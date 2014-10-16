@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -84,9 +85,11 @@ public class RMServerUtils {
    * requested memory/vcore is non-negative and not greater than max
    */
   public static void validateResourceRequests(List<ResourceRequest> ask,
-      Resource maximumResource) throws InvalidResourceRequestException {
+      Resource maximumResource, String queueName, YarnScheduler scheduler)
+      throws InvalidResourceRequestException {
     for (ResourceRequest resReq : ask) {
-      SchedulerUtils.validateResourceRequest(resReq, maximumResource);
+      SchedulerUtils.validateResourceRequest(resReq, maximumResource,
+          queueName, scheduler);
     }
   }
 
@@ -132,17 +135,25 @@ public class RMServerUtils {
     }
   }
 
+  public static UserGroupInformation verifyAccess(
+      AccessControlList acl, String method, final Log LOG)
+      throws IOException {
+    // by default, this method will use AdminService as module name
+    return verifyAccess(acl, method, "AdminService", LOG);
+  }
+
   /**
    * Utility method to verify if the current user has access based on the
    * passed {@link AccessControlList}
    * @param acl the {@link AccessControlList} to check against
    * @param method the method name to be logged
+   * @param module, like AdminService or NodeLabelManager
    * @param LOG the logger to use
    * @return {@link UserGroupInformation} of the current user
    * @throws IOException
    */
   public static UserGroupInformation verifyAccess(
-      AccessControlList acl, String method, final Log LOG)
+      AccessControlList acl, String method, String module, final Log LOG)
       throws IOException {
     UserGroupInformation user;
     try {
@@ -159,7 +170,7 @@ public class RMServerUtils {
           " to call '" + method + "'");
 
       RMAuditLogger.logFailure(user.getShortUserName(), method,
-          acl.toString(), "AdminService",
+          acl.toString(), module,
           RMAuditLogger.AuditConstants.UNAUTHORIZED_USER);
 
       throw new AccessControlException("User " + user.getShortUserName() +

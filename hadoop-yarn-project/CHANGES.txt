@@ -138,6 +138,12 @@ Release 2.6.0 - UNRELEASED
     YARN-2656. Made RM web services authentication filter support proxy user.
     (Varun Vasudev and Zhijie Shen via zjshen)
 
+    YARN-2496. Enhanced Capacity Scheduler to have basic support for allocating
+    resources based on node-labels. (Wangda Tan via vinodkv)
+
+    YARN-2500. Ehnaced ResourceManager to support schedulers allocating resources
+    based on node-labels. (Wangda Tan via vinodkv)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 

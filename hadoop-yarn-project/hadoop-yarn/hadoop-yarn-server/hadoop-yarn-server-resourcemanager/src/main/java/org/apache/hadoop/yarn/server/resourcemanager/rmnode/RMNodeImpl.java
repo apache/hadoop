@@ -855,4 +855,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   public Set<ContainerId> getLaunchedContainers() {
     return this.launchedContainers;
   }
+
+  @Override
+  public Set<String> getNodeLabels() {
+    if (context.getNodeLabelManager() == null) {
+      return null;
+    }
+    return context.getNodeLabelManager().getLabelsOnNode(nodeId);
+  }
  }

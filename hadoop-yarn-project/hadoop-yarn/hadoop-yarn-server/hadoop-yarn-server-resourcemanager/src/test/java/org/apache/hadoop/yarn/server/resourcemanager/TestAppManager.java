@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+
 import static org.mockito.Matchers.isA;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
@@ -37,7 +38,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
 import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.MockApps;
@@ -207,6 +207,7 @@ public class TestAppManager{
   private ApplicationSubmissionContext asContext;
   private ApplicationId appId;
 
+  @SuppressWarnings("deprecation")
   @Before
   public void setUp() {
     long now = System.currentTimeMillis();
@@ -540,6 +541,7 @@ public class TestAppManager{
     Assert.assertEquals("app state doesn't match", RMAppState.FINISHED, app.getState());
   }
 
+  @SuppressWarnings("deprecation")
   @Test (timeout = 30000)
   public void testRMAppSubmitInvalidResourceRequest() throws Exception {
     asContext.setResource(Resources.createResource(

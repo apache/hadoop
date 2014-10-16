@@ -72,9 +72,18 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   
   /**
    * Get the configured <em>capacity</em> of the queue.
-   * @return queue capacity
+   * @return configured queue capacity
    */
   public float getCapacity();
+  
+  /**
+   * Get actual <em>capacity</em> of the queue, this may be different from
+   * configured capacity when mis-config take place, like add labels to the
+   * cluster
+   * 
+   * @return actual queue capacity
+   */
+  public float getAbsActualCapacity();
 
   /**
    * Get capacity of the parent of the queue as a function of the 
@@ -106,28 +115,31 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public float getAbsoluteUsedCapacity();
 
   /**
-   * Get the current used capacity of the queue
-   * and it's children (if any).
-   * @return queue used capacity
-   */
-  public float getUsedCapacity();
-  
-  /**
    * Set used capacity of the queue.
-   * @param usedCapacity used capacity of the queue
+   * @param usedCapacity
+   *          used capacity of the queue
    */
   public void setUsedCapacity(float usedCapacity);
-  
+
   /**
    * Set absolute used capacity of the queue.
-   * @param absUsedCapacity absolute used capacity of the queue
+   * @param absUsedCapacity
+   *          absolute used capacity of the queue
    */
   public void setAbsoluteUsedCapacity(float absUsedCapacity);
 
   /**
-   * Get the currently utilized resources in the cluster 
-   * by the queue and children (if any).
-   * @return used resources by the queue and it's children 
+   * Get the current used capacity of nodes without label(s) of the queue
+   * and it's children (if any).
+   * @return queue used capacity
+   */
+  public float getUsedCapacity();
+
+  /**
+   * Get the currently utilized resources which allocated at nodes without any
+   * labels in the cluster by the queue and children (if any).
+   * 
+   * @return used resources by the queue and it's children
    */
   public Resource getUsedResources();
   
@@ -259,4 +271,25 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    */
   public void attachContainer(Resource clusterResource,
                FiCaSchedulerApp application, RMContainer container);
+  
+  /**
+   * Get absolute capacity by label of this queue can use 
+   * @param nodeLabel
+   * @return absolute capacity by label of this queue can use
+   */
+  public float getAbsoluteCapacityByNodeLabel(String nodeLabel);
+  
+  /**
+   * Get absolute max capacity by label of this queue can use 
+   * @param nodeLabel
+   * @return absolute capacity by label of this queue can use
+   */
+  public float getAbsoluteMaximumCapacityByNodeLabel(String nodeLabel);
+
+  /**
+   * Get capacity by node label
+   * @param nodeLabel
+   * @return capacity by node label
+   */
+  public float getCapacityByNodeLabel(String nodeLabel);
 }

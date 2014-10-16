@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
@@ -121,6 +122,7 @@ public class TestReservations {
     when(csContext.getQueueComparator()).thenReturn(
         CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    when(csContext.getRMContext()).thenReturn(rmContext);
     RMContainerTokenSecretManager containerTokenSecretManager = new RMContainerTokenSecretManager(
         conf);
     containerTokenSecretManager.rollMasterKey();
@@ -819,7 +821,9 @@ public class TestReservations {
     // allocate to queue so that the potential new capacity is greater then
     // absoluteMaxCapacity
     Resource capability = Resources.createResource(32 * GB, 0);
-    boolean res = a.assignToQueue(clusterResource, capability, app_0, true);
+    boolean res =
+        a.canAssignToThisQueue(clusterResource, capability,
+            CommonNodeLabelsManager.EMPTY_STRING_SET, app_0, true);
     assertFalse(res);
 
     // now add in reservations and make sure it continues if config set
@@ -836,23 +840,29 @@ public class TestReservations {
     assertEquals(3 * GB, node_1.getUsedResource().getMemory());
 
     capability = Resources.createResource(5 * GB, 0);
-    res = a
-        .assignToQueue(clusterResource, capability, app_0, true);
+    res =
+        a.canAssignToThisQueue(clusterResource, capability,
+            CommonNodeLabelsManager.EMPTY_STRING_SET, app_0, true);
     assertTrue(res);
 
     // tell to not check reservations
-    res = a.assignToQueue(clusterResource, capability, app_0, false);
+    res =
+        a.canAssignToThisQueue(clusterResource, capability,
+            CommonNodeLabelsManager.EMPTY_STRING_SET, app_0, false);
     assertFalse(res);
 
     refreshQueuesTurnOffReservationsContLook(a, csConf);
 
     // should return false no matter what checkReservations is passed
     // in since feature is off
-    res = a.assignToQueue(clusterResource, capability, app_0, false);
+    res =
+        a.canAssignToThisQueue(clusterResource, capability,
+            CommonNodeLabelsManager.EMPTY_STRING_SET, app_0, false);
     assertFalse(res);
 
-    res = a
-        .assignToQueue(clusterResource, capability, app_0, true);
+    res =
+        a.canAssignToThisQueue(clusterResource, capability,
+            CommonNodeLabelsManager.EMPTY_STRING_SET, app_0, true);
     assertFalse(res);
   }
 
@@ -1000,18 +1010,18 @@ public class TestReservations {
     // set limit so subtrace reservations it can continue
     Resource limit = Resources.createResource(12 * GB, 0);
     boolean res = a.assignToUser(clusterResource, user_0, limit, app_0,
-        true);
+        true, null);
     assertTrue(res);
 
     // tell it not to check for reservations and should fail as already over
     // limit
-    res = a.assignToUser(clusterResource, user_0, limit, app_0, false);
+    res = a.assignToUser(clusterResource, user_0, limit, app_0, false, null);
     assertFalse(res);
 
     refreshQueuesTurnOffReservationsContLook(a, csConf);
 
     // should now return false since feature off
-    res = a.assignToUser(clusterResource, user_0, limit, app_0, true);
+    res = a.assignToUser(clusterResource, user_0, limit, app_0, true, null);
     assertFalse(res);
   }
 

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -71,4 +72,22 @@ public interface Queue {
    */
   public void recoverContainer(Resource clusterResource,
       SchedulerApplicationAttempt schedulerAttempt, RMContainer rmContainer);
+  
+  /**
+   * Get labels can be accessed of this queue
+   * labels={*}, means this queue can access any label
+   * labels={ }, means this queue cannot access any label except node without label
+   * labels={a, b, c} means this queue can access a or b or c  
+   * @return labels
+   */
+  public Set<String> getAccessibleNodeLabels();
+  
+  /**
+   * Get default label expression of this queue. If label expression of
+   * ApplicationSubmissionContext and label expression of Resource Request not
+   * set, this will be used.
+   * 
+   * @return default label expression
+   */
+  public String getDefaultNodeLabelExpression();
 }

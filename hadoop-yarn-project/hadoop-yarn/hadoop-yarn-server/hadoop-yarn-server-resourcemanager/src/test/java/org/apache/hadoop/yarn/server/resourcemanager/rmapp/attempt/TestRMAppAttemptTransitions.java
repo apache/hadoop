@@ -40,7 +40,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -62,7 +64,9 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -83,8 +87,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
@@ -96,7 +100,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeFinishedContainersPulledByAMEvent;
-
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -112,6 +115,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -122,6 +126,8 @@ import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 @RunWith(value = Parameterized.class)
 public class TestRMAppAttemptTransitions {
@@ -229,6 +235,7 @@ public class TestRMAppAttemptTransitions {
     this.isSecurityEnabled = isSecurityEnabled;
   }
 
+  @SuppressWarnings("deprecation")
   @Before
   public void setUp() throws Exception {
     AuthenticationMethod authMethod = AuthenticationMethod.SIMPLE;
@@ -300,6 +307,7 @@ public class TestRMAppAttemptTransitions {
     Mockito.doReturn(resourceScheduler).when(spyRMContext).getScheduler();
 
 
+    final String user = MockApps.newUserName();
     final String queue = MockApps.newQueue();
     submissionContext = mock(ApplicationSubmissionContext.class);
     when(submissionContext.getQueue()).thenReturn(queue);
@@ -315,7 +323,11 @@ public class TestRMAppAttemptTransitions {
     application = mock(RMAppImpl.class);
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttemptId, spyRMContext, scheduler,
-          masterService, submissionContext, new Configuration(), false);
+            masterService, submissionContext, new Configuration(), false,
+            BuilderUtils.newResourceRequest(
+                RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
+                submissionContext.getResource(), 1));
+
     when(application.getCurrentAppAttempt()).thenReturn(applicationAttempt);
     when(application.getApplicationId()).thenReturn(applicationId);
     spyRMContext.getRMApps().put(application.getApplicationId(), application);
@@ -1399,13 +1411,16 @@ public class TestRMAppAttemptTransitions {
   }
 
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testContainersCleanupForLastAttempt() {
     // create a failed attempt.
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(), spyRMContext,
           scheduler, masterService, submissionContext, new Configuration(),
-          true);
+          true, BuilderUtils.newResourceRequest(
+              RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
+              submissionContext.getResource(), 1));
     when(submissionContext.getKeepContainersAcrossApplicationAttempts())
       .thenReturn(true);
     when(submissionContext.getMaxAppAttempts()).thenReturn(1);
@@ -1426,6 +1441,49 @@ public class TestRMAppAttemptTransitions {
       applicationAttempt.getAppAttemptState());
     assertFalse(transferStateFromPreviousAttempt);
     verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
+  }
+  
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testScheduleTransitionReplaceAMContainerRequestWithDefaults() {
+    YarnScheduler mockScheduler = mock(YarnScheduler.class);
+    when(
+        mockScheduler.allocate(any(ApplicationAttemptId.class),
+            any(List.class), any(List.class), any(List.class), any(List.class)))
+        .thenAnswer(new Answer<Allocation>() {
+
+          @SuppressWarnings("rawtypes")
+          @Override
+          public Allocation answer(InvocationOnMock invocation)
+              throws Throwable {
+            ResourceRequest rr =
+                (ResourceRequest) ((List) invocation.getArguments()[1]).get(0);
+            
+            // capacity shouldn't changed
+            assertEquals(Resource.newInstance(3333, 1), rr.getCapability());
+            assertEquals("label-expression", rr.getNodeLabelExpression());
+            
+            // priority, #container, relax-locality will be changed
+            assertEquals(RMAppAttemptImpl.AM_CONTAINER_PRIORITY, rr.getPriority());
+            assertEquals(1, rr.getNumContainers());
+            assertEquals(ResourceRequest.ANY, rr.getResourceName());
+
+            // just return an empty allocation
+            List l = new ArrayList();
+            Set s = new HashSet();
+            return new Allocation(l, Resources.none(), s, s, l);
+          }
+        });
+    
+    // create an attempt.
+    applicationAttempt =
+        new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(),
+            spyRMContext, scheduler, masterService, submissionContext,
+            new Configuration(), true, ResourceRequest.newInstance(
+                Priority.UNDEFINED, "host1", Resource.newInstance(3333, 1), 3,
+                false, "label-expression"));
+    new RMAppAttemptImpl.ScheduleTransition().transition(
+        (RMAppAttemptImpl) applicationAttempt, null);
   }
 
   private void verifyAMCrashAtAllocatedDiagnosticInfo(String diagnostics,

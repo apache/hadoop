@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
@@ -186,6 +187,18 @@ public class FifoScheduler extends
       increaseUsedResources(rmContainer);
       updateAppHeadRoom(schedulerAttempt);
       updateAvailableResourcesMetrics();
+    }
+
+    @Override
+    public Set<String> getAccessibleNodeLabels() {
+      // TODO add implementation for FIFO scheduler
+      return null;
+    }
+
+    @Override
+    public String getDefaultNodeLabelExpression() {
+      // TODO add implementation for FIFO scheduler
+      return null;
     }
   };
 

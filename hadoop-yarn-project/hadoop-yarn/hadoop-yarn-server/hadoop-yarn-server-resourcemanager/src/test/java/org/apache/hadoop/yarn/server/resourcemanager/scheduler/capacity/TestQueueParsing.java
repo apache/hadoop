@@ -18,22 +18,40 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.junit.Assert;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableSet;
 
 public class TestQueueParsing {
 
   private static final Log LOG = LogFactory.getLog(TestQueueParsing.class);
   
   private static final double DELTA = 0.000001;
+  
+  private RMNodeLabelsManager nodeLabelManager;
+  
+  @Before
+  public void setup() {
+    nodeLabelManager = mock(RMNodeLabelsManager.class);
+    when(nodeLabelManager.containsNodeLabel(any(String.class))).thenReturn(true);
+  }
   
   @Test
   public void testQueueParsing() throws Exception {
@@ -43,15 +61,11 @@ public class TestQueueParsing {
     YarnConfiguration conf = new YarnConfiguration(csConf);
 
     CapacityScheduler capacityScheduler = new CapacityScheduler();
-    RMContextImpl rmContext = new RMContextImpl(null, null,
-        null, null, null, null, new RMContainerTokenSecretManager(conf),
-        new NMTokenSecretManagerInRM(conf),
-        new ClientToAMTokenSecretManagerInRM(), null);
     capacityScheduler.setConf(conf);
-    capacityScheduler.setRMContext(rmContext);
+    capacityScheduler.setRMContext(TestUtils.getMockRMContext());
     capacityScheduler.init(conf);
     capacityScheduler.start();
-    capacityScheduler.reinitialize(conf, rmContext);
+    capacityScheduler.reinitialize(conf, TestUtils.getMockRMContext());
     
     CSQueue a = capacityScheduler.getQueue("a");
     Assert.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
@@ -202,4 +216,241 @@ public class TestQueueParsing {
     capacityScheduler.stop();
   }
   
+  private void setupQueueConfigurationWithoutLabels(CapacitySchedulerConfiguration conf) {
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
+
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+    conf.setCapacity(A, 10);
+    conf.setMaximumCapacity(A, 15);
+    
+    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+    conf.setCapacity(B, 90);
+
+    LOG.info("Setup top-level queues");
+    
+    // Define 2nd-level queues
+    final String A1 = A + ".a1";
+    final String A2 = A + ".a2";
+    conf.setQueues(A, new String[] {"a1", "a2"});
+    conf.setCapacity(A1, 30);
+    conf.setMaximumCapacity(A1, 45);
+    conf.setCapacity(A2, 70);
+    conf.setMaximumCapacity(A2, 85);
+    
+    final String B1 = B + ".b1";
+    final String B2 = B + ".b2";
+    final String B3 = B + ".b3";
+    conf.setQueues(B, new String[] {"b1", "b2", "b3"});
+    conf.setCapacity(B1, 50);
+    conf.setMaximumCapacity(B1, 85);
+    conf.setCapacity(B2, 30);
+    conf.setMaximumCapacity(B2, 35);
+    conf.setCapacity(B3, 20);
+    conf.setMaximumCapacity(B3, 35);
+  }
+  
+  private void setupQueueConfigurationWithLabels(CapacitySchedulerConfiguration conf) {
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
+
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+    conf.setCapacity(A, 10);
+    conf.setMaximumCapacity(A, 15);
+    
+    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+    conf.setCapacity(B, 90);
+
+    LOG.info("Setup top-level queues");
+    
+    // Define 2nd-level queues
+    final String A1 = A + ".a1";
+    final String A2 = A + ".a2";
+    conf.setQueues(A, new String[] {"a1", "a2"});
+    conf.setAccessibleNodeLabels(A, ImmutableSet.of("red", "blue"));
+    conf.setCapacityByLabel(A, "red", 50);
+    conf.setCapacityByLabel(A, "blue", 50);
+    
+    conf.setCapacity(A1, 30);
+    conf.setMaximumCapacity(A1, 45);
+    conf.setCapacityByLabel(A1, "red", 50);
+    conf.setCapacityByLabel(A1, "blue", 100);
+    
+    conf.setCapacity(A2, 70);
+    conf.setMaximumCapacity(A2, 85);
+    conf.setAccessibleNodeLabels(A2, ImmutableSet.of("red"));
+    conf.setCapacityByLabel(A2, "red", 50);
+    
+    final String B1 = B + ".b1";
+    final String B2 = B + ".b2";
+    final String B3 = B + ".b3";
+    conf.setQueues(B, new String[] {"b1", "b2", "b3"});
+    conf.setAccessibleNodeLabels(B, ImmutableSet.of("red", "blue"));
+    conf.setCapacityByLabel(B, "red", 50);
+    conf.setCapacityByLabel(B, "blue", 50);
+    
+    conf.setCapacity(B1, 50);
+    conf.setMaximumCapacity(B1, 85);
+    conf.setCapacityByLabel(B1, "red", 50);
+    conf.setCapacityByLabel(B1, "blue", 50);
+    
+    conf.setCapacity(B2, 30);
+    conf.setMaximumCapacity(B2, 35);
+    conf.setCapacityByLabel(B2, "red", 25);
+    conf.setCapacityByLabel(B2, "blue", 25);
+    
+    conf.setCapacity(B3, 20);
+    conf.setMaximumCapacity(B3, 35);
+    conf.setCapacityByLabel(B3, "red", 25);
+    conf.setCapacityByLabel(B3, "blue", 25);
+  }
+  
+  private void setupQueueConfigurationWithLabelsInherit(
+      CapacitySchedulerConfiguration conf) {
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
+
+    // Set A configuration
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+    conf.setCapacity(A, 10);
+    conf.setMaximumCapacity(A, 15);
+    conf.setQueues(A, new String[] {"a1", "a2"});
+    conf.setAccessibleNodeLabels(A, ImmutableSet.of("red", "blue"));
+    conf.setCapacityByLabel(A, "red", 100);
+    conf.setCapacityByLabel(A, "blue", 100);
+    
+    // Set B configuraiton
+    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+    conf.setCapacity(B, 90);
+    conf.setAccessibleNodeLabels(B, CommonNodeLabelsManager.EMPTY_STRING_SET);
+    
+    // Define 2nd-level queues
+    final String A1 = A + ".a1";
+    final String A2 = A + ".a2";
+    
+    conf.setCapacity(A1, 30);
+    conf.setMaximumCapacity(A1, 45);
+    conf.setCapacityByLabel(A1, "red", 50);
+    conf.setCapacityByLabel(A1, "blue", 100);
+    
+    conf.setCapacity(A2, 70);
+    conf.setMaximumCapacity(A2, 85);
+    conf.setAccessibleNodeLabels(A2, ImmutableSet.of("red"));
+    conf.setCapacityByLabel(A2, "red", 50);
+  }
+  
+  @Test
+  public void testQueueParsingReinitializeWithLabels() throws IOException {
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    setupQueueConfigurationWithoutLabels(csConf);
+    YarnConfiguration conf = new YarnConfiguration(csConf);
+
+    CapacityScheduler capacityScheduler = new CapacityScheduler();
+    RMContextImpl rmContext =
+        new RMContextImpl(null, null, null, null, null, null,
+            new RMContainerTokenSecretManager(conf),
+            new NMTokenSecretManagerInRM(conf),
+            new ClientToAMTokenSecretManagerInRM(), null);
+    rmContext.setNodeLabelManager(nodeLabelManager);
+    capacityScheduler.setConf(conf);
+    capacityScheduler.setRMContext(rmContext);
+    capacityScheduler.init(conf);
+    capacityScheduler.start();
+    csConf = new CapacitySchedulerConfiguration();
+    setupQueueConfigurationWithLabels(csConf);
+    conf = new YarnConfiguration(csConf);
+    capacityScheduler.reinitialize(conf, rmContext);
+    checkQueueLabels(capacityScheduler);
+    capacityScheduler.stop();
+  }
+  
+  private void checkQueueLabels(CapacityScheduler capacityScheduler) {
+    // queue-A is red, blue
+    Assert.assertTrue(capacityScheduler.getQueue("a").getAccessibleNodeLabels()
+        .containsAll(ImmutableSet.of("red", "blue")));
+
+    // queue-A1 inherits A's configuration
+    Assert.assertTrue(capacityScheduler.getQueue("a1")
+        .getAccessibleNodeLabels().containsAll(ImmutableSet.of("red", "blue")));
+
+    // queue-A2 is "red"
+    Assert.assertEquals(1, capacityScheduler.getQueue("a2")
+        .getAccessibleNodeLabels().size());
+    Assert.assertTrue(capacityScheduler.getQueue("a2")
+        .getAccessibleNodeLabels().contains("red"));
+
+    // queue-B is "red"/"blue"
+    Assert.assertTrue(capacityScheduler.getQueue("b").getAccessibleNodeLabels()
+        .containsAll(ImmutableSet.of("red", "blue")));
+
+    // queue-B2 inherits "red"/"blue"
+    Assert.assertTrue(capacityScheduler.getQueue("b2")
+        .getAccessibleNodeLabels().containsAll(ImmutableSet.of("red", "blue")));
+  }
+  
+  private void
+      checkQueueLabelsInheritConfig(CapacityScheduler capacityScheduler) {
+    // queue-A is red, blue
+    Assert.assertTrue(capacityScheduler.getQueue("a").getAccessibleNodeLabels()
+        .containsAll(ImmutableSet.of("red", "blue")));
+
+    // queue-A1 inherits A's configuration
+    Assert.assertTrue(capacityScheduler.getQueue("a1")
+        .getAccessibleNodeLabels().containsAll(ImmutableSet.of("red", "blue")));
+
+    // queue-A2 is "red"
+    Assert.assertEquals(1, capacityScheduler.getQueue("a2")
+        .getAccessibleNodeLabels().size());
+    Assert.assertTrue(capacityScheduler.getQueue("a2")
+        .getAccessibleNodeLabels().contains("red"));
+
+    // queue-B is "red"/"blue"
+    Assert.assertTrue(capacityScheduler.getQueue("b").getAccessibleNodeLabels()
+        .isEmpty());
+  }
+  
+  @Test
+  public void testQueueParsingWithLabels() throws IOException {
+    YarnConfiguration conf = new YarnConfiguration();
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration(conf);
+    setupQueueConfigurationWithLabels(csConf);
+
+    CapacityScheduler capacityScheduler = new CapacityScheduler();
+    RMContextImpl rmContext =
+        new RMContextImpl(null, null, null, null, null, null,
+            new RMContainerTokenSecretManager(csConf),
+            new NMTokenSecretManagerInRM(csConf),
+            new ClientToAMTokenSecretManagerInRM(), null);
+    rmContext.setNodeLabelManager(nodeLabelManager);
+    capacityScheduler.setConf(csConf);
+    capacityScheduler.setRMContext(rmContext);
+    capacityScheduler.init(csConf);
+    capacityScheduler.start();
+    checkQueueLabels(capacityScheduler);
+    capacityScheduler.stop();
+  }
+  
+  @Test
+  public void testQueueParsingWithLabelsInherit() throws IOException {
+    YarnConfiguration conf = new YarnConfiguration();
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration(conf);
+    setupQueueConfigurationWithLabelsInherit(csConf);
+
+    CapacityScheduler capacityScheduler = new CapacityScheduler();
+    RMContextImpl rmContext =
+        new RMContextImpl(null, null, null, null, null, null,
+            new RMContainerTokenSecretManager(csConf),
+            new NMTokenSecretManagerInRM(csConf),
+            new ClientToAMTokenSecretManagerInRM(), null);
+    rmContext.setNodeLabelManager(nodeLabelManager);
+    capacityScheduler.setConf(csConf);
+    capacityScheduler.setRMContext(rmContext);
+    capacityScheduler.init(csConf);
+    capacityScheduler.start();
+    checkQueueLabelsInheritConfig(capacityScheduler);
+    capacityScheduler.stop();
+  }
 }

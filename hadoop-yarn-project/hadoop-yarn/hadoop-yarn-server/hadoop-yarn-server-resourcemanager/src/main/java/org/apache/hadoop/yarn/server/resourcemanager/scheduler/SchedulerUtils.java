@@ -17,22 +17,28 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import com.google.common.collect.Sets;
 
 /**
  * Utilities shared by schedulers. 
@@ -190,7 +196,8 @@ public class SchedulerUtils {
    *         request
    */
   public static void validateResourceRequest(ResourceRequest resReq,
-      Resource maximumResource) throws InvalidResourceRequestException {
+      Resource maximumResource, String queueName, YarnScheduler scheduler)
+      throws InvalidResourceRequestException {
     if (resReq.getCapability().getMemory() < 0 ||
         resReq.getCapability().getMemory() > maximumResource.getMemory()) {
       throw new InvalidResourceRequestException("Invalid resource request"
@@ -209,5 +216,116 @@ public class SchedulerUtils {
           + resReq.getCapability().getVirtualCores()
           + ", maxVirtualCores=" + maximumResource.getVirtualCores());
     }
+    
+    // Get queue from scheduler
+    QueueInfo queueInfo = null;
+    try {
+      queueInfo = scheduler.getQueueInfo(queueName, false, false);
+    } catch (IOException e) {
+      // it is possible queue cannot get when queue mapping is set, just ignore
+      // the queueInfo here, and move forward
+    }
+
+    // check labels in the resource request.
+    String labelExp = resReq.getNodeLabelExpression();
+    
+    // if queue has default label expression, and RR doesn't have, use the
+    // default label expression of queue
+    if (labelExp == null && queueInfo != null) {
+      labelExp = queueInfo.getDefaultNodeLabelExpression();
+      resReq.setNodeLabelExpression(labelExp);
+    }
+    
+    if (labelExp != null && !labelExp.trim().isEmpty() && queueInfo != null) {
+      if (!checkQueueLabelExpression(queueInfo.getAccessibleNodeLabels(),
+          labelExp)) {
+        throw new InvalidResourceRequestException("Invalid resource request"
+            + ", queue="
+            + queueInfo.getQueueName()
+            + " doesn't have permission to access all labels "
+            + "in resource request. labelExpression of resource request="
+            + labelExp
+            + ". Queue labels="
+            + (queueInfo.getAccessibleNodeLabels() == null ? "" : StringUtils.join(queueInfo
+                .getAccessibleNodeLabels().iterator(), ',')));
+      }
+    }
+  }
+  
+  public static boolean checkQueueAccessToNode(Set<String> queueLabels,
+      Set<String> nodeLabels) {
+    // if queue's label is *, it can access any node
+    if (queueLabels != null && queueLabels.contains(RMNodeLabelsManager.ANY)) {
+      return true;
+    }
+    // any queue can access to a node without label
+    if (nodeLabels == null || nodeLabels.isEmpty()) {
+      return true;
+    }
+    // a queue can access to a node only if it contains any label of the node
+    if (queueLabels != null
+        && Sets.intersection(queueLabels, nodeLabels).size() > 0) {
+      return true;
+    }
+    // sorry, you cannot access
+    return false;
+  }
+  
+  public static void checkIfLabelInClusterNodeLabels(RMNodeLabelsManager mgr,
+      Set<String> labels) throws IOException {
+    if (mgr == null) {
+      if (labels != null && !labels.isEmpty()) {
+        throw new IOException("NodeLabelManager is null, please check");
+      }
+      return;
+    }
+
+    if (labels != null) {
+      for (String label : labels) {
+        if (!label.equals(RMNodeLabelsManager.ANY)
+            && !mgr.containsNodeLabel(label)) {
+          throw new IOException("NodeLabelManager doesn't include label = "
+              + label + ", please check.");
+        }
+      }
+    }
+  }
+  
+  public static boolean checkNodeLabelExpression(Set<String> nodeLabels,
+      String labelExpression) {
+    // empty label expression can only allocate on node with empty labels
+    if (labelExpression == null || labelExpression.trim().isEmpty()) {
+      if (!nodeLabels.isEmpty()) {
+        return false;
+      }
+    }
+
+    if (labelExpression != null) {
+      for (String str : labelExpression.split("&&")) {
+        if (!str.trim().isEmpty()
+            && (nodeLabels == null || !nodeLabels.contains(str.trim()))) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  public static boolean checkQueueLabelExpression(Set<String> queueLabels,
+      String labelExpression) {
+    if (queueLabels != null && queueLabels.contains(RMNodeLabelsManager.ANY)) {
+      return true;
+    }
+    // if label expression is empty, we can allocate container on any node
+    if (labelExpression == null) {
+      return true;
+    }
+    for (String str : labelExpression.split("&&")) {
+      if (!str.trim().isEmpty()
+          && (queueLabels == null || !queueLabels.contains(str.trim()))) {
+        return false;
+      }
+    }
+    return true;
   }
 }
