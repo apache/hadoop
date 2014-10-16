@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -269,5 +270,17 @@ public abstract class FSQueue implements Queue, Schedulable {
   public String toString() {
     return String.format("[%s, demand=%s, running=%s, share=%s, w=%s]",
         getName(), getDemand(), getResourceUsage(), fairShare, getWeights());
+  }
+  
+  @Override
+  public Set<String> getAccessibleNodeLabels() {
+    // TODO, add implementation for FS
+    return null;
+  }
+  
+  @Override
+  public String getDefaultNodeLabelExpression() {
+    // TODO, add implementation for FS
+    return null;
   }
 }

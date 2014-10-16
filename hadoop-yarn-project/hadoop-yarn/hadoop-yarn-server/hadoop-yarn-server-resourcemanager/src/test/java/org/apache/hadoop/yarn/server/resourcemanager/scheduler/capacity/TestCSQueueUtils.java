@@ -19,38 +19,19 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InOrder;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 public class TestCSQueueUtils {
 
@@ -88,6 +69,8 @@ public class TestCSQueueUtils {
         thenReturn(Resources.createResource(GB, 1));
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(0, 0));
+    RMContext rmContext = TestUtils.getMockRMContext();
+    when(csContext.getRMContext()).thenReturn(rmContext);
   
     final String L1Q1 = "L1Q1";
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {L1Q1});
@@ -129,6 +112,8 @@ public class TestCSQueueUtils {
         thenReturn(Resources.createResource(GB, 1));
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB, 32));
+    RMContext rmContext = TestUtils.getMockRMContext();
+    when(csContext.getRMContext()).thenReturn(rmContext);
     
     final String L1Q1 = "L1Q1";
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {L1Q1});
@@ -173,6 +158,9 @@ public class TestCSQueueUtils {
         thenReturn(Resources.createResource(GB, 1));
     when(csContext.getMaximumResourceCapability()).
         thenReturn(Resources.createResource(16*GB, 32));
+    
+    RMContext rmContext = TestUtils.getMockRMContext();
+    when(csContext.getRMContext()).thenReturn(rmContext);
     
     final String L1Q1 = "L1Q1";
     final String L1Q2 = "L1Q2";

@@ -59,6 +59,8 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.DummyRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -109,6 +111,13 @@ public class MockRM extends ResourceManager {
     }
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);    
+  }
+  
+  @Override
+  protected RMNodeLabelsManager createNodeLabelManager() {
+    RMNodeLabelsManager mgr = new DummyRMNodeLabelsManager();
+    mgr.init(getConfig());
+    return mgr;
   }
 
   public void waitForState(ApplicationId appId, RMAppState finalState)
@@ -183,27 +192,43 @@ public class MockRM extends ResourceManager {
     return launchAndRegisterAM(app, this, nm);
   }
 
-  public void waitForState(MockNM nm, ContainerId containerId,
+  public boolean waitForState(MockNM nm, ContainerId containerId,
       RMContainerState containerState) throws Exception {
+    // default is wait for 30,000 ms
+    return waitForState(nm, containerId, containerState, 30 * 1000);
+  }
+  
+  public boolean waitForState(MockNM nm, ContainerId containerId,
+      RMContainerState containerState, int timeoutMillisecs) throws Exception {
     RMContainer container = getResourceScheduler().getRMContainer(containerId);
     int timeoutSecs = 0;
-    while(container == null && timeoutSecs++ < 100) {
+    while(container == null && timeoutSecs++ < timeoutMillisecs / 100) {
       nm.nodeHeartbeat(true);
       container = getResourceScheduler().getRMContainer(containerId);
       System.out.println("Waiting for container " + containerId + " to be allocated.");
       Thread.sleep(100);
+      
+      if (timeoutMillisecs <= timeoutSecs * 100) {
+        return false;
+      }
     }
     Assert.assertNotNull("Container shouldn't be null", container);
-    timeoutSecs = 0;
-    while (!containerState.equals(container.getState()) && timeoutSecs++ < 40) {
+    while (!containerState.equals(container.getState())
+        && timeoutSecs++ < timeoutMillisecs / 100) {
       System.out.println("Container : " + containerId + " State is : "
           + container.getState() + " Waiting for state : " + containerState);
       nm.nodeHeartbeat(true);
-      Thread.sleep(300);
+      Thread.sleep(100);
+      
+      if (timeoutMillisecs <= timeoutSecs * 100) {
+        return false;
+      }
     }
+    
     System.out.println("Container State is : " + container.getState());
     Assert.assertEquals("Container state is not correct (timedout)",
       containerState, container.getState());
+    return true;
   }
 
   // get new application id
@@ -310,6 +335,7 @@ public class MockRM extends ResourceManager {
       isAppIdProvided, applicationId, 0, null);
   }
 
+  @SuppressWarnings("deprecation")
   public RMApp submitApp(int masterMemory,
       LogAggregationContext logAggregationContext) throws Exception {
     return submitApp(masterMemory, "", UserGroupInformation.getCurrentUser()
@@ -319,6 +345,7 @@ public class MockRM extends ResourceManager {
       false, null, 0, logAggregationContext);
    }
 
+  @SuppressWarnings("deprecation")
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
       int maxAppAttempts, Credentials ts, String appType,

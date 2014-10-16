@@ -93,7 +93,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -177,6 +176,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private Object transitionTodo;
   
   private RMAppAttemptMetrics attemptMetrics = null;
+  private ResourceRequest amReq = null;
 
   private static final StateMachineFactory<RMAppAttemptImpl,
                                            RMAppAttemptState,
@@ -426,7 +426,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       RMContext rmContext, YarnScheduler scheduler,
       ApplicationMasterService masterService,
       ApplicationSubmissionContext submissionContext,
-      Configuration conf, boolean maybeLastAttempt) {
+      Configuration conf, boolean maybeLastAttempt, ResourceRequest amReq) {
     this.conf = conf;
     this.applicationAttemptId = appAttemptId;
     this.rmContext = rmContext;
@@ -442,8 +442,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.proxiedTrackingUrl = generateProxyUriWithScheme(null);
     this.maybeLastAttempt = maybeLastAttempt;
     this.stateMachine = stateMachineFactory.make(this);
+
     this.attemptMetrics =
         new RMAppAttemptMetrics(applicationAttemptId, rmContext);
+    
+    this.amReq = amReq;
   }
 
   @Override
@@ -885,24 +888,34 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private static final List<ResourceRequest> EMPTY_CONTAINER_REQUEST_LIST =
       new ArrayList<ResourceRequest>();
 
-  private static final class ScheduleTransition
+  @VisibleForTesting
+  public static final class ScheduleTransition
       implements
       MultipleArcTransition<RMAppAttemptImpl, RMAppAttemptEvent, RMAppAttemptState> {
     @Override
     public RMAppAttemptState transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
-      if (!appAttempt.submissionContext.getUnmanagedAM()) {
-        // Request a container for the AM.
-        ResourceRequest request =
-            BuilderUtils.newResourceRequest(
-                AM_CONTAINER_PRIORITY, ResourceRequest.ANY, appAttempt
-                    .getSubmissionContext().getResource(), 1);
-
+      ApplicationSubmissionContext subCtx = appAttempt.submissionContext;
+      if (!subCtx.getUnmanagedAM()) {
+        // Need reset #containers before create new attempt, because this request
+        // will be passed to scheduler, and scheduler will deduct the number after
+        // AM container allocated
+        
+        // Currently, following fields are all hard code,
+        // TODO: change these fields when we want to support
+        // priority/resource-name/relax-locality specification for AM containers
+        // allocation.
+        appAttempt.amReq.setNumContainers(1);
+        appAttempt.amReq.setPriority(AM_CONTAINER_PRIORITY);
+        appAttempt.amReq.setResourceName(ResourceRequest.ANY);
+        appAttempt.amReq.setRelaxLocality(true);
+        
         // SchedulerUtils.validateResourceRequests is not necessary because
         // AM resource has been checked when submission
-        Allocation amContainerAllocation = appAttempt.scheduler.allocate(
-            appAttempt.applicationAttemptId,
-            Collections.singletonList(request), EMPTY_CONTAINER_RELEASE_LIST, null, null);
+        Allocation amContainerAllocation =
+            appAttempt.scheduler.allocate(appAttempt.applicationAttemptId,
+                Collections.singletonList(appAttempt.amReq),
+                EMPTY_CONTAINER_RELEASE_LIST, null, null);
         if (amContainerAllocation != null
             && amContainerAllocation.getContainers() != null) {
           assert (amContainerAllocation.getContainers().size() == 0);

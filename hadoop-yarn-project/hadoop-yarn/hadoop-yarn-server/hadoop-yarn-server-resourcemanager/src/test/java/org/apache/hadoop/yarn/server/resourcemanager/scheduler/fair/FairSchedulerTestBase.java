@@ -216,7 +216,7 @@ public class FairSchedulerTestBase {
     RMApp rmApp = new RMAppImpl(attId.getApplicationId(), rmContext, conf,
         null, null, null, ApplicationSubmissionContext.newInstance(null, null,
         null, null, null, false, false, 0, amResource, null), null, null,
-        0, null, null);
+        0, null, null, null);
     rmContext.getRMApps().put(attId.getApplicationId(), rmApp);
     AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
         attId.getApplicationId(), queue, user);

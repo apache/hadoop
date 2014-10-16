@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMaste
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -320,6 +321,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new AMLivelinessMonitor(this.rmDispatcher);
   }
   
+  protected RMNodeLabelsManager createNodeLabelManager() {
+    return new RMNodeLabelsManager();
+  }
+  
   protected DelegationTokenRenewer createDelegationTokenRenewer() {
     return new DelegationTokenRenewer();
   }
@@ -399,6 +404,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
       AMLivelinessMonitor amFinishingMonitor = createAMLivelinessMonitor();
       addService(amFinishingMonitor);
       rmContext.setAMFinishingMonitor(amFinishingMonitor);
+      
+      RMNodeLabelsManager nlm = createNodeLabelManager();
+      addService(nlm);
+      rmContext.setNodeLabelManager(nlm);
 
       boolean isRecoveryEnabled = conf.getBoolean(
           YarnConfiguration.RECOVERY_ENABLED,
@@ -962,7 +971,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * instance of {@link RMActiveServices} and initializes it.
    * @throws Exception
    */
-  void createAndInitActiveServices() throws Exception {
+  protected void createAndInitActiveServices() throws Exception {
     activeServices = new RMActiveServices();
     activeServices.init(conf);
   }

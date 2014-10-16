@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -108,6 +109,10 @@ public interface RMContext {
 
   boolean isWorkPreservingRecoveryEnabled();
   
+  RMNodeLabelsManager getNodeLabelManager();
+  
+  public void setNodeLabelManager(RMNodeLabelsManager mgr);
+
   long getEpoch();
 
   ReservationSystem getReservationSystem();

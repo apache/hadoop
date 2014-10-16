@@ -17,13 +17,16 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
@@ -37,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ReservationRequestsPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
@@ -44,6 +48,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.junit.Assert;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class ReservationSystemTestUtil {
 
@@ -55,6 +61,7 @@ public class ReservationSystemTestUtil {
     return ReservationId.newInstance(rand.nextLong(), rand.nextLong());
   }
 
+  @SuppressWarnings("unchecked")
   public CapacityScheduler mockCapacityScheduler(int numContainers)
       throws IOException {
     // stolen from TestCapacityScheduler
@@ -68,6 +75,29 @@ public class ReservationSystemTestUtil {
             new RMContainerTokenSecretManager(conf),
             new NMTokenSecretManagerInRM(conf),
             new ClientToAMTokenSecretManagerInRM(), null));
+    
+    RMNodeLabelsManager nlm = mock(RMNodeLabelsManager.class);
+    when(
+        nlm.getQueueResource(any(String.class), any(Set.class),
+            any(Resource.class))).thenAnswer(new Answer<Resource>() {
+      @Override
+      public Resource answer(InvocationOnMock invocation) throws Throwable {
+        Object[] args = invocation.getArguments();
+        return (Resource) args[2];
+      }
+    });
+    
+    when(nlm.getResourceByLabel(any(String.class), any(Resource.class)))
+        .thenAnswer(new Answer<Resource>() {
+          @Override
+          public Resource answer(InvocationOnMock invocation) throws Throwable {
+            Object[] args = invocation.getArguments();
+            return (Resource) args[1];
+          }
+        });
+    
+    mockRmContext.setNodeLabelManager(nlm);
+    
     cs.setRMContext(mockRmContext);
     try {
       cs.serviceInit(conf);

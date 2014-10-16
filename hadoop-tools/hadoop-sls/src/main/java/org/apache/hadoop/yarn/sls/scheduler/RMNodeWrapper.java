@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 @Private
 @Unstable
@@ -147,4 +148,8 @@ public class RMNodeWrapper implements RMNode {
     return node.getNodeManagerVersion();
   }
 
+  @Override
+  public Set<String> getNodeLabels() {
+    return null;
+  }
 }
