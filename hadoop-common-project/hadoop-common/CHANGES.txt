@@ -661,7 +661,7 @@ Release 2.6.0 - UNRELEASED
 
   BUG FIXES
 
-    HADOOP-11181. GraphiteSink emits wrong timestamps (Sascha Coenen via raviprak)
+    HADOOP-11182. GraphiteSink emits wrong timestamps (Sascha Coenen via raviprak)
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
     Sivachenko via Colin Patrick McCabe)
