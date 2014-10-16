@@ -596,6 +596,7 @@ public class RegistrySecurity extends AbstractService {
       + " %s required\n"
       // kerberos module
       + " keyTab=\"%s\"\n"
+      + " debug=true\n"
       + " principal=\"%s\"\n"
       + " useKeyTab=true\n"
       + " useTicketCache=false\n"
@@ -621,12 +622,15 @@ public class RegistrySecurity extends AbstractService {
         "invalid context");
     Preconditions.checkArgument(keytab != null && keytab.isFile(),
         "Keytab null or missing: ");
+    String keytabpath = keytab.getAbsolutePath();
+    // fix up for windows; no-op on unix
+    keytabpath =  keytabpath.replace('\\', '/');
     return String.format(
         Locale.ENGLISH,
         JAAS_ENTRY,
         context,
         getKerberosAuthModuleForJVM(),
-        keytab.getAbsolutePath(),
+        keytabpath,
         principal);
   }
 
@@ -846,11 +850,11 @@ public class RegistrySecurity extends AbstractService {
     StringBuilder builder = new StringBuilder();
     builder.append(secureRegistry ? "secure registry; "
                           : "insecure registry; ");
-    builder.append("Access policy: ").append(access);
+    builder.append("Curator service access policy: ").append(access);
 
-    builder.append(", System ACLs: ").append(aclsToString(systemACLs));
-    builder.append(UgiInfo.fromCurrentUser());
-    builder.append(" Kerberos Realm: ").append(kerberosRealm).append(" ; ");
+    builder.append("; System ACLs: ").append(aclsToString(systemACLs));
+    builder.append("User: ").append(UgiInfo.fromCurrentUser());
+    builder.append("; Kerberos Realm: ").append(kerberosRealm);
     builder.append(describeProperty(Environment.JAAS_CONF_KEY));
     String sasl =
         System.getProperty(PROP_ZK_ENABLE_SASL_CLIENT,
@@ -859,7 +863,7 @@ public class RegistrySecurity extends AbstractService {
     builder.append(describeProperty(PROP_ZK_ENABLE_SASL_CLIENT,
         DEFAULT_ZK_ENABLE_SASL_CLIENT));
     if (saslEnabled) {
-      builder.append("JAAS Client Identity")
+      builder.append("; JAAS Client Identity")
              .append("=")
              .append(jaasClientIdentity)
              .append("; ");
