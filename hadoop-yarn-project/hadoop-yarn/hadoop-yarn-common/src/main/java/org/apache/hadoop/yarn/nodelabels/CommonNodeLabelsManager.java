@@ -129,6 +129,7 @@ public class CommonNodeLabelsManager extends AbstractService {
       if (labels != null) {
         c.labels =
             Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+        c.labels.addAll(labels);
       } else {
         c.labels = null;
       }

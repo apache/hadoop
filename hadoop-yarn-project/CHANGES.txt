@@ -553,6 +553,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2628. Capacity scheduler with DominantResourceCalculator carries out
     reservation even though slots are free. (Varun Vasudev via jianhe)
 
+    YARN-2685. Fixed a bug in CommonNodeLabelsManager that caused wrong resource
+    tracking per label when a host runs multiple node-managers. (Wangda Tan via
+    vinodkv)
+
   BREAKDOWN OF YARN-1051 SUBTASKS AND RELATED JIRAS
 
     YARN-1707. Introduce APIs to add/remove/resize queues in the
