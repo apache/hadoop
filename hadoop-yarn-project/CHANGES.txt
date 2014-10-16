@@ -357,6 +357,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2312. Deprecated old ContainerId#getId API and updated MapReduce to
     use ContainerId#getContainerId instead. (Tsuyoshi OZAWA via jianhe)
 
+    YARN-2621. Simplify the output when the user doesn't have the access for
+    getDomain(s). (Zhijie Shen via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

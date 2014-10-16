@@ -361,17 +361,13 @@ public class TimelineDataManager extends AbstractService {
 
   /**
    * Get a single domain of the particular ID. If callerUGI is not the owner
-   * or the admin of the domain, we need to hide the details from him, and
-   * only allow him to see the ID.
+   * or the admin of the domain, null will be returned.
    */
   public TimelineDomain getDomain(String domainId,
       UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineDomain domain = store.getDomain(domainId);
     if (domain != null) {
       if (timelineACLsManager.checkAccess(callerUGI, domain)) {
-        return domain;
-      } else {
-        hideDomainDetails(domain);
         return domain;
       }
     }
@@ -380,34 +376,22 @@ public class TimelineDataManager extends AbstractService {
 
   /**
    * Get all the domains that belong to the given owner. If callerUGI is not
-   * the owner or the admin of the domain, we need to hide the details from
-   * him, and only allow him to see the ID.
+   * the owner or the admin of the domain, empty list is going to be returned.
    */
   public TimelineDomains getDomains(String owner,
       UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineDomains domains = store.getDomains(owner);
     boolean hasAccess = true;
-    boolean isChecked = false;
-    for (TimelineDomain domain : domains.getDomains()) {
-      // The owner for each domain is the same, just need to check on
-      if (!isChecked) {
-        hasAccess = timelineACLsManager.checkAccess(callerUGI, domain);
-        isChecked = true;
-      }
-      if (!hasAccess) {
-        hideDomainDetails(domain);
-      }
+    if (domains.getDomains().size() > 0) {
+      // The owner for each domain is the same, just need to check one
+      hasAccess = timelineACLsManager.checkAccess(
+          callerUGI, domains.getDomains().get(0));
     }
-    return domains;
-  }
-
-  private static void hideDomainDetails(TimelineDomain domain) {
-    domain.setDescription(null);
-    domain.setOwner(null);
-    domain.setReaders(null);
-    domain.setWriters(null);
-    domain.setCreatedTime(null);
-    domain.setModifiedTime(null);
+    if (hasAccess) {
+      return domains;
+    } else {
+      return new TimelineDomains();
+    }
   }
 
   private static boolean extendFields(EnumSet<Field> fieldEnums) {

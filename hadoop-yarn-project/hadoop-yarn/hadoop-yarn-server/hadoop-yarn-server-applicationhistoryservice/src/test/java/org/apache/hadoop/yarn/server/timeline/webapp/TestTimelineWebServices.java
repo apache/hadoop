@@ -807,7 +807,7 @@ public class TestTimelineWebServices extends JerseyTest {
         .get(ClientResponse.class);
     Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     TimelineDomain domain = response.getEntity(TimelineDomain.class);
-    verifyDomain(domain, "domain_id_1", true);
+    verifyDomain(domain, "domain_id_1");
   }
 
   @Test
@@ -823,7 +823,7 @@ public class TestTimelineWebServices extends JerseyTest {
           .get(ClientResponse.class);
       Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       TimelineDomain domain = response.getEntity(TimelineDomain.class);
-      verifyDomain(domain, "domain_id_1", true);
+      verifyDomain(domain, "domain_id_1");
 
       response = r.path("ws").path("v1").path("timeline")
           .path("domain").path("domain_id_1")
@@ -831,8 +831,8 @@ public class TestTimelineWebServices extends JerseyTest {
           .accept(MediaType.APPLICATION_JSON)
           .get(ClientResponse.class);
       Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-      domain = response.getEntity(TimelineDomain.class);
-      verifyDomain(domain, "domain_id_1", false);
+      Assert.assertEquals(ClientResponse.Status.NOT_FOUND,
+          response.getClientResponseStatus());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }
@@ -851,7 +851,7 @@ public class TestTimelineWebServices extends JerseyTest {
     Assert.assertEquals(2, domains.getDomains().size());
     for (int i = 0; i < domains.getDomains().size(); ++i) {
       verifyDomain(domains.getDomains().get(i),
-          i == 0 ? "domain_id_4" : "domain_id_1", true);
+          i == 0 ? "domain_id_4" : "domain_id_1");
     }
   }
 
@@ -871,7 +871,7 @@ public class TestTimelineWebServices extends JerseyTest {
       Assert.assertEquals(2, domains.getDomains().size());
       for (int i = 0; i < domains.getDomains().size(); ++i) {
         verifyDomain(domains.getDomains().get(i),
-            i == 0 ? "domain_id_4" : "domain_id_1", true);
+            i == 0 ? "domain_id_4" : "domain_id_1");
       }
 
       response = r.path("ws").path("v1").path("timeline")
@@ -882,11 +882,7 @@ public class TestTimelineWebServices extends JerseyTest {
           .get(ClientResponse.class);
       Assert.assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       domains = response.getEntity(TimelineDomains.class);
-      Assert.assertEquals(2, domains.getDomains().size());
-      for (int i = 0; i < domains.getDomains().size(); ++i) {
-        verifyDomain(domains.getDomains().get(i),
-            i == 0 ? "domain_id_4" : "domain_id_1", false);
-      }
+      Assert.assertEquals(0, domains.getDomains().size());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }
@@ -978,22 +974,15 @@ public class TestTimelineWebServices extends JerseyTest {
     }
   }
 
-  private static void verifyDomain(TimelineDomain domain,
-      String domainId, boolean hasAccess) {
+  private static void verifyDomain(TimelineDomain domain, String domainId) {
     Assert.assertNotNull(domain);
     Assert.assertEquals(domainId, domain.getId());
     // The specific values have been verified in TestMemoryTimelineStore
-    Assert.assertTrue(hasAccess && domain.getDescription() != null ||
-        !hasAccess && domain.getDescription() == null);
-    Assert.assertTrue(hasAccess && domain.getOwner() != null ||
-        !hasAccess && domain.getOwner() == null);
-    Assert.assertTrue(hasAccess && domain.getReaders() != null ||
-        !hasAccess && domain.getReaders() == null);
-    Assert.assertTrue(hasAccess && domain.getWriters() != null ||
-        !hasAccess && domain.getWriters() == null);
-    Assert.assertTrue(hasAccess && domain.getCreatedTime() != null ||
-        !hasAccess && domain.getCreatedTime() == null);
-    Assert.assertTrue(hasAccess && domain.getModifiedTime() != null ||
-        !hasAccess && domain.getModifiedTime() == null);
+    Assert.assertNotNull(domain.getDescription());
+    Assert.assertNotNull(domain.getOwner());
+    Assert.assertNotNull(domain.getReaders());
+    Assert.assertNotNull(domain.getWriters());
+    Assert.assertNotNull(domain.getCreatedTime());
+    Assert.assertNotNull(domain.getModifiedTime());
   }
 }
