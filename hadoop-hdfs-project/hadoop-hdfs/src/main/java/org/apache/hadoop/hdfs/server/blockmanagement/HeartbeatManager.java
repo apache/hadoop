@@ -192,7 +192,7 @@ class HeartbeatManager implements DatanodeStatistics {
       addDatanode(d);
 
       //update its timestamp
-      d.updateHeartbeat(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0);
+      d.updateHeartbeatState(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0);
     }
   }
 
@@ -242,6 +242,25 @@ class HeartbeatManager implements DatanodeStatistics {
    * While removing dead datanodes, make sure that only one datanode is marked
    * dead at a time within the synchronized section. Otherwise, a cascading
    * effect causes more datanodes to be declared dead.
+   * Check if there are any failed storage and if so,
+   * Remove all the blocks on the storage. It also covers the following less
+   * common scenarios. After DatanodeStorage is marked FAILED, it is still
+   * possible to receive IBR for this storage.
+   * 1) DN could deliver IBR for failed storage due to its implementation.
+   *    a) DN queues a pending IBR request.
+   *    b) The storage of the block fails.
+   *    c) DN first sends HB, NN will mark the storage FAILED.
+   *    d) DN then sends the pending IBR request.
+   * 2) SBN processes block request from pendingDNMessages.
+   *    It is possible to have messages in pendingDNMessages that refer
+   *    to some failed storage.
+   *    a) SBN receives a IBR and put it in pendingDNMessages.
+   *    b) The storage of the block fails.
+   *    c) Edit log replay get the IBR from pendingDNMessages.
+   * Alternatively, we can resolve these scenarios with the following approaches.
+   * A. Make sure DN don't deliver IBR for failed storage.
+   * B. Remove all blocks in PendingDataNodeMessages for the failed storage
+   *    when we remove all blocks from BlocksMap for that storage.
    */
   void heartbeatCheck() {
     final DatanodeManager dm = blockManager.getDatanodeManager();
@@ -254,6 +273,10 @@ class HeartbeatManager implements DatanodeStatistics {
     while (!allAlive) {
       // locate the first dead node.
       DatanodeID dead = null;
+
+      // locate the first failed storage that isn't on a dead node.
+      DatanodeStorageInfo failedStorage = null;
+
       // check the number of stale nodes
       int numOfStaleNodes = 0;
       int numOfStaleStorages = 0;
@@ -271,7 +294,14 @@ class HeartbeatManager implements DatanodeStatistics {
             if (storageInfo.areBlockContentsStale()) {
               numOfStaleStorages++;
             }
+
+            if (failedStorage == null &&
+                storageInfo.areBlocksOnFailedStorage() &&
+                d != dead) {
+              failedStorage = storageInfo;
+            }
           }
+
         }
         
         // Set the number of stale nodes in the DatanodeManager
@@ -279,8 +309,8 @@ class HeartbeatManager implements DatanodeStatistics {
         dm.setNumStaleStorages(numOfStaleStorages);
       }
 
-      allAlive = dead == null;
-      if (!allAlive) {
+      allAlive = dead == null && failedStorage == null;
+      if (dead != null) {
         // acquire the fsnamesystem lock, and then remove the dead node.
         namesystem.writeLock();
         try {
@@ -289,6 +319,20 @@ class HeartbeatManager implements DatanodeStatistics {
           }
           synchronized(this) {
             dm.removeDeadDatanode(dead);
+          }
+        } finally {
+          namesystem.writeUnlock();
+        }
+      }
+      if (failedStorage != null) {
+        // acquire the fsnamesystem lock, and remove blocks on the storage.
+        namesystem.writeLock();
+        try {
+          if (namesystem.isInStartupSafeMode()) {
+            return;
+          }
+          synchronized(this) {
+            blockManager.removeBlocksAssociatedTo(failedStorage);
           }
         } finally {
           namesystem.writeUnlock();
