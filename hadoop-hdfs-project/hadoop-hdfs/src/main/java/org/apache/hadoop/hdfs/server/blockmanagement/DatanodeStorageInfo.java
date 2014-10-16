@@ -182,7 +182,15 @@ public class DatanodeStorageInfo {
   State getState() {
     return this.state;
   }
-  
+
+  void setState(State state) {
+    this.state = state;
+  }
+
+  boolean areBlocksOnFailedStorage() {
+    return getState() == State.FAILED && numBlocks != 0;
+  }
+
   String getStorageID() {
     return storageID;
   }

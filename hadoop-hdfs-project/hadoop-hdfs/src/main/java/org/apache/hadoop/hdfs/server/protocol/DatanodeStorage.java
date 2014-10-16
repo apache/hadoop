@@ -39,7 +39,9 @@ public class DatanodeStorage {
      * property should be used for debugging purposes only.
      * </p> 
      */
-    READ_ONLY_SHARED;
+    READ_ONLY_SHARED,
+
+    FAILED;
   }
   
   private final String storageID;

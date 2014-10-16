@@ -724,6 +724,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       logNodeIsNotChosen(storage, "storage is read-only");
       return false;
     }
+
+    if (storage.getState() == State.FAILED) {
+      logNodeIsNotChosen(storage, "storage has failed");
+      return false;
+    }
+
     DatanodeDescriptor node = storage.getDatanodeDescriptor();
     // check if the node is (being) decommissioned
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
