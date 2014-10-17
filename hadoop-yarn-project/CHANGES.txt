@@ -294,6 +294,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2621. Simplify the output when the user doesn't have the access for
     getDomain(s). (Zhijie Shen via jianhe)
 
+    YARN-1879. Marked Idempotent/AtMostOnce annotations to ApplicationMasterProtocol
+    for RM fail over. (Tsuyoshi OZAWA via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
