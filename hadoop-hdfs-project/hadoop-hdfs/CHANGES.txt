@@ -402,6 +402,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7242. Code improvement for FSN#checkUnreadableBySuperuser.
     (Yi Liu via vinayakumarb)
 
+    HDFS-7252. small refinement to the use of isInAnEZ in FSNamesystem.
+    (Yi Liu via vinayakumarb)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
