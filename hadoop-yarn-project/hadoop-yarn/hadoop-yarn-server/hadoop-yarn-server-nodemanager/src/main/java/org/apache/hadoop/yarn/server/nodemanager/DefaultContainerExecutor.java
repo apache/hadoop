@@ -462,11 +462,6 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    * $logdir/$user/$appId */
   static final short LOGDIR_PERM = (short)0710;
 
-  protected Path getFirstApplicationDir(List<String> localDirs, String user,
-      String appId) {
-    return getApplicationDir(new Path(localDirs.get(0)), user, appId);
-  }
-
   private long getDiskFreeSpace(Path base) throws IOException {
     return lfs.getFsStatus(base).getRemaining();
   }
@@ -489,7 +484,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         ContainerLocalizer.FILECACHE);
   }
 
-  private Path getWorkingDir(List<String> localDirs, String user,
+  protected Path getWorkingDir(List<String> localDirs, String user,
       String appId) throws IOException {
     Path appStorageDir = null;
     long totalAvailable = 0L;
