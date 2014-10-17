@@ -597,6 +597,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11181. Generalized o.a.h.s.t.d.DelegationTokenManager to handle all
     sub-classes of AbstractDelegationTokenIdentifier. (zjshen)
 
+    HADOOP-11207. Enhanced common DelegationTokenAuthenticationHandler to support
+    proxy-users on Delegation-token management operations. (Zhijie Shen via
+    vinodkv)
 
   OPTIMIZATIONS
 

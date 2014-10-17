@@ -333,6 +333,7 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
    * supported.
    * @param token the authentication token being used for the user where the
    * Delegation token will be stored.
+   * @param renewer the renewer user.
    * @return a delegation token.
    * @throws IOException if an IO error occurred.
    * @throws AuthenticationException if an authentication exception occurred.
@@ -340,12 +341,32 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
   public org.apache.hadoop.security.token.Token<AbstractDelegationTokenIdentifier>
       getDelegationToken(URL url, Token token, String renewer)
           throws IOException, AuthenticationException {
+    return getDelegationToken(url, token, renewer, null);
+  }
+
+  /**
+   * Requests a delegation token using the configured <code>Authenticator</code>
+   * for authentication.
+   *
+   * @param url the URL to get the delegation token from. Only HTTP/S URLs are
+   * supported.
+   * @param token the authentication token being used for the user where the
+   * Delegation token will be stored.
+   * @param renewer the renewer user.
+   * @param doAsUser the user to do as, which will be the token owner.
+   * @return a delegation token.
+   * @throws IOException if an IO error occurred.
+   * @throws AuthenticationException if an authentication exception occurred.
+   */
+  public org.apache.hadoop.security.token.Token<AbstractDelegationTokenIdentifier>
+      getDelegationToken(URL url, Token token, String renewer, String doAsUser)
+          throws IOException, AuthenticationException {
     Preconditions.checkNotNull(url, "url");
     Preconditions.checkNotNull(token, "token");
     try {
       token.delegationToken =
           ((KerberosDelegationTokenAuthenticator) getAuthenticator()).
-              getDelegationToken(url, token, renewer);
+              getDelegationToken(url, token, renewer, doAsUser);
       return token.delegationToken;
     } catch (IOException ex) {
       token.delegationToken = null;
@@ -365,13 +386,29 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
    */
   public long renewDelegationToken(URL url, Token token)
       throws IOException, AuthenticationException {
+    return renewDelegationToken(url, token, null);
+  }
+
+  /**
+   * Renews a delegation token from the server end-point using the
+   * configured <code>Authenticator</code> for authentication.
+   *
+   * @param url the URL to renew the delegation token from. Only HTTP/S URLs are
+   * supported.
+   * @param token the authentication token with the Delegation Token to renew.
+   * @param doAsUser the user to do as, which will be the token owner.
+   * @throws IOException if an IO error occurred.
+   * @throws AuthenticationException if an authentication exception occurred.
+   */
+  public long renewDelegationToken(URL url, Token token, String doAsUser)
+      throws IOException, AuthenticationException {
     Preconditions.checkNotNull(url, "url");
     Preconditions.checkNotNull(token, "token");
     Preconditions.checkNotNull(token.delegationToken,
         "No delegation token available");
     try {
       return ((KerberosDelegationTokenAuthenticator) getAuthenticator()).
-          renewDelegationToken(url, token, token.delegationToken);
+          renewDelegationToken(url, token, token.delegationToken, doAsUser);
     } catch (IOException ex) {
       token.delegationToken = null;
       throw ex;
@@ -389,13 +426,28 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
    */
   public void cancelDelegationToken(URL url, Token token)
       throws IOException {
+    cancelDelegationToken(url, token, null);
+  }
+
+  /**
+   * Cancels a delegation token from the server end-point. It does not require
+   * being authenticated by the configured <code>Authenticator</code>.
+   *
+   * @param url the URL to cancel the delegation token from. Only HTTP/S URLs
+   * are supported.
+   * @param token the authentication token with the Delegation Token to cancel.
+   * @param doAsUser the user to do as, which will be the token owner.
+   * @throws IOException if an IO error occurred.
+   */
+  public void cancelDelegationToken(URL url, Token token, String doAsUser)
+      throws IOException {
     Preconditions.checkNotNull(url, "url");
     Preconditions.checkNotNull(token, "token");
     Preconditions.checkNotNull(token.delegationToken,
         "No delegation token available");
     try {
       ((KerberosDelegationTokenAuthenticator) getAuthenticator()).
-          cancelDelegationToken(url, token, token.delegationToken);
+          cancelDelegationToken(url, token, token.delegationToken, doAsUser);
     } finally {
       token.delegationToken = null;
     }
