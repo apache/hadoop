@@ -594,6 +594,9 @@ Release 2.6.0 - UNRELEASED
     tracking per label when a host runs multiple node-managers. (Wangda Tan via
     vinodkv)
 
+    YARN-2699. Fixed a bug in CommonNodeLabelsManager that caused tests to fail
+    when using ephemeral ports on NodeIDs. (Wangda Tan via vinodkv)
+
   BREAKDOWN OF YARN-1051 SUBTASKS AND RELATED JIRAS
 
     YARN-1707. Introduce APIs to add/remove/resize queues in the
