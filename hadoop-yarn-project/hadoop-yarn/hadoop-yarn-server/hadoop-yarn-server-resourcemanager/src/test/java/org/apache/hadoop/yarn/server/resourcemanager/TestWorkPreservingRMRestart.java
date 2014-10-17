@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -668,6 +670,9 @@ public class TestWorkPreservingRMRestart {
     // create app and launch the AM
     RMApp app0 = rm1.submitApp(200);
     MockAM am0 = MockRM.launchAM(app0, rm1, nm1);
+    // Issuing registerAppAttempt() before and after RM restart to confirm
+    // registerApplicationMaster() is idempotent.
+    am0.registerAppAttempt();
 
     // start new RM
     rm2 = new MockRM(conf, memStore);
@@ -676,6 +681,7 @@ public class TestWorkPreservingRMRestart {
     rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.LAUNCHED);
 
     am0.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());
+    // retry registerApplicationMaster() after RM restart.
     am0.registerAppAttempt(true);
 
     rm2.waitForState(app0.getApplicationId(), RMAppState.RUNNING);
@@ -897,4 +903,44 @@ public class TestWorkPreservingRMRestart {
       Thread.sleep(500);
     }
   }
+
+  /**
+   * Testing to confirm that retried finishApplicationMaster() doesn't throw
+   * InvalidApplicationMasterRequest before and after RM restart.
+   */
+  @Test (timeout = 20000)
+  public void testRetriedFinishApplicationMasterRequest()
+      throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    // start RM
+    rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create app and launch the AM
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = MockRM.launchAM(app0, rm1, nm1);
+
+    am0.registerAppAttempt();
+
+    // Emulating following a scenario:
+    // RM1 saves the app in RMStateStore and then crashes,
+    // FinishApplicationMasterResponse#isRegistered still return false,
+    // so AM still retry the 2nd RM
+    MockRM.finishAMAndVerifyAppState(app0, rm1, nm1, am0);
+
+
+    // start new RM
+    rm2 = new MockRM(conf, memStore);
+    rm2.start();
+
+    am0.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());
+    am0.unregisterAppAttempt(false);
+  }
+
 }

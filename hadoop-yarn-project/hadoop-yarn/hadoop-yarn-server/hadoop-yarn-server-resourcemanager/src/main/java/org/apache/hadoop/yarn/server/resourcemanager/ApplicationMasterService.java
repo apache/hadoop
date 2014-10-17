@@ -343,6 +343,15 @@ public class ApplicationMasterService extends AbstractService implements
         authorizeRequest().getApplicationAttemptId();
     ApplicationId appId = applicationAttemptId.getApplicationId();
 
+    RMApp rmApp =
+        rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
+    // checking whether the app exits in RMStateStore at first not to throw
+    // ApplicationDoesNotExistInCacheException before and after
+    // RM work-preserving restart.
+    if (rmApp.isAppFinalStateStored()) {
+      return FinishApplicationMasterResponse.newInstance(true);
+    }
+
     AllocateResponseLock lock = responseMap.get(applicationAttemptId);
     if (lock == null) {
       throwApplicationDoesNotExistInCacheException(applicationAttemptId);
@@ -365,13 +374,6 @@ public class ApplicationMasterService extends AbstractService implements
       }
 
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);
-
-      RMApp rmApp =
-          rmContext.getRMApps().get(appId);
-
-      if (rmApp.isAppFinalStateStored()) {
-        return FinishApplicationMasterResponse.newInstance(true);
-      }
 
       rmContext.getDispatcher().getEventHandler().handle(
           new RMAppAttemptUnregistrationEvent(applicationAttemptId, request
