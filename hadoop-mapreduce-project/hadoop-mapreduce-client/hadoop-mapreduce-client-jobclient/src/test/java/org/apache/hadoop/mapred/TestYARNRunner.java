@@ -86,6 +86,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -186,6 +187,16 @@ public class TestYARNRunner extends TestCase {
     when(clientDelegate.getJobStatus(any(JobID.class))).thenReturn(new
         org.apache.hadoop.mapreduce.JobStatus(jobId, 0f, 0f, 0f, 0f,
             State.RUNNING, JobPriority.HIGH, "tmp", "tmp", "tmp", "tmp"));
+    yarnRunner.killJob(jobId);
+    verify(clientDelegate).killJob(jobId);
+
+    when(clientDelegate.getJobStatus(any(JobID.class))).thenReturn(null);
+    when(resourceMgrDelegate.getApplicationReport(any(ApplicationId.class)))
+        .thenReturn(
+            ApplicationReport.newInstance(appId, null, "tmp", "tmp", "tmp",
+                "tmp", 0, null, YarnApplicationState.FINISHED, "tmp", "tmp",
+                0l, 0l, FinalApplicationStatus.SUCCEEDED, null, null, 0f,
+                "tmp", null));
     yarnRunner.killJob(jobId);
     verify(clientDelegate).killJob(jobId);
   }
