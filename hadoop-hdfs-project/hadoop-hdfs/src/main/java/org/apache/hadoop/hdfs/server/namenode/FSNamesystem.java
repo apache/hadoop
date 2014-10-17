@@ -2561,11 +2561,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         src = resolvePath(src, pathComponents);
         INodesInPath iip = dir.getINodesInPath4Write(src);
         // Nothing to do if the path is not within an EZ
-        if (dir.isInAnEZ(iip)) {
-          EncryptionZone zone = dir.getEZForPath(iip);
+        final EncryptionZone zone = dir.getEZForPath(iip);
+        if (zone != null) {
           protocolVersion = chooseProtocolVersion(zone, supportedVersions);
           suite = zone.getSuite();
-          ezKeyName = dir.getKeyName(iip);
+          ezKeyName = zone.getKeyName();
 
           Preconditions.checkNotNull(protocolVersion);
           Preconditions.checkNotNull(suite);
@@ -2648,14 +2648,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     FileEncryptionInfo feInfo = null;
-    if (dir.isInAnEZ(iip)) {
+
+    final EncryptionZone zone = dir.getEZForPath(iip);
+    if (zone != null) {
       // The path is now within an EZ, but we're missing encryption parameters
       if (suite == null || edek == null) {
         throw new RetryStartFileException();
       }
       // Path is within an EZ and we have provided encryption parameters.
       // Make sure that the generated EDEK matches the settings of the EZ.
-      String ezKeyName = dir.getKeyName(iip);
+      final String ezKeyName = zone.getKeyName();
       if (!ezKeyName.equals(edek.getEncryptionKeyName())) {
         throw new RetryStartFileException();
       }
