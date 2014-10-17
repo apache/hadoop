@@ -96,6 +96,14 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     Assert.assertEquals(mgr.getResourceByLabel(RMNodeLabelsManager.NO_LABEL, null),
         Resources.add(SMALL_RESOURCE, LARGE_NODE));
   }
+  
+  @Test(timeout = 5000)
+  public void testActivateNodeManagerWithZeroPort() throws Exception {
+    // active two NM, one is zero port , another is non-zero port. no exception
+    // should be raised
+    mgr.activateNode(NodeId.newInstance("n1", 0), SMALL_RESOURCE);
+    mgr.activateNode(NodeId.newInstance("n1", 2), LARGE_NODE);
+  }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   @Test(timeout = 5000)
