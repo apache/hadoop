@@ -677,6 +677,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2566. DefaultContainerExecutor should pick a working directory randomly. 
     (Zhihai Xu via kasha)
 
+    YARN-2588. Standby RM fails to transitionToActive if previous
+    transitionToActive failed with ZK exception. (Rohith Sharmaks via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
