@@ -52,6 +52,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
@@ -648,6 +651,16 @@ public class TestWebDelegationToken {
           "token-kind");
       return conf;
     }
+
+    @Override
+    protected org.apache.hadoop.conf.Configuration getProxyuserConfiguration(
+        FilterConfig filterConfig) throws ServletException {
+      org.apache.hadoop.conf.Configuration conf =
+          new org.apache.hadoop.conf.Configuration(false);
+      conf.set("proxyuser.client.users", OK_USER);
+      conf.set("proxyuser.client.hosts", "localhost");
+      return conf;
+    }
   }
 
   private static class KerberosConfiguration extends Configuration {
@@ -713,6 +726,19 @@ public class TestWebDelegationToken {
 
   @Test
   public void testKerberosDelegationTokenAuthenticator() throws Exception {
+    testKerberosDelegationTokenAuthenticator(false);
+  }
+
+  @Test
+  public void testKerberosDelegationTokenAuthenticatorWithDoAs()
+      throws Exception {
+    testKerberosDelegationTokenAuthenticator(true);
+  }
+
+  private void testKerberosDelegationTokenAuthenticator(
+      final boolean doAs) throws Exception {
+    final String doAsUser = doAs ? OK_USER : null;
+
     // setting hadoop security to kerberos
     org.apache.hadoop.conf.Configuration conf =
         new org.apache.hadoop.conf.Configuration();
@@ -742,7 +768,7 @@ public class TestWebDelegationToken {
       final URL url = new URL(getJettyURL() + "/foo/bar");
 
       try {
-        aUrl.getDelegationToken(url, token, FOO_USER);
+        aUrl.getDelegationToken(url, token, FOO_USER, doAsUser);
         Assert.fail();
       } catch (AuthenticationException ex) {
         Assert.assertTrue(ex.getMessage().contains("GSSException"));
@@ -752,25 +778,41 @@ public class TestWebDelegationToken {
           new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-              aUrl.getDelegationToken(url, token, "client");
+              aUrl.getDelegationToken(
+                  url, token, doAs ? doAsUser : "client", doAsUser);
+              Assert.assertNotNull(token.getDelegationToken());
+              Assert.assertEquals(new Text("token-kind"),
+                  token.getDelegationToken().getKind());
+              // Make sure the token belongs to the right owner
+              ByteArrayInputStream buf = new ByteArrayInputStream(
+                  token.getDelegationToken().getIdentifier());
+              DataInputStream dis = new DataInputStream(buf);
+              DelegationTokenIdentifier id =
+                  new DelegationTokenIdentifier(new Text("token-kind"));
+              id.readFields(dis);
+              dis.close();
+              Assert.assertEquals(
+                  doAs ? new Text(OK_USER) : new Text("client"), id.getOwner());
+              if (doAs) {
+                Assert.assertEquals(new Text("client"), id.getRealUser());
+              }
+
+              aUrl.renewDelegationToken(url, token, doAsUser);
               Assert.assertNotNull(token.getDelegationToken());
 
-              aUrl.renewDelegationToken(url, token);
-              Assert.assertNotNull(token.getDelegationToken());
-
-              aUrl.getDelegationToken(url, token, FOO_USER);
+              aUrl.getDelegationToken(url, token, FOO_USER, doAsUser);
               Assert.assertNotNull(token.getDelegationToken());
 
               try {
-                aUrl.renewDelegationToken(url, token);
+                aUrl.renewDelegationToken(url, token, doAsUser);
                 Assert.fail();
               } catch (Exception ex) {
                 Assert.assertTrue(ex.getMessage().contains("403"));
               }
 
-              aUrl.getDelegationToken(url, token, FOO_USER);
+              aUrl.getDelegationToken(url, token, FOO_USER, doAsUser);
 
-              aUrl.cancelDelegationToken(url, token);
+              aUrl.cancelDelegationToken(url, token, doAsUser);
               Assert.assertNull(token.getDelegationToken());
 
               return null;
