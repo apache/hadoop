@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -51,6 +52,7 @@ public class MockAM {
   private final ApplicationAttemptId attemptId;
   private RMContext context;
   private ApplicationMasterProtocol amRMProtocol;
+  private UserGroupInformation ugi;
 
   private final List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
   private final List<ContainerId> releases = new ArrayList<ContainerId>();
@@ -101,15 +103,18 @@ public class MockAM {
     req.setHost("");
     req.setRpcPort(1);
     req.setTrackingUrl("");
-    UserGroupInformation ugi =
-        UserGroupInformation.createRemoteUser(attemptId.toString());
-    Token<AMRMTokenIdentifier> token =
-        context.getRMApps().get(attemptId.getApplicationId())
-          .getRMAppAttempt(attemptId).getAMRMToken();
-    ugi.addTokenIdentifier(token.decodeIdentifier());
+    if (ugi == null) {
+      ugi = UserGroupInformation.createRemoteUser(
+          attemptId.toString());
+      Token<AMRMTokenIdentifier> token =
+          context.getRMApps().get(attemptId.getApplicationId())
+              .getRMAppAttempt(attemptId).getAMRMToken();
+      ugi.addTokenIdentifier(token.decodeIdentifier());
+    }
     try {
       return ugi
-        .doAs(new PrivilegedExceptionAction<RegisterApplicationMasterResponse>() {
+        .doAs(
+            new PrivilegedExceptionAction<RegisterApplicationMasterResponse>() {
           @Override
           public RegisterApplicationMasterResponse run() throws Exception {
             return amRMProtocol.registerApplicationMaster(req);
@@ -245,10 +250,15 @@ public class MockAM {
 
   public void unregisterAppAttempt() throws Exception {
     waitForState(RMAppAttemptState.RUNNING);
+    unregisterAppAttempt(true);
+  }
+
+  public void unregisterAppAttempt(boolean waitForStateRunning)
+      throws Exception {
     final FinishApplicationMasterRequest req =
         FinishApplicationMasterRequest.newInstance(
-          FinalApplicationStatus.SUCCEEDED, "", "");
-    unregisterAppAttempt(req,true);
+            FinalApplicationStatus.SUCCEEDED, "", "");
+    unregisterAppAttempt(req, waitForStateRunning);
   }
 
   public void unregisterAppAttempt(final FinishApplicationMasterRequest req,
@@ -256,19 +266,25 @@ public class MockAM {
     if (waitForStateRunning) {
       waitForState(RMAppAttemptState.RUNNING);
     }
-    UserGroupInformation ugi =
-        UserGroupInformation.createRemoteUser(attemptId.toString());
-    Token<AMRMTokenIdentifier> token =
-        context.getRMApps().get(attemptId.getApplicationId())
-            .getRMAppAttempt(attemptId).getAMRMToken();
-    ugi.addTokenIdentifier(token.decodeIdentifier());
-    ugi.doAs(new PrivilegedExceptionAction<Object>() {
-      @Override
-      public Object run() throws Exception {
-        amRMProtocol.finishApplicationMaster(req);
-        return null;
-      }
-    });
+    if (ugi == null) {
+      ugi =  UserGroupInformation.createRemoteUser(attemptId.toString());
+      Token<AMRMTokenIdentifier> token =
+          context.getRMApps()
+              .get(attemptId.getApplicationId())
+              .getRMAppAttempt(attemptId).getAMRMToken();
+      ugi.addTokenIdentifier(token.decodeIdentifier());
+    }
+    try {
+      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          amRMProtocol.finishApplicationMaster(req);
+          return null;
+        }
+      });
+    } catch (UndeclaredThrowableException e) {
+      throw (Exception) e.getCause();
+    }
   }
 
   public ApplicationAttemptId getApplicationAttemptId() {
