@@ -23,6 +23,10 @@ Release 2.7.0 - UNRELEASED
     YARN-2641. Decommission nodes on -refreshNodes instead of next 
     NM-RM heartbeat. (Zhihai Xu via kasha)
 
+    YARN-2682. Updated WindowsSecureContainerExecutor to not use
+    DefaultContainerExecutor#getFirstApplicationDir and use getWorkingDir()
+    instead. (Zhihai Xu via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -329,10 +333,6 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2621. Simplify the output when the user doesn't have the access for
     getDomain(s). (Zhijie Shen via jianhe)
-
-    YARN-2682. Updated WindowsSecureContainerExecutor to not use
-    DefaultContainerExecutor#getFirstApplicationDir and use getWorkingDir()
-    instead. (Zhihai Xu via jianhe) 
 
   OPTIMIZATIONS
 
