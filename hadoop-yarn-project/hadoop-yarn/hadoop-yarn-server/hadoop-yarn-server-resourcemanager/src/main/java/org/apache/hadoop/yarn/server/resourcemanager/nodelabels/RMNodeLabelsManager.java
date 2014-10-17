@@ -181,7 +181,15 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       // save if we have a node before
       Map<String, Host> before = cloneNodeMap(ImmutableSet.of(nodeId));
       
-      createNodeIfNonExisted(nodeId);
+      createHostIfNonExisted(nodeId.getHost());
+      try {
+        createNodeIfNonExisted(nodeId);
+      } catch (IOException e) {
+        LOG.error("This shouldn't happen, cannot get host in nodeCollection"
+            + " associated to the node being activated");
+        return;
+      }
+
       Node nm = getNMInNodeSet(nodeId);
       nm.resource = resource;
       nm.running = true;
@@ -220,7 +228,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
     }
   }
 
-  public void updateNodeResource(NodeId node, Resource newResource) {
+  public void updateNodeResource(NodeId node, Resource newResource) throws IOException {
     deactivateNode(node);
     activateNode(node, newResource);
   }
