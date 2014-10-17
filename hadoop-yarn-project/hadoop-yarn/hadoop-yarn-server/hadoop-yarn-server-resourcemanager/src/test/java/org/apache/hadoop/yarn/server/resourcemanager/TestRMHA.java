@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -396,6 +397,57 @@ public class TestRMHA {
     configuration.clear();
     setUp();
     innerTestHAWithRMHostName(true);
+  }
+
+  @Test(timeout = 30000)
+  public void testFailoverWhenTransitionToActiveThrowException()
+      throws Exception {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    Configuration conf = new YarnConfiguration(configuration);
+
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      int count = 0;
+
+      @Override
+      public synchronized void startInternal() throws Exception {
+        // first time throw exception
+        if (count++ == 0) {
+          throw new Exception("Session Expired");
+        }
+      }
+    };
+    // start RM
+    memStore.init(conf);
+
+    rm = new MockRM(conf, memStore);
+    rm.init(conf);
+    StateChangeRequestInfo requestInfo =
+        new StateChangeRequestInfo(
+            HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+
+    assertEquals(STATE_ERR, HAServiceState.INITIALIZING, rm.adminService
+        .getServiceStatus().getState());
+    assertFalse("RM is ready to become active before being started",
+        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    checkMonitorHealth();
+
+    rm.start();
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    // 2. Try Transition to active, throw exception
+    try {
+      rm.adminService.transitionToActive(requestInfo);
+      Assert.fail("Transitioned to Active should throw exception.");
+    } catch (Exception e) {
+      assertTrue("Error when transitioning to Active mode".contains(e
+          .getMessage()));
+    }
+
+    // 3. Transition to active, success
+    rm.adminService.transitionToActive(requestInfo);
+    checkMonitorHealth();
+    checkActiveRMFunctionality();
   }
 
   public void innerTestHAWithRMHostName(boolean includeBindHost) {
