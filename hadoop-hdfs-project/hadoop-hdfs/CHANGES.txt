@@ -399,6 +399,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7190. Bad use of Preconditions in startFileInternal().
     (Dawson Choong via wheat9)
 
+    HDFS-7242. Code improvement for FSN#checkUnreadableBySuperuser.
+    (Yi Liu via vinayakumarb)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
