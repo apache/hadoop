@@ -115,9 +115,8 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
      createUserCacheDirs(localDirs, user);
      createAppDirs(localDirs, user, appId);
      createAppLogDirs(appId, logDirs, user);
-     
-     // TODO: Why pick first app dir. The same in LCE why not random?
-     Path appStorageDir = getFirstApplicationDir(localDirs, user, appId);
+
+     Path appStorageDir = getWorkingDir(localDirs, user, appId);
 
      String tokenFn = String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId);
      Path tokenDst = new Path(appStorageDir, tokenFn);
