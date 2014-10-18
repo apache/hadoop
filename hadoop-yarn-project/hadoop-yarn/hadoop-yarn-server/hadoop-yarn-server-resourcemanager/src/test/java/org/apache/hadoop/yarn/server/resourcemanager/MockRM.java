@@ -59,7 +59,7 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.DummyRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.MemoryRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -115,7 +115,7 @@ public class MockRM extends ResourceManager {
   
   @Override
   protected RMNodeLabelsManager createNodeLabelManager() {
-    RMNodeLabelsManager mgr = new DummyRMNodeLabelsManager();
+    RMNodeLabelsManager mgr = new MemoryRMNodeLabelsManager();
     mgr.init(getConfig());
     return mgr;
   }

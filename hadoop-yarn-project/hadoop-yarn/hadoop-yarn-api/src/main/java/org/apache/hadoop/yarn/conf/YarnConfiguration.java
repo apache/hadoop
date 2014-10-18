@@ -1457,10 +1457,16 @@ public class YarnConfiguration extends Configuration {
   
   public static final String NODE_LABELS_PREFIX = YARN_PREFIX + "node-labels.";
 
+  /**
+   * Class for RMNodeLabelsManager Please note this value should be consistent
+   * in client nodes and RM node(s)
+   */
+  public static final String RM_NODE_LABELS_MANAGER_CLASS = NODE_LABELS_PREFIX
+      + "manager-class";
+  
   /** URI for NodeLabelManager */
-  public static final String FS_NODE_LABELS_STORE_URI = NODE_LABELS_PREFIX
-      + "fs-store.uri";
-  public static final String DEFAULT_FS_NODE_LABELS_STORE_URI = "file:///tmp/";
+  public static final String FS_NODE_LABELS_STORE_ROOT_DIR = NODE_LABELS_PREFIX
+      + "fs-store.root-dir";
   public static final String FS_NODE_LABELS_STORE_RETRY_POLICY_SPEC =
       NODE_LABELS_PREFIX + "fs-store.retry-policy-spec";
   public static final String DEFAULT_FS_NODE_LABELS_STORE_RETRY_POLICY_SPEC =

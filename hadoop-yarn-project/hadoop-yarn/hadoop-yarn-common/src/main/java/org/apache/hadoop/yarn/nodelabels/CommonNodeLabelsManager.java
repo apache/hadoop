@@ -220,9 +220,11 @@ public class CommonNodeLabelsManager extends AbstractService {
     // service init, we don't want to trigger any event handling at that time.
     initDispatcher(getConfig());
 
-    dispatcher.register(NodeLabelsStoreEventType.class,
-        new ForwardingEventHandler());
-
+    if (null != dispatcher) {
+      dispatcher.register(NodeLabelsStoreEventType.class,
+          new ForwardingEventHandler());
+    }
+    
     startDispatcher();
   }
   
