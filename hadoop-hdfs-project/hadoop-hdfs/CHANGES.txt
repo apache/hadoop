@@ -971,6 +971,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-5089. When a LayoutVersion support SNAPSHOT, it must support
     FSIMAGE_NAME_OPTIMIZATION.  (szetszwo)
 
+    HDFS-7260. Change DFSOutputStream.MAX_PACKETS to be configurable. (szetszwo)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
