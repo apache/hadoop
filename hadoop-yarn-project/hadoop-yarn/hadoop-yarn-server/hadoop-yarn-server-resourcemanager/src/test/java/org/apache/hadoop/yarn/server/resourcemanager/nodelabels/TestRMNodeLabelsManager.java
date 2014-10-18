@@ -42,11 +42,11 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
   private final Resource SMALL_RESOURCE = Resource.newInstance(100, 0);
   private final Resource LARGE_NODE = Resource.newInstance(1000, 0);
   
-  DummyRMNodeLabelsManager mgr = null;
+  MemoryRMNodeLabelsManager mgr = null;
 
   @Before
   public void before() {
-    mgr = new DummyRMNodeLabelsManager();
+    mgr = new MemoryRMNodeLabelsManager();
     mgr.init(new Configuration());
     mgr.start();
   }

@@ -67,7 +67,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     tempDir.delete();
     tempDir.mkdirs();
     tempDir.deleteOnExit();
-    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_URI,
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR,
         tempDir.getAbsolutePath());
     mgr.init(conf);
     mgr.start();
@@ -75,7 +75,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
 
   @After
   public void after() throws IOException {
-    getStore().fs.delete(getStore().rootDirPath, true);
+    getStore().fs.delete(getStore().fsWorkingPath, true);
     mgr.stop();
   }
 

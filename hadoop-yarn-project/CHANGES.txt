@@ -530,6 +530,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2699. Fixed a bug in CommonNodeLabelsManager that caused tests to fail
     when using ephemeral ports on NodeIDs. (Wangda Tan via vinodkv)
 
+    YARN-2705. Fixed bugs in ResourceManager node-label manager that were causing
+    test-failures: added a dummy in-memory labels-manager. (Wangda Tan via
+    vinodkv)
+
   BREAKDOWN OF YARN-1051 SUBTASKS AND RELATED JIRAS
 
     YARN-1707. Introduce APIs to add/remove/resize queues in the

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.AddToClusterNodeLabelsRequestProto;
@@ -54,7 +55,7 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
 
   protected static final Log LOG = LogFactory.getLog(FileSystemNodeLabelsStore.class);
 
-  protected static final String ROOT_DIR_NAME = "FSNodeLabelManagerRoot";
+  protected static final String DEFAULT_DIR_NAME = "node-labels";
   protected static final String MIRROR_FILENAME = "nodelabel.mirror";
   protected static final String EDITLOG_FILENAME = "nodelabel.editlog";
   
@@ -63,22 +64,27 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
   }
 
   Path fsWorkingPath;
-  Path rootDirPath;
   FileSystem fs;
   FSDataOutputStream editlogOs;
   Path editLogPath;
+  
+  private String getDefaultFSNodeLabelsRootDir() throws IOException {
+    // default is in local: /tmp/hadoop-yarn-${user}/node-labels/
+    return "file:///tmp/hadoop-yarn-"
+        + UserGroupInformation.getCurrentUser().getShortUserName() + "/"
+        + DEFAULT_DIR_NAME;
+  }
 
   @Override
   public void init(Configuration conf) throws Exception {
     fsWorkingPath =
-        new Path(conf.get(YarnConfiguration.FS_NODE_LABELS_STORE_URI,
-            YarnConfiguration.DEFAULT_FS_NODE_LABELS_STORE_URI));
-    rootDirPath = new Path(fsWorkingPath, ROOT_DIR_NAME);
+        new Path(conf.get(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR,
+            getDefaultFSNodeLabelsRootDir()));
 
     setFileSystem(conf);
 
     // mkdir of root dir path
-    fs.mkdirs(rootDirPath);
+    fs.mkdirs(fsWorkingPath);
   }
 
   @Override
@@ -159,8 +165,8 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
      */
     
     // Open mirror from serialized file
-    Path mirrorPath = new Path(rootDirPath, MIRROR_FILENAME);
-    Path oldMirrorPath = new Path(rootDirPath, MIRROR_FILENAME + ".old");
+    Path mirrorPath = new Path(fsWorkingPath, MIRROR_FILENAME);
+    Path oldMirrorPath = new Path(fsWorkingPath, MIRROR_FILENAME + ".old");
 
     FSDataInputStream is = null;
     if (fs.exists(mirrorPath)) {
@@ -183,7 +189,7 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
     }
 
     // Open and process editlog
-    editLogPath = new Path(rootDirPath, EDITLOG_FILENAME);
+    editLogPath = new Path(fsWorkingPath, EDITLOG_FILENAME);
     if (fs.exists(editLogPath)) {
       is = fs.open(editLogPath);
 
@@ -224,7 +230,7 @@ public class FileSystemNodeLabelsStore extends NodeLabelsStore {
     }
 
     // Serialize current mirror to mirror.writing
-    Path writingMirrorPath = new Path(rootDirPath, MIRROR_FILENAME + ".writing");
+    Path writingMirrorPath = new Path(fsWorkingPath, MIRROR_FILENAME + ".writing");
     FSDataOutputStream os = fs.create(writingMirrorPath, true);
     ((AddToClusterNodeLabelsRequestPBImpl) AddToClusterNodeLabelsRequestPBImpl
         .newInstance(mgr.getClusterNodeLabels())).getProto().writeDelimitedTo(os);

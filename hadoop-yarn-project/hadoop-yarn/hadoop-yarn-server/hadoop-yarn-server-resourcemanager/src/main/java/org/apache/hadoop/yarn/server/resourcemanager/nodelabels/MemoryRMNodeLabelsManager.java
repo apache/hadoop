@@ -25,10 +25,9 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelsStore;
 
-public class DummyRMNodeLabelsManager extends RMNodeLabelsManager {
+public class MemoryRMNodeLabelsManager extends RMNodeLabelsManager {
   Map<NodeId, Set<String>> lastNodeToLabels = null;
   Collection<String> lastAddedlabels = null;
   Collection<String> lastRemovedlabels = null;
@@ -68,7 +67,7 @@ public class DummyRMNodeLabelsManager extends RMNodeLabelsManager {
 
   @Override
   protected void initDispatcher(Configuration conf) {
-    super.dispatcher = new InlineDispatcher();
+    super.dispatcher = null;
   }
 
   @Override
