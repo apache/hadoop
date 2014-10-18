@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMaste
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.MemoryRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -321,8 +322,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new AMLivelinessMonitor(this.rmDispatcher);
   }
   
-  protected RMNodeLabelsManager createNodeLabelManager() {
-    return new RMNodeLabelsManager();
+  protected RMNodeLabelsManager createNodeLabelManager()
+      throws InstantiationException, IllegalAccessException {
+    Class<? extends RMNodeLabelsManager> nlmCls =
+        conf.getClass(YarnConfiguration.RM_NODE_LABELS_MANAGER_CLASS,
+            MemoryRMNodeLabelsManager.class, RMNodeLabelsManager.class);
+    return nlmCls.newInstance();
   }
   
   protected DelegationTokenRenewer createDelegationTokenRenewer() {
