@@ -78,4 +78,9 @@ public class DummyCommonNodeLabelsManager extends CommonNodeLabelsManager {
   protected void stopDispatcher() {
     // do nothing
   }
+  
+  @Override
+  protected void serviceStop() throws Exception {
+    super.serviceStop();
+  }
 }
