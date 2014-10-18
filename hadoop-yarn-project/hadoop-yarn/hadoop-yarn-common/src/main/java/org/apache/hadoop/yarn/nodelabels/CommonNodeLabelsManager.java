@@ -238,7 +238,11 @@ public class CommonNodeLabelsManager extends AbstractService {
   protected void serviceStop() throws Exception {
     // finalize store
     stopDispatcher();
-    store.close();
+    
+    // only close store when we enabled store persistent
+    if (null != store) {
+      store.close();
+    }
   }
 
   /**
