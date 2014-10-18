@@ -42,6 +42,7 @@ import javax.ws.rs.core.Response.Status;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
@@ -52,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.timeline.TestMemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
@@ -118,11 +120,15 @@ public class TestTimelineWebServices extends JerseyTest {
       ServletContext context = mock(ServletContext.class);
       when(filterConfig.getServletContext()).thenReturn(context);
       Enumeration<Object> names = mock(Enumeration.class);
-      when(names.hasMoreElements()).thenReturn(true, true, false);
+      when(names.hasMoreElements()).thenReturn(true, true, true, false);
       when(names.nextElement()).thenReturn(
           AuthenticationFilter.AUTH_TYPE,
-          PseudoAuthenticationHandler.ANONYMOUS_ALLOWED);
+          PseudoAuthenticationHandler.ANONYMOUS_ALLOWED,
+          DelegationTokenAuthenticationHandler.TOKEN_KIND);
       when(filterConfig.getInitParameterNames()).thenReturn(names);
+      when(filterConfig.getInitParameter(
+          DelegationTokenAuthenticationHandler.TOKEN_KIND)).thenReturn(
+              TimelineDelegationTokenIdentifier.KIND_NAME.toString());
       try {
         taFilter.init(filterConfig);
       } catch (ServletException e) {

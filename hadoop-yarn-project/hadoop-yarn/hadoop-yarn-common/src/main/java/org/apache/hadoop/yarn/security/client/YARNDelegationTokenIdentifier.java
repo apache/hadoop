@@ -38,22 +38,9 @@ public abstract class YARNDelegationTokenIdentifier extends
   public YARNDelegationTokenIdentifier() {}
 
   public YARNDelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {
-    if (owner != null) {
-      builder.setOwner(owner.toString());
-    }
-    
-    if (renewer != null) {
-      HadoopKerberosName renewerKrbName = new HadoopKerberosName(renewer.toString());
-      try {
-        builder.setRenewer(renewerKrbName.getShortName());
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    
-    if (realUser != null) {
-      builder.setRealUser(realUser.toString());
-    }
+    setOwner(owner);
+    setRenewer(renewer);
+    setRealUser(realUser);
   }
   
   /**
@@ -90,6 +77,13 @@ public abstract class YARNDelegationTokenIdentifier extends
     }
   }
 
+  @Override
+  public void setOwner(Text owner) {
+    if (builder != null && owner != null) {
+      builder.setOwner(owner.toString());
+    }
+  }
+
   public Text getRenewer() {
     String renewer = builder.getRenewer();
     if (renewer == null) {
@@ -98,7 +92,19 @@ public abstract class YARNDelegationTokenIdentifier extends
       return new Text(renewer);
     }
   }
-  
+
+  @Override
+  public void setRenewer(Text renewer) {
+    if (builder != null && renewer != null) {
+      HadoopKerberosName renewerKrbName = new HadoopKerberosName(renewer.toString());
+      try {
+        builder.setRenewer(renewerKrbName.getShortName());
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
   public Text getRealUser() {
     String realUser = builder.getRealUser();
     if (realUser == null) {
@@ -107,7 +113,14 @@ public abstract class YARNDelegationTokenIdentifier extends
       return new Text(realUser);
     }
   }
-  
+
+  @Override
+  public void setRealUser(Text realUser) {
+    if (builder != null && realUser != null) {
+      builder.setRealUser(realUser.toString());
+    }
+  }
+
   public void setIssueDate(long issueDate) {
     builder.setIssueDate(issueDate);
   }

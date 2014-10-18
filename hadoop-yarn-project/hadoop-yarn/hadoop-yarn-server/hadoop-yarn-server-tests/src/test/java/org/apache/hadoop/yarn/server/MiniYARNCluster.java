@@ -721,8 +721,6 @@ public class MiniYARNCluster extends CompositeService {
       if (appHistoryServer != null) {
         appHistoryServer.stop();
       }
-      AHSWebApp.resetInstance();
-      super.serviceStop();
     }
   }
 

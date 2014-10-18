@@ -76,7 +76,6 @@ public class TestApplicationHistoryClientService extends
 
   @After
   public void tearDown() throws Exception {
-    AHSWebApp.resetInstance();
     historyServer.stop();
   }
 

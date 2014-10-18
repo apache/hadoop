@@ -90,7 +90,6 @@ public class TestSystemMetricsPublisher {
     if (timelineServer != null) {
       timelineServer.stop();
     }
-    AHSWebApp.resetInstance();
   }
 
   @Test(timeout = 10000)
