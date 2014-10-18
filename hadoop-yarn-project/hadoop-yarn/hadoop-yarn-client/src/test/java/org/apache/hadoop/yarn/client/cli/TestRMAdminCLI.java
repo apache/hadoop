@@ -16,18 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client.cli;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.never;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -37,9 +36,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HAServiceTarget;
+import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.client.cli.RMAdminCLI;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.nodelabels.DummyCommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
@@ -49,6 +55,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMapp
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import com.google.common.collect.ImmutableSet;
 
 public class TestRMAdminCLI {
 
@@ -56,10 +66,25 @@ public class TestRMAdminCLI {
   private HAServiceProtocol haadmin;
   private RMAdminCLI rmAdminCLI;
   private RMAdminCLI rmAdminCLIWithHAEnabled;
+  private CommonNodeLabelsManager dummyNodeLabelsManager;
+  private boolean remoteAdminServiceAccessed = false;
 
+  @SuppressWarnings("static-access")
   @Before
-  public void configure() throws IOException {
+  public void configure() throws IOException, YarnException {
+    remoteAdminServiceAccessed = false;
+    dummyNodeLabelsManager = new DummyCommonNodeLabelsManager();
     admin = mock(ResourceManagerAdministrationProtocol.class);
+    when(admin.addToClusterNodeLabels(any(AddToClusterNodeLabelsRequest.class)))
+        .thenAnswer(new Answer<AddToClusterNodeLabelsResponse>() {
+
+          @Override
+          public AddToClusterNodeLabelsResponse answer(
+              InvocationOnMock invocation) throws Throwable {
+            remoteAdminServiceAccessed = true;
+            return AddToClusterNodeLabelsResponse.newInstance();
+          }
+        });
 
     haadmin = mock(HAServiceProtocol.class);
     when(haadmin.getServiceStatus()).thenReturn(new HAServiceStatus(
@@ -69,7 +94,6 @@ public class TestRMAdminCLI {
     when(haServiceTarget.getProxy(any(Configuration.class), anyInt()))
         .thenReturn(haadmin);
     rmAdminCLI = new RMAdminCLI(new Configuration()) {
-
       @Override
       protected ResourceManagerAdministrationProtocol createAdminProtocol()
           throws IOException {
@@ -81,6 +105,7 @@ public class TestRMAdminCLI {
         return haServiceTarget;
       }
     };
+    rmAdminCLI.localNodeLabelsManager = dummyNodeLabelsManager;
 
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
@@ -359,6 +384,127 @@ public class TestRMAdminCLI {
     } finally {
       System.setErr(oldErrPrintStream);
     }
+  }
+  
+  @Test
+  public void testAccessLocalNodeLabelManager() throws Exception {
+    assertFalse(dummyNodeLabelsManager.getServiceState() == STATE.STOPPED);
+    
+    String[] args =
+        { "-addToClusterNodeLabels", "x,y", "-directlyAccessNodeLabelStore" };
+    assertEquals(0, rmAdminCLI.run(args));
+    assertTrue(dummyNodeLabelsManager.getClusterNodeLabels().containsAll(
+        ImmutableSet.of("x", "y")));
+    
+    // reset localNodeLabelsManager
+    dummyNodeLabelsManager.removeFromClusterNodeLabels(ImmutableSet.of("x", "y"));
+    
+    // change the sequence of "-directlyAccessNodeLabelStore" and labels,
+    // should not matter
+    args =
+        new String[] { "-addToClusterNodeLabels",
+            "-directlyAccessNodeLabelStore", "x,y" };
+    assertEquals(0, rmAdminCLI.run(args));
+    assertTrue(dummyNodeLabelsManager.getClusterNodeLabels().containsAll(
+        ImmutableSet.of("x", "y")));
+    
+    // local node labels manager will be close after running
+    assertTrue(dummyNodeLabelsManager.getServiceState() == STATE.STOPPED);
+  }
+  
+  @Test
+  public void testAccessRemoteNodeLabelManager() throws Exception {
+    String[] args =
+        { "-addToClusterNodeLabels", "x,y" };
+    assertEquals(0, rmAdminCLI.run(args));
+    
+    // localNodeLabelsManager shouldn't accessed
+    assertTrue(dummyNodeLabelsManager.getClusterNodeLabels().isEmpty());
+    
+    // remote node labels manager accessed
+    assertTrue(remoteAdminServiceAccessed);
+  }
+  
+  @Test
+  public void testAddToClusterNodeLabels() throws Exception {
+    // successfully add labels
+    String[] args =
+        { "-addToClusterNodeLabels", "x", "-directlyAccessNodeLabelStore" };
+    assertEquals(0, rmAdminCLI.run(args));
+    assertTrue(dummyNodeLabelsManager.getClusterNodeLabels().containsAll(
+        ImmutableSet.of("x")));
+    
+    // no labels, should fail
+    args = new String[] { "-addToClusterNodeLabels" };
+    assertTrue(0 != rmAdminCLI.run(args));
+    
+    // no labels, should fail
+    args =
+        new String[] { "-addToClusterNodeLabels",
+            "-directlyAccessNodeLabelStore" };
+    assertTrue(0 != rmAdminCLI.run(args));
+  }
+  
+  @Test
+  public void testRemoveFromClusterNodeLabels() throws Exception {
+    // Successfully remove labels
+    dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x"));
+    String[] args =
+        { "-removeFromClusterNodeLabels", "x", "-directlyAccessNodeLabelStore" };
+    assertEquals(0, rmAdminCLI.run(args));
+    assertTrue(dummyNodeLabelsManager.getClusterNodeLabels().isEmpty());
+    
+    // no labels, should fail
+    args = new String[] { "-removeFromClusterNodeLabels" };
+    assertTrue(0 != rmAdminCLI.run(args));
+    
+    // no labels, should fail
+    args =
+        new String[] { "-removeFromClusterNodeLabels",
+            "-directlyAccessNodeLabelStore" };
+    assertTrue(0 != rmAdminCLI.run(args));
+  }
+  
+  @Test
+  public void testReplaceLabelsOnNode() throws Exception {
+    // Successfully replace labels
+    dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    String[] args =
+        { "-replaceLabelsOnNode", "node1,x,y node2,y",
+            "-directlyAccessNodeLabelStore" };
+    assertEquals(0, rmAdminCLI.run(args));
+    assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
+        NodeId.newInstance("node1", 0)));
+    assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
+        NodeId.newInstance("node2", 0)));
+    
+    // no labels, should fail
+    args = new String[] { "-replaceLabelsOnNode" };
+    assertTrue(0 != rmAdminCLI.run(args));
+    
+    // no labels, should fail
+    args =
+        new String[] { "-replaceLabelsOnNode",
+            "-directlyAccessNodeLabelStore" };
+    assertTrue(0 != rmAdminCLI.run(args));
+  }
+  
+  @Test
+  public void testGetClusterNodeLabels() throws Exception {
+    // Successfully get labels
+    String[] args =
+        { "-getClusterNodeLabels",
+            "-directlyAccessNodeLabelStore" };
+    assertEquals(0, rmAdminCLI.run(args));
+  }
+  
+  @Test
+  public void testGetNodeToLabels() throws Exception {
+    // Successfully get node-to-labels
+    String[] args =
+        { "-getNodeToLabels",
+            "-directlyAccessNodeLabelStore" };
+    assertEquals(0, rmAdminCLI.run(args));
   }
 
   private void testError(String[] args, String template,

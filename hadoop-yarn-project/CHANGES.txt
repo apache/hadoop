@@ -105,8 +105,11 @@ Release 2.6.0 - UNRELEASED
     YARN-2496. Enhanced Capacity Scheduler to have basic support for allocating
     resources based on node-labels. (Wangda Tan via vinodkv)
 
-    YARN-2500. Ehnaced ResourceManager to support schedulers allocating resources
+    YARN-2500. Enhaced ResourceManager to support schedulers allocating resources
     based on node-labels. (Wangda Tan via vinodkv)
+
+    YARN-2504. Enhanced RM Admin CLI to support management of node-labels.
+    (Wangda Tan via vinodkv)
 
   IMPROVEMENTS
 
