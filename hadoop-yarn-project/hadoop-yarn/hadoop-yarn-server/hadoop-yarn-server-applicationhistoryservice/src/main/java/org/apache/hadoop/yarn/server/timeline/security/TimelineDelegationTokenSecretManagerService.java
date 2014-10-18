@@ -77,73 +77,11 @@ public class TimelineDelegationTokenSecretManagerService extends AbstractService
   }
 
   /**
-   * Creates a delegation token.
-   *
-   * @param ugi UGI creating the token.
-   * @param renewer token renewer.
-   * @return new delegation token.
-   * @throws IOException thrown if the token could not be created.
+   * Ge the instance of {link #TimelineDelegationTokenSecretManager}
+   * @return the instance of {link #TimelineDelegationTokenSecretManager}
    */
-  public Token<TimelineDelegationTokenIdentifier> createToken(
-      UserGroupInformation ugi, String renewer) throws IOException {
-    renewer = (renewer == null) ? ugi.getShortUserName() : renewer;
-    String user = ugi.getUserName();
-    Text owner = new Text(user);
-    Text realUser = null;
-    if (ugi.getRealUser() != null) {
-      realUser = new Text(ugi.getRealUser().getUserName());
-    }
-    TimelineDelegationTokenIdentifier tokenIdentifier =
-        new TimelineDelegationTokenIdentifier(owner, new Text(renewer), realUser);
-    Token<TimelineDelegationTokenIdentifier> token =
-        new Token<TimelineDelegationTokenIdentifier>(tokenIdentifier, secretManager);
-    SecurityUtil.setTokenService(token, serviceAddr);
-    return token;
-  }
-
-  /**
-   * Renews a delegation token.
-   *
-   * @param token delegation token to renew.
-   * @param renewer token renewer.
-   * @throws IOException thrown if the token could not be renewed.
-   */
-  public long renewToken(Token<TimelineDelegationTokenIdentifier> token,
-      String renewer) throws IOException {
-      return secretManager.renewToken(token, renewer);
-  }
-
-  /**
-   * Cancels a delegation token.
-   *
-   * @param token delegation token to cancel.
-   * @param canceler token canceler.
-   * @throws IOException thrown if the token could not be canceled.
-   */
-  public void cancelToken(Token<TimelineDelegationTokenIdentifier> token,
-      String canceler) throws IOException {
-    secretManager.cancelToken(token, canceler);
-  }
-
-  /**
-   * Verifies a delegation token.
-   *
-   * @param token delegation token to verify.
-   * @return the UGI for the token.
-   * @throws IOException thrown if the token could not be verified.
-   */
-  public UserGroupInformation verifyToken(Token<TimelineDelegationTokenIdentifier> token)
-    throws IOException {
-    ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
-    DataInputStream dis = new DataInputStream(buf);
-    TimelineDelegationTokenIdentifier id = new TimelineDelegationTokenIdentifier();
-    try {
-      id.readFields(dis);
-      secretManager.verifyToken(id, token.getPassword());
-    } finally {
-      dis.close();
-    }
-    return id.getUser();
+  public TimelineDelegationTokenSecretManager getTimelineDelegationTokenSecretManager() {
+    return secretManager;
   }
 
   /**

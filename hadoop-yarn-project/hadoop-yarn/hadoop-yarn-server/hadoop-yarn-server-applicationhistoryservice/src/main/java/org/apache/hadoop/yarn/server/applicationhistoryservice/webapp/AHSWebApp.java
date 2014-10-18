@@ -19,69 +19,32 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.server.api.ApplicationContext;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
-import org.apache.hadoop.yarn.server.timeline.security.TimelineDelegationTokenSecretManagerService;
 import org.apache.hadoop.yarn.server.timeline.webapp.TimelineWebServices;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
-import com.google.common.annotations.VisibleForTesting;
-
 public class AHSWebApp extends WebApp implements YarnWebParams {
 
   private ApplicationHistoryManager applicationHistoryManager;
-  private TimelineDelegationTokenSecretManagerService secretManagerService;
   private TimelineDataManager timelineDataManager;
 
-  private static AHSWebApp instance = null;
-
-  public static AHSWebApp getInstance() {
-    if (instance == null) {
-      instance = new AHSWebApp();
-    }
-    return instance;
-  }
-
-  @Private
-  @VisibleForTesting
-  public static void resetInstance() {
-    instance = null;
-  }
-
-  private AHSWebApp() {
-
+  public AHSWebApp(TimelineDataManager timelineDataManager,
+      ApplicationHistoryManager applicationHistoryManager) {
+    this.timelineDataManager = timelineDataManager;
+    this.applicationHistoryManager = applicationHistoryManager;
   }
 
   public ApplicationHistoryManager getApplicationHistoryManager() {
     return applicationHistoryManager;
   }
 
-  public void setApplicationHistoryManager(
-      ApplicationHistoryManager applicationHistoryManager) {
-    this.applicationHistoryManager = applicationHistoryManager;
-  }
-
-  public TimelineDelegationTokenSecretManagerService
-      getTimelineDelegationTokenSecretManagerService() {
-    return secretManagerService;
-  }
-
-  public void setTimelineDelegationTokenSecretManagerService(
-      TimelineDelegationTokenSecretManagerService secretManagerService) {
-    this.secretManagerService = secretManagerService;
-  }
-
   public TimelineDataManager getTimelineDataManager() {
     return timelineDataManager;
-  }
-
-  public void setTimelineDataManager(TimelineDataManager timelineDataManager) {
-    this.timelineDataManager = timelineDataManager;
   }
 
   @Override
@@ -91,8 +54,6 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
     bind(TimelineWebServices.class);
     bind(GenericExceptionHandler.class);
     bind(ApplicationContext.class).toInstance(applicationHistoryManager);
-    bind(TimelineDelegationTokenSecretManagerService.class).toInstance(
-        secretManagerService);
     bind(TimelineDataManager.class).toInstance(timelineDataManager);
     route("/", AHSController.class);
     route(pajoin("/apps", APP_STATE), AHSController.class);

@@ -18,32 +18,32 @@
 
 package org.apache.hadoop.yarn.server.timeline.security;
 
-import java.util.Properties;
-
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationFilter;
+import org.apache.hadoop.yarn.server.timeline.security.TimelineDelegationTokenSecretManagerService.TimelineDelegationTokenSecretManager;
 
 @Private
 @Unstable
-public class TimelineAuthenticationFilter extends AuthenticationFilter {
+public class TimelineAuthenticationFilter
+    extends DelegationTokenAuthenticationFilter {
+
+  private static TimelineDelegationTokenSecretManager secretManager;
 
   @Override
-  protected Properties getConfiguration(String configPrefix,
-      FilterConfig filterConfig) throws ServletException {
-    // In yarn-site.xml, we can simply set type to "kerberos". However, we need
-    // to replace the name here to use the customized Kerberos + DT service
-    // instead of the standard Kerberos handler.
-    Properties properties = super.getConfiguration(configPrefix, filterConfig);
-    String authType = properties.getProperty(AUTH_TYPE);
-    if (authType != null && authType.equals("kerberos")) {
-      properties.setProperty(
-          AUTH_TYPE, TimelineClientAuthenticationService.class.getName());
-    }
-    return properties;
+  public void init(FilterConfig filterConfig) throws ServletException {
+    filterConfig.getServletContext().setAttribute(
+        DelegationTokenAuthenticationFilter.DELEGATION_TOKEN_SECRET_MANAGER_ATTR,
+        secretManager);
+    super.init(filterConfig);
+  }
+
+  public static void setTimelineDelegationTokenSecretManager(
+      TimelineDelegationTokenSecretManager secretManager) {
+    TimelineAuthenticationFilter.secretManager = secretManager;
   }
 
 }

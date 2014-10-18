@@ -105,7 +105,6 @@ public class TestApplicationHistoryServer {
       Configuration tmp = historyServer.getConfig();
       assertEquals(expectedValue, tmp.get("hadoop.http.filter.initializers"));
       historyServer.stop();
-      AHSWebApp.resetInstance();
     }
   }
 
@@ -114,6 +113,5 @@ public class TestApplicationHistoryServer {
     if (historyServer != null) {
       historyServer.stop();
     }
-    AHSWebApp.resetInstance();
   }
 }

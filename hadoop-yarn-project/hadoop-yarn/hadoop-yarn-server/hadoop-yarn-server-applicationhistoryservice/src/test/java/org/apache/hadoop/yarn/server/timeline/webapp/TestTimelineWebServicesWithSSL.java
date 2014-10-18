@@ -83,7 +83,6 @@ public class TestTimelineWebServicesWithSSL {
     if (timelineServer != null) {
       timelineServer.stop();
     }
-    AHSWebApp.resetInstance();
   }
 
   @Test

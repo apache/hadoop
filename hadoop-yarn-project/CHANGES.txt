@@ -367,6 +367,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1879. Marked Idempotent/AtMostOnce annotations to ApplicationMasterProtocol
     for RM fail over. (Tsuyoshi OZAWA via jianhe)
 
+    YARN-2676. Enhanced Timeline auth-filter to support proxy users. (Zhijie Shen
+    via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

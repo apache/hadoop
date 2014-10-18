@@ -30,6 +30,16 @@ import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
+import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
+import org.apache.hadoop.security.token.delegation.web.PseudoDelegationTokenAuthenticationHandler;
+import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * <p>
@@ -54,6 +64,9 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
   private static final String SIGNATURE_SECRET_FILE =
       TimelineAuthenticationFilter.SIGNATURE_SECRET + ".file";
 
+  @VisibleForTesting
+  Map<String, String> filterConfig;
+
   /**
    * <p>
    * Initializes {@link TimelineAuthenticationFilter}
@@ -71,14 +84,24 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
    */
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {
-    Map<String, String> filterConfig = new HashMap<String, String>();
+    filterConfig = new HashMap<String, String>();
 
     // setting the cookie path to root '/' so it is used for all resources.
     filterConfig.put(TimelineAuthenticationFilter.COOKIE_PATH, "/");
 
     for (Map.Entry<String, String> entry : conf) {
       String name = entry.getKey();
+      if (name.startsWith(ProxyUsers.CONF_HADOOP_PROXYUSER)) {
+        String value = conf.get(name);
+        name = name.substring("hadoop.".length());
+        filterConfig.put(name, value);
+      }
+    }
+    for (Map.Entry<String, String> entry : conf) {
+      String name = entry.getKey();
       if (name.startsWith(PREFIX)) {
+        // yarn.timeline-service.http-authentication.proxyuser will override
+        // hadoop.proxyuser
         String value = conf.get(name);
         name = name.substring(PREFIX.length());
         filterConfig.put(name, value);
@@ -108,20 +131,32 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
       }
     }
 
-    // Resolve _HOST into bind address
-    String bindAddress = conf.get(HttpServer2.BIND_ADDRESS);
-    String principal =
-        filterConfig.get(TimelineClientAuthenticationService.PRINCIPAL);
-    if (principal != null) {
-      try {
-        principal = SecurityUtil.getServerPrincipal(principal, bindAddress);
-      } catch (IOException ex) {
-        throw new RuntimeException(
-            "Could not resolve Kerberos principal name: " + ex.toString(), ex);
+    String authType = filterConfig.get(AuthenticationFilter.AUTH_TYPE);
+    if (authType.equals(PseudoAuthenticationHandler.TYPE)) {
+      filterConfig.put(AuthenticationFilter.AUTH_TYPE,
+          PseudoDelegationTokenAuthenticationHandler.class.getName());
+    } else if (authType.equals(KerberosAuthenticationHandler.TYPE)) {
+      filterConfig.put(AuthenticationFilter.AUTH_TYPE,
+          KerberosDelegationTokenAuthenticationHandler.class.getName());
+
+      // Resolve _HOST into bind address
+      String bindAddress = conf.get(HttpServer2.BIND_ADDRESS);
+      String principal =
+          filterConfig.get(KerberosAuthenticationHandler.PRINCIPAL);
+      if (principal != null) {
+        try {
+          principal = SecurityUtil.getServerPrincipal(principal, bindAddress);
+        } catch (IOException ex) {
+          throw new RuntimeException(
+              "Could not resolve Kerberos principal name: " + ex.toString(), ex);
+        }
+        filterConfig.put(KerberosAuthenticationHandler.PRINCIPAL,
+            principal);
       }
-      filterConfig.put(TimelineClientAuthenticationService.PRINCIPAL,
-          principal);
     }
+
+    filterConfig.put(DelegationTokenAuthenticationHandler.TOKEN_KIND,
+        TimelineDelegationTokenIdentifier.KIND_NAME.toString());
 
     container.addGlobalFilter("Timeline Authentication Filter",
         TimelineAuthenticationFilter.class.getName(),
