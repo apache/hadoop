@@ -438,9 +438,6 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5542. Killing a job just as it finishes can generate an NPE in
     client (Rohith via jlowe)
 
-    MAPREDUCE-5911. Terasort TeraOutputFormat does not check for output
-    directory existance (Bruno P. Kinoshita via ivanmi)
-
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
