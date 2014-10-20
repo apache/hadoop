@@ -181,6 +181,32 @@ public class TestTimelineClient {
     }
   }
 
+  @Test
+  public void testCheckRetryCount() throws Exception {
+    int newMaxRetries = 1;
+    long newIntervalMs = 1500;
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+      newMaxRetries);
+    conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+      newIntervalMs);
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    TimelineClientImpl client = createTimelineClient(conf);
+    try {
+      // This call should fail because there is no timeline server
+      client.putEntities(generateEntity());
+      Assert.fail("Exception expected!"
+          + "Timeline server should be off to run this test. ");
+    } catch (ClientHandlerException ce) {
+      Assert.assertTrue(
+        "Handler exception for reason other than retry: " + ce.getMessage(),
+        ce.getMessage().contains("Connection retries limit exceeded"));
+      // we would expect this exception here, check if the client has retried
+      Assert.assertTrue("Retry filter didn't perform any retries! ", client
+        .getRetryFilter().retried);
+    }
+  }
+
   private static ClientResponse mockEntityClientResponse(
       TimelineClientImpl client, ClientResponse.Status status,
       boolean hasError, boolean hasRuntimeError) {

@@ -1322,6 +1322,22 @@
     <value>/etc/krb5.keytab</value>
   </property>
 
+  <property>
+    <description>
+    Default maximum number of retires for timeline servive client.
+    </description>
+    <name>yarn.timeline-service.client.max-retries</name>
+    <value>30</value>
+  </property>
+
+  <property>
+    <description>
+    Default retry time interval for timeline servive client.
+    </description>
+    <name>yarn.timeline-service.client.retry-interval-ms</name>
+    <value>1000</value>
+  </property>
+
   <!--  Shared Cache Configuration -->
   <property>
     <description>Whether the shared cache is enabled</description>
