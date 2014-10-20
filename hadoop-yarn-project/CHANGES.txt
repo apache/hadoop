@@ -306,6 +306,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2673. Made timeline client put APIs retry if ConnectException happens.
     (Li Lu via zjshen)
 
+    YARN-2582. Fixed Log CLI and Web UI for showing aggregated logs of LRS. (Xuan
+    Gong via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
