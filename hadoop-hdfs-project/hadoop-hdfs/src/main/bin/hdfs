@@ -164,6 +164,7 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
   ;;
   mover)
+    daemon="true"
     CLASS=org.apache.hadoop.hdfs.server.mover.Mover
     hadoop_debug "Appending HADOOP_MOVER_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_MOVER_OPTS}"
