@@ -47,7 +47,6 @@ import org.apache.hadoop.yarn.webapp.log.AggregatedLogsBlockForTest;
 import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlockForTest;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.mockito.Mockito.*;
@@ -149,10 +148,8 @@ public class TestAggregatedLogsBlock {
   }
   /**
    * Log files was deleted.
-   * TODO: YARN-2582: fix log web ui for Long Running application
    * @throws Exception
    */
-  @Ignore
   @Test
   public void testNoLogs() throws Exception {
 
