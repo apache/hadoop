@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -67,7 +68,10 @@ import org.codehaus.jackson.map.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.filter.ClientFilter;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.ClientRequest;
+import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
@@ -103,6 +107,80 @@ public class TimelineClientImpl extends TimelineClient {
   private URI resURI;
   private boolean isEnabled;
 
+  private TimelineJerseyRetryFilter retryFilter;
+
+  static class TimelineJerseyRetryFilter extends ClientFilter {
+    // maxRetries < 0 means keep trying
+    @Private
+    @VisibleForTesting
+    public int maxRetries;
+
+    @Private
+    @VisibleForTesting
+    public long retryInterval;
+
+    // Indicates if retries happened last time
+    @Private
+    @VisibleForTesting
+    public boolean retried = false;
+
+    // Constructor with default retry settings
+    public TimelineJerseyRetryFilter(Configuration conf) {
+      super();
+      maxRetries = conf.getInt(
+        YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
+      retryInterval = conf.getLong(
+        YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
+    }
+
+    @Override
+    public ClientResponse handle(ClientRequest cr)
+        throws ClientHandlerException {
+      int leftRetries = maxRetries;
+      retried = false;
+      // keep trying
+      while (true) {
+        try {
+          // try pass the request on, if fail, keep retrying
+          return getNext().handle(cr);
+        } catch (ClientHandlerException e) {
+          // break if there's no retries left
+          if (leftRetries == 0) {
+            break;
+          }
+          if(e.getCause() instanceof ConnectException) {
+            if (leftRetries > 0) {
+              LOG.info("Connection Timeout (" + cr.getURI() + "), will try "
+                  + leftRetries + " more time(s).");
+            } else {
+              // note that maxRetries may be -1 at the very beginning
+              // maxRetries = -1 means keep trying
+              LOG.info("Connection Timeout (" + cr.getURI()
+                  + "), will keep retrying.");
+            }
+            retried = true;
+          } else {
+            throw e;
+          }
+        }
+        if (leftRetries > 0) {
+          leftRetries--;
+        }
+        try {
+          // sleep for the given time interval
+          Thread.sleep(retryInterval);
+        } catch (InterruptedException ie) {
+          LOG.warn("Client retry sleep interrupted! ");
+        }
+      }
+      throw new ClientHandlerException("Failed to connect to timeline server. "
+          + "Connection retries limit exceeded. "
+          + "The posted timeline event may be missing");
+    };
+  }
+
   public TimelineClientImpl() {
     super(TimelineClientImpl.class.getName());
   }
@@ -126,6 +204,8 @@ public class TimelineClientImpl extends TimelineClient {
       client = new Client(new URLConnectionClientHandler(
           new TimelineURLConnectionFactory()), cc);
       token = new DelegationTokenAuthenticatedURL.Token();
+      retryFilter = new TimelineJerseyRetryFilter(conf);
+      client.addFilter(retryFilter);
 
       if (YarnConfiguration.useHttps(conf)) {
         resURI = URI
@@ -226,6 +306,12 @@ public class TimelineClientImpl extends TimelineClient {
     } catch (InterruptedException e) {
       throw new IOException(e);
     }
+  }
+
+  @Private
+  @VisibleForTesting
+  public TimelineJerseyRetryFilter getRetryFilter() {
+    return retryFilter;
   }
 
   @Private

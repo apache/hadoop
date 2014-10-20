@@ -343,6 +343,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2676. Enhanced Timeline auth-filter to support proxy users. (Zhijie Shen
     via vinodkv)
 
+    YARN-2673. Made timeline client put APIs retry if ConnectException happens.
+    (Li Lu via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
