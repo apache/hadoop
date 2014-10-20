@@ -3,6 +3,7 @@
 *.iws
 *.orig
 *.rej
+**/.keep
 .idea
 .svn
 .classpath
