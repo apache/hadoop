@@ -662,6 +662,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10681. Remove unnecessary synchronization from Snappy & Zlib
     codecs. (Gopal Vijayaraghavan via acmurthy)
 
+    HADOOP-11194. Ignore .keep files. (kasha)
+
   BUG FIXES
 
     HADOOP-11182. GraphiteSink emits wrong timestamps (Sascha Coenen via raviprak)
