@@ -624,6 +624,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7260. Change DFSOutputStream.MAX_PACKETS to be configurable. (szetszwo)
 
+    HDFS-7259. Unresponseive NFS mount point due to deferred COMMIT response.
+    (brandonli)
+
     BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
   
       HDFS-6921. Add LazyPersist flag to FileStatus. (Arpit Agarwal)

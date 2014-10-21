@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.nfs3.WriteCtx.DataState;
 import org.apache.hadoop.io.BytesWritable.Comparator;
 import org.apache.hadoop.io.IOUtils;
@@ -77,7 +78,26 @@ class OpenFileCtx {
     COMMIT_INACTIVE_CTX,
     COMMIT_INACTIVE_WITH_PENDING_WRITE,
     COMMIT_ERROR,
-    COMMIT_DO_SYNC;
+    COMMIT_DO_SYNC,
+    /**
+     * Deferred COMMIT response could fail file uploading. The following two
+     * status are introduced as a solution. 1. if client asks to commit
+     * non-sequential trunk of data, NFS gateway return success with the hope
+     * that client will send the prerequisite writes. 2. if client asks to
+     * commit a sequential trunk(means it can be flushed to HDFS), NFS gateway
+     * return a special error NFS3ERR_JUKEBOX indicating the client needs to
+     * retry. Meanwhile, NFS gateway keeps flush data to HDFS and do sync
+     * eventually.
+     * 
+     * The reason to let client wait is that, we want the client to wait for the
+     * last commit. Otherwise, client thinks file upload finished (e.g., cp
+     * command returns success) but NFS could be still flushing staged data to
+     * HDFS. However, we don't know which one is the last commit. We make the
+     * assumption that a commit after sequential writes may be the last.
+     * Referring HDFS-7259 for more details.
+     * */
+    COMMIT_SPECIAL_WAIT, // scoped pending writes is sequential
+    COMMIT_SPECIAL_SUCCESS;// scoped pending writes is not sequential 
   }
 
   private final DFSClient client;
@@ -159,6 +179,7 @@ class OpenFileCtx {
   private RandomAccessFile raf;
   private final String dumpFilePath;
   private Daemon dumpThread;
+  private final boolean uploadLargeFile;
   
   private void updateLastAccessTime() {
     lastAccessTime = Time.monotonicNow();
@@ -200,12 +221,13 @@ class OpenFileCtx {
   
   OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
       String dumpFilePath, DFSClient client, IdUserGroup iug) {
-    this(fos, latestAttr, dumpFilePath, client, iug, false);
+    this(fos, latestAttr, dumpFilePath, client, iug, false,
+        new NfsConfiguration());
   }
   
   OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
       String dumpFilePath, DFSClient client, IdUserGroup iug,
-      boolean aixCompatMode) {
+      boolean aixCompatMode, NfsConfiguration config) {
     this.fos = fos;
     this.latestAttr = latestAttr;
     this.aixCompatMode = aixCompatMode;
@@ -235,6 +257,8 @@ class OpenFileCtx {
     dumpThread = null;
     this.client = client;
     this.iug = iug;
+    this.uploadLargeFile = config.getBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD,
+        NfsConfigKeys.LARGE_FILE_UPLOAD_DEFAULT);
   }
 
   public Nfs3FileAttributes getLatestAttr() {
@@ -783,6 +807,11 @@ class OpenFileCtx {
         return COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE;
       }
     }
+    if (pendingWrites.isEmpty()) {
+      // Note that, there is no guarantee data is synced. Caller should still
+      // do a sync here though the output stream might be closed.
+      return COMMIT_STATUS.COMMIT_FINISHED;
+    }
 
     long flushed = 0;
     try {
@@ -795,6 +824,32 @@ class OpenFileCtx {
       LOG.debug("getFlushedOffset=" + flushed + " commitOffset=" + commitOffset);
     }
 
+    // Handle large file upload
+    if (uploadLargeFile && !aixCompatMode) {
+      long co = (commitOffset > 0) ? commitOffset : pendingWrites.firstEntry()
+          .getKey().getMax() - 1;
+
+      if (co <= flushed) {
+        return COMMIT_STATUS.COMMIT_DO_SYNC;
+      } else if (co < nextOffset.get()) {
+        if (!fromRead) {
+          // let client retry the same request, add pending commit to sync later
+          CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
+              preOpAttr);
+          pendingCommits.put(commitOffset, commitCtx);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("return COMMIT_SPECIAL_WAIT");
+        }
+        return COMMIT_STATUS.COMMIT_SPECIAL_WAIT;
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("return COMMIT_SPECIAL_SUCCESS");
+        }
+        return COMMIT_STATUS.COMMIT_SPECIAL_SUCCESS;
+      }
+    }
+    
     if (commitOffset > 0) {
       if (aixCompatMode) {
         // The AIX NFS client misinterprets RFC-1813 and will always send 4096
@@ -825,20 +880,14 @@ class OpenFileCtx {
     Entry<OffsetRange, WriteCtx> key = pendingWrites.firstEntry();
 
     // Commit whole file, commitOffset == 0
-    if (pendingWrites.isEmpty()) {
-      // Note that, there is no guarantee data is synced. TODO: We could still
-      // do a sync here though the output stream might be closed.
-      return COMMIT_STATUS.COMMIT_FINISHED;
-    } else {
-      if (!fromRead) {
-        // Insert commit
-        long maxOffset = key.getKey().getMax() - 1;
-        Preconditions.checkState(maxOffset > 0);
-        CommitCtx commitCtx = new CommitCtx(maxOffset, channel, xid, preOpAttr);
-        pendingCommits.put(maxOffset, commitCtx);
-      }
-      return COMMIT_STATUS.COMMIT_WAIT;
+    if (!fromRead) {
+      // Insert commit
+      long maxOffset = key.getKey().getMax() - 1;
+      Preconditions.checkState(maxOffset > 0);
+      CommitCtx commitCtx = new CommitCtx(maxOffset, channel, xid, preOpAttr);
+      pendingCommits.put(maxOffset, commitCtx);
     }
+    return COMMIT_STATUS.COMMIT_WAIT;
   }
   
   private void addWrite(WriteCtx writeCtx) {
