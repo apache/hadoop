@@ -41,7 +41,7 @@ class WriteCtx {
   
   /**
    * In memory write data has 3 states. ALLOW_DUMP: not sequential write, still
-   * wait for prerequisit writes. NO_DUMP: sequential write, no need to dump
+   * wait for prerequisite writes. NO_DUMP: sequential write, no need to dump
    * since it will be written to HDFS soon. DUMPED: already dumped to a file.
    */
   public static enum DataState {

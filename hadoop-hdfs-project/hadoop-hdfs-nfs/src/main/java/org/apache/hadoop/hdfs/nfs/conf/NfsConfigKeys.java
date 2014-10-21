@@ -57,4 +57,7 @@ public class NfsConfigKeys {
 
   public static final String  AIX_COMPAT_MODE_KEY = "nfs.aix.compatibility.mode.enabled";
   public static final boolean AIX_COMPAT_MODE_DEFAULT = false;
+  
+  public final static String LARGE_FILE_UPLOAD = "nfs.large.file.upload";
+  public final static boolean LARGE_FILE_UPLOAD_DEFAULT = true;
 }
