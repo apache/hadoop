@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static org.apache.hadoop.fs.CreateFlag.CREATE;
+import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -29,8 +31,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.Assert;
@@ -52,6 +57,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
 import org.junit.After;
 import org.junit.Before;
@@ -108,10 +115,12 @@ public class TestLinuxContainerExecutor {
   private LinuxContainerExecutor exec = null;
   private String appSubmitter = null;
   private LocalDirsHandlerService dirsHandler;
+  private Configuration conf;
+  private FileContext files;
 
   @Before
   public void setup() throws Exception {
-    FileContext files = FileContext.getLocalFSFileContext();
+    files = FileContext.getLocalFSFileContext();
     Path workSpacePath = new Path(workSpace.getAbsolutePath());
     files.mkdir(workSpacePath, null, true);
     FileUtil.chmod(workSpace.getAbsolutePath(), "777");
@@ -123,7 +132,11 @@ public class TestLinuxContainerExecutor {
         new FsPermission("777"), false);
     String exec_path = System.getProperty("container-executor.path");
     if(exec_path != null && !exec_path.isEmpty()) {
-      Configuration conf = new Configuration(false);
+      conf = new Configuration(false);
+      conf.setClass("fs.AbstractFileSystem.file.impl",
+        org.apache.hadoop.fs.local.LocalFs.class,
+        org.apache.hadoop.fs.AbstractFileSystem.class);
+      conf.set(YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY, "xuan");
       LOG.info("Setting "+YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH
           +"="+exec_path);
       conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, exec_path);
@@ -212,6 +225,59 @@ public class TestLinuxContainerExecutor {
         dirsHandler.getLogDirs());
   }
   
+  @Test
+  public void testContainerLocalizer() throws Exception {
+    if (!shouldRun()) {
+      return;
+    }
+    List<String> localDirs = dirsHandler.getLocalDirs();
+    List<String> logDirs = dirsHandler.getLogDirs();
+    for (String localDir : localDirs) {
+      Path userDir =
+          new Path(localDir, ContainerLocalizer.USERCACHE);
+      files.mkdir(userDir, new FsPermission("777"), false);
+      // $local/filecache
+      Path fileDir =
+          new Path(localDir, ContainerLocalizer.FILECACHE);
+      files.mkdir(fileDir, new FsPermission("777"), false);
+    }
+    String locId = "container_01_01";
+    Path nmPrivateContainerTokensPath =
+        dirsHandler.getLocalPathForWrite(
+            ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR
+              + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
+                  locId));
+    files.create(nmPrivateContainerTokensPath, EnumSet.of(CREATE, OVERWRITE));
+    Configuration config = new YarnConfiguration(conf);
+    InetSocketAddress nmAddr = config.getSocketAddr(
+      YarnConfiguration.NM_BIND_HOST,
+      YarnConfiguration.NM_LOCALIZER_ADDRESS,
+      YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS,
+      YarnConfiguration.DEFAULT_NM_LOCALIZER_PORT);
+    String appId = "application_01_01";
+    exec = new LinuxContainerExecutor() {
+      @Override
+      public void buildMainArgs(List<String> command, String user, String appId,
+          String locId, InetSocketAddress nmAddr, List<String> localDirs) {
+        MockContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
+          localDirs);
+      }
+    };
+    exec.setConf(conf);
+
+    exec.startLocalizer(nmPrivateContainerTokensPath, nmAddr, appSubmitter,
+      appId, locId, localDirs, logDirs);
+
+    String locId2 = "container_01_02";
+    Path nmPrivateContainerTokensPath2 =
+        dirsHandler
+          .getLocalPathForWrite(ResourceLocalizationService.NM_PRIVATE_DIR
+              + Path.SEPARATOR
+              + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId2));
+    files.create(nmPrivateContainerTokensPath2, EnumSet.of(CREATE, OVERWRITE));
+    exec.startLocalizer(nmPrivateContainerTokensPath2, nmAddr, appSubmitter,
+      appId, locId2, localDirs, logDirs);
+  }
   
   @Test
   public void testContainerLaunch() throws IOException {

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 
 import java.io.File;
@@ -218,7 +219,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     if (javaLibPath != null) {
       command.add("-Djava.library.path=" + javaLibPath);
     }
-    ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr, localDirs);
+    buildMainArgs(command, user, appId, locId, nmAddr, localDirs);
     String[] commandArray = command.toArray(new String[command.size()]);
     ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
     if (LOG.isDebugEnabled()) {
@@ -237,6 +238,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       throw new IOException("Application " + appId + " initialization failed" +
       		" (exitCode=" + exitCode + ") with output: " + shExec.getOutput(), e);
     }
+  }
+
+  @VisibleForTesting
+  public void buildMainArgs(List<String> command, String user, String appId,
+      String locId, InetSocketAddress nmAddr, List<String> localDirs) {
+    ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
+      localDirs);
   }
 
   @Override
