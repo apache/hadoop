@@ -379,6 +379,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2582. Fixed Log CLI and Web UI for showing aggregated logs of LRS. (Xuan
     Gong via zjshen)
 
+    YARN-90. NodeManager should identify failed disks becoming good again
+    (Varun Vasudev via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES

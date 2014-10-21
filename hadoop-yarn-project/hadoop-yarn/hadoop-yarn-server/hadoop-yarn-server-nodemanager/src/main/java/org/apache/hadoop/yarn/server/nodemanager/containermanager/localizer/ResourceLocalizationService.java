@@ -55,11 +55,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.Credentials;
@@ -170,6 +172,8 @@ public class ResourceLocalizationService extends CompositeService
    */
   private final ConcurrentMap<String,LocalResourcesTracker> appRsrc =
     new ConcurrentHashMap<String,LocalResourcesTracker>();
+  
+  FileContext lfs;
 
   public ResourceLocalizationService(Dispatcher dispatcher,
       ContainerExecutor exec, DeletionService delService,
@@ -219,32 +223,17 @@ public class ResourceLocalizationService extends CompositeService
     this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
 
     try {
-      FileContext lfs = getLocalFileContext(conf);
-      lfs.setUMask(new FsPermission((short)FsPermission.DEFAULT_UMASK));
+      lfs = getLocalFileContext(conf);
+      lfs.setUMask(new FsPermission((short) FsPermission.DEFAULT_UMASK));
 
-      if (!stateStore.canRecover() || stateStore.isNewlyCreated()) {
-        cleanUpLocalDir(lfs,delService);
+      if (!stateStore.canRecover()|| stateStore.isNewlyCreated()) {
+        cleanUpLocalDirs(lfs, delService);
+        initializeLocalDirs(lfs);
+        initializeLogDirs(lfs);
       }
-
-      List<String> localDirs = dirsHandler.getLocalDirs();
-      for (String localDir : localDirs) {
-        // $local/usercache
-        Path userDir = new Path(localDir, ContainerLocalizer.USERCACHE);
-        lfs.mkdir(userDir, null, true);
-        // $local/filecache
-        Path fileDir = new Path(localDir, ContainerLocalizer.FILECACHE);
-        lfs.mkdir(fileDir, null, true);
-        // $local/nmPrivate
-        Path sysDir = new Path(localDir, NM_PRIVATE_DIR);
-        lfs.mkdir(sysDir, NM_PRIVATE_PERM, true);
-      }
-
-      List<String> logDirs = dirsHandler.getLogDirs();
-      for (String logDir : logDirs) {
-        lfs.mkdir(new Path(logDir), null, true);
-      }
-    } catch (IOException e) {
-      throw new YarnRuntimeException("Failed to initialize LocalizationService", e);
+    } catch (Exception e) {
+      throw new YarnRuntimeException(
+        "Failed to initialize LocalizationService", e);
     }
 
     cacheTargetSize =
@@ -497,27 +486,44 @@ public class ResourceLocalizationService extends CompositeService
     String containerIDStr = c.toString();
     String appIDStr = ConverterUtils.toString(
         c.getContainerId().getApplicationAttemptId().getApplicationId());
-    for (String localDir : dirsHandler.getLocalDirs()) {
+    
+    // Try deleting from good local dirs and full local dirs because a dir might
+    // have gone bad while the app was running(disk full). In addition
+    // a dir might have become good while the app was running.
+    // Check if the container dir exists and if it does, try to delete it
 
+    for (String localDir : dirsHandler.getLocalDirsForCleanup()) {
       // Delete the user-owned container-dir
       Path usersdir = new Path(localDir, ContainerLocalizer.USERCACHE);
       Path userdir = new Path(usersdir, userName);
       Path allAppsdir = new Path(userdir, ContainerLocalizer.APPCACHE);
       Path appDir = new Path(allAppsdir, appIDStr);
       Path containerDir = new Path(appDir, containerIDStr);
-      delService.delete(userName, containerDir, new Path[] {});
+      submitDirForDeletion(userName, containerDir);
 
       // Delete the nmPrivate container-dir
-      
+
       Path sysDir = new Path(localDir, NM_PRIVATE_DIR);
       Path appSysDir = new Path(sysDir, appIDStr);
       Path containerSysDir = new Path(appSysDir, containerIDStr);
-      delService.delete(null, containerSysDir,  new Path[] {});
+      submitDirForDeletion(null, containerSysDir);
     }
 
     dispatcher.getEventHandler().handle(
         new ContainerEvent(c.getContainerId(),
             ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
+  }
+  
+  private void submitDirForDeletion(String userName, Path dir) {
+    try {
+      lfs.getFileStatus(dir);
+      delService.delete(userName, dir, new Path[] {});
+    } catch (UnsupportedFileSystemException ue) {
+      LOG.warn("Local dir " + dir + " is an unsupported filesystem", ue);
+    } catch (IOException ie) {
+      // ignore
+      return;
+    }
   }
 
 
@@ -545,19 +551,22 @@ public class ResourceLocalizationService extends CompositeService
     }
 
     // Delete the application directories
-    for (String localDir : dirsHandler.getLocalDirs()) {
+    userName = application.getUser();
+    appIDStr = application.toString();
+
+    for (String localDir : dirsHandler.getLocalDirsForCleanup()) {
 
       // Delete the user-owned app-dir
       Path usersdir = new Path(localDir, ContainerLocalizer.USERCACHE);
       Path userdir = new Path(usersdir, userName);
       Path allAppsdir = new Path(userdir, ContainerLocalizer.APPCACHE);
       Path appDir = new Path(allAppsdir, appIDStr);
-      delService.delete(userName, appDir, new Path[] {});
+      submitDirForDeletion(userName, appDir);
 
       // Delete the nmPrivate app-dir
       Path sysDir = new Path(localDir, NM_PRIVATE_DIR);
       Path appSysDir = new Path(sysDir, appIDStr);
-      delService.delete(null, appSysDir, new Path[] {});
+      submitDirForDeletion(null, appSysDir);
     }
 
     // TODO: decrement reference counts of all resources associated with this
@@ -590,8 +599,8 @@ public class ResourceLocalizationService extends CompositeService
 
   private String getAppFileCachePath(String user, String appId) {
     return StringUtils.join(Path.SEPARATOR, Arrays.asList(".",
-      ContainerLocalizer.USERCACHE, user, ContainerLocalizer.APPCACHE, appId,
-      ContainerLocalizer.FILECACHE));
+        ContainerLocalizer.USERCACHE, user, ContainerLocalizer.APPCACHE, appId,
+        ContainerLocalizer.FILECACHE));
   }
   
   @VisibleForTesting
@@ -868,7 +877,7 @@ public class ResourceLocalizationService extends CompositeService
     /**
      * Find next resource to be given to a spawned localizer.
      * 
-     * @return
+     * @return the next resource to be localized
      */
     private LocalResource findNextResource() {
       synchronized (pending) {
@@ -1071,8 +1080,8 @@ public class ResourceLocalizationService extends CompositeService
         // 1) write credentials to private dir
         writeCredentials(nmPrivateCTokensPath);
         // 2) exec initApplication and wait
-        List<String> localDirs = dirsHandler.getLocalDirs();
-        List<String> logDirs = dirsHandler.getLogDirs();
+        List<String> localDirs = getInitializedLocalDirs();
+        List<String> logDirs = getInitializedLogDirs();
         if (dirsHandler.areDisksHealthy()) {
           exec.startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
               context.getUser(),
@@ -1082,7 +1091,7 @@ public class ResourceLocalizationService extends CompositeService
               localizerId, localDirs, logDirs);
         } else {
           throw new IOException("All disks failed. "
-              + dirsHandler.getDisksHealthReport());
+              + dirsHandler.getDisksHealthReport(false));
         }
       // TODO handle ExitCodeException separately?
       } catch (Exception e) {
@@ -1151,21 +1160,92 @@ public class ResourceLocalizationService extends CompositeService
 
   }
 
-  private void cleanUpLocalDir(FileContext lfs, DeletionService del) {
-    long currentTimeStamp = System.currentTimeMillis();
-    for (String localDir : dirsHandler.getLocalDirs()) {
-      renameLocalDir(lfs, localDir, ContainerLocalizer.USERCACHE,
-          currentTimeStamp);
-      renameLocalDir(lfs, localDir, ContainerLocalizer.FILECACHE,
-          currentTimeStamp);
-      renameLocalDir(lfs, localDir, ResourceLocalizationService.NM_PRIVATE_DIR,
-          currentTimeStamp);
+  private void initializeLocalDirs(FileContext lfs) {
+    List<String> localDirs = dirsHandler.getLocalDirs();
+    for (String localDir : localDirs) {
+      initializeLocalDir(lfs, localDir);
+    }
+  }
+
+  private void initializeLocalDir(FileContext lfs, String localDir) {
+
+    Map<Path, FsPermission> pathPermissionMap = getLocalDirsPathPermissionsMap(localDir);
+    for (Map.Entry<Path, FsPermission> entry : pathPermissionMap.entrySet()) {
+      FileStatus status;
       try {
-        deleteLocalDir(lfs, del, localDir);
-      } catch (IOException e) {
-        // Do nothing, just give the warning
-        LOG.warn("Failed to delete localDir: " + localDir);
+        status = lfs.getFileStatus(entry.getKey());
       }
+      catch(FileNotFoundException fs) {
+        status = null;
+      }
+      catch(IOException ie) {
+        String msg = "Could not get file status for local dir " + entry.getKey();
+        LOG.warn(msg, ie);
+        throw new YarnRuntimeException(msg, ie);
+      }
+      if(status == null) {
+        try {
+          lfs.mkdir(entry.getKey(), entry.getValue(), true);
+          status = lfs.getFileStatus(entry.getKey());
+        } catch (IOException e) {
+          String msg = "Could not initialize local dir " + entry.getKey();
+          LOG.warn(msg, e);
+          throw new YarnRuntimeException(msg, e);
+        }
+      }
+      FsPermission perms = status.getPermission();
+      if(!perms.equals(entry.getValue())) {
+        try {
+          lfs.setPermission(entry.getKey(), entry.getValue());
+        }
+        catch(IOException ie) {
+          String msg = "Could not set permissions for local dir " + entry.getKey();
+          LOG.warn(msg, ie);
+          throw new YarnRuntimeException(msg, ie);
+        }
+      }
+    }
+  }
+
+  private void initializeLogDirs(FileContext lfs) {
+    List<String> logDirs = dirsHandler.getLogDirs();
+    for (String logDir : logDirs) {
+      initializeLogDir(lfs, logDir);
+    }
+  }
+
+  private void initializeLogDir(FileContext lfs, String logDir) {
+    try {
+      lfs.mkdir(new Path(logDir), null, true);
+    } catch (FileAlreadyExistsException fe) {
+      // do nothing
+    } catch (IOException e) {
+      String msg = "Could not initialize log dir " + logDir;
+      LOG.warn(msg, e);
+      throw new YarnRuntimeException(msg, e);
+    }
+  }
+
+  private void cleanUpLocalDirs(FileContext lfs, DeletionService del) {
+    for (String localDir : dirsHandler.getLocalDirs()) {
+      cleanUpLocalDir(lfs, del, localDir);
+    }
+  }
+
+  private void cleanUpLocalDir(FileContext lfs, DeletionService del,
+      String localDir) {
+    long currentTimeStamp = System.currentTimeMillis();
+    renameLocalDir(lfs, localDir, ContainerLocalizer.USERCACHE,
+      currentTimeStamp);
+    renameLocalDir(lfs, localDir, ContainerLocalizer.FILECACHE,
+      currentTimeStamp);
+    renameLocalDir(lfs, localDir, ResourceLocalizationService.NM_PRIVATE_DIR,
+      currentTimeStamp);
+    try {
+      deleteLocalDir(lfs, del, localDir);
+    } catch (IOException e) {
+      // Do nothing, just give the warning
+      LOG.warn("Failed to delete localDir: " + localDir);
     }
   }
 
@@ -1234,5 +1314,95 @@ public class ResourceLocalizationService extends CompositeService
       del.scheduleFileDeletionTask(dependentDeletionTask);
     }
   }
+  
+  /**
+   * Synchronized method to get a list of initialized local dirs. Method will
+   * check each local dir to ensure it has been setup correctly and will attempt
+   * to fix any issues it finds.
+   * 
+   * @return list of initialized local dirs
+   */
+  synchronized private List<String> getInitializedLocalDirs() {
+    List<String> dirs = dirsHandler.getLocalDirs();
+    List<String> checkFailedDirs = new ArrayList<String>();
+    for (String dir : dirs) {
+      try {
+        checkLocalDir(dir);
+      } catch (YarnRuntimeException e) {
+        checkFailedDirs.add(dir);
+      }
+    }
+    for (String dir : checkFailedDirs) {
+      LOG.info("Attempting to initialize " + dir);
+      initializeLocalDir(lfs, dir);
+      try {
+        checkLocalDir(dir);
+      } catch (YarnRuntimeException e) {
+        String msg =
+            "Failed to setup local dir " + dir + ", which was marked as good.";
+        LOG.warn(msg, e);
+        throw new YarnRuntimeException(msg, e);
+      }
+    }
+    return dirs;
+  }
 
+  private boolean checkLocalDir(String localDir) {
+
+    Map<Path, FsPermission> pathPermissionMap = getLocalDirsPathPermissionsMap(localDir);
+
+    for (Map.Entry<Path, FsPermission> entry : pathPermissionMap.entrySet()) {
+      FileStatus status;
+      try {
+        status = lfs.getFileStatus(entry.getKey());
+      } catch (Exception e) {
+        String msg =
+            "Could not carry out resource dir checks for " + localDir
+                + ", which was marked as good";
+        LOG.warn(msg, e);
+        throw new YarnRuntimeException(msg, e);
+      }
+
+      if (!status.getPermission().equals(entry.getValue())) {
+        String msg =
+            "Permissions incorrectly set for dir " + entry.getKey()
+                + ", should be " + entry.getValue() + ", actual value = "
+                + status.getPermission();
+        LOG.warn(msg);
+        throw new YarnRuntimeException(msg);
+      }
+    }
+    return true;
+  }
+
+  private Map<Path, FsPermission> getLocalDirsPathPermissionsMap(String localDir) {
+    Map<Path, FsPermission> localDirPathFsPermissionsMap = new HashMap<Path, FsPermission>();
+
+    FsPermission defaultPermission =
+        FsPermission.getDirDefault().applyUMask(lfs.getUMask());
+    FsPermission nmPrivatePermission =
+        NM_PRIVATE_PERM.applyUMask(lfs.getUMask());
+
+    Path userDir = new Path(localDir, ContainerLocalizer.USERCACHE);
+    Path fileDir = new Path(localDir, ContainerLocalizer.FILECACHE);
+    Path sysDir = new Path(localDir, NM_PRIVATE_DIR);
+
+    localDirPathFsPermissionsMap.put(userDir, defaultPermission);
+    localDirPathFsPermissionsMap.put(fileDir, defaultPermission);
+    localDirPathFsPermissionsMap.put(sysDir, nmPrivatePermission);
+    return localDirPathFsPermissionsMap;
+  }
+  
+  /**
+   * Synchronized method to get a list of initialized log dirs. Method will
+   * check each local dir to ensure it has been setup correctly and will attempt
+   * to fix any issues it finds.
+   * 
+   * @return list of initialized log dirs
+   */
+  synchronized private List<String> getInitializedLogDirs() {
+    List<String> dirs = dirsHandler.getLogDirs();
+    initializeLogDirs(lfs);
+    return dirs;
+  }
 }

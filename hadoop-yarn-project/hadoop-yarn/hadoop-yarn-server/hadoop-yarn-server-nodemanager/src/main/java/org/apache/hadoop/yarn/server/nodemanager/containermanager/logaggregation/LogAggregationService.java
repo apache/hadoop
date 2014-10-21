@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -326,6 +327,15 @@ public class LogAggregationService extends AbstractService implements
     }
     this.dispatcher.getEventHandler().handle(eventResponse);
   }
+  
+  FileContext getLocalFileContext(Configuration conf) {
+    try {
+      return FileContext.getLocalFSFileContext(conf);
+    } catch (IOException e) {
+      throw new YarnRuntimeException("Failed to access local fs");
+    }
+  }
+
 
   protected void initAppAggregator(final ApplicationId appId, String user,
       Credentials credentials, ContainerLogsRetentionPolicy logRetentionPolicy,
@@ -344,7 +354,8 @@ public class LogAggregationService extends AbstractService implements
         new AppLogAggregatorImpl(this.dispatcher, this.deletionService,
             getConfig(), appId, userUgi, this.nodeId, dirsHandler,
             getRemoteNodeLogFileForApp(appId, user), logRetentionPolicy,
-            appAcls, logAggregationContext, this.context);
+            appAcls, logAggregationContext, this.context,
+            getLocalFileContext(getConfig()));
     if (this.appLogAggregators.putIfAbsent(appId, appLogAggregator) != null) {
       throw new YarnRuntimeException("Duplicate initApp for " + appId);
     }

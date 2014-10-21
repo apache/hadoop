@@ -55,9 +55,9 @@ public class NodeHealthCheckerService extends CompositeService {
     String scriptReport = (nodeHealthScriptRunner == null) ? ""
         : nodeHealthScriptRunner.getHealthReport();
     if (scriptReport.equals("")) {
-      return dirsHandler.getDisksHealthReport();
+      return dirsHandler.getDisksHealthReport(false);
     } else {
-      return scriptReport.concat(SEPARATOR + dirsHandler.getDisksHealthReport());
+      return scriptReport.concat(SEPARATOR + dirsHandler.getDisksHealthReport(false));
     }
   }
 

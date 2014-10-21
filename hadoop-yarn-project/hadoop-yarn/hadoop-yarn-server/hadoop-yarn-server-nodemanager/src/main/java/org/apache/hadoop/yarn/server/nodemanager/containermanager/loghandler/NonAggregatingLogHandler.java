@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,11 +30,14 @@ import java.util.concurrent.RejectedExecutionException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -96,6 +101,15 @@ public class NonAggregatingLogHandler extends AbstractService implements
     }
     super.serviceStop();
   }
+  
+  FileContext getLocalFileContext(Configuration conf) {
+    try {
+      return FileContext.getLocalFSFileContext(conf);
+    } catch (IOException e) {
+      throw new YarnRuntimeException("Failed to access local fs");
+    }
+  }
+
 
   @SuppressWarnings("unchecked")
   @Override
@@ -160,21 +174,30 @@ public class NonAggregatingLogHandler extends AbstractService implements
     @Override
     @SuppressWarnings("unchecked")
     public void run() {
-      List<String> rootLogDirs =
-          NonAggregatingLogHandler.this.dirsHandler.getLogDirs();
-      Path[] localAppLogDirs = new Path[rootLogDirs.size()];
-      int index = 0;
-      for (String rootLogDir : rootLogDirs) {
-        localAppLogDirs[index] = new Path(rootLogDir, applicationId.toString());
-        index++;
+      List<Path> localAppLogDirs = new ArrayList<Path>();
+      FileContext lfs = getLocalFileContext(getConfig());
+      for (String rootLogDir : dirsHandler.getLogDirsForCleanup()) {
+        Path logDir = new Path(rootLogDir, applicationId.toString());
+        try {
+          lfs.getFileStatus(logDir);
+          localAppLogDirs.add(logDir);
+        } catch (UnsupportedFileSystemException ue) {
+          LOG.warn("Unsupported file system used for log dir " + logDir, ue);
+          continue;
+        } catch (IOException ie) {
+          continue;
+        }
       }
+
       // Inform the application before the actual delete itself, so that links
-      // to logs will no longer be there on NM web-UI. 
+      // to logs will no longer be there on NM web-UI.
       NonAggregatingLogHandler.this.dispatcher.getEventHandler().handle(
-          new ApplicationEvent(this.applicationId,
-              ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
-      NonAggregatingLogHandler.this.delService.delete(user, null,
-          localAppLogDirs);
+        new ApplicationEvent(this.applicationId,
+          ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
+      if (localAppLogDirs.size() > 0) {
+        NonAggregatingLogHandler.this.delService.delete(user, null,
+          (Path[]) localAppLogDirs.toArray(new Path[localAppLogDirs.size()]));
+      }
     }
 
     @Override
