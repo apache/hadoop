@@ -1215,6 +1215,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7167. NPE while running Mover if the given path is for a file. (jing9)
 
+    HDFS-7154. Fix returning value of starting reconfiguration task (Lei Xu via
+    Colin P. McCabe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
