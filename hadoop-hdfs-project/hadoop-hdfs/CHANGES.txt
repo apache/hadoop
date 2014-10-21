@@ -575,6 +575,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7259. Unresponseive NFS mount point due to deferred COMMIT response.
     (brandonli)
 
+    HDFS-7215.Add JvmPauseMonitor to NFS gateway (brandonli)
+
     BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
   
       HDFS-6921. Add LazyPersist flag to FileStatus. (Arpit Agarwal)

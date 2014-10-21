@@ -136,8 +136,9 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
     }
   }
 
-  // Start extra daemons
+  // Start extra daemons or services
   public void startDaemons() {}
+  public void stopDaemons() {}
   
   @Override
   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
