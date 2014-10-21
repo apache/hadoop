@@ -306,6 +306,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7233. NN logs unnecessary org.apache.hadoop.hdfs.protocol.UnresolvedPathException.
     (Rushabh S Shah via jing9)
 
+    HDFS-7221. TestDNFencingWithReplication fails consistently. (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
