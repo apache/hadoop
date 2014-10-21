@@ -382,6 +382,9 @@ Release 2.6.0 - UNRELEASED
     YARN-90. NodeManager should identify failed disks becoming good again
     (Varun Vasudev via jlowe)
 
+    YARN-2709. Made timeline client getDelegationToken API retry if ConnectException
+    happens. (Li Lu via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
