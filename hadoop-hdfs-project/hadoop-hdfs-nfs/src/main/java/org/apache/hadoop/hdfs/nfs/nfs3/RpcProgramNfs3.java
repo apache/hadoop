@@ -126,6 +126,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -158,6 +159,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   private String writeDumpDir; // The dir save dump files
 
   private final RpcCallCache rpcCallCache;
+  private JvmPauseMonitor pauseMonitor;
 
   public RpcProgramNfs3(NfsConfiguration config, DatagramSocket registrationSocket,
       boolean allowInsecurePorts) throws IOException {
@@ -219,7 +221,21 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
   @Override
   public void startDaemons() {
-     writeManager.startAsyncDataSerivce();
+    if (pauseMonitor == null) {
+      pauseMonitor = new JvmPauseMonitor(config);
+      pauseMonitor.start();
+    }
+    writeManager.startAsyncDataSerivce();
+  }
+
+  @Override
+  public void stopDaemons() {
+    if (writeManager != null) {
+      writeManager.shutdownAsyncDataService();
+    }
+    if (pauseMonitor != null) {
+      pauseMonitor.stop();
+    }
   }
 
   // Checks the type of IOException and maps it to appropriate Nfs3Status code.

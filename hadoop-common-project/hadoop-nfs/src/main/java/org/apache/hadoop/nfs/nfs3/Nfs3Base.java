@@ -50,7 +50,7 @@ public abstract class Nfs3Base {
     startTCPServer(); // Start TCP server
 
     if (register) {
-      ShutdownHookManager.get().addShutdownHook(new Unregister(),
+      ShutdownHookManager.get().addShutdownHook(new NfsShutdownHook(),
           SHUTDOWN_HOOK_PRIORITY);
       try {
         rpcProgram.register(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
@@ -74,10 +74,11 @@ public abstract class Nfs3Base {
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 10;
 
-  private class Unregister implements Runnable {
+  private class NfsShutdownHook implements Runnable {
     @Override
     public synchronized void run() {
       rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
+      rpcProgram.stopDaemons();
     }
   }
 }
