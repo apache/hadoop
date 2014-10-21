@@ -536,9 +536,9 @@ public class Job extends JobContext {
         ensureNotSet(JobContext.OUTPUT_FORMAT_CLASS_ATTR, mode);
       }
     }
+    conf.setBooleanIfUnset("mapred.reducer.new-api",
+                           conf.get(oldReduceClass) == null);
     if (numReduces != 0) {
-      conf.setBooleanIfUnset("mapred.reducer.new-api",
-                             conf.get(oldReduceClass) == null);
       if (conf.getUseNewReducer()) {
         String mode = "new reduce API";
         ensureNotSet("mapred.output.format.class", mode);
