@@ -83,6 +83,7 @@ shift
 
 case ${COMMAND} in
   balancer)
+    daemon="true"
     CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
     hadoop_debug "Appending HADOOP_BALANCER_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_BALANCER_OPTS}"

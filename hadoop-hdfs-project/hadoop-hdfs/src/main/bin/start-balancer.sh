@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function usage
+function hadoop_usage
 {
   echo "Usage: start-balancer.sh [--config confdir]  [-policy <policy>] [-threshold <threshold>]"
 }
@@ -42,4 +42,4 @@ fi
 
 # Start balancer daemon.
 
-exec "${bin}/hadoop-daemon.sh" --config "${HADOOP_CONF_DIR}" start balancer "$@"
+exec "${HADOOP_HDFS_HOME}/bin/hdfs" --config "${HADOOP_CONF_DIR}" --daemon start balancer "$@"

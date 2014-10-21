@@ -253,6 +253,8 @@ Trunk (Unreleased)
 
     HDFS-6981. Fix DN upgrade with layout version change. (Arpit Agarwal)
 
+    HDFS-7204. balancer doesn't run as a daemon (aw)
+
 
 Release 2.7.0 - UNRELEASED
 
