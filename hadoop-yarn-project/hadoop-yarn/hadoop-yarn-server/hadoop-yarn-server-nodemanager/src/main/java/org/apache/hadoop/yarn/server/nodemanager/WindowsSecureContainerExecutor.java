@@ -149,10 +149,12 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
      // Passing CLASSPATH explicitly is *way* too long for command line.
      String classPath = System.getProperty("java.class.path");
      Map<String, String> env = new HashMap<String, String>(System.getenv());
-     String classPathJar = FileUtil.createJarWithClassPath(classPath, appStorageDir, env);
+     String[] jarCp = FileUtil.createJarWithClassPath(classPath, appStorageDir, env);
+     String classPathJar = jarCp[0];
      localizeClasspathJar(new Path(classPathJar), user);
+     String replacementClassPath = classPathJar + jarCp[1];
      command.add("-classpath");
-     command.add(classPathJar);
+     command.add(replacementClassPath);
      
      String javaLibPath = System.getProperty("java.library.path");
      if (javaLibPath != null) {
