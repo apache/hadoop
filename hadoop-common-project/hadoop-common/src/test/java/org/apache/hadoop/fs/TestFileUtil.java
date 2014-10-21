@@ -1036,8 +1036,10 @@ public class TestFileUtil {
     List<String> classPaths = Arrays.asList("", "cp1.jar", "cp2.jar", wildcardPath,
       "cp3.jar", nonExistentSubdir);
     String inputClassPath = StringUtils.join(File.pathSeparator, classPaths);
-    String classPathJar = FileUtil.createJarWithClassPath(inputClassPath,
+    String[] jarCp = FileUtil.createJarWithClassPath(inputClassPath + File.pathSeparator + "unexpandedwildcard/*",
       new Path(tmp.getCanonicalPath()), System.getenv());
+    String classPathJar = jarCp[0];
+    assertNotEquals("Unexpanded wildcard was not placed in extra classpath", jarCp[1].indexOf("unexpanded"), -1);
 
     // verify classpath by reading manifest from jar file
     JarFile jarFile = null;

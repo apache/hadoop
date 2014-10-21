@@ -1212,10 +1212,11 @@ public class FileUtil {
    * @param pwd Path to working directory to save jar
    * @param callerEnv Map<String, String> caller's environment variables to use
    *   for expansion
-   * @return String absolute path to new jar
+   * @return String[] with absolute path to new jar in position 0 and
+   *   unexpanded wild card entry path in position 1
    * @throws IOException if there is an I/O error while writing the jar file
    */
-  public static String createJarWithClassPath(String inputClassPath, Path pwd,
+  public static String[] createJarWithClassPath(String inputClassPath, Path pwd,
       Map<String, String> callerEnv) throws IOException {
     // Replace environment variables, case-insensitive on Windows
     @SuppressWarnings("unchecked")
@@ -1235,6 +1236,7 @@ public class FileUtil {
       LOG.debug("mkdirs false for " + workingDir + ", execution will continue");
     }
 
+    StringBuilder unexpandedWildcardClasspath = new StringBuilder();
     // Append all entries
     List<String> classPathEntryList = new ArrayList<String>(
       classPathEntries.length);
@@ -1243,15 +1245,21 @@ public class FileUtil {
         continue;
       }
       if (classPathEntry.endsWith("*")) {
+        boolean foundWildCardJar = false;
         // Append all jars that match the wildcard
         Path globPath = new Path(classPathEntry).suffix("{.jar,.JAR}");
         FileStatus[] wildcardJars = FileContext.getLocalFSFileContext().util()
           .globStatus(globPath);
         if (wildcardJars != null) {
           for (FileStatus wildcardJar: wildcardJars) {
+            foundWildCardJar = true;
             classPathEntryList.add(wildcardJar.getPath().toUri().toURL()
               .toExternalForm());
           }
+        }
+        if (!foundWildCardJar) {
+          unexpandedWildcardClasspath.append(File.pathSeparator);
+          unexpandedWildcardClasspath.append(classPathEntry);
         }
       } else {
         // Append just this entry
@@ -1300,7 +1308,8 @@ public class FileUtil {
     } finally {
       IOUtils.cleanup(LOG, jos, bos, fos);
     }
-
-    return classPathJar.getCanonicalPath();
+    String[] jarCp = {classPathJar.getCanonicalPath(),
+                        unexpandedWildcardClasspath.toString()};
+    return jarCp;
   }
 }
