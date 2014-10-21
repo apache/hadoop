@@ -27,6 +27,8 @@ import static org.mockito.Mockito.when;
 
 import java.net.ConnectException;
 
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
@@ -183,8 +185,8 @@ public class TestTimelineClient {
 
   @Test
   public void testCheckRetryCount() throws Exception {
-    int newMaxRetries = 1;
-    long newIntervalMs = 1500;
+    int newMaxRetries = 5;
+    long newIntervalMs = 500;
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
       newMaxRetries);
@@ -197,13 +199,44 @@ public class TestTimelineClient {
       client.putEntities(generateEntity());
       Assert.fail("Exception expected!"
           + "Timeline server should be off to run this test. ");
-    } catch (ClientHandlerException ce) {
+    } catch (RuntimeException ce) {
       Assert.assertTrue(
         "Handler exception for reason other than retry: " + ce.getMessage(),
         ce.getMessage().contains("Connection retries limit exceeded"));
       // we would expect this exception here, check if the client has retried
       Assert.assertTrue("Retry filter didn't perform any retries! ", client
-        .getRetryFilter().retried);
+        .connectionRetry.retried);
+    }
+  }
+
+  @Test
+  public void testTokenRetry() throws Exception {
+    int newMaxRetries = 5;
+    long newIntervalMs = 500;
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+      newMaxRetries);
+    conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+      newIntervalMs);
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    // use kerberos to bypass the issue in HADOOP-11215
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+            UserGroupInformation.setConfiguration(conf);
+    TimelineClientImpl client = createTimelineClient(conf);
+    try {
+      // try getting a delegation token
+      client.getDelegationToken(
+        UserGroupInformation.getCurrentUser().getShortUserName());
+      Assert.fail("Exception expected!"
+          + "Timeline server should be off to run this test. ");
+    } catch (RuntimeException ce) {
+      Assert.assertTrue(
+        "Handler exception for reason other than retry: " + ce.toString(), ce
+          .getMessage().contains("Connection retries limit exceeded"));
+      // we would expect this exception here, check if the client has retried
+      Assert.assertTrue("Retry filter didn't perform any retries! ",
+        client.connectionRetry.retried);
     }
   }
 
