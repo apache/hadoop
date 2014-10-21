@@ -632,6 +632,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2588. Standby RM fails to transitionToActive if previous
     transitionToActive failed with ZK exception. (Rohith Sharmaks via jianhe)
 
+    YARN-2701. Potential race condition in startLocalizer when using
+    LinuxContainerExecutor. (Xuan Gong via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
