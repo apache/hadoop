@@ -635,6 +635,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2701. Potential race condition in startLocalizer when using
     LinuxContainerExecutor. (Xuan Gong via jianhe)
 
+    YARN-2717. Avoided duplicate logging when container logs are not found. (Xuan
+    Gong via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

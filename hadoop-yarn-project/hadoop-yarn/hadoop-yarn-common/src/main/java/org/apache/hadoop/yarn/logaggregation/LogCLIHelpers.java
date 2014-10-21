@@ -109,7 +109,6 @@ public class LogCLIHelpers implements Configurable {
     }
 
     if (valueStream == null) {
-      containerLogNotFound(containerIdStr);
       return -1;
     }
 
