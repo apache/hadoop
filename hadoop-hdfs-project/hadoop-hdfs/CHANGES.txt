@@ -384,6 +384,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7266. HDFS Peercache enabled check should not lock on object (awang
     via cmccabe)
 
+    HDFS-7221. TestDNFencingWithReplication fails consistently. (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
