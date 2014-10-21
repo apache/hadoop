@@ -171,7 +171,9 @@ HDFS NFS Gateway
 </property>
 ----
 
-  * Customize log settings. To get NFS debug trace, users can edit the log4j.property file 
+  * JVM and log settings. You can export JVM settings (e.g., heap size and GC log) in 
+   HADOOP_NFS3_OPTS. More NFS related settings can be found in hadoop-env.sh. 
+   To get NFS debug trace, you can edit the log4j.property file 
    to add the following. Note, debug trace, especially for ONCRPC, can be very verbose.
 
     To change logging level:
