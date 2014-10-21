@@ -178,7 +178,7 @@ public class WriteManager {
       String writeDumpDir = config.get(NfsConfigKeys.DFS_NFS_FILE_DUMP_DIR_KEY,
           NfsConfigKeys.DFS_NFS_FILE_DUMP_DIR_DEFAULT);
       openFileCtx = new OpenFileCtx(fos, latestAttr, writeDumpDir + "/"
-          + fileHandle.getFileId(), dfsClient, iug, aixCompatMode);
+          + fileHandle.getFileId(), dfsClient, iug, aixCompatMode, config);
 
       if (!addOpenFileStream(fileHandle, openFileCtx)) {
         LOG.info("Can't add new stream. Close it. Tell client to retry.");
@@ -236,6 +236,7 @@ public class WriteManager {
         status = Nfs3Status.NFS3ERR_IO;
         break;
       case COMMIT_WAIT:
+      case COMMIT_SPECIAL_WAIT:
         /**
          * This should happen rarely in some possible cases, such as read
          * request arrives before DFSClient is able to quickly flush data to DN,
@@ -243,6 +244,10 @@ public class WriteManager {
          * want to block read.
          */     
         status = Nfs3Status.NFS3ERR_JUKEBOX;
+        break;
+      case COMMIT_SPECIAL_SUCCESS:
+        // Read beyond eof could result in partial read
+        status = Nfs3Status.NFS3_OK;
         break;
       default:
         LOG.error("Should not get commit return code:" + ret.name());
@@ -278,6 +283,12 @@ public class WriteManager {
       case COMMIT_WAIT:
         // Do nothing. Commit is async now.
         return;
+      case COMMIT_SPECIAL_WAIT:
+        status = Nfs3Status.NFS3ERR_JUKEBOX;
+        break;
+      case COMMIT_SPECIAL_SUCCESS:
+        status = Nfs3Status.NFS3_OK;
+        break;
       default:
         LOG.error("Should not get commit return code:" + ret.name());
         throw new RuntimeException("Should not get commit return code:"
@@ -288,8 +299,7 @@ public class WriteManager {
     // Send out the response
     Nfs3FileAttributes postOpAttr = null;
     try {
-      String fileIdPath = Nfs3Utils.getFileIdPath(preOpAttr.getFileId());
-      postOpAttr = Nfs3Utils.getFileAttr(dfsClient, fileIdPath, iug);
+      postOpAttr = getFileAttr(dfsClient, new FileHandle(preOpAttr.getFileId()), iug);
     } catch (IOException e1) {
       LOG.info("Can't get postOpAttr for fileId: " + preOpAttr.getFileId(), e1);
     }

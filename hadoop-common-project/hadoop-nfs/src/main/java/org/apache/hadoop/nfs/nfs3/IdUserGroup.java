@@ -372,7 +372,7 @@ public class IdUserGroup {
       uid = getUid(user);
     } catch (IOException e) {
       uid = user.hashCode();
-      LOG.info("Can't map user " + user + ". Use its string hashcode:" + uid, e);
+      LOG.info("Can't map user " + user + ". Use its string hashcode:" + uid);
     }
     return uid;
   }
@@ -385,7 +385,7 @@ public class IdUserGroup {
       gid = getGid(group);
     } catch (IOException e) {
       gid = group.hashCode();
-      LOG.info("Can't map group " + group + ". Use its string hashcode:" + gid, e);
+      LOG.info("Can't map group " + group + ". Use its string hashcode:" + gid);
     }
     return gid;
   }
