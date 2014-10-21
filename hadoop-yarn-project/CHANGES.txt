@@ -678,6 +678,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2717. Avoided duplicate logging when container logs are not found. (Xuan
     Gong via zjshen)
 
+    YARN-2720. Windows: Wildcard classpath variables not expanded against
+    resources contained in archives. (Craig Welch via cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

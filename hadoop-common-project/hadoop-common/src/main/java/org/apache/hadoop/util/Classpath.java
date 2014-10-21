@@ -94,7 +94,7 @@ public final class Classpath {
       final String tmpJarPath;
       try {
         tmpJarPath = FileUtil.createJarWithClassPath(classPath, workingDir,
-          System.getenv());
+          System.getenv())[0];
       } catch (IOException e) {
         terminate(1, "I/O error creating jar: " + e.getMessage());
         return;
