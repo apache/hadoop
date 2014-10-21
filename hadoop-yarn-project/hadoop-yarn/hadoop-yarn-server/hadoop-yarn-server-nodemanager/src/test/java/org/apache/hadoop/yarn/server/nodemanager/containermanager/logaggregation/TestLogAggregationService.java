@@ -25,6 +25,7 @@ import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -58,6 +59,8 @@ import org.junit.Assert;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -105,6 +108,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.TestContainerM
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.TestNonAggregatingLogHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
@@ -136,12 +140,19 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     super();
     this.remoteRootLogDir.mkdir();
   }
+  
+  DrainDispatcher dispatcher;
+  EventHandler<ApplicationEvent> appEventHandler;
 
   @Override
+  @SuppressWarnings("unchecked")
   public void setup() throws IOException {
     super.setup();
     NodeId nodeId = NodeId.newInstance("0.0.0.0", 5555);
     ((NMContext)context).setNodeId(nodeId);
+    dispatcher = createDispatcher();
+    appEventHandler = mock(EventHandler.class);
+    dispatcher.register(ApplicationEventType.class, appEventHandler);
   }
 
   @Override
@@ -149,10 +160,12 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     super.tearDown();
     createContainerExecutor().deleteAsUser(user,
         new Path(remoteRootLogDir.getAbsolutePath()), new Path[] {});
+    dispatcher.await();
+    dispatcher.stop();
+    dispatcher.close();
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testLocalFileDeletionAfterUpload() throws Exception {
     this.delSrvc = new DeletionService(createContainerExecutor());
     delSrvc = spy(delSrvc);
@@ -160,10 +173,6 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
-    
-    DrainDispatcher dispatcher = createDispatcher();
-    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
-    dispatcher.register(ApplicationEventType.class, appEventHandler);
     
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
@@ -236,15 +245,10 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testNoContainerOnNode() throws Exception {
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
-    
-    DrainDispatcher dispatcher = createDispatcher();
-    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
-    dispatcher.register(ApplicationEventType.class, appEventHandler);
     
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
@@ -285,6 +289,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     };
     checkEvents(appEventHandler, expectedEvents, true, "getType", "getApplicationID");
     dispatcher.stop();
+    logAggregationService.close();
   }
 
   @Test
@@ -294,6 +299,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
+    
     String[] fileNames = new String[] { "stdout", "stderr", "syslog" };
     DrainDispatcher dispatcher = createDispatcher();
     EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
@@ -432,16 +438,11 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   }
   
   @Test
-  @SuppressWarnings("unchecked")
   public void testVerifyAndCreateRemoteDirsFailure()
       throws Exception {
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
-    
-    DrainDispatcher dispatcher = createDispatcher();
-    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
-    dispatcher.register(ApplicationEventType.class, appEventHandler);
     
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
@@ -456,8 +457,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     logAggregationService.start();
     
     // Now try to start an application
-    ApplicationId appId = BuilderUtils.newApplicationId(
-        System.currentTimeMillis(), (int)Math.random());
+    ApplicationId appId =
+        BuilderUtils.newApplicationId(System.currentTimeMillis(),
+          (int) (Math.random() * 1000));
     logAggregationService.handle(new LogHandlerAppStartedEvent(appId,
         this.user, null,
         ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY,
@@ -475,8 +477,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     Mockito.reset(logAggregationService);
     
     // Now try to start another one
-    ApplicationId appId2 = BuilderUtils.newApplicationId(
-        System.currentTimeMillis(), (int)Math.random());
+    ApplicationId appId2 =
+        BuilderUtils.newApplicationId(System.currentTimeMillis(),
+          (int) (Math.random() * 1000));
     File appLogDir =
         new File(localLogDir, ConverterUtils.toString(appId2));
     appLogDir.mkdir();
@@ -578,6 +581,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     aggSvc.handle(new LogHandlerAppStartedEvent(appId3, this.user, null,
         ContainerLogsRetentionPolicy.ALL_CONTAINERS, this.acls));
     verify(spyFs, never()).mkdirs(eq(appDir3), isA(FsPermission.class));
+    aggSvc.stop();
+    aggSvc.close();
   }
 
   @Test
@@ -588,19 +593,16 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
-
-    DrainDispatcher dispatcher = createDispatcher();
-    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
-    dispatcher.register(ApplicationEventType.class, appEventHandler);
-
+    
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
                                   super.dirsHandler));
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
-    ApplicationId appId = BuilderUtils.newApplicationId(
-        System.currentTimeMillis(), (int)Math.random());
+    ApplicationId appId =
+        BuilderUtils.newApplicationId(System.currentTimeMillis(),
+          (int) (Math.random() * 1000));
     doThrow(new YarnRuntimeException("KABOOM!"))
       .when(logAggregationService).initAppAggregator(
           eq(appId), eq(user), any(Credentials.class),
@@ -634,26 +636,22 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testLogAggregationCreateDirsFailsWithoutKillingNM()
       throws Exception {
     
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
-    
-    DrainDispatcher dispatcher = createDispatcher();
-    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
-    dispatcher.register(ApplicationEventType.class, appEventHandler);
-    
+        
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
                                   super.dirsHandler));
     logAggregationService.init(this.conf);
     logAggregationService.start();
     
-    ApplicationId appId = BuilderUtils.newApplicationId(
-        System.currentTimeMillis(), (int)Math.random());
+    ApplicationId appId =
+        BuilderUtils.newApplicationId(System.currentTimeMillis(),
+          (int) (Math.random() * 1000));
     Exception e = new RuntimeException("KABOOM!");
     doThrow(e)
       .when(logAggregationService).createAppDir(any(String.class),
@@ -905,18 +903,13 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   }
 
   @Test(timeout=20000)
-  @SuppressWarnings("unchecked")
   public void testStopAfterError() throws Exception {
     DeletionService delSrvc = mock(DeletionService.class);
 
     // get the AppLogAggregationImpl thread to crash
     LocalDirsHandlerService mockedDirSvc = mock(LocalDirsHandlerService.class);
     when(mockedDirSvc.getLogDirs()).thenThrow(new RuntimeException());
-
-    DrainDispatcher dispatcher = createDispatcher();
-    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
-    dispatcher.register(ApplicationEventType.class, appEventHandler);
-
+    
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, this.context, delSrvc,
                                   mockedDirSvc);
@@ -930,19 +923,15 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     logAggregationService.stop();
     assertEquals(0, logAggregationService.getNumAggregators());
+    logAggregationService.close();
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testLogAggregatorCleanup() throws Exception {
     DeletionService delSrvc = mock(DeletionService.class);
 
     // get the AppLogAggregationImpl thread to crash
     LocalDirsHandlerService mockedDirSvc = mock(LocalDirsHandlerService.class);
-
-    DrainDispatcher dispatcher = createDispatcher();
-    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
-    dispatcher.register(ApplicationEventType.class, appEventHandler);
 
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, this.context, delSrvc,
@@ -964,6 +953,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     }
     Assert.assertEquals("Log aggregator failed to cleanup!", 0,
         logAggregationService.getNumAggregators());
+    logAggregationService.stop();
+    logAggregationService.close();
   }
   
   @SuppressWarnings("unchecked")
@@ -1037,6 +1028,72 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     }
     sb.append("]");
     return sb.toString();
+  }
+
+  /*
+   * Test to make sure we handle cases where the directories we get back from
+   * the LocalDirsHandler may have issues including the log dir not being
+   * present as well as other issues. The test uses helper functions from
+   * TestNonAggregatingLogHandler.
+   */
+  @Test
+  public void testFailedDirsLocalFileDeletionAfterUpload() throws Exception {
+
+    // setup conf and services
+    DeletionService mockDelService = mock(DeletionService.class);
+    File[] localLogDirs =
+        TestNonAggregatingLogHandler.getLocalLogDirFiles(this.getClass()
+          .getName(), 7);
+    final List<String> localLogDirPaths =
+        new ArrayList<String>(localLogDirs.length);
+    for (int i = 0; i < localLogDirs.length; i++) {
+      localLogDirPaths.add(localLogDirs[i].getAbsolutePath());
+    }
+
+    String localLogDirsString = StringUtils.join(localLogDirPaths, ",");
+
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDirsString);
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+      this.remoteRootLogDir.getAbsolutePath());
+    this.conf.setLong(YarnConfiguration.NM_DISK_HEALTH_CHECK_INTERVAL_MS, 500);
+
+    ApplicationId application1 = BuilderUtils.newApplicationId(1234, 1);
+    ApplicationAttemptId appAttemptId =
+        BuilderUtils.newApplicationAttemptId(application1, 1);
+
+    this.dirsHandler = new LocalDirsHandlerService();
+    LocalDirsHandlerService mockDirsHandler = mock(LocalDirsHandlerService.class);
+
+    LogAggregationService logAggregationService =
+        spy(new LogAggregationService(dispatcher, this.context, mockDelService,
+          mockDirsHandler));
+    AbstractFileSystem spylfs =
+        spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
+    FileContext lfs = FileContext.getFileContext(spylfs, conf);
+    doReturn(lfs).when(logAggregationService).getLocalFileContext(
+      isA(Configuration.class));
+
+    logAggregationService.init(this.conf);
+    logAggregationService.start();
+
+    TestNonAggregatingLogHandler.runMockedFailedDirs(logAggregationService,
+      application1, user, mockDelService, mockDirsHandler, conf, spylfs, lfs,
+      localLogDirs);
+
+    logAggregationService.stop();
+    assertEquals(0, logAggregationService.getNumAggregators());
+    verify(logAggregationService).closeFileSystems(
+      any(UserGroupInformation.class));
+
+    ApplicationEvent expectedEvents[] =
+        new ApplicationEvent[] {
+            new ApplicationEvent(appAttemptId.getApplicationId(),
+              ApplicationEventType.APPLICATION_LOG_HANDLING_INITED),
+            new ApplicationEvent(appAttemptId.getApplicationId(),
+              ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED) };
+
+    checkEvents(appEventHandler, expectedEvents, true, "getType",
+      "getApplicationID");
   }
 
   @Test (timeout = 50000)

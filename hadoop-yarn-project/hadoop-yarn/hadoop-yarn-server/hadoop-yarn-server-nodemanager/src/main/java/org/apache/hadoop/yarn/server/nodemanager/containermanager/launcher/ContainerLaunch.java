@@ -240,7 +240,7 @@ public class ContainerLaunch implements Callable<Integer> {
       if (!dirsHandler.areDisksHealthy()) {
         ret = ContainerExitStatus.DISKS_FAILED;
         throw new IOException("Most of the disks failed. "
-            + dirsHandler.getDisksHealthReport());
+            + dirsHandler.getDisksHealthReport(false));
       }
 
       try {
