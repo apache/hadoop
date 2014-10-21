@@ -381,6 +381,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
 
+    HDFS-7266. HDFS Peercache enabled check should not lock on object (awang
+    via cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
