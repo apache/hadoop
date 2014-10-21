@@ -196,7 +196,7 @@ public class TestNodeHealthService {
         healthStatus.getHealthReport().equals(
             NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG
             + NodeHealthCheckerService.SEPARATOR
-            + nodeHealthChecker.getDiskHandler().getDisksHealthReport()));
+            + nodeHealthChecker.getDiskHandler().getDisksHealthReport(false)));
   }
 
 }
