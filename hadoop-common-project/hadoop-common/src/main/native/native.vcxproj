@@ -107,6 +107,9 @@
       <AdditionalOptions Condition="'$(SnappyEnabled)' == 'true'">/D HADOOP_SNAPPY_LIBRARY=L\"snappy.dll\"</AdditionalOptions>
     </ClCompile>
     <ClCompile Include="src\org\apache\hadoop\util\NativeCrc32.c" />
+    <ClCompile Include="src\org\apache\hadoop\yarn\server\nodemanager\windows_secure_container_executor.c">
+      <AdditionalIncludeDirectories>src\org\apache\hadoop\io\nativeio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\org\apache\hadoop\util\crc32c_tables.h" />
@@ -120,6 +123,7 @@
     <ClInclude Include="src\org\apache\hadoop\util\crc32c_tables.h" />
     <ClInclude Include="src\org\apache\hadoop\util\crc32_zlib_polynomial_tables.h" />
     <ClInclude Include="src\org_apache_hadoop.h" />
+    <ClInclude Include="src\org\apache\hadoop\yarn\server\nodemanager\windows_secure_container_executor.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

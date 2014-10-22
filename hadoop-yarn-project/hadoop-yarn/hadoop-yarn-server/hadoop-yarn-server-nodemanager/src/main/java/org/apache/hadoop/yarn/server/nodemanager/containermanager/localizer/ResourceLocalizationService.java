@@ -1088,7 +1088,8 @@ public class ResourceLocalizationService extends CompositeService
               ConverterUtils.toString(
                   context.getContainerId().
                   getApplicationAttemptId().getApplicationId()),
-              localizerId, localDirs, logDirs);
+              localizerId,
+              dirsHandler);
         } else {
           throw new IOException("All disks failed. "
               + dirsHandler.getDisksHealthReport(false));

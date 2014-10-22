@@ -71,8 +71,13 @@ static jmethodID nioe_ctor;
 // Please see HADOOP-7156 for details.
 jobject pw_lock_object;
 
+/*
+ * Throw a java.IO.IOException, generating the message from errno.
+ * NB. this is also used form windows_secure_container_executor.c
+ */
+extern void throw_ioe(JNIEnv* env, int errnum);
+
 // Internal functions
-static void throw_ioe(JNIEnv* env, int errnum);
 #ifdef UNIX
 static ssize_t get_pw_buflen();
 #endif
@@ -216,7 +221,7 @@ static int map_fadvise_flag(jint flag) {
  */
 JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_nativeio_NativeIO_initNative(
-	JNIEnv *env, jclass clazz) {
+  JNIEnv *env, jclass clazz) {
   stat_init(env, clazz);
   PASS_EXCEPTIONS_GOTO(env, error);
   nioe_init(env);
@@ -802,7 +807,7 @@ cleanup:
 /*
  * Throw a java.IO.IOException, generating the message from errno.
  */
-static void throw_ioe(JNIEnv* env, int errnum)
+void throw_ioe(JNIEnv* env, int errnum)
 {
 #ifdef UNIX
   char message[80];

@@ -17,11 +17,26 @@
 
 #include "winutils.h"
 
+#include <winbase.h>
+
 static void Usage(LPCWSTR program);
+
+LONG WINAPI WinutilsSehUnhandled(_In_  struct _EXCEPTION_POINTERS *ecxr) {
+	LogDebugMessage(L"unhandled SEH: code:%x flags:%d\n", 
+		ecxr->ExceptionRecord->ExceptionCode,
+		ecxr->ExceptionRecord->ExceptionFlags);
+  fwprintf(stderr, L"Unhandled exception code:%x at address:%p",
+		ecxr->ExceptionRecord->ExceptionCode,
+		ecxr->ExceptionRecord->ExceptionAddress);
+	ExitProcess(ERROR_UNHANDLED_EXCEPTION);
+	return EXCEPTION_EXECUTE_HANDLER; // not that it matters...
+}
 
 int wmain(__in int argc, __in_ecount(argc) wchar_t* argv[])
 {
   LPCWSTR cmd = NULL;
+
+  SetUnhandledExceptionFilter(WinutilsSehUnhandled);
 
   if (argc < 2)
   {
@@ -66,6 +81,10 @@ int wmain(__in int argc, __in_ecount(argc) wchar_t* argv[])
   else if (wcscmp(L"systeminfo", cmd) == 0)
   {
     return SystemInfo();
+  }
+  else if (wcscmp(L"service", cmd) == 0)
+  {
+    return RunService(argc - 1, argv + 1);
   }
   else if (wcscmp(L"help", cmd) == 0)
   {
@@ -119,5 +138,9 @@ The available commands and their usages are:\n\n", program);
 
   fwprintf(stdout, L"%-15s%s\n\n", L"task", L"Task operations.");
   TaskUsage();
+
+  fwprintf(stdout, L"%-15s%s\n\n", L"service", L"Service operations.");
+  ServiceUsage();
+
   fwprintf(stdout, L"\n\n");
 }
