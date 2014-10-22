@@ -303,6 +303,7 @@ public class TestDefaultContainerExecutor {
   public void testStartLocalizer()
       throws IOException, InterruptedException {
     InetSocketAddress localizationServerAddress;
+    
     final Path firstDir = new Path(BASE_TMP_PATH, "localDir1");
     List<String> localDirs = new ArrayList<String>();
     final Path secondDir = new Path(BASE_TMP_PATH, "localDir2");
@@ -383,9 +384,14 @@ public class TestDefaultContainerExecutor {
     String appSubmitter = "nobody";
     String appId = "APP_ID";
     String locId = "LOC_ID";
+    
+    LocalDirsHandlerService  dirsHandler = mock(LocalDirsHandlerService.class);
+    when(dirsHandler.getLocalDirs()).thenReturn(localDirs);
+    when(dirsHandler.getLogDirs()).thenReturn(logDirs);
+    
     try {
       mockExec.startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
-          appSubmitter, appId, locId, localDirs, logDirs);
+          appSubmitter, appId, locId, dirsHandler);
     } catch (IOException e) {
       Assert.fail("StartLocalizer failed to copy token file " + e);
     } finally {

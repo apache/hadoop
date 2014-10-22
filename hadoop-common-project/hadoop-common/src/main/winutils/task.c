@@ -19,15 +19,18 @@
 #include <errno.h>
 #include <psapi.h>
 #include <malloc.h>
+#include <authz.h>
+#include <sddl.h>
 
 #define PSAPI_VERSION 1
 #pragma comment(lib, "psapi.lib")
 
-#define ERROR_TASK_NOT_ALIVE 1
+#define NM_WSCE_IMPERSONATE_ALLOWED L"yarn.nodemanager.windows-secure-container-executor.impersonate.allowed"
+#define NM_WSCE_IMPERSONATE_DENIED  L"yarn.nodemanager.windows-secure-container-executor.impersonate.denied"
 
-// This exit code for killed processes is compatible with Unix, where a killed
-// process exits with 128 + signal.  For SIGKILL, this would be 128 + 9 = 137.
-#define KILLED_PROCESS_EXIT_CODE 137
+// The S4U impersonation access check mask. Arbitrary value (we use 1 for the service access check)
+#define SERVICE_IMPERSONATE_MASK 0x00000002
+
 
 // Name for tracking this logon process when registering with LSA
 static const char *LOGON_PROCESS_NAME="Hadoop Container Executor";
@@ -104,6 +107,459 @@ static BOOL ParseCommandLine(__in int argc,
   return FALSE;
 }
 
+
+//----------------------------------------------------------------------------
+// Function: BuildImpersonateSecurityDescriptor
+//
+// Description:
+//  Builds the security descriptor for the S4U impersonation permissions
+//  This describes what users can be impersonated and what not
+//
+// Returns:
+//   ERROR_SUCCESS: On success
+//   GetLastError: otherwise
+//
+DWORD BuildImpersonateSecurityDescriptor(__out PSECURITY_DESCRIPTOR* ppSD) {
+  DWORD dwError = ERROR_SUCCESS;
+  size_t countAllowed = 0;
+  PSID* allowedSids = NULL;
+  size_t countDenied = 0;
+  PSID* deniedSids = NULL;
+  LPCWSTR value = NULL;
+  WCHAR** tokens = NULL;
+  size_t len = 0;
+  size_t count = 0;
+  int crt = 0;
+  PSECURITY_DESCRIPTOR pSD = NULL;
+
+  dwError = GetConfigValue(wsceConfigRelativePath, NM_WSCE_IMPERSONATE_ALLOWED, &len, &value); 
+  if (dwError) {
+    ReportErrorCode(L"GetConfigValue:1", dwError);
+    goto done;
+  }
+
+  if (0 == len) {
+    dwError = ERROR_BAD_CONFIGURATION;
+    ReportErrorCode(L"GetConfigValue:2", dwError);
+    goto done;
+  }
+  
+  dwError = SplitStringIgnoreSpaceW(len, value, L',', &count, &tokens);
+  if (dwError) {
+    ReportErrorCode(L"SplitStringIgnoreSpaceW:1", dwError);
+    goto done;
+  }
+
+  allowedSids = LocalAlloc(LPTR, sizeof(PSID) * count);
+  if (NULL == allowedSids) {
+    dwError = GetLastError();
+    ReportErrorCode(L"LocalAlloc:1", dwError);
+    goto done;
+  }
+
+  for(crt = 0; crt < count; ++crt) {
+    dwError = GetSidFromAcctNameW(tokens[crt], &allowedSids[crt]);
+    if (dwError) {
+      ReportErrorCode(L"GetSidFromAcctNameW:1", dwError);
+      goto done;
+    }
+  }
+  countAllowed = count;
+
+  LocalFree(tokens);
+  tokens = NULL;
+
+  LocalFree(value);
+  value = NULL;
+  
+  dwError = GetConfigValue(wsceConfigRelativePath, NM_WSCE_IMPERSONATE_DENIED, &len, &value); 
+  if (dwError) {
+    ReportErrorCode(L"GetConfigValue:3", dwError);
+    goto done;
+  }
+
+  if (0 != len) {
+    dwError = SplitStringIgnoreSpaceW(len, value, L',', &count, &tokens);
+    if (dwError) {
+      ReportErrorCode(L"SplitStringIgnoreSpaceW:2", dwError);
+      goto done;
+    }
+
+    deniedSids = LocalAlloc(LPTR, sizeof(PSID) * count);
+    if (NULL == allowedSids) {
+      dwError = GetLastError();
+      ReportErrorCode(L"LocalAlloc:2", dwError);
+      goto done;
+    }
+
+    for(crt = 0; crt < count; ++crt) {
+      dwError = GetSidFromAcctNameW(tokens[crt], &deniedSids[crt]);
+      if (dwError) {
+        ReportErrorCode(L"GetSidFromAcctNameW:2", dwError);
+        goto done;
+      }
+    }
+    countDenied = count;
+  }
+
+  dwError = BuildServiceSecurityDescriptor(
+    SERVICE_IMPERSONATE_MASK,
+    countAllowed, allowedSids,
+    countDenied, deniedSids,
+    NULL,
+    &pSD);
+
+  if (dwError) {
+    ReportErrorCode(L"BuildServiceSecurityDescriptor", dwError);
+    goto done;
+  }
+  
+  *ppSD = pSD;
+  pSD = NULL;
+
+done:
+  if (pSD) LocalFree(pSD);
+  if (tokens) LocalFree(tokens);
+  if (allowedSids) LocalFree(allowedSids);
+  if (deniedSids) LocalFree(deniedSids);
+  return dwError;
+}
+
+//----------------------------------------------------------------------------
+// Function: AddNodeManagerAndUserACEsToObject
+//
+// Description:
+//  Adds ACEs to grant NM and user the provided access mask over a given handle
+//
+// Returns:
+//  ERROR_SUCCESS: on success
+//
+DWORD AddNodeManagerAndUserACEsToObject(
+  __in HANDLE hObject,
+  __in LPWSTR user,
+  __in ACCESS_MASK accessMask) {
+
+  DWORD dwError = ERROR_SUCCESS;
+  int         countTokens = 0;
+  size_t      len = 0;
+  LPCWSTR     value = NULL;
+  WCHAR**     tokens = NULL;
+  int         crt = 0;
+  PACL        pDacl = NULL;
+  PSECURITY_DESCRIPTOR  psdProcess = NULL;
+  LPSTR       lpszOldDacl = NULL, lpszNewDacl = NULL;
+  ULONG       daclLen = 0;
+  PACL        pNewDacl = NULL;
+  ACL_SIZE_INFORMATION si;
+  DWORD       dwNewAclSize = 0;
+  PACE_HEADER pTempAce = NULL;
+  BYTE        sidTemp[SECURITY_MAX_SID_SIZE];
+  DWORD       cbSid = SECURITY_MAX_SID_SIZE;
+  PSID        tokenSid = NULL;
+  // These hard-coded SIDs are allways added
+  WELL_KNOWN_SID_TYPE forcesSidTypes[] = {
+    WinLocalSystemSid,
+    WinBuiltinAdministratorsSid};
+  BOOL        logSDs = IsDebuggerPresent(); // Check only once to avoid attach-while-running
+ 
+  
+  dwError = GetSecurityInfo(hObject,
+      SE_KERNEL_OBJECT,
+      DACL_SECURITY_INFORMATION,
+      NULL,
+      NULL,
+      &pDacl,
+      NULL,
+      &psdProcess);
+  if (dwError) {
+    ReportErrorCode(L"GetSecurityInfo", dwError);
+    goto done;
+  }
+
+  // This is debug only output for troubleshooting
+  if (logSDs) {
+    if (!ConvertSecurityDescriptorToStringSecurityDescriptor(
+        psdProcess,
+        SDDL_REVISION_1,
+        DACL_SECURITY_INFORMATION,
+        &lpszOldDacl,
+        &daclLen)) {
+      dwError = GetLastError();
+      ReportErrorCode(L"ConvertSecurityDescriptorToStringSecurityDescriptor", dwError);
+      goto done;
+    }
+  }
+
+  ZeroMemory(&si, sizeof(si));
+  if (!GetAclInformation(pDacl, &si, sizeof(si), AclSizeInformation)) {
+    dwError = GetLastError();
+    ReportErrorCode(L"GetAclInformation", dwError);
+    goto done;  
+  }
+
+  dwError = GetConfigValue(wsceConfigRelativePath, NM_WSCE_ALLOWED, &len, &value);
+  if (ERROR_SUCCESS != dwError) {
+    ReportErrorCode(L"GetConfigValue", dwError);
+    goto done;
+  }
+
+  if (0 == len) {
+    dwError = ERROR_BAD_CONFIGURATION;
+    ReportErrorCode(L"GetConfigValue", dwError);
+    goto done;
+  }
+
+  dwError = SplitStringIgnoreSpaceW(len, value, L',', &countTokens, &tokens);
+  if (ERROR_SUCCESS != dwError) {
+    ReportErrorCode(L"SplitStringIgnoreSpaceW", dwError);
+    goto done;
+  }
+
+  // We're gonna add 1 ACE for each token found, +1 for user and +1 for each forcesSidTypes[]
+  // ACCESS_ALLOWED_ACE struct contains the first DWORD of the SID 
+  //
+  dwNewAclSize = si.AclBytesInUse + 
+    (countTokens + 1 + sizeof(forcesSidTypes)/sizeof(forcesSidTypes[0])) * 
+      (sizeof(ACCESS_ALLOWED_ACE) + SECURITY_MAX_SID_SIZE - sizeof(DWORD));
+
+  pNewDacl = (PSID) LocalAlloc(LPTR, dwNewAclSize);
+  if (!pNewDacl) {
+    dwError = ERROR_OUTOFMEMORY;
+    ReportErrorCode(L"LocalAlloc", dwError);
+    goto done;
+  }
+
+  if (!InitializeAcl(pNewDacl, dwNewAclSize, ACL_REVISION)) {
+    dwError = ERROR_OUTOFMEMORY;
+    ReportErrorCode(L"InitializeAcl", dwError);
+    goto done;
+  }
+
+  // Copy over old ACEs
+  for (crt = 0; crt < si.AceCount; ++crt) {
+    if (!GetAce(pDacl, crt, &pTempAce)) {
+      dwError = ERROR_OUTOFMEMORY;
+      ReportErrorCode(L"InitializeAcl", dwError);
+      goto done;
+    }
+    if (!AddAce(pNewDacl, ACL_REVISION, MAXDWORD, pTempAce, pTempAce->AceSize)) {
+      dwError = ERROR_OUTOFMEMORY;
+      ReportErrorCode(L"InitializeAcl", dwError);
+      goto done;
+    }
+  }
+
+  // Add the configured allowed SIDs
+  for (crt = 0; crt < countTokens; ++crt) {
+    dwError = GetSidFromAcctNameW(tokens[crt], &tokenSid);
+    if (ERROR_SUCCESS != dwError) {
+      ReportErrorCode(L"GetSidFromAcctNameW", dwError);
+      goto done;
+    }
+    if (!AddAccessAllowedAceEx(
+                pNewDacl,
+                ACL_REVISION_DS,
+                CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
+                PROCESS_ALL_ACCESS,
+                tokenSid)) {
+      dwError = GetLastError();
+      ReportErrorCode(L"AddAccessAllowedAceEx:1", dwError);
+      goto done;
+    }
+    LocalFree(tokenSid);
+    tokenSid = NULL;
+  }
+
+  // add the forced SIDs ACE 
+  for (crt = 0; crt < sizeof(forcesSidTypes)/sizeof(forcesSidTypes[0]); ++crt) {
+    cbSid = SECURITY_MAX_SID_SIZE;
+    if (!CreateWellKnownSid(forcesSidTypes[crt], NULL, &sidTemp, &cbSid)) {
+      dwError = GetLastError();
+      ReportErrorCode(L"CreateWellKnownSid", dwError);
+      goto done;
+    }
+    if (!AddAccessAllowedAceEx(
+              pNewDacl,
+              ACL_REVISION_DS,
+              CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
+              accessMask,
+              (PSID) sidTemp)) {
+      dwError = GetLastError();
+      ReportErrorCode(L"AddAccessAllowedAceEx:2", dwError);
+      goto done;
+    }
+  }
+  
+  // add the user ACE
+  dwError = GetSidFromAcctNameW(user, &tokenSid);
+  if (ERROR_SUCCESS != dwError) {
+    ReportErrorCode(L"GetSidFromAcctNameW:user", dwError);
+    goto done;
+  }    
+
+  if (!AddAccessAllowedAceEx(
+              pNewDacl,
+              ACL_REVISION_DS,
+              CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
+              PROCESS_ALL_ACCESS,
+              tokenSid)) {
+    dwError = GetLastError();
+    ReportErrorCode(L"AddAccessAllowedAceEx:3", dwError);
+    goto done;
+  }
+
+  LocalFree(tokenSid);
+  tokenSid = NULL;
+
+  dwError = SetSecurityInfo(hObject,
+    SE_KERNEL_OBJECT,
+    DACL_SECURITY_INFORMATION,
+    NULL,
+    NULL,
+    pNewDacl,
+    NULL);
+  if (dwError) {
+    ReportErrorCode(L"SetSecurityInfo", dwError);
+    goto done;
+  }
+
+  // This is debug only output for troubleshooting
+  if (logSDs) {
+    dwError = GetSecurityInfo(hObject,
+        SE_KERNEL_OBJECT,
+        DACL_SECURITY_INFORMATION,
+        NULL,
+        NULL,
+        &pDacl,
+        NULL,
+        &psdProcess);
+    if (dwError) {
+      ReportErrorCode(L"GetSecurityInfo:2", dwError);
+      goto done;
+    }
+
+    if (!ConvertSecurityDescriptorToStringSecurityDescriptor(
+        psdProcess,
+        SDDL_REVISION_1,
+        DACL_SECURITY_INFORMATION,
+        &lpszNewDacl,
+        &daclLen)) {
+      dwError = GetLastError();
+      ReportErrorCode(L"ConvertSecurityDescriptorToStringSecurityDescriptor:2", dwError);
+      goto done;
+    }
+
+    LogDebugMessage(L"Old DACL: %s\nNew DACL: %s\n", lpszOldDacl, lpszNewDacl);
+  }
+  
+done:
+  if (tokenSid) LocalFree(tokenSid);
+  if (pNewDacl) LocalFree(pNewDacl);
+  if (lpszOldDacl) LocalFree(lpszOldDacl);
+  if (lpszNewDacl) LocalFree(lpszNewDacl);
+  if (psdProcess) LocalFree(psdProcess);
+
+  return dwError;
+}
+
+//----------------------------------------------------------------------------
+// Function: ValidateImpersonateAccessCheck
+//
+// Description:
+//  Performs the access check for S4U impersonation
+//
+// Returns:
+//   ERROR_SUCCESS: On success
+//   ERROR_ACCESS_DENIED, GetLastError: otherwise
+//
+DWORD ValidateImpersonateAccessCheck(__in HANDLE logonHandle) {
+  DWORD dwError = ERROR_SUCCESS;
+  PSECURITY_DESCRIPTOR pSD = NULL;
+  LUID luidUnused;
+  AUTHZ_ACCESS_REQUEST  request;
+  AUTHZ_ACCESS_REPLY    reply;
+  DWORD authError = ERROR_SUCCESS;
+  DWORD saclResult = 0;
+  ACCESS_MASK grantedMask = 0;
+  AUTHZ_RESOURCE_MANAGER_HANDLE hManager = NULL;
+  AUTHZ_CLIENT_CONTEXT_HANDLE hAuthzToken = NULL;
+
+  ZeroMemory(&luidUnused, sizeof(luidUnused));
+  ZeroMemory(&request, sizeof(request));
+  ZeroMemory(&reply, sizeof(reply));
+
+  dwError = BuildImpersonateSecurityDescriptor(&pSD);
+  if (dwError) {
+    ReportErrorCode(L"BuildImpersonateSecurityDescriptor", dwError);
+    goto done;
+  }
+
+  request.DesiredAccess = MAXIMUM_ALLOWED;
+  reply.Error = &authError;
+  reply.SaclEvaluationResults = &saclResult;
+  reply.ResultListLength = 1;
+  reply.GrantedAccessMask = &grantedMask;
+
+  if (!AuthzInitializeResourceManager(
+        AUTHZ_RM_FLAG_NO_AUDIT,
+        NULL,  // pfnAccessCheck
+        NULL,  // pfnComputeDynamicGroups
+        NULL,  // pfnFreeDynamicGroups
+        NULL,  // szResourceManagerName
+        &hManager)) {
+    dwError = GetLastError();
+    ReportErrorCode(L"AuthzInitializeResourceManager", dwError);
+    goto done;
+  }  
+
+  if (!AuthzInitializeContextFromToken(
+        0,
+        logonHandle,
+        hManager,
+        NULL, // expiration time
+        luidUnused, // not used
+        NULL, // callback args
+        &hAuthzToken)) {
+    dwError = GetLastError();
+    ReportErrorCode(L"AuthzInitializeContextFromToken", dwError);
+    goto done;
+  }
+
+  if (!AuthzAccessCheck(
+        0,
+        hAuthzToken,
+        &request,
+        NULL,   // AuditEvent
+        pSD,
+        NULL,  // OptionalSecurityDescriptorArray
+        0,     // OptionalSecurityDescriptorCount
+        &reply,
+        NULL  // phAccessCheckResults
+        )) {
+    dwError = GetLastError();
+    ReportErrorCode(L"AuthzAccessCheck", dwError);
+    goto done;
+  }
+
+  LogDebugMessage(L"AutzAccessCheck: Error:%d sacl:%d access:%d\n",
+    authError, saclResult, grantedMask);
+  
+  if (authError != ERROR_SUCCESS) {
+    ReportErrorCode(L"AuthzAccessCheck:REPLY:1", authError);
+    dwError = authError;
+  } 
+  else if (!(grantedMask & SERVICE_IMPERSONATE_MASK)) {
+    ReportErrorCode(L"AuthzAccessCheck:REPLY:2", ERROR_ACCESS_DENIED);
+    dwError = ERROR_ACCESS_DENIED;
+  }
+
+done:  
+  if (hAuthzToken) AuthzFreeContext(hAuthzToken);
+  if (hManager) AuthzFreeResourceManager(hManager);
+  if (pSD) LocalFree(pSD);
+  return dwError;
+}
+
 //----------------------------------------------------------------------------
 // Function: CreateTaskImpl
 //
@@ -116,7 +572,8 @@ static BOOL ParseCommandLine(__in int argc,
 // Returns:
 // ERROR_SUCCESS: On success
 // GetLastError: otherwise
-DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PWSTR cmdLine) 
+DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PCWSTR cmdLine, 
+  __in LPCWSTR userName) 
 {
   DWORD dwErrorCode = ERROR_SUCCESS;
   DWORD exitCode = EXIT_FAILURE;
@@ -126,19 +583,36 @@ DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PW
   HANDLE jobObject = NULL;
   JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = { 0 };
   void * envBlock = NULL;
-  BOOL createProcessResult = FALSE;
+  WCHAR secureJobNameBuffer[MAX_PATH];
+  LPCWSTR secureJobName = jobObjName;
 
   wchar_t* curr_dir = NULL;
   FILE *stream = NULL;
+
+  if (NULL != logonHandle) {
+    dwErrorCode = ValidateImpersonateAccessCheck(logonHandle);
+    if (dwErrorCode) {
+      ReportErrorCode(L"ValidateImpersonateAccessCheck", dwErrorCode);
+      return dwErrorCode;
+    }
+
+    dwErrorCode = GetSecureJobObjectName(jobObjName, MAX_PATH, secureJobNameBuffer);
+    if (dwErrorCode) {
+      ReportErrorCode(L"GetSecureJobObjectName", dwErrorCode);
+      return dwErrorCode;
+    }
+    secureJobName = secureJobNameBuffer;
+  }
 
   // Create un-inheritable job object handle and set job object to terminate 
   // when last handle is closed. So winutils.exe invocation has the only open 
   // job object handle. Exit of winutils.exe ensures termination of job object.
   // Either a clean exit of winutils or crash or external termination.
-  jobObject = CreateJobObject(NULL, jobObjName);
+  jobObject = CreateJobObject(NULL, secureJobName);
   dwErrorCode = GetLastError();
   if(jobObject == NULL || dwErrorCode ==  ERROR_ALREADY_EXISTS)
   {
+    ReportErrorCode(L"CreateJobObject", dwErrorCode);
     return dwErrorCode;
   }
   jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
@@ -148,13 +622,22 @@ DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PW
                              sizeof(jeli)) == 0)
   {
     dwErrorCode = GetLastError();
+    ReportErrorCode(L"SetInformationJobObject", dwErrorCode);
     CloseHandle(jobObject);
     return dwErrorCode;
-  }      
+  }
+
+  dwErrorCode = AddNodeManagerAndUserACEsToObject(jobObject, userName, JOB_OBJECT_ALL_ACCESS);
+  if (dwErrorCode) {
+    ReportErrorCode(L"AddNodeManagerAndUserACEsToObject", dwErrorCode);
+    CloseHandle(jobObject);
+    return dwErrorCode;
+  }
 
   if(AssignProcessToJobObject(jobObject, GetCurrentProcess()) == 0)
   {
     dwErrorCode = GetLastError();
+    ReportErrorCode(L"AssignProcessToJobObject", dwErrorCode);
     CloseHandle(jobObject);
     return dwErrorCode;
   }
@@ -164,6 +647,7 @@ DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PW
   if(SetEnvironmentVariable(L"JVM_PID", jobObjName) == 0)
   {
     dwErrorCode = GetLastError();
+    ReportErrorCode(L"SetEnvironmentVariable", dwErrorCode);
     // We have to explictly Terminate, passing in the error code
     // simply closing the job would kill our own process with success exit status
     TerminateJobObject(jobObject, dwErrorCode);
@@ -180,6 +664,7 @@ DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PW
                               logonHandle,
                               TRUE )) {
         dwErrorCode = GetLastError();
+        ReportErrorCode(L"CreateEnvironmentBlock", dwErrorCode);
         // We have to explictly Terminate, passing in the error code
         // simply closing the job would kill our own process with success exit status
         TerminateJobObject(jobObject, dwErrorCode);
@@ -197,42 +682,72 @@ DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PW
   
   if (0 == currDirCnt) {
      dwErrorCode = GetLastError();
+     ReportErrorCode(L"GetCurrentDirectory", dwErrorCode);
      // We have to explictly Terminate, passing in the error code
      // simply closing the job would kill our own process with success exit status
      TerminateJobObject(jobObject, dwErrorCode);
      return dwErrorCode;     
   }
 
+  dwErrorCode = ERROR_SUCCESS;
+
   if (logonHandle == NULL) {
-    createProcessResult = CreateProcess(
-                  NULL,         // ApplicationName
-                  cmdLine,      // command line
-                  NULL,         // process security attributes
-                  NULL,         // thread security attributes
-                  TRUE,         // inherit handles
-                  0,            // creation flags
-                  NULL,         // environment
-                  curr_dir,     // current directory
-                  &si,          // startup info
-                  &pi);         // process info
+    if (!CreateProcess(
+                NULL,         // ApplicationName
+                cmdLine,      // command line
+                NULL,         // process security attributes
+                NULL,         // thread security attributes
+                TRUE,         // inherit handles
+                0,            // creation flags
+                NULL,         // environment
+                curr_dir,     // current directory
+                &si,          // startup info
+                &pi)) {       // process info
+         dwErrorCode = GetLastError();
+         ReportErrorCode(L"CreateProcess", dwErrorCode);
+      }
+    goto create_process_done;
   }
-  else {
-    createProcessResult = CreateProcessAsUser(
-                  logonHandle,  // logon token handle
-                  NULL,         // Application handle
-                  cmdLine,      // command line
-                  NULL,         // process security attributes
-                  NULL,         // thread security attributes
-                  FALSE,        // inherit handles
-                  CREATE_UNICODE_ENVIRONMENT, // creation flags
-                  envBlock,     // environment
-                  curr_dir,     // current directory
-                  &si,          // startup info
-                  &pi);         // process info
-  }
+
+  // From here on is the secure S4U implementation for CreateProcessAsUser
   
-  if (FALSE == createProcessResult) {
+  // We desire to grant process access to NM so that it can interogate process status
+  // and resource utilization. Passing in a security descriptor though results in the 
+  // S4U privilege checks being done against that SD and CreateProcessAsUser fails.
+  // So instead we create the process suspended and then we add the desired ACEs.
+  //
+  if (!CreateProcessAsUser(
+                logonHandle,  // logon token handle
+                NULL,         // Application handle
+                cmdLine,      // command line
+                NULL,         // process security attributes
+                NULL,         // thread security attributes
+                FALSE,        // inherit handles
+                CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED, // creation flags
+                envBlock,     // environment
+                curr_dir,     // current directory
+                &si,          // startup info
+                &pi))  {      // process info 
     dwErrorCode = GetLastError();
+    ReportErrorCode(L"CreateProcessAsUser", dwErrorCode);
+    goto create_process_done;
+  }
+
+  dwErrorCode = AddNodeManagerAndUserACEsToObject(pi.hProcess, userName, PROCESS_ALL_ACCESS);
+  if (dwErrorCode) {
+    ReportErrorCode(L"AddNodeManagerAndUserACEsToObject", dwErrorCode);
+    goto create_process_done;
+  }
+
+  if (-1 == ResumeThread(pi.hThread)) {
+    dwErrorCode = GetLastError();
+    ReportErrorCode(L"ResumeThread", dwErrorCode);
+    goto create_process_done;
+  }
+
+create_process_done:
+
+  if (dwErrorCode) {
     if( envBlock != NULL ) {
       DestroyEnvironmentBlock( envBlock );
       envBlock = NULL;
@@ -293,10 +808,11 @@ DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PW
 DWORD CreateTask(__in PCWSTR jobObjName,__in PWSTR cmdLine) 
 {
   // call with null logon in order to create tasks utilizing the current logon
-  return CreateTaskImpl( NULL, jobObjName, cmdLine );
+  return CreateTaskImpl( NULL, jobObjName, cmdLine, NULL);
 }
+
 //----------------------------------------------------------------------------
-// Function: CreateTask
+// Function: CreateTaskAsUser
 //
 // Description:
 //  Creates a task via a jobobject. Outputs the
@@ -305,7 +821,8 @@ DWORD CreateTask(__in PCWSTR jobObjName,__in PWSTR cmdLine)
 // Returns:
 // ERROR_SUCCESS: On success
 // GetLastError: otherwise
-DWORD CreateTaskAsUser(__in PCWSTR jobObjName,__in PWSTR user, __in PWSTR pidFilePath, __in PWSTR cmdLine)
+DWORD CreateTaskAsUser(__in PCWSTR jobObjName,
+  __in PCWSTR user, __in PCWSTR pidFilePath, __in PCWSTR cmdLine)
 {
   DWORD err = ERROR_SUCCESS;
   DWORD exitCode = EXIT_FAILURE;
@@ -314,53 +831,50 @@ DWORD CreateTaskAsUser(__in PCWSTR jobObjName,__in PWSTR user, __in PWSTR pidFil
   PROFILEINFO  pi;
   BOOL profileIsLoaded = FALSE;
   FILE* pidFile = NULL;
-
   DWORD retLen = 0;
   HANDLE logonHandle = NULL;
 
-  err = EnablePrivilege(SE_TCB_NAME);
+  err = EnableImpersonatePrivileges();
   if( err != ERROR_SUCCESS ) {
-    fwprintf(stdout, L"INFO: The user does not have SE_TCB_NAME.\n");
-    goto done;
-  }
-  err = EnablePrivilege(SE_ASSIGNPRIMARYTOKEN_NAME);
-  if( err != ERROR_SUCCESS ) {
-    fwprintf(stdout, L"INFO: The user does not have SE_ASSIGNPRIMARYTOKEN_NAME.\n");
-    goto done;
-  }
-  err = EnablePrivilege(SE_INCREASE_QUOTA_NAME);
-  if( err != ERROR_SUCCESS ) {
-    fwprintf(stdout, L"INFO: The user does not have SE_INCREASE_QUOTA_NAME.\n");
-    goto done;
-  }
-  err = EnablePrivilege(SE_RESTORE_NAME);
-  if( err != ERROR_SUCCESS ) {
-    fwprintf(stdout, L"INFO: The user does not have SE_RESTORE_NAME.\n");
+    ReportErrorCode(L"EnableImpersonatePrivileges", err);
     goto done;
   }
 
   err = RegisterWithLsa(LOGON_PROCESS_NAME ,&lsaHandle);
-  if( err != ERROR_SUCCESS ) goto done;
+  if( err != ERROR_SUCCESS ) {
+    ReportErrorCode(L"RegisterWithLsa", err);
+    goto done;
+  }
 
   err = LookupKerberosAuthenticationPackageId( lsaHandle, &authnPkgId );
-  if( err != ERROR_SUCCESS ) goto done;
+  if( err != ERROR_SUCCESS ) {
+    ReportErrorCode(L"LookupKerberosAuthenticationPackageId", err);
+    goto done;
+  }
 
-  err =  CreateLogonForUser(lsaHandle,
+  err =  CreateLogonTokenForUser(lsaHandle,
     LOGON_PROCESS_NAME, 
     TOKEN_SOURCE_NAME,
     authnPkgId, 
     user, 
     &logonHandle); 
-  if( err != ERROR_SUCCESS ) goto done;
+  if( err != ERROR_SUCCESS ) {
+    ReportErrorCode(L"CreateLogonTokenForUser", err);
+    goto done;
+  }
 
   err = LoadUserProfileForLogon(logonHandle, &pi);
-  if( err != ERROR_SUCCESS ) goto done;
+  if( err != ERROR_SUCCESS ) {
+    ReportErrorCode(L"LoadUserProfileForLogon", err);
+    goto done;
+  }
   profileIsLoaded = TRUE; 
 
   // Create the PID file
 
   if (!(pidFile = _wfopen(pidFilePath, "w"))) {
       err = GetLastError();
+      ReportErrorCode(L"_wfopen:pidFilePath", err);
       goto done;
   }
 
@@ -371,12 +885,13 @@ DWORD CreateTaskAsUser(__in PCWSTR jobObjName,__in PWSTR user, __in PWSTR pidFil
   fclose(pidFile);
     
   if (err != ERROR_SUCCESS) {
-    goto done;
+      ReportErrorCode(L"fprintf_s:pidFilePath", err);
+      goto done;
   }
-  
-  err = CreateTaskImpl(logonHandle, jobObjName, cmdLine);
 
-done:	
+  err = CreateTaskImpl(logonHandle, jobObjName, cmdLine, user);
+
+done: 
   if( profileIsLoaded ) {
     UnloadProfileForLogon( logonHandle, &pi );
     profileIsLoaded = FALSE;
@@ -391,7 +906,6 @@ done:
 
   return err;
 }
-
 
 //----------------------------------------------------------------------------
 // Function: IsTaskAlive
@@ -408,10 +922,27 @@ DWORD IsTaskAlive(const WCHAR* jobObjName, int* isAlive, int* procsInJob)
   PJOBOBJECT_BASIC_PROCESS_ID_LIST procList;
   HANDLE jobObject = NULL;
   int numProcs = 100;
+  WCHAR secureJobNameBuffer[MAX_PATH];
 
   *isAlive = FALSE;
   
   jobObject = OpenJobObject(JOB_OBJECT_QUERY, FALSE, jobObjName);
+  if(jobObject == NULL)
+  {
+    // Try Global\...
+    DWORD err = GetSecureJobObjectName(jobObjName, MAX_PATH, secureJobNameBuffer);
+    if  (err) {
+      ReportErrorCode(L"GetSecureJobObjectName", err);
+      return err;
+    }
+    jobObject = OpenJobObject(JOB_OBJECT_QUERY, FALSE, secureJobNameBuffer);
+  }
+  
+  if(jobObject == NULL)
+  {
+    DWORD err = GetLastError();
+    return err;
+  }  
 
   if(jobObject == NULL)
   {
@@ -454,39 +985,6 @@ DWORD IsTaskAlive(const WCHAR* jobObjName, int* isAlive, int* procsInJob)
 }
 
 //----------------------------------------------------------------------------
-// Function: KillTask
-//
-// Description:
-//  Kills a task via a jobobject. Outputs the
-//  appropriate information to stdout on success, or stderr on failure.
-//
-// Returns:
-// ERROR_SUCCESS: On success
-// GetLastError: otherwise
-DWORD KillTask(PCWSTR jobObjName)
-{
-  HANDLE jobObject = OpenJobObject(JOB_OBJECT_TERMINATE, FALSE, jobObjName);
-  if(jobObject == NULL)
-  {
-    DWORD err = GetLastError();
-    if(err == ERROR_FILE_NOT_FOUND)
-    {
-      // job object does not exist. assume its not alive
-      return ERROR_SUCCESS;
-    }
-    return err;
-  }
-
-  if(TerminateJobObject(jobObject, KILLED_PROCESS_EXIT_CODE) == 0)
-  {
-    return GetLastError();
-  }
-  CloseHandle(jobObject);
-
-  return ERROR_SUCCESS;
-}
-
-//----------------------------------------------------------------------------
 // Function: PrintTaskProcessList
 //
 // Description:
@@ -500,7 +998,21 @@ DWORD PrintTaskProcessList(const WCHAR* jobObjName)
   DWORD i;
   PJOBOBJECT_BASIC_PROCESS_ID_LIST procList;
   int numProcs = 100;
-  HANDLE jobObject = OpenJobObject(JOB_OBJECT_QUERY, FALSE, jobObjName);
+  WCHAR secureJobNameBuffer[MAX_PATH];
+  HANDLE jobObject = NULL;
+
+  jobObject = OpenJobObject(JOB_OBJECT_QUERY, FALSE, jobObjName);
+  if(jobObject == NULL)
+  {
+    // Try Global\...
+    DWORD err = GetSecureJobObjectName(jobObjName, MAX_PATH, secureJobNameBuffer);
+    if  (err) {
+      ReportErrorCode(L"GetSecureJobObjectName", err);
+      return err;
+    }
+    jobObject = OpenJobObject(JOB_OBJECT_QUERY, FALSE, secureJobNameBuffer);
+  }
+  
   if(jobObject == NULL)
   {
     DWORD err = GetLastError();
@@ -581,7 +1093,7 @@ int Task(__in int argc, __in_ecount(argc) wchar_t *argv[])
   TaskCommandOption command = TaskInvalid;
   wchar_t* cmdLine = NULL;
   wchar_t buffer[16*1024] = L""; // 32K max command line
-  size_t charCountBufferLeft = sizeof(buffer)/sizeof(wchar_t);
+  size_t charCountBufferLeft = sizeof(buffer)/sizeof(wchar_t);
   int crtArgIndex = 0;
   size_t argLen = 0;
   size_t wscatErr = 0;
@@ -712,6 +1224,7 @@ int Task(__in int argc, __in_ecount(argc) wchar_t *argv[])
   }
 
 TaskExit:
+  ReportErrorCode(L"TaskExit:", dwErrorCode);
   return dwErrorCode;
 }
 

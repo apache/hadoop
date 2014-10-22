@@ -266,7 +266,7 @@ public class TestLinuxContainerExecutor {
     exec.setConf(conf);
 
     exec.startLocalizer(nmPrivateContainerTokensPath, nmAddr, appSubmitter,
-      appId, locId, localDirs, logDirs);
+      appId, locId, dirsHandler);
 
     String locId2 = "container_01_02";
     Path nmPrivateContainerTokensPath2 =
@@ -276,7 +276,7 @@ public class TestLinuxContainerExecutor {
               + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId2));
     files.create(nmPrivateContainerTokensPath2, EnumSet.of(CREATE, OVERWRITE));
     exec.startLocalizer(nmPrivateContainerTokensPath2, nmAddr, appSubmitter,
-      appId, locId2, localDirs, logDirs);
+      appId, locId2, dirsHandler);
   }
   
   @Test

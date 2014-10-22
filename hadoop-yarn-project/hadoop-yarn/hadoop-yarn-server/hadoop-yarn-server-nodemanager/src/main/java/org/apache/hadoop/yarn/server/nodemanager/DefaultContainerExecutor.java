@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import com.google.common.base.Optional;
+
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
@@ -32,9 +33,11 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
@@ -42,6 +45,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
+import org.apache.hadoop.util.Shell.CommandExecutor;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -92,13 +96,16 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   @Override
   public synchronized void startLocalizer(Path nmPrivateContainerTokensPath,
       InetSocketAddress nmAddr, String user, String appId, String locId,
-      List<String> localDirs, List<String> logDirs)
+      LocalDirsHandlerService dirsHandler)
       throws IOException, InterruptedException {
 
+    List<String> localDirs = dirsHandler.getLocalDirs();
+    List<String> logDirs = dirsHandler.getLogDirs();
+    
     ContainerLocalizer localizer =
         new ContainerLocalizer(lfs, user, appId, locId, getPaths(localDirs),
             RecordFactoryProvider.getRecordFactory(getConf()));
-
+    
     createUserLocalDirs(localDirs, user);
     createUserCacheDirs(localDirs, user);
     createAppDirs(localDirs, user, appId);
@@ -120,9 +127,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   @Override
   public int launchContainer(Container container,
       Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
-      String userName, String appId, Path containerWorkDir,
+      String user, String appId, Path containerWorkDir,
       List<String> localDirs, List<String> logDirs) throws IOException {
-
+    
     FsPermission dirPerm = new FsPermission(APPDIR_PERM);
     ContainerId containerId = container.getContainerId();
 
@@ -134,29 +141,30 @@ public class DefaultContainerExecutor extends ContainerExecutor {
                 getApplicationId());
     for (String sLocalDir : localDirs) {
       Path usersdir = new Path(sLocalDir, ContainerLocalizer.USERCACHE);
-      Path userdir = new Path(usersdir, userName);
+      Path userdir = new Path(usersdir, user);
       Path appCacheDir = new Path(userdir, ContainerLocalizer.APPCACHE);
       Path appDir = new Path(appCacheDir, appIdStr);
       Path containerDir = new Path(appDir, containerIdStr);
-      createDir(containerDir, dirPerm, true, userName);
+      createDir(containerDir, dirPerm, true, user);
     }
 
     // Create the container log-dirs on all disks
-    createContainerLogDirs(appIdStr, containerIdStr, logDirs, userName);
+    createContainerLogDirs(appIdStr, containerIdStr, logDirs, user);
 
     Path tmpDir = new Path(containerWorkDir,
         YarnConfiguration.DEFAULT_CONTAINER_TEMP_DIR);
-    createDir(tmpDir, dirPerm, false, userName);
+    createDir(tmpDir, dirPerm, false, user);
 
-    // copy launch script to work dir
-    Path launchDst =
-        new Path(containerWorkDir, ContainerLaunch.CONTAINER_SCRIPT);
-    copyFile(nmPrivateContainerScriptPath, launchDst, userName);
 
     // copy container tokens to work dir
     Path tokenDst =
       new Path(containerWorkDir, ContainerLaunch.FINAL_CONTAINER_TOKENS_FILE);
-    copyFile(nmPrivateTokensPath, tokenDst, userName);
+    copyFile(nmPrivateTokensPath, tokenDst, user);
+
+    // copy launch script to work dir
+    Path launchDst =
+        new Path(containerWorkDir, ContainerLaunch.CONTAINER_SCRIPT);
+    copyFile(nmPrivateContainerScriptPath, launchDst, user);
 
     // Create new local launch wrapper script
     LocalWrapperScriptBuilder sb = getLocalWrapperScriptBuilder(
@@ -181,23 +189,19 @@ public class DefaultContainerExecutor extends ContainerExecutor {
           + " was marked as inactive. Returning terminated error");
       return ExitCode.TERMINATED.getExitCode();
     }
-
+    
     // create log dir under app
     // fork script
-    ShellCommandExecutor shExec = null;
+    Shell.CommandExecutor shExec = null;
     try {
-      setScriptExecutable(launchDst, userName);
-      setScriptExecutable(sb.getWrapperScriptPath(), userName);
+      setScriptExecutable(launchDst, user);
+      setScriptExecutable(sb.getWrapperScriptPath(), user);
 
-      // Setup command to run
-      String[] command = getRunCommand(sb.getWrapperScriptPath().toString(),
-        containerIdStr, userName, pidFile, this.getConf());
-
-      LOG.info("launchContainer: " + Arrays.toString(command));
-      shExec = new ShellCommandExecutor(
-          command,
+      shExec = buildCommandExecutor(sb.getWrapperScriptPath().toString(),
+          containerIdStr, user, pidFile,
           new File(containerWorkDir.toUri().getPath()),
-          container.getLaunchContext().getEnvironment());      // sanitized env
+          container.getLaunchContext().getEnvironment());
+      
       if (isContainerActive(containerId)) {
         shExec.execute();
       }
@@ -242,9 +246,24 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       }
       return exitCode;
     } finally {
-      ; //
+      if (shExec != null) shExec.close();
     }
     return 0;
+  }
+
+  protected CommandExecutor buildCommandExecutor(String wrapperScriptPath, 
+      String containerIdStr, String user, Path pidFile, File wordDir, 
+      Map<String, String> environment) 
+          throws IOException {
+    
+    String[] command = getRunCommand(wrapperScriptPath,
+        containerIdStr, user, pidFile, this.getConf());
+
+      LOG.info("launchContainer: " + Arrays.toString(command));
+      return new ShellCommandExecutor(
+          command,
+          wordDir,
+          environment); 
   }
 
   protected LocalWrapperScriptBuilder getLocalWrapperScriptBuilder(
@@ -421,7 +440,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    * @param signal signal to send
    * (for logging).
    */
-  private void killContainer(String pid, Signal signal) throws IOException {
+  protected void killContainer(String pid, Signal signal) throws IOException {
     new ShellCommandExecutor(Shell.getSignalKillCommand(signal.getValue(), pid))
       .execute();
   }

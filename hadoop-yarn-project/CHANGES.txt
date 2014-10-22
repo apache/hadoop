@@ -178,6 +178,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2504. Enhanced RM Admin CLI to support management of node-labels.
     (Wangda Tan via vinodkv)
 
+    YARN-2198. Remove the need to run NodeManager as privileged account for
+    Windows Secure Container Executor. (Remus Rusanu via jianhe)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
