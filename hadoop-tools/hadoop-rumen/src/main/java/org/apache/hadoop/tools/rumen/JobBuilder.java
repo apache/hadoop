@@ -26,6 +26,8 @@ import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -42,6 +44,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobQueueChangeEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobUnsuccessfulCompletionEvent;
 import org.apache.hadoop.mapreduce.jobhistory.MapAttemptFinished;
 import org.apache.hadoop.mapreduce.jobhistory.MapAttemptFinishedEvent;
+import org.apache.hadoop.mapreduce.jobhistory.NormalizedResourceEvent;
 import org.apache.hadoop.mapreduce.jobhistory.ReduceAttemptFinished;
 import org.apache.hadoop.mapreduce.jobhistory.ReduceAttemptFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptFinished;
@@ -66,6 +69,8 @@ public class JobBuilder {
   private static final long BYTES_IN_MEG =
       StringUtils.TraditionalBinaryPrefix.string2long("1m");
 
+  static final private Log LOG = LogFactory.getLog(JobBuilder.class);
+  
   private String jobID;
 
   private boolean finalized = false;
@@ -137,6 +142,9 @@ public class JobBuilder {
       // ignore this event as Rumen currently doesnt need this event
       //TODO Enhance Rumen to process this event and capture restarts
       return;
+    } else if (event instanceof NormalizedResourceEvent) {
+      // Log an warn message as NormalizedResourceEvent shouldn't be written.
+      LOG.warn("NormalizedResourceEvent should be ignored in history server.");
     } else if (event instanceof JobFinishedEvent) {
       processJobFinishedEvent((JobFinishedEvent) event);
     } else if (event instanceof JobInfoChangeEvent) {
@@ -173,7 +181,8 @@ public class JobBuilder {
       processTaskUpdatedEvent((TaskUpdatedEvent) event);
     } else
       throw new IllegalArgumentException(
-          "JobBuilder.process(HistoryEvent): unknown event type");
+          "JobBuilder.process(HistoryEvent): unknown event type:"
+          + event.getEventType() + " for event:" + event);
   }
 
   static String extract(Properties conf, String[] names, String defaultValue) {

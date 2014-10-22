@@ -224,6 +224,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-6078. native-task: fix gtest build on macosx (Binglin Chang)
 
+    MAPREDUCE-6126. Fixed Rumen JobBuilder to ignore NormalizedResourceEvent.
+    (Junping Du via jianhe)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
