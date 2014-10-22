@@ -268,7 +268,12 @@ public class RawLocalFileSystem extends FileSystem {
       throw new IOException("Mkdirs failed to create " + parent.toString());
     }
     return new FSDataOutputStream(new BufferedOutputStream(
-        new LocalFSFileOutputStream(f, false), bufferSize), statistics);
+        createOutputStream(f, false), bufferSize), statistics);
+  }
+  
+  protected OutputStream createOutputStream(Path f, boolean append) 
+      throws IOException {
+    return new LocalFSFileOutputStream(f, append); 
   }
   
   @Override
@@ -400,6 +405,10 @@ public class RawLocalFileSystem extends FileSystem {
     }
     return Arrays.copyOf(results, j);
   }
+  
+  protected boolean mkOneDir(File p2f) throws IOException {
+    return p2f.mkdir();
+  }
 
   /**
    * Creates the specified directory hierarchy. Does not
@@ -412,8 +421,9 @@ public class RawLocalFileSystem extends FileSystem {
     }
     Path parent = f.getParent();
     File p2f = pathToFile(f);
+    File parent2f = null;
     if(parent != null) {
-      File parent2f = pathToFile(parent);
+      parent2f = pathToFile(parent);
       if(parent2f != null && parent2f.exists() && !parent2f.isDirectory()) {
         throw new ParentNotDirectoryException("Parent path is not a directory: "
             + parent);
@@ -423,8 +433,8 @@ public class RawLocalFileSystem extends FileSystem {
       throw new FileNotFoundException("Destination exists" +
               " and is not a directory: " + p2f.getCanonicalPath());
     }
-    return (parent == null || mkdirs(parent)) &&
-      (p2f.mkdir() || p2f.isDirectory());
+    return (parent == null || parent2f.exists() || mkdirs(parent)) &&
+      (mkOneDir(p2f) || p2f.isDirectory());
   }
 
   @Override

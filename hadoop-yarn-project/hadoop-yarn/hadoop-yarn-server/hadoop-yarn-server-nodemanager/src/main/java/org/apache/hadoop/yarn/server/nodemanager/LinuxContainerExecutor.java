@@ -194,9 +194,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   @Override
   public void startLocalizer(Path nmPrivateContainerTokensPath,
       InetSocketAddress nmAddr, String user, String appId, String locId,
-      List<String> localDirs, List<String> logDirs)
+      LocalDirsHandlerService dirsHandler)
       throws IOException, InterruptedException {
 
+    List<String> localDirs = dirsHandler.getLocalDirs();
+    List<String> logDirs = dirsHandler.getLogDirs();
+    
     verifyUsernamePattern(user);
     String runAsUser = getRunAsUser(user);
     List<String> command = new ArrayList<String>();

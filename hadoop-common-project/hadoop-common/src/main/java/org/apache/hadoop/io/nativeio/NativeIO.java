@@ -22,6 +22,8 @@ import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
@@ -35,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.HardLink;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
@@ -504,6 +507,8 @@ public class NativeIO {
     public static final long FILE_BEGIN = 0;
     public static final long FILE_CURRENT = 1;
     public static final long FILE_END = 2;
+    
+    public static final long FILE_ATTRIBUTE_NORMAL = 0x00000080L;
 
     /** Wrapper around CreateFile() on Windows */
     public static native FileDescriptor createFile(String path,

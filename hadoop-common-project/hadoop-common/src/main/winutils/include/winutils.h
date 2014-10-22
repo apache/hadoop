@@ -30,6 +30,11 @@
 #include <ntsecapi.h>
 #include <userenv.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 enum EXIT_CODE
 {
   /* Common success exit code shared among all utilities */
@@ -38,6 +43,12 @@ enum EXIT_CODE
   FAILURE = EXIT_FAILURE,
   /* Failure code indicates the user does not privilege to create symlinks */
   SYMLINK_NO_PRIVILEGE = 2,
+
+  ERROR_TASK_NOT_ALIVE = 1,
+  
+  // This exit code for killed processes is compatible with Unix, where a killed
+  // process exits with 128 + signal.  For SIGKILL, this would be 128 + 9 = 137.
+  KILLED_PROCESS_EXIT_CODE = 137,
 };
 
 
@@ -100,6 +111,8 @@ void GroupsUsage(LPCWSTR program);
 
 int Hardlink(__in int argc, __in_ecount(argc) wchar_t *argv[]);
 void HardlinkUsage();
+
+DWORD KillTask(PCWSTR jobObjName);
 
 int Task(__in int argc, __in_ecount(argc) wchar_t *argv[]);
 void TaskUsage();
@@ -167,7 +180,7 @@ void UnregisterWithLsa(__in HANDLE lsaHandle);
 
 DWORD LookupKerberosAuthenticationPackageId(__in HANDLE lsaHandle, __out ULONG * packageId);
 
-DWORD CreateLogonForUser(__in HANDLE lsaHandle,
+DWORD CreateLogonTokenForUser(__in HANDLE lsaHandle,
                          __in const char * tokenSourceName, 
                          __in const char * tokenOriginName, 
                          __in ULONG authnPkgId, 
@@ -177,4 +190,103 @@ DWORD CreateLogonForUser(__in HANDLE lsaHandle,
 DWORD LoadUserProfileForLogon(__in HANDLE logonHandle, __out PROFILEINFO * pi);
 
 DWORD UnloadProfileForLogon(__in HANDLE logonHandle, __in PROFILEINFO * pi);
+
+DWORD EnableImpersonatePrivileges();
+
+DWORD RunService(__in int argc, __in_ecount(argc) wchar_t *argv[]);
+void ServiceUsage();
+
+
+DWORD ChangeFileOwnerBySid(__in LPCWSTR path,
+  __in_opt PSID pNewOwnerSid, __in_opt PSID pNewGroupSid);
+
+DWORD ChownImpl(
+  __in_opt LPCWSTR userName,
+  __in_opt LPCWSTR groupName,
+  __in LPCWSTR pathName);
+
+LPCWSTR GetSystemTimeString();
+
+VOID LogDebugMessage(LPCWSTR format, ...);
+
+DWORD SplitStringIgnoreSpaceW(
+  __in size_t len, 
+  __in_ecount(len) LPCWSTR source, 
+  __in WCHAR deli, 
+  __out size_t* count, __out_ecount(count) WCHAR*** out);
+
+DWORD BuildPathRelativeToModule(
+    __in LPCWSTR relativePath, 
+    __in size_t len, 
+    __out_ecount(len) LPWSTR buffer);
+
+DWORD GetConfigValue(
+  __in LPCWSTR relativePath,
+  __in LPCWSTR keyName, 
+  __out size_t* len, 
+  __out_ecount(len) LPCWSTR* value);
+DWORD GetConfigValueFromXmlFile(
+  __in LPCWSTR xmlFile, 
+  __in LPCWSTR keyName, 
+  __out size_t* len, 
+  __out_ecount(len) LPCWSTR* value);
+
+
+DWORD BuildServiceSecurityDescriptor(
+  __in ACCESS_MASK                    accessMask,
+  __in size_t                         grantSidCount,
+  __in_ecount(grantSidCount) PSID*    pGrantSids,
+  __in size_t                         denySidCount,
+  __in_ecount(denySidCount) PSID*     pDenySids,
+  __in_opt PSID                       pOwner,
+  __out PSECURITY_DESCRIPTOR*         pSD);
+
+DWORD AddNodeManagerAndUserACEsToObject(
+  __in HANDLE hProcess,
+  __in LPWSTR user);
+
+
+DWORD GetSecureJobObjectName(
+  __in LPCWSTR      jobName,
+  __in size_t       cchSecureJobName,
+  __out_ecount(cchSecureJobName) LPWSTR secureJobName);
+
+extern const WCHAR* wsceConfigRelativePath;
+
+extern LPCWSTR NM_WSCE_ALLOWED;
+
+
+#define SVCNAME       TEXT("hadoopwinutilsvc")
+#define SVCBINDING    TEXT("ncalrpc")
+
+DWORD RpcCall_WinutilsKillTask(
+  __in LPCWSTR taskName);
+
+DWORD RpcCall_TaskCreateAsUser(
+  LPCWSTR cwd, LPCWSTR jobName, 
+  LPCWSTR user, LPCWSTR pidFile, LPCWSTR cmdLine, 
+  HANDLE* phProcess, HANDLE* phThread, HANDLE* phStdIn, HANDLE* phStdOut, HANDLE* phStdErr);
+
+DWORD RpcCall_WinutilsCreateFile(
+  __in LPCWSTR path,
+  __in DWORD desiredAccess,
+  __in DWORD shareMode,
+  __in DWORD creationDisposition,
+  __in DWORD flags,
+  __out HANDLE* hFile);
+
+DWORD RpcCall_WinutilsMoveFile(
+  __in LPCWSTR    sourcePath, 
+  __in LPCWSTR    destinationPath,
+  __in BOOL       replaceExisting);
+
+DWORD RpcCall_WinutilsDeletePath(
+  __in LPCWSTR    path,
+  __in BOOL       isDir,
+  __out BOOL*     pDeleted);
+
+#ifdef __cplusplus
+}
+#endif
+
 

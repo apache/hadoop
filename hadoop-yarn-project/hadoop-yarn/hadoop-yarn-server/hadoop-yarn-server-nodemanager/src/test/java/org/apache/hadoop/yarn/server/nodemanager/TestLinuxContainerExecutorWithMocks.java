@@ -184,7 +184,7 @@ public class TestLinuxContainerExecutorWithMocks {
     Path nmPrivateCTokensPath= new Path("file:///bin/nmPrivateCTokensPath");
  
     try {
-      mockExec.startLocalizer(nmPrivateCTokensPath, address, "test", "application_0", "12345", dirsHandler.getLocalDirs(), dirsHandler.getLogDirs());
+      mockExec.startLocalizer(nmPrivateCTokensPath, address, "test", "application_0", "12345", dirsHandler);
       List<String> result=readMockParams();
       Assert.assertEquals(result.size(), 17);
       Assert.assertEquals(result.get(0), YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);

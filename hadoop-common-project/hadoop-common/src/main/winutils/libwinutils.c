@@ -19,9 +19,24 @@
 #pragma comment(lib, "netapi32.lib")
 #pragma comment(lib, "Secur32.lib")
 #pragma comment(lib, "Userenv.lib")
+#pragma comment(lib, "Ntdsapi.lib")
+
 #include "winutils.h"
+#include <ctype.h>
+#include <Winsvc.h>
 #include <authz.h>
 #include <sddl.h>
+#include <Ntdsapi.h>
+#include <malloc.h>
+
+#define WIDEN_STRING(x) WIDEN_STRING_(x)
+#define WIDEN_STRING_(x) L ## x
+#define STRINGIFY(x) STRINGIFY_(x)
+#define STRINGIFY_(x) #x
+
+
+#pragma message("WSCE config is " STRINGIFY(WSCE_CONFIG_DIR) "\\" STRINGIFY(WSCE_CONFIG_FILE))
+const WCHAR* wsceConfigRelativePath = WIDEN_STRING(STRINGIFY(WSCE_CONFIG_DIR)) L"\\" WIDEN_STRING(STRINGIFY(WSCE_CONFIG_FILE));
 
 /*
  * The array of 12 months' three-letter abbreviations 
@@ -237,10 +252,10 @@ ConvertToLongPathExit:
 // Function: IsDirFileInfo
 //
 // Description:
-//	Test if the given file information is a directory
+//  Test if the given file information is a directory
 //
 // Returns:
-//	TRUE if it is a directory
+//  TRUE if it is a directory
 //  FALSE otherwise
 //
 // Notes:
@@ -257,10 +272,10 @@ BOOL IsDirFileInfo(const BY_HANDLE_FILE_INFORMATION *fileInformation)
 // Function: CheckFileAttributes
 //
 // Description:
-//	Check if the given file has all the given attribute(s)
+//  Check if the given file has all the given attribute(s)
 //
 // Returns:
-//	ERROR_SUCCESS on success
+//  ERROR_SUCCESS on success
 //  error code otherwise
 //
 // Notes:
@@ -281,10 +296,10 @@ static DWORD FileAttributesCheck(
 // Function: IsDirectory
 //
 // Description:
-//	Check if the given file is a directory
+//  Check if the given file is a directory
 //
 // Returns:
-//	ERROR_SUCCESS on success
+//  ERROR_SUCCESS on success
 //  error code otherwise
 //
 // Notes:
@@ -298,10 +313,10 @@ DWORD DirectoryCheck(__in LPCWSTR pathName, __out PBOOL res)
 // Function: IsReparsePoint
 //
 // Description:
-//	Check if the given file is a reparse point
+//  Check if the given file is a reparse point
 //
 // Returns:
-//	ERROR_SUCCESS on success
+//  ERROR_SUCCESS on success
 //  error code otherwise
 //
 // Notes:
@@ -315,10 +330,10 @@ static DWORD ReparsePointCheck(__in LPCWSTR pathName, __out PBOOL res)
 // Function: CheckReparseTag
 //
 // Description:
-//	Check if the given file is a reparse point of the given tag.
+//  Check if the given file is a reparse point of the given tag.
 //
 // Returns:
-//	ERROR_SUCCESS on success
+//  ERROR_SUCCESS on success
 //  error code otherwise
 //
 // Notes:
@@ -356,10 +371,10 @@ static DWORD ReparseTagCheck(__in LPCWSTR path, __in DWORD tag, __out PBOOL res)
 // Function: IsSymbolicLink
 //
 // Description:
-//	Check if the given file is a symbolic link.
+//  Check if the given file is a symbolic link.
 //
 // Returns:
-//	ERROR_SUCCESS on success
+//  ERROR_SUCCESS on success
 //  error code otherwise
 //
 // Notes:
@@ -373,10 +388,10 @@ DWORD SymbolicLinkCheck(__in LPCWSTR pathName, __out PBOOL res)
 // Function: IsJunctionPoint
 //
 // Description:
-//	Check if the given file is a junction point.
+//  Check if the given file is a junction point.
 //
 // Returns:
-//	ERROR_SUCCESS on success
+//  ERROR_SUCCESS on success
 //  error code otherwise
 //
 // Notes:
@@ -390,14 +405,14 @@ DWORD JunctionPointCheck(__in LPCWSTR pathName, __out PBOOL res)
 // Function: GetSidFromAcctNameW
 //
 // Description:
-//	To retrieve the SID for a user account
+//  To retrieve the SID for a user account
 //
 // Returns:
-//	ERROR_SUCCESS: on success
+//  ERROR_SUCCESS: on success
 //  Other error code: otherwise
 //
 // Notes:
-//	Caller needs to destroy the memory of Sid by calling LocalFree()
+//  Caller needs to destroy the memory of Sid by calling LocalFree()
 //
 DWORD GetSidFromAcctNameW(__in PCWSTR acctName, __out PSID *ppSid)
 {
@@ -479,10 +494,10 @@ DWORD GetSidFromAcctNameW(__in PCWSTR acctName, __out PSID *ppSid)
 // Function: GetUnixAccessMask
 //
 // Description:
-//	Compute the 3 bit Unix mask for the owner, group, or, others
+//  Compute the 3 bit Unix mask for the owner, group, or, others
 //
 // Returns:
-//	The 3 bit Unix mask in INT
+//  The 3 bit Unix mask in INT
 //
 // Notes:
 //
@@ -506,10 +521,10 @@ static INT GetUnixAccessMask(ACCESS_MASK Mask)
 // Function: GetAccess
 //
 // Description:
-//	Get Windows acces mask by AuthZ methods
+//  Get Windows acces mask by AuthZ methods
 //
 // Returns:
-//	ERROR_SUCCESS: on success
+//  ERROR_SUCCESS: on success
 //
 // Notes:
 //
@@ -554,10 +569,10 @@ static DWORD GetAccess(AUTHZ_CLIENT_CONTEXT_HANDLE hAuthzClient,
 // Function: GetEffectiveRightsForSid
 //
 // Description:
-//	Get Windows acces mask by AuthZ methods
+//  Get Windows acces mask by AuthZ methods
 //
 // Returns:
-//	ERROR_SUCCESS: on success
+//  ERROR_SUCCESS: on success
 //
 // Notes:
 //   We run into problems for local user accounts when using the method
@@ -714,11 +729,11 @@ CheckAccessEnd:
 // Function: FindFileOwnerAndPermissionByHandle
 //
 // Description:
-//	Find the owner, primary group and permissions of a file object given the
+//  Find the owner, primary group and permissions of a file object given the
 //  the file object handle. The function will always follow symbolic links.
 //
 // Returns:
-//	ERROR_SUCCESS: on success
+//  ERROR_SUCCESS: on success
 //  Error code otherwise
 //
 // Notes:
@@ -778,10 +793,10 @@ FindFileOwnerAndPermissionByHandleEnd:
 // Function: FindFileOwnerAndPermission
 //
 // Description:
-//	Find the owner, primary group and permissions of a file object
+//  Find the owner, primary group and permissions of a file object
 //
 // Returns:
-//	ERROR_SUCCESS: on success
+//  ERROR_SUCCESS: on success
 //  Error code otherwise
 //
 // Notes:
@@ -1207,14 +1222,14 @@ static DWORD GetWindowsDACLs(__in INT unixMask,
 
   if (winUserAccessDenyMask &&
     !AddAccessDeniedAceEx(pNewDACL, ACL_REVISION,
-    NO_PROPAGATE_INHERIT_ACE,
+    CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
     winUserAccessDenyMask, pOwnerSid))
   {
     ret = GetLastError();
     goto GetWindowsDACLsEnd;
   }
   if (!AddAccessAllowedAceEx(pNewDACL, ACL_REVISION,
-    NO_PROPAGATE_INHERIT_ACE,
+    CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
     winUserAccessAllowMask, pOwnerSid))
   {
     ret = GetLastError();
@@ -1222,21 +1237,21 @@ static DWORD GetWindowsDACLs(__in INT unixMask,
   }
   if (winGroupAccessDenyMask &&
     !AddAccessDeniedAceEx(pNewDACL, ACL_REVISION,
-    NO_PROPAGATE_INHERIT_ACE,
+    CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
     winGroupAccessDenyMask, pGroupSid))
   {
     ret = GetLastError();
     goto GetWindowsDACLsEnd;
   }
   if (!AddAccessAllowedAceEx(pNewDACL, ACL_REVISION,
-    NO_PROPAGATE_INHERIT_ACE,
+    CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
     winGroupAccessAllowMask, pGroupSid))
   {
     ret = GetLastError();
     goto GetWindowsDACLsEnd;
   }
   if (!AddAccessAllowedAceEx(pNewDACL, ACL_REVISION,
-    NO_PROPAGATE_INHERIT_ACE,
+    CONTAINER_INHERIT_ACE | OBJECT_INHERIT_ACE,
     winOtherAccessAllowMask, pEveryoneSid))
   {
     ret = GetLastError();
@@ -1440,14 +1455,14 @@ ChangeFileModeByMaskEnd:
 // Function: GetAccntNameFromSid
 //
 // Description:
-//	To retrieve an account name given the SID
+//  To retrieve an account name given the SID
 //
 // Returns:
-//	ERROR_SUCCESS: on success
+//  ERROR_SUCCESS: on success
 //  Other error code: otherwise
 //
 // Notes:
-//	Caller needs to destroy the memory of account name by calling LocalFree()
+//  Caller needs to destroy the memory of account name by calling LocalFree()
 //
 DWORD GetAccntNameFromSid(__in PSID pSid, __out PWSTR *ppAcctName)
 {
@@ -1536,10 +1551,10 @@ GetAccntNameFromSidEnd:
 // Function: GetLocalGroupsForUser
 //
 // Description:
-//	Get an array of groups for the given user.
+//  Get an array of groups for the given user.
 //
 // Returns:
-//	ERROR_SUCCESS on success
+//  ERROR_SUCCESS on success
 //  Other error code on failure
 //
 // Notes:
@@ -1631,11 +1646,12 @@ GetLocalGroupsForUserEnd:
   return ret;
 }
 
+
 //----------------------------------------------------------------------------
 // Function: EnablePrivilege
 //
 // Description:
-//	Check if the process has the given privilege. If yes, enable the privilege
+//  Check if the process has the given privilege. If yes, enable the privilege
 //  to the process's access token.
 //
 // Returns:
@@ -1672,8 +1688,8 @@ DWORD EnablePrivilege(__in LPCWSTR privilegeName)
   // As stated on MSDN, we need to use GetLastError() to check if
   // AdjustTokenPrivileges() adjusted all of the specified privileges.
   //
-  if( !AdjustTokenPrivileges(hToken, FALSE, &tp, 0, NULL, NULL) ) {
-  dwErrCode = GetLastError();
+  if (!AdjustTokenPrivileges(hToken, FALSE, &tp, 0, NULL, NULL)) {
+    dwErrCode = GetLastError();
   }
   CloseHandle(hToken);
 
@@ -1706,12 +1722,15 @@ void ReportErrorCode(LPCWSTR func, DWORD err)
     (LPWSTR)&msg, 0, NULL);
   if (len > 0)
   {
+    LogDebugMessage(L"%s error (%d): %s\n", func, err, msg);
     fwprintf(stderr, L"%s error (%d): %s\n", func, err, msg);
   }
   else
   {
+    LogDebugMessage(L"%s error code: %d.\n", func, err);
     fwprintf(stderr, L"%s error code: %d.\n", func, err);
   }
+
   if (msg != NULL) LocalFree(msg);
 }
 
@@ -1843,7 +1862,7 @@ DWORD LookupKerberosAuthenticationPackageId(__in HANDLE lsaHandle, __out ULONG *
 }
   
 //----------------------------------------------------------------------------
-// Function: CreateLogonForUser
+// Function: CreateLogonTokenForUser
 //
 // Description:
 //  Contacts the local LSA and performs a logon without credential for the 
@@ -1858,7 +1877,7 @@ DWORD LookupKerberosAuthenticationPackageId(__in HANDLE lsaHandle, __out ULONG *
 //  This call assumes that all required privileges have already been enabled (TCB etc).
 //  IMPORTANT ****  tokenOriginName must be immutable!
 //
-DWORD CreateLogonForUser(__in HANDLE lsaHandle,
+DWORD CreateLogonTokenForUser(__in HANDLE lsaHandle,
                          __in const char * tokenSourceName, 
                          __in const char * tokenOriginName, // must be immutable, will not be copied!
                          __in ULONG authnPkgId, 
@@ -2026,6 +2045,8 @@ done:
   return loadProfileStatus;
 }
 
+
+
 DWORD UnloadProfileForLogon(__in HANDLE logonHandle, __in PROFILEINFO * pi)
 {
   DWORD touchProfileStatus = ERROR_ASSERTION_FAILURE; // Failure to set status should trigger error
@@ -2046,3 +2067,646 @@ DWORD UnloadProfileForLogon(__in HANDLE logonHandle, __in PROFILEINFO * pi)
 done:
   return touchProfileStatus;
 }
+
+
+//----------------------------------------------------------------------------
+// Function: ChangeFileOwnerBySid
+//
+// Description:
+//  Change a file or directory ownership by giving new owner and group SIDs
+//
+// Returns:
+//  ERROR_SUCCESS: on success
+//  Error code: otherwise
+//
+// Notes:
+//  This function is long path safe, i.e. the path will be converted to long
+//  path format if not already converted. So the caller does not need to do
+//  the converstion before calling the method.
+//
+DWORD ChangeFileOwnerBySid(__in LPCWSTR path,
+  __in_opt PSID pNewOwnerSid, __in_opt PSID pNewGroupSid)
+{
+  LPWSTR longPathName = NULL;
+  INT oldMode = 0;
+
+  SECURITY_INFORMATION securityInformation = 0;
+
+  DWORD dwRtnCode = ERROR_SUCCESS;
+
+  // Convert the path the the long path
+  //
+  dwRtnCode = ConvertToLongPath(path, &longPathName);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    goto ChangeFileOwnerByNameEnd;
+  }
+
+  // Get a pointer to the existing owner information and DACL
+  //
+  dwRtnCode = FindFileOwnerAndPermission(longPathName, FALSE, NULL, NULL, &oldMode);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    goto ChangeFileOwnerByNameEnd;
+  }
+
+  // We need SeTakeOwnershipPrivilege to set the owner if the caller does not
+  // have WRITE_OWNER access to the object; we need SeRestorePrivilege if the
+  // SID is not contained in the caller's token, and have the SE_GROUP_OWNER
+  // permission enabled.
+  //
+  if (EnablePrivilege(L"SeTakeOwnershipPrivilege") != ERROR_SUCCESS)
+  {
+    fwprintf(stdout, L"INFO: The user does not have SeTakeOwnershipPrivilege.\n");
+  }
+  if (EnablePrivilege(L"SeRestorePrivilege") != ERROR_SUCCESS)
+  {
+    fwprintf(stdout, L"INFO: The user does not have SeRestorePrivilege.\n");
+  }
+
+  assert(pNewOwnerSid != NULL || pNewGroupSid != NULL);
+
+  // Set the owners of the file.
+  //
+  if (pNewOwnerSid != NULL) securityInformation |= OWNER_SECURITY_INFORMATION;
+  if (pNewGroupSid != NULL) securityInformation |= GROUP_SECURITY_INFORMATION;
+  dwRtnCode = SetNamedSecurityInfoW(
+    longPathName,
+    SE_FILE_OBJECT,
+    securityInformation,
+    pNewOwnerSid,
+    pNewGroupSid,
+    NULL,
+    NULL);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    goto ChangeFileOwnerByNameEnd;
+  }
+
+  // Set the permission on the file for the new owner.
+  //
+  dwRtnCode = ChangeFileModeByMask(longPathName, oldMode);
+  if (dwRtnCode != ERROR_SUCCESS)
+  {
+    goto ChangeFileOwnerByNameEnd;
+  }
+
+ChangeFileOwnerByNameEnd:
+  LocalFree(longPathName);
+  return dwRtnCode;
+}
+
+
+//-----------------------------------------------------------------------------
+// Function: GetSecureJobObjectName
+//
+// Description:
+//  Creates a job object name usable in a secure environment: adds the Golbal\
+//
+
+DWORD GetSecureJobObjectName(
+  __in LPCWSTR      jobName,
+  __in size_t       cchSecureJobName,
+  __out_ecount(cchSecureJobName) LPWSTR secureJobName) {
+
+  HRESULT hr = StringCchPrintf(secureJobName, cchSecureJobName,
+    L"Global\\%s", jobName);
+
+  if (FAILED(hr)) {
+    return HRESULT_CODE(hr);
+  }
+
+  return ERROR_SUCCESS;
+}
+
+//-----------------------------------------------------------------------------
+// Function: EnableImpersonatePrivileges
+//
+// Description:
+//  Enables the required privileges for S4U impersonation
+//
+// Returns:
+// ERROR_SUCCESS: On success
+//
+DWORD EnableImpersonatePrivileges() {
+  DWORD dwError = ERROR_SUCCESS;
+  LPCWSTR privilege = NULL;
+  int crt = 0;
+
+  LPCWSTR privileges[] = {
+    SE_IMPERSONATE_NAME,
+    SE_TCB_NAME,
+    SE_ASSIGNPRIMARYTOKEN_NAME,
+    SE_INCREASE_QUOTA_NAME,
+    SE_RESTORE_NAME,
+    SE_DEBUG_NAME,
+    SE_SECURITY_NAME,
+    };
+
+  for (crt = 0; crt < sizeof(privileges)/sizeof(LPCWSTR); ++crt) {
+    LPCWSTR privilege = privileges[crt];
+    dwError = EnablePrivilege(privilege);
+    if( dwError != ERROR_SUCCESS ) {
+      LogDebugMessage(L"Failed to enable privilege: %s\n", privilege);
+      ReportErrorCode(L"EnablePrivilege", dwError);
+      goto done;
+    }    
+  }
+
+done:
+  return dwError;
+}
+
+
+//-----------------------------------------------------------------------------
+// Function: KillTask
+//
+// Description:
+//  Kills a task via a jobobject. Outputs the
+//  appropriate information to stdout on success, or stderr on failure.
+//
+// Returns:
+// ERROR_SUCCESS: On success
+// GetLastError: otherwise
+DWORD KillTask(PCWSTR jobObjName)
+{
+  DWORD dwError = ERROR_SUCCESS;
+  
+  HANDLE jobObject = OpenJobObject(JOB_OBJECT_TERMINATE, FALSE, jobObjName);
+  if(jobObject == NULL)
+  {
+    dwError = GetLastError();
+    if(dwError == ERROR_FILE_NOT_FOUND)
+    {      
+      // job object does not exist. assume its not alive
+      dwError = ERROR_SUCCESS;
+    }
+    goto done;
+  }
+
+  if(TerminateJobObject(jobObject, KILLED_PROCESS_EXIT_CODE) == 0)
+  {
+    dwError = GetLastError();
+  }
+
+done:
+  CloseHandle(jobObject);
+  
+  return dwError;
+}
+
+DWORD ChownImpl(
+  __in_opt LPCWSTR userName,
+  __in_opt LPCWSTR groupName,
+  __in LPCWSTR pathName) {
+
+  DWORD dwError;
+
+  PSID pNewOwnerSid = NULL;
+  PSID pNewGroupSid = NULL;
+
+  if (userName != NULL)
+  {
+    dwError = GetSidFromAcctNameW(userName, &pNewOwnerSid);
+    if (dwError != ERROR_SUCCESS)
+    {
+      ReportErrorCode(L"GetSidFromAcctName", dwError);
+      fwprintf(stderr, L"Invalid user name: %s\n", userName);
+      goto done;
+    }
+  }
+
+  if (groupName != NULL)
+  {
+    dwError = GetSidFromAcctNameW(groupName, &pNewGroupSid);
+    if (dwError != ERROR_SUCCESS)
+    {
+      ReportErrorCode(L"GetSidFromAcctName", dwError);
+      fwprintf(stderr, L"Invalid group name: %s\n", groupName);
+      goto done;
+    }
+  }
+
+  if (wcslen(pathName) == 0 || wcsspn(pathName, L"/?|><:*\"") != 0)
+  {
+    fwprintf(stderr, L"Incorrect file name format: %s\n", pathName);
+    goto done;
+  }
+
+  dwError = ChangeFileOwnerBySid(pathName, pNewOwnerSid, pNewGroupSid);
+  if (dwError != ERROR_SUCCESS)
+  {
+    ReportErrorCode(L"ChangeFileOwnerBySid", dwError);
+    goto done;
+  }
+done:
+  LocalFree(pNewOwnerSid);
+  LocalFree(pNewGroupSid);
+
+  return dwError;
+}
+
+
+
+LPCWSTR GetSystemTimeString() {
+  __declspec(thread) static WCHAR buffer[1024];
+  DWORD dwError;
+  FILETIME ftime;
+  SYSTEMTIME systime;
+  LARGE_INTEGER counter, frequency;
+  int subSec;
+  double qpc;
+  HRESULT hr;
+  buffer[0] = L'\0';
+
+  // GetSystemTimePreciseAsFileTime is only available in Win8+ and our libs do not link against it
+
+  GetSystemTimeAsFileTime(&ftime);
+
+  if (!FileTimeToSystemTime(&ftime, &systime)) {
+    dwError = GetLastError();
+    LogDebugMessage(L"FileTimeToSystemTime error:%d\n", dwError);
+    goto done;
+  }
+
+  // Get the ms from QPC. GetSystemTimeAdjustment is ignored...
+  
+  QueryPerformanceCounter(&counter);
+  QueryPerformanceFrequency(&frequency);
+
+  qpc = (double) counter.QuadPart / (double) frequency.QuadPart;
+  subSec = ((qpc - (long)qpc) * 1000000);
+
+  hr = StringCbPrintf(buffer, sizeof(buffer), L"%02d:%02d:%02d.%06d", 
+    (int)systime.wHour, (int)systime.wMinute, (int)systime.wSecond, (int)subSec);
+
+  if (FAILED(hr)) {
+    LogDebugMessage(L"StringCbPrintf error:%d\n", hr);
+  }
+done:
+  return buffer;
+}
+
+
+//----------------------------------------------------------------------------
+// Function: LogDebugMessage
+//
+// Description:
+//  Sends a message to the debugger console, if one is attached
+//
+// Notes:
+//  Native debugger: windbg, ntsd, cdb, visual studio
+//
+VOID LogDebugMessage(LPCWSTR format, ...) {
+  LPWSTR buffer[8192];
+  va_list args;
+  HRESULT hr;
+
+  if (!IsDebuggerPresent()) return;
+
+  va_start(args, format);
+  hr = StringCbVPrintf(buffer, sizeof(buffer), format, args);
+  if (SUCCEEDED(hr)) {
+    OutputDebugString(buffer);
+  }
+  va_end(args);
+}
+
+//----------------------------------------------------------------------------
+// Function: SplitStringIgnoreSpaceW
+//
+// Description:
+//  splits a null-terminated string based on a delimiter
+//
+// Returns:
+//  ERROR_SUCCESS: on success
+//  error code: otherwise
+//
+// Notes:
+//  The tokes are also null-terminated
+//  Caller should use LocalFree to clear outTokens
+//
+DWORD SplitStringIgnoreSpaceW(
+  __in size_t len, 
+  __in_ecount(len) LPCWSTR source, 
+  __in WCHAR deli, 
+  __out size_t* count, 
+  __out_ecount(count) WCHAR*** outTokens) {
+  
+  size_t tokenCount = 0;
+  size_t crtSource;
+  size_t crtToken = 0;
+  WCHAR* lpwszTokenStart = NULL;
+  WCHAR* lpwszTokenEnd = NULL;
+  WCHAR* lpwszBuffer = NULL;
+  size_t tokenLength = 0;
+  size_t cchBufferLength = 0;
+  WCHAR crt;
+  WCHAR** tokens = NULL;
+  enum {BLANK, TOKEN, DELIMITER} State = BLANK;
+
+  for(crtSource = 0; crtSource < len; ++crtSource) {
+    crt = source[crtSource];
+    switch(State) {
+    case BLANK: // intentional fallthrough
+    case DELIMITER:
+      if (crt == deli) {
+        State = DELIMITER;
+      } 
+      else if (!iswspace(crt)) {
+        ++tokenCount;
+        lpwszTokenEnd = lpwszTokenStart = source + crtSource;
+        State = TOKEN;
+      }
+      else {
+        State = BLANK;
+      }
+      break;
+    case TOKEN:
+      if (crt == deli) {
+        State = DELIMITER;
+        cchBufferLength += lpwszTokenEnd - lpwszTokenStart + 2;
+      }
+      else if (!iswspace(crt)) {
+        lpwszTokenEnd = source + crtSource;
+      }
+      break;
+    }
+  }
+
+  if (State == TOKEN) {
+    cchBufferLength += lpwszTokenEnd - lpwszTokenStart + 2;
+  }
+
+  LogDebugMessage(L"counted %d [buffer:%d] tokens in %s\n", tokenCount, cchBufferLength, source);
+
+  #define COPY_CURRENT_TOKEN                                              \
+    tokenLength = lpwszTokenEnd - lpwszTokenStart + 1;                    \
+    tokens[crtToken] = lpwszBuffer;                                       \
+    memcpy(tokens[crtToken], lpwszTokenStart, tokenLength*sizeof(WCHAR)); \
+    tokens[crtToken][tokenLength] = L'\0';                                \
+    lpwszBuffer += (tokenLength+1);                                       \
+    ++crtToken;
+
+  if (tokenCount) {
+
+    // We use one contigous memory for both the pointer arrays and the data copy buffers
+    // We cannot use in-place references (zero-copy) because the function users 
+    // need null-terminated strings for the tokens
+    
+    tokens = (WCHAR**) LocalAlloc(LPTR, 
+       sizeof(WCHAR*) * tokenCount +      // for the pointers
+       sizeof(WCHAR) * cchBufferLength);  // for the data
+
+    // Data will be copied after the array
+    lpwszBuffer = (WCHAR*)(((BYTE*)tokens) + (sizeof(WCHAR*) * tokenCount));
+       
+    State = BLANK;
+
+    for(crtSource = 0; crtSource < len; ++crtSource) {
+      crt = source[crtSource];
+      switch(State) {
+      case DELIMITER: // intentional fallthrough
+      case BLANK:
+        if (crt == deli) {
+          State = DELIMITER;
+        } 
+        else if (!iswspace(crt)) {
+          lpwszTokenEnd = lpwszTokenStart = source + crtSource;
+          State = TOKEN;
+        }
+        else {
+          State = BLANK;
+        }
+        break;
+      case TOKEN:
+        if (crt == deli) {
+          COPY_CURRENT_TOKEN;
+          State = DELIMITER;
+        }
+        else if (!iswspace(crt)) {
+          lpwszTokenEnd = source + crtSource;
+        }
+        break;
+      }
+    }
+
+    // Copy out last token, if any
+    if (TOKEN == State) {
+      COPY_CURRENT_TOKEN;
+    }
+  }
+
+  *count = tokenCount;
+  *outTokens = tokens;
+
+  return ERROR_SUCCESS;
+}
+
+//----------------------------------------------------------------------------
+// Function: BuildServiceSecurityDescriptor
+//
+// Description:
+//  Builds a security descriptor for an arbitrary object
+//
+// Returns:
+//  ERROR_SUCCESS: on success
+//  error code: otherwise
+//
+// Notes:
+//  The SD is a of the self-contained flavor (offsets, not pointers)
+//  Caller should use LocalFree to clear allocated pSD
+//
+DWORD BuildServiceSecurityDescriptor(
+  __in ACCESS_MASK                    accessMask,
+  __in size_t                         grantSidCount,
+  __in_ecount(grantSidCount) PSID*    pGrantSids,
+  __in size_t                         denySidCount,
+  __in_ecount(denySidCount) PSID*     pDenySids,
+  __in_opt PSID                       pOwner,
+  __out PSECURITY_DESCRIPTOR*         pSD) {
+
+  DWORD                 dwError = ERROR_SUCCESS;
+  int                   crt  = 0;
+  int                   len = 0;
+  EXPLICIT_ACCESS*      eas = NULL;
+  LPWSTR                lpszSD = NULL;
+  ULONG                 cchSD = 0;
+  HANDLE                hToken = INVALID_HANDLE_VALUE;
+  DWORD                 dwBufferSize = 0;
+  PTOKEN_USER           pTokenUser = NULL;
+  PTOKEN_PRIMARY_GROUP  pTokenGroup = NULL;
+  PSECURITY_DESCRIPTOR  pTempSD = NULL;
+  ULONG                 cbSD = 0;
+  TRUSTEE               owner, group;
+
+  ZeroMemory(&owner, sizeof(owner));
+
+  // We'll need our own SID to add as SD owner
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+    dwError = GetLastError();
+    LogDebugMessage(L"OpenProcessToken: %d\n", dwError);
+    goto done;  
+  }
+
+  if (NULL == pOwner) {
+    if (!GetTokenInformation(hToken, TokenUser, NULL, 0, &dwBufferSize)) {
+      dwError = GetLastError();
+      if (ERROR_INSUFFICIENT_BUFFER != dwError) {
+        LogDebugMessage(L"GetTokenInformation: %d\n", dwError);
+        goto done;
+      }
+    }
+
+    pTokenUser = (PTOKEN_USER) LocalAlloc(LPTR, dwBufferSize);
+    if (NULL == pTokenUser) {
+      dwError = GetLastError();
+      LogDebugMessage(L"LocalAlloc:pTokenUser: %d\n", dwError);
+      goto done; 
+    }
+
+    if (!GetTokenInformation(hToken, TokenUser, pTokenUser, dwBufferSize, &dwBufferSize)) {
+      dwError = GetLastError();
+      LogDebugMessage(L"GetTokenInformation: %d\n", dwError);
+      goto done; 
+    }
+
+    if (!IsValidSid(pTokenUser->User.Sid)) {
+      dwError = ERROR_INVALID_PARAMETER;
+      LogDebugMessage(L"IsValidSid: %d\n", dwError);
+      goto done;
+    }
+    pOwner = pTokenUser->User.Sid;
+  }
+
+  dwBufferSize = 0;
+  if (!GetTokenInformation(hToken, TokenPrimaryGroup, NULL, 0, &dwBufferSize)) {
+    dwError = GetLastError();
+    if (ERROR_INSUFFICIENT_BUFFER != dwError) {
+      LogDebugMessage(L"GetTokenInformation: %d\n", dwError);
+      goto done;
+    }
+  }
+
+  pTokenGroup = (PTOKEN_USER) LocalAlloc(LPTR, dwBufferSize);
+  if (NULL == pTokenGroup) {
+    dwError = GetLastError();
+    LogDebugMessage(L"LocalAlloc:pTokenGroup: %d\n", dwError);
+    goto done; 
+  }
+
+  if (!GetTokenInformation(hToken, TokenPrimaryGroup, pTokenGroup, dwBufferSize, &dwBufferSize)) {
+    dwError = GetLastError();
+    LogDebugMessage(L"GetTokenInformation: %d\n", dwError);
+    goto done; 
+  }
+
+  if (!IsValidSid(pTokenGroup->PrimaryGroup)) {
+    dwError = ERROR_INVALID_PARAMETER;
+    LogDebugMessage(L"IsValidSid: %d\n", dwError);
+    goto done;
+  }  
+
+  owner.TrusteeForm = TRUSTEE_IS_SID;
+  owner.TrusteeType = TRUSTEE_IS_UNKNOWN;
+  owner.ptstrName = (LPCWSTR) pOwner;
+
+  group.TrusteeForm = TRUSTEE_IS_SID;
+  group.TrusteeType = TRUSTEE_IS_UNKNOWN;
+  group.ptstrName = (LPCWSTR) pTokenGroup->PrimaryGroup;
+
+  eas = (EXPLICIT_ACCESS*) LocalAlloc(LPTR, sizeof(EXPLICIT_ACCESS) * (grantSidCount + denySidCount));
+  if (NULL == eas) {
+    dwError = ERROR_OUTOFMEMORY;
+    LogDebugMessage(L"LocalAlloc: %d\n", dwError);
+    goto done;
+  }
+
+  // Build the granted list
+  for (crt = 0; crt < grantSidCount; ++crt) {
+    eas[crt].grfAccessPermissions = accessMask;
+    eas[crt].grfAccessMode = GRANT_ACCESS;
+    eas[crt].grfInheritance = NO_INHERITANCE;
+    eas[crt].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+    eas[crt].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN;
+    eas[crt].Trustee.ptstrName = (LPCWSTR) pGrantSids[crt];
+    eas[crt].Trustee.pMultipleTrustee = NULL;
+    eas[crt].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+  }
+
+  // Build the deny list
+  for (; crt < grantSidCount + denySidCount; ++crt) {
+    eas[crt].grfAccessPermissions = accessMask;
+    eas[crt].grfAccessMode = DENY_ACCESS;
+    eas[crt].grfInheritance = NO_INHERITANCE;
+    eas[crt].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+    eas[crt].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN;
+    eas[crt].Trustee.ptstrName = (LPCWSTR) pDenySids[crt - grantSidCount];
+    eas[crt].Trustee.pMultipleTrustee = NULL;
+    eas[crt].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+  }
+
+  dwError = BuildSecurityDescriptor(
+    &owner,
+    &group,
+    crt,
+    eas,
+    0,    // cCountOfAuditEntries
+    NULL, // pListOfAuditEntries
+    NULL, // pOldSD
+    &cbSD, 
+    &pTempSD);
+  if (ERROR_SUCCESS != dwError) {
+    LogDebugMessage(L"BuildSecurityDescriptor: %d\n", dwError);
+    goto done;
+  }
+  
+  *pSD = pTempSD;
+  pTempSD = NULL;
+
+  if (IsDebuggerPresent()) {
+    ConvertSecurityDescriptorToStringSecurityDescriptor(*pSD, 
+      SDDL_REVISION_1,
+      DACL_SECURITY_INFORMATION,
+      &lpszSD,
+      &cchSD);
+    LogDebugMessage(L"pSD: %.*s\n", cchSD, lpszSD);
+  }
+  
+done:
+  if (eas) LocalFree(eas);
+  if (pTokenUser) LocalFree(pTokenUser);
+  if (INVALID_HANDLE_VALUE != hToken) CloseHandle(hToken);
+  if (lpszSD) LocalFree(lpszSD);
+  if (pTempSD) LocalFree(pTempSD);
+  return dwError;
+}
+
+//----------------------------------------------------------------------------
+// Function: MIDL_user_allocate
+//
+// Description:
+//  Hard-coded function name used by RPC midl code for allocations
+//
+// Notes:
+//  Must match the de-allocation mechanism used in MIDL_user_free
+//
+void __RPC_FAR * __RPC_USER MIDL_user_allocate(size_t len)
+{
+    return LocalAlloc(LPTR, len);
+}
+ 
+ //----------------------------------------------------------------------------
+ // Function: MIDL_user_free
+ //
+ // Description:
+ //  Hard-coded function name used by RPC midl code for deallocations
+ //
+ // NoteS:
+ //  Must match the allocation mechanism used in MIDL_user_allocate
+ //
+void __RPC_USER MIDL_user_free(void __RPC_FAR * ptr)
+{
+    LocalFree(ptr);
+}
+

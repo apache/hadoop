@@ -117,6 +117,9 @@ Release 2.6.0 - UNRELEASED
     YARN-1972. Added a secure container-executor for Windows. (Remus Rusanu via
     vinodkv)
 
+    YARN-2198. Remove the need to run NodeManager as privileged account for
+    Windows Secure Container Executor. (Remus Rusanu via jianhe)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
