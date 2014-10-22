@@ -287,6 +287,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7254. Add documentation for hot swaping DataNode drives (Lei Xu via
     Colin P. McCabe)
 
+    HDFS-6877. Avoid calling checkDisk when an HDFS volume is removed during a
+    write. (Lei Xu via Colin P. McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
