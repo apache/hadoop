@@ -194,6 +194,7 @@ HDFS Commands Guide
           [-refreshSuperUserGroupsConfiguration]
           [-refreshCallQueue]
           [-refresh <host:ipc_port> <key> [arg1..argn]]
+          [-reconfig <datanode|...> <host:ipc_port> <start|status>]
           [-printTopology]
           [-refreshNamenodes datanodehost:port]
           [-deleteBlockPool datanode-host:port blockpoolId [force]]
@@ -286,6 +287,12 @@ HDFS Commands Guide
 | -refresh \<host:ipc_port\> \<key\> [arg1..argn] | Triggers a runtime-refresh
                   | of the resource specified by \<key\> on \<host:ipc_port\>.
                   | All other args after are sent to the host.
+*-----------------+-----------------------------------------------------------+
+| -reconfig <datanode|...> <host:ipc_port> <start|status> | Start
+                  | reconfiguration or get the status of an ongoing
+                  | reconfiguration. The second parameter specifies the node
+                  | type. Currently, only reloading DataNode's configuration is
+                  | supported.
 *-----------------+-----------------------------------------------------------+
 | -printTopology  | Print a tree of the racks and their nodes as reported by
                   | the Namenode
