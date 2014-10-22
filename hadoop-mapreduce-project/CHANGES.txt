@@ -219,6 +219,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5542. Killing a job just as it finishes can generate an NPE in
     client (Rohith via jlowe)
 
+    MAPREDUCE-6126. Fixed Rumen JobBuilder to ignore NormalizedResourceEvent.
+    (Junping Du via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
