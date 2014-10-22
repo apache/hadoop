@@ -35,6 +35,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 
@@ -42,14 +43,12 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 public class RMAuthenticationFilterInitializer extends FilterInitializer {
 
   String configPrefix;
-  String proxyPrefix;
   String signatureSecretFileProperty;
   String kerberosPrincipalProperty;
   String cookiePath;
 
   public RMAuthenticationFilterInitializer() {
     this.configPrefix = "hadoop.http.authentication.";
-    this.proxyPrefix = "yarn.resourcemanager.webapp.proxyuser.";
     this.signatureSecretFileProperty =
         AuthenticationFilter.SIGNATURE_SECRET + ".file";
     this.kerberosPrincipalProperty = KerberosAuthenticationHandler.PRINCIPAL;
@@ -62,15 +61,18 @@ public class RMAuthenticationFilterInitializer extends FilterInitializer {
     // setting the cookie path to root '/' so it is used for all resources.
     filterConfig.put(AuthenticationFilter.COOKIE_PATH, cookiePath);
 
+    // Before conf object is passed in, RM has already processed it and used RM
+    // specific configs to overwrite hadoop common ones. Hence we just need to
+    // source hadoop.proxyuser configs here.
     for (Map.Entry<String, String> entry : conf) {
       String propName = entry.getKey();
       if (propName.startsWith(configPrefix)) {
         String value = conf.get(propName);
         String name = propName.substring(configPrefix.length());
         filterConfig.put(name, value);
-      } else if (propName.startsWith(proxyPrefix)) {
+      } else if (propName.startsWith(ProxyUsers.CONF_HADOOP_PROXYUSER)) {
         String value = conf.get(propName);
-        String name = propName.substring("yarn.resourcemanager.webapp.".length());
+        String name = propName.substring("hadoop.".length());
         filterConfig.put(name, value);
       }
     }
