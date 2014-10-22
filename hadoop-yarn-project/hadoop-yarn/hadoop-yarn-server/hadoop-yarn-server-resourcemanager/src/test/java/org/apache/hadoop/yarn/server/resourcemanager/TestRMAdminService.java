@@ -357,6 +357,24 @@ public class TestRMAdminService {
         .get("hadoop.proxyuser.test.hosts").size() == 1);
     Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
         .get("hadoop.proxyuser.test.hosts").contains("test_hosts"));
+
+    Configuration yarnConf = new Configuration(false);
+    yarnConf.set("yarn.resourcemanager.proxyuser.test.groups", "test_groups_1");
+    yarnConf.set("yarn.resourcemanager.proxyuser.test.hosts", "test_hosts_1");
+    uploadConfiguration(yarnConf, "yarn-site.xml");
+
+    // RM specific configs will overwrite the common ones
+    rm.adminService.refreshSuperUserGroupsConfiguration(
+        RefreshSuperUserGroupsConfigurationRequest.newInstance());
+    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
+        .get("hadoop.proxyuser.test.groups").size() == 1);
+    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
+        .get("hadoop.proxyuser.test.groups").contains("test_groups_1"));
+
+    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
+        .get("hadoop.proxyuser.test.hosts").size() == 1);
+    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
+        .get("hadoop.proxyuser.test.hosts").contains("test_hosts_1"));
   }
 
   @Test

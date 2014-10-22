@@ -158,8 +158,8 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     rmconf.set(YarnConfiguration.NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY,
       httpSpnegoKeytabFile.getAbsolutePath());
     rmconf.setBoolean("mockrm.webapp.enabled", true);
-    rmconf.set("yarn.resourcemanager.webapp.proxyuser.client.hosts", "*");
-    rmconf.set("yarn.resourcemanager.webapp.proxyuser.client.groups", "*");
+    rmconf.set("yarn.resourcemanager.proxyuser.client.hosts", "*");
+    rmconf.set("yarn.resourcemanager.proxyuser.client.groups", "*");
     UserGroupInformation.setConfiguration(rmconf);
     rm = new MockRM(rmconf);
     rm.start();

@@ -21,12 +21,16 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -36,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
@@ -248,4 +253,26 @@ public class RMServerUtils {
       BuilderUtils.newApplicationResourceUsageReport(-1, -1,
           Resources.createResource(-1, -1), Resources.createResource(-1, -1),
           Resources.createResource(-1, -1), 0, 0);
+
+
+
+  /**
+   * Find all configs whose name starts with
+   * YarnConfiguration.RM_PROXY_USER_PREFIX, and add a record for each one by
+   * replacing the prefix with ProxyUsers.CONF_HADOOP_PROXYUSER
+   */
+  public static void processRMProxyUsersConf(Configuration conf) {
+    Map<String, String> rmProxyUsers = new HashMap<String, String>();
+    for (Map.Entry<String, String> entry : conf) {
+      String propName = entry.getKey();
+      if (propName.startsWith(YarnConfiguration.RM_PROXY_USER_PREFIX)) {
+        rmProxyUsers.put(ProxyUsers.CONF_HADOOP_PROXYUSER + "." +
+            propName.substring(YarnConfiguration.RM_PROXY_USER_PREFIX.length()),
+            entry.getValue());
+      }
+    }
+    for (Map.Entry<String, String> entry : rmProxyUsers.entrySet()) {
+      conf.set(entry.getKey(), entry.getValue());
+    }
+  }
 }
