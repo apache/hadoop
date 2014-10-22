@@ -35,9 +35,6 @@ Trunk (Unreleased)
     HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal Lee
     via jitendra)
 
-    HDFS-2486. Remove unnecessary priority level checks in
-    UnderReplicatedBlocks.  (Uma Maheswara Rao G via szetszwo)
-
     HDFS-2878. Fix TestBlockRecovery and move it back into main test directory.
     (todd)
 
@@ -289,6 +286,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-6877. Avoid calling checkDisk when an HDFS volume is removed during a
     write. (Lei Xu via Colin P. McCabe)
+
+    HDFS-2486. Remove unnecessary priority level checks in
+    UnderReplicatedBlocks.  (Uma Maheswara Rao G via szetszwo)
 
   OPTIMIZATIONS
 
