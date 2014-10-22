@@ -650,6 +650,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2720. Windows: Wildcard classpath variables not expanded against
     resources contained in archives. (Craig Welch via cnauroth)
 
+    YARN-2721. Suppress NodeExist exception thrown by ZKRMStateStore when it
+    retries creating znode. (Jian He via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

@@ -1094,6 +1094,10 @@ public class ZKRMStateStore extends RMStateStore {
             throw new StoreFencedException();
           }
         } catch (KeeperException ke) {
+          if (ke.code() == Code.NODEEXISTS) {
+            LOG.info("znode already exists!");
+            return null;
+          }
           LOG.info("Exception while executing a ZK operation.", ke);
           if (shouldRetry(ke.code()) && ++retry < numRetries) {
             LOG.info("Retrying operation on ZK. Retry no. " + retry);
