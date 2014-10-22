@@ -290,6 +290,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-2486. Remove unnecessary priority level checks in
     UnderReplicatedBlocks.  (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-6824. Additional user documentation for HDFS encryption. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
