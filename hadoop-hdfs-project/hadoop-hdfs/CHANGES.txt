@@ -1105,6 +1105,8 @@ Release 2.6.0 - UNRELEASED
     dfs.namenode.secondary.http-address cannot be interpreted as a network
     address. (cnauroth)
 
+    HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
