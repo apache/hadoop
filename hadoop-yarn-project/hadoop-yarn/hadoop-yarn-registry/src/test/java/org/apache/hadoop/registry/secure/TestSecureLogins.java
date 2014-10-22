@@ -57,19 +57,6 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
       LoggerFactory.getLogger(TestSecureLogins.class);
 
   @Test
-  public void testZKinKeytab() throws Throwable {
-    Assume.assumeTrue(!Shell.WINDOWS);
-    try {
-      String listing = ktList(keytab_zk);
-      assertTrue("no " + ZOOKEEPER_LOCALHOST + " in " + listing,
-          listing.contains(ZOOKEEPER_LOCALHOST));
-    } catch (IOException e) {
-      LOG.debug(KTUTIL + " failure: {}", e, e);
-      Assume.assumeTrue("Failed to run "+ KTUTIL+": " + e, false );
-    }
-  }
-
-  @Test
   public void testHasRealm() throws Throwable {
     assertNotNull(getRealm());
     LOG.info("ZK principal = {}", getPrincipalAndRealm(ZOOKEEPER_LOCALHOST));
