@@ -415,6 +415,7 @@ public class TestDNFencing {
     int numQueued = 0;
     int numDN = cluster.getDataNodes().size();
     
+    // case 1: create file and call hflush after write
     FSDataOutputStream out = fs.create(TEST_FILE_PATH);
     try {
       AppendTestUtil.write(out, 0, 10);
@@ -422,28 +423,64 @@ public class TestDNFencing {
 
       // Opening the file will report RBW replicas, but will be
       // queued on the StandbyNode.
+      // However, the delivery of RBW messages is delayed by HDFS-7217 fix.
+      // Apply cluster.triggerBlockReports() to trigger the reporting sooner.
+      //
+      cluster.triggerBlockReports();
       numQueued += numDN; // RBW messages
+
+      // The cluster.triggerBlockReports() call above does a full 
+      // block report that incurs 3 extra RBW messages
+      numQueued += numDN; // RBW messages      
     } finally {
       IOUtils.closeStream(out);
       numQueued += numDN; // blockReceived messages
     }
-    
+
     cluster.triggerBlockReports();
     numQueued += numDN;
-    
+    assertEquals(numQueued, cluster.getNameNode(1).getNamesystem().
+        getPendingDataNodeMessageCount());
+
+    // case 2: append to file and call hflush after write
     try {
       out = fs.append(TEST_FILE_PATH);
       AppendTestUtil.write(out, 10, 10);
-      // RBW replicas once it's opened for append
-      numQueued += numDN;
-
+      out.hflush();
+      cluster.triggerBlockReports();
+      numQueued += numDN * 2; // RBW messages, see comments in case 1
     } finally {
       IOUtils.closeStream(out);
       numQueued += numDN; // blockReceived
     }
-    
+    assertEquals(numQueued, cluster.getNameNode(1).getNamesystem().
+        getPendingDataNodeMessageCount());
+
+    // case 3: similar to case 2, except no hflush is called.
+    try {
+      out = fs.append(TEST_FILE_PATH);
+      AppendTestUtil.write(out, 20, 10);
+    } finally {
+      // The write operation in the try block is buffered, thus no RBW message
+      // is reported yet until the closeStream call here. When closeStream is
+      // called, before HDFS-7217 fix, there would be three RBW messages
+      // (blockReceiving), plus three FINALIZED messages (blockReceived)
+      // delivered to NN. However, because of HDFS-7217 fix, the reporting of
+      // RBW  messages is postponed. In this case, they are even overwritten 
+      // by the blockReceived messages of the same block when they are waiting
+      // to be delivered. All this happens within the closeStream() call.
+      // What's delivered to NN is the three blockReceived messages. See 
+      //    BPServiceActor#addPendingReplicationBlockInfo 
+      //
+      IOUtils.closeStream(out);
+      numQueued += numDN; // blockReceived
+    }
+
     cluster.triggerBlockReports();
     numQueued += numDN;
+
+    LOG.info("Expect " + numQueued + " and got: " + cluster.getNameNode(1).getNamesystem().
+        getPendingDataNodeMessageCount());      
 
     assertEquals(numQueued, cluster.getNameNode(1).getNamesystem().
         getPendingDataNodeMessageCount());
@@ -458,7 +495,7 @@ public class TestDNFencing {
     assertEquals(0, nn1.getNamesystem().getCorruptReplicaBlocks());
     assertEquals(0, nn2.getNamesystem().getCorruptReplicaBlocks());
     
-    AppendTestUtil.check(fs, TEST_FILE_PATH, 20);
+    AppendTestUtil.check(fs, TEST_FILE_PATH, 30);
   }
   
   /**
