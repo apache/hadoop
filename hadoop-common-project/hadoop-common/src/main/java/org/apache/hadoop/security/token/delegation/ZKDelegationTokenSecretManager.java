@@ -276,7 +276,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  public void startThreads() throws IOException {
+  public synchronized void startThreads() throws IOException {
     if (!isExternalClient) {
       try {
         zkClient.start();
@@ -402,7 +402,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  public void stopThreads() {
+  public synchronized void stopThreads() {
     try {
       if (!isExternalClient && (zkClient != null)) {
         zkClient.close();
@@ -434,12 +434,12 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  protected int getDelegationTokenSeqNum() {
+  protected synchronized int getDelegationTokenSeqNum() {
     return seqCounter.getCount();
   }
 
   @Override
-  protected int incrementDelegationTokenSeqNum() {
+  protected synchronized int incrementDelegationTokenSeqNum() {
     try {
       while (!seqCounter.trySetCount(seqCounter.getCount() + 1)) {
       }
@@ -450,8 +450,12 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  protected void setDelegationTokenSeqNum(int seqNum) {
-    delegationTokenSequenceNumber = seqNum;
+  protected synchronized void setDelegationTokenSeqNum(int seqNum) {
+    try {
+      seqCounter.setCount(seqNum);
+    } catch (Exception e) {
+      throw new RuntimeException("Could not set shared counter !!", e);
+    }
   }
 
   @Override

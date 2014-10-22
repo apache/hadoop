@@ -163,11 +163,6 @@ extends AbstractDelegationTokenIdentifier>
     return;
   }
 
-  // for ZK based secretManager
-  protected void updateMasterKey(DelegationKey key) throws IOException{
-    return;
-  }
-
   // RM
   protected void removeStoredMasterKey(DelegationKey key) {
     return;
@@ -191,7 +186,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations
    */
-  protected int getDelegationTokenSeqNum() {
+  protected synchronized int getDelegationTokenSeqNum() {
     return delegationTokenSequenceNumber;
   }
 
@@ -199,7 +194,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations
    */
-  protected int incrementDelegationTokenSeqNum() {
+  protected synchronized int incrementDelegationTokenSeqNum() {
     return ++delegationTokenSequenceNumber;
   }
 
@@ -207,7 +202,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations
    */
-  protected void setDelegationTokenSeqNum(int seqNum) {
+  protected synchronized void setDelegationTokenSeqNum(int seqNum) {
     delegationTokenSequenceNumber = seqNum;
   }
 
@@ -234,7 +229,6 @@ extends AbstractDelegationTokenIdentifier>
    */
   protected void updateDelegationKey(DelegationKey key) throws IOException {
     allKeys.put(key.getKeyId(), key);
-    updateMasterKey(key);
   }
 
   /**
