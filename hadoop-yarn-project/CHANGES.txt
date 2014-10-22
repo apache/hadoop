@@ -683,6 +683,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2692 ktutil test hanging on some machines/ktutil versions (stevel)
 
+    YARN-2700 TestSecureRMRegistryOperations failing on windows: auth problems
+    (stevel)
+
     ---
 
     YARN-2598 GHS should show N/A instead of null for the inaccessible information
