@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 
@@ -559,6 +560,11 @@ public class YarnConfiguration extends Configuration {
 
   public static final String DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION =
       "NONE";
+
+  /**
+   * RM proxy users' prefix
+   */
+  public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
 
   ////////////////////////////////
   // Node Manager Configs

@@ -421,9 +421,13 @@ public class AdminService extends CompositeService implements
       throwStandbyException();
     }
 
+    // Accept hadoop common configs in core-site.xml as well as RM specific
+    // configurations in yarn-site.xml
     Configuration conf =
         getConfiguration(new Configuration(false),
-            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
+            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE,
+            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+    RMServerUtils.processRMProxyUsersConf(conf);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     RMAuditLogger.logSuccess(user.getShortUserName(),
         argName, "AdminService");
@@ -594,11 +598,13 @@ public class AdminService extends CompositeService implements
   }
 
   private synchronized Configuration getConfiguration(Configuration conf,
-      String confFileName) throws YarnException, IOException {
-    InputStream confFileInputStream = this.rmContext.getConfigurationProvider()
-        .getConfigurationInputStream(conf, confFileName);
-    if (confFileInputStream != null) {
-      conf.addResource(confFileInputStream);
+      String... confFileNames) throws YarnException, IOException {
+    for (String confFileName : confFileNames) {
+      InputStream confFileInputStream = this.rmContext.getConfigurationProvider()
+          .getConfigurationInputStream(conf, confFileName);
+      if (confFileInputStream != null) {
+        conf.addResource(confFileInputStream);
+      }
     }
     return conf;
   }
