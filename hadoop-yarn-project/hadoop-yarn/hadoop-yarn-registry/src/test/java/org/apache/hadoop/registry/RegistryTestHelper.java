@@ -326,48 +326,6 @@ public class RegistryTestHelper extends Assert {
   }
 
   /**
-   * Exec the native <code>ktutil</code> to list the keys
-   * (primarily to verify that the generated keytabs are compatible).
-   * This operation is not executed on windows. On other platforms
-   * it requires <code>ktutil</code> to be installed and on the path
-   * <pre>
-   *   ktutil --keytab=target/kdc/zookeeper.keytab list --keys
-   * </pre>
-   * @param keytab keytab to list
-   * @throws IOException on any execution problem, including the executable
-   * being missing
-   */
-  public static String ktList(File keytab) throws IOException {
-    if (!Shell.WINDOWS) {
-      String path = keytab.getAbsolutePath();
-      String out = Shell.execCommand(
-          KTUTIL,
-          "--keytab=" + path,
-          "list",
-          "--keys"
-      );
-      LOG.info("Listing of keytab {}:\n{}\n", path, out);
-      return out;
-    }
-    return "";
-  }
-
-  /**
-   * Perform a robust <code>ktutils -l</code> ... catches and ignores
-   * exceptions, otherwise the output is logged.
-   * @param keytab keytab to list
-   * @return the result of the operation, or "" on any problem
-   */
-  public static String ktListRobust(File keytab) {
-    try {
-      return ktList(keytab);
-    } catch (IOException e) {
-      // probably not on the path
-      return "";
-    }
-  }
-
-  /**
    * Login via a UGI. Requres UGI to have been set up
    * @param user username
    * @param keytab keytab to list

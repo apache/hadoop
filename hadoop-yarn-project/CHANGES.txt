@@ -681,6 +681,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2689 TestSecureRMRegistryOperations failing on windows:
     secure ZK won't start (stevel)
 
+    YARN-2692 ktutil test hanging on some machines/ktutil versions (stevel)
+
     ---
 
     YARN-2598 GHS should show N/A instead of null for the inaccessible information
