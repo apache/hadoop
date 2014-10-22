@@ -994,6 +994,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11175. Fix several issues of hadoop security configuration in user
     doc. (Yi Liu via cnauroth)
 
+    HADOOP-11122. Fix findbugs in ZK DelegationTokenSecretManagers.
+    (Arun Suresh via kasha)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
