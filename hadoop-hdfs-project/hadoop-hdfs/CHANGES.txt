@@ -65,6 +65,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
 
+    HDFS-7277. Remove explicit dependency on netty 3.2 in BKJournal. (wheat9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
