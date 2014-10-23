@@ -896,6 +896,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7215.Add JvmPauseMonitor to NFS gateway (brandonli)
 
+    HDFS-7180. NFSv3 gateway frequently gets stuck due to GC (brandonli)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an

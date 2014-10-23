@@ -228,7 +228,7 @@ class DFSClientCache {
           RemovalNotification<DFSInputStreamCaheKey, FSDataInputStream> notification) {
         try {
           notification.getValue().close();
-        } catch (IOException e) {
+        } catch (IOException ignored) {
         }
       }
     };

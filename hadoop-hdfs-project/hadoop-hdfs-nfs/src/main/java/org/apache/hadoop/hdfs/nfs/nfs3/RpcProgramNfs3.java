@@ -282,7 +282,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    GETATTR3Request request = null;
+    GETATTR3Request request;
     try {
       request = GETATTR3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -374,7 +374,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    SETATTR3Request request = null;
+    SETATTR3Request request;
     try {
       request = SETATTR3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -459,7 +459,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    LOOKUP3Request request = null;
+    LOOKUP3Request request;
     try {
       request = LOOKUP3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -527,7 +527,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    ACCESS3Request request = null;
+    ACCESS3Request request;
     try {
       request = ACCESS3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -594,7 +594,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    READLINK3Request request = null;
+    READLINK3Request request;
 
     try {
       request = READLINK3Request.deserialize(xdr);
@@ -668,7 +668,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    READ3Request request = null;
+    READ3Request request;
 
     try {
       request = READ3Request.deserialize(xdr);
@@ -710,7 +710,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           securityHandler.getUid(), securityHandler.getGid(),
           securityHandler.getAuxGids(), attrs);
       if ((access & Nfs3Constant.ACCESS3_READ) != 0) {
-        eof = offset < attrs.getSize() ? false : true;
+        eof = offset >= attrs.getSize();
         return new READ3Response(Nfs3Status.NFS3_OK, attrs, 0, eof,
             ByteBuffer.wrap(new byte[0]));
       } else {
@@ -749,7 +749,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         } catch (IOException e) {
           // TODO: A cleaner way is to throw a new type of exception
           // which requires incompatible changes.
-          if (e.getMessage() == "Stream closed") {
+          if (e.getMessage().equals("Stream closed")) {
             clientCache.invalidateDfsInputStream(userName,
                 Nfs3Utils.getFileIdPath(handle));
             continue;
@@ -769,7 +769,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       if (readCount < 0) {
         readCount = 0;
       }
-      eof = (offset + readCount) < attrs.getSize() ? false : true;
+      eof = (offset + readCount) >= attrs.getSize();
       return new READ3Response(Nfs3Status.NFS3_OK, attrs, readCount, eof,
           ByteBuffer.wrap(readbuffer));
 
@@ -801,7 +801,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    WRITE3Request request = null;
+    WRITE3Request request;
 
     try {
       request = WRITE3Request.deserialize(xdr);
@@ -883,7 +883,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    CREATE3Request request = null;
+    CREATE3Request request;
 
     try {
       request = CREATE3Request.deserialize(xdr);
@@ -1017,7 +1017,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    MKDIR3Request request = null;
+    MKDIR3Request request;
 
     try {
       request = MKDIR3Request.deserialize(xdr);
@@ -1114,7 +1114,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    REMOVE3Request request = null;
+    REMOVE3Request request;
     try {
       request = REMOVE3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -1194,7 +1194,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    RMDIR3Request request = null;
+    RMDIR3Request request;
     try {
       request = RMDIR3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -1375,7 +1375,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    SYMLINK3Request request = null;
+    SYMLINK3Request request;
     try {
       request = SYMLINK3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -1431,7 +1431,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
    */
   private DirectoryListing listPaths(DFSClient dfsClient, String dirFileIdPath,
       byte[] startAfter) throws IOException {
-    DirectoryListing dlisting = null;
+    DirectoryListing dlisting;
     try {
       dlisting = dfsClient.listPaths(dirFileIdPath, startAfter);
     } catch (RemoteException e) {
@@ -1468,7 +1468,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    READDIR3Request request = null;
+    READDIR3Request request;
     try {
       request = READDIR3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -1492,9 +1492,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           + cookie + " count: " + count);
     }
 
-    HdfsFileStatus dirStatus = null;
-    DirectoryListing dlisting = null;
-    Nfs3FileAttributes postOpAttr = null;
+    HdfsFileStatus dirStatus;
+    DirectoryListing dlisting;
+    Nfs3FileAttributes postOpAttr;
     long dotdotFileId = 0;
     try {
       String dirFileIdPath = Nfs3Utils.getFileIdPath(handle);
@@ -1657,8 +1657,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     HdfsFileStatus dirStatus;
-    DirectoryListing dlisting = null;
-    Nfs3FileAttributes postOpDirAttr = null;
+    DirectoryListing dlisting;
+    Nfs3FileAttributes postOpDirAttr;
     long dotdotFileId = 0;
     HdfsFileStatus dotdotStatus = null;
     try {
@@ -1803,7 +1803,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    FSSTAT3Request request = null;
+    FSSTAT3Request request;
     try {
       request = FSSTAT3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -1877,7 +1877,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    FSINFO3Request request = null;
+    FSINFO3Request request;
     try {
       request = FSINFO3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -1941,7 +1941,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    PATHCONF3Request request = null;
+    PATHCONF3Request request;
     try {
       request = PATHCONF3Request.deserialize(xdr);
     } catch (IOException e) {
@@ -1992,7 +1992,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
 
-    COMMIT3Request request = null;
+    COMMIT3Request request;
     try {
       request = COMMIT3Request.deserialize(xdr);
     } catch (IOException e) {
