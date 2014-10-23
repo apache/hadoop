@@ -19,6 +19,7 @@ package org.apache.hadoop.tracing;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -101,6 +102,9 @@ public class SpanReceiverHost implements TraceAdminProtocol {
       reader = new BufferedReader(
           new InputStreamReader(new FileInputStream("/proc/self/stat")));
       String line = reader.readLine();
+      if (line == null) {
+        throw new EOFException();
+      }
       nonce = line.split(" ")[0];
     } catch (IOException e) {
     } finally {
