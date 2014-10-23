@@ -668,6 +668,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2721. Suppress NodeExist exception thrown by ZKRMStateStore when it
     retries creating znode. (Jian He via zjshen)
 
+    YARN-2732. Fixed syntax error in SecureContainer.apt.vm. (Jian He via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
