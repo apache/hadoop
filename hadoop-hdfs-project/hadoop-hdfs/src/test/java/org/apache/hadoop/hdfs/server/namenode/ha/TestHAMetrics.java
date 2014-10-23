@@ -30,6 +30,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -62,6 +66,12 @@ public class TestHAMetrics {
       assertTrue(0 < nn1.getMillisSinceLastLoadedEdits());
 
       cluster.transitionToActive(0);
+      final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      final ObjectName mxbeanName =
+          new ObjectName("Hadoop:service=NameNode,name=NameNodeStatus");
+      final Long ltt1 =
+          (Long) mbs.getAttribute(mxbeanName, "LastHATransitionTime");
+      assertTrue("lastHATransitionTime should be > 0", ltt1 > 0);
       
       assertEquals("active", nn0.getHAState());
       assertEquals(0, nn0.getMillisSinceLastLoadedEdits());
@@ -69,6 +79,9 @@ public class TestHAMetrics {
       assertTrue(0 < nn1.getMillisSinceLastLoadedEdits());
       
       cluster.transitionToStandby(0);
+      final Long ltt2 =
+          (Long) mbs.getAttribute(mxbeanName, "LastHATransitionTime");
+      assertTrue("lastHATransitionTime should be > " + ltt1, ltt2 > ltt1);
       cluster.transitionToActive(1);
       
       assertEquals("standby", nn0.getHAState());

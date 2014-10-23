@@ -41,6 +41,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7222. Expose DataNode network errors as a metric. (Charles Lamb via wang)
 
+    HDFS-7257. Add the time of last HA state transition to NN's /jmx page.
+    (Charles Lamb via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
