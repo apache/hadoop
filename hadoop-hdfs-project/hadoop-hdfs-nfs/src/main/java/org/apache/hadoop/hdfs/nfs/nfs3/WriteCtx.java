@@ -47,14 +47,20 @@ class WriteCtx {
   public static enum DataState {
     ALLOW_DUMP,
     NO_DUMP,
-    DUMPED;
+    DUMPED
   }
 
   private final FileHandle handle;
   private final long offset;
   private final int count;
   
-  //Only needed for overlapped write, referring OpenFileCtx.addWritesToCache()  
+  /**
+   * Some clients can send a write that includes previously written data along
+   * with new data. In such case the write request is changed to write from only
+   * the new data. {@code originalCount} tracks the number of bytes sent in the
+   * request before it was modified to write only the new data. 
+   * @see OpenFileCtx#addWritesToCache for more details
+   */
   private final int originalCount; 
   public static final int INVALID_ORIGINAL_COUNT = -1;
   
@@ -173,7 +179,7 @@ class WriteCtx {
   public void writeData(HdfsDataOutputStream fos) throws IOException {
     Preconditions.checkState(fos != null);
 
-    ByteBuffer dataBuffer = null;
+    ByteBuffer dataBuffer;
     try {
       dataBuffer = getData();
     } catch (Exception e1) {
