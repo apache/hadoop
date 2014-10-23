@@ -69,6 +69,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7277. Remove explicit dependency on netty 3.2 in BKJournal. (wheat9)
 
+    HDFS-7232. Populate hostname in httpfs audit log (Zoran Dimitrijevic
+    via aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
