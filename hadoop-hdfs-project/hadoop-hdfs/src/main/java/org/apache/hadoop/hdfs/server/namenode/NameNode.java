@@ -1619,6 +1619,11 @@ public class NameNode implements NameNodeStatusMXBean {
     return UserGroupInformation.isSecurityEnabled();
   }
 
+  @Override // NameNodeStatusMXBean
+  public long getLastHATransitionTime() {
+    return state.getLastHATransitionTime();
+  }
+
   /**
    * Shutdown the NN immediately in an ungraceful way. Used when it would be
    * unsafe for the NN to continue operating, e.g. during a failed HA state
