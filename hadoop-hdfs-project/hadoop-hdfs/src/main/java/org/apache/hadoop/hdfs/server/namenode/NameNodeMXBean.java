@@ -147,10 +147,19 @@ public interface NameNodeMXBean {
   /**
    * Gets the total number of missing blocks on the cluster
    * 
-   * @return the total number of files and blocks on the cluster
+   * @return the total number of missing blocks on the cluster
    */
   public long getNumberOfMissingBlocks();
   
+  /**
+   * Gets the total number of missing blocks on the cluster with
+   * replication factor 1
+   *
+   * @return the total number of missing blocks on the cluster with
+   * replication factor 1
+   */
+  public long getNumberOfMissingBlocksWithReplicationFactorOne();
+
   /**
    * Gets the number of threads.
    * 

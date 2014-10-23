@@ -3438,6 +3438,11 @@ public class BlockManager {
     return this.neededReplications.getCorruptBlockSize();
   }
 
+  public long getMissingReplOneBlocksCount() {
+    // not locking
+    return this.neededReplications.getCorruptReplOneBlockSize();
+  }
+
   public BlockInfo addBlockCollection(BlockInfo block, BlockCollection bc) {
     return blocksMap.addBlockCollection(block, bc);
   }

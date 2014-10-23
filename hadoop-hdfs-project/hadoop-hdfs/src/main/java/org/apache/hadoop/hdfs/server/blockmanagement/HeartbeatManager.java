@@ -179,7 +179,7 @@ class HeartbeatManager implements DatanodeStatistics {
                        -1L,
                        -1L,
                        -1L,
-                       getBlockPoolUsed()};
+                       -1L};
   }
 
   @Override
