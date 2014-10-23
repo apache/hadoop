@@ -295,6 +295,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7165. Separate block metrics for files with replication count 1.
     (Zhe Zhang via wang)
 
+    HDFS-7222. Expose DataNode network errors as a metric. (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
