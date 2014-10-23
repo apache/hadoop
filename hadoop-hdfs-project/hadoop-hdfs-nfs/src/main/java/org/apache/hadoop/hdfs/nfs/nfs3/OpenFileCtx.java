@@ -175,7 +175,10 @@ class OpenFileCtx {
   
   private volatile boolean enabledDump;
   private FileOutputStream dumpOut;
+  
+  /** Tracks the data buffered in memory related to non sequential writes */
   private AtomicLong nonSequentialWriteInMemory;
+  
   private RandomAccessFile raf;
   private final String dumpFilePath;
   private Daemon dumpThread;
@@ -205,7 +208,7 @@ class OpenFileCtx {
     return (pendingWrites.size() != 0 || pendingCommits.size() != 0);
   }
   
-  // Increase or decrease the memory occupation of non-sequential writes
+  /** Increase or decrease the memory occupation of non-sequential writes */
   private long updateNonSequentialWriteInMemory(long count) {
     long newValue = nonSequentialWriteInMemory.addAndGet(count);
     if (LOG.isDebugEnabled()) {
@@ -214,8 +217,8 @@ class OpenFileCtx {
     }
 
     Preconditions.checkState(newValue >= 0,
-        "nonSequentialWriteInMemory is negative after update with count "
-            + count);
+        "nonSequentialWriteInMemory is negative " + newValue
+            + " after update with count " + count);
     return newValue;
   }
   
@@ -248,7 +251,7 @@ class OpenFileCtx {
     nonSequentialWriteInMemory = new AtomicLong(0);
   
     this.dumpFilePath = dumpFilePath;  
-    enabledDump = dumpFilePath == null ? false: true;
+    enabledDump = dumpFilePath != null;
     nextOffset = new AtomicLong();
     nextOffset.set(latestAttr.getSize());
     try {	
@@ -271,7 +274,7 @@ class OpenFileCtx {
   }
   
   // Check if need to dump the new writes
-  private void checkDump() {
+  private void waitForDump() {
     if (!enabledDump) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Do nothing, dump is disabled.");
@@ -296,6 +299,14 @@ class OpenFileCtx {
           this.notifyAll();          
         }
       }
+      
+      while (nonSequentialWriteInMemory.get() >= DUMP_WRITE_WATER_MARK) {
+        try {
+          this.wait();
+        } catch (InterruptedException ignored) {
+        }
+      }
+
     }
   }
 
@@ -382,6 +393,7 @@ class OpenFileCtx {
           }
           synchronized (OpenFileCtx.this) {
             if (nonSequentialWriteInMemory.get() < DUMP_WRITE_WATER_MARK) {
+              OpenFileCtx.this.notifyAll();
               try {
                 OpenFileCtx.this.wait();
                 if (LOG.isDebugEnabled()) {
@@ -398,8 +410,13 @@ class OpenFileCtx {
                 + " enabledDump: " + enabledDump);
           }
         } catch (Throwable t) {
+          // unblock threads with new request
+          synchronized (OpenFileCtx.this) {
+            OpenFileCtx.this.notifyAll();
+          }
           LOG.info("Dumper get Throwable: " + t + ". dumpFilePath: "
               + OpenFileCtx.this.dumpFilePath, t);
+          activeState = false;
         }
       }
     }
@@ -563,10 +580,15 @@ class OpenFileCtx {
       // check if there is a WriteCtx with the same range in pendingWrites
       WriteCtx oldWriteCtx = checkRepeatedWriteRequest(request, channel, xid);
       if (oldWriteCtx == null) {
-        addWrite(writeCtx);
+        pendingWrites.put(new OffsetRange(offset, offset + count), writeCtx);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("New write buffered with xid " + xid + " nextOffset "
+              + cachedOffset + " req offset=" + offset + " mapsize="
+              + pendingWrites.size());
+        }
       } else {
-        LOG.warn("Got a repeated request, same range, with xid:"
-            + writeCtx.getXid());
+        LOG.warn("Got a repeated request, same range, with xid:" + xid
+            + " nextOffset " + +cachedOffset + " req offset=" + offset);
       }
       return writeCtx;
     }
@@ -648,7 +670,7 @@ class OpenFileCtx {
       boolean startWriting = checkAndStartWrite(asyncDataService, writeCtx);
       if (!startWriting) {
         // offset > nextOffset. check if we need to dump data
-        checkDump();
+        waitForDump();
         
         // In test, noticed some Linux client sends a batch (e.g., 1MB)
         // of reordered writes and won't send more writes until it gets
@@ -683,7 +705,7 @@ class OpenFileCtx {
   private WRITE3Response processPerfectOverWrite(DFSClient dfsClient,
       long offset, int count, WriteStableHow stableHow, byte[] data,
       String path, WccData wccData, IdUserGroup iug) {
-    WRITE3Response response = null;
+    WRITE3Response response;
 
     // Read the content back
     byte[] readbuffer = new byte[count];
@@ -888,13 +910,6 @@ class OpenFileCtx {
       pendingCommits.put(maxOffset, commitCtx);
     }
     return COMMIT_STATUS.COMMIT_WAIT;
-  }
-  
-  private void addWrite(WriteCtx writeCtx) {
-    long offset = writeCtx.getOffset();
-    int count = writeCtx.getCount();
-    // For the offset range (min, max), min is inclusive, and max is exclusive
-    pendingWrites.put(new OffsetRange(offset, offset + count), writeCtx);
   }
   
   /**
@@ -1191,7 +1206,7 @@ class OpenFileCtx {
       dumpThread.interrupt();
       try {
         dumpThread.join(3000);
-      } catch (InterruptedException e) {
+      } catch (InterruptedException ignored) {
       }
     }
     

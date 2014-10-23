@@ -220,12 +220,12 @@ class OpenFileCtxCache {
 
   void shutdown() {
     // stop the dump thread
-    if (streamMonitor != null && streamMonitor.isAlive()) {
+    if (streamMonitor.isAlive()) {
       streamMonitor.shouldRun(false);
       streamMonitor.interrupt();
       try {
         streamMonitor.join(3000);
-      } catch (InterruptedException e) {
+      } catch (InterruptedException ignored) {
       }
     }
     
