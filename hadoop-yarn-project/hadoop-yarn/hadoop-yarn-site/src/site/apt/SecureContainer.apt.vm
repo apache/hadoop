@@ -111,7 +111,7 @@ min.user.id=1000#Prevent other super-users
 +---+
   *** wsce-site.xml
   
-      The hadoopwinutilsvc uses <<<%HADOOP_HOME%\etc\hadoop\wsce_site.xml to configure access to the privileged operations.
+      The hadoopwinutilsvc uses <<<%HADOOP_HOME%\etc\hadoop\wsce_site.xml>>> to configure access to the privileged operations.
 
 +---+
   <property>
