@@ -20,10 +20,13 @@ package org.apache.hadoop.security.token.delegation;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -125,7 +128,7 @@ extends AbstractDelegationTokenIdentifier>
    * Reset all data structures and mutable state.
    */
   public synchronized void reset() {
-    currentId = 0;
+    setCurrentKeyId(0);
     allKeys.clear();
     setDelegationTokenSeqNum(0);
     currentTokens.clear();
@@ -138,8 +141,8 @@ extends AbstractDelegationTokenIdentifier>
   public synchronized void addKey(DelegationKey key) throws IOException {
     if (running) // a safety check
       throw new IOException("Can't add delegation key to a running SecretManager.");
-    if (key.getKeyId() > currentId) {
-      currentId = key.getKeyId();
+    if (key.getKeyId() > getCurrentKeyId()) {
+      setCurrentKeyId(key.getKeyId());
     }
     allKeys.put(key.getKeyId(), key);
   }
@@ -180,6 +183,30 @@ extends AbstractDelegationTokenIdentifier>
   // RM
   protected void updateStoredToken(TokenIdent ident, long renewDate) throws IOException {
     return;
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected synchronized int getCurrentKeyId() {
+    return currentId;
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected synchronized int incrementCurrentKeyId() {
+    return ++currentId;
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected synchronized void setCurrentKeyId(int keyId) {
+    currentId = keyId;
   }
 
   /**
@@ -282,8 +309,8 @@ extends AbstractDelegationTokenIdentifier>
       return;
     }
     byte[] password = createPassword(identifier.getBytes(), dKey.getKey());
-    if (identifier.getSequenceNumber() > delegationTokenSequenceNumber) {
-      delegationTokenSequenceNumber = identifier.getSequenceNumber();
+    if (identifier.getSequenceNumber() > getDelegationTokenSeqNum()) {
+      setDelegationTokenSeqNum(identifier.getSequenceNumber());
     }
     if (getTokenInfo(identifier) == null) {
       currentTokens.put(identifier, new DelegationTokenInformation(renewDate,
@@ -303,7 +330,7 @@ extends AbstractDelegationTokenIdentifier>
     /* Create a new currentKey with an estimated expiry date. */
     int newCurrentId;
     synchronized (this) {
-      newCurrentId = currentId+1;
+      newCurrentId = incrementCurrentKeyId();
     }
     DelegationKey newKey = new DelegationKey(newCurrentId, System
         .currentTimeMillis()
@@ -311,7 +338,6 @@ extends AbstractDelegationTokenIdentifier>
     //Log must be invoked outside the lock on 'this'
     logUpdateMasterKey(newKey);
     synchronized (this) {
-      currentId = newKey.getKeyId();
       currentKey = newKey;
       storeDelegationKey(currentKey);
     }
@@ -358,9 +384,9 @@ extends AbstractDelegationTokenIdentifier>
     sequenceNum = incrementDelegationTokenSeqNum();
     identifier.setIssueDate(now);
     identifier.setMaxDate(now + tokenMaxLifetime);
-    identifier.setMasterKeyId(currentId);
+    identifier.setMasterKeyId(currentKey.getKeyId());
     identifier.setSequenceNumber(sequenceNum);
-    LOG.info("Creating password for identifier: " + identifier);
+    LOG.info("Creating password for identifier: [" + MD5Hash.digest(identifier.getBytes()) + ", " + currentKey.getKeyId() + "]");
     byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
     DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));

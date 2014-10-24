@@ -48,7 +48,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -56,6 +55,7 @@ import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,6 +104,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   private static final String ZK_DTSM_NAMESPACE = "ZKDTSMRoot";
   private static final String ZK_DTSM_SEQNUM_ROOT = "ZKDTSMSeqNumRoot";
+  private static final String ZK_DTSM_KEYID_ROOT = "ZKDTSMKeyIdRoot";
   private static final String ZK_DTSM_TOKENS_ROOT = "ZKDTSMTokensRoot";
   private static final String ZK_DTSM_MASTER_KEY_ROOT = "ZKDTSMMasterKeyRoot";
 
@@ -119,7 +120,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   private final boolean isExternalClient;
   private final CuratorFramework zkClient;
-  private SharedCount seqCounter;
+  private SharedCount delTokSeqCounter;
+  private SharedCount keyIdSeqCounter;
   private PathChildrenCache keyCache;
   private PathChildrenCache tokenCache;
   private ExecutorService listenerThreadPool;
@@ -276,7 +278,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  public synchronized void startThreads() throws IOException {
+  public void startThreads() throws IOException {
     if (!isExternalClient) {
       try {
         zkClient.start();
@@ -285,12 +287,20 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       }
     }
     try {
-      seqCounter = new SharedCount(zkClient, ZK_DTSM_SEQNUM_ROOT, 0);
-      if (seqCounter != null) {
-        seqCounter.start();
+      delTokSeqCounter = new SharedCount(zkClient, ZK_DTSM_SEQNUM_ROOT, 0);
+      if (delTokSeqCounter != null) {
+        delTokSeqCounter.start();
       }
     } catch (Exception e) {
       throw new IOException("Could not start Sequence Counter", e);
+    }
+    try {
+      keyIdSeqCounter = new SharedCount(zkClient, ZK_DTSM_KEYID_ROOT, 0);
+      if (keyIdSeqCounter != null) {
+        keyIdSeqCounter.start();
+      }
+    } catch (Exception e) {
+      throw new IOException("Could not start KeyId Counter", e);
     }
     try {
       createPersistentNode(ZK_DTSM_MASTER_KEY_ROOT);
@@ -402,13 +412,16 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  public synchronized void stopThreads() {
+  public void stopThreads() {
     try {
       if (!isExternalClient && (zkClient != null)) {
         zkClient.close();
       }
-      if (seqCounter != null) {
-        seqCounter.close();
+      if (delTokSeqCounter != null) {
+        delTokSeqCounter.close();
+      }
+      if (keyIdSeqCounter != null) {
+        keyIdSeqCounter.close();
       }
       if (keyCache != null) {
         keyCache.close();
@@ -434,28 +447,44 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  protected synchronized int getDelegationTokenSeqNum() {
-    return seqCounter.getCount();
+  protected int getDelegationTokenSeqNum() {
+    return delTokSeqCounter.getCount();
   }
 
   @Override
-  protected synchronized int incrementDelegationTokenSeqNum() {
+  protected int incrementDelegationTokenSeqNum() {
     try {
-      while (!seqCounter.trySetCount(seqCounter.getCount() + 1)) {
+      while (!delTokSeqCounter.trySetCount(delTokSeqCounter.getCount() + 1)) {
       }
     } catch (Exception e) {
       throw new RuntimeException("Could not increment shared counter !!", e);
     }
-    return seqCounter.getCount();
+    return delTokSeqCounter.getCount();
   }
 
   @Override
-  protected synchronized void setDelegationTokenSeqNum(int seqNum) {
+  protected void setDelegationTokenSeqNum(int seqNum) {
     try {
-      seqCounter.setCount(seqNum);
+      delTokSeqCounter.setCount(seqNum);
     } catch (Exception e) {
       throw new RuntimeException("Could not set shared counter !!", e);
     }
+  }
+
+  @Override
+  protected int getCurrentKeyId() {
+    return keyIdSeqCounter.getCount();
+  }
+
+  @Override
+  protected int incrementCurrentKeyId() {
+    try {
+      while (!keyIdSeqCounter.trySetCount(keyIdSeqCounter.getCount() + 1)) {
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Could not increment shared keyId counter !!", e);
+    }
+    return keyIdSeqCounter.getCount();
   }
 
   @Override
@@ -518,6 +547,11 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   private DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident)
       throws IOException {
+    return getTokenInfoFromZK(ident, false);
+  }
+
+  private DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident,
+      boolean quiet) throws IOException {
     String nodePath =
         getNodePath(ZK_DTSM_TOKENS_ROOT,
             DELEGATION_TOKEN_PREFIX + ident.getSequenceNumber());
@@ -539,7 +573,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         return tokenInfo;
       }
     } catch (KeeperException.NoNodeException e) {
-      LOG.error("No node in path [" + nodePath + "]");
+      if (!quiet) {
+        LOG.error("No node in path [" + nodePath + "]");
+      }
     } catch (Exception ex) {
       throw new IOException(ex);
     }
@@ -604,7 +640,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
     try {
       if (zkClient.checkExists().forPath(nodeRemovePath) != null) {
-        zkClient.delete().forPath(nodeRemovePath);
+        while(zkClient.checkExists().forPath(nodeRemovePath) != null){
+          zkClient.delete().guaranteed().forPath(nodeRemovePath);
+        }
       } else {
         LOG.debug("Attempted to delete a non-existing znode " + nodeRemovePath);
       }
@@ -633,10 +671,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
             + ident.getSequenceNumber());
     try {
       if (zkClient.checkExists().forPath(nodeRemovePath) != null) {
+        addOrUpdateToken(ident, tokenInfo, true);
+      } else {
         addOrUpdateToken(ident, tokenInfo, false);
         LOG.debug("Attempted to update a non-existing znode " + nodeRemovePath);
-      } else {
-        addOrUpdateToken(ident, tokenInfo, true);
       }
     } catch (Exception e) {
       throw new RuntimeException("Could not update Stored Token ZKDTSMDelegationToken_"
@@ -656,9 +694,11 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
     try {
       if (zkClient.checkExists().forPath(nodeRemovePath) != null) {
-        LOG.debug("Attempted to remove a non-existing znode " + nodeRemovePath);
+        while(zkClient.checkExists().forPath(nodeRemovePath) != null){
+          zkClient.delete().guaranteed().forPath(nodeRemovePath);
+        }
       } else {
-        zkClient.delete().forPath(nodeRemovePath);
+        LOG.debug("Attempted to remove a non-existing znode " + nodeRemovePath);
       }
     } catch (Exception e) {
       throw new RuntimeException(
@@ -682,7 +722,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       tokenOut.writeInt(info.getPassword().length);
       tokenOut.write(info.getPassword());
       if (LOG.isDebugEnabled()) {
-        LOG.debug((isUpdate ? "Storing " : "Updating ")
+        LOG.debug((isUpdate ? "Updating " : "Storing ")
             + "ZKDTSMDelegationToken_" +
             ident.getSequenceNumber());
       }
