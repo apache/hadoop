@@ -303,6 +303,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7223. Tracing span description of IPC client is too long (iwasakims
     via cmccabe)
 
+    HDFS-7283. Bump DataNode OOM log from WARN to ERROR.
+    (Stephen Chu via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
