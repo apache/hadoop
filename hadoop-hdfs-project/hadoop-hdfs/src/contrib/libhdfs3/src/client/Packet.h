@@ -29,11 +29,10 @@ namespace internal {
 
 class ConstPacketBuffer {
 public:
-    ConstPacketBuffer(const char * buf, int size) :
-        buffer(buf), size(size) {
+    ConstPacketBuffer(const char *buf, int size) : buffer(buf), size(size) {
     }
 
-    const char * getBuffer() const {
+    const char *getBuffer() const {
         return buffer;
     }
 
@@ -42,7 +41,7 @@ public:
     }
 
 private:
-    const char * buffer;
+    const char *buffer;
     const int size;
 };
 
@@ -65,13 +64,15 @@ public:
     /**
      * create a new packet
      */
-    Packet(int pktSize, int chunksPerPkt, int64_t offsetInBlock, int64_t seqno, int checksumSize);
+    Packet(int pktSize, int chunksPerPkt, int64_t offsetInBlock, int64_t seqno,
+           int checksumSize);
 
-    void reset(int pktSize, int chunksPerPkt, int64_t offsetInBlock, int64_t seqno, int checksumSize);
+    void reset(int pktSize, int chunksPerPkt, int64_t offsetInBlock,
+               int64_t seqno, int checksumSize);
 
     void addChecksum(uint32_t checksum);
 
-    void addData(const char * buf, int size);
+    void addData(const char *buf, int size);
 
     void setSyncFlag(bool sync);
 
@@ -102,21 +103,20 @@ public:
     }
 
 private:
-    bool lastPacketInBlock; // is this the last packet in block
-    bool syncBlock; // sync block to disk?
+    bool lastPacketInBlock;  // is this the last packet in block
+    bool syncBlock;          // sync block to disk?
     int checksumPos;
     int checksumSize;
     int checksumStart;
     int dataPos;
     int dataStart;
     int headerStart;
-    int maxChunks; // max chunks in packet
-    int numChunks; // number of chunks currently in packet
-    int64_t offsetInBlock; // offset in block
-    int64_t seqno; // sequence number of packet in block
+    int maxChunks;          // max chunks in packet
+    int numChunks;          // number of chunks currently in packet
+    int64_t offsetInBlock;  // offset in block
+    int64_t seqno;          // sequence number of packet in block
     std::vector<char> buffer;
 };
-
 }
 }
 #endif /* _HDFS_LIBHDFS3_CLIENT_PACKET_H_ */

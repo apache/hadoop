@@ -16,45 +16,45 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_
-#define _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_
-
-#include "Config.h"
-#include "Status.h"
+#ifndef _HDFS_LIBHDFS3_COMMON_STATUS_H_
+#define _HDFS_LIBHDFS3_COMMON_STATUS_H_
 
 #include <string>
-#include <vector>
 
 namespace hdfs {
 
-class NamenodeInfo {
+class Status {
 public:
-    NamenodeInfo();
+    Status();
 
-    const std::string &getHttpAddr() const {
-        return http_addr;
+    Status(int code);
+
+    Status(int code, const std::string &msg);
+
+    bool operator==(const Status &other) const {
+        return code == other.code;
     }
 
-    void setHttpAddr(const std::string &httpAddr) {
-        http_addr = httpAddr;
+    bool isError() const {
+        return code != 0;
     }
 
-    const std::string &getRpcAddr() const {
-        return rpc_addr;
+    int getCode() const {
+        return code;
     }
 
-    void setRpcAddr(const std::string &rpcAddr) {
-        rpc_addr = rpcAddr;
+    const char *getErrorMsg() {
+        return msg.c_str();
     }
 
-    static Status GetHANamenodeInfo(const std::string &service,
-                                    const Config &conf,
-                                    std::vector<NamenodeInfo> *output);
+    static Status OK() {
+        return Status();
+    }
 
 private:
-    std::string rpc_addr;
-    std::string http_addr;
+    int code;
+    std::string msg;
 };
 }
 
-#endif /* _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_ */
+#endif /* _HDFS_LIBHDFS3_COMMON_STATUS_H_ */

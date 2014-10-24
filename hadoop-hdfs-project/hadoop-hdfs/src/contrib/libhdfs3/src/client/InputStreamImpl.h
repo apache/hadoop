@@ -19,13 +19,10 @@
 #ifndef _HDFS_LIBHDFS3_CLIENT_INPUTSTREAMIMPL_H_
 #define _HDFS_LIBHDFS3_CLIENT_INPUTSTREAMIMPL_H_
 
-#include "platform.h"
-
 #include "BlockReader.h"
 #include "ExceptionInternal.h"
 #include "FileSystem.h"
 #include "Hash.h"
-#include "InputStreamInter.h"
 #include "LruMap.h"
 #include "SessionConfig.h"
 #include "SharedPtr.h"
@@ -45,14 +42,16 @@ namespace hdfs {
 namespace internal {
 
 typedef std::pair<int64_t, std::string> LocalBlockInforCacheKey;
-typedef LruMap<LocalBlockInforCacheKey, BlockLocalPathInfo> LocalBlockInforCacheType;
+typedef LruMap<LocalBlockInforCacheKey, BlockLocalPathInfo>
+    LocalBlockInforCacheType;
 
 /**
  * A input stream used read data from hdfs.
  */
-class InputStreamImpl: public InputStreamInter {
+class InputStreamImpl {
 public:
     InputStreamImpl();
+
     ~InputStreamImpl();
 
     /**
@@ -61,22 +60,24 @@ public:
      * @param path the file to be read.
      * @param verifyChecksum verify the checksum.
      */
-    void open(shared_ptr<FileSystemInter> fs, const char * path, bool verifyChecksum);
+    void open(shared_ptr<FileSystemImpl> fs, const char *path,
+              bool verifyChecksum);
 
     /**
      * To read data from hdfs.
      * @param buf the buffer used to filled.
      * @param size buffer size.
-     * @return return the number of bytes filled in the buffer, it may less than size.
+     * @return return the number of bytes filled in the buffer, it may less than
+     * size.
      */
-    int32_t read(char * buf, int32_t size);
+    int32_t read(char *buf, int32_t size);
 
     /**
      * To read data from hdfs, block until get the given size of bytes.
      * @param buf the buffer used to filled.
      * @param size the number of bytes to be read.
      */
-    void readFully(char * buf, int64_t size);
+    void readFully(char *buf, int64_t size);
 
     int64_t available();
 
@@ -100,23 +101,24 @@ public:
     std::string toString();
 
 private:
-    BlockLocalPathInfo getBlockLocalPathInfo(LocalBlockInforCacheType & cache,
-            const LocatedBlock & b);
+    BlockLocalPathInfo getBlockLocalPathInfo(LocalBlockInforCacheType &cache,
+                                             const LocatedBlock &b);
     bool choseBestNode();
     bool isLocalNode();
-    int32_t readInternal(char * buf, int32_t size);
-    int32_t readOneBlock(char * buf, int32_t size, bool shouldUpdateMetadataOnFailure);
+    int32_t readInternal(char *buf, int32_t size);
+    int32_t readOneBlock(char *buf, int32_t size,
+                         bool shouldUpdateMetadataOnFailure);
     int64_t getFileLength();
-    int64_t readBlockLength(const LocatedBlock & b);
-    LocalBlockInforCacheType & getBlockLocalPathInfoCache(uint32_t port);
+    int64_t readBlockLength(const LocatedBlock &b);
+    LocalBlockInforCacheType &getBlockLocalPathInfoCache(uint32_t port);
     void checkStatus();
-    void invalidCacheEntry(LocalBlockInforCacheType & cache,
-                           const LocatedBlock & b);
-    void openInternal(shared_ptr<FileSystemInter> fs, const char * path,
+    void invalidCacheEntry(LocalBlockInforCacheType &cache,
+                           const LocatedBlock &b);
+    void openInternal(shared_ptr<FileSystemImpl> fs, const char *path,
                       bool verifyChecksum);
-    void readFullyInternal(char * buf, int64_t size);
+    void readFullyInternal(char *buf, int64_t size);
     void seekInternal(int64_t pos);
-    void seekToBlock(const LocatedBlock & lb);
+    void seekToBlock(const LocatedBlock &lb);
     void setupBlockReader(bool temporaryDisableLocalRead);
     void updateBlockInfos();
 
@@ -135,7 +137,7 @@ private:
     int64_t prefetchSize;
     RpcAuth auth;
     shared_ptr<BlockReader> blockReader;
-    shared_ptr<FileSystemInter> filesystem;
+    shared_ptr<FileSystemImpl> filesystem;
     shared_ptr<LocatedBlock> curBlock;
     shared_ptr<LocatedBlocks> lbs;
     shared_ptr<SessionConfig> conf;
@@ -144,28 +146,31 @@ private:
     std::vector<char> localReaderBuffer;
 
     static mutex MutLocalBlockInforCache;
-    static unordered_map<uint32_t, shared_ptr<LocalBlockInforCacheType> > LocalBlockInforCache;
-#ifdef MOCK
+    static unordered_map<uint32_t, shared_ptr<LocalBlockInforCacheType>>
+        LocalBlockInforCache;
+
 private:
-    hdfs::mock::TestDatanodeStub * stub;
+    InputStreamImpl(const InputStreamImpl &other);
+    InputStreamImpl &operator=(const InputStreamImpl &other);
+
+#ifdef MOCK
+    hdfs::mock::TestDatanodeStub *stub;
 #endif
 };
-
 }
 }
 
 #ifdef NEED_BOOST
 
 namespace boost {
-template<>
+template <>
 struct hash<hdfs::internal::LocalBlockInforCacheKey> {
     std::size_t operator()(
-        const hdfs::internal::LocalBlockInforCacheKey & key) const {
+        const hdfs::internal::LocalBlockInforCacheKey &key) const {
         size_t values[] = {hdfs::internal::Int64Hasher(key.first),
-                           hdfs::internal::StringHasher(key.second)
-                          };
-        return hdfs::internal::CombineHasher(values,
-                                             sizeof(values) / sizeof(values[0]));
+                           hdfs::internal::StringHasher(key.second)};
+        return hdfs::internal::CombineHasher(
+            values, sizeof(values) / sizeof(values[0]));
     }
 };
 }
@@ -173,15 +178,14 @@ struct hash<hdfs::internal::LocalBlockInforCacheKey> {
 #else
 
 namespace std {
-template<>
+template <>
 struct hash<hdfs::internal::LocalBlockInforCacheKey> {
     std::size_t operator()(
-        const hdfs::internal::LocalBlockInforCacheKey & key) const {
-        size_t values[] = { hdfs::internal::Int64Hasher(key.first),
-                            hdfs::internal::StringHasher(key.second)
-                          };
-        return hdfs::internal::CombineHasher(values,
-                                             sizeof(values) / sizeof(values[0]));
+        const hdfs::internal::LocalBlockInforCacheKey &key) const {
+        size_t values[] = {hdfs::internal::Int64Hasher(key.first),
+                           hdfs::internal::StringHasher(key.second)};
+        return hdfs::internal::CombineHasher(
+            values, sizeof(values) / sizeof(values[0]));
     }
 };
 }

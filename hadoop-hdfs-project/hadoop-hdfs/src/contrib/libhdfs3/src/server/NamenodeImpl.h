@@ -24,70 +24,76 @@
 namespace hdfs {
 namespace internal {
 
-class NamenodeImpl: public Namenode {
+class NamenodeImpl : public Namenode {
 public:
     NamenodeImpl(const char *host, const char *port,
-            const std::string &tokenService, const SessionConfig &c,
-            const RpcAuth &a);
+                 const std::string &tokenService, const SessionConfig &c,
+                 const RpcAuth &a);
 
     ~NamenodeImpl();
 
-    //Idempotent
-    void getBlockLocations(const std::string &src, int64_t offset,
-                           int64_t length, LocatedBlocks &lbs) /* throw (AccessControlException,
+    // Idempotent
+    void getBlockLocations(
+        const std::string &src, int64_t offset, int64_t length,
+        LocatedBlocks &lbs) /* throw (AccessControlException,
              FileNotFoundException, UnresolvedLinkException,
              HdfsIOException) */;
 
     void create(const std::string &src, const Permission &masked,
                 const std::string &clientName, int flag, bool createParent,
-                short replication, int64_t blockSize) /* throw (AccessControlException,
+                short replication,
+                int64_t blockSize) /* throw (AccessControlException,
              AlreadyBeingCreatedException, DSQuotaExceededException,
              FileAlreadyExistsException, FileNotFoundException,
              NSQuotaExceededException, ParentNotDirectoryException,
              SafeModeException, UnresolvedLinkException, HdfsIOException) */;
 
-    shared_ptr<LocatedBlock> append(const std::string &src, const std::string &clientName)
-    /* throw (AccessControlException,
+    shared_ptr<LocatedBlock> append(const std::string &src,
+                                    const std::string &clientName)
+        /* throw (AccessControlException,
              DSQuotaExceededException, FileNotFoundException,
              SafeModeException, UnresolvedLinkException, HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     bool setReplication(const std::string &src, short replication)
-    /* throw (AccessControlException, DSQuotaExceededException,
+        /* throw (AccessControlException, DSQuotaExceededException,
      FileNotFoundException, SafeModeException, UnresolvedLinkException,
      HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     void setPermission(const std::string &src, const Permission &permission)
-    /* throw (AccessControlException, FileNotFoundException,
+        /* throw (AccessControlException, FileNotFoundException,
      SafeModeException, UnresolvedLinkException, HdfsIOException) */;
 
-    //Idempotent
-    void setOwner(const std::string &src, const std::string &username,
-                  const std::string &groupname) /* throw (AccessControlException,
+    // Idempotent
+    void setOwner(
+        const std::string &src, const std::string &username,
+        const std::string &groupname) /* throw (AccessControlException,
              FileNotFoundException, SafeModeException,
              UnresolvedLinkException, HdfsIOException) */;
 
-    void abandonBlock(const ExtendedBlock &b, const std::string &src,
-                      const std::string &holder) /* throw (AccessControlException,
+    void abandonBlock(
+        const ExtendedBlock &b, const std::string &src,
+        const std::string &holder) /* throw (AccessControlException,
              FileNotFoundException, UnresolvedLinkException,
              HdfsIOException) */;
 
-    shared_ptr<LocatedBlock> addBlock(const std::string &src, const std::string &clientName,
-                                      const ExtendedBlock *previous,
-                                      const std::vector<DatanodeInfo> &excludeNodes)
-    /* throw (AccessControlException, FileNotFoundException,
+    shared_ptr<LocatedBlock> addBlock(
+        const std::string &src, const std::string &clientName,
+        const ExtendedBlock *previous,
+        const std::vector<DatanodeInfo> &excludeNodes)
+        /* throw (AccessControlException, FileNotFoundException,
      NotReplicatedYetException, SafeModeException,
      UnresolvedLinkException, HdfsIOException) */;
 
-    //Idempotent
-    shared_ptr<LocatedBlock> getAdditionalDatanode(const std::string &src,
-            const ExtendedBlock &blk,
-            const std::vector<DatanodeInfo> &existings,
-            const std::vector<std::string> &storageIDs,
-            const std::vector<DatanodeInfo> &excludes, int numAdditionalNodes,
-            const std::string &clientName)
-    /* throw (AccessControlException, FileNotFoundException,
+    // Idempotent
+    shared_ptr<LocatedBlock> getAdditionalDatanode(
+        const std::string &src, const ExtendedBlock &blk,
+        const std::vector<DatanodeInfo> &existings,
+        const std::vector<std::string> &storageIDs,
+        const std::vector<DatanodeInfo> &excludes, int numAdditionalNodes,
+        const std::string &clientName)
+        /* throw (AccessControlException, FileNotFoundException,
      SafeModeException, UnresolvedLinkException, HdfsIOException) */;
 
     bool complete(const std::string &src, const std::string &clientName,
@@ -95,15 +101,15 @@ public:
              FileNotFoundException, SafeModeException,
              UnresolvedLinkException, HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     void reportBadBlocks(const std::vector<LocatedBlock> &blocks)
-    /* throw (HdfsIOException) */;
+        /* throw (HdfsIOException) */;
 
     bool rename(const std::string &src, const std::string &dst)
-    /* throw (UnresolvedLinkException, HdfsIOException) */;
+        /* throw (UnresolvedLinkException, HdfsIOException) */;
 
     void concat(const std::string &trg, const std::vector<std::string> &srcs)
-    /* throw (HdfsIOException, UnresolvedLinkException) */;
+        /* throw (HdfsIOException, UnresolvedLinkException) */;
 
     /*void rename2(const std::string &src, const std::string &dst)
      throw (AccessControlException, DSQuotaExceededException,
@@ -112,43 +118,43 @@ public:
      SafeModeException, UnresolvedLinkException, HdfsIOException) ;*/
 
     bool deleteFile(const std::string &src, bool recursive)
-    /* throw (AccessControlException, FileNotFoundException,
+        /* throw (AccessControlException, FileNotFoundException,
      SafeModeException, UnresolvedLinkException, HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     bool mkdirs(const std::string &src, const Permission &masked,
                 bool createParent) /* throw (AccessControlException,
              FileAlreadyExistsException, FileNotFoundException,
              NSQuotaExceededException, ParentNotDirectoryException,
              SafeModeException, UnresolvedLinkException, HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     bool getListing(const std::string &src, const std::string &startAfter,
                     bool needLocation, std::vector<FileStatus> &dl)
-    /* throw (AccessControlException, FileNotFoundException,
+        /* throw (AccessControlException, FileNotFoundException,
      UnresolvedLinkException, HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     void renewLease(const std::string &clientName)
-    /* throw (AccessControlException, HdfsIOException) */;
+        /* throw (AccessControlException, HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     bool recoverLease(const std::string &src, const std::string &clientName)
-    /* throw (HdfsIOException) */;
+        /* throw (HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     std::vector<int64_t> getFsStats() /* throw (HdfsIOException) */;
 
     void metaSave(const std::string &filename) /* throw (HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     FileStatus getFileInfo(const std::string &src)
-    /* throw (AccessControlException, FileNotFoundException,
+        /* throw (AccessControlException, FileNotFoundException,
      UnresolvedLinkException, HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     FileStatus getFileLinkInfo(const std::string &src)
-    /* throw (AccessControlException, UnresolvedLinkException,
+        /* throw (AccessControlException, UnresolvedLinkException,
      HdfsIOException) */;
 
     /*    //Idempotent
@@ -156,66 +162,68 @@ public:
          throw (AccessControlException, FileNotFoundException,
          UnresolvedLinkException, HdfsIOException) ;*/
 
-    //Idempotent
+    // Idempotent
     void setQuota(const std::string &path, int64_t namespaceQuota,
                   int64_t diskspaceQuota) /* throw (AccessControlException,
              FileNotFoundException, UnresolvedLinkException,
              HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     void fsync(const std::string &src, const std::string &client)
-    /* throw (AccessControlException, FileNotFoundException,
+        /* throw (AccessControlException, FileNotFoundException,
      UnresolvedLinkException, HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     void setTimes(const std::string &src, int64_t mtime, int64_t atime)
-    /* throw (AccessControlException, FileNotFoundException,
+        /* throw (AccessControlException, FileNotFoundException,
      UnresolvedLinkException, HdfsIOException) */;
 
     void createSymlink(const std::string &target, const std::string &link,
                        const Permission &dirPerm, bool createParent)
-    /* throw (AccessControlException, FileAlreadyExistsException,
+        /* throw (AccessControlException, FileAlreadyExistsException,
      FileNotFoundException, ParentNotDirectoryException,
      SafeModeException, UnresolvedLinkException, HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     std::string getLinkTarget(const std::string &path)
-    /* throw (AccessControlException, FileNotFoundException,
+        /* throw (AccessControlException, FileNotFoundException,
      HdfsIOException) */;
 
-    //Idempotent
-    shared_ptr<LocatedBlock> updateBlockForPipeline(const ExtendedBlock &block,
-            const std::string &clientName)
-    /* throw (HdfsIOException) */;
+    // Idempotent
+    shared_ptr<LocatedBlock> updateBlockForPipeline(
+        const ExtendedBlock &block, const std::string &clientName)
+        /* throw (HdfsIOException) */;
 
     void updatePipeline(const std::string &clientName,
-                        const ExtendedBlock &oldBlock, const ExtendedBlock &newBlock,
+                        const ExtendedBlock &oldBlock,
+                        const ExtendedBlock &newBlock,
                         const std::vector<DatanodeInfo> &newNodes,
-                        const std::vector<std::string> &storageIDs) /* throw (HdfsIOException) */;
+                        const std::vector<std::string> &
+                            storageIDs) /* throw (HdfsIOException) */;
 
-    //Idempotent
+    // Idempotent
     Token getDelegationToken(const std::string &renewer)
-    /* throws IOException*/;
+        /* throws IOException*/;
 
-    //Idempotent
+    // Idempotent
     int64_t renewDelegationToken(const Token &token)
-    /*throws IOException*/;
+        /*throws IOException*/;
 
-    //Idempotent
+    // Idempotent
     void cancelDelegationToken(const Token &token)
-    /*throws IOException*/;
+        /*throws IOException*/;
 
 private:
     void invoke(const RpcCall &call);
+    NamenodeImpl(const NamenodeImpl &other);
+    NamenodeImpl &operator=(const NamenodeImpl &other);
 
-private:
     RpcAuth auth;
     RpcClient &client;
     RpcConfig conf;
     RpcProtocolInfo protocol;
     RpcServerInfo server;
 };
-
 }
 }
 

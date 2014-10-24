@@ -28,6 +28,8 @@ namespace internal {
 
 class PacketHeader {
 public:
+    static int GetPkgHeaderSize();
+    static int CalcPkgHeaderSize();
     PacketHeader();
     PacketHeader(int packetLen, int64_t offsetInBlock, int64_t seqno,
                  bool lastPacketInBlock, int dataLen);
@@ -37,24 +39,19 @@ public:
     int getPacketLen();
     int64_t getOffsetInBlock();
     int64_t getSeqno();
-    void readFields(const char * buf, size_t size);
+    void readFields(const char *buf, size_t size);
+
     /**
      * Write the header into the buffer.
      * This requires that PKT_HEADER_LEN bytes are available.
      */
-    void writeInBuffer(char * buf, size_t size);
-
-public:
-    static int GetPkgHeaderSize();
-    static int CalcPkgHeaderSize();
+    void writeInBuffer(char *buf, size_t size);
 
 private:
     static int PkgHeaderSize;
-private:
     int32_t packetLen;
     PacketHeaderProto proto;
 };
-
 }
 }
 

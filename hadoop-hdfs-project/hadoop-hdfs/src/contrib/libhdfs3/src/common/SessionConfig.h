@@ -19,11 +19,11 @@
 #ifndef _HDFS_LIBHDFS3_COMMON_SESSIONCONFIG_H_
 #define _HDFS_LIBHDFS3_COMMON_SESSIONCONFIG_H_
 
+#include "ConfigImpl.h"
 #include "Exception.h"
 #include "ExceptionInternal.h"
 #include "Function.h"
 #include "Logger.h"
-#include "XmlConfig.h"
 
 #include <cassert>
 #include <stdint.h>
@@ -32,18 +32,18 @@
 namespace hdfs {
 namespace internal {
 
-template<typename T>
+template <typename T>
 struct ConfigDefault {
-    T *variable; //variable this configure item should be bound to.
-    const char *key; //configure key.
-    T value; //default value.
-    function<void(const char *, T const &)> check;   //the function to validate the value.
+    T *variable;      // variable this configure item should be bound to.
+    const char *key;  // configure key.
+    T value;          // default value.
+    function<void(const char *, T const &)>
+        check;  // the function to validate the value.
 };
 
 class SessionConfig {
 public:
-
-    SessionConfig(const Config &conf);
+    SessionConfig(const ConfigImpl &conf);
 
     /*
      * rpc configure
@@ -308,16 +308,14 @@ public:
     bool addDatanode;
     int32_t chunkSize;
     int32_t packetSize;
-    int32_t blockWriteRetry; //retry on block not replicated yet.
+    int32_t blockWriteRetry;  // retry on block not replicated yet.
     int32_t outputConnTimeout;
     int32_t outputReadTimeout;
     int32_t outputWriteTimeout;
     int32_t packetPoolSize;
     int32_t heartBeatInterval;
     int32_t closeFileTimeout;
-
 };
-
 }
 }
 

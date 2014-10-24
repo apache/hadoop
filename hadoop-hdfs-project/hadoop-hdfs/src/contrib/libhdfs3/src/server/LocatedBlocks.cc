@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "Exception.h"
 #include "ExceptionInternal.h"
 #include "LocatedBlock.h"
@@ -28,22 +27,19 @@
 namespace hdfs {
 namespace internal {
 
-const LocatedBlock *LocatedBlocksImpl::findBlock(int64_t position) {
+const LocatedBlock *LocatedBlocks::findBlock(int64_t position) {
     if (position < fileLength) {
         LocatedBlock target(position);
         std::vector<LocatedBlock>::iterator bound;
-
         if (blocks.empty()) {
             return NULL;
         }
-
-        /*
-         * up is the first block which offset is not less than position.
-         */
+        // Find first block whose offset is equal to or greater than the
+        // requested position.
         bound = std::lower_bound(blocks.begin(), blocks.end(), target,
                                  std::less<LocatedBlock>());
         assert(bound == blocks.end() || bound->getOffset() >= position);
-        LocatedBlock * retval = NULL;
+        LocatedBlock *retval = NULL;
 
         if (bound == blocks.end()) {
             retval = &blocks.back();
@@ -53,17 +49,14 @@ const LocatedBlock *LocatedBlocksImpl::findBlock(int64_t position) {
         } else {
             retval = &(*bound);
         }
-
-        if (position < retval->getOffset()
-                || position >= retval->getOffset() + retval->getNumBytes()) {
+        if (position < retval->getOffset() ||
+            position >= retval->getOffset() + retval->getNumBytes()) {
             return NULL;
         }
-
         return retval;
     } else {
         return lastBlock.get();
     }
 }
-
 }
 }

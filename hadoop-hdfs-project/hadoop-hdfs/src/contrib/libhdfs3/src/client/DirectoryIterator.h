@@ -16,45 +16,40 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_
-#define _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_
+#ifndef _HDFS_LIBHFDS3_CLIENT_DIRECTORY_ITERATOR_H_
+#define _HDFS_LIBHFDS3_CLIENT_DIRECTORY_ITERATOR_H_
 
-#include "Config.h"
+#include "FileStatus.h"
 #include "Status.h"
 
-#include <string>
 #include <vector>
 
 namespace hdfs {
+namespace internal {
+class FileSystemImpl;
+}
 
-class NamenodeInfo {
+class DirectoryIterator {
 public:
-    NamenodeInfo();
-
-    const std::string &getHttpAddr() const {
-        return http_addr;
-    }
-
-    void setHttpAddr(const std::string &httpAddr) {
-        http_addr = httpAddr;
-    }
-
-    const std::string &getRpcAddr() const {
-        return rpc_addr;
-    }
-
-    void setRpcAddr(const std::string &rpcAddr) {
-        rpc_addr = rpcAddr;
-    }
-
-    static Status GetHANamenodeInfo(const std::string &service,
-                                    const Config &conf,
-                                    std::vector<NamenodeInfo> *output);
+    DirectoryIterator();
+    bool hasNext();
+    Status getNext(FileStatus *output);
 
 private:
-    std::string rpc_addr;
-    std::string http_addr;
+    DirectoryIterator(hdfs::internal::FileSystemImpl *const fs,
+                      const std::string &path, bool needLocations);
+    bool getListing();
+
+    bool needLocations;
+    bool hasNextItem;
+    hdfs::internal::FileSystemImpl *filesystem;
+    size_t next;
+    std::string path;
+    std::string startAfter;
+    std::vector<FileStatus> lists;
+
+    friend hdfs::internal::FileSystemImpl;
 };
 }
 
-#endif /* _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_ */
+#endif /* _HDFS_LIBHFDS3_CLIENT_DIRECTORY_ITERATOR_H_ */

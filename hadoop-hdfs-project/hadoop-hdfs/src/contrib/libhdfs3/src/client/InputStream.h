@@ -19,20 +19,28 @@
 #ifndef _HDFS_LIBHDFS3_CLIENT_INPUTSTREAM_H_
 #define _HDFS_LIBHDFS3_CLIENT_INPUTSTREAM_H_
 
-#include "FileSystem.h"
+#include "Status.h"
 
 namespace hdfs {
 namespace internal {
-class InputStreamInter;
+class InputStreamImpl;
 }
+
+class FileSystem;
 
 /**
  * A input stream used read data from hdfs.
  */
 class InputStream {
 public:
+    /**
+     * Construct an instance.
+     */
     InputStream();
 
+    /**
+     * Destroy this instance.
+     */
     ~InputStream();
 
     /**
@@ -40,51 +48,66 @@ public:
      * @param fs hdfs file system.
      * @param path the file to be read.
      * @param verifyChecksum verify the checksum.
+     * @return the result status of this operation
      */
-    void open(FileSystem & fs, const char * path, bool verifyChecksum = true);
+    Status open(FileSystem &fs, const std::string &path,
+                bool verifyChecksum = true);
 
     /**
      * To read data from hdfs.
      * @param buf the buffer used to filled.
      * @param size buffer size.
-     * @return return the number of bytes filled in the buffer, it may less than size.
+     * @return return the number of bytes filled in the buffer, it may less than
+     * size, -1 on error.
      */
-    int32_t read(char * buf, int32_t size);
+    int32_t read(char *buf, int32_t size);
 
     /**
      * To read data from hdfs, block until get the given size of bytes.
      * @param buf the buffer used to filled.
      * @param size the number of bytes to be read.
+     * @return the result status of this operation
      */
-    void readFully(char * buf, int64_t size);
+    Status readFully(char *buf, int64_t size);
 
     /**
      * Get how many bytes can be read without blocking.
-     * @return The number of bytes can be read without blocking.
+     * @return The number of bytes can be read without blocking, -1 on error.
      */
     int64_t available();
 
     /**
      * To move the file point to the given position.
      * @param pos the given position.
+     * @return the result status of this operation
      */
-    void seek(int64_t pos);
+    Status seek(int64_t pos);
 
     /**
      * To get the current file point position.
-     * @return the position of current file point.
+     * @return the position of current file pointer, -1 on error.
      */
     int64_t tell();
 
     /**
      * Close the stream.
+     * @return the result status of this operation
      */
-    void close();
+    Status close();
+
+    /**
+     * Get the error status of the last operation.
+     * @return the error status of the last operation.
+     */
+    Status getLastError();
 
 private:
-    Internal::InputStreamInter * impl;
-};
+    InputStream(const InputStream &other);
+    InputStream &operator=(InputStream &other);
 
+    internal::InputStreamImpl *impl;
+    Status lastError;
+};
 }
 
 #endif /* _HDFS_LIBHDFS3_CLIENT_INPUTSTREAM_H_ */

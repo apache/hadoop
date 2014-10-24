@@ -24,51 +24,54 @@
 #include "SharedPtr.h"
 #include "Thread.h"
 
+#include <string>
+#include <vector>
+
 namespace hdfs {
 namespace internal {
 
-class NamenodeProxy: public Namenode {
+class NamenodeProxy : public Namenode {
 public:
     NamenodeProxy(const std::vector<NamenodeInfo> &namenodeInfos,
-            const std::string &tokenService,
-            const SessionConfig &c, const RpcAuth &a);
+                  const std::string &tokenService, const SessionConfig &c,
+                  const RpcAuth &a);
     ~NamenodeProxy();
 
 public:
-
     void getBlockLocations(const std::string &src, int64_t offset,
-            int64_t length, LocatedBlocks &lbs);
+                           int64_t length, LocatedBlocks &lbs);
 
     void create(const std::string &src, const Permission &masked,
-            const std::string &clientName, int flag, bool createParent,
-            short replication, int64_t blockSize);
+                const std::string &clientName, int flag, bool createParent,
+                short replication, int64_t blockSize);
 
     shared_ptr<LocatedBlock> append(const std::string &src,
-            const std::string &clientName);
+                                    const std::string &clientName);
 
     bool setReplication(const std::string &src, short replication);
 
     void setPermission(const std::string &src, const Permission &permission);
 
     void setOwner(const std::string &src, const std::string &username,
-            const std::string &groupname);
+                  const std::string &groupname);
 
     void abandonBlock(const ExtendedBlock &b, const std::string &src,
-            const std::string &holder);
+                      const std::string &holder);
 
-    shared_ptr<LocatedBlock> addBlock(const std::string &src,
-            const std::string &clientName, const ExtendedBlock *previous,
-            const std::vector<DatanodeInfo> &excludeNodes);
+    shared_ptr<LocatedBlock> addBlock(
+        const std::string &src, const std::string &clientName,
+        const ExtendedBlock *previous,
+        const std::vector<DatanodeInfo> &excludeNodes);
 
-    shared_ptr<LocatedBlock> getAdditionalDatanode(const std::string &src,
-            const ExtendedBlock &blk,
-            const std::vector<DatanodeInfo> &existings,
-            const std::vector<std::string> &storageIDs,
-            const std::vector<DatanodeInfo> &excludes, int numAdditionalNodes,
-            const std::string &clientName);
+    shared_ptr<LocatedBlock> getAdditionalDatanode(
+        const std::string &src, const ExtendedBlock &blk,
+        const std::vector<DatanodeInfo> &existings,
+        const std::vector<std::string> &storageIDs,
+        const std::vector<DatanodeInfo> &excludes, int numAdditionalNodes,
+        const std::string &clientName);
 
     bool complete(const std::string &src, const std::string &clientName,
-            const ExtendedBlock *last);
+                  const ExtendedBlock *last);
 
     void reportBadBlocks(const std::vector<LocatedBlock> &blocks);
 
@@ -85,10 +88,10 @@ public:
     bool deleteFile(const std::string &src, bool recursive);
 
     bool mkdirs(const std::string &src, const Permission &masked,
-            bool createParent);
+                bool createParent);
 
     bool getListing(const std::string &src, const std::string &startAfter,
-            bool needLocation, std::vector<FileStatus> &dl);
+                    bool needLocation, std::vector<FileStatus> &dl);
 
     void renewLease(const std::string &clientName);
 
@@ -103,24 +106,25 @@ public:
     FileStatus getFileLinkInfo(const std::string &src);
 
     void setQuota(const std::string &path, int64_t namespaceQuota,
-            int64_t diskspaceQuota);
+                  int64_t diskspaceQuota);
 
     void fsync(const std::string &src, const std::string &client);
 
     void setTimes(const std::string &src, int64_t mtime, int64_t atime);
 
     void createSymlink(const std::string &target, const std::string &link,
-            const Permission &dirPerm, bool createParent);
+                       const Permission &dirPerm, bool createParent);
 
     std::string getLinkTarget(const std::string &path);
 
-    shared_ptr<LocatedBlock> updateBlockForPipeline(const ExtendedBlock &block,
-            const std::string &clientName);
+    shared_ptr<LocatedBlock> updateBlockForPipeline(
+        const ExtendedBlock &block, const std::string &clientName);
 
     void updatePipeline(const std::string &clientName,
-            const ExtendedBlock &oldBlock, const ExtendedBlock &newBlock,
-            const std::vector<DatanodeInfo> &newNodes,
-            const std::vector<std::string> &storageIDs);
+                        const ExtendedBlock &oldBlock,
+                        const ExtendedBlock &newBlock,
+                        const std::vector<DatanodeInfo> &newNodes,
+                        const std::vector<std::string> &storageIDs);
 
     Token getDelegationToken(const std::string &renewer);
 
@@ -131,18 +135,18 @@ public:
     void close();
 
 private:
+    NamenodeProxy(const NamenodeProxy &other);
+    NamenodeProxy &operator=(const NamenodeProxy &other);
     shared_ptr<Namenode> getActiveNamenode(uint32_t &oldValue);
     void failoverToNextNamenode(uint32_t oldValue);
 
-private:
     bool enableNamenodeHA;
     int maxNamenodeHARetry;
     mutex mut;
     std::string clusterid;
-    std::vector<shared_ptr<Namenode> > namenodes;
+    std::vector<shared_ptr<Namenode>> namenodes;
     uint32_t currentNamenode;
 };
-
 }
 }
 

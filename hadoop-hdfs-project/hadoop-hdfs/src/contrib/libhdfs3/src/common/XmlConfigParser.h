@@ -16,48 +16,54 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS3_CLIENT_BLOCKREADER_H_
-#define _HDFS_LIBHDFS3_CLIENT_BLOCKREADER_H_
+#ifndef _HDFS_LIBHDFS3_COMMON_XMLCONFIGPARSER_H_
+#define _HDFS_LIBHDFS3_COMMON_XMLCONFIGPARSER_H_
 
 #include <stdint.h>
+#include <string>
+#include <sstream>
+#include <map>
 
 namespace hdfs {
 namespace internal {
 
-class BlockReader {
+/**
+ * A configure file parser.
+ */
+class XmlConfigParser {
 public:
-    BlockReader() {
+    /**
+     * Construct a empty Config instance.
+     */
+    XmlConfigParser() {
     }
 
-    virtual ~BlockReader() {
+    /**
+     * Construct a Config with given configure file.
+     * @param path The path of configure file.
+     * @throw HdfsBadConfigFoumat
+     */
+    XmlConfigParser(const char *path);
+
+    /**
+     * Parse the configure file.
+     * @throw HdfsBadConfigFoumat
+     */
+    void update(const char *path);
+
+    /**
+     * Get Key Values
+     * @return Return the Key Value pairs.
+     */
+    std::map<std::string, std::string> getKeyValue() {
+        return kv;
     }
-
-    /**
-     * Get how many bytes can be read without blocking.
-     * @return The number of bytes can be read without blocking.
-     */
-    virtual int64_t available() = 0;
-
-    /**
-     * To read data from block.
-     * @param buf the buffer used to filled.
-     * @param size the number of bytes to be read.
-     * @return return the number of bytes filled in the buffer,
-     *  it may less than size. Return 0 if reach the end of block.
-     */
-    virtual int32_t read(char *buf, int32_t size) = 0;
-
-    /**
-     * Move the cursor forward len bytes.
-     * @param len The number of bytes to skip.
-     */
-    virtual void skip(int64_t len) = 0;
 
 private:
-    BlockReader(const BlockReader &other);
-    BlockReader &operator=(const BlockReader &other);
+    std::string path;
+    std::map<std::string, std::string> kv;
 };
 }
 }
 
-#endif /* _HDFS_LIBHDFS3_CLIENT_BLOCKREADER_H_ */
+#endif /* _HDFS_LIBHDFS3_COMMON_XMLCONFIGPARSER_H_ */

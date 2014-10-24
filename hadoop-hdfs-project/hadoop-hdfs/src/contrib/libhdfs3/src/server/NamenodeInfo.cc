@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
+#include "Config.h"
+#include "ConfigImpl.h"
 #include "NamenodeInfo.h"
+#include "StatusInternal.h"
 #include "StringUtil.h"
-#include "XmlConfig.h"
 
 #include <string>
 #include <vector>
@@ -35,25 +37,35 @@ const char *const DFS_NAMENODE_HA = "dfs.ha.namenodes";
 const char *const DFS_NAMENODE_RPC_ADDRESS_KEY = "dfs.namenode.rpc-address";
 const char *const DFS_NAMENODE_HTTP_ADDRESS_KEY = "dfs.namenode.http-address";
 
-std::vector<NamenodeInfo> NamenodeInfo::GetHANamenodeInfo(
-    const std::string & service, const Config & conf) {
-    std::vector<NamenodeInfo> retval;
-    std::string strNameNodes = StringTrim(
-              conf.getString(std::string(DFS_NAMENODE_HA) + "." + service));
-    std::vector<std::string> nns = StringSplit(strNameNodes, ",");
-    retval.resize(nns.size());
+Status NamenodeInfo::GetHANamenodeInfo(const std::string &service,
+                                       const Config &c,
+                                       std::vector<NamenodeInfo> *output) {
+    ConfigImpl &conf = *c.impl;
+    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
 
-    for (size_t i = 0; i < nns.size(); ++i) {
-        std::string dfsRpcAddress = StringTrim(
-              std::string(DFS_NAMENODE_RPC_ADDRESS_KEY) + "." + service + "."
-              + StringTrim(nns[i]));
-        std::string dfsHttpAddress = StringTrim(
-              std::string(DFS_NAMENODE_HTTP_ADDRESS_KEY) + "." + service + "." +
-              StringTrim(nns[i]));
-        retval[i].setRpcAddr(StringTrim(conf.getString(dfsRpcAddress, "")));
-        retval[i].setHttpAddr(StringTrim(conf.getString(dfsHttpAddress, "")));
+    try {
+        std::vector<NamenodeInfo> &retval = *output;
+        std::string strNameNodes = StringTrim(
+            conf.getString(std::string(DFS_NAMENODE_HA) + "." + service));
+        std::vector<std::string> nns = StringSplit(strNameNodes, ",");
+        retval.resize(nns.size());
+
+        for (size_t i = 0; i < nns.size(); ++i) {
+            std::string dfsRpcAddress =
+                StringTrim(std::string(DFS_NAMENODE_RPC_ADDRESS_KEY) + "." +
+                           service + "." + StringTrim(nns[i]));
+            std::string dfsHttpAddress =
+                StringTrim(std::string(DFS_NAMENODE_HTTP_ADDRESS_KEY) + "." +
+                           service + "." + StringTrim(nns[i]));
+            retval[i].setRpcAddr(StringTrim(conf.getString(dfsRpcAddress, "")));
+            retval[i].setHttpAddr(
+                StringTrim(conf.getString(dfsHttpAddress, "")));
+        }
+
+    } catch (...) {
+        return CreateStatusFromException(current_exception());
     }
 
-    return retval;
+    return Status::OK();
 }
 }

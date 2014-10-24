@@ -16,34 +16,12 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS3_COMMON_UNORDERED_MAP_H_
-#define _HDFS_LIBHDFS3_COMMON_UNORDERED_MAP_H_
+#ifndef _HDFS_LIBHDFS3_CLIENT_TOKENINTERNAL_H_
+#define _HDFS_LIBHDFS3_CLIENT_TOKENINTERNAL_H_
 
-#ifdef _LIBCPP_VERSION
+#include "Hash.h"
+#include "Token.h"
 
-#include <unordered_map>
-#include <unordered_set>
+HDFS_HASH_DEFINE(::hdfs::internal::Token);
 
-namespace hdfs {
-namespace internal {
-
-using std::unordered_set;
-using std::unordered_map;
-}
-}
-
-#else
-
-#include <tr1/unordered_map>
-#include <tr1/unordered_set>
-
-namespace hdfs {
-namespace internal {
-
-using std::tr1::unordered_set;
-using std::tr1::unordered_map;
-}
-}
-
-#endif
-#endif
+#endif /* _HDFS_LIBHDFS3_CLIENT_TOKENINTERNAL_H_ */

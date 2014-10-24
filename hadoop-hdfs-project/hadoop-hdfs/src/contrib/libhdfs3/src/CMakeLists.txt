@@ -48,7 +48,18 @@ SET(libhdfs3_PROTO_FILES ${libhdfs3_PROTO_FILES} PARENT_SCOPE)
 INCLUDE(GenerateProtobufs.cmake)
 INCLUDE_DIRECTORIES("${CMAKE_BINARY_DIR}")
 
-SET(HEADER client/hdfs.h)
+SET(HEADER 
+    client/BlockLocation.h
+    client/DirectoryIterator.h
+    client/FileStatus.h
+    client/FileSystem.h
+    client/FileSystemStats.h
+    client/InputStream.h
+    client/Permission.h
+    common/Config.h
+    common/SharedPtr.h
+    common/Status.h
+)
 
 ADD_LIBRARY(libhdfs3-static STATIC ${LIBHDFS3_SOURCES} ${LIBHDFS3_PROTO_SOURCES} ${LIBHDFS3_PROTO_HEADERS})
 ADD_LIBRARY(libhdfs3-shared SHARED ${LIBHDFS3_SOURCES} ${LIBHDFS3_PROTO_SOURCES} ${LIBHDFS3_PROTO_HEADERS})

@@ -32,11 +32,11 @@
 namespace hdfs {
 namespace internal {
 
-class LocalBlockReader: public BlockReader {
+class LocalBlockReader : public BlockReader {
 public:
-    LocalBlockReader(const BlockLocalPathInfo & info,
-                     const ExtendedBlock & block, int64_t offset, bool verify,
-                     SessionConfig & conf, std::vector<char> & buffer);
+    LocalBlockReader(const BlockLocalPathInfo &info, const ExtendedBlock &block,
+                     int64_t offset, bool verify, SessionConfig &conf,
+                     std::vector<char> &buffer);
 
     ~LocalBlockReader();
 
@@ -55,7 +55,7 @@ public:
      * @return return the number of bytes filled in the buffer,
      *  it may less than size. Return 0 if reach the end of block.
      */
-    virtual int32_t read(char * buf, int32_t size);
+    virtual int32_t read(char *buf, int32_t size);
 
     /**
      * Move the cursor forward len bytes.
@@ -64,34 +64,36 @@ public:
     virtual void skip(int64_t len);
 
 private:
+    LocalBlockReader(const LocalBlockReader &other);
+    LocalBlockReader &operator=(const LocalBlockReader &other);
+
     /**
      * Fill buffer and verify checksum.
      * @param bufferSize The size of buffer.
      */
     void readAndVerify(int32_t bufferSize);
-    int32_t readInternal(char * buf, int32_t len);
+    int32_t readInternal(char *buf, int32_t len);
 
 private:
-    bool verify; //verify checksum or not.
+    bool verify;  // verify checksum or not.
     const char *pbuffer;
     const char *pMetaBuffer;
     const ExtendedBlock &block;
     int checksumSize;
     int chunkSize;
     int localBufferSize;
-    int position; //point in buffer.
-    int size;  //data size in buffer.
-    int64_t cursor; //point in block.
-    int64_t length; //data size of block.
+    int position;    // point in buffer.
+    int size;        // data size in buffer.
+    int64_t cursor;  // point in block.
+    int64_t length;  // data size of block.
     shared_ptr<Checksum> checksum;
     shared_ptr<FileWrapper> dataFd;
     shared_ptr<FileWrapper> metaFd;
     std::string dataFilePath;
     std::string metaFilePath;
-    std::vector<char> & buffer;
+    std::vector<char> &buffer;
     std::vector<char> metaBuffer;
 };
-
 }
 }
 

@@ -35,7 +35,7 @@
 namespace hdfs {
 namespace internal {
 
-class RemoteBlockReader: public BlockReader {
+class RemoteBlockReader : public BlockReader {
 public:
     RemoteBlockReader(const ExtendedBlock &eb, DatanodeInfo &datanode,
                       int64_t start, int64_t len, const Token &token,
@@ -65,6 +65,8 @@ public:
     virtual void skip(int64_t len);
 
 private:
+    RemoteBlockReader(const RemoteBlockReader &other);
+    RemoteBlockReader &operator=(RemoteBlockReader &other);
     bool readTrailingEmptyPacket();
     shared_ptr<PacketHeader> readPacketHeader();
     void checkResponse();
@@ -72,20 +74,19 @@ private:
     void sendStatus();
     void verifyChecksum(int chunks);
 
-private:
-    bool verify; //verify checksum or not.
+    bool verify;  // verify checksum or not.
     DatanodeInfo &datanode;
     const ExtendedBlock &binfo;
     int checksumSize;
     int chunkSize;
     int connTimeout;
-    int position; //point in buffer.
+    int position;  // point in buffer.
     int readTimeout;
-    int size;  //data size in buffer.
+    int size;  // data size in buffer.
     int writeTimeout;
-    int64_t cursor; //point in block.
-    int64_t endOffset; //offset in block requested to read to.
-    int64_t lastSeqNo; //segno of the last chunk received
+    int64_t cursor;     // point in block.
+    int64_t endOffset;  // offset in block requested to read to.
+    int64_t lastSeqNo;  // segno of the last chunk received
     shared_ptr<BufferedSocketReader> in;
     shared_ptr<Checksum> checksum;
     shared_ptr<DataTransferProtocol> sender;
@@ -93,7 +94,6 @@ private:
     shared_ptr<Socket> sock;
     std::vector<char> buffer;
 };
-
 }
 }
 

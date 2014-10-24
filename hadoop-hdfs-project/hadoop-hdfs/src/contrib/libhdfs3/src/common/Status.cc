@@ -16,45 +16,18 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_
-#define _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_
-
-#include "Config.h"
 #include "Status.h"
-
-#include <string>
-#include <vector>
+#include "ExceptionInternal.h"
 
 namespace hdfs {
 
-class NamenodeInfo {
-public:
-    NamenodeInfo();
-
-    const std::string &getHttpAddr() const {
-        return http_addr;
-    }
-
-    void setHttpAddr(const std::string &httpAddr) {
-        http_addr = httpAddr;
-    }
-
-    const std::string &getRpcAddr() const {
-        return rpc_addr;
-    }
-
-    void setRpcAddr(const std::string &rpcAddr) {
-        rpc_addr = rpcAddr;
-    }
-
-    static Status GetHANamenodeInfo(const std::string &service,
-                                    const Config &conf,
-                                    std::vector<NamenodeInfo> *output);
-
-private:
-    std::string rpc_addr;
-    std::string http_addr;
-};
+Status::Status() : code(0), msg("Success") {
 }
 
-#endif /* _HDFS_LIBHDFS_SERVER_NAMENODEINFO_H_ */
+Status::Status(int code)
+    : code(code), msg(hdfs::internal::GetSystemErrorInfo(code)) {
+}
+
+Status::Status(int code, const std::string &msg) : code(code), msg(msg) {
+}
+}

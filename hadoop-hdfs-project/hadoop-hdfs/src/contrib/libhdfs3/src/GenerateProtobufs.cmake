@@ -56,6 +56,8 @@ COPY_IF_CHANGED("${CMAKE_BINARY_DIR}/hdfs_pb"
     ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/NamenodeProtocol.proto
     ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/ClientNamenodeProtocol.proto
     ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/xattr.proto
+    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/encryption.proto
+    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/inotify.proto
 )
 
 AUTO_SOURCES(PB_SOURCES "*.proto" "RECURSE" "${CMAKE_BINARY_DIR}")
