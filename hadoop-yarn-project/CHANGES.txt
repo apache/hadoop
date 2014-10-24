@@ -23,10 +23,6 @@ Release 2.7.0 - UNRELEASED
     YARN-2641. Decommission nodes on -refreshNodes instead of next 
     NM-RM heartbeat. (Zhihai Xu via kasha)
 
-    YARN-2682. Updated WindowsSecureContainerExecutor to not use
-    DefaultContainerExecutor#getFirstApplicationDir and use getWorkingDir()
-    instead. (Zhihai Xu via jianhe)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -357,6 +353,10 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2709. Made timeline client getDelegationToken API retry if ConnectException
     happens. (Li Lu via zjshen)
+
+    YARN-2682. Updated WindowsSecureContainerExecutor to not use
+    DefaultContainerExecutor#getFirstApplicationDir and use getWorkingDir()
+    instead. (Zhihai Xu via jianhe)
 
     YARN-2209. Replaced AM resync/shutdown command with corresponding exceptions and
     made related MR changes. (Jian He via zjshen)
