@@ -45,7 +45,6 @@ import javax.management.StandardMBean;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -2397,24 +2396,20 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   class LazyWriter implements Runnable {
     private volatile boolean shouldRun = true;
     final int checkpointerInterval;
-    final long estimateBlockSize;
-    final int lowWatermarkFreeSpacePercentage;
-    final int lowWatermarkFreeSpaceReplicas;
+    final float lowWatermarkFreeSpacePercentage;
+    final long lowWatermarkFreeSpaceBytes;
 
 
     public LazyWriter(Configuration conf) {
       this.checkpointerInterval = conf.getInt(
           DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC,
           DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_DEFAULT_SEC);
-      this.estimateBlockSize = conf.getLongBytes(
-          DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
-          DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
-      this.lowWatermarkFreeSpacePercentage = conf.getInt(
+      this.lowWatermarkFreeSpacePercentage = conf.getFloat(
           DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_PERCENT,
           DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_PERCENT_DEFAULT);
-      this.lowWatermarkFreeSpaceReplicas = conf.getInt(
-          DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_REPLICAS,
-          DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_REPLICAS_DEFAULT);
+      this.lowWatermarkFreeSpaceBytes = conf.getLong(
+          DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_BYTES,
+          DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_BYTES_DEFAULT);
     }
 
     /**
@@ -2477,6 +2472,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     private boolean transientFreeSpaceBelowThreshold() throws IOException {
       long free = 0;
       long capacity = 0;
+      float percentFree = 0.0f;
 
       // Don't worry about fragmentation for now. We don't expect more than one
       // transient volume per DN.
@@ -2491,9 +2487,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         return false;
       }
 
-      int percentFree = (int) (free * 100 / capacity);
-      return percentFree < lowWatermarkFreeSpacePercentage ||
-             free < (estimateBlockSize * lowWatermarkFreeSpaceReplicas);
+      percentFree = (float) ((double)free * 100 / capacity);
+      return (percentFree < lowWatermarkFreeSpacePercentage) ||
+          (free < lowWatermarkFreeSpaceBytes);
     }
 
     /**
