@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.logaggregation;
 
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -37,7 +38,6 @@ import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -194,6 +194,8 @@ public class TestAggregatedLogFormat {
 
     int numChars = 80000;
 
+    // create file stderr and stdout in containerLogDir
+    writeSrcFile(srcFilePath, "stderr", numChars);
     writeSrcFile(srcFilePath, "stdout", numChars);
 
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -204,7 +206,14 @@ public class TestAggregatedLogFormat {
         new LogValue(Collections.singletonList(srcFileRoot.toString()),
             testContainerId, ugi.getShortUserName());
 
-    logWriter.append(logKey, logValue);
+    // When we try to open FileInputStream for stderr, it will throw out an IOException.
+    // Skip the log aggregation for stderr.
+    LogValue spyLogValue = spy(logValue);
+    File errorFile = new File((new Path(srcFilePath, "stderr")).toString());
+    doThrow(new IOException("Mock can not open FileInputStream")).when(
+      spyLogValue).secureOpenFile(errorFile);
+
+    logWriter.append(logKey, spyLogValue);
     logWriter.close();
 
     // make sure permission are correct on the file
@@ -218,11 +227,15 @@ public class TestAggregatedLogFormat {
     Writer writer = new StringWriter();
     LogReader.readAcontainerLogs(dis, writer);
     
+    // We should only do the log aggregation for stdout.
+    // Since we could not open the fileInputStream for stderr, this file is not
+    // aggregated.
     String s = writer.toString();
     int expectedLength =
         "\n\nLogType:stdout".length() + ("\nLogLength:" + numChars).length()
             + "\nLog Contents:\n".length() + numChars;
     Assert.assertTrue("LogType not matched", s.contains("LogType:stdout"));
+    Assert.assertTrue("log file:stderr should not be aggregated.", !s.contains("LogType:stderr"));
     Assert.assertTrue("LogLength not matched", s.contains("LogLength:" + numChars));
     Assert.assertTrue("Log Contents not matched", s.contains("Log Contents"));
     
