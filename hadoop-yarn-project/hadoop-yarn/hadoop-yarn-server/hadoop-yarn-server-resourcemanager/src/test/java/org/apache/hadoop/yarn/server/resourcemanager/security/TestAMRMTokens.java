@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collection;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -206,6 +207,7 @@ public class TestAMRMTokens {
    * 
    * @throws Exception
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void testMasterKeyRollOver() throws Exception {
 

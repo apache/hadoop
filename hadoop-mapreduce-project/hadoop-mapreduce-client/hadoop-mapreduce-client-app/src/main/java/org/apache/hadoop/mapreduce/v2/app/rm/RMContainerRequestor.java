@@ -29,7 +29,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -40,7 +39,6 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -50,6 +48,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+
+import com.google.common.annotations.VisibleForTesting;
 
 
 /**
@@ -176,7 +176,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     LOG.info("blacklistDisablePercent is " + blacklistDisablePercent);
   }
 
-  protected AllocateResponse makeRemoteRequest() throws IOException {
+  protected AllocateResponse makeRemoteRequest() throws YarnException,
+      IOException {
     ResourceBlacklistRequest blacklistRequest =
         ResourceBlacklistRequest.newInstance(new ArrayList<String>(blacklistAdditions),
             new ArrayList<String>(blacklistRemovals));
@@ -184,16 +185,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
         AllocateRequest.newInstance(lastResponseID,
           super.getApplicationProgress(), new ArrayList<ResourceRequest>(ask),
           new ArrayList<ContainerId>(release), blacklistRequest);
-    AllocateResponse allocateResponse;
-    try {
-      allocateResponse = scheduler.allocate(allocateRequest);
-    } catch (YarnException e) {
-      throw new IOException(e);
-    }
-
-    if (isResyncCommand(allocateResponse)) {
-      return allocateResponse;
-    }
+    AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
     lastResponseID = allocateResponse.getResponseId();
     availableResources = allocateResponse.getAvailableResources();
     lastClusterNmCount = clusterNmCount;
@@ -220,11 +212,6 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     blacklistAdditions.clear();
     blacklistRemovals.clear();
     return allocateResponse;
-  }
-
-  protected boolean isResyncCommand(AllocateResponse allocateResponse) {
-    return allocateResponse.getAMCommand() != null
-        && allocateResponse.getAMCommand() == AMCommand.AM_RESYNC;
   }
 
   protected void addOutstandingRequestOnResync() {

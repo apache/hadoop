@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.api;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateResponsePBImpl;
 import org.apache.hadoop.yarn.api.records.AMCommand;
@@ -34,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProto;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -52,8 +51,8 @@ import org.junit.Test;
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-
 public class TestAllocateResponse {
+  @SuppressWarnings("deprecation")
   @Test
   public void testAllocateResponseWithIncDecContainers() {
     List<ContainerResourceIncrease> incContainers =
@@ -96,6 +95,7 @@ public class TestAllocateResponse {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testAllocateResponseWithoutIncDecContainers() {
     AllocateResponse r =

@@ -36,12 +36,13 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -98,11 +99,24 @@ public class LocalContainerAllocator extends RMCommunicator
         AllocateRequest.newInstance(this.lastResponseID,
           super.getApplicationProgress(), new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>(), null);
-    AllocateResponse allocateResponse;
     try {
-      allocateResponse = scheduler.allocate(allocateRequest);
+      scheduler.allocate(allocateRequest);
       // Reset retry count if no exception occurred.
       retrystartTime = System.currentTimeMillis();
+    } catch (ApplicationAttemptNotFoundException e) {
+      LOG.info("Event from RM: shutting down Application Master");
+      // This can happen if the RM has been restarted. If it is in that state,
+      // this application must clean itself up.
+      eventHandler.handle(new JobEvent(this.getJob().getID(),
+        JobEventType.JOB_AM_REBOOT));
+      throw new YarnRuntimeException(
+        "Resource Manager doesn't recognize AttemptId: "
+            + this.getContext().getApplicationID(), e);
+    } catch (ApplicationMasterNotRegisteredException e) {
+      LOG.info("ApplicationMaster is out of sync with ResourceManager,"
+          + " hence resync and send outstanding requests.");
+      this.lastResponseID = 0;
+      register();
     } catch (Exception e) {
       // This can happen when the connection to the RM has gone down. Keep
       // re-trying until the retryInterval has expired.
@@ -116,29 +130,6 @@ public class LocalContainerAllocator extends RMCommunicator
       // Throw this up to the caller, which may decide to ignore it and
       // continue to attempt to contact the RM.
       throw e;
-    }
-    if (allocateResponse.getAMCommand() != null) {
-      switch(allocateResponse.getAMCommand()) {
-      case AM_RESYNC:
-        LOG.info("ApplicationMaster is out of sync with ResourceManager,"
-            + " hence resyncing.");        
-        this.lastResponseID = 0;
-        register();
-        break;
-      case AM_SHUTDOWN:
-        LOG.info("Event from RM: shutting down Application Master");
-        // This can happen if the RM has been restarted. If it is in that state,
-        // this application must clean itself up.
-        eventHandler.handle(new JobEvent(this.getJob().getID(),
-                                         JobEventType.JOB_AM_REBOOT));
-        throw new YarnRuntimeException("Resource Manager doesn't recognize AttemptId: " +
-                                 this.getContext().getApplicationID());
-      default:
-        String msg =
-              "Unhandled value of AMCommand: " + allocateResponse.getAMCommand();
-        LOG.error(msg);
-        throw new YarnRuntimeException(msg);
-      }
     }
   }
 
