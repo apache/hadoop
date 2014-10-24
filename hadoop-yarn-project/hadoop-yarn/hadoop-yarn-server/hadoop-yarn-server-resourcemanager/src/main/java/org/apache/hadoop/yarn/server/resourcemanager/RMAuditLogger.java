@@ -50,6 +50,7 @@ public class RMAuditLogger {
     public static final String FINISH_FAILED_APP = "Application Finished - Failed";
     public static final String FINISH_KILLED_APP = "Application Finished - Killed";
     public static final String REGISTER_AM = "Register App Master";
+    public static final String AM_ALLOCATE = "App Master Heartbeats";
     public static final String UNREGISTER_AM = "Unregister App Master";
     public static final String ALLOC_CONTAINER = "AM Allocated Container";
     public static final String RELEASE_CONTAINER = "AM Released Container";

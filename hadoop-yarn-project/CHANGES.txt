@@ -388,6 +388,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2709. Made timeline client getDelegationToken API retry if ConnectException
     happens. (Li Lu via zjshen)
 
+    YARN-2209. Replaced AM resync/shutdown command with corresponding exceptions and
+    made related MR changes. (Jian He via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

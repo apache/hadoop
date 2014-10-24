@@ -20,13 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
 import java.security.PrivilegedExceptionAction;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -35,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -107,7 +106,12 @@ public class TestAMRMRPCResponseId {
     
     /** try sending old request again **/
     allocateRequest = AllocateRequest.newInstance(0, 0F, null, null, null);
-    response = allocate(attempt.getAppAttemptId(), allocateRequest);
-    Assert.assertTrue(response.getAMCommand() == AMCommand.AM_RESYNC);
+
+    try {
+      allocate(attempt.getAppAttemptId(), allocateRequest);
+      Assert.fail();
+    } catch (Exception e) {
+      Assert.assertTrue(e.getCause() instanceof InvalidApplicationMasterRequestException);
+    }
   }
 }

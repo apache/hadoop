@@ -49,7 +49,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -275,15 +274,16 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         blacklistRemovals.clear();
       }
 
-      allocateResponse = rmClient.allocate(allocateRequest);
-      if (isResyncCommand(allocateResponse)) {
+      try {
+        allocateResponse = rmClient.allocate(allocateRequest);
+      } catch (ApplicationMasterNotRegisteredException e) {
         LOG.warn("ApplicationMaster is out of sync with ResourceManager,"
             + " hence resyncing.");
         synchronized (this) {
           release.addAll(this.pendingRelease);
           blacklistAdditions.addAll(this.blacklistedNodes);
           for (Map<String, TreeMap<Resource, ResourceRequestInfo>> rr : remoteRequestsTable
-              .values()) {
+            .values()) {
             for (Map<Resource, ResourceRequestInfo> capabalities : rr.values()) {
               for (ResourceRequestInfo request : capabalities.values()) {
                 addResourceRequestToAsk(request.remoteRequest);
@@ -293,7 +293,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         }
         // re register with RM
         registerApplicationMaster();
-        return allocate(progressIndicator);
+        allocateResponse = allocate(progressIndicator);
+        return allocateResponse;
       }
 
       synchronized (this) {
@@ -347,11 +348,6 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     for (ContainerStatus containerStatus : completedContainersStatuses) {
       pendingRelease.remove(containerStatus.getContainerId());
     }
-  }
-
-  private boolean isResyncCommand(AllocateResponse allocateResponse) {
-    return allocateResponse.getAMCommand() != null
-        && allocateResponse.getAMCommand() == AMCommand.AM_RESYNC;
   }
 
   @Private

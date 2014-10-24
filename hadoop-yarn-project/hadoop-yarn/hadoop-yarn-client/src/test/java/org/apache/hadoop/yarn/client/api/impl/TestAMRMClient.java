@@ -932,7 +932,7 @@ public class TestAMRMClient {
       Assert.assertNotEquals(amrmToken_1, amrmToken_2);
 
       // can do the allocate call with latest AMRMToken
-      amClient.allocate(0.1f);
+      AllocateResponse response = amClient.allocate(0.1f);
       
       // Verify latest AMRMToken can be used to send allocation request.
       UserGroupInformation testUser1 =
@@ -953,7 +953,8 @@ public class TestAMRMClient {
         .getResourceManager().getApplicationMasterService().getBindAddress());
       testUser1.addToken(newVersionToken);
       
-      
+      AllocateRequest request = Records.newRecord(AllocateRequest.class);
+      request.setResponseId(response.getResponseId());
       testUser1.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
         @Override
         public ApplicationMasterProtocol run() {
@@ -962,7 +963,7 @@ public class TestAMRMClient {
             yarnCluster.getResourceManager().getApplicationMasterService()
                 .getBindAddress(), conf);
         }
-      }).allocate(Records.newRecord(AllocateRequest.class));
+      }).allocate(request);
 
       // Make sure previous token has been rolled-over
       // and can not use this rolled-over token to make a allocate all.
