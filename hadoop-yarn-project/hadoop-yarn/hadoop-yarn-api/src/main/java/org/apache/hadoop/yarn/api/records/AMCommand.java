@@ -20,7 +20,11 @@ package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 
 /**
  * Command sent by the Resource Manager to the Application Master in the 
@@ -30,16 +34,26 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 @Public
 @Unstable
 public enum AMCommand {
+
   /**
-   * Sent by Resource Manager when it is out of sync with the AM and wants the 
-   * AM get back in sync.
+   * @deprecated Sent by Resource Manager when it is out of sync with the AM and
+   *             wants the AM get back in sync.
+   * 
+   *             Note: Instead of sending this command,
+   *             {@link ApplicationMasterNotRegisteredException} will be thrown
+   *             when ApplicationMaster is out of sync with ResourceManager and
+   *             ApplicationMaster is expected to re-register with RM by calling
+   *             {@link ApplicationMasterProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)}
    */
   AM_RESYNC,
-  
+
   /**
-   * Sent by Resource Manager when it wants the AM to shutdown. Eg. when the 
-   * node is going down for maintenance. The AM should save any state and 
-   * prepare to be restarted at a later time. 
+   * @deprecated Sent by Resource Manager when it wants the AM to shutdown.
+   *             Note: This command was earlier sent by ResourceManager to
+   *             instruct AM to shutdown if RM had restarted. Now
+   *             {@link ApplicationAttemptNotFoundException} will be thrown in case
+   *             that RM has restarted and AM is supposed to handle this
+   *             exception by shutting down itself.
    */
   AM_SHUTDOWN
 }

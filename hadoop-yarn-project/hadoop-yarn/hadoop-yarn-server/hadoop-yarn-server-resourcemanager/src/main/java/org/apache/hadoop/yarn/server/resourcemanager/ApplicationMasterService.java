@@ -22,7 +22,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -46,7 +50,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -63,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
@@ -106,18 +110,12 @@ public class ApplicationMasterService extends AbstractService implements
       RecordFactoryProvider.getRecordFactory(null);
   private final ConcurrentMap<ApplicationAttemptId, AllocateResponseLock> responseMap =
       new ConcurrentHashMap<ApplicationAttemptId, AllocateResponseLock>();
-  private final AllocateResponse resync =
-      recordFactory.newRecordInstance(AllocateResponse.class);
-  private final AllocateResponse shutdown =
-      recordFactory.newRecordInstance(AllocateResponse.class);
   private final RMContext rmContext;
 
   public ApplicationMasterService(RMContext rmContext, YarnScheduler scheduler) {
     super(ApplicationMasterService.class.getName());
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.rScheduler = scheduler;
-    this.shutdown.setAMCommand(AMCommand.AM_SHUTDOWN);
-    this.resync.setAMCommand(AMCommand.AM_RESYNC);
     this.rmContext = rmContext;
   }
 
@@ -429,36 +427,35 @@ public class ApplicationMasterService extends AbstractService implements
     /* check if its in cache */
     AllocateResponseLock lock = responseMap.get(appAttemptId);
     if (lock == null) {
-      LOG.error("AppAttemptId doesnt exist in cache " + appAttemptId);
-      return shutdown;
+      String message =
+          "Application attempt " + appAttemptId
+              + " doesn't exist in ApplicationMasterService cache.";
+      LOG.error(message);
+      throw new ApplicationAttemptNotFoundException(message);
     }
     synchronized (lock) {
       AllocateResponse lastResponse = lock.getAllocateResponse();
       if (!hasApplicationMasterRegistered(appAttemptId)) {
         String message =
-            "Application Master is not registered for known application: "
-                + applicationId
-                + ". Let AM resync.";
+            "AM is not registered for known application attempt: " + appAttemptId
+                + " or RM had restarted after AM registered . AM should re-register.";
         LOG.info(message);
         RMAuditLogger.logFailure(
-            this.rmContext.getRMApps().get(applicationId)
-                .getUser(), AuditConstants.REGISTER_AM, "",
-            "ApplicationMasterService", message,
-            applicationId,
-            appAttemptId);
-        return resync;
+          this.rmContext.getRMApps().get(appAttemptId.getApplicationId())
+            .getUser(), AuditConstants.AM_ALLOCATE, "",
+          "ApplicationMasterService", message, applicationId, appAttemptId);
+        throw new ApplicationMasterNotRegisteredException(message);
       }
 
       if ((request.getResponseId() + 1) == lastResponse.getResponseId()) {
         /* old heartbeat */
         return lastResponse;
       } else if (request.getResponseId() + 1 < lastResponse.getResponseId()) {
-        LOG.error("Invalid responseid from appAttemptId " + appAttemptId);
-        // Oh damn! Sending reboot isn't enough. RM state is corrupted. TODO:
-        // Reboot is not useful since after AM reboots, it will send register
-        // and
-        // get an exception. Might as well throw an exception here.
-        return resync;
+        String message =
+            "Invalid responseId in AllocateRequest from application attempt: "
+                + appAttemptId + ", expect responseId to be "
+                + (lastResponse.getResponseId() + 1);
+        throw new InvalidApplicationMasterRequestException(message);
       }
 
       //filter illegal progress values

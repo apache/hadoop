@@ -328,6 +328,9 @@ Release 2.6.0 - UNRELEASED
     DefaultContainerExecutor#getFirstApplicationDir and use getWorkingDir()
     instead. (Zhihai Xu via jianhe) 
 
+    YARN-2209. Replaced AM resync/shutdown command with corresponding exceptions and
+    made related MR changes. (Jian He via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

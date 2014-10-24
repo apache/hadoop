@@ -827,7 +827,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
       return AllocateResponse.newInstance(-1,
           new ArrayList<ContainerStatus>(),
           new ArrayList<Container>(), new ArrayList<NodeReport>(),
-          Resource.newInstance(1024, 2), AMCommand.AM_RESYNC, 1,
+          Resource.newInstance(1024, 2), null, 1,
           null, new ArrayList<NMToken>());
     }
   }

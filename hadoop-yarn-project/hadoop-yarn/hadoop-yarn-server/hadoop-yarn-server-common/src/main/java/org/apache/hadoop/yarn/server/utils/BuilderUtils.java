@@ -399,7 +399,7 @@ public class BuilderUtils {
     url.setFile(file);
     return url;
   }
-  
+
   public static AllocateResponse newAllocateResponse(int responseId,
       List<ContainerStatus> completedContainers,
       List<Container> allocatedContainers, List<NodeReport> updatedNodes,
