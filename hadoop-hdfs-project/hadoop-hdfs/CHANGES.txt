@@ -334,6 +334,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7232. Populate hostname in httpfs audit log (Zoran Dimitrijevic 
     via aw)
 
+    HDFS-7258. CacheReplicationMonitor rescan schedule log should use DEBUG
+    level instead of INFO level. (Xiaoyu Yao via wheat9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
