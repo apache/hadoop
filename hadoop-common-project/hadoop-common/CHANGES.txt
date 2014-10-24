@@ -636,6 +636,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11228. Winutils task: unsecure path should not call
     AddNodeManagerAndUserACEsToObject. (Remus Rusanu via jianhe)
 
+    HADOOP-11170. ZKDelegationTokenSecretManager fails to renewToken created by 
+    a peer. (Arun Suresh and Gregory Chanan via kasha)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
