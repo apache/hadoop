@@ -1221,6 +1221,28 @@ public class TestEncryptionZones {
     fs.delete(target, true);
   }
 
+  @Test(timeout = 60000)
+  public void testConcatFailsInEncryptionZones() throws Exception {
+    final int len = 8192;
+    final Path ez = new Path("/ez");
+    fs.mkdirs(ez);
+    dfsAdmin.createEncryptionZone(ez, TEST_KEY);
+    final Path src1 = new Path(ez, "src1");
+    final Path src2 = new Path(ez, "src2");
+    final Path target = new Path(ez, "target");
+    DFSTestUtil.createFile(fs, src1, len, (short)1, 0xFEED);
+    DFSTestUtil.createFile(fs, src2, len, (short)1, 0xFEED);
+    DFSTestUtil.createFile(fs, target, len, (short)1, 0xFEED);
+    try {
+      fs.concat(target, new Path[] { src1, src2 });
+      fail("expected concat to throw en exception for files in an ez");
+    } catch (IOException e) {
+      assertExceptionContains(
+          "concat can not be called for files in an encryption zone", e);
+    }
+    fs.delete(ez, true);
+  }
+
   /**
    * Test running the OfflineImageViewer on a system with encryption zones.
    */
