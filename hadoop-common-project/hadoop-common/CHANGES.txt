@@ -633,6 +633,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11122. Fix findbugs in ZK DelegationTokenSecretManagers.
     (Arun Suresh via kasha)
 
+    HADOOP-11228. Winutils task: unsecure path should not call
+    AddNodeManagerAndUserACEsToObject. (Remus Rusanu via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

@@ -627,11 +627,13 @@ DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PC
     return dwErrorCode;
   }
 
-  dwErrorCode = AddNodeManagerAndUserACEsToObject(jobObject, userName, JOB_OBJECT_ALL_ACCESS);
-  if (dwErrorCode) {
-    ReportErrorCode(L"AddNodeManagerAndUserACEsToObject", dwErrorCode);
-    CloseHandle(jobObject);
-    return dwErrorCode;
+  if (logonHandle != NULL) {
+    dwErrorCode = AddNodeManagerAndUserACEsToObject(jobObject, userName, JOB_OBJECT_ALL_ACCESS);
+    if (dwErrorCode) {
+      ReportErrorCode(L"AddNodeManagerAndUserACEsToObject", dwErrorCode);
+      CloseHandle(jobObject);
+      return dwErrorCode;
+    }
   }
 
   if(AssignProcessToJobObject(jobObject, GetCurrentProcess()) == 0)
@@ -706,6 +708,8 @@ DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PC
          dwErrorCode = GetLastError();
          ReportErrorCode(L"CreateProcess", dwErrorCode);
       }
+
+    // task create (w/o createAsUser) does not need the ACEs change on the process
     goto create_process_done;
   }
 
