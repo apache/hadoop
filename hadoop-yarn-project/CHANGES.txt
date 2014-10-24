@@ -733,6 +733,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2732. Fixed syntax error in SecureContainer.apt.vm. (Jian He via zjshen)
 
+    YARN-2724. Skipped uploading a local log file to HDFS if exception is raised
+    when opening it. (Xuan Gong via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
