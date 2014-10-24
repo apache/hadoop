@@ -87,46 +87,6 @@ public class ServletUtil {
   public static String htmlFooter() {
     return HTML_TAIL;
   }
-  
-  /**
-   * Generate the percentage graph and returns HTML representation string
-   * of the same.
-   * 
-   * @param perc The percentage value for which graph is to be generated
-   * @param width The width of the display table
-   * @return HTML String representation of the percentage graph
-   * @throws IOException
-   */
-  public static String percentageGraph(int perc, int width) throws IOException {
-    assert perc >= 0; assert perc <= 100;
-
-    StringBuilder builder = new StringBuilder();
-
-    builder.append("<table border=\"1px\" width=\""); builder.append(width);
-    builder.append("px\"><tr>");
-    if(perc > 0) {
-      builder.append("<td cellspacing=\"0\" class=\"perc_filled\" width=\"");
-      builder.append(perc); builder.append("%\"></td>");
-    }if(perc < 100) {
-      builder.append("<td cellspacing=\"0\" class=\"perc_nonfilled\" width=\"");
-      builder.append(100 - perc); builder.append("%\"></td>");
-    }
-    builder.append("</tr></table>");
-    return builder.toString();
-  }
-  
-  /**
-   * Generate the percentage graph and returns HTML representation string
-   * of the same.
-   * @param perc The percentage value for which graph is to be generated
-   * @param width The width of the display table
-   * @return HTML String representation of the percentage graph
-   * @throws IOException
-   */
-  public static String percentageGraph(float perc, int width) throws IOException {
-    return percentageGraph((int)perc, width);
-  }
-
   /**
    * Escape and encode a string regarded as within the query component of an URI.
    * @param value the value to encode
