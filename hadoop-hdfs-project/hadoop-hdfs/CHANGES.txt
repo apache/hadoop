@@ -628,6 +628,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7228. Add an SSD policy into the default BlockStoragePolicySuite.
     (jing9)
 
+    HDFS-6904. YARN unable to renew delegation token fetched via webhdfs 
+    due to incorrect service port. (jitendra)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
