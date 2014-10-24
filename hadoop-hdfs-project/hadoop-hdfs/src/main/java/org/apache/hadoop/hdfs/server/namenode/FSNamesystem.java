@@ -2044,7 +2044,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // replication and blocks sizes should be the same for ALL the blocks
 
     // check the target
-    final INodeFile trgInode = INodeFile.valueOf(dir.getINode4Write(target),
+    final INodesInPath trgIip = dir.getINodesInPath4Write(target);
+    if (dir.getEZForPath(trgIip) != null) {
+      throw new HadoopIllegalArgumentException(
+          "concat can not be called for files in an encryption zone.");
+    }
+    final INodeFile trgInode = INodeFile.valueOf(trgIip.getLastINode(),
         target);
     if(trgInode.isUnderConstruction()) {
       throw new HadoopIllegalArgumentException("concat: target file "
