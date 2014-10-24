@@ -339,9 +339,6 @@ Trunk (Unreleased)
     HADOOP-11022. User replaced functions get lost 2-3 levels deep (e.g., 
     sbin) (aw)
 
-    HADOOP-11228. Winutils task: unsecure path should not call
-    AddNodeManagerAndUserACEsToObject. (Remus Rusanu via jianhe)
-
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -1005,6 +1002,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11122. Fix findbugs in ZK DelegationTokenSecretManagers.
     (Arun Suresh via kasha)
+
+    HADOOP-11228. Winutils task: unsecure path should not call
+    AddNodeManagerAndUserACEsToObject. (Remus Rusanu via jianhe)
 
 Release 2.5.1 - 2014-09-05
 
