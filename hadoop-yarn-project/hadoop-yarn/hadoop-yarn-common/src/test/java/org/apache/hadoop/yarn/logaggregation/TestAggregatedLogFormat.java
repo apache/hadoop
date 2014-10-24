@@ -232,7 +232,9 @@ public class TestAggregatedLogFormat {
     // aggregated.
     String s = writer.toString();
     int expectedLength =
-        "\n\nLogType:stdout".length() + ("\nLogLength:" + numChars).length()
+        "\n\nLogType:stdout".length()
+            + ("\nLogUploadTime:" + System.currentTimeMillis()).length()
+            + ("\nLogLength:" + numChars).length()
             + "\nLog Contents:\n".length() + numChars;
     Assert.assertTrue("LogType not matched", s.contains("LogType:stdout"));
     Assert.assertTrue("log file:stderr should not be aggregated.", !s.contains("LogType:stderr"));

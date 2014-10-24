@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.PRE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -198,12 +199,13 @@ public class AggregatedLogsBlock extends HtmlBlock {
       if (desiredLogType == null || desiredLogType.isEmpty()
           || desiredLogType.equals(logType)) {
         long logLength = logReader.getCurrentLogLength();
-
+        long logUpLoadTime = logReader.getCurrentLogUpLoadTime();
         if (foundLog) {
           html.pre()._("\n\n")._();
         }
 
         html.p()._("Log Type: " + logType)._();
+        html.p()._("Log UpLoadTime: " + Times.format(logUpLoadTime))._();
         html.p()._("Log Length: " + Long.toString(logLength))._();
 
         long start = logLimits.start < 0

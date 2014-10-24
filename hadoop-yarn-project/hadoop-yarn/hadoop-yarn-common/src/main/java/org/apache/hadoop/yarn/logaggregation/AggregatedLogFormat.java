@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Times;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
@@ -225,6 +226,9 @@ public class AggregatedLogFormat {
         final long fileLength = logFile.length();
         // Write the logFile Type
         out.writeUTF(logFile.getName());
+
+        // Write the uploaded TimeStamp
+        out.writeLong(System.currentTimeMillis());
 
         // Write the log length as UTF so that it is printable
         out.writeUTF(String.valueOf(fileLength));
@@ -636,6 +640,7 @@ public class AggregatedLogFormat {
       int bufferSize = 65536;
       char[] cbuf = new char[bufferSize];
       String fileType;
+      long uploadTime;
       String fileLengthStr;
       long fileLength;
 
@@ -646,10 +651,13 @@ public class AggregatedLogFormat {
           // EndOfFile
           return;
         }
+        uploadTime = valueStream.readLong();
         fileLengthStr = valueStream.readUTF();
         fileLength = Long.parseLong(fileLengthStr);
         writer.write("\n\nLogType:");
         writer.write(fileType);
+        writer.write("\nLogUploadTime:");
+        writer.write(String.valueOf(uploadTime));
         writer.write("\nLogLength:");
         writer.write(fileLengthStr);
         writer.write("\nLog Contents:\n");
@@ -681,10 +689,13 @@ public class AggregatedLogFormat {
       byte[] buf = new byte[65535];
 
       String fileType = valueStream.readUTF();
+      long uploadTime = valueStream.readLong();
       String fileLengthStr = valueStream.readUTF();
       long fileLength = Long.parseLong(fileLengthStr);
       out.print("LogType: ");
       out.println(fileType);
+      out.print("LogUploadTime: ");
+      out.println(Times.format(uploadTime));
       out.print("LogLength: ");
       out.println(fileLengthStr);
       out.println("Log Contents:");
@@ -715,6 +726,7 @@ public class AggregatedLogFormat {
   public static class ContainerLogsReader {
     private DataInputStream valueStream;
     private String currentLogType = null;
+    private long currentLogUpLoadTime = 0;
     private long currentLogLength = 0;
     private BoundedInputStream currentLogData = null;
     private InputStreamReader currentLogISR;
@@ -735,12 +747,14 @@ public class AggregatedLogFormat {
       }
 
       currentLogType = null;
+      currentLogUpLoadTime = 0;
       currentLogLength = 0;
       currentLogData = null;
       currentLogISR = null;
 
       try {
         String logType = valueStream.readUTF();
+        long logUpLoadTime = valueStream.readLong();
         String logLengthStr = valueStream.readUTF();
         currentLogLength = Long.parseLong(logLengthStr);
         currentLogData =
@@ -748,6 +762,7 @@ public class AggregatedLogFormat {
         currentLogData.setPropagateClose(false);
         currentLogISR = new InputStreamReader(currentLogData);
         currentLogType = logType;
+        currentLogUpLoadTime = logUpLoadTime;
       } catch (EOFException e) {
       }
 
@@ -756,6 +771,10 @@ public class AggregatedLogFormat {
 
     public String getCurrentLogType() {
       return currentLogType;
+    }
+
+    public long getCurrentLogUpLoadTime() {
+      return currentLogUpLoadTime;
     }
 
     public long getCurrentLogLength() {
