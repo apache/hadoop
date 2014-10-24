@@ -22,50 +22,127 @@ import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
+
+import static org.junit.Assert.fail;
+
 import org.junit.Test;
 
 public class TestZKDelegationTokenSecretManager {
 
   private static final long DAY_IN_SECS = 86400;
 
+  private TestingServer zkServer;
+
+  @Before
+  public void setup() throws Exception {
+    zkServer = new TestingServer();
+    zkServer.start();
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    if (zkServer != null) {
+      zkServer.close();
+    }
+  }
+
+  protected Configuration getSecretConf(String connectString) {
+   Configuration conf = new Configuration();
+   conf.setBoolean(DelegationTokenManager.ENABLE_ZK_KEY, true);
+   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CONNECTION_STRING, connectString);
+   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
+   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
+   conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
+   conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
+   conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
+   conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, DAY_IN_SECS);
+   return conf;
+  }
+
   @SuppressWarnings("unchecked")
   @Test
-  public void testZKDelTokSecretManager() throws Exception {
-    TestingServer zkServer = new TestingServer();
+  public void testMultiNodeOperations() throws Exception {
     DelegationTokenManager tm1, tm2 = null;
-    zkServer.start();
+    String connectString = zkServer.getConnectString();
+    Configuration conf = getSecretConf(connectString);
+    tm1 = new DelegationTokenManager(conf, new Text("bla"));
+    tm1.init();
+    tm2 = new DelegationTokenManager(conf, new Text("bla"));
+    tm2.init();
+
+    Token<DelegationTokenIdentifier> token =
+        (Token<DelegationTokenIdentifier>) tm1.createToken(
+            UserGroupInformation.getCurrentUser(), "foo");
+    Assert.assertNotNull(token);
+    tm2.verifyToken(token);
+    tm2.renewToken(token, "foo");
+    tm1.verifyToken(token);
+    tm1.cancelToken(token, "foo");
     try {
-      String connectString = zkServer.getConnectString();
-      Configuration conf = new Configuration();
-      conf.setBoolean(DelegationTokenManager.ENABLE_ZK_KEY, true);
-      conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CONNECTION_STRING, connectString);
-      conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
-      conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
-      conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
-      conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
-      conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
-      conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, DAY_IN_SECS);
-      tm1 = new DelegationTokenManager(conf, new Text("foo"));
-      tm1.init();
-      tm2 = new DelegationTokenManager(conf, new Text("foo"));
-      tm2.init();
-
-      Token<DelegationTokenIdentifier> token =
-          (Token<DelegationTokenIdentifier>) tm1.createToken(
-              UserGroupInformation.getCurrentUser(), "foo");
-      Assert.assertNotNull(token);
       tm2.verifyToken(token);
+      fail("Expected InvalidToken");
+    } catch (SecretManager.InvalidToken it) {
+      // Ignore
+    }
 
-      token = (Token<DelegationTokenIdentifier>) tm2.createToken(
-          UserGroupInformation.getCurrentUser(), "bar");
-      Assert.assertNotNull(token);
+    token = (Token<DelegationTokenIdentifier>) tm2.createToken(
+        UserGroupInformation.getCurrentUser(), "bar");
+    Assert.assertNotNull(token);
+    tm1.verifyToken(token);
+    tm1.renewToken(token, "bar");
+    tm2.verifyToken(token);
+    tm2.cancelToken(token, "bar");
+    try {
       tm1.verifyToken(token);
-    } finally {
-      zkServer.close();
+      fail("Expected InvalidToken");
+    } catch (SecretManager.InvalidToken it) {
+      // Ignore
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testRenewTokenSingleManager() throws Exception {
+    DelegationTokenManager tm1 = null;
+    String connectString = zkServer.getConnectString();
+    Configuration conf = getSecretConf(connectString);
+    tm1 = new DelegationTokenManager(conf, new Text("foo"));
+    tm1.init();
+
+    Token<DelegationTokenIdentifier> token =
+        (Token<DelegationTokenIdentifier>)
+        tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+    Assert.assertNotNull(token);
+    tm1.renewToken(token, "foo");
+    tm1.verifyToken(token);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testCancelTokenSingleManager() throws Exception {
+    DelegationTokenManager tm1 = null;
+    String connectString = zkServer.getConnectString();
+    Configuration conf = getSecretConf(connectString);
+    tm1 = new DelegationTokenManager(conf, new Text("foo"));
+    tm1.init();
+
+    Token<DelegationTokenIdentifier> token =
+        (Token<DelegationTokenIdentifier>)
+        tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
+    Assert.assertNotNull(token);
+    tm1.cancelToken(token, "foo");
+    try {
+      tm1.verifyToken(token);
+      fail("Expected InvalidToken");
+    } catch (SecretManager.InvalidToken it) {
+      it.printStackTrace();
     }
   }
 }
