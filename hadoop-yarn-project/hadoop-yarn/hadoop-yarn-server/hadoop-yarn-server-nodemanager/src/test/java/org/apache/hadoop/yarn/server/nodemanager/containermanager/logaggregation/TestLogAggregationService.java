@@ -61,7 +61,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -768,19 +767,23 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
             Assert.assertEquals("LogType:", writtenLines[0].substring(0, 8));
             String fileType = writtenLines[0].substring(9);
 
-            Assert.assertEquals("LogLength:", writtenLines[1].substring(0, 10));
-            String fileLengthStr = writtenLines[1].substring(11);
+            Assert.assertEquals("LogUploadTime:", writtenLines[1].substring(0, 14));
+            String fileUploadedTimeStr = writtenLines[1].substring(15);
+
+            Assert.assertEquals("LogLength:", writtenLines[2].substring(0, 10));
+            String fileLengthStr = writtenLines[2].substring(11);
             long fileLength = Long.parseLong(fileLengthStr);
 
             Assert.assertEquals("Log Contents:",
-              writtenLines[2].substring(0, 13));
+              writtenLines[3].substring(0, 13));
 
             String logContents = StringUtils.join(
-              Arrays.copyOfRange(writtenLines, 3, writtenLines.length), "\n");
+              Arrays.copyOfRange(writtenLines, 4, writtenLines.length), "\n");
             perContainerMap.put(fileType, logContents);
 
             LOG.info("LogType:" + fileType);
-            LOG.info("LogType:" + fileLength);
+            LOG.info("LogUploadTime:" + fileUploadedTimeStr);
+            LOG.info("LogLength:" + fileLength);
             LOG.info("Log Contents:\n" + perContainerMap.get(fileType));
           } catch (EOFException eof) {
             break;
