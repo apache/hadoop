@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -211,6 +212,16 @@ public class AggregatedLogFormat {
       Collections.sort(fileList);
 
       for (File logFile : fileList) {
+
+        FileInputStream in = null;
+        try {
+          in = secureOpenFile(logFile);
+        } catch (IOException e) {
+          logErrorMessage(logFile, e);
+          IOUtils.cleanup(LOG, in);
+          continue;
+        }
+
         final long fileLength = logFile.length();
         // Write the logFile Type
         out.writeUTF(logFile.getName());
@@ -219,9 +230,7 @@ public class AggregatedLogFormat {
         out.writeUTF(String.valueOf(fileLength));
 
         // Write the log itself
-        FileInputStream in = null;
         try {
-          in = SecureIOUtils.openForRead(logFile, getUser(), null);
           byte[] buf = new byte[65535];
           int len = 0;
           long bytesLeft = fileLength;
@@ -244,16 +253,24 @@ public class AggregatedLogFormat {
           }
           this.uploadedFiles.add(logFile);
         } catch (IOException e) {
-          String message = "Error aggregating log file. Log file : "
-              + logFile.getAbsolutePath() + e.getMessage();
-          LOG.error(message, e);
+          String message = logErrorMessage(logFile, e);
           out.write(message.getBytes());
         } finally {
-          if (in != null) {
-            in.close();
-          }
+          IOUtils.cleanup(LOG, in);
         }
       }
+    }
+
+    @VisibleForTesting
+    public FileInputStream secureOpenFile(File logFile) throws IOException {
+      return SecureIOUtils.openForRead(logFile, getUser(), null);
+    }
+
+    private static String logErrorMessage(File logFile, Exception e) {
+      String message = "Error aggregating log file. Log file : "
+          + logFile.getAbsolutePath() + ". " + e.getMessage();
+      LOG.error(message, e);
+      return message;
     }
 
     // Added for testing purpose.
