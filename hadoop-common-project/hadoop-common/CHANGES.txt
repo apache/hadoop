@@ -135,6 +135,8 @@ Trunk (Unreleased)
     HADOOP-11188. hadoop-azure: automatically expand page blobs when they become
     full. (Eric Hanson via cnauroth)
 
+    HADOOP-11231. Remove dead code in ServletUtil. (Li Lu via wheat9)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -327,8 +329,6 @@ Trunk (Unreleased)
 
     HADOOP-10996. Stop violence in the *_HOME (aw)
 
-    HADOOP-10748. HttpServer2 should not load JspServlet. (wheat9)
-
     HADOOP-11033. shell scripts ignore JAVA_HOME on OS X. (aw)
 
     HADOOP-11052. hadoop_verify_secure_prereq's results aren't checked 
@@ -359,7 +359,7 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11172. Improve error message in Shell#runCommand on OutOfMemoryError.
     (Yongjun Zhang via wang)
 
-    HADOOP-11231. Remove dead code in ServletUtil. (Li Lu via wheat9)
+    HADOOP-10748. HttpServer2 should not load JspServlet. (wheat9)
 
   OPTIMIZATIONS
 
