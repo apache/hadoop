@@ -1210,7 +1210,7 @@ Content-Length: 0
   * Submit a HTTP GET request.
 
 +---------------------------------
-curl -i "http://<HOST>:<PORT>/webhdfs/v1/?op=GETDELEGATIONTOKEN&renewer=<USER>"
+curl -i "http://<HOST>:<PORT>/webhdfs/v1/?op=GETDELEGATIONTOKEN&renewer=<USER>&service=<SERVICE>&kind=<KIND>"
 +---------------------------------
 
   The client receives a response with a {{{Token JSON Schema}<<<Token>>> JSON object}}:
@@ -1232,7 +1232,10 @@ Transfer-Encoding: chunked
 
   See also:
   {{{Renewer}<<<renewer>>>}},
-   {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getDelegationToken
+   {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getDelegationToken,
+  {{{Token Kind}<<<kind>>>}},
+  {{{Token Service}<<<service>>>}}
+
 
 
 ** {Get Delegation Tokens}
@@ -2516,6 +2519,46 @@ var tokenProperties =
   See also:
   {{{Renew Delegation Token}<<<RENEWDELEGATIONTOKEN>>>}},
   {{{Cancel Delegation Token}<<<CANCELDELEGATIONTOKEN>>>}}
+
+
+** {Token Kind}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<kind>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The kind of the delegation token requested |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> (Server sets the default kind for the service) |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | A string that represents token kind e.g "HDFS_DELEGATION_TOKEN" or "WEBHDFS delegation" |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Any string. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{Get Delegation Token}<<<GETDELEGATIONTOKEN>>>}}
+
+
+** {Token Service}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<service>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The name of the service where the token is supposed to be used, e.g. ip:port of the namenode |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | ip:port in string format or logical name of the service |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Any string. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{Get Delegation Token}<<<GETDELEGATIONTOKEN>>>}}
 
 
 ** {Username}

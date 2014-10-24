@@ -28,10 +28,15 @@ import static org.mockito.Mockito.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
+import java.util.Map;
 
+import org.apache.commons.httpclient.HttpConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -41,22 +46,21 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
-import org.apache.hadoop.hdfs.web.resources.GetOpParam;
-import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
-import org.apache.hadoop.hdfs.web.resources.PostOpParam;
-import org.apache.hadoop.hdfs.web.resources.PutOpParam;
+import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestWebHdfsTokens {
   private static Configuration conf;
@@ -233,6 +237,62 @@ public class TestWebHdfsTokens {
           cluster.shutdown();
         }
      }
+  }
+
+  @Test
+  public void testSetTokenServiceAndKind() throws Exception {
+    MiniDFSCluster cluster = null;
+
+    try {
+      final Configuration clusterConf = new HdfsConfiguration(conf);
+      SecurityUtil.setAuthenticationMethod(SIMPLE, clusterConf);
+      clusterConf.setBoolean(DFSConfigKeys
+              .DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+
+      // trick the NN into thinking s[ecurity is enabled w/o it trying
+      // to login from a keytab
+      UserGroupInformation.setConfiguration(clusterConf);
+      cluster = new MiniDFSCluster.Builder(clusterConf).numDataNodes(0).build();
+      cluster.waitActive();
+      SecurityUtil.setAuthenticationMethod(KERBEROS, clusterConf);
+      final WebHdfsFileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem
+              (clusterConf, "webhdfs");
+      Whitebox.setInternalState(fs, "canRefreshDelegationToken", true);
+
+      URLConnectionFactory factory = new URLConnectionFactory(new ConnectionConfigurator() {
+        @Override
+        public HttpURLConnection configure(HttpURLConnection conn)
+                throws IOException {
+          return conn;
+        }
+      }) {
+        @Override
+        public URLConnection openConnection(URL url) throws IOException {
+          return super.openConnection(new URL(url + "&service=foo&kind=bar"));
+        }
+      };
+      Whitebox.setInternalState(fs, "connectionFactory", factory);
+      Token<?> token1 = fs.getDelegationToken();
+      Assert.assertEquals(new Text("bar"), token1.getKind());
+
+      final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKEN;
+      Token<DelegationTokenIdentifier> token2 =
+          fs.new FsPathResponseRunner<Token<DelegationTokenIdentifier>>(
+              op, null, new RenewerParam(null)) {
+            @Override
+            Token<DelegationTokenIdentifier> decodeResponse(Map<?, ?> json)
+                throws IOException {
+              return JsonUtil.toDelegationToken(json);
+            }
+          }.run();
+
+      Assert.assertEquals(new Text("bar"), token2.getKind());
+      Assert.assertEquals(new Text("foo"), token2.getService());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
   
   @SuppressWarnings("unchecked")
