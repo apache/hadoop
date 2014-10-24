@@ -300,6 +300,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7257. Add the time of last HA state transition to NN's /jmx page.
     (Charles Lamb via wheat9)
 
+    HDFS-7223. Tracing span description of IPC client is too long (iwasakims
+    via cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
