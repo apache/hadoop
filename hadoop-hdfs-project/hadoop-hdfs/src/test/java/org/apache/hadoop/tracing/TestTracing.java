@@ -83,15 +83,15 @@ public class TestTracing {
     String[] expectedSpanNames = {
       "testWriteTraceHooks",
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.create",
-      "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.create",
+      "ClientNamenodeProtocol#create",
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.fsync",
-      "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.fsync",
+      "ClientNamenodeProtocol#fsync",
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.complete",
-      "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.complete",
+      "ClientNamenodeProtocol#complete",
       "DFSOutputStream",
       "OpWriteBlockProto",
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.addBlock",
-      "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.addBlock"
+      "ClientNamenodeProtocol#addBlock"
     };
     assertSpanNamesFound(expectedSpanNames);
 
@@ -162,7 +162,7 @@ public class TestTracing {
     String[] expectedSpanNames = {
       "testReadTraceHooks",
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.getBlockLocations",
-      "org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol.BlockingInterface.getBlockLocations",
+      "ClientNamenodeProtocol#getBlockLocations",
       "OpReadBlockProto"
     };
     assertSpanNamesFound(expectedSpanNames);

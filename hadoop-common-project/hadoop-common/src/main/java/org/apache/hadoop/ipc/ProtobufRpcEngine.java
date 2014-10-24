@@ -212,9 +212,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       // guard it in the if statement to make sure there isn't
       // any extra string manipulation.
       if (Trace.isTracing()) {
-        traceScope = Trace.startSpan(
-            method.getDeclaringClass().getCanonicalName() +
-            "." + method.getName());
+        traceScope = Trace.startSpan(RpcClientUtil.methodToTraceString(method));
       }
 
       RequestHeaderProto rpcRequestHeader = constructRpcRequestHeader(method);

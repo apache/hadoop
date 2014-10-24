@@ -235,9 +235,7 @@ public class WritableRpcEngine implements RpcEngine {
       }
       TraceScope traceScope = null;
       if (Trace.isTracing()) {
-        traceScope = Trace.startSpan(
-            method.getDeclaringClass().getCanonicalName() +
-            "." + method.getName());
+        traceScope = Trace.startSpan(RpcClientUtil.methodToTraceString(method));
       }
       ObjectWritable value;
       try {
