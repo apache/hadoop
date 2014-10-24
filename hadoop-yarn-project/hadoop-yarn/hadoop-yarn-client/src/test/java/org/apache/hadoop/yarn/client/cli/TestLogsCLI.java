@@ -227,6 +227,7 @@ public class TestLogsCLI {
     assertTrue(exitCode == 0);
     assertTrue(sysOutStream.toString().contains(
         "Hello container_0_0001_01_000001!"));
+    assertTrue(sysOutStream.toString().contains("LogUploadTime"));
 
     fs.delete(new Path(remoteLogRootDir), true);
     fs.delete(new Path(rootLogDir), true);

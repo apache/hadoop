@@ -361,6 +361,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2209. Replaced AM resync/shutdown command with corresponding exceptions and
     made related MR changes. (Jian He via zjshen)
 
+    YARN-2703. Added logUploadedTime into LogValue for better display. (Xuan Gong
+    via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
