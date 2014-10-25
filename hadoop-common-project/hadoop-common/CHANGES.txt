@@ -361,6 +361,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-10748. HttpServer2 should not load JspServlet. (wheat9)
 
+    HADOOP-6857. FsShell should report raw disk usage including replication
+    factor. (Byron Wong via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
