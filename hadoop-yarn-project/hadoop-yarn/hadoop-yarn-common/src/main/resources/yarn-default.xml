@@ -1380,22 +1380,43 @@
     <description>A resource in the in-memory store is considered stale
     if the time since the last reference exceeds the staleness period.
     This value is specified in minutes.</description>
-    <name>yarn.sharedcache.store.in-memory.staleness-period</name>
+    <name>yarn.sharedcache.store.in-memory.staleness-period-mins</name>
     <value>10080</value>
   </property>
   
   <property>
     <description>Initial delay before the in-memory store runs its first check
     to remove dead initial applications. Specified in minutes.</description>
-    <name>yarn.sharedcache.store.in-memory.initial-delay</name>
+    <name>yarn.sharedcache.store.in-memory.initial-delay-mins</name>
     <value>10</value>
   </property>
   
   <property>
     <description>The frequency at which the in-memory store checks to remove
     dead initial applications. Specified in minutes.</description>
-    <name>yarn.sharedcache.store.in-memory.check-period</name>
+    <name>yarn.sharedcache.store.in-memory.check-period-mins</name>
     <value>720</value>
+  </property>
+
+  <property>
+    <description>The frequency at which a cleaner task runs.
+    Specified in minutes.</description>
+    <name>yarn.sharedcache.cleaner.period-mins</name>
+    <value>1440</value>
+  </property>
+
+  <property>
+    <description>Initial delay before the first cleaner task is scheduled.
+    Specified in minutes.</description>
+    <name>yarn.sharedcache.cleaner.initial-delay-mins</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The time to sleep between processing each shared cache
+    resource. Specified in milliseconds.</description>
+    <name>yarn.sharedcache.cleaner.resource-sleep-ms</name>
+    <value>0</value>
   </property>
 
   <!-- Other configuration -->

@@ -60,10 +60,8 @@ public class TestInMemorySCMStore {
 
   @Before
   public void setup() {
-    this.store = spy(new InMemorySCMStore());
     this.checker = spy(new DummyAppChecker());
-    doReturn(checker).when(store).createAppCheckerService(
-        isA(Configuration.class));
+    this.store = spy(new InMemorySCMStore(checker));
   }
 
   @After

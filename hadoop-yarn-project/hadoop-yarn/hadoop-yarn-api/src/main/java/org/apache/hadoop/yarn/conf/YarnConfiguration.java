@@ -1393,25 +1393,54 @@ public class YarnConfiguration extends Configuration {
    * the last reference exceeds the staleness period. This value is specified in
    * minutes.
    */
-  public static final String IN_MEMORY_STALENESS_PERIOD =
-      IN_MEMORY_STORE_PREFIX + "staleness-period";
-  public static final int DEFAULT_IN_MEMORY_STALENESS_PERIOD = 7 * 24 * 60;
+  public static final String IN_MEMORY_STALENESS_PERIOD_MINS =
+      IN_MEMORY_STORE_PREFIX + "staleness-period-mins";
+  public static final int DEFAULT_IN_MEMORY_STALENESS_PERIOD_MINS =
+      7 * 24 * 60;
 
   /**
    * Initial delay before the in-memory store runs its first check to remove
    * dead initial applications. Specified in minutes.
    */
-  public static final String IN_MEMORY_INITIAL_DELAY =
-      IN_MEMORY_STORE_PREFIX + "initial-delay";
-  public static final int DEFAULT_IN_MEMORY_INITIAL_DELAY = 10;
+  public static final String IN_MEMORY_INITIAL_DELAY_MINS =
+      IN_MEMORY_STORE_PREFIX + "initial-delay-mins";
+  public static final int DEFAULT_IN_MEMORY_INITIAL_DELAY_MINS = 10;
   
   /**
    * The frequency at which the in-memory store checks to remove dead initial
    * applications. Specified in minutes.
    */
-  public static final String IN_MEMORY_CHECK_PERIOD =
-      IN_MEMORY_STORE_PREFIX + "check-period";
-  public static final int DEFAULT_IN_MEMORY_CHECK_PERIOD = 12 * 60;
+  public static final String IN_MEMORY_CHECK_PERIOD_MINS =
+      IN_MEMORY_STORE_PREFIX + "check-period-mins";
+  public static final int DEFAULT_IN_MEMORY_CHECK_PERIOD_MINS = 12 * 60;
+
+  // SCM Cleaner service configuration
+
+  private static final String SCM_CLEANER_PREFIX = SHARED_CACHE_PREFIX
+      + "cleaner.";
+
+  /**
+   * The frequency at which a cleaner task runs. Specified in minutes.
+   */
+  public static final String SCM_CLEANER_PERIOD_MINS =
+      SCM_CLEANER_PREFIX + "period-mins";
+  public static final int DEFAULT_SCM_CLEANER_PERIOD_MINS = 24 * 60;
+
+  /**
+   * Initial delay before the first cleaner task is scheduled. Specified in
+   * minutes.
+   */
+  public static final String SCM_CLEANER_INITIAL_DELAY_MINS =
+      SCM_CLEANER_PREFIX + "initial-delay-mins";
+  public static final int DEFAULT_SCM_CLEANER_INITIAL_DELAY_MINS = 10;
+
+  /**
+   * The time to sleep between processing each shared cache resource. Specified
+   * in milliseconds.
+   */
+  public static final String SCM_CLEANER_RESOURCE_SLEEP_MS =
+      SCM_CLEANER_PREFIX + "resource-sleep-ms";
+  public static final long DEFAULT_SCM_CLEANER_RESOURCE_SLEEP_MS = 0L;
 
   ////////////////////////////////
   // Other Configs

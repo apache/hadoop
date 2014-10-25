@@ -39,6 +39,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2180. [YARN-1492] In-memory backing store for cache manager. 
     (Chris Trezzo via kasha)
 
+    YARN-2183. [YARN-1492] Cleaner service for cache manager.
+    (Chris Trezzo and Sangjin Lee via kasha)
+
   IMPROVEMENTS
 
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.

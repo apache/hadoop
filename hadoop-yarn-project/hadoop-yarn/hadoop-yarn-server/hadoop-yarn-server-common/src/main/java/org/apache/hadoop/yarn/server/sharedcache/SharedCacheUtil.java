@@ -78,4 +78,14 @@ public class SharedCacheUtil {
 
     return sb.toString();
   }
+
+  @Private
+  public static String getCacheEntryGlobPattern(int depth) {
+    StringBuilder pattern = new StringBuilder();
+    for (int i = 0; i < depth; i++) {
+      pattern.append("*/");
+    }
+    pattern.append("*");
+    return pattern.toString();
+  }
 }
