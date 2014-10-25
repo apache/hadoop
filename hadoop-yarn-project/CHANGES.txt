@@ -742,6 +742,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2724. Skipped uploading a local log file to HDFS if exception is raised
     when opening it. (Xuan Gong via zjshen)
 
+    YARN-1915. Fixed a race condition that client could use the ClientToAMToken
+    to contact with AM before AM actually receives the ClientToAMTokenMasterKey.
+    (Jason Lowe via jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
