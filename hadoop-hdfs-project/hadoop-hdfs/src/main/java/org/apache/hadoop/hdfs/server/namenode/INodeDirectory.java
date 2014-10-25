@@ -615,13 +615,13 @@ public class INodeDirectory extends INodeWithAdditionalFields
     if (q != null) {
       return q.computeContentSummary(this, summary);
     } else {
-      return computeDirectoryContentSummary(summary);
+      return computeDirectoryContentSummary(summary, Snapshot.CURRENT_STATE_ID);
     }
   }
 
-  ContentSummaryComputationContext computeDirectoryContentSummary(
-      ContentSummaryComputationContext summary) {
-    ReadOnlyList<INode> childrenList = getChildrenList(Snapshot.CURRENT_STATE_ID);
+  protected ContentSummaryComputationContext computeDirectoryContentSummary(
+      ContentSummaryComputationContext summary, int snapshotId) {
+    ReadOnlyList<INode> childrenList = getChildrenList(snapshotId);
     // Explicit traversing is done to enable repositioning after relinquishing
     // and reacquiring locks.
     for (int i = 0;  i < childrenList.size(); i++) {
@@ -643,7 +643,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
         break;
       }
       // Obtain the children list again since it may have been modified.
-      childrenList = getChildrenList(Snapshot.CURRENT_STATE_ID);
+      childrenList = getChildrenList(snapshotId);
       // Reposition in case the children list is changed. Decrement by 1
       // since it will be incremented when loops.
       i = nextChild(childrenList, childName) - 1;

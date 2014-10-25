@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
+import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -171,6 +172,13 @@ public class Snapshot implements Comparable<byte[]> {
     @Override
     public INode getChild(byte[] name, int snapshotId) {
       return getParent().getChild(name, snapshotId);
+    }
+    
+    @Override
+    public ContentSummaryComputationContext computeContentSummary(
+        ContentSummaryComputationContext summary) {
+      int snapshotId = getParent().getSnapshot(getLocalNameBytes()).getId();
+      return computeDirectoryContentSummary(summary, snapshotId);
     }
     
     @Override

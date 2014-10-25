@@ -63,6 +63,7 @@ import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.*;
+import static org.hamcrest.core.StringContains.containsString;
 
 import com.google.common.collect.Lists;
 
@@ -197,8 +198,10 @@ public class TestDFSShell {
     
   @Test (timeout = 30000)
   public void testDu() throws IOException {
+    int replication = 2;
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(replication).build();
     DistributedFileSystem fs = cluster.getFileSystem();
     PrintStream psBackup = System.out;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -217,6 +220,10 @@ public class TestDFSShell {
       Path myFile2 = new Path("/test/dir/file2");
       writeFile(fs, myFile2);
       assertTrue(fs.exists(myFile2));
+      Long myFileLength = fs.getFileStatus(myFile).getLen();
+      Long myFileDiskUsed = myFileLength * replication;
+      Long myFile2Length = fs.getFileStatus(myFile2).getLen();
+      Long myFile2DiskUsed = myFile2Length * replication;
       
       String[] args = new String[2];
       args[0] = "-du";
@@ -232,9 +239,37 @@ public class TestDFSShell {
       String returnString = out.toString();
       out.reset();
       // Check if size matchs as expected
-      assertTrue(returnString.contains("22"));
-      assertTrue(returnString.contains("23"));
+      assertThat(returnString, containsString(myFileLength.toString()));
+      assertThat(returnString, containsString(myFileDiskUsed.toString()));
+      assertThat(returnString, containsString(myFile2Length.toString()));
+      assertThat(returnString, containsString(myFile2DiskUsed.toString()));
       
+      // Check that -du -s reports the state of the snapshot
+      String snapshotName = "ss1";
+      Path snapshotPath = new Path(myPath, ".snapshot/" + snapshotName);
+      fs.allowSnapshot(myPath);
+      assertThat(fs.createSnapshot(myPath, snapshotName), is(snapshotPath));
+      assertThat(fs.delete(myFile, false), is(true));
+      assertThat(fs.exists(myFile), is(false));
+
+      args = new String[3];
+      args[0] = "-du";
+      args[1] = "-s";
+      args[2] = snapshotPath.toString();
+      val = -1;
+      try {
+        val = shell.run(args);
+      } catch (Exception e) {
+        System.err.println("Exception raised from DFSShell.run " +
+            e.getLocalizedMessage());
+      }
+      assertThat(val, is(0));
+      returnString = out.toString();
+      out.reset();
+      Long combinedLength = myFileLength + myFile2Length;
+      Long combinedDiskUsed = myFileDiskUsed + myFile2DiskUsed;
+      assertThat(returnString, containsString(combinedLength.toString()));
+      assertThat(returnString, containsString(combinedDiskUsed.toString()));
     } finally {
       System.setOut(psBackup);
       cluster.shutdown();
