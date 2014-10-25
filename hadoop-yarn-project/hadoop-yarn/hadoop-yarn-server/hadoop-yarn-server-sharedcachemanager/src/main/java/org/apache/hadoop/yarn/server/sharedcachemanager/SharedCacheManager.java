@@ -64,6 +64,9 @@ public class SharedCacheManager extends CompositeService {
     this.store = createSCMStoreService(conf);
     addService(store);
 
+    CleanerService cs = createCleanerService(store);
+    addService(cs);
+
     // init metrics
     DefaultMetricsSystem.initialize("SharedCacheManager");
     JvmMetrics.initSingleton("SharedCacheManager", null);
@@ -88,6 +91,10 @@ public class SharedCacheManager extends CompositeService {
             YarnConfiguration.SCM_STORE_CLASS,
             defaultStoreClass, SCMStore.class), conf);
     return store;
+  }
+
+  private CleanerService createCleanerService(SCMStore store) {
+    return new CleanerService(store);
   }
 
   @Override

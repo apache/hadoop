@@ -19,11 +19,15 @@
 package org.apache.hadoop.yarn.server.sharedcachemanager.store;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.sharedcachemanager.AppChecker;
 
 
 /**
@@ -35,8 +39,11 @@ import org.apache.hadoop.service.CompositeService;
 @Evolving
 public abstract class SCMStore extends CompositeService {
 
-  protected SCMStore(String name) {
+  protected final AppChecker appChecker;
+
+  protected SCMStore(String name, AppChecker appChecker) {
     super(name);
+    this.appChecker = appChecker;
   }
 
   /**
@@ -117,6 +124,33 @@ public abstract class SCMStore extends CompositeService {
   @Private
   public abstract void removeResourceReferences(String key,
       Collection<SharedCacheResourceReference> refs, boolean updateAccessTime);
+
+  /**
+   * Clean all resource references to a cache resource that contain application
+   * ids pointing to finished applications. If the resource key does not exist,
+   * do nothing.
+   *
+   * @param key a unique identifier for a resource
+   * @throws YarnException
+   */
+  @Private
+  public void cleanResourceReferences(String key) throws YarnException {
+    Collection<SharedCacheResourceReference> refs = getResourceReferences(key);
+    if (!refs.isEmpty()) {
+      Set<SharedCacheResourceReference> refsToRemove =
+          new HashSet<SharedCacheResourceReference>();
+      for (SharedCacheResourceReference r : refs) {
+        if (!appChecker.isApplicationActive(r.getAppId())) {
+          // application in resource reference is dead, it is safe to remove the
+          // reference
+          refsToRemove.add(r);
+        }
+      }
+      if (refsToRemove.size() > 0) {
+        removeResourceReferences(key, refsToRemove, false);
+      }
+    }
+  }
 
   /**
    * Check if a specific resource is evictable according to the store's enabled
