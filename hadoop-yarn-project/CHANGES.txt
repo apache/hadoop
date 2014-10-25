@@ -687,6 +687,9 @@ Release 2.6.0 - UNRELEASED
     prevent creating thousands of threads in a large cluster. (Jason Lowe via
     jianhe)
 
+    YARN-2723. Fix rmadmin -replaceLabelsOnNode does not correctly parse port.
+    (Naganarasimha G R via xgong)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

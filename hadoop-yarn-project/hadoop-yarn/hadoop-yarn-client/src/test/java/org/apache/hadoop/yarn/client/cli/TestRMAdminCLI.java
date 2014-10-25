@@ -488,6 +488,20 @@ public class TestRMAdminCLI {
             "-directlyAccessNodeLabelStore" };
     assertTrue(0 != rmAdminCLI.run(args));
   }
+
+  @Test
+  public void testReplaceLabelsOnNodeWithPort() throws Exception {
+    // Successfully replace labels
+    dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    String[] args =
+      { "-replaceLabelsOnNode", "node1:8000,x,y node2:8000,y",
+      "-directlyAccessNodeLabelStore" };
+    assertEquals(0, rmAdminCLI.run(args));
+    assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
+        NodeId.newInstance("node1", 8000)));
+    assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
+        NodeId.newInstance("node2", 8000)));
+  }
   
   @Test
   public void testGetClusterNodeLabels() throws Exception {
