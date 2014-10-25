@@ -454,7 +454,7 @@ public class RMAdminCLI extends HAAdmin {
       int port;
       if (nodeIdStr.contains(":")) {
         nodeName = nodeIdStr.substring(0, nodeIdStr.indexOf(":"));
-        port = Integer.valueOf(nodeIdStr.substring(nodeIdStr.indexOf(":")));
+        port = Integer.valueOf(nodeIdStr.substring(nodeIdStr.indexOf(":") + 1));
       } else {
         nodeName = nodeIdStr;
         port = 0;
