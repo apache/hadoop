@@ -683,6 +683,10 @@ Release 2.6.0 - UNRELEASED
     to contact with AM before AM actually receives the ClientToAMTokenMasterKey.
     (Jason Lowe via jianhe)
 
+    YARN-2314. Disable ContainerManagementProtocolProxy cache by default to
+    prevent creating thousands of threads in a large cluster. (Jason Lowe via
+    jianhe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
