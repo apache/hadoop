@@ -1094,21 +1094,27 @@
   </property>
 
   <property>
-  	<description>
-  	  Maximum number of proxy connections for node manager. It should always be
-      more than 1. NMClient and MRAppMaster will use this to cache connection
-      with node manager. There will be at max one connection per node manager.
-      Ex. configuring it to a value of 5 will make sure that client will at
-      max have 5 connections cached with 5 different node managers. These
-      connections will be timed out if idle for more than system wide idle
-      timeout period. The token if used for authentication then it will be used
-      only at connection creation time. If new token is received then earlier
-      connection should be closed in order to use newer token. This and
+    <description>
+      Maximum number of proxy connections to cache for node managers. If set
+      to a value greater than zero then the cache is enabled and the NMClient
+      and MRAppMaster will cache the specified number of node manager proxies.
+      There will be at max one proxy per node manager. Ex. configuring it to a
+      value of 5 will make sure that client will at max have 5 proxies cached
+      with 5 different node managers. These connections for these proxies will
+      be timed out if idle for more than the system wide idle timeout period.
+      Note that this could cause issues on large clusters as many connections
+      could linger simultaneously and lead to a large number of connection
+      threads. The token used for authentication will be used only at
+      connection creation time. If a new token is received then the earlier
+      connection should be closed in order to use the new token. This and
       (yarn.client.nodemanager-client-async.thread-pool-max-size) are related
-      and should be sync (no need for them to be equal).
-  	</description>
-  	<name>yarn.client.max-nodemanagers-proxies</name>
-  	<value>500</value>
+      and should be in sync (no need for them to be equal).
+      If the value of this property is zero then the connection cache is
+      disabled and connections will use a zero idle timeout to prevent too
+      many connection threads on large clusters.
+    </description>
+    <name>yarn.client.max-cached-nodemanagers-proxies</name>
+    <value>0</value>
   </property>
   
   <property>

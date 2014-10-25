@@ -70,8 +70,16 @@ public class YarnConfiguration extends Configuration {
   public static final int APPLICATION_MAX_TAG_LENGTH = 100;
 
   static {
+    addDeprecatedKeys();
     Configuration.addDefaultResource(YARN_DEFAULT_CONFIGURATION_FILE);
     Configuration.addDefaultResource(YARN_SITE_CONFIGURATION_FILE);
+  }
+
+  private static void addDeprecatedKeys() {
+    Configuration.addDeprecations(new DeprecationDelta[] {
+        new DeprecationDelta("yarn.client.max-nodemanagers-proxies",
+            NM_CLIENT_MAX_NM_PROXIES)
+    });
   }
 
   //Configurations
@@ -1446,21 +1454,27 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE = 500;
 
   /**
-   * Maximum number of proxy connections for node manager. It should always be
-   * more than 1. NMClient and MRAppMaster will use this to cache connection
-   * with node manager. There will be at max one connection per node manager.
-   * Ex. configuring it to a value of 5 will make sure that client will at
-   * max have 5 connections cached with 5 different node managers. These
-   * connections will be timed out if idle for more than system wide idle
-   * timeout period. The token if used for authentication then it will be used
-   * only at connection creation time. If new token is received then earlier
-   * connection should be closed in order to use newer token.
-   * Note: {@link YarnConfiguration#NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE}
-   * are related to each other.
+   * Maximum number of proxy connections to cache for node managers. If set
+   * to a value greater than zero then the cache is enabled and the NMClient
+   * and MRAppMaster will cache the specified number of node manager proxies.
+   * There will be at max one proxy per node manager. Ex. configuring it to a
+   * value of 5 will make sure that client will at max have 5 proxies cached
+   * with 5 different node managers. These connections for these proxies will
+   * be timed out if idle for more than the system wide idle timeout period.
+   * Note that this could cause issues on large clusters as many connections
+   * could linger simultaneously and lead to a large number of connection
+   * threads. The token used for authentication will be used only at
+   * connection creation time. If a new token is received then the earlier
+   * connection should be closed in order to use the new token. This and
+   * {@link YarnConfiguration#NM_CLIENT_ASYNC_THREAD_POOL_MAX_SIZE} are related
+   * and should be in sync (no need for them to be equal).
+   * If the value of this property is zero then the connection cache is
+   * disabled and connections will use a zero idle timeout to prevent too
+   * many connection threads on large clusters.
    */
   public static final String NM_CLIENT_MAX_NM_PROXIES =
-      YARN_PREFIX + "client.max-nodemanagers-proxies";
-  public static final int DEFAULT_NM_CLIENT_MAX_NM_PROXIES = 500;
+      YARN_PREFIX + "client.max-cached-nodemanagers-proxies";
+  public static final int DEFAULT_NM_CLIENT_MAX_NM_PROXIES = 0;
 
   /** Max time to wait to establish a connection to NM */
   public static final String CLIENT_NM_CONNECT_MAX_WAIT_MS =
