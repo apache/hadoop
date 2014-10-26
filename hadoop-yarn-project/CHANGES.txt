@@ -694,6 +694,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2723. Fix rmadmin -replaceLabelsOnNode does not correctly parse port.
     (Naganarasimha G R via xgong)
 
+    YARN-2734. Skipped sub-folders in the local log dir when aggregating logs.
+    (Xuan Gong via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
