@@ -24,6 +24,7 @@ package hadoop.yarn;
 
 import "yarn_server_common_protos.proto";
 import "yarn_protos.proto";
+import "yarn_security_token.proto";
 
 ////////////////////////////////////////////////////////////////////////
 ////// RM recovery related records /////////////////////////////////////
@@ -90,4 +91,9 @@ message EpochProto {
 message AMRMTokenSecretManagerStateProto {
   optional MasterKeyProto current_master_key = 1;
   optional MasterKeyProto next_master_key = 2;
+}
+
+message RMDelegationTokenIdentifierDataProto {
+  optional YARNDelegationTokenIdentifierProto token_identifier = 1;
+  optional int64 renewDate = 2;
 }

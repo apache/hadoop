@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.spy;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -402,6 +403,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     RMDelegationTokenIdentifier dtId1 =
         new RMDelegationTokenIdentifier(new Text("owner1"),
           new Text("renewer1"), new Text("realuser1"));
+    byte[] tokenBeforeStore = dtId1.getBytes();
     Long renewDate1 = new Long(System.currentTimeMillis());
     int sequenceNumber = 1111;
     store.storeRMDelegationTokenAndSequenceNumber(dtId1, renewDate1,
@@ -423,6 +425,10 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
     Assert.assertEquals(sequenceNumber,
         secretManagerState.getDTSequenceNumber());
+    RMDelegationTokenIdentifier tokenAfterStore =
+        secretManagerState.getTokenState().keySet().iterator().next();
+    Assert.assertTrue(Arrays.equals(tokenBeforeStore,
+      tokenAfterStore.getBytes()));
 
     // update RM delegation token;
     renewDate1 = new Long(System.currentTimeMillis());
