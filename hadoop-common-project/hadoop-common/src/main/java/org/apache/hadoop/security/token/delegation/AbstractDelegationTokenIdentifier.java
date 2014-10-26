@@ -159,7 +159,7 @@ extends TokenIdentifier {
     return masterKeyId;
   }
 
-  static boolean isEqual(Object a, Object b) {
+  protected static boolean isEqual(Object a, Object b) {
     return a == null ? b == null : a.equals(b);
   }
   

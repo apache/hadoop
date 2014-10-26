@@ -574,6 +574,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2715. Fixed ResourceManager to respect common configurations for proxy
     users/groups beyond just the YARN level config. (Zhijie Shen via vinodkv)
 
+    YARN-2743. Fixed a bug in ResourceManager that was causing RMDelegationToken
+    identifiers to be tampered and thus causing app submission failures in
+    secure mode. (Jian He via vinodkv)
+
   BREAKDOWN OF YARN-1051 SUBTASKS AND RELATED JIRAS
 
     YARN-1707. Introduce APIs to add/remove/resize queues in the
