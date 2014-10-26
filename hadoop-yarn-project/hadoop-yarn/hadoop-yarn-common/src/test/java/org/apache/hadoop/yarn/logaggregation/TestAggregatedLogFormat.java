@@ -194,6 +194,14 @@ public class TestAggregatedLogFormat {
 
     int numChars = 80000;
 
+    // create a sub-folder under srcFilePath
+    // and create file logs in this sub-folder.
+    // We only aggregate top level files.
+    // So, this log file should be ignored.
+    Path subDir = new Path(srcFilePath, "subDir");
+    fs.mkdirs(subDir);
+    writeSrcFile(subDir, "logs", numChars);
+
     // create file stderr and stdout in containerLogDir
     writeSrcFile(srcFilePath, "stderr", numChars);
     writeSrcFile(srcFilePath, "stdout", numChars);
@@ -238,6 +246,7 @@ public class TestAggregatedLogFormat {
             + "\nLog Contents:\n".length() + numChars;
     Assert.assertTrue("LogType not matched", s.contains("LogType:stdout"));
     Assert.assertTrue("log file:stderr should not be aggregated.", !s.contains("LogType:stderr"));
+    Assert.assertTrue("log file:logs should not be aggregated.", !s.contains("LogType:logs"));
     Assert.assertTrue("LogLength not matched", s.contains("LogLength:" + numChars));
     Assert.assertTrue("Log Contents not matched", s.contains("Log Contents"));
     

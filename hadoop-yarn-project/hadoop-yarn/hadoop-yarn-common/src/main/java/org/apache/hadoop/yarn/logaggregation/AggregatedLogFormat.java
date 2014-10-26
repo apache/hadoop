@@ -213,6 +213,12 @@ public class AggregatedLogFormat {
       Collections.sort(fileList);
 
       for (File logFile : fileList) {
+        // We only aggregate top level files.
+        // Ignore anything inside sub-folders.
+        if (logFile.isDirectory()) {
+          LOG.warn(logFile.getAbsolutePath() + " is a directory. Ignore it.");
+          continue;
+        }
 
         FileInputStream in = null;
         try {
