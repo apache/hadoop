@@ -28,6 +28,7 @@ import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -984,6 +985,22 @@ class BPServiceActor implements Runnable {
      */
     boolean removeBlockInfo(ReceivedDeletedBlockInfo blockInfo) {
       return (pendingIncrementalBR.remove(blockInfo.getBlock().getBlockId()) != null);
+    }
+  }
+
+  void triggerBlockReport(BlockReportOptions options) throws IOException {
+    if (options.isIncremental()) {
+      LOG.info(bpos.toString() + ": scheduling an incremental block report.");
+      synchronized(pendingIncrementalBRperStorage) {
+        sendImmediateIBR = true;
+        pendingIncrementalBRperStorage.notifyAll();
+      }
+    } else {
+      LOG.info(bpos.toString() + ": scheduling a full block report.");
+      synchronized(pendingIncrementalBRperStorage) {
+        lastBlockReport = 0;
+        pendingIncrementalBRperStorage.notifyAll();
+      }
     }
   }
 }
