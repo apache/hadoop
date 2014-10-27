@@ -29,10 +29,13 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.DataChecksum;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.DataChecksum;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -46,6 +49,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class BlockMetadataHeader {
+  private static final Log LOG = LogFactory.getLog(BlockMetadataHeader.class);
 
   public static final short VERSION = 1;
   
@@ -74,6 +78,37 @@ public class BlockMetadataHeader {
   }
 
   /**
+   * Read the checksum header from the meta file.
+   * @return the data checksum obtained from the header.
+   */
+  public static DataChecksum readDataChecksum(File metaFile) throws IOException {
+    DataInputStream in = null;
+    try {
+      in = new DataInputStream(new BufferedInputStream(
+        new FileInputStream(metaFile), HdfsConstants.IO_FILE_BUFFER_SIZE));
+      return readDataChecksum(in, metaFile);
+    } finally {
+      IOUtils.closeStream(in);
+    }
+  }
+
+  /**
+   * Read the checksum header from the meta input stream.
+   * @return the data checksum obtained from the header.
+   */
+  public static DataChecksum readDataChecksum(final DataInputStream metaIn,
+      final Object name) throws IOException {
+    // read and handle the common header here. For now just a version
+    final BlockMetadataHeader header = readHeader(metaIn);
+    if (header.getVersion() != VERSION) {
+      LOG.warn("Unexpected meta-file version for " + name
+          + ": version in file is " + header.getVersion()
+          + " but expected version is " + VERSION);
+    }
+    return header.getChecksum();
+  }
+
+  /**
    * Read the header without changing the position of the FileChannel.
    *
    * @param fc The FileChannel to read.
@@ -82,7 +117,7 @@ public class BlockMetadataHeader {
    */
   public static BlockMetadataHeader preadHeader(FileChannel fc)
       throws IOException {
-    byte arr[] = new byte[2 + DataChecksum.HEADER_LEN];
+    final byte arr[] = new byte[getHeaderSize()];
     ByteBuffer buf = ByteBuffer.wrap(arr);
 
     while (buf.hasRemaining()) {
@@ -158,7 +193,7 @@ public class BlockMetadataHeader {
    * Writes all the fields till the beginning of checksum.
    * @throws IOException on error
    */
-  static void writeHeader(DataOutputStream out, DataChecksum checksum)
+  public static void writeHeader(DataOutputStream out, DataChecksum checksum)
                          throws IOException {
     writeHeader(out, new BlockMetadataHeader(VERSION, checksum));
   }

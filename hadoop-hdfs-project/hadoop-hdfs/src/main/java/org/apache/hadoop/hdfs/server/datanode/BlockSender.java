@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
@@ -262,26 +263,37 @@ class BlockSender implements java.io.Closeable {
        */
       DataChecksum csum = null;
       if (verifyChecksum || sendChecksum) {
-        final InputStream metaIn = datanode.data.getMetaDataInputStream(block);
-        if (!corruptChecksumOk || metaIn != null) {
-          if (metaIn == null) {
-            //need checksum but meta-data not found
-            throw new FileNotFoundException("Meta-data not found for " + block);
-          }
+        LengthInputStream metaIn = null;
+        boolean keepMetaInOpen = false;
+        try {
+          metaIn = datanode.data.getMetaDataInputStream(block);
+          if (!corruptChecksumOk || metaIn != null) {
+            if (metaIn == null) {
+              //need checksum but meta-data not found
+              throw new FileNotFoundException("Meta-data not found for " +
+                  block);
+            }
 
-          checksumIn = new DataInputStream(
-              new BufferedInputStream(metaIn, HdfsConstants.IO_FILE_BUFFER_SIZE));
+            // The meta file will contain only the header if the NULL checksum
+            // type was used, or if the replica was written to transient storage.
+            // Checksum verification is not performed for replicas on transient
+            // storage.  The header is important for determining the checksum
+            // type later when lazy persistence copies the block to non-transient
+            // storage and computes the checksum.
+            if (metaIn.getLength() > BlockMetadataHeader.getHeaderSize()) {
+              checksumIn = new DataInputStream(new BufferedInputStream(
+                  metaIn, HdfsConstants.IO_FILE_BUFFER_SIZE));
   
-          // read and handle the common header here. For now just a version
-          BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
-          short version = header.getVersion();
-          if (version != BlockMetadataHeader.VERSION) {
-            LOG.warn("Wrong version (" + version + ") for metadata file for "
-                + block + " ignoring ...");
+              csum = BlockMetadataHeader.readDataChecksum(checksumIn, block);
+              keepMetaInOpen = true;
+            }
+          } else {
+            LOG.warn("Could not find metadata file for " + block);
           }
-          csum = header.getChecksum();
-        } else {
-          LOG.warn("Could not find metadata file for " + block);
+        } finally {
+          if (!keepMetaInOpen) {
+            IOUtils.closeStream(metaIn);
+          }
         }
       }
       if (csum == null) {
@@ -340,7 +352,7 @@ class BlockSender implements java.io.Closeable {
       endOffset = end;
 
       // seek to the right offsets
-      if (offset > 0) {
+      if (offset > 0 && checksumIn != null) {
         long checksumSkip = (offset / chunkSize) * checksumSize;
         // note blockInStream is seeked when created below
         if (checksumSkip > 0) {

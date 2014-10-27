@@ -213,7 +213,7 @@ public class ReplicaInPipeline extends ReplicaInfo
     
     // the checksum that should actually be used -- this
     // may differ from requestedChecksum for appends.
-    DataChecksum checksum;
+    final DataChecksum checksum;
     
     RandomAccessFile metaRAF = new RandomAccessFile(metaFile, "rw");
     
@@ -250,7 +250,7 @@ public class ReplicaInPipeline extends ReplicaInfo
         }
       }
     } else {
-			// for create, we can use the requested checksum
+      // for create, we can use the requested checksum
       checksum = requestedChecksum;
     }
     
@@ -264,7 +264,8 @@ public class ReplicaInPipeline extends ReplicaInfo
         blockOut.getChannel().position(blockDiskSize);
         crcOut.getChannel().position(crcDiskSize);
       }
-      return new ReplicaOutputStreams(blockOut, crcOut, checksum);
+      return new ReplicaOutputStreams(blockOut, crcOut, checksum,
+          getVolume().isTransientStorage());
     } catch (IOException e) {
       IOUtils.closeStream(blockOut);
       IOUtils.closeStream(metaRAF);

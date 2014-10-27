@@ -81,12 +81,12 @@ class BlockReceiver implements Closeable {
    * checksum polynomial than the block is stored with on disk,
    * the DataNode needs to recalculate checksums before writing.
    */
-  private boolean needsChecksumTranslation;
+  private final boolean needsChecksumTranslation;
   private OutputStream out = null; // to block file at local disk
   private FileDescriptor outFd;
   private DataOutputStream checksumOut = null; // to crc file at local disk
-  private int bytesPerChecksum;
-  private int checksumSize;
+  private final int bytesPerChecksum;
+  private final int checksumSize;
   
   private final PacketReceiver packetReceiver = new PacketReceiver(false);
   
@@ -98,7 +98,6 @@ class BlockReceiver implements Closeable {
   private DataTransferThrottler throttler;
   private ReplicaOutputStreams streams;
   private DatanodeInfo srcDataNode = null;
-  private Checksum partialCrc = null;
   private final DataNode datanode;
   volatile private boolean mirrorError;
 
@@ -489,7 +488,7 @@ class BlockReceiver implements Closeable {
     long offsetInBlock = header.getOffsetInBlock();
     long seqno = header.getSeqno();
     boolean lastPacketInBlock = header.isLastPacketInBlock();
-    int len = header.getDataLen();
+    final int len = header.getDataLen();
     boolean syncBlock = header.getSyncBlock();
 
     // avoid double sync'ing on close
@@ -498,7 +497,7 @@ class BlockReceiver implements Closeable {
     }
 
     // update received bytes
-    long firstByteInBlock = offsetInBlock;
+    final long firstByteInBlock = offsetInBlock;
     offsetInBlock += len;
     if (replicaInfo.getNumBytes() < offsetInBlock) {
       replicaInfo.setNumBytes(offsetInBlock);
@@ -538,16 +537,15 @@ class BlockReceiver implements Closeable {
         flushOrSync(true);
       }
     } else {
-      int checksumLen = ((len + bytesPerChecksum - 1)/bytesPerChecksum)*
-                                                            checksumSize;
+      final int checksumLen = diskChecksum.getChecksumSize(len);
+      final int checksumReceivedLen = checksumBuf.capacity();
 
-      if ( checksumBuf.capacity() != checksumLen) {
-        throw new IOException("Length of checksums in packet " +
-            checksumBuf.capacity() + " does not match calculated checksum " +
-            "length " + checksumLen);
+      if (checksumReceivedLen > 0 && checksumReceivedLen != checksumLen) {
+        throw new IOException("Invalid checksum length: received length is "
+            + checksumReceivedLen + " but expected length is " + checksumLen);
       }
 
-      if (shouldVerifyChecksum()) {
+      if (checksumReceivedLen > 0 && shouldVerifyChecksum()) {
         try {
           verifyChunks(dataBuf, checksumBuf);
         } catch (IOException ioe) {
@@ -571,11 +569,17 @@ class BlockReceiver implements Closeable {
           translateChunks(dataBuf, checksumBuf);
         }
       }
+
+      if (checksumReceivedLen == 0 && !streams.isTransientStorage()) {
+        // checksum is missing, need to calculate it
+        checksumBuf = ByteBuffer.allocate(checksumLen);
+        diskChecksum.calculateChunkedSums(dataBuf, checksumBuf);
+      }
       
       // by this point, the data in the buffer uses the disk checksum
 
-      byte[] lastChunkChecksum;
-      
+      final boolean shouldNotWriteChecksum = checksumReceivedLen == 0
+          && streams.isTransientStorage();
       try {
         long onDiskLen = replicaInfo.getBytesOnDisk();
         if (onDiskLen<offsetInBlock) {
@@ -587,14 +591,16 @@ class BlockReceiver implements Closeable {
           }
           
           // If this is a partial chunk, then read in pre-existing checksum
-          if (firstByteInBlock % bytesPerChecksum != 0) {
-            LOG.info("Packet starts at " + firstByteInBlock +
-                     " for " + block +
-                     " which is not a multiple of bytesPerChecksum " +
-                     bytesPerChecksum);
+          Checksum partialCrc = null;
+          if (!shouldNotWriteChecksum && firstByteInBlock % bytesPerChecksum != 0) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("receivePacket for " + block 
+                  + ": bytesPerChecksum=" + bytesPerChecksum                  
+                  + " does not divide firstByteInBlock=" + firstByteInBlock);
+            }
             long offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
                 onDiskLen / bytesPerChecksum * checksumSize;
-            computePartialChunkCrc(onDiskLen, offsetInChecksum, bytesPerChecksum);
+            partialCrc = computePartialChunkCrc(onDiskLen, offsetInChecksum);
           }
 
           int startByteToDisk = (int)(onDiskLen-firstByteInBlock) 
@@ -611,41 +617,40 @@ class BlockReceiver implements Closeable {
                 + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms)");
           }
 
-          // If this is a partial chunk, then verify that this is the only
-          // chunk in the packet. Calculate new crc for this chunk.
-          if (partialCrc != null) {
+          final byte[] lastCrc;
+          if (shouldNotWriteChecksum) {
+            lastCrc = null;
+          } else if (partialCrc != null) {
+            // If this is a partial chunk, then verify that this is the only
+            // chunk in the packet. Calculate new crc for this chunk.
             if (len > bytesPerChecksum) {
-              throw new IOException("Got wrong length during writeBlock(" + 
-                                    block + ") from " + inAddr + " " +
-                                    "A packet can have only one partial chunk."+
-                                    " len = " + len + 
-                                    " bytesPerChecksum " + bytesPerChecksum);
+              throw new IOException("Unexpected packet data length for "
+                  +  block + " from " + inAddr + ": a partial chunk must be "
+                  + " sent in an individual packet (data length = " + len
+                  +  " > bytesPerChecksum = " + bytesPerChecksum + ")");
             }
             partialCrc.update(dataBuf.array(), startByteToDisk, numBytesToDisk);
             byte[] buf = FSOutputSummer.convertToByteStream(partialCrc, checksumSize);
-            lastChunkChecksum = Arrays.copyOfRange(
-              buf, buf.length - checksumSize, buf.length
-            );
+            lastCrc = copyLastChunkChecksum(buf, checksumSize, buf.length);
             checksumOut.write(buf);
             if(LOG.isDebugEnabled()) {
               LOG.debug("Writing out partial crc for data len " + len);
             }
             partialCrc = null;
           } else {
-            lastChunkChecksum = Arrays.copyOfRange(
-                checksumBuf.array(),
-                checksumBuf.arrayOffset() + checksumBuf.position() + checksumLen - checksumSize,
-                checksumBuf.arrayOffset() + checksumBuf.position() + checksumLen);
-            checksumOut.write(checksumBuf.array(),
-                checksumBuf.arrayOffset() + checksumBuf.position(),
-                checksumLen);
+            // write checksum
+            final int offset = checksumBuf.arrayOffset() +
+                checksumBuf.position();
+            final int end = offset + checksumLen;
+            lastCrc = copyLastChunkChecksum(checksumBuf.array(), checksumSize,
+                end);
+            checksumOut.write(checksumBuf.array(), offset, checksumLen);
           }
+
           /// flush entire packet, sync if requested
           flushOrSync(syncBlock);
           
-          replicaInfo.setLastChecksumAndDataLen(
-            offsetInBlock, lastChunkChecksum
-          );
+          replicaInfo.setLastChecksumAndDataLen(offsetInBlock, lastCrc);
 
           datanode.metrics.incrBytesWritten(len);
 
@@ -683,6 +688,10 @@ class BlockReceiver implements Closeable {
     }
     
     return lastPacketInBlock?-1:len;
+  }
+
+  private static byte[] copyLastChunkChecksum(byte[] array, int size, int end) {
+    return Arrays.copyOfRange(array, end - size, end);
   }
 
   private void manageWriterOsCache(long offsetInBlock) {
@@ -920,18 +929,19 @@ class BlockReceiver implements Closeable {
    * reads in the partial crc chunk and computes checksum
    * of pre-existing data in partial chunk.
    */
-  private void computePartialChunkCrc(long blkoff, long ckoff, 
-                                      int bytesPerChecksum) throws IOException {
+  private Checksum computePartialChunkCrc(long blkoff, long ckoff)
+      throws IOException {
 
     // find offset of the beginning of partial chunk.
     //
     int sizePartialChunk = (int) (blkoff % bytesPerChecksum);
-    int checksumSize = diskChecksum.getChecksumSize();
     blkoff = blkoff - sizePartialChunk;
-    LOG.info("computePartialChunkCrc sizePartialChunk " + 
-              sizePartialChunk + " " + block +
-              " block offset " + blkoff +
-              " metafile offset " + ckoff);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("computePartialChunkCrc for " + block
+          + ": sizePartialChunk=" + sizePartialChunk
+          + ", block offset=" + blkoff
+          + ", metafile offset=" + ckoff);
+    }
 
     // create an input stream from the block file
     // and read in partial crc chunk into temporary buffer
@@ -950,10 +960,12 @@ class BlockReceiver implements Closeable {
     }
 
     // compute crc of partial chunk from data read in the block file.
-    partialCrc = DataChecksum.newDataChecksum(
+    final Checksum partialCrc = DataChecksum.newDataChecksum(
         diskChecksum.getChecksumType(), diskChecksum.getBytesPerChecksum());
     partialCrc.update(buf, 0, sizePartialChunk);
-    LOG.info("Read in partial CRC chunk from disk for " + block);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Read in partial CRC chunk from disk for " + block);
+    }
 
     // paranoia! verify that the pre-computed crc matches what we
     // recalculated just now
@@ -964,6 +976,7 @@ class BlockReceiver implements Closeable {
                    checksum2long(crcbuf);
       throw new IOException(msg);
     }
+    return partialCrc;
   }
   
   private static enum PacketResponderType {

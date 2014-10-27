@@ -66,6 +66,7 @@ class BlockReaderLocal implements BlockReader {
     private ShortCircuitReplica replica;
     private long dataPos;
     private ExtendedBlock block;
+    private StorageType storageType;
 
     public Builder(Conf conf) {
       this.maxReadahead = Integer.MAX_VALUE;
@@ -103,6 +104,11 @@ class BlockReaderLocal implements BlockReader {
 
     public Builder setBlock(ExtendedBlock block) {
       this.block = block;
+      return this;
+    }
+
+    public Builder setStorageType(StorageType storageType) {
+      this.storageType = storageType;
       return this;
     }
 
@@ -209,6 +215,11 @@ class BlockReaderLocal implements BlockReader {
    */
   private ByteBuffer checksumBuf;
 
+  /**
+   * StorageType of replica on DataNode.
+   */
+  private StorageType storageType;
+
   private BlockReaderLocal(Builder builder) {
     this.replica = builder.replica;
     this.dataIn = replica.getDataStream().getChannel();
@@ -237,6 +248,7 @@ class BlockReaderLocal implements BlockReader {
       this.zeroReadaheadRequested = false;
     }
     this.maxReadaheadLength = maxReadaheadChunks * bytesPerChecksum;
+    this.storageType = builder.storageType;
   }
 
   private synchronized void createDataBufIfNeeded() {
@@ -327,8 +339,8 @@ class BlockReaderLocal implements BlockReader {
         int checksumsNeeded = (total + bytesPerChecksum - 1) / bytesPerChecksum;
         checksumBuf.clear();
         checksumBuf.limit(checksumsNeeded * checksumSize);
-        long checksumPos =
-          7 + ((startDataPos / bytesPerChecksum) * checksumSize);
+        long checksumPos = BlockMetadataHeader.getHeaderSize()
+            + ((startDataPos / bytesPerChecksum) * checksumSize);
         while (checksumBuf.hasRemaining()) {
           int nRead = checksumIn.read(checksumBuf, checksumPos);
           if (nRead < 0) {
@@ -350,7 +362,14 @@ class BlockReaderLocal implements BlockReader {
 
   private boolean createNoChecksumContext() {
     if (verifyChecksum) {
-      return replica.addNoChecksumAnchor();
+      if (storageType != null && storageType.isTransient()) {
+        // Checksums are not stored for replicas on transient storage.  We do not
+        // anchor, because we do not intend for client activity to block eviction
+        // from transient storage on the DataNode side.
+        return true;
+      } else {
+        return replica.addNoChecksumAnchor();
+      }
     } else {
       return true;
     }
@@ -358,7 +377,9 @@ class BlockReaderLocal implements BlockReader {
 
   private void releaseNoChecksumContext() {
     if (verifyChecksum) {
-      replica.removeNoChecksumAnchor();
+      if (storageType == null || !storageType.isTransient()) {
+        replica.removeNoChecksumAnchor();
+      }
     }
   }
 
