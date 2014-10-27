@@ -54,6 +54,23 @@
 
     var data = {};
 
+    $.ajax({'url': '/conf', 'dataType': 'xml', 'async': false}).done(
+      function(d) {
+        var $xml = $(d);
+        var namespace, nnId;
+        $xml.find('property').each(function(idx,v) {
+          if ($(v).find('name').text() === 'dfs.nameservice.id') {
+            namespace = $(v).find('value').text();
+          }
+          if ($(v).find('name').text() === 'dfs.ha.namenode.id') {
+            nnId = $(v).find('value').text();
+          }
+        });
+        if (namespace && nnId) {
+          data['HAInfo'] = {"Namespace": namespace, "NamenodeID": nnId};
+        }
+    });
+
     // Workarounds for the fact that JMXJsonServlet returns non-standard JSON strings
     function workaround(nn) {
       nn.JournalTransactionInfo = JSON.parse(nn.JournalTransactionInfo);
