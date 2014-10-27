@@ -200,6 +200,7 @@ HDFS Commands Guide
           [-fetchImage <local directory>]
           [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
           [-getDatanodeInfo <datanode_host:ipc_port>]
+          [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
           [-help [cmd]]
 +------------------------------------------+
 
@@ -326,6 +327,11 @@ HDFS Commands Guide
                   | given datanode. See
                   | {{{./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo}Rolling Upgrade document}}
                   | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -triggerBlockReport [-incremental] \<datanode_host:ipc_port\> | Trigger a
+                  | block report for the given datanode.  If 'incremental' is
+                  | specified, it will be | an incremental block report;
+                  | otherwise, it will be a full block report.
 *-----------------+-----------------------------------------------------------+
 | -help [cmd]     | Displays help for the given command or all commands if none
                   | is specified.

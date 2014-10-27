@@ -6,6 +6,9 @@ Release 2.6.1 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-7278. Add a command that allows sysadmins to manually trigger full
+    block reports from a DN (cmccabe)
+
   IMPROVEMENTS
 
     HDFS-7035. Make adding a new data directory to the DataNode an atomic
