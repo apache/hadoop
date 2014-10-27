@@ -869,8 +869,7 @@ public class NativeIO {
    * @throws IOException
    */
   public static void copyFileUnbuffered(File src, File dst) throws IOException {
-    if ((nativeLoaded) &&
-        (Shell.WINDOWS || (Shell.isLinuxSendfileAvailable))) {
+    if ((nativeLoaded) && (Shell.WINDOWS || Shell.LINUX)) {
       copyFileUnbuffered0(src.getAbsolutePath(), dst.getAbsolutePath());
     } else {
       FileUtils.copyFile(src, dst);
