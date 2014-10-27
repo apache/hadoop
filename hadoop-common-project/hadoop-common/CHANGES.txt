@@ -368,6 +368,8 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-11236. NFS: Fix javadoc warning in RpcProgram.java (Abhiraj Butala via harsh)
+
     HADOOP-11166. Remove ulimit from test-patch.sh. (wang)
 
     HDFS-7227. Fix findbugs warning about NP_DEREFERENCE_OF_READLINE_VALUE in
