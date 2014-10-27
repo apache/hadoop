@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
-import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
@@ -28,6 +27,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -74,8 +74,13 @@ public class TestApplicationHistoryManagerOnTimelineStore {
 
   @BeforeClass
   public static void prepareStore() throws Exception {
-    store = new MemoryTimelineStore();
-    prepareTimelineStore(store);
+    store = createStore(SCALE);
+  }
+
+  public static TimelineStore createStore(int scale) throws Exception {
+    TimelineStore store = new MemoryTimelineStore();
+    prepareTimelineStore(store, scale);
+    return store;
   }
 
   @Before
@@ -117,9 +122,9 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     }
   }
 
-  private static void prepareTimelineStore(TimelineStore store)
+  private static void prepareTimelineStore(TimelineStore store, int scale)
       throws Exception {
-    for (int i = 1; i <= SCALE; ++i) {
+    for (int i = 1; i <= scale; ++i) {
       TimelineEntities entities = new TimelineEntities();
       ApplicationId appId = ApplicationId.newInstance(0, i);
       if (i == 2) {
@@ -128,13 +133,13 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         entities.addEntity(createApplicationTimelineEntity(appId, false));
       }
       store.put(entities);
-      for (int j = 1; j <= SCALE; ++j) {
+      for (int j = 1; j <= scale; ++j) {
         entities = new TimelineEntities();
         ApplicationAttemptId appAttemptId =
             ApplicationAttemptId.newInstance(appId, j);
         entities.addEntity(createAppAttemptTimelineEntity(appAttemptId));
         store.put(entities);
-        for (int k = 1; k <= SCALE; ++k) {
+        for (int k = 1; k <= scale; ++k) {
           entities = new TimelineEntities();
           ContainerId containerId = ContainerId.newInstance(appAttemptId, k);
           entities.addEntity(createContainerEntity(containerId));
@@ -223,13 +228,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
           // The exception is expected
           Assert.fail();
         }
-      } catch (UndeclaredThrowableException e) {
+      } catch (AuthorizationException e) {
         if (callerUGI != null && callerUGI.getShortUserName().equals("user3")) {
-          if (e.getCause().getMessage().contains(
-              "does not have privilage to see this application")) {
-            // The exception is expected
-            return;
-          }
+          // The exception is expected
+          return;
         }
         throw e;
       }
@@ -269,13 +271,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
           // The exception is expected
           Assert.fail();
         }
-      } catch (UndeclaredThrowableException e) {
+      } catch (AuthorizationException e) {
         if (callerUGI != null && callerUGI.getShortUserName().equals("user3")) {
-          if (e.getCause().getMessage().contains(
-              "does not have privilage to see this application")) {
-            // The exception is expected
-            return;
-          }
+          // The exception is expected
+          return;
         }
         throw e;
       }
@@ -324,13 +323,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
           // The exception is expected
           Assert.fail();
         }
-      } catch (UndeclaredThrowableException e) {
+      } catch (AuthorizationException e) {
         if (callerUGI != null && callerUGI.getShortUserName().equals("user3")) {
-          if (e.getCause().getMessage().contains(
-              "does not have privilage to see this application")) {
-            // The exception is expected
-            return;
-          }
+          // The exception is expected
+          return;
         }
         throw e;
       }
@@ -359,13 +355,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
           // The exception is expected
           Assert.fail();
         }
-      } catch (UndeclaredThrowableException e) {
+      } catch (AuthorizationException e) {
         if (callerUGI != null && callerUGI.getShortUserName().equals("user3")) {
-          if (e.getCause().getMessage().contains(
-              "does not have privilage to see this application")) {
-            // The exception is expected
-            return;
-          }
+          // The exception is expected
+          return;
         }
         throw e;
       }
@@ -394,13 +387,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
           // The exception is expected
           Assert.fail();
         }
-      } catch (UndeclaredThrowableException e) {
+      } catch (AuthorizationException e) {
         if (callerUGI != null && callerUGI.getShortUserName().equals("user3")) {
-          if (e.getCause().getMessage().contains(
-              "does not have privilage to see this application")) {
-            // The exception is expected
-            return;
-          }
+          // The exception is expected
+          return;
         }
         throw e;
       }

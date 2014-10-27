@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.webapp;
 
+import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
@@ -29,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.WebApplicationException;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -46,6 +48,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 public class WebServices {
@@ -151,7 +154,7 @@ public class WebServices {
         });
       }
     } catch (Exception e) {
-      throw new WebApplicationException(e);
+      rewrapAndThrowException(e);
     }
     for (ApplicationReport appReport : appReports) {
 
@@ -221,7 +224,7 @@ public class WebServices {
         });
       }
     } catch (Exception e) {
-      throw new WebApplicationException(e);
+      rewrapAndThrowException(e);
     }
     if (app == null) {
       throw new NotFoundException("app with id: " + appId + " not found");
@@ -247,7 +250,7 @@ public class WebServices {
         });
       }
     } catch (Exception e) {
-      throw new WebApplicationException(e);
+      rewrapAndThrowException(e);
     }
     AppAttemptsInfo appAttemptsInfo = new AppAttemptsInfo();
     for (ApplicationAttemptReport appAttemptReport : appAttemptReports) {
@@ -278,7 +281,7 @@ public class WebServices {
         });
       }
     } catch (Exception e) {
-      throw new WebApplicationException(e);
+      rewrapAndThrowException(e);
     }
     if (appAttempt == null) {
       throw new NotFoundException("app attempt with id: " + appAttemptId
@@ -307,7 +310,7 @@ public class WebServices {
         });
       }
     } catch (Exception e) {
-      throw new WebApplicationException(e);
+      rewrapAndThrowException(e);
     }
     ContainersInfo containersInfo = new ContainersInfo();
     for (ContainerReport containerReport : containerReports) {
@@ -339,7 +342,7 @@ public class WebServices {
         });
       }
     } catch (Exception e) {
-      throw new WebApplicationException(e);
+      rewrapAndThrowException(e);
     }
     if (container == null) {
       throw new NotFoundException("container with id: " + containerId
@@ -439,6 +442,22 @@ public class WebServices {
       callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
     }
     return callerUGI;
+  }
+
+  private static void rewrapAndThrowException(Exception e) {
+    if (e instanceof UndeclaredThrowableException) {
+      if (e.getCause() instanceof AuthorizationException) {
+        throw new ForbiddenException(e.getCause());
+      } else {
+        throw new WebApplicationException(e.getCause());
+      }
+    } else {
+      if (e instanceof AuthorizationException) {
+        throw new ForbiddenException(e);
+      } else {
+        throw new WebApplicationException(e);
+      }
+    }
   }
 
 }
