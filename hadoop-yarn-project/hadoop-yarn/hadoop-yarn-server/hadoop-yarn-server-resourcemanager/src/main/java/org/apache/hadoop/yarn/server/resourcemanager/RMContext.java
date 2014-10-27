@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -57,6 +58,8 @@ public interface RMContext {
 
   ConcurrentMap<ApplicationId, RMApp> getRMApps();
   
+  ConcurrentMap<ApplicationId, ByteBuffer> getSystemCredentialsForApps();
+
   ConcurrentMap<String, RMNode> getInactiveRMNodes();
 
   ConcurrentMap<NodeId, RMNode> getRMNodes();

@@ -278,7 +278,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       try {
         credentials = parseCredentials(submissionContext);
         this.rmContext.getDelegationTokenRenewer().addApplicationAsync(appId,
-          credentials, submissionContext.getCancelTokensWhenComplete());
+          credentials, submissionContext.getCancelTokensWhenComplete(),
+          application.getUser());
       } catch (Exception e) {
         LOG.warn("Unable to parse credentials.", e);
         // Sending APP_REJECTED is fine, since we assume that the
@@ -325,7 +326,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         credentials = parseCredentials(appContext);
         // synchronously renew delegation token on recovery.
         rmContext.getDelegationTokenRenewer().addApplicationSync(appId,
-          credentials, appContext.getCancelTokensWhenComplete());
+          credentials, appContext.getCancelTokensWhenComplete(),
+          application.getUser());
         application.handle(new RMAppEvent(appId, RMAppEventType.RECOVER));
       } catch (Exception e) {
         LOG.warn("Unable to parse and renew delegation tokens.", e);

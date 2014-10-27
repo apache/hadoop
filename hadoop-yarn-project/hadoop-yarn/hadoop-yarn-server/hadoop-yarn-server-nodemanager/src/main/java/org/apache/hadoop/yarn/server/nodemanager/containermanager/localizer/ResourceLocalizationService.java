@@ -83,11 +83,11 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService.FileDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
@@ -158,6 +158,7 @@ public class ResourceLocalizationService extends CompositeService
   private LocalResourcesTracker publicRsrc;
 
   private LocalDirsHandlerService dirsHandler;
+  private Context nmContext;
 
   /**
    * Map of LocalResourceTrackers keyed by username, for private
@@ -177,7 +178,7 @@ public class ResourceLocalizationService extends CompositeService
 
   public ResourceLocalizationService(Dispatcher dispatcher,
       ContainerExecutor exec, DeletionService delService,
-      LocalDirsHandlerService dirsHandler, NMStateStoreService stateStore) {
+      LocalDirsHandlerService dirsHandler, Context context) {
 
     super(ResourceLocalizationService.class.getName());
     this.exec = exec;
@@ -189,7 +190,8 @@ public class ResourceLocalizationService extends CompositeService
         new ThreadFactoryBuilder()
           .setNameFormat("ResourceLocalizationService Cache Cleanup")
           .build());
-    this.stateStore = stateStore;
+    this.stateStore = context.getNMStateStore();
+    this.nmContext = context;
   }
 
   FileContext getLocalFileContext(Configuration conf) {
@@ -1110,11 +1112,36 @@ public class ResourceLocalizationService extends CompositeService
       }
     }
 
+    private Credentials getSystemCredentialsSentFromRM(
+        LocalizerContext localizerContext) throws IOException {
+      ApplicationId appId =
+          localizerContext.getContainerId().getApplicationAttemptId()
+            .getApplicationId();
+      Credentials systemCredentials =
+          nmContext.getSystemCredentialsForApps().get(appId);
+      if (systemCredentials == null) {
+        return null;
+      }
+      LOG.info("Adding new framework tokens from RM for " + appId);
+      for (Token<?> token : systemCredentials.getAllTokens()) {
+        LOG.info("Adding new application-token for localization: " + token);
+      }
+      return systemCredentials;
+    }
+    
     private void writeCredentials(Path nmPrivateCTokensPath)
         throws IOException {
       DataOutputStream tokenOut = null;
       try {
         Credentials credentials = context.getCredentials();
+        if (UserGroupInformation.isSecurityEnabled()) {
+          Credentials systemCredentials =
+              getSystemCredentialsSentFromRM(context);
+          if (systemCredentials != null) {
+            credentials = systemCredentials;
+          }
+        }
+
         FileContext lfs = getLocalFileContext(getConfig());
         tokenOut =
             lfs.create(nmPrivateCTokensPath, EnumSet.of(CREATE, OVERWRITE));
