@@ -400,6 +400,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2703. Added logUploadedTime into LogValue for better display. (Xuan Gong
     via zjshen)
 
+    YARN-2704. Changed ResourceManager to optionally obtain tokens itself for the
+    sake of localization and log-aggregation for long-running services. (Jian He
+    via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

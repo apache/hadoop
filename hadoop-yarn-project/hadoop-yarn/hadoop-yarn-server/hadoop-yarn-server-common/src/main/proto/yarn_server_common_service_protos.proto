@@ -59,6 +59,12 @@ message NodeHeartbeatResponseProto {
   optional int64 nextHeartBeatInterval = 7;
   optional string diagnostics_message = 8;
   repeated ContainerIdProto containers_to_be_removed_from_nm = 9;
+  repeated SystemCredentialsForAppsProto system_credentials_for_apps = 10;
+}
+
+message SystemCredentialsForAppsProto {
+  optional ApplicationIdProto appId = 1;
+  optional bytes credentialsForApp = 2;
 }
 
 message NMContainerStatusProto {

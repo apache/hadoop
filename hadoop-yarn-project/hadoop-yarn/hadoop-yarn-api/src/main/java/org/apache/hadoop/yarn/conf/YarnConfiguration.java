@@ -695,6 +695,10 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "delegation-token-renewer.thread-count";
   public static final int DEFAULT_RM_DELEGATION_TOKEN_RENEWER_THREAD_COUNT = 50;
 
+  public static final String RM_PROXY_USER_PRIVILEGES_ENABLED = RM_PREFIX
+      + "proxy-user-privileges.enabled";
+  public static boolean DEFAULT_RM_PROXY_USER_PRIVILEGES_ENABLED = false;
+
   /** Whether to enable log aggregation */
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
       + "log-aggregation-enable";
