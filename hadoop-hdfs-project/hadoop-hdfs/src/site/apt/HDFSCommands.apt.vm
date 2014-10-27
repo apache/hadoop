@@ -204,6 +204,7 @@ HDFS Commands Guide
           [-fetchImage <local directory>]
           [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
           [-getDatanodeInfo <datanode_host:ipc_port>]
+          [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
           [-help [cmd]]
 +------------------------------------------+
 
@@ -288,7 +289,7 @@ HDFS Commands Guide
                   | of the resource specified by \<key\> on \<host:ipc_port\>.
                   | All other args after are sent to the host.
 *-----------------+-----------------------------------------------------------+
-| -reconfig <datanode|...> <host:ipc_port> <start|status> | Start
+| -reconfig \<datanode\|...\> \<host:ipc_port\> \<start\|status\> | Start
                   | reconfiguration or get the status of an ongoing
                   | reconfiguration. The second parameter specifies the node
                   | type. Currently, only reloading DataNode's configuration is
@@ -336,6 +337,11 @@ HDFS Commands Guide
                   | given datanode. See
                   | {{{./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo}Rolling Upgrade document}}
                   | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -triggerBlockReport [-incremental] \<datanode_host:ipc_port\> | Trigger a
+                  | block report for the given datanode.  If 'incremental' is
+                  | specified, it will be | an incremental block report;
+                  | otherwise, it will be a full block report.
 *-----------------+-----------------------------------------------------------+
 | -help [cmd]     | Displays help for the given command or all commands if none
                   | is specified.

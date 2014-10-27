@@ -31,10 +31,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +51,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -396,6 +399,7 @@ public class DFSAdmin extends FsShell {
     "\t[-metasave filename]\n" +
     "\t[-setStoragePolicy path policyName]\n" +
     "\t[-getStoragePolicy path]\n" +
+    "\t[-triggerBlockReport [-incremental] <datanode_host:ipc_port>]\n" +
     "\t[-help [cmd]]\n";
 
   /**
@@ -630,6 +634,38 @@ public class DFSAdmin extends FsShell {
       }
     }
     throw new IOException("Cannot identify the storage policy for " + argv[1]);
+  }
+
+  public int triggerBlockReport(String[] argv) throws IOException {
+    List<String> args = new LinkedList<String>();
+    for (int j = 1; j < argv.length; j++) {
+      args.add(argv[j]);
+    }
+    boolean incremental = StringUtils.popOption("-incremental", args);
+    String hostPort = StringUtils.popFirstNonOption(args);
+    if (hostPort == null) {
+      System.err.println("You must specify a host:port pair.");
+      return 1;
+    }
+    if (!args.isEmpty()) {
+      System.err.print("Can't understand arguments: " +
+        Joiner.on(" ").join(args) + "\n");
+      return 1;
+    }
+    ClientDatanodeProtocol dnProxy = getDataNodeProxy(hostPort);
+    try {
+      dnProxy.triggerBlockReport(
+          new BlockReportOptions.Factory().
+              setIncremental(incremental).
+              build());
+    } catch (IOException e) {
+      System.err.println("triggerBlockReport error: " + e);
+      return 1;
+    }
+    System.out.println("Triggering " +
+        (incremental ? "an incremental " : "a full ") +
+        "block report on " + hostPort + ".");
+    return 0;
   }
 
   /**
@@ -985,6 +1021,12 @@ public class DFSAdmin extends FsShell {
     String getStoragePolicy = "-getStoragePolicy path\n"
         + "\tGet the storage policy for a file/directory.\n";
 
+    String triggerBlockReport =
+      "-triggerBlockReport [-incremental] <datanode_host:ipc_port>\n"
+        + "\tTrigger a block report for the datanode.\n"
+        + "\tIf 'incremental' is specified, it will be an incremental\n"
+        + "\tblock report; otherwise, it will be a full block report.\n";
+
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -1082,6 +1124,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(getDatanodeInfo);
       System.out.println(setStoragePolicy);
       System.out.println(getStoragePolicy);
+      System.out.println(triggerBlockReport);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -1595,6 +1638,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-getDatanodeInfo".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-getDatanodeInfo <datanode_host:ipc_port>]");
+    } else if ("-triggerBlockReport".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]");
     } else {
       System.err.println("Usage: hdfs dfsadmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
@@ -1738,6 +1784,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-triggerBlockReport".equals(cmd)) {
+      if (argv.length < 1) {
+        printUsage(cmd);
+        return exitCode;
+      }
     } else if ("-getStoragePolicy".equals(cmd)) {
       if (argv.length != 2) {
         printUsage(cmd);
@@ -1820,6 +1871,8 @@ public class DFSAdmin extends FsShell {
         exitCode = setStoragePolicy(argv);
       } else if ("-getStoragePolicy".equals(cmd)) {
         exitCode = getStoragePolicy(argv);
+      } else if ("-triggerBlockReport".equals(cmd)) {
+        exitCode = triggerBlockReport(argv);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);

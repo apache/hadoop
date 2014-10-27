@@ -258,6 +258,9 @@ Release 2.7.0 - UNRELEASED
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+    
+    HDFS-7278. Add a command that allows sysadmins to manually trigger full
+    block reports from a DN (cmccabe)
 
   IMPROVEMENTS
 
