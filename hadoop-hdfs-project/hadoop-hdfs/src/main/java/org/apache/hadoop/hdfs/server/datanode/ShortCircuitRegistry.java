@@ -48,7 +48,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 
-/*
+/**
  * Manages client short-circuit memory segments on the DataNode.
  *
  * DFSClients request shared memory segments from the DataNode.  The 

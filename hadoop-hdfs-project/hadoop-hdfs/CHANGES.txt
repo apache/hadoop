@@ -309,7 +309,10 @@ Release 2.7.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-    
+
+    HDFS-6538. Comment format error in ShortCircuitRegistry javadoc.
+    (David Luo via harsh).
+
     HDFS-7194. Fix findbugs "inefficient new String constructor" warning in
     DFSClient#PATH (yzhang via cmccabe)
 
