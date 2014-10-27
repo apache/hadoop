@@ -98,6 +98,7 @@ import javax.net.SocketFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
@@ -526,8 +527,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return createChecksum(null);
     }
 
-    private DataChecksum createChecksum(ChecksumOpt userOpt) 
-        throws IOException {
+    private DataChecksum createChecksum(ChecksumOpt userOpt) {
       // Fill in any missing field with the default.
       ChecksumOpt myOpt = ChecksumOpt.processChecksumOpt(
           defaultChecksumOpt, userOpt);
@@ -535,8 +535,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           myOpt.getChecksumType(),
           myOpt.getBytesPerChecksum());
       if (dataChecksum == null) {
-        throw new IOException("Invalid checksum type specified: "
-            + myOpt.getChecksumType().name());
+        throw new HadoopIllegalArgumentException("Invalid checksum type: userOpt="
+            + userOpt + ", default=" + defaultChecksumOpt
+            + ", effective=null");
       }
       return dataChecksum;
     }

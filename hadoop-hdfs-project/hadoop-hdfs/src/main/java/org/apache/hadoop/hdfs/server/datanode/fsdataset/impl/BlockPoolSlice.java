@@ -599,13 +599,8 @@ class BlockPoolSlice {
               HdfsConstants.IO_FILE_BUFFER_SIZE));
 
       // read and handle the common header here. For now just a version
-      BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
-      short version = header.getVersion();
-      if (version != BlockMetadataHeader.VERSION) {
-        FsDatasetImpl.LOG.warn("Wrong version (" + version + ") for metadata file "
-            + metaFile + " ignoring ...");
-      }
-      DataChecksum checksum = header.getChecksum();
+      final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(
+          checksumIn, metaFile);
       int bytesPerChecksum = checksum.getBytesPerChecksum();
       int checksumSize = checksum.getChecksumSize();
       long numChunks = Math.min(

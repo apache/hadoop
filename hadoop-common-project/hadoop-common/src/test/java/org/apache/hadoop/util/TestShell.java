@@ -165,4 +165,24 @@ public class TestShell extends TestCase {
       assertEquals(2, command.getRunCount());
     }
   }
+
+  public void testLinuxKernelVersion() throws IOException {
+    Shell.LinuxKernelVersion v2_6_18 =
+        new Shell.LinuxKernelVersion((short)2, (short)6, (short)18);
+    Shell.LinuxKernelVersion v2_6_32 =
+        new Shell.LinuxKernelVersion((short)2, (short)6, (short)32);
+    assertTrue(v2_6_18.compareTo(v2_6_32) < 0);
+  }
+
+  public void testParseLinuxKernelVersion() throws Exception {
+    String centOs58Ver = new String("2.6.18-308.24.1.el5");
+    String ubuntu14Ver = new String("3.13.0-32-generic");
+    Shell.LinuxKernelVersion lkvCentOs58 =
+        Shell.LinuxKernelVersion.parseLinuxKernelVersion(centOs58Ver);
+    Shell.LinuxKernelVersion lkvUnbuntu14 =
+        Shell.LinuxKernelVersion.parseLinuxKernelVersion(ubuntu14Ver);
+    assertTrue(lkvUnbuntu14.compareTo(lkvCentOs58) > 0);
+    assertFalse(lkvUnbuntu14.equals(lkvCentOs58));
+  }
+
 }

@@ -241,7 +241,7 @@ class RamDiskAsyncLazyPersistService {
       } catch (Exception e){
         FsDatasetImpl.LOG.warn(
             "LazyWriter failed to async persist RamDisk block pool id: "
-            + bpId + "block Id: " + blockId);
+            + bpId + "block Id: " + blockId, e);
       } finally {
         if (!succeeded) {
           datanode.getFSDataset().onFailLazyPersist(bpId, blockId);
