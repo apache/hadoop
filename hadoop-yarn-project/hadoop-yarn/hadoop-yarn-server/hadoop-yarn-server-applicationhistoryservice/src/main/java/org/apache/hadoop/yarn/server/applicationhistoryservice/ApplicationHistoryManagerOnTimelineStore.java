@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -504,8 +505,8 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           app.appReport.setOriginalTrackingUrl(appAttempt.getOriginalTrackingUrl());
         }
       }
-    } catch (YarnException e) {
-      // YarnExcetpion is thrown because the user doesn't have access
+    } catch (AuthorizationException e) {
+      // AuthorizationException is thrown because the user doesn't have access
       app.appReport.setDiagnostics(null);
       app.appReport.setCurrentApplicationAttemptId(null);
     }
@@ -554,7 +555,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
          if (!aclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
              ApplicationAccessType.VIEW_APP, app.appReport.getUser(),
              app.appReport.getApplicationId())) {
-           throw new YarnException("User "
+           throw new AuthorizationException("User "
                + UserGroupInformation.getCurrentUser().getShortUserName()
                + " does not have privilage to see this application "
                + app.appReport.getApplicationId());
