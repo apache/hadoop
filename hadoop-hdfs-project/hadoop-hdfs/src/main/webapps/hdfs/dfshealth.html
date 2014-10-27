@@ -116,15 +116,20 @@
 {/nn}
 
 <div class="page-header"><h1>Overview {#nnstat}<small>'{HostAndPort}' ({State})</small>{/nnstat}</h1></div>
-{#nn}
+
 <table class="table table-bordered table-striped">
+{#HAInfo}
+  <tr><th>Namespace:</th><td>{Namespace}</td></tr>
+  <tr><th>Namenode ID:</th><td>{NamenodeID}</td></tr>
+{/HAInfo}
+{#nn}
   <tr><th>Started:</th><td>{NNStarted}</td></tr>
   <tr><th>Version:</th><td>{Version}</td></tr>
   <tr><th>Compiled:</th><td>{CompileInfo}</td></tr>
   <tr><th>Cluster ID:</th><td>{ClusterId}</td></tr>
   <tr><th>Block Pool ID:</th><td>{BlockPoolId}</td></tr>
-</table>
 {/nn}
+</table>
 
 <div class="page-header"><h1>Summary</h1></div>
 <p>

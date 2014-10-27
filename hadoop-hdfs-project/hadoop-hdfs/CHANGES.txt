@@ -309,6 +309,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7283. Bump DataNode OOM log from WARN to ERROR.
     (Stephen Chu via wheat9)
 
+    HDFS-5928. Show namespace and namenode ID on NN dfshealth page.
+    (Siqi Li via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
