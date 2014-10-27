@@ -110,6 +110,11 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   private DatanodeInfo datanode;
 
   /**
+   * StorageType of replica on DataNode.
+   */
+  private StorageType storageType;
+
+  /**
    * If false, we won't try short-circuit local reads.
    */
   private boolean allowShortCircuitLocalReads;
@@ -198,6 +203,11 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
 
   public BlockReaderFactory setDatanodeInfo(DatanodeInfo datanode) {
     this.datanode = datanode;
+    return this;
+  }
+
+  public BlockReaderFactory setStorageType(StorageType storageType) {
+    this.storageType = storageType;
     return this;
   }
 
@@ -353,7 +363,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     try {
       return BlockReaderLocalLegacy.newBlockReader(conf,
           userGroupInformation, configuration, fileName, block, token,
-          datanode, startOffset, length);
+          datanode, startOffset, length, storageType);
     } catch (RemoteException remoteException) {
       ioe = remoteException.unwrapRemoteException(
                 InvalidToken.class, AccessControlException.class);
@@ -415,6 +425,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         setShortCircuitReplica(info.getReplica()).
         setVerifyChecksum(verifyChecksum).
         setCachingStrategy(cachingStrategy).
+        setStorageType(storageType).
         build();
   }
 

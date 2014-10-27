@@ -377,6 +377,117 @@ abstract public class Shell {
     return winUtilsPath;
   }
 
+  public static class LinuxKernelVersion implements Comparable<LinuxKernelVersion>{
+    private final short major;
+    private final short minor;
+    private final short revision;
+
+    public LinuxKernelVersion(short major, short minor, short revision) {
+      this.major = major;
+      this.minor = minor;
+      this.revision = revision;
+    }
+
+    /**
+     * Parse Linux kernel version string from output of POSIX command 'uname -r'
+     * @param version version string from POSIX command 'uname -r'
+     * @return LinuxKernelVersion
+     * @throws IllegalArgumentException
+     *
+     * Note:
+     * On CentOS 5.8: '2.6.18-308.24.1.el5'
+     * On Ubuntu 14:  '3.13.0-32-generic'
+     */
+    public static LinuxKernelVersion parseLinuxKernelVersion(String version)
+        throws IllegalArgumentException {
+      if (version == null) {
+        throw new IllegalArgumentException();
+      }
+      String parts[] = version.split("-")[0].split("\\.");
+      if (parts.length != 3) {
+        throw new IllegalArgumentException(version);
+      }
+      short major = Short.parseShort(parts[0]);
+      short minor = Short.parseShort(parts[1]);
+      short revision = Short.parseShort(parts[2]);
+      return new LinuxKernelVersion(major, minor, revision);
+    }
+
+    @Override
+    public int compareTo(LinuxKernelVersion o) {
+      if (this.major == o.major) {
+        if (this.minor == o.minor) {
+          return this.revision - o.revision;
+        } else {
+          return this.minor - o.minor;
+        }
+      } else {
+        return this.major - o.major;
+      }
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (this == other) {
+        return true;
+      }
+      if (!(other instanceof LinuxKernelVersion)) {
+        return false;
+      }
+      return compareTo((LinuxKernelVersion) other) == 0;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("%d.%d.%d", major, minor, revision);
+    }
+
+    @Override
+    public int hashCode(){
+      int hash = 41;
+      hash = (19 * hash) + major;
+      hash = (53 * hash) + minor;
+      hash = (29 * hash) + revision;
+      return hash;
+    }
+  }
+
+  /*
+   * sendfile() API between two file descriptors
+   * is only supported on Linux Kernel version 2.6.33+
+   * according to http://man7.org/linux/man-pages/man2/sendfile.2.html
+   */
+  public static final boolean isLinuxSendfileAvailable = isLinuxSendfileSupported();
+  private static LinuxKernelVersion minLkvSupportSendfile =
+      new LinuxKernelVersion((short)2, (short)6, (short)33);
+
+  private static boolean isLinuxSendfileSupported() {
+    if (!Shell.LINUX) {
+      return false;
+    }
+    ShellCommandExecutor shexec = null;
+    boolean sendfileSupported = false;
+    try {
+      String[] args = {"uname", "bash", "-r"};
+      shexec = new ShellCommandExecutor(args);
+      shexec.execute();
+      String version = shexec.getOutput();
+      LinuxKernelVersion lkv =
+          LinuxKernelVersion.parseLinuxKernelVersion(version);
+      if (lkv.compareTo(minLkvSupportSendfile) > 0) {
+        sendfileSupported = true;
+      }
+    } catch (Exception e) {
+      LOG.warn("isLinuxSendfileSupported() failed unexpected: " + e);
+    } finally {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("uname exited with exit code "
+            + (shexec != null ? shexec.getExitCode() : "(null executor)"));
+      }
+    }
+    return sendfileSupported;
+  }
+
   public static final boolean isSetsidAvailable = isSetsidSupported();
   private static boolean isSetsidSupported() {
     if (Shell.WINDOWS) {

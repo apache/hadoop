@@ -32,16 +32,18 @@ public class ReplicaOutputStreams implements Closeable {
   private final OutputStream dataOut;
   private final OutputStream checksumOut;
   private final DataChecksum checksum;
+  private final boolean isTransientStorage;
 
   /**
    * Create an object with a data output stream, a checksum output stream
    * and a checksum.
    */
   public ReplicaOutputStreams(OutputStream dataOut, OutputStream checksumOut,
-      DataChecksum checksum) {
+      DataChecksum checksum, boolean isTransientStorage) {
     this.dataOut = dataOut;
     this.checksumOut = checksumOut;
     this.checksum = checksum;
+    this.isTransientStorage = isTransientStorage;
   }
 
   /** @return the data output stream. */
@@ -57,6 +59,11 @@ public class ReplicaOutputStreams implements Closeable {
   /** @return the checksum. */
   public DataChecksum getChecksum() {
     return checksum;
+  }
+
+  /** @return is writing to a transient storage? */
+  public boolean isTransientStorage() {
+    return isTransientStorage;
   }
 
   @Override

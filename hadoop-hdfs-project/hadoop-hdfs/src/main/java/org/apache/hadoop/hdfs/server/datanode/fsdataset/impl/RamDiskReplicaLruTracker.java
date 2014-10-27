@@ -168,9 +168,9 @@ public class RamDiskReplicaLruTracker extends RamDiskReplicaTracker {
 
   @Override
   synchronized RamDiskReplicaLru getNextCandidateForEviction() {
-    Iterator it = replicasPersisted.values().iterator();
+    final Iterator<RamDiskReplicaLru> it = replicasPersisted.values().iterator();
     while (it.hasNext()) {
-      RamDiskReplicaLru ramDiskReplicaLru = (RamDiskReplicaLru) it.next();
+      final RamDiskReplicaLru ramDiskReplicaLru = it.next();
       it.remove();
 
       Map<Long, RamDiskReplicaLru> replicaMap =

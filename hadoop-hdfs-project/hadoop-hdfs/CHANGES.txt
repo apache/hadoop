@@ -1274,6 +1274,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7090. Use unbuffered writes when persisting in-memory replicas.
     (Xiaoyu Yao via cnauroth)
 
+    HDFS-6934. Move checksum computation off the hot path when writing to RAM
+    disk. (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
