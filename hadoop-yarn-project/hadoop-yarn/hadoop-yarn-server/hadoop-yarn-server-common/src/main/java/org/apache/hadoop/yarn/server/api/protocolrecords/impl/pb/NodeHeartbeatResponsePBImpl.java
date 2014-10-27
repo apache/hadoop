@@ -18,21 +18,26 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
@@ -49,6 +54,8 @@ public class NodeHeartbeatResponsePBImpl extends
   private List<ContainerId> containersToCleanup = null;
   private List<ContainerId> containersToBeRemovedFromNM = null;
   private List<ApplicationId> applicationsToCleanup = null;
+  private Map<ApplicationId, ByteBuffer> systemCredentials = null;
+
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
   
@@ -62,7 +69,7 @@ public class NodeHeartbeatResponsePBImpl extends
   }
   
   public NodeHeartbeatResponseProto getProto() {
-      mergeLocalToProto();
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -85,6 +92,19 @@ public class NodeHeartbeatResponsePBImpl extends
     if (this.nmTokenMasterKey != null) {
       builder.setNmTokenMasterKey(
           convertToProtoFormat(this.nmTokenMasterKey));
+    }
+    if (this.systemCredentials != null) {
+      addSystemCredentialsToProto();
+    }
+  }
+
+  private void addSystemCredentialsToProto() {
+    maybeInitBuilder();
+    builder.clearSystemCredentialsForApps();
+    for (Map.Entry<ApplicationId, ByteBuffer> entry : systemCredentials.entrySet()) {
+      builder.addSystemCredentialsForApps(SystemCredentialsForAppsProto.newBuilder()
+        .setAppId(convertToProtoFormat(entry.getKey()))
+        .setCredentialsForApp(ProtoUtils.convertToProtoFormat(entry.getValue())));
     }
   }
 
@@ -385,6 +405,38 @@ public class NodeHeartbeatResponsePBImpl extends
       }
     };
     builder.addAllApplicationsToCleanup(iterable);
+  }
+
+
+  @Override
+  public Map<ApplicationId, ByteBuffer> getSystemCredentialsForApps() {
+    if (this.systemCredentials != null) {
+      return this.systemCredentials;
+    }
+    initSystemCredentials();
+    return systemCredentials;
+  }
+
+  private void initSystemCredentials() {
+    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<SystemCredentialsForAppsProto> list = p.getSystemCredentialsForAppsList();
+    this.systemCredentials = new HashMap<ApplicationId, ByteBuffer> ();
+    for (SystemCredentialsForAppsProto c : list) {
+      ApplicationId appId = convertFromProtoFormat(c.getAppId());
+      ByteBuffer byteBuffer = ProtoUtils.convertFromProtoFormat(c.getCredentialsForApp());
+      this.systemCredentials.put(appId, byteBuffer);
+    }
+  }
+
+  @Override
+  public void setSystemCredentialsForApps(
+      Map<ApplicationId, ByteBuffer> systemCredentials) {
+    if (systemCredentials == null || systemCredentials.isEmpty()) {
+      return;
+    }
+    maybeInitBuilder();
+    this.systemCredentials = new HashMap<ApplicationId, ByteBuffer>();
+    this.systemCredentials.putAll(systemCredentials);
   }
 
   @Override

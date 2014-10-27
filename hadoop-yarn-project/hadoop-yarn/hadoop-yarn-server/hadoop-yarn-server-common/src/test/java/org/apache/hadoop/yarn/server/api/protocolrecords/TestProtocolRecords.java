@@ -18,9 +18,18 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -29,10 +38,10 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
-import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NMContainerStatusPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterNodeManagerRequestPBImpl;
+import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -92,5 +101,34 @@ public class TestProtocolRecords {
       requestProto.getResource());
     Assert.assertEquals(1, requestProto.getRunningApplications().size());
     Assert.assertEquals(appId, requestProto.getRunningApplications().get(0)); 
+  }
+
+  @Test
+  public void testNodeHeartBeatResponse() throws IOException {
+    NodeHeartbeatResponse record =
+        Records.newRecord(NodeHeartbeatResponse.class);
+    Map<ApplicationId, ByteBuffer> appCredentials =
+        new HashMap<ApplicationId, ByteBuffer>();
+    Credentials app1Cred = new Credentials();
+
+    Token<DelegationTokenIdentifier> token1 =
+        new Token<DelegationTokenIdentifier>();
+    token1.setKind(new Text("kind1"));
+    app1Cred.addToken(new Text("token1"), token1);
+    Token<DelegationTokenIdentifier> token2 =
+        new Token<DelegationTokenIdentifier>();
+    token2.setKind(new Text("kind2"));
+    app1Cred.addToken(new Text("token2"), token2);
+
+    DataOutputBuffer dob = new DataOutputBuffer();
+    app1Cred.writeTokenStorageToStream(dob);
+    ByteBuffer byteBuffer1 = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    appCredentials.put(ApplicationId.newInstance(1234, 1), byteBuffer1);
+    record.setSystemCredentialsForApps(appCredentials);
+
+    NodeHeartbeatResponse proto =
+        new NodeHeartbeatResponsePBImpl(
+          ((NodeHeartbeatResponsePBImpl) record).getProto());
+    Assert.assertEquals(appCredentials, proto.getSystemCredentialsForApps());
   }
 }

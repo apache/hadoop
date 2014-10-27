@@ -44,10 +44,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -561,6 +565,7 @@ public class TestNodeStatusUpdater {
 
   // Test NodeStatusUpdater sends the right container statuses each time it
   // heart beats.
+  private Credentials expectedCredentials = new Credentials();
   private class MyResourceTracker4 implements ResourceTracker {
 
     public NodeAction registerNodeAction = NodeAction.NORMAL;
@@ -576,6 +581,11 @@ public class TestNodeStatusUpdater {
         createContainerStatus(5, ContainerState.COMPLETE);
 
     public MyResourceTracker4(Context context) {
+      // create app Credentials
+      org.apache.hadoop.security.token.Token<DelegationTokenIdentifier> token1 =
+          new org.apache.hadoop.security.token.Token<DelegationTokenIdentifier>();
+      token1.setKind(new Text("kind1"));
+      expectedCredentials.addToken(new Text("token1"), token1);
       this.context = context;
     }
 
@@ -694,6 +704,14 @@ public class TestNodeStatusUpdater {
           YarnServerBuilderUtils.newNodeHeartbeatResponse(heartBeatID,
             heartBeatNodeAction, null, null, null, null, 1000L);
       nhResponse.addContainersToBeRemovedFromNM(finishedContainersPulledByAM);
+      Map<ApplicationId, ByteBuffer> appCredentials =
+          new HashMap<ApplicationId, ByteBuffer>();
+      DataOutputBuffer dob = new DataOutputBuffer();
+      expectedCredentials.writeTokenStorageToStream(dob);
+      ByteBuffer byteBuffer1 =
+          ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      appCredentials.put(ApplicationId.newInstance(1234, 1), byteBuffer1);
+      nhResponse.setSystemCredentialsForApps(appCredentials);
       return nhResponse;
     }
   }
@@ -1293,6 +1311,8 @@ public class TestNodeStatusUpdater {
     if(assertionFailedInThread.get()) {
       Assert.fail("ContainerStatus Backup failed");
     }
+    Assert.assertNotNull(nm.getNMContext().getSystemCredentialsForApps()
+      .get(ApplicationId.newInstance(1234, 1)).getToken(new Text("token1")));
     nm.stop();
   }
 

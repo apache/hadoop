@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -32,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -313,6 +316,10 @@ public class NodeManager extends CompositeService
     private NodeId nodeId = null;
     protected final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
+
+    private Map<ApplicationId, Credentials> systemCredentials =
+        new HashMap<ApplicationId, Credentials>();
+
     protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
 
@@ -419,6 +426,16 @@ public class NodeManager extends CompositeService
     @Override
     public void setDecommissioned(boolean isDecommissioned) {
       this.isDecommissioned = isDecommissioned;
+    }
+
+    @Override
+    public Map<ApplicationId, Credentials> getSystemCredentialsForApps() {
+      return systemCredentials;
+    }
+
+    public void setSystemCrendentials(
+        Map<ApplicationId, Credentials> systemCredentials) {
+      this.systemCredentials = systemCredentials;
     }
   }
 

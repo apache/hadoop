@@ -278,8 +278,7 @@ public class TestContainerManagerRecovery {
   private ContainerManagerImpl createContainerManager(Context context) {
     final LogHandler logHandler = mock(LogHandler.class);
     final ResourceLocalizationService rsrcSrv =
-        new ResourceLocalizationService(null, null, null, null,
-            context.getNMStateStore()) {
+        new ResourceLocalizationService(null, null, null, null, context) {
           @Override
           public void serviceInit(Configuration conf) throws Exception {
           }
@@ -320,7 +319,7 @@ public class TestContainerManagerRecovery {
 
           @Override
           protected ResourceLocalizationService createResourceLocalizationService(
-              ContainerExecutor exec, DeletionService deletionContext) {
+              ContainerExecutor exec, DeletionService deletionContext, Context context) {
             return rsrcSrv;
           }
 
