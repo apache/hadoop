@@ -466,12 +466,19 @@ public class CapacitySchedulerConfiguration extends Configuration {
         nodeLabelCapacities.put(label, 1.0f);
         continue;
       }
-      float capacity =
-          getFloat(getNodeLabelPrefix(queue, label) + CAPACITY, UNDEFINED);
+      String capacityPropertyName = getNodeLabelPrefix(queue, label) + CAPACITY;
+      float capacity = getFloat(capacityPropertyName, UNDEFINED);
+      if (capacity == UNDEFINED) {
+        throw new IllegalArgumentException("Configuration issue: "
+            + " node-label=" + label + " is accessible from queue=" + queue
+            + " but has no capacity set, you should set " 
+            + capacityPropertyName + " in range of [0, 100].");
+      }
       if (capacity < MINIMUM_CAPACITY_VALUE
           || capacity > MAXIMUM_CAPACITY_VALUE) {
-        throw new IllegalArgumentException("Illegal " + "capacity of "
-            + capacity + " for label=" + label + " in queue=" + queue);
+        throw new IllegalArgumentException("Illegal capacity of " + capacity
+            + " for node-label=" + label + " in queue=" + queue
+            + ", valid capacity should in range of [0, 100].");
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("CSConf - getCapacityOfLabel: prefix="
