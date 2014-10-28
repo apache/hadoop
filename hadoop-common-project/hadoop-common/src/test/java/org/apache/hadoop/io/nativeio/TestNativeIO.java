@@ -632,7 +632,7 @@ public class TestNativeIO {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     File srcFile = new File(TEST_DIR, METHOD_NAME + ".src.dat");
     File dstFile = new File(TEST_DIR, METHOD_NAME + ".dst.dat");
-    final int fileSize = 0x8FFFFFF; // 128 MB
+    final int fileSize = 0x8000000; // 128 MB
     final int SEED = 0xBEEF;
     final int batchSize = 4096;
     final int numBatches = fileSize / batchSize;
@@ -650,7 +650,8 @@ public class TestNativeIO {
         mapBuf.put(bytesToWrite);
       }
       NativeIO.copyFileUnbuffered(srcFile, dstFile);
-    }finally {
+      Assert.assertEquals(srcFile.length(), dstFile.length());
+    } finally {
       IOUtils.cleanup(LOG, channel);
       IOUtils.cleanup(LOG, raSrcFile);
       FileUtils.deleteQuietly(TEST_DIR);

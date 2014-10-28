@@ -1003,10 +1003,11 @@ public abstract class Storage extends StorageInfo {
    * This method copies the contents of the specified source file
    * to the specified destination file using OS specific unbuffered IO.
    * The goal is to avoid churning the file system buffer cache when copying
-   * large files. TheFileUtils#copyLarge function from apache-commons-io library
-   * can be used to achieve this with an internal memory buffer but is less
-   * efficient than the native unbuffered APIs such as sendfile() in Linux and
-   * CopyFileEx() in Windows wrapped in {@link NativeIO#copyFileUnbuffered}.
+   * large files.
+   *
+   * We can't use FileUtils#copyFile from apache-commons-io because it
+   * is a buffered IO based on FileChannel#transferFrom, which uses MmapByteBuffer
+   * internally.
    *
    * The directory holding the destination file is created if it does not exist.
    * If the destination file exists, then this method will delete it first.
