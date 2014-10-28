@@ -223,5 +223,26 @@ public class CorruptReplicasMap{
     }
     
     return ret;
-  }  
+  }
+
+  /**
+   * return the reason about corrupted replica for a given block
+   * on a given dn
+   * @param block block that has corrupted replica
+   * @param node datanode that contains this corrupted replica
+   * @return reason
+   */
+  String getCorruptReason(Block block, DatanodeDescriptor node) {
+    Reason reason = null;
+    if(corruptReplicasMap.containsKey(block)) {
+      if (corruptReplicasMap.get(block).containsKey(node)) {
+        reason = corruptReplicasMap.get(block).get(node);
+      }
+    }
+    if (reason != null) {
+      return reason.toString();
+    } else {
+      return null;
+    }
+  }
 }

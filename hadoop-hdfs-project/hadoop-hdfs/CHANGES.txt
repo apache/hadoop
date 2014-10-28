@@ -262,6 +262,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7278. Add a command that allows sysadmins to manually trigger full
     block reports from a DN (cmccabe)
 
+    HDFS-6663. Admin command to track file and locations from block id.
+    (Chen He via kihwal)
+
   IMPROVEMENTS
 
     HDFS-7055. Add tracing to DFSInputStream (cmccabe)

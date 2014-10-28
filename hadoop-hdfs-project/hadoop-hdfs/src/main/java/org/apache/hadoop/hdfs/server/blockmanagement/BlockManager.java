@@ -3505,6 +3505,13 @@ public class BlockManager {
     return corruptReplicas.getNodes(block);
   }
 
+ /**
+  * Get reason for certain corrupted replicas for a given block and a given dn.
+  */
+ public String getCorruptReason(Block block, DatanodeDescriptor node) {
+   return corruptReplicas.getCorruptReason(block, node);
+ }
+
   /** @return the size of UnderReplicatedBlocks */
   public int numOfUnderReplicatedBlocks() {
     return neededReplications.size();
