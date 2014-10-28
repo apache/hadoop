@@ -241,8 +241,14 @@ public class JobHistoryEventHandler extends AbstractService
             MRJobConfig.MR_AM_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD,
             MRJobConfig.DEFAULT_MR_AM_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD);
 
-    timelineClient = TimelineClient.createTimelineClient();
-    timelineClient.init(conf);
+    if (conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA,
+        MRJobConfig.DEFAULT_MAPREDUCE_JOB_EMIT_TIMELINE_DATA)) {
+      timelineClient = TimelineClient.createTimelineClient();
+      timelineClient.init(conf);
+      LOG.info("Emitting job history data to the timeline server is enabled");
+    } else {
+      LOG.info("Emitting job history data to the timeline server is not enabled");
+    }
 
     super.serviceInit(conf);
   }
@@ -268,7 +274,9 @@ public class JobHistoryEventHandler extends AbstractService
 
   @Override
   protected void serviceStart() throws Exception {
-    timelineClient.start();
+    if (timelineClient != null) {
+      timelineClient.start();
+    }
     eventHandlingThread = new Thread(new Runnable() {
       @Override
       public void run() {
@@ -537,7 +545,7 @@ public class JobHistoryEventHandler extends AbstractService
       // For all events
       // (1) Write it out
       // (2) Process it for JobSummary
-      // (3) Process it for ATS
+      // (3) Process it for ATS (if enabled)
       MetaInfo mi = fileMap.get(event.getJobID());
       try {
         HistoryEvent historyEvent = event.getHistoryEvent();
@@ -546,8 +554,10 @@ public class JobHistoryEventHandler extends AbstractService
         }
         processEventForJobSummary(event.getHistoryEvent(), mi.getJobSummary(),
             event.getJobID());
-        processEventForTimelineServer(historyEvent, event.getJobID(),
-                event.getTimestamp());
+        if (timelineClient != null) {
+          processEventForTimelineServer(historyEvent, event.getJobID(),
+              event.getTimestamp());
+        }
         if (LOG.isDebugEnabled()) {
           LOG.debug("In HistoryEventHandler "
               + event.getHistoryEvent().getEventType());
@@ -839,8 +849,8 @@ public class JobHistoryEventHandler extends AbstractService
         tEvent.addEventInfo("FINISH_TIME", tfe2.getFinishTime());
         tEvent.addEventInfo("STATUS", TaskStatus.State.SUCCEEDED.toString());
         tEvent.addEventInfo("SUCCESSFUL_TASK_ATTEMPT_ID",
-                tfe2.getSuccessfulTaskAttemptId() == null ?
-                "" : tfe2.getSuccessfulTaskAttemptId().toString());
+            tfe2.getSuccessfulTaskAttemptId() == null ?
+            "" : tfe2.getSuccessfulTaskAttemptId().toString());
         tEntity.addEvent(tEvent);
         tEntity.setEntityId(tfe2.getTaskId().toString());
         tEntity.setEntityType(MAPREDUCE_TASK_ENTITY_TYPE);

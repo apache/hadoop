@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.jobhistory.EventType;
 import org.apache.hadoop.mapreduce.jobhistory.TestJobHistoryEventHandler;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
@@ -85,4 +86,83 @@ public class TestMRTimelineEventHandling {
     }
   }
 
+  @Test
+  public void testMapreduceJobTimelineServiceEnabled()
+      throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, false);
+    MiniMRYarnCluster cluster = null;
+    try {
+      cluster = new MiniMRYarnCluster(
+          TestJobHistoryEventHandler.class.getSimpleName(), 1, true);
+      cluster.init(conf);
+      cluster.start();
+      TimelineStore ts = cluster.getApplicationHistoryServer()
+          .getTimelineStore();
+
+      Path inDir = new Path("input");
+      Path outDir = new Path("output");
+      RunningJob job =
+          UtilsForTests.runJobSucceed(new JobConf(conf), inDir, outDir);
+      Assert.assertEquals(JobStatus.SUCCEEDED,
+          job.getJobStatus().getState().getValue());
+      TimelineEntities entities = ts.getEntities("MAPREDUCE_JOB", null, null,
+          null, null, null, null, null, null);
+      Assert.assertEquals(0, entities.getEntities().size());
+
+      conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, true);
+      job = UtilsForTests.runJobSucceed(new JobConf(conf), inDir, outDir);
+      Assert.assertEquals(JobStatus.SUCCEEDED,
+          job.getJobStatus().getState().getValue());
+      entities = ts.getEntities("MAPREDUCE_JOB", null, null, null, null, null,
+          null, null, null);
+      Assert.assertEquals(1, entities.getEntities().size());
+      TimelineEntity tEntity = entities.getEntities().get(0);
+      Assert.assertEquals(job.getID().toString(), tEntity.getEntityId());
+    } finally {
+      if (cluster != null) {
+        cluster.stop();
+      }
+    }
+
+    conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, true);
+    cluster = null;
+    try {
+      cluster = new MiniMRYarnCluster(
+          TestJobHistoryEventHandler.class.getSimpleName(), 1, true);
+      cluster.init(conf);
+      cluster.start();
+      TimelineStore ts = cluster.getApplicationHistoryServer()
+          .getTimelineStore();
+
+      Path inDir = new Path("input");
+      Path outDir = new Path("output");
+
+      conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, false);
+      RunningJob job =
+          UtilsForTests.runJobSucceed(new JobConf(conf), inDir, outDir);
+      Assert.assertEquals(JobStatus.SUCCEEDED,
+          job.getJobStatus().getState().getValue());
+      TimelineEntities entities = ts.getEntities("MAPREDUCE_JOB", null, null,
+          null, null, null, null, null, null);
+      Assert.assertEquals(0, entities.getEntities().size());
+
+      conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, true);
+      job = UtilsForTests.runJobSucceed(new JobConf(conf), inDir, outDir);
+      Assert.assertEquals(JobStatus.SUCCEEDED,
+          job.getJobStatus().getState().getValue());
+      entities = ts.getEntities("MAPREDUCE_JOB", null, null, null, null, null,
+          null, null, null);
+      Assert.assertEquals(1, entities.getEntities().size());
+      TimelineEntity tEntity = entities.getEntities().get(0);
+      Assert.assertEquals(job.getID().toString(), tEntity.getEntityId());
+    } finally {
+      if (cluster != null) {
+        cluster.stop();
+      }
+    }
+  }
 }
