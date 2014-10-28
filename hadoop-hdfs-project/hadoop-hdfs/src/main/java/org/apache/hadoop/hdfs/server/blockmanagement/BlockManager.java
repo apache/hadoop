@@ -3105,9 +3105,11 @@ public class BlockManager {
             + " is received from " + nodeID);
       }
     }
-    blockLog.debug("*BLOCK* NameNode.processIncrementalBlockReport: " + "from "
+    if (blockLog.isDebugEnabled()) {
+      blockLog.debug("*BLOCK* NameNode.processIncrementalBlockReport: " + "from "
         + nodeID + " receiving: " + receiving + ", " + " received: " + received
         + ", " + " deleted: " + deleted);
+    }
   }
 
   /**

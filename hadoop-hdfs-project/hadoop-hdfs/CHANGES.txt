@@ -35,6 +35,9 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-8486. DN startup may cause severe data loss. (daryn via cmccabe)
 
+    HDFS-7213. processIncrementalBlockReport performance degradation.
+    (Eric Payne via kihwal)
+
     HDFS-7235. DataNode#transferBlock should report blocks that don't exist
     using reportBadBlock (yzhang via cmccabe)
 
