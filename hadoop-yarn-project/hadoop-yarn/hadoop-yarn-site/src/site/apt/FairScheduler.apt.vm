@@ -151,8 +151,7 @@ Properties that can be placed in yarn-site.xml
 
  * <<<yarn.scheduler.fair.preemption>>>
 
-    * Whether to use preemption. Note that preemption is experimental in the current
-      version. Defaults to false.
+    * Whether to use preemption. Defaults to false.
 
  * <<<yarn.scheduler.fair.preemption.cluster-utilization-threshold>>>
 
