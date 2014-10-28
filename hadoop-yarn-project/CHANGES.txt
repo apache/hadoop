@@ -778,6 +778,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2591. Fixed AHSWebServices to return FORBIDDEN(403) if the request user
     doesn't have access to the history data. (Zhijie Shen via jianhe)
 
+    YARN-2279. Add UTs to cover timeline server authentication.
+    (Zhijie Shen via xgong)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

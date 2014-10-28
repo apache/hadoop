@@ -22,17 +22,23 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
@@ -42,30 +48,49 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistor
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 public class TestTimelineAuthenticationFilter {
 
   private static final String FOO_USER = "foo";
   private static final String BAR_USER = "bar";
   private static final String HTTP_USER = "HTTP";
 
-  private static final File testRootDir = new File("target",
+  private static final File testRootDir = new File(
+      System.getProperty("test.build.dir", "target/test-dir"),
       TestTimelineAuthenticationFilter.class.getName() + "-root");
   private static File httpSpnegoKeytabFile = new File(
       KerberosTestUtils.getKeytabFile());
   private static String httpSpnegoPrincipal =
       KerberosTestUtils.getServerPrincipal();
-  private static MiniKdc testMiniKDC;
-  private static ApplicationHistoryServer testTimelineServer;
-  private static Configuration conf;
+  private static final String BASEDIR =
+      System.getProperty("test.build.dir", "target/test-dir") + "/"
+          + TestTimelineAuthenticationFilter.class.getSimpleName();
 
-  @BeforeClass
-  public static void setupClass() {
+  @Parameterized.Parameters
+  public static Collection<Object[]> withSsl() {
+    return Arrays.asList(new Object[][] { { false }, { true } });
+  }
+
+  private MiniKdc testMiniKDC;
+  private String keystoresDir;
+  private String sslConfDir;
+  private ApplicationHistoryServer testTimelineServer;
+  private Configuration conf;
+  private TimelineClient client;
+  private boolean withSsl;
+
+  public TestTimelineAuthenticationFilter(boolean withSsl) {
+    this.withSsl = withSsl;
+  }
+
+  @Before
+  public void setup() {
     try {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
       testMiniKDC.start();
@@ -77,7 +102,7 @@ public class TestTimelineAuthenticationFilter {
 
     try {
       testTimelineServer = new ApplicationHistoryServer();
-      conf = new YarnConfiguration();
+      conf = new Configuration(false);
       conf.setStrings(TimelineAuthenticationFilterInitializer.PREFIX + "type",
           "kerberos");
       conf.set(TimelineAuthenticationFilterInitializer.PREFIX +
@@ -98,31 +123,30 @@ public class TestTimelineAuthenticationFilter {
           "localhost:10200");
       conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
           "localhost:8188");
+      conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
+          "localhost:8190");
       conf.set("hadoop.proxyuser.HTTP.hosts", "*");
       conf.set("hadoop.proxyuser.HTTP.users", FOO_USER);
+
+      if (withSsl) {
+        conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY,
+            HttpConfig.Policy.HTTPS_ONLY.name());
+        File base = new File(BASEDIR);
+        FileUtil.fullyDelete(base);
+        base.mkdirs();
+        keystoresDir = new File(BASEDIR).getAbsolutePath();
+        sslConfDir =
+            KeyStoreTestUtil.getClasspathDir(TestTimelineAuthenticationFilter.class);
+        KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
+      }
+
       UserGroupInformation.setConfiguration(conf);
       testTimelineServer.init(conf);
       testTimelineServer.start();
     } catch (Exception e) {
       assertTrue("Couldn't setup TimelineServer", false);
     }
-  }
 
-  @AfterClass
-  public static void tearDownClass() {
-    if (testMiniKDC != null) {
-      testMiniKDC.stop();
-    }
-
-    if (testTimelineServer != null) {
-      testTimelineServer.stop();
-    }
-  }
-
-  private TimelineClient client;
-
-  @Before
-  public void setup() throws Exception {
     client = TimelineClient.createTimelineClient();
     client.init(conf);
     client.start();
@@ -130,8 +154,22 @@ public class TestTimelineAuthenticationFilter {
 
   @After
   public void tearDown() throws Exception {
+    if (testMiniKDC != null) {
+      testMiniKDC.stop();
+    }
+
+    if (testTimelineServer != null) {
+      testTimelineServer.stop();
+    }
+
     if (client != null) {
       client.stop();
+    }
+
+    if (withSsl) {
+      KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
+      File base = new File(BASEDIR);
+      FileUtil.fullyDelete(base);
     }
   }
 
@@ -141,15 +179,35 @@ public class TestTimelineAuthenticationFilter {
       @Override
       public Void call() throws Exception {
         TimelineEntity entityToStore = new TimelineEntity();
-        entityToStore.setEntityType("TestTimelineAuthenticationFilter");
+        entityToStore.setEntityType(
+            TestTimelineAuthenticationFilter.class.getName());
         entityToStore.setEntityId("entity1");
         entityToStore.setStartTime(0L);
         TimelinePutResponse putResponse = client.putEntities(entityToStore);
         Assert.assertEquals(0, putResponse.getErrors().size());
         TimelineEntity entityToRead =
             testTimelineServer.getTimelineStore().getEntity(
-                "entity1", "TestTimelineAuthenticationFilter", null);
+                "entity1", TestTimelineAuthenticationFilter.class.getName(), null);
         Assert.assertNotNull(entityToRead);
+        return null;
+      }
+    });
+  }
+
+  @Test
+  public void testPutDomains() throws Exception {
+    KerberosTestUtils.doAs(HTTP_USER + "/localhost", new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        TimelineDomain domainToStore = new TimelineDomain();
+        domainToStore.setId(TestTimelineAuthenticationFilter.class.getName());
+        domainToStore.setReaders("*");
+        domainToStore.setWriters("*");
+        client.putDomain(domainToStore);
+        TimelineDomain domainToRead =
+            testTimelineServer.getTimelineStore().getDomain(
+                TestTimelineAuthenticationFilter.class.getName());
+        Assert.assertNotNull(domainToRead);
         return null;
       }
     });
