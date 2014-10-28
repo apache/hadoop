@@ -1155,46 +1155,8 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_copyFileUnbuffered0(
 JNIEnv *env, jclass clazz, jstring jsrc, jstring jdst)
 {
 #ifdef UNIX
-#if (defined(__FreeBSD__) || defined(__MACH__))
-  THROW(env, "java/io/IOException",
-      "The function copyFileUnbuffered() is not supported on FreeBSD or Mac OS");
-  return;
-#else
-  const char *src = NULL, *dst = NULL;
-  int srcFd = -1;
-  int dstFd = -1;
-  struct stat s;
-  off_t offset = 0;
-
-  src = (*env)->GetStringUTFChars(env, jsrc, NULL);
-  if (!src) goto cleanup; // exception was thrown
-  dst = (*env)->GetStringUTFChars(env, jdst, NULL);
-  if (!dst) goto cleanup; // exception was thrown
-
-  srcFd = open(src, O_RDONLY);
-  if (srcFd == -1) {
-    throw_ioe(env, errno);
-    goto cleanup;
-  }
-  if (fstat(srcFd, &s) == -1){
-    throw_ioe(env, errno);
-    goto cleanup;
-  }
-  dstFd = open(dst, O_WRONLY | O_CREAT, s.st_mode);
-  if (dstFd == -1) {
-    throw_ioe(env, errno);
-    goto cleanup;
-  }
-  if (sendfile(dstFd, srcFd, &offset, s.st_size) == -1) {
-    throw_ioe(env, errno);
-  }
-
-cleanup:
-  if (src) (*env)->ReleaseStringUTFChars(env, jsrc, src);
-  if (dst) (*env)->ReleaseStringUTFChars(env, jdst, dst);
-  if (srcFd != -1) close(srcFd);
-  if (dstFd != -1) close(dstFd);
-#endif
+  THROW(env, "java/lang/UnsupportedOperationException",
+    "The function copyFileUnbuffered0 should not be used on Unix. Use FileChannel#transferTo instead.");
 #endif
 
 #ifdef WINDOWS
