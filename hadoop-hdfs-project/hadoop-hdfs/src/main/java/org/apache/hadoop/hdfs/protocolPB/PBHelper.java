@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
+import org.apache.hadoop.crypto.CipherOption;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
@@ -128,6 +129,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlocksWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointSignatureProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherOptionProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ContentSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CorruptFileBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DataEncryptionKeyProto;
@@ -2684,6 +2686,83 @@ public class PBHelper {
     builder.setSyncTxid(el.getSyncTxid());
     return GetEditsFromTxidResponseProto.newBuilder().setEventsList(
         builder.build()).build();
+  }
+  
+  public static CipherOptionProto convert(CipherOption option) {
+    if (option != null) {
+      CipherOptionProto.Builder builder = CipherOptionProto.
+          newBuilder();
+      if (option.getCipherSuite() != null) {
+        builder.setSuite(convert(option.getCipherSuite()));
+      }
+      if (option.getInKey() != null) {
+        builder.setInKey(ByteString.copyFrom(option.getInKey()));
+      }
+      if (option.getInIv() != null) {
+        builder.setInIv(ByteString.copyFrom(option.getInIv()));
+      }
+      if (option.getOutKey() != null) {
+        builder.setOutKey(ByteString.copyFrom(option.getOutKey()));
+      }
+      if (option.getOutIv() != null) {
+        builder.setOutIv(ByteString.copyFrom(option.getOutIv()));
+      }
+      return builder.build();
+    }
+    return null;
+  }
+  
+  public static CipherOption convert(CipherOptionProto proto) {
+    if (proto != null) {
+      CipherSuite suite = null;
+      if (proto.getSuite() != null) {
+        suite = convert(proto.getSuite());
+      }
+      byte[] inKey = null;
+      if (proto.getInKey() != null) {
+        inKey = proto.getInKey().toByteArray();
+      }
+      byte[] inIv = null;
+      if (proto.getInIv() != null) {
+        inIv = proto.getInIv().toByteArray();
+      }
+      byte[] outKey = null;
+      if (proto.getOutKey() != null) {
+        outKey = proto.getOutKey().toByteArray();
+      }
+      byte[] outIv = null;
+      if (proto.getOutIv() != null) {
+        outIv = proto.getOutIv().toByteArray();
+      }
+      return new CipherOption(suite, inKey, inIv, outKey, outIv);
+    }
+    return null;
+  }
+  
+  public static List<CipherOptionProto> convertCipherOptions(
+      List<CipherOption> options) {
+    if (options != null) {
+      List<CipherOptionProto> protos = 
+          Lists.newArrayListWithCapacity(options.size());
+      for (CipherOption option : options) {
+        protos.add(convert(option));
+      }
+      return protos;
+    }
+    return null;
+  }
+  
+  public static List<CipherOption> convertCipherOptionProtos(
+      List<CipherOptionProto> protos) {
+    if (protos != null) {
+      List<CipherOption> options = 
+          Lists.newArrayListWithCapacity(protos.size());
+      for (CipherOptionProto proto : protos) {
+        options.add(convert(proto));
+      }
+      return options;
+    }
+    return null;
   }
 
   public static CipherSuiteProto convert(CipherSuite suite) {

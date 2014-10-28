@@ -678,7 +678,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       this.initThreadsNumForHedgedReads(numThreads);
     }
     this.saslClient = new SaslDataTransferClient(
-      DataTransferSaslUtil.getSaslPropertiesResolver(conf),
+      conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
       TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
   }
   

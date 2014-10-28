@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.*;
 
 import java.io.DataInputStream;
@@ -27,6 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -40,6 +40,9 @@ import javax.security.sasl.RealmChoiceCallback;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherOption;
+import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.hdfs.net.EncryptedPeer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -54,6 +57,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Lists;
 
 /**
  * Negotiates SASL for DataTransferProtocol on behalf of a client.  There are
@@ -72,6 +76,7 @@ public class SaslDataTransferClient {
   private static final Logger LOG = LoggerFactory.getLogger(
     SaslDataTransferClient.class);
 
+  private final Configuration conf;
   private final AtomicBoolean fallbackToSimpleAuth;
   private final SaslPropertiesResolver saslPropsResolver;
   private final TrustedChannelResolver trustedChannelResolver;
@@ -82,27 +87,32 @@ public class SaslDataTransferClient {
    * simple auth.  For intra-cluster connections between data nodes in the same
    * cluster, we can assume that all run under the same security configuration.
    *
+   * @param conf the configuration
    * @param saslPropsResolver for determining properties of SASL negotiation
    * @param trustedChannelResolver for identifying trusted connections that do
    *   not require SASL negotiation
    */
-  public SaslDataTransferClient(SaslPropertiesResolver saslPropsResolver,
+  public SaslDataTransferClient(Configuration conf, 
+      SaslPropertiesResolver saslPropsResolver,
       TrustedChannelResolver trustedChannelResolver) {
-    this(saslPropsResolver, trustedChannelResolver, null);
+    this(conf, saslPropsResolver, trustedChannelResolver, null);
   }
 
   /**
    * Creates a new SaslDataTransferClient.
    *
+   * @param conf the configuration
    * @param saslPropsResolver for determining properties of SASL negotiation
    * @param trustedChannelResolver for identifying trusted connections that do
    *   not require SASL negotiation
    * @param fallbackToSimpleAuth checked on each attempt at general SASL
    *   handshake, if true forces use of simple auth
    */
-  public SaslDataTransferClient(SaslPropertiesResolver saslPropsResolver,
+  public SaslDataTransferClient(Configuration conf, 
+      SaslPropertiesResolver saslPropsResolver,
       TrustedChannelResolver trustedChannelResolver,
       AtomicBoolean fallbackToSimpleAuth) {
+    this.conf = conf;
     this.fallbackToSimpleAuth = fallbackToSimpleAuth;
     this.saslPropsResolver = saslPropsResolver;
     this.trustedChannelResolver = trustedChannelResolver;
@@ -436,17 +446,38 @@ public class SaslDataTransferClient {
       sendSaslMessage(out, new byte[0]);
 
       // step 1
-      performSaslStep1(out, in, sasl);
-
-      // step 2 (client-side only)
       byte[] remoteResponse = readSaslMessage(in);
       byte[] localResponse = sasl.evaluateChallengeOrResponse(remoteResponse);
+      List<CipherOption> cipherOptions = null;
+      if (requestedQopContainsPrivacy(saslProps)) {
+        // Negotiation cipher options
+        CipherOption option = new CipherOption(CipherSuite.AES_CTR_NOPADDING);
+        cipherOptions = Lists.newArrayListWithCapacity(1);
+        cipherOptions.add(option);
+      }
+      sendSaslMessageAndNegotiationCipherOptions(out, localResponse, 
+          cipherOptions);
+
+      // step 2 (client-side only)
+      SaslResponseWithNegotiatedCipherOption response = 
+          readSaslMessageAndNegotiatedCipherOption(in);
+      localResponse = sasl.evaluateChallengeOrResponse(response.payload);
       assert localResponse == null;
 
       // SASL handshake is complete
       checkSaslComplete(sasl, saslProps);
 
-      return sasl.createStreamPair(out, in);
+      CipherOption cipherOption = null;
+      if (sasl.isNegotiatedQopPrivacy()) {
+        // Unwrap the negotiated cipher option
+        cipherOption = unwrap(response.cipherOption, sasl);
+      }
+
+      // If negotiated cipher option is not null, we will use it to create 
+      // stream pair.
+      return cipherOption != null ? createStreamPair(
+          conf, cipherOption, underlyingOut, underlyingIn, false) : 
+            sasl.createStreamPair(out, in);
     } catch (IOException ioe) {
       sendGenericSaslErrorMessage(out, ioe.getMessage());
       throw ioe;

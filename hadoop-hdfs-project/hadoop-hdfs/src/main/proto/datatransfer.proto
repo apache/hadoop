@@ -42,6 +42,7 @@ message DataTransferEncryptorMessageProto {
   required DataTransferEncryptorStatus status = 1;
   optional bytes payload = 2;
   optional string message = 3;
+  repeated CipherOptionProto cipherOption = 4;
 }
 
 message BaseHeaderProto {
