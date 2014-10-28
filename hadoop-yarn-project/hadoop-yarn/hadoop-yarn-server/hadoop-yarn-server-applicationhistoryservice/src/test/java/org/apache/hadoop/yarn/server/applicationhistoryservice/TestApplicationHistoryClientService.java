@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice;
 import java.io.IOException;
 import java.util.List;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
@@ -44,57 +42,48 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
-import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
+import org.apache.hadoop.yarn.server.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestApplicationHistoryClientService extends
-    ApplicationHistoryStoreTestUtils {
+public class TestApplicationHistoryClientService {
 
-  ApplicationHistoryServer historyServer = null;
-  String expectedLogUrl = null;
+  private static ApplicationHistoryClientService clientService;
 
-  @Before
-  public void setup() {
-    historyServer = new ApplicationHistoryServer();
-    Configuration config = new YarnConfiguration();
-    expectedLogUrl = WebAppUtils.getHttpSchemePrefix(config) +
-        WebAppUtils.getAHSWebAppURLWithoutScheme(config) +
-        "/applicationhistory/logs/localhost:0/container_0_0001_01_000001/" +
-        "container_0_0001_01_000001/test user";
-    config.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
-    config.setClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
-      MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
-    historyServer.init(config);
-    historyServer.start();
-    store =
-        ((ApplicationHistoryManagerImpl) historyServer.getApplicationHistoryManager())
-          .getHistoryStore();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    historyServer.stop();
+  @BeforeClass
+  public static void setup() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    TimelineStore store =
+        TestApplicationHistoryManagerOnTimelineStore.createStore(2);
+    TimelineACLsManager aclsManager = new TimelineACLsManager(conf);
+    TimelineDataManager dataManager =
+        new TimelineDataManager(store, aclsManager);
+    ApplicationACLsManager appAclsManager = new ApplicationACLsManager(conf);
+    ApplicationHistoryManagerOnTimelineStore historyManager =
+        new ApplicationHistoryManagerOnTimelineStore(dataManager, appAclsManager);
+    historyManager.init(conf);
+    historyManager.start();
+    clientService = new ApplicationHistoryClientService(historyManager);
   }
 
   @Test
   public void testApplicationReport() throws IOException, YarnException {
     ApplicationId appId = null;
     appId = ApplicationId.newInstance(0, 1);
-    writeApplicationStartData(appId);
-    writeApplicationFinishData(appId);
     GetApplicationReportRequest request =
         GetApplicationReportRequest.newInstance(appId);
     GetApplicationReportResponse response =
-        historyServer.getClientService().getClientHandler()
-          .getApplicationReport(request);
+        clientService.getClientHandler().getApplicationReport(request);
     ApplicationReport appReport = response.getApplicationReport();
     Assert.assertNotNull(appReport);
     Assert.assertEquals("application_0_0001", appReport.getApplicationId()
       .toString());
-    Assert.assertEquals("test type", appReport.getApplicationType().toString());
+    Assert.assertEquals("test app type",
+        appReport.getApplicationType().toString());
     Assert.assertEquals("test queue", appReport.getQueue().toString());
   }
 
@@ -102,15 +91,10 @@ public class TestApplicationHistoryClientService extends
   public void testApplications() throws IOException, YarnException {
     ApplicationId appId = null;
     appId = ApplicationId.newInstance(0, 1);
-    writeApplicationStartData(appId);
-    writeApplicationFinishData(appId);
     ApplicationId appId1 = ApplicationId.newInstance(0, 2);
-    writeApplicationStartData(appId1);
-    writeApplicationFinishData(appId1);
     GetApplicationsRequest request = GetApplicationsRequest.newInstance();
     GetApplicationsResponse response =
-        historyServer.getClientService().getClientHandler()
-          .getApplications(request);
+        clientService.getClientHandler().getApplications(request);
     List<ApplicationReport> appReport = response.getApplicationList();
     Assert.assertNotNull(appReport);
     Assert.assertEquals(appId, appReport.get(0).getApplicationId());
@@ -122,13 +106,10 @@ public class TestApplicationHistoryClientService extends
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    writeApplicationAttemptStartData(appAttemptId);
-    writeApplicationAttemptFinishData(appAttemptId);
     GetApplicationAttemptReportRequest request =
         GetApplicationAttemptReportRequest.newInstance(appAttemptId);
     GetApplicationAttemptReportResponse response =
-        historyServer.getClientService().getClientHandler()
-          .getApplicationAttemptReport(request);
+        clientService.getClientHandler().getApplicationAttemptReport(request);
     ApplicationAttemptReport attemptReport =
         response.getApplicationAttemptReport();
     Assert.assertNotNull(attemptReport);
@@ -143,15 +124,10 @@ public class TestApplicationHistoryClientService extends
         ApplicationAttemptId.newInstance(appId, 1);
     ApplicationAttemptId appAttemptId1 =
         ApplicationAttemptId.newInstance(appId, 2);
-    writeApplicationAttemptStartData(appAttemptId);
-    writeApplicationAttemptFinishData(appAttemptId);
-    writeApplicationAttemptStartData(appAttemptId1);
-    writeApplicationAttemptFinishData(appAttemptId1);
     GetApplicationAttemptsRequest request =
         GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse response =
-        historyServer.getClientService().getClientHandler()
-          .getApplicationAttempts(request);
+        clientService.getClientHandler().getApplicationAttempts(request);
     List<ApplicationAttemptReport> attemptReports =
         response.getApplicationAttemptList();
     Assert.assertNotNull(attemptReports);
@@ -164,42 +140,32 @@ public class TestApplicationHistoryClientService extends
   @Test
   public void testContainerReport() throws IOException, YarnException {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    writeApplicationStartData(appId);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
-    writeContainerStartData(containerId);
-    writeContainerFinishData(containerId);
-    writeApplicationFinishData(appId);
     GetContainerReportRequest request =
         GetContainerReportRequest.newInstance(containerId);
     GetContainerReportResponse response =
-        historyServer.getClientService().getClientHandler()
-          .getContainerReport(request);
+        clientService.getClientHandler().getContainerReport(request);
     ContainerReport container = response.getContainerReport();
     Assert.assertNotNull(container);
     Assert.assertEquals(containerId, container.getContainerId());
-    Assert.assertEquals(expectedLogUrl, container.getLogUrl());
+    Assert.assertEquals("http://0.0.0.0:8188/applicationhistory/logs/" +
+        "test host:100/container_0_0001_01_000001/" +
+        "container_0_0001_01_000001/user1", container.getLogUrl());
   }
 
   @Test
   public void testContainers() throws IOException, YarnException {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    writeApplicationStartData(appId);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
     ContainerId containerId1 = ContainerId.newInstance(appAttemptId, 2);
-    writeContainerStartData(containerId);
-    writeContainerFinishData(containerId);
-    writeContainerStartData(containerId1);
-    writeContainerFinishData(containerId1);
-    writeApplicationFinishData(appId);
     GetContainersRequest request =
         GetContainersRequest.newInstance(appAttemptId);
     GetContainersResponse response =
-        historyServer.getClientService().getClientHandler()
-          .getContainers(request);
+        clientService.getClientHandler().getContainers(request);
     List<ContainerReport> containers = response.getContainerList();
     Assert.assertNotNull(containers);
     Assert.assertEquals(containerId, containers.get(1).getContainerId());

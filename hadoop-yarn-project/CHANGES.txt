@@ -751,6 +751,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2279. Add UTs to cover timeline server authentication.
     (Zhijie Shen via xgong)
 
+    YARN-2758. Update TestApplicationHistoryClientService to use the new generic
+    history store. (Zhijie Shen via xgong)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
