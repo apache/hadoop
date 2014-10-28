@@ -151,11 +151,8 @@ public class TestReplication {
     assertTrue(!fileSys.exists(name));
   }
 
-  /* 
-   * Test if Datanode reports bad blocks during replication request
-   */
-  @Test
-  public void testBadBlockReportOnTransfer() throws Exception {
+  private void testBadBlockReportOnTransfer(
+      boolean corruptBlockByDeletingBlockFile) throws Exception {
     Configuration conf = new HdfsConfiguration();
     FileSystem fs = null;
     DFSClient dfsClient = null;
@@ -176,7 +173,11 @@ public class TestReplication {
     // Corrupt the block belonging to the created file
     ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file1);
 
-    int blockFilesCorrupted = cluster.corruptBlockOnDataNodes(block);
+    int blockFilesCorrupted =
+        corruptBlockByDeletingBlockFile?
+            cluster.corruptBlockOnDataNodesByDeletingBlockFile(block) :
+              cluster.corruptBlockOnDataNodes(block);       
+
     assertEquals("Corrupted too few blocks", replFactor, blockFilesCorrupted); 
 
     // Increase replication factor, this should invoke transfer request
@@ -200,7 +201,24 @@ public class TestReplication {
     assertTrue(replicaCount == 1);
     cluster.shutdown();
   }
-  
+
+  /* 
+   * Test if Datanode reports bad blocks during replication request
+   */
+  @Test
+  public void testBadBlockReportOnTransfer() throws Exception {
+    testBadBlockReportOnTransfer(false);
+  }
+
+  /* 
+   * Test if Datanode reports bad blocks during replication request
+   * with missing block file
+   */
+  @Test
+  public void testBadBlockReportOnTransferMissingBlockFile() throws Exception {
+    testBadBlockReportOnTransfer(true);
+  }
+
   /**
    * Tests replication in DFS.
    */
