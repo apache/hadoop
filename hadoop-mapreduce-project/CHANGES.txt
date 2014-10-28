@@ -20,6 +20,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5910. Make MR AM resync with RM in case of work-preserving
     RM-restart. Contributed by Rohith
 
+    MAPREDUCE-5933. Enabled MR AM to post history events to the timeline server.
+    (Robert Kanter via zjshen)
+
   IMPROVEMENTS
 
     MAPREDUCE-5971. Move the default options for distcp -p to
