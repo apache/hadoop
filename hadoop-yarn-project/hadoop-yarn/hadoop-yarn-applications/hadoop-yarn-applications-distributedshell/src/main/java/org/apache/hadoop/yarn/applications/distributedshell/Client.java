@@ -115,7 +115,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 public class Client {
 
   private static final Log LOG = LogFactory.getLog(Client.class);
-
+  
   // Configuration
   private Configuration conf;
   private YarnClient yarnClient;
@@ -152,6 +152,7 @@ public class Client {
   private int containerVirtualCores = 1;
   // No. of containers in which the shell script needs to be executed
   private int numContainers = 1;
+  private String nodeLabelExpression = null;
 
   // log4j.properties file 
   // if available, add to local resources and set into classpath 
@@ -280,7 +281,12 @@ public class Client {
     opts.addOption("create", false, "Flag to indicate whether to create the "
         + "domain specified with -domain.");
     opts.addOption("help", false, "Print usage");
-
+    opts.addOption("node_label_expression", true,
+        "Node label expression to determine the nodes"
+            + " where all the containers of this application"
+            + " will be allocated, \"\" means containers"
+            + " can be allocated anywhere, if you don't specify the option,"
+            + " default node_label_expression of queue will be used.");
   }
 
   /**
@@ -391,6 +397,7 @@ public class Client {
     containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "10"));
     containerVirtualCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
     numContainers = Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
+    
 
     if (containerMemory < 0 || containerVirtualCores < 0 || numContainers < 1) {
       throw new IllegalArgumentException("Invalid no. of containers or container memory/vcores specified,"
@@ -399,6 +406,8 @@ public class Client {
           + ", containerVirtualCores=" + containerVirtualCores
           + ", numContainer=" + numContainers);
     }
+    
+    nodeLabelExpression = cliParser.getOptionValue("node_label_expression", null);
 
     clientTimeout = Integer.parseInt(cliParser.getOptionValue("timeout", "600000"));
 
@@ -617,6 +626,9 @@ public class Client {
     vargs.add("--container_memory " + String.valueOf(containerMemory));
     vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
     vargs.add("--num_containers " + String.valueOf(numContainers));
+    if (null != nodeLabelExpression) {
+      appContext.setNodeLabelExpression(nodeLabelExpression);
+    }
     vargs.add("--priority " + String.valueOf(shellCmdPriority));
 
     for (Map.Entry<String, String> entry : shellEnv.entrySet()) {

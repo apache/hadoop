@@ -374,6 +374,9 @@ Release 2.6.0 - UNRELEASED
     sake of localization and log-aggregation for long-running services. (Jian He
     via vinodkv)
 
+    YARN-2502. Changed DistributedShell to support node labels. (Wangda Tan via
+    jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
