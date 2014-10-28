@@ -62,6 +62,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7213. processIncrementalBlockReport performance degradation.
     (Eric Payne via kihwal)
 
+    HDFS-7280. Use netty 4 in WebImageViewer. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

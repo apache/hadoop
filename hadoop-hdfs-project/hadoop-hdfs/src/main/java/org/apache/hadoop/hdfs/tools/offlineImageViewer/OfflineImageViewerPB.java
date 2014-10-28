@@ -112,12 +112,12 @@ public class OfflineImageViewerPB {
    *          Command line options
    * @throws IOException
    */
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws Exception {
     int status = run(args);
     System.exit(status);
   }
 
-  public static int run(String[] args) throws IOException {
+  public static int run(String[] args) throws Exception {
     Options options = buildOptions();
     if (args.length == 0) {
       printUsage();
@@ -159,8 +159,13 @@ public class OfflineImageViewerPB {
             "r"));
       } else if (processor.equals("Web")) {
         String addr = cmd.getOptionValue("addr", "localhost:5978");
-        new WebImageViewer(NetUtils.createSocketAddr(addr))
-            .initServerAndWait(inputFile);
+        WebImageViewer viewer = new WebImageViewer(NetUtils.createSocketAddr
+                (addr));
+        try {
+          viewer.start(inputFile);
+        } finally {
+          viewer.close();
+        }
       }
       return 0;
     } catch (EOFException e) {
