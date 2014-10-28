@@ -237,7 +237,7 @@ public class TestOfflineImageViewer {
   }
 
   @Test
-  public void testFileDistributionCalculatorWithOptions() throws IOException {
+  public void testFileDistributionCalculatorWithOptions() throws Exception {
     int status = OfflineImageViewerPB.run(new String[] {"-i",
         originalFsimage.getAbsolutePath(), "-o", "-", "-p", "FileDistribution",
         "-maxSize", "512", "-step", "8"});
@@ -258,8 +258,7 @@ public class TestOfflineImageViewer {
   }
 
   @Test
-  public void testWebImageViewer() throws IOException, InterruptedException,
-      URISyntaxException {
+  public void testWebImageViewer() throws Exception {
     WebImageViewer viewer = new WebImageViewer(
         NetUtils.createSocketAddr("localhost:0"));
     try {
@@ -319,7 +318,7 @@ public class TestOfflineImageViewer {
           connection.getResponseCode());
     } finally {
       // shutdown the viewer
-      viewer.shutdown();
+      viewer.close();
     }
   }
 
