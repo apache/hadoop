@@ -519,6 +519,7 @@ public class TestShortCircuitCache {
       }
     });
     cluster.shutdown();
+    sockDir.close();
   }
 
   /**
