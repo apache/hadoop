@@ -316,6 +316,9 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-6741. Improve permission denied message when
+    FSPermissionChecker#checkOwner fails (Stephen Chu and harsh).
+
     HDFS-6538. Comment format error in ShortCircuitRegistry javadoc.
     (David Luo via harsh).
 
