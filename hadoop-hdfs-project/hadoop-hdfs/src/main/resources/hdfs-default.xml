@@ -1514,6 +1514,18 @@
     the configured JCE default on the system is used (usually 3DES.) It is
     widely believed that 3DES is more cryptographically secure, but RC4 is
     substantially faster.
+    
+    Note that if AES is supported by both the client and server then this 
+    encryption algorithm will only be used to initially transfer keys for AES.
+  </description>
+</property>
+
+<property>
+  <name>dfs.encrypt.data.transfer.cipher.key.bitlength</name>
+  <value>128</value>
+  <description>
+    The key bitlength negotiated by dfsclient and datanode for encryption.
+    This value may be set to either 128, 192 or 256.
   </description>
 </property>
 

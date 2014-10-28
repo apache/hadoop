@@ -21,6 +21,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_RPC_PROT
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT;
 import static org.apache.hadoop.hdfs.protocolPB.PBHelper.vintPrefixed;
 
 import java.io.IOException;
@@ -28,6 +30,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.security.sasl.Sasl;
@@ -35,10 +38,18 @@ import javax.security.sasl.Sasl;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherOption;
+import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoCodec;
+import org.apache.hadoop.crypto.CryptoInputStream;
+import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto.DataTransferEncryptorStatus;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherOptionProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.slf4j.Logger;
@@ -94,6 +105,19 @@ public final class DataTransferSaslUtil {
         "channel does not have acceptable quality of protection, " +
         "requested = %s, negotiated = %s", requestedQop, negotiatedQop));
     }
+  }
+  
+  /**
+   * Check whether requested SASL Qop contains privacy.
+   * 
+   * @param saslProps properties of SASL negotiation
+   * @return boolean true if privacy exists
+   */
+  public static boolean requestedQopContainsPrivacy(
+      Map<String, String> saslProps) {
+    Set<String> requestedQop = ImmutableSet.copyOf(Arrays.asList(
+        saslProps.get(Sasl.QOP).split(",")));
+    return requestedQop.contains("auth-conf");
   }
 
   /**
@@ -177,20 +201,6 @@ public final class DataTransferSaslUtil {
   }
 
   /**
-   * Performs the first step of SASL negotiation.
-   *
-   * @param out connection output stream
-   * @param in connection input stream
-   * @param sasl participant
-   */
-  public static void performSaslStep1(OutputStream out, InputStream in,
-      SaslParticipant sasl) throws IOException {
-    byte[] remoteResponse = readSaslMessage(in);
-    byte[] localResponse = sasl.evaluateChallengeOrResponse(remoteResponse);
-    sendSaslMessage(out, localResponse);
-  }
-
-  /**
    * Reads a SASL negotiation message.
    *
    * @param in stream to read
@@ -207,6 +217,124 @@ public final class DataTransferSaslUtil {
     } else {
       return proto.getPayload().toByteArray();
     }
+  }
+  
+  /**
+   * Reads a SASL negotiation message and negotiation cipher options. 
+   * 
+   * @param in stream to read
+   * @param cipherOptions list to store negotiation cipher options
+   * @return byte[] SASL negotiation message
+   * @throws IOException for any error
+   */
+  public static byte[] readSaslMessageAndNegotiationCipherOptions(
+      InputStream in, List<CipherOption> cipherOptions) throws IOException {
+    DataTransferEncryptorMessageProto proto =
+        DataTransferEncryptorMessageProto.parseFrom(vintPrefixed(in));
+    if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_UNKNOWN_KEY) {
+      throw new InvalidEncryptionKeyException(proto.getMessage());
+    } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR) {
+      throw new IOException(proto.getMessage());
+    } else {
+      List<CipherOptionProto> optionProtos = proto.getCipherOptionList();
+      if (optionProtos != null) {
+        for (CipherOptionProto optionProto : optionProtos) {
+          cipherOptions.add(PBHelper.convert(optionProto));
+        }
+      }
+      return proto.getPayload().toByteArray();
+    }
+  }
+  
+  /**
+   * Negotiate a cipher option which server supports.
+   * 
+   * @param options the cipher options which client supports
+   * @return CipherOption negotiated cipher option
+   */
+  public static CipherOption negotiateCipherOption(Configuration conf,
+      List<CipherOption> options) {
+    if (options != null) {
+      for (CipherOption option : options) {
+        // Currently we support AES/CTR/NoPadding
+        CipherSuite suite = option.getCipherSuite();
+        if (suite == CipherSuite.AES_CTR_NOPADDING) {
+          int keyLen = conf.getInt(
+              DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY,
+              DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT) / 8;
+          CryptoCodec codec = CryptoCodec.getInstance(conf, suite);
+          byte[] inKey = new byte[keyLen];
+          byte[] inIv = new byte[suite.getAlgorithmBlockSize()];
+          byte[] outKey = new byte[keyLen];
+          byte[] outIv = new byte[suite.getAlgorithmBlockSize()];
+          codec.generateSecureRandom(inKey);
+          codec.generateSecureRandom(inIv);
+          codec.generateSecureRandom(outKey);
+          codec.generateSecureRandom(outIv);
+          return new CipherOption(suite, inKey, inIv, outKey, outIv);
+        }
+      }
+    }
+    return null;
+  }
+  
+  /**
+   * Send SASL message and negotiated cipher option to client.
+   * 
+   * @param out stream to receive message
+   * @param payload to send
+   * @param option negotiated cipher option
+   * @throws IOException for any error
+   */
+  public static void sendSaslMessageAndNegotiatedCipherOption(
+      OutputStream out, byte[] payload, CipherOption option) 
+          throws IOException {
+    DataTransferEncryptorMessageProto.Builder builder =
+        DataTransferEncryptorMessageProto.newBuilder();
+    
+    builder.setStatus(DataTransferEncryptorStatus.SUCCESS);
+    if (payload != null) {
+      builder.setPayload(ByteString.copyFrom(payload));
+    }
+    if (option != null) {
+      builder.addCipherOption(PBHelper.convert(option));
+    }
+    
+    DataTransferEncryptorMessageProto proto = builder.build();
+    proto.writeDelimitedTo(out);
+    out.flush();
+  }
+  
+  /**
+   * Create IOStreamPair of {@link org.apache.hadoop.crypto.CryptoInputStream}
+   * and {@link org.apache.hadoop.crypto.CryptoOutputStream}
+   * 
+   * @param conf the configuration
+   * @param cipherOption negotiated cipher option
+   * @param out underlying output stream
+   * @param in underlying input stream
+   * @param isServer is server side
+   * @return IOStreamPair the stream pair
+   * @throws IOException for any error
+   */
+  public static IOStreamPair createStreamPair(Configuration conf,
+      CipherOption cipherOption, OutputStream out, InputStream in, 
+      boolean isServer) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Creating IOStreamPair of CryptoInputStream and " +
+          "CryptoOutputStream.");
+    }
+    CryptoCodec codec = CryptoCodec.getInstance(conf, 
+        cipherOption.getCipherSuite());
+    byte[] inKey = cipherOption.getInKey();
+    byte[] inIv = cipherOption.getInIv();
+    byte[] outKey = cipherOption.getOutKey();
+    byte[] outIv = cipherOption.getOutIv();
+    InputStream cIn = new CryptoInputStream(in, codec, 
+        isServer ? inKey : outKey, isServer ? inIv : outIv);
+    OutputStream cOut = new CryptoOutputStream(out, codec, 
+        isServer ? outKey : inKey, isServer ? outIv : inIv);
+    return new IOStreamPair(cIn, cOut);
   }
 
   /**
@@ -231,6 +359,116 @@ public final class DataTransferSaslUtil {
   public static void sendSaslMessage(OutputStream out, byte[] payload)
       throws IOException {
     sendSaslMessage(out, DataTransferEncryptorStatus.SUCCESS, payload, null);
+  }
+  
+  /**
+   * Send a SASL negotiation message and negotiation cipher options to server.
+   * 
+   * @param out stream to receive message
+   * @param payload to send
+   * @param options cipher options to negotiate
+   * @throws IOException for any error
+   */
+  public static void sendSaslMessageAndNegotiationCipherOptions(
+      OutputStream out, byte[] payload, List<CipherOption> options)
+          throws IOException {
+    DataTransferEncryptorMessageProto.Builder builder =
+        DataTransferEncryptorMessageProto.newBuilder();
+    
+    builder.setStatus(DataTransferEncryptorStatus.SUCCESS);
+    if (payload != null) {
+      builder.setPayload(ByteString.copyFrom(payload));
+    }
+    if (options != null) {
+      builder.addAllCipherOption(PBHelper.convertCipherOptions(options));
+    }
+    
+    DataTransferEncryptorMessageProto proto = builder.build();
+    proto.writeDelimitedTo(out);
+    out.flush();
+  }
+  
+  /**
+   * Read SASL message and negotiated cipher option from server.
+   * 
+   * @param in stream to read
+   * @return SaslResponseWithNegotiatedCipherOption SASL message and 
+   * negotiated cipher option
+   * @throws IOException for any error
+   */
+  public static SaslResponseWithNegotiatedCipherOption
+      readSaslMessageAndNegotiatedCipherOption(InputStream in)
+          throws IOException {
+    DataTransferEncryptorMessageProto proto =
+        DataTransferEncryptorMessageProto.parseFrom(vintPrefixed(in));
+    if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_UNKNOWN_KEY) {
+      throw new InvalidEncryptionKeyException(proto.getMessage());
+    } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR) {
+      throw new IOException(proto.getMessage());
+    } else {
+      byte[] response = proto.getPayload().toByteArray();
+      List<CipherOption> options = PBHelper.convertCipherOptionProtos(
+          proto.getCipherOptionList());
+      CipherOption option = null;
+      if (options != null && !options.isEmpty()) {
+        option = options.get(0);
+      }
+      return new SaslResponseWithNegotiatedCipherOption(response, option);
+    }
+  }
+  
+  /**
+   * Encrypt the key and iv of the negotiated cipher option.
+   * 
+   * @param option negotiated cipher option
+   * @param sasl SASL participant representing server
+   * @return CipherOption negotiated cipher option which contains the 
+   * encrypted key and iv
+   * @throws IOException for any error
+   */
+  public static CipherOption wrap(CipherOption option, SaslParticipant sasl) 
+      throws IOException {
+    if (option != null) {
+      byte[] inKey = option.getInKey();
+      if (inKey != null) {
+        inKey = sasl.wrap(inKey, 0, inKey.length);
+      }
+      byte[] outKey = option.getOutKey();
+      if (outKey != null) {
+        outKey = sasl.wrap(outKey, 0, outKey.length);
+      }
+      return new CipherOption(option.getCipherSuite(), inKey, option.getInIv(),
+          outKey, option.getOutIv());
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Decrypt the key and iv of the negotiated cipher option.
+   * 
+   * @param option negotiated cipher option
+   * @param sasl SASL participant representing client
+   * @return CipherOption negotiated cipher option which contains the 
+   * decrypted key and iv
+   * @throws IOException for any error
+   */
+  public static CipherOption unwrap(CipherOption option, SaslParticipant sasl)
+      throws IOException {
+    if (option != null) {
+      byte[] inKey = option.getInKey();
+      if (inKey != null) {
+        inKey = sasl.unwrap(inKey, 0, inKey.length);
+      }
+      byte[] outKey = option.getOutKey();
+      if (outKey != null) {
+        outKey = sasl.unwrap(outKey, 0, outKey.length);
+      }
+      return new CipherOption(option.getCipherSuite(), inKey, option.getInIv(),
+          outKey, option.getOutIv());
+    }
+    
+    return null;
   }
 
   /**

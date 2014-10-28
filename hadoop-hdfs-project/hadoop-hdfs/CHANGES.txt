@@ -407,6 +407,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7122. Use of ThreadLocal<Random> results in poor block placement.
     (wang)
 
+    HDFS-6606. Optimize HDFS Encrypted Transport performance. (yliu)
+
   BUG FIXES
 
     HDFS-6823. dfs.web.authentication.kerberos.principal shows up in logs for 
