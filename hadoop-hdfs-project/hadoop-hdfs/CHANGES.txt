@@ -687,6 +687,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7243. HDFS concat operation should not be allowed in Encryption Zone.
     (clamb via yliu)
 
+    HADOOP-11233. hadoop.security.kms.client.encrypted.key.cache.expiry
+    property spelled wrong in core-default. (Stephen Chu via yliu)
+
     BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
   
       HDFS-6921. Add LazyPersist flag to FileStatus. (Arpit Agarwal)
