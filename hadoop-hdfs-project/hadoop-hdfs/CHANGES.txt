@@ -694,6 +694,9 @@ Release 2.6.0 - UNRELEASED
       HDFS-6934. Move checksum computation off the hot path when writing to RAM
       disk. (cnauroth)
 
+      HDFS-7291. Persist in-memory replicas with appropriate unbuffered copy API
+      on POSIX and Windows. (Xiaoyu Yao via cnauroth)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
