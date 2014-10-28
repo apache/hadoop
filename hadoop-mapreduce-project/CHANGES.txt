@@ -61,6 +61,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5970. Provide a boolean switch to enable MR-AM profiling (Gera
     Shegalov via jlowe)
 
+    MAPREDUCE-6018. Added an MR specific config to enable emitting job history
+    data to the timeline server. (Robert Kanter via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

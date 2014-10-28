@@ -378,6 +378,11 @@ public interface MRJobConfig {
   public static final String JOB_UBERTASK_MAXBYTES =
     "mapreduce.job.ubertask.maxbytes";
 
+  public static final String MAPREDUCE_JOB_EMIT_TIMELINE_DATA =
+    "mapreduce.job.emit-timeline-data";
+  public static final boolean DEFAULT_MAPREDUCE_JOB_EMIT_TIMELINE_DATA =
+      false;
+
   public static final String MR_PREFIX = "yarn.app.mapreduce.";
 
   public static final String MR_AM_PREFIX = MR_PREFIX + "am.";
