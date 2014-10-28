@@ -242,6 +242,9 @@ Release 2.6.0 - UNRELEASED
 
   NEW FEATURES
 
+    MAPREDUCE-5933. Enabled MR AM to post history events to the timeline server.
+    (Robert Kanter via zjshen)
+
   IMPROVEMENTS
 
     MAPREDUCE-5971. Move the default options for distcp -p to
