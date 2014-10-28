@@ -93,6 +93,10 @@ Release 2.7.0 - UNRELEASED
     HDFS-7258. CacheReplicationMonitor rescan schedule log should use DEBUG
     level instead of INFO level. (Xiaoyu Yao via wheat9)
 
+    HDFS-7282. Fix intermittent TestShortCircuitCache and
+    TestBlockReaderFactory failures resulting from TemporarySocketDirectory GC.
+    (Jinghui Wang via Colin Patrick McCabe)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
