@@ -109,6 +109,10 @@ Release 2.7.0 - UNRELEASED
     HDFS-7301. TestMissingBlocksAlert should use MXBeans instead of old web UI.
     (Zhe Zhang via wheat9)
 
+    HDFS-7235. DataNode#transferBlock should report blocks that don't exist
+    using reportBadBlock (yzhang via cmccabe)
+
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
