@@ -1637,7 +1637,7 @@ for ldap providers in the same way as above does.
   </description>
 </property>
 <property>
-  <name>"hadoop.security.kms.client.encrypted.key.cache.expiry</name>
+  <name>hadoop.security.kms.client.encrypted.key.cache.expiry</name>
   <value>43200000</value>
   <description>
     Cache expiry time for a Key, after which the cache Queue for this
