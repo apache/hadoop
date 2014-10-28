@@ -106,6 +106,9 @@ Release 2.7.0 - UNRELEASED
     TestBlockReaderFactory failures resulting from TemporarySocketDirectory GC.
     (Jinghui Wang via Colin Patrick McCabe)
 
+    HDFS-7301. TestMissingBlocksAlert should use MXBeans instead of old web UI.
+    (Zhe Zhang via wheat9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
