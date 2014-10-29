@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Set;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -50,6 +54,7 @@ public class CapacitySchedulerQueueInfo {
   protected CapacitySchedulerQueueInfoList queues;
   protected ResourceInfo resourcesUsed;
   private boolean hideReservationQueues = false;
+  protected ArrayList<String> nodeLabels = new ArrayList<String>();
 
   CapacitySchedulerQueueInfo() {
   };
@@ -74,6 +79,13 @@ public class CapacitySchedulerQueueInfo {
     if(q instanceof PlanQueue &&
        !((PlanQueue)q).showReservationsAsQueues()) {
       hideReservationQueues = true;
+    }
+    
+    // add labels
+    Set<String> labelSet = q.getAccessibleNodeLabels();
+    if (labelSet != null) {
+      nodeLabels.addAll(labelSet);
+      Collections.sort(nodeLabels);
     }
   }
 
@@ -137,5 +149,9 @@ public class CapacitySchedulerQueueInfo {
    */
   static float cap(float val, float low, float hi) {
     return Math.min(Math.max(val, low), hi);
+  }
+  
+  public ArrayList<String> getNodeLabels() {
+    return this.nodeLabels;
   }
 }
