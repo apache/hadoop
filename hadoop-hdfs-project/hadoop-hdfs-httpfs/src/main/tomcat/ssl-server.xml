@@ -70,7 +70,7 @@
          described in the APR documentation -->
     <Connector port="${httpfs.http.port}" protocol="HTTP/1.1" SSLEnabled="true"
                maxThreads="150" scheme="https" secure="true"
-               clientAuth="false" sslProtocol="TLS"
+               clientAuth="false" sslEnabledProtocols="TLSv1"
                keystoreFile="${httpfs.ssl.keystore.file}"
                keystorePass="${httpfs.ssl.keystore.pass}"/>
 
