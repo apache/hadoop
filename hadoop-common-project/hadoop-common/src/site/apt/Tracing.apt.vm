@@ -42,7 +42,7 @@ public void receiveSpan(Span span);
   Configure what SpanReceivers you'd like to use
   by putting a comma separated list of the fully-qualified class name of
   classes implementing SpanReceiver
-  in <<<hdfs-site.xml>>> property: <<<hadoop.trace.spanreceiver.classes>>>.
+  in <<<hdfs-site.xml>>> property: <<<hadoop.htrace.spanreceiver.classes>>>.
 
 +----
   <property>
