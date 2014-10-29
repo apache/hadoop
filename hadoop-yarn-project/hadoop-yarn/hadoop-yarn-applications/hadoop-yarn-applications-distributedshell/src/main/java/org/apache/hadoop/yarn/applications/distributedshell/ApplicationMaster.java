@@ -470,9 +470,6 @@ public class ApplicationMaster {
         shellScriptPathLen = Long.valueOf(envs
             .get(DSConstants.DISTRIBUTEDSHELLSCRIPTLEN));
       }
-      if (envs.containsKey(DSConstants.DISTRIBUTEDSHELLTIMELINEDOMAIN)) {
-        domainId = envs.get(DSConstants.DISTRIBUTEDSHELLTIMELINEDOMAIN);
-      }
       if (!scriptPath.isEmpty()
           && (shellScriptPathTimestamp <= 0 || shellScriptPathLen <= 0)) {
         LOG.error("Illegal values in env for shell script path" + ", path="
@@ -481,6 +478,10 @@ public class ApplicationMaster {
         throw new IllegalArgumentException(
             "Illegal values in env for shell script path");
       }
+    }
+
+    if (envs.containsKey(DSConstants.DISTRIBUTEDSHELLTIMELINEDOMAIN)) {
+      domainId = envs.get(DSConstants.DISTRIBUTEDSHELLTIMELINEDOMAIN);
     }
 
     containerMemory = Integer.parseInt(cliParser.getOptionValue(
