@@ -281,7 +281,8 @@ public class TestBlockManager {
     assertTrue("Source of replication should be one of the nodes the block " +
         "was on. Was: " + pipeline[0],
         origStorages.contains(pipeline[0]));
-    assertEquals("Should have three targets", 3, pipeline.length);
+    // Only up to two nodes can be picked per rack when there are two racks.
+    assertEquals("Should have two targets", 2, pipeline.length);
     
     boolean foundOneOnRackB = false;
     for (int i = 1; i < pipeline.length; i++) {
