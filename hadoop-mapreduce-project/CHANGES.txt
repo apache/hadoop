@@ -450,6 +450,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6142. Fixed test failures in TestJobHistoryEventHandler and
     TestMRTimelineEventHandling. (Zhijie Shen via vinodkv)
 
+    MAPREDUCE-6022. map_input_file is missing from streaming job environment.
+    (jlowe via kihwal)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

@@ -559,6 +559,32 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Sets all deprecated properties that are not currently set but have a
+   * corresponding new property that is set. Useful for iterating the
+   * properties when all deprecated properties for currently set properties
+   * need to be present.
+   */
+  public void setDeprecatedProperties() {
+    DeprecationContext deprecations = deprecationContext.get();
+    Properties props = getProps();
+    Properties overlay = getOverlay();
+    for (Map.Entry<String, DeprecatedKeyInfo> entry :
+        deprecations.getDeprecatedKeyMap().entrySet()) {
+      String depKey = entry.getKey();
+      if (!overlay.contains(depKey)) {
+        for (String newKey : entry.getValue().newKeys) {
+          String val = overlay.getProperty(newKey);
+          if (val != null) {
+            props.setProperty(depKey, val);
+            overlay.setProperty(depKey, val);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Checks for the presence of the property <code>name</code> in the
    * deprecation map. Returns the first of the list of new keys if present
    * in the deprecation map or the <code>name</code> itself. If the property
