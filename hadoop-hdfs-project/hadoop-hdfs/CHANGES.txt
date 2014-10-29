@@ -850,6 +850,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7128. Decommission slows way down when it gets towards the end.
     (Ming Ma via cnauroth)
 
+    HDFS-7287. The OfflineImageViewer (OIV) can output invalid XML depending on
+    the filename (Ravi Prakash via Colin P. McCabe)
+
   BREAKDOWN OF HDFS-6584 ARCHIVAL STORAGE
 
     HDFS-6677. Change INodeFile and FSImage to support storage policy ID.

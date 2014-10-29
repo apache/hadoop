@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
@@ -125,6 +126,10 @@ public class TestOfflineImageViewer {
       hdfs.mkdirs(emptydir);
       writtenFiles.put(emptydir.toString(), hdfs.getFileStatus(emptydir));
 
+      //Create a directory whose name should be escaped in XML
+      Path invalidXMLDir = new Path("/dirContainingInvalidXMLChar\u0000here");
+      hdfs.mkdirs(invalidXMLDir);
+
       // Get delegation tokens so we log the delegation token op
       Token<?>[] delegationTokens = hdfs
           .addDelegationTokens(TEST_RENEWER, null);
@@ -220,7 +225,7 @@ public class TestOfflineImageViewer {
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalDirs = Integer.parseInt(matcher.group(1));
     // totalDirs includes root directory, empty directory, and xattr directory
-    assertEquals(NUM_DIRS + 3, totalDirs);
+    assertEquals(NUM_DIRS + 4, totalDirs);
 
     FileStatus maxFile = Collections.max(writtenFiles.values(),
         new Comparator<FileStatus>() {
@@ -273,7 +278,7 @@ public class TestOfflineImageViewer {
 
       // verify the number of directories
       FileStatus[] statuses = webhdfs.listStatus(new Path("/"));
-      assertEquals(NUM_DIRS + 2, statuses.length); // contains empty and xattr directory
+      assertEquals(NUM_DIRS + 3, statuses.length); // contains empty and xattr directory
 
       // verify the number of files in the directory
       statuses = webhdfs.listStatus(new Path("/dir0"));
