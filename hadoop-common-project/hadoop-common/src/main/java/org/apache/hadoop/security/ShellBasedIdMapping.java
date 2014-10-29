@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.nfs.nfs3;
+package org.apache.hadoop.security;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -37,11 +37,15 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
 /**
+ * A simple shell-based implementation of {@link IdMappingServiceProvider} 
  * Map id to user name or group name. It does update every 15 minutes. Only a
  * single instance of this class is expected to be on the server.
  */
-public class IdUserGroup {
-  static final Log LOG = LogFactory.getLog(IdUserGroup.class);
+public class ShellBasedIdMapping implements IdMappingServiceProvider {
+
+  private static final Log LOG =
+      LogFactory.getLog(ShellBasedIdMapping.class);
+
   private final static String OS = System.getProperty("os.name");
 
   /** Shell commands to get users and groups */
@@ -66,24 +70,29 @@ public class IdUserGroup {
 
   private long lastUpdateTime = 0; // Last time maps were updated
   
-  public IdUserGroup(Configuration conf) throws IOException {
+  public ShellBasedIdMapping(Configuration conf,
+      final String defaultStaticIdMappingFile) throws IOException {
     long updateTime = conf.getLong(
-        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_KEY,
-        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_DEFAULT);
+        IdMappingConstant.USERGROUPID_UPDATE_MILLIS_KEY,
+        IdMappingConstant.USERGROUPID_UPDATE_MILLIS_DEFAULT);
     // Minimal interval is 1 minute
-    if (updateTime < Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_MIN) {
+    if (updateTime < IdMappingConstant.USERGROUPID_UPDATE_MILLIS_MIN) {
       LOG.info("User configured user account update time is less"
           + " than 1 minute. Use 1 minute instead.");
-      timeout = Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_MIN;
+      timeout = IdMappingConstant.USERGROUPID_UPDATE_MILLIS_MIN;
     } else {
       timeout = updateTime;
     }
     
-    String staticFilePath = conf.get(Nfs3Constant.NFS_STATIC_MAPPING_FILE_KEY,
-        Nfs3Constant.NFS_STATIC_MAPPING_FILE_DEFAULT);
+    String staticFilePath = conf.get(IdMappingConstant.STATIC_ID_MAPPING_FILE_KEY,
+        defaultStaticIdMappingFile);
     staticMappingFile = new File(staticFilePath);
     
     updateMaps();
+  }
+
+  public ShellBasedIdMapping(Configuration conf) throws IOException {
+    this(conf, IdMappingConstant.STATIC_ID_MAPPING_FILE_DEFAULT);
   }
 
   @VisibleForTesting

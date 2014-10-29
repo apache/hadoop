@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.CommitCtx;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
-import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
@@ -50,6 +49,7 @@ import org.apache.hadoop.nfs.nfs3.response.CREATE3Response;
 import org.apache.hadoop.nfs.nfs3.response.READ3Response;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
+import org.apache.hadoop.security.ShellBasedIdMapping;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.jboss.netty.channel.Channel;
@@ -141,7 +141,7 @@ public class TestWrites {
     NfsConfiguration conf = new NfsConfiguration();
     conf.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, false);
     OpenFileCtx ctx = new OpenFileCtx(fos, attr, "/dumpFilePath", dfsClient,
-        new IdUserGroup(conf), false, conf);
+        new ShellBasedIdMapping(conf), false, conf);
 
     COMMIT_STATUS ret;
 
@@ -207,7 +207,7 @@ public class TestWrites {
     NfsConfiguration conf = new NfsConfiguration();
     conf.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, true);
     OpenFileCtx ctx = new OpenFileCtx(fos, attr, "/dumpFilePath", dfsClient,
-        new IdUserGroup(conf), false, conf);
+        new ShellBasedIdMapping(conf), false, conf);
 
     COMMIT_STATUS ret;
 
@@ -273,7 +273,7 @@ public class TestWrites {
     conf.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, false);
     // Enable AIX compatibility mode.
     OpenFileCtx ctx = new OpenFileCtx(fos, attr, "/dumpFilePath", dfsClient,
-        new IdUserGroup(new NfsConfiguration()), true, conf);
+        new ShellBasedIdMapping(new NfsConfiguration()), true, conf);
     
     // Test fall-through to pendingWrites check in the event that commitOffset
     // is greater than the number of bytes we've so far flushed.
@@ -303,11 +303,11 @@ public class TestWrites {
 
     config.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, false);
     OpenFileCtx ctx = new OpenFileCtx(fos, attr, "/dumpFilePath", dfsClient,
-        new IdUserGroup(config), false, config);
+        new ShellBasedIdMapping(config), false, config);
 
     FileHandle h = new FileHandle(1); // fake handle for "/dumpFilePath"
     COMMIT_STATUS ret;
-    WriteManager wm = new WriteManager(new IdUserGroup(config), config, false);
+    WriteManager wm = new WriteManager(new ShellBasedIdMapping(config), config, false);
     assertTrue(wm.addOpenFileStream(h, ctx));
     
     // Test inactive open file context
@@ -372,11 +372,11 @@ public class TestWrites {
 
     config.setBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD, true);
     OpenFileCtx ctx = new OpenFileCtx(fos, attr, "/dumpFilePath", dfsClient,
-        new IdUserGroup(config), false, config);
+        new ShellBasedIdMapping(config), false, config);
 
     FileHandle h = new FileHandle(1); // fake handle for "/dumpFilePath"
     COMMIT_STATUS ret;
-    WriteManager wm = new WriteManager(new IdUserGroup(config), config, false);
+    WriteManager wm = new WriteManager(new ShellBasedIdMapping(config), config, false);
     assertTrue(wm.addOpenFileStream(h, ctx));
     
     // Test inactive open file context

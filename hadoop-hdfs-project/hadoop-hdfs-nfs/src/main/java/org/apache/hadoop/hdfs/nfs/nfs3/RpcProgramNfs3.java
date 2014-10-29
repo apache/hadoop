@@ -52,7 +52,6 @@ import org.apache.hadoop.nfs.NfsExports;
 import org.apache.hadoop.nfs.NfsFileType;
 import org.apache.hadoop.nfs.NfsTime;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
-import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant.NFSPROC3;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
@@ -123,7 +122,10 @@ import org.apache.hadoop.oncrpc.security.SysSecurityHandler;
 import org.apache.hadoop.oncrpc.security.Verifier;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.IdMappingConstant;
+import org.apache.hadoop.security.IdMappingServiceProvider;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.ShellBasedIdMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.JvmPauseMonitor;
@@ -146,7 +148,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
   private final NfsConfiguration config;
   private final WriteManager writeManager;
-  private final IdUserGroup iug;
+  private final IdMappingServiceProvider iug;
   private final DFSClientCache clientCache;
 
   private final NfsExports exports;
@@ -171,7 +173,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     this.config = config;
     config.set(FsPermission.UMASK_LABEL, "000");
-    iug = new IdUserGroup(config);
+    iug = new ShellBasedIdMapping(config,
+        Nfs3Constant.NFS_STATIC_MAPPING_FILE_DEFAULT);
 
     aixCompatMode = config.getBoolean(
         NfsConfigKeys.AIX_COMPAT_MODE_KEY,
@@ -341,9 +344,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     if (updateFields.contains(SetAttrField.UID)
         || updateFields.contains(SetAttrField.GID)) {
       String uname = updateFields.contains(SetAttrField.UID) ? iug.getUserName(
-          newAttr.getUid(), Nfs3Constant.UNKNOWN_USER) : null;
+          newAttr.getUid(), IdMappingConstant.UNKNOWN_USER) : null;
       String gname = updateFields.contains(SetAttrField.GID) ? iug
-          .getGroupName(newAttr.getGid(), Nfs3Constant.UNKNOWN_GROUP) : null;
+          .getGroupName(newAttr.getGid(), IdMappingConstant.UNKNOWN_GROUP) : null;
       dfsClient.setOwner(fileIdPath, uname, gname);
     }
 

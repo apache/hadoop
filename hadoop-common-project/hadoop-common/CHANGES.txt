@@ -299,6 +299,10 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11194. Ignore .keep files. (kasha)
 
+    HADOOP-11195. Move Id-Name mapping in NFS to the hadoop-common area for
+    better maintenance (Yongjun Zhang via brandonli)
+
+
   BUG FIXES
 
     HADOOP-11182. GraphiteSink emits wrong timestamps (Sascha Coenen via raviprak)
