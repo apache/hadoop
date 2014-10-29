@@ -139,13 +139,17 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       List<DatanodeStorageInfo> results = new ArrayList<DatanodeStorageInfo>();
       boolean avoidStaleNodes = stats != null
           && stats.isAvoidingStaleDataNodesForWrite();
+
+      int maxNodesAndReplicas[] = getMaxNodesPerRack(0, numOfReplicas);
+      numOfReplicas = maxNodesAndReplicas[0];
+      int maxNodesPerRack = maxNodesAndReplicas[1];
+
       for (int i = 0; i < favoredNodes.size() && results.size() < numOfReplicas; i++) {
         DatanodeDescriptor favoredNode = favoredNodes.get(i);
         // Choose a single node which is local to favoredNode.
         // 'results' is updated within chooseLocalNode
         final DatanodeStorageInfo target = chooseLocalStorage(favoredNode,
-            favoriteAndExcludedNodes, blocksize, 
-            getMaxNodesPerRack(results.size(), numOfReplicas)[1],
+            favoriteAndExcludedNodes, blocksize, maxNodesPerRack,
             results, avoidStaleNodes, storageTypes, false);
         if (target == null) {
           LOG.warn("Could not find a target for file " + src
@@ -221,6 +225,19 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         results.toArray(new DatanodeStorageInfo[results.size()]));
   }
 
+  /**
+   * Calculate the maximum number of replicas to allocate per rack. It also
+   * limits the total number of replicas to the total number of nodes in the
+   * cluster. Caller should adjust the replica count to the return value.
+   *
+   * @param numOfChosen The number of already chosen nodes.
+   * @param numOfReplicas The number of additional nodes to allocate.
+   * @return integer array. Index 0: The number of nodes allowed to allocate
+   *         in addition to already chosen nodes.
+   *         Index 1: The maximum allowed number of nodes per rack. This
+   *         is independent of the number of chosen nodes, as it is calculated
+   *         using the target number of replicas.
+   */
   private int[] getMaxNodesPerRack(int numOfChosen, int numOfReplicas) {
     int clusterSize = clusterMap.getNumOfLeaves();
     int totalNumOfReplicas = numOfChosen + numOfReplicas;
@@ -228,7 +245,26 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       numOfReplicas -= (totalNumOfReplicas-clusterSize);
       totalNumOfReplicas = clusterSize;
     }
-    int maxNodesPerRack = (totalNumOfReplicas-1)/clusterMap.getNumOfRacks()+2;
+    // No calculation needed when there is only one rack or picking one node.
+    int numOfRacks = clusterMap.getNumOfRacks();
+    if (numOfRacks == 1 || totalNumOfReplicas <= 1) {
+      return new int[] {numOfReplicas, totalNumOfReplicas};
+    }
+
+    int maxNodesPerRack = (totalNumOfReplicas-1)/numOfRacks + 2;
+    // At this point, there are more than one racks and more than one replicas
+    // to store. Avoid all replicas being in the same rack.
+    //
+    // maxNodesPerRack has the following properties at this stage.
+    //   1) maxNodesPerRack >= 2
+    //   2) (maxNodesPerRack-1) * numOfRacks > totalNumOfReplicas
+    //          when numOfRacks > 1
+    //
+    // Thus, the following adjustment will still result in a value that forces
+    // multi-rack allocation and gives enough number of total nodes.
+    if (maxNodesPerRack == totalNumOfReplicas) {
+      maxNodesPerRack--;
+    }
     return new int[] {numOfReplicas, maxNodesPerRack};
   }
 

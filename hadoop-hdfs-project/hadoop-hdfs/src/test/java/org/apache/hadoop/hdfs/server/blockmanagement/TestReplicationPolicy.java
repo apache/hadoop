@@ -430,6 +430,55 @@ public class TestReplicationPolicy {
   }
 
   /**
+   * In this testcase, there are enough total number of nodes, but only
+   * one rack is actually available.
+   * @throws Exception
+   */
+  @Test
+  public void testChooseTarget6() throws Exception {
+    DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
+        "DS-xxxx", "7.7.7.7", "/d2/r3", "host7");
+    DatanodeDescriptor newDn = storage.getDatanodeDescriptor();
+    Set<Node> excludedNodes;
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+
+    excludedNodes = new HashSet<Node>();
+    excludedNodes.add(dataNodes[0]);
+    excludedNodes.add(dataNodes[1]);
+    excludedNodes.add(dataNodes[2]);
+    excludedNodes.add(dataNodes[3]);
+
+    DatanodeStorageInfo[] targets;
+    // Only two nodes available in a rack. Try picking two nodes. Only one
+    // should return.
+    targets = chooseTarget(2, chosenNodes, excludedNodes);
+    assertEquals(1, targets.length);
+
+    // Make three nodes available in a rack.
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    bm.getDatanodeManager().getNetworkTopology().add(newDn);
+    bm.getDatanodeManager().getHeartbeatManager().addDatanode(newDn);
+    updateHeartbeatWithUsage(newDn,
+        2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+
+    // Try picking three nodes. Only two should return.
+    excludedNodes.clear();
+    excludedNodes.add(dataNodes[0]);
+    excludedNodes.add(dataNodes[1]);
+    excludedNodes.add(dataNodes[2]);
+    excludedNodes.add(dataNodes[3]);
+    chosenNodes.clear();
+    try {
+      targets = chooseTarget(3, chosenNodes, excludedNodes);
+      assertEquals(2, targets.length);
+    } finally {
+      bm.getDatanodeManager().getNetworkTopology().remove(newDn);
+    }
+  }
+
+
+  /**
    * In this testcase, it tries to choose more targets than available nodes and
    * check the result, with stale node avoidance on the write path enabled.
    * @throws Exception
