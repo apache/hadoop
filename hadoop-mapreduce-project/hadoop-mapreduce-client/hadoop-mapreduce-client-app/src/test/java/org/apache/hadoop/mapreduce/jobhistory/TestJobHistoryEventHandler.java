@@ -446,6 +446,7 @@ public class TestJobHistoryEventHandler {
     TestParams t = new TestParams(false);
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, true);
     JHEvenHandlerForTest jheh = new JHEvenHandlerForTest(t.mockAppContext, 0);
     jheh.init(conf);
     MiniYARNCluster yarnCluster = null;

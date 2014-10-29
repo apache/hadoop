@@ -38,6 +38,7 @@ public class TestMRTimelineEventHandling {
   public void testMRTimelineEventHandling() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, true);
     MiniMRYarnCluster cluster = null;
     try {
       cluster = new MiniMRYarnCluster(
