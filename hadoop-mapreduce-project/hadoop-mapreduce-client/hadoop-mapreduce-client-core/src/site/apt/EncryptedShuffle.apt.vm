@@ -54,6 +54,8 @@ Hadoop MapReduce Next Generation - Encrypted Shuffle
 *--------------------------------------+---------------------+-----------------+
 | <<<hadoop.ssl.client.conf>>>         | <<<ss-client.xml>>> | Resource file from which ssl server keystore information will be extracted. This file is looked up in the classpath, typically it should be in Hadoop conf/ directory |
 *--------------------------------------+---------------------+-----------------+
+| <<<hadoop.ssl.enabled.protocols>>>   | <<<TLSv1>>>         | The supported SSL protocols (JDK6 can use <<TLSv1>>, JDK7+ can use <<TLSv1,TLSv1.1,TLSv1.2>>) |
+*--------------------------------------+---------------------+-----------------+
 
   <<IMPORTANT:>> Currently requiring client certificates should be set to false.
   Refer the {{{ClientCertificates}Client Certificates}} section for details.
