@@ -235,7 +235,9 @@ public abstract class PipeMapRed {
     }
   }
 
-  void addJobConfToEnvironment(JobConf conf, Properties env) {
+  void addJobConfToEnvironment(JobConf jobconf, Properties env) {
+    JobConf conf = new JobConf(jobconf);
+    conf.setDeprecatedProperties();
     Iterator it = conf.iterator();
     while (it.hasNext()) {
       Map.Entry en = (Map.Entry) it.next();
