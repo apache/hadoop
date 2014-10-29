@@ -856,6 +856,7 @@ Release 2.6.0 - UNRELEASED
     HDFS-7300. The getMaxNodesPerRack() method in BlockPlacementPolicyDefault
     is flawed (kihwal)
 
+    HDFS-7305. NPE seen in wbhdfs FS while running SLive. (jing9)
 
   BREAKDOWN OF HDFS-6584 ARCHIVAL STORAGE
 
