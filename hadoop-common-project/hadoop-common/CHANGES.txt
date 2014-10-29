@@ -30,6 +30,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7227. Fix findbugs warning about NP_DEREFERENCE_OF_READLINE_VALUE in
     SpanReceiverHost (cmccabe)
 
+    HADOOP-11186. documentation should talk about
+    hadoop.htrace.spanreceiver.classes, not hadoop.trace.spanreceiver.classes (cmccabe)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
