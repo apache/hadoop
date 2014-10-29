@@ -39,6 +39,12 @@ public class TestFairSchedulerConfiguration {
         parseResourceConfigValue("2vcores,1024mb"));
     assertEquals(BuilderUtils.newResource(1024, 2),
         parseResourceConfigValue("1024mb,2vcores"));
+    assertEquals(BuilderUtils.newResource(1024, 2),
+        parseResourceConfigValue("1024   mb, 2    vcores"));
+    assertEquals(BuilderUtils.newResource(1024, 2),
+        parseResourceConfigValue("1024 Mb, 2 vCores"));
+    assertEquals(BuilderUtils.newResource(1024, 2),
+        parseResourceConfigValue("  1024 mb, 2 vcores  "));
   }
   
   @Test(expected = AllocationConfigurationException.class)

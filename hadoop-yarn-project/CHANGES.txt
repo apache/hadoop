@@ -53,6 +53,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2641. Decommission nodes on -refreshNodes instead of next 
     NM-RM heartbeat. (Zhihai Xu via kasha)
 
+    YARN-2742. FairSchedulerConfiguration should allow extra spaces
+    between value and unit. (Wei Yan via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
