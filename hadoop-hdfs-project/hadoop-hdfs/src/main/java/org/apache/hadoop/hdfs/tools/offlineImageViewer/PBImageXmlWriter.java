@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
+import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.collect.Lists;
@@ -410,7 +411,7 @@ public final class PBImageXmlWriter {
   }
 
   private PBImageXmlWriter o(final String e, final Object v) {
-    out.print("<" + e + ">" + v + "</" + e + ">");
+    out.print("<" + e + ">" + XMLUtils.mangleXmlString(v.toString()) + "</" + e + ">");
     return this;
   }
 }

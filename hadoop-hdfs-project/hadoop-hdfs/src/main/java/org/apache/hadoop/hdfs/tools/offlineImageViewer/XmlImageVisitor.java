@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 import java.io.IOException;
 import java.util.LinkedList;
 
+import org.apache.hadoop.hdfs.util.XMLUtils;
 /**
  * An XmlImageVisitor walks over an fsimage structure and writes out
  * an equivalent XML document that contains the fsimage's components.
@@ -83,6 +84,6 @@ public class XmlImageVisitor extends TextWriterImageVisitor {
   }
 
   private void writeTag(String tag, String value) throws IOException {
-    write("<" + tag + ">" + value + "</" + tag + ">\n");
+    write("<" + tag + ">" + XMLUtils.mangleXmlString(value) + "</" + tag + ">\n");
   }
 }
