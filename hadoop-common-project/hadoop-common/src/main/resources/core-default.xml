@@ -1366,6 +1366,14 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>hadoop.ssl.enabled.protocols</name>
+  <value>TLSv1</value>
+  <description>
+    Protocols supported by the ssl.
+  </description>
+</property>
+
+<property>
   <name>hadoop.jetty.logs.serve.aliases</name>
   <value>true</value>
   <description>
