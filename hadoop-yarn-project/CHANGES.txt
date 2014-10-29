@@ -343,6 +343,8 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2760. Remove 'experimental' from FairScheduler docs. (Harsh J via kasha)
 
+    YARN-2503. Added node lablels in web UI. (Wangda Tan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
