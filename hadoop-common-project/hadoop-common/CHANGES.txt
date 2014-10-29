@@ -669,6 +669,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11170. ZKDelegationTokenSecretManager fails to renewToken created by 
     a peer. (Arun Suresh and Gregory Chanan via kasha)
 
+    HADOOP-11217. Disable SSLv3 in KMS. (Robert Kanter via kasha)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
