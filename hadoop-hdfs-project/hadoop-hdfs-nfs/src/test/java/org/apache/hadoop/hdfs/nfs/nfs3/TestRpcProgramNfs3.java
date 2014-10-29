@@ -89,6 +89,7 @@ import org.apache.hadoop.nfs.nfs3.response.SYMLINK3Response;
 import org.apache.hadoop.nfs.nfs3.response.WRITE3Response;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
+import org.apache.hadoop.security.IdMappingConstant;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.jboss.netty.channel.Channel;
@@ -802,7 +803,7 @@ public class TestRpcProgramNfs3 {
         Nfs3Constant.NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY, 0) == 1000);
 
     conf.setInt("hadoop.nfs.userupdate.milly", 10);
-    assertTrue(conf.getInt(Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_KEY, 0) == 10);
+    assertTrue(conf.getInt(IdMappingConstant.USERGROUPID_UPDATE_MILLIS_KEY, 0) == 10);
 
     conf.set("dfs.nfs3.dump.dir", "/nfs/tmp");
     assertTrue(conf.get(NfsConfigKeys.DFS_NFS_FILE_DUMP_DIR_KEY).equals(

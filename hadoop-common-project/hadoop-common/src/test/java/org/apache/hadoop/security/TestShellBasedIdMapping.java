@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.nfs.nfs3;
+package org.apache.hadoop.security;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -27,14 +27,14 @@ import java.io.OutputStream;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.nfs.nfs3.IdUserGroup.PassThroughMap;
-import org.apache.hadoop.nfs.nfs3.IdUserGroup.StaticMapping;
+import org.apache.hadoop.security.ShellBasedIdMapping.PassThroughMap;
+import org.apache.hadoop.security.ShellBasedIdMapping.StaticMapping;
 import org.junit.Test;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
-public class TestIdUserGroup {
+public class TestShellBasedIdMapping {
   
   private static final Map<Integer, Integer> EMPTY_PASS_THROUGH_MAP =
       new PassThroughMap<Integer>();
@@ -57,7 +57,7 @@ public class TestIdUserGroup {
     OutputStream out = new FileOutputStream(tempStaticMapFile);
     out.write(staticMapFileContents.getBytes());
     out.close();
-    StaticMapping parsedMap = IdUserGroup.parseStaticMap(tempStaticMapFile);
+    StaticMapping parsedMap = ShellBasedIdMapping.parseStaticMap(tempStaticMapFile);
     
     assertEquals(10, (int)parsedMap.uidMapping.get(100));
     assertEquals(11, (int)parsedMap.uidMapping.get(201));
@@ -93,9 +93,9 @@ public class TestIdUserGroup {
         + "mapred2:x:498\""
         + " | cut -d: -f1,3";
 
-    IdUserGroup.updateMapInternal(uMap, "user", GET_ALL_USERS_CMD, ":",
+    ShellBasedIdMapping.updateMapInternal(uMap, "user", GET_ALL_USERS_CMD, ":",
         uidStaticMap);
-    IdUserGroup.updateMapInternal(gMap, "group", GET_ALL_GROUPS_CMD, ":",
+    ShellBasedIdMapping.updateMapInternal(gMap, "group", GET_ALL_GROUPS_CMD, ":",
         gidStaticMap);
     
     assertEquals("hdfs", uMap.get(10));
@@ -133,7 +133,7 @@ public class TestIdUserGroup {
     BiMap<Integer, String> uMap = HashBiMap.create();
     BiMap<Integer, String> gMap = HashBiMap.create();
 
-    IdUserGroup.updateMapInternal(uMap, "user", GET_ALL_USERS_CMD, ":",
+    ShellBasedIdMapping.updateMapInternal(uMap, "user", GET_ALL_USERS_CMD, ":",
         EMPTY_PASS_THROUGH_MAP);
     assertEquals(5, uMap.size());
     assertEquals("root", uMap.get(0));
@@ -142,7 +142,7 @@ public class TestIdUserGroup {
     assertEquals("bin", uMap.get(2));
     assertEquals("daemon", uMap.get(1));
 
-    IdUserGroup.updateMapInternal(gMap, "group", GET_ALL_GROUPS_CMD, ":",
+    ShellBasedIdMapping.updateMapInternal(gMap, "group", GET_ALL_GROUPS_CMD, ":",
         EMPTY_PASS_THROUGH_MAP);
     assertTrue(gMap.size() == 3);
     assertEquals("hdfs",gMap.get(11501));
@@ -174,7 +174,7 @@ public class TestIdUserGroup {
     BiMap<Integer, String> uMap = HashBiMap.create();
     BiMap<Integer, String> gMap = HashBiMap.create();
 
-    IdUserGroup.updateMapInternal(uMap, "user", GET_ALL_USERS_CMD, ":",
+    ShellBasedIdMapping.updateMapInternal(uMap, "user", GET_ALL_USERS_CMD, ":",
         EMPTY_PASS_THROUGH_MAP);
     assertTrue(uMap.size() == 7);
     assertEquals("nfsnobody", uMap.get(-2));
@@ -185,7 +185,7 @@ public class TestIdUserGroup {
     assertEquals("hdfs",uMap.get(11501));
     assertEquals("daemon", uMap.get(2));
 
-    IdUserGroup.updateMapInternal(gMap, "group", GET_ALL_GROUPS_CMD, ":",
+    ShellBasedIdMapping.updateMapInternal(gMap, "group", GET_ALL_GROUPS_CMD, ":",
         EMPTY_PASS_THROUGH_MAP);
     assertTrue(gMap.size() == 7);
     assertEquals("hdfs",gMap.get(11501));
@@ -199,19 +199,19 @@ public class TestIdUserGroup {
 
   @Test
   public void testUserUpdateSetting() throws IOException {
-    IdUserGroup iug = new IdUserGroup(new Configuration());
+    ShellBasedIdMapping iug = new ShellBasedIdMapping(new Configuration());
     assertEquals(iug.getTimeout(),
-        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_DEFAULT);
+        IdMappingConstant.USERGROUPID_UPDATE_MILLIS_DEFAULT);
 
     Configuration conf = new Configuration();
-    conf.setLong(Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_KEY, 0);
-    iug = new IdUserGroup(conf);
-    assertEquals(iug.getTimeout(), Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_MIN);
+    conf.setLong(IdMappingConstant.USERGROUPID_UPDATE_MILLIS_KEY, 0);
+    iug = new ShellBasedIdMapping(conf);
+    assertEquals(iug.getTimeout(), IdMappingConstant.USERGROUPID_UPDATE_MILLIS_MIN);
 
-    conf.setLong(Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_KEY,
-        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_DEFAULT * 2);
-    iug = new IdUserGroup(conf);
+    conf.setLong(IdMappingConstant.USERGROUPID_UPDATE_MILLIS_KEY,
+        IdMappingConstant.USERGROUPID_UPDATE_MILLIS_DEFAULT * 2);
+    iug = new ShellBasedIdMapping(conf);
     assertEquals(iug.getTimeout(),
-        Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_DEFAULT * 2);
+        IdMappingConstant.USERGROUPID_UPDATE_MILLIS_DEFAULT * 2);
   }
 }
