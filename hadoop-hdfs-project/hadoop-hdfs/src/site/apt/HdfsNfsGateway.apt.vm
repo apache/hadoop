@@ -367,7 +367,7 @@ HDFS NFS Gateway
   file in the event one wishes to access the HDFS NFS Gateway from a system with
   a completely disparate set of UIDs/GIDs. By default this file is located at
   "/etc/nfs.map", but a custom location can be configured by setting the
-  "nfs.static.mapping.file" property to the path of the static mapping file.
+  "static.id.mapping.file" property to the path of the static mapping file.
   The format of the static mapping file is similar to what is described in the
   exports(5) manual page, but roughly it is:
 

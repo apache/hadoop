@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.nfs.conf;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
+import org.apache.hadoop.security.IdMappingConstant;
 
 /**
  * Adds deprecated keys into the configuration.
@@ -41,7 +42,11 @@ public class NfsConfiguration extends HdfsConfiguration {
         new DeprecationDelta("dfs.nfs.exports.cache.expirytime.millis",
             Nfs3Constant.NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY),
         new DeprecationDelta("hadoop.nfs.userupdate.milly",
-            Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_KEY),
+            IdMappingConstant.USERGROUPID_UPDATE_MILLIS_KEY),
+        new DeprecationDelta(Nfs3Constant.NFS_USERGROUP_UPDATE_MILLIS_KEY,
+            IdMappingConstant.USERGROUPID_UPDATE_MILLIS_KEY),
+        new DeprecationDelta(Nfs3Constant.NFS_STATIC_MAPPING_FILE_KEY,
+            IdMappingConstant.STATIC_ID_MAPPING_FILE_KEY),
         new DeprecationDelta("dfs.nfs3.enableDump",
             NfsConfigKeys.DFS_NFS_FILE_DUMP_KEY),
         new DeprecationDelta("dfs.nfs3.dump.dir",

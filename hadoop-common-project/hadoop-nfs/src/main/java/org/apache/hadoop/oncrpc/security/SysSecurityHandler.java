@@ -17,24 +17,26 @@
  */
 package org.apache.hadoop.oncrpc.security;
 
-import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.oncrpc.RpcCall;
+import org.apache.hadoop.security.IdMappingConstant;
+import org.apache.hadoop.security.IdMappingServiceProvider;
 
 public class SysSecurityHandler extends SecurityHandler {
   
-  private final IdUserGroup iug;
+  private final IdMappingServiceProvider iug;
   private final CredentialsSys mCredentialsSys;
   
   public SysSecurityHandler(CredentialsSys credentialsSys,
-      IdUserGroup iug) {
+      IdMappingServiceProvider iug) {
     this.mCredentialsSys = credentialsSys;
     this.iug = iug;
   }
   
   @Override
   public String getUser() {
-    return iug.getUserName(mCredentialsSys.getUID(), Nfs3Constant.UNKNOWN_USER);
+    return iug.getUserName(mCredentialsSys.getUID(),
+        IdMappingConstant.UNKNOWN_USER);
   }
 
   @Override

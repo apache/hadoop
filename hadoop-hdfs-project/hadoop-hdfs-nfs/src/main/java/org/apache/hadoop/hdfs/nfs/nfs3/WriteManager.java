@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.nfs.NfsFileType;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
-import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
@@ -41,6 +40,7 @@ import org.apache.hadoop.nfs.nfs3.response.WRITE3Response;
 import org.apache.hadoop.nfs.nfs3.response.WccData;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
+import org.apache.hadoop.security.IdMappingServiceProvider;
 import org.jboss.netty.channel.Channel;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -52,7 +52,7 @@ public class WriteManager {
   public static final Log LOG = LogFactory.getLog(WriteManager.class);
 
   private final NfsConfiguration config;
-  private final IdUserGroup iug;
+  private final IdMappingServiceProvider iug;
  
   private AsyncDataService asyncDataService;
   private boolean asyncDataServiceStarted = false;
@@ -80,7 +80,7 @@ public class WriteManager {
     return fileContextCache.put(h, ctx);
   }
   
-  WriteManager(IdUserGroup iug, final NfsConfiguration config,
+  WriteManager(IdMappingServiceProvider iug, final NfsConfiguration config,
       boolean aixCompatMode) {
     this.iug = iug;
     this.config = config;
@@ -315,7 +315,7 @@ public class WriteManager {
    * If the file is in cache, update the size based on the cached data size
    */
   Nfs3FileAttributes getFileAttr(DFSClient client, FileHandle fileHandle,
-      IdUserGroup iug) throws IOException {
+      IdMappingServiceProvider iug) throws IOException {
     String fileIdPath = Nfs3Utils.getFileIdPath(fileHandle);
     Nfs3FileAttributes attr = Nfs3Utils.getFileAttr(client, fileIdPath, iug);
     if (attr != null) {

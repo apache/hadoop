@@ -194,15 +194,11 @@ public class Nfs3Constant {
   public static final String NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY = "nfs.exports.cache.expirytime.millis";
   public static final long NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT = 15 * 60 * 1000; // 15 min
 
-  /** Do user/group update every 15 minutes by default, minimum 1 minute */
+  @Deprecated
   public final static String NFS_USERGROUP_UPDATE_MILLIS_KEY = "nfs.usergroup.update.millis";
-  public final static long NFS_USERGROUP_UPDATE_MILLIS_DEFAULT = 15 * 60 * 1000; // ms
-  final static long NFS_USERGROUP_UPDATE_MILLIS_MIN = 1 * 60 * 1000; // ms
-  
-  public final static String UNKNOWN_USER = "nobody";
-  public final static String UNKNOWN_GROUP = "nobody";
   
   // Used for finding the configured static mapping file.
+  @Deprecated
   public static final String NFS_STATIC_MAPPING_FILE_KEY = "nfs.static.mapping.file";
   public static final String NFS_STATIC_MAPPING_FILE_DEFAULT = "/etc/nfs.map";
 }

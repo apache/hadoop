@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.nfs.nfs3.WriteCtx.DataState;
 import org.apache.hadoop.io.BytesWritable.Comparator;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
-import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
@@ -55,6 +54,7 @@ import org.apache.hadoop.nfs.nfs3.response.WccAttr;
 import org.apache.hadoop.nfs.nfs3.response.WccData;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
+import org.apache.hadoop.security.IdMappingServiceProvider;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 import org.jboss.netty.channel.Channel;
@@ -101,7 +101,7 @@ class OpenFileCtx {
   }
 
   private final DFSClient client;
-  private final IdUserGroup iug;
+  private final IdMappingServiceProvider iug;
   
   // The stream status. False means the stream is closed.
   private volatile boolean activeState;
@@ -223,13 +223,13 @@ class OpenFileCtx {
   }
   
   OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
-      String dumpFilePath, DFSClient client, IdUserGroup iug) {
+      String dumpFilePath, DFSClient client, IdMappingServiceProvider iug) {
     this(fos, latestAttr, dumpFilePath, client, iug, false,
         new NfsConfiguration());
   }
   
   OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
-      String dumpFilePath, DFSClient client, IdUserGroup iug,
+      String dumpFilePath, DFSClient client, IdMappingServiceProvider iug,
       boolean aixCompatMode, NfsConfiguration config) {
     this.fos = fos;
     this.latestAttr = latestAttr;
@@ -441,7 +441,7 @@ class OpenFileCtx {
   
   public void receivedNewWrite(DFSClient dfsClient, WRITE3Request request,
       Channel channel, int xid, AsyncDataService asyncDataService,
-      IdUserGroup iug) {
+      IdMappingServiceProvider iug) {
     
     if (!activeState) {
       LOG.info("OpenFileCtx is inactive, fileId:"
@@ -596,7 +596,7 @@ class OpenFileCtx {
   
   /** Process an overwrite write request */
   private void processOverWrite(DFSClient dfsClient, WRITE3Request request,
-      Channel channel, int xid, IdUserGroup iug) {
+      Channel channel, int xid, IdMappingServiceProvider iug) {
     WccData wccData = new WccData(latestAttr.getWccAttr(), null);
     long offset = request.getOffset();
     int count = request.getCount();
@@ -655,7 +655,7 @@ class OpenFileCtx {
 
   private void receivedNewWriteInternal(DFSClient dfsClient,
       WRITE3Request request, Channel channel, int xid,
-      AsyncDataService asyncDataService, IdUserGroup iug) {
+      AsyncDataService asyncDataService, IdMappingServiceProvider iug) {
     WriteStableHow stableHow = request.getStableHow();
     WccAttr preOpAttr = latestAttr.getWccAttr();
     int count = request.getCount();
@@ -704,7 +704,7 @@ class OpenFileCtx {
    */
   private WRITE3Response processPerfectOverWrite(DFSClient dfsClient,
       long offset, int count, WriteStableHow stableHow, byte[] data,
-      String path, WccData wccData, IdUserGroup iug) {
+      String path, WccData wccData, IdMappingServiceProvider iug) {
     WRITE3Response response;
 
     // Read the content back

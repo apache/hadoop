@@ -24,12 +24,12 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.nfs.NfsFileType;
 import org.apache.hadoop.nfs.NfsTime;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
-import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.response.WccAttr;
 import org.apache.hadoop.nfs.nfs3.response.WccData;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.security.IdMappingServiceProvider;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 
@@ -59,7 +59,7 @@ public class Nfs3Utils {
   }
 
   public static Nfs3FileAttributes getNfs3FileAttrFromFileStatus(
-      HdfsFileStatus fs, IdUserGroup iug) {
+      HdfsFileStatus fs, IdMappingServiceProvider iug) {
     /**
      * Some 32bit Linux client has problem with 64bit fileId: it seems the 32bit
      * client takes only the lower 32bit of the fileId and treats it as signed
@@ -75,7 +75,7 @@ public class Nfs3Utils {
   }
 
   public static Nfs3FileAttributes getFileAttr(DFSClient client,
-      String fileIdPath, IdUserGroup iug) throws IOException {
+      String fileIdPath, IdMappingServiceProvider iug) throws IOException {
     HdfsFileStatus fs = getFileStatus(client, fileIdPath);
     return fs == null ? null : getNfs3FileAttrFromFileStatus(fs, iug);
   }
@@ -100,7 +100,8 @@ public class Nfs3Utils {
 
   // TODO: maybe not efficient
   public static WccData createWccData(final WccAttr preOpAttr,
-      DFSClient dfsClient, final String fileIdPath, final IdUserGroup iug)
+      DFSClient dfsClient, final String fileIdPath,
+      final IdMappingServiceProvider iug)
       throws IOException {
     Nfs3FileAttributes postOpDirAttr = getFileAttr(dfsClient, fileIdPath, iug);
     return new WccData(preOpAttr, postOpDirAttr);
