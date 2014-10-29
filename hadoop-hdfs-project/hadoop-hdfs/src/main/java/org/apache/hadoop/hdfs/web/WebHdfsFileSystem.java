@@ -354,7 +354,7 @@ public class WebHdfsFileSystem extends FileSystem
       // extract UGI-related exceptions and unwrap InvalidToken
       // the NN mangles these exceptions but the DN does not and may need
       // to re-fetch a token if either report the token is expired
-      if (re.getMessage().startsWith(
+      if (re.getMessage() != null && re.getMessage().startsWith(
           SecurityUtil.FAILED_TO_GET_UGI_MSG_HEADER)) {
         String[] parts = re.getMessage().split(":\\s+", 3);
         re = new RemoteException(parts[1], parts[2]);
