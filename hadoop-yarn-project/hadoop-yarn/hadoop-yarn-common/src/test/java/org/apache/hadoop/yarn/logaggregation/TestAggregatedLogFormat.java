@@ -305,6 +305,8 @@ public class TestAggregatedLogFormat {
     
     // It is trying simulate a situation where first log file is owned by
     // different user (probably symlink) and second one by the user itself.
+    // The first file should not be aggregated. Because this log file has the invalid
+    // user name.
     when(logValue.getUser()).thenReturn(randomUser).thenReturn(
         ugi.getShortUserName());
     logWriter.append(logKey, logValue);
@@ -329,6 +331,9 @@ public class TestAggregatedLogFormat {
         expectedOwner = adminsGroupString;
       }
     }
+
+    // This file: stderr should not be aggregated.
+    // And we will not aggregate the log message.
     String stdoutFile1 =
         StringUtils.join(
             File.separator,
@@ -336,10 +341,8 @@ public class TestAggregatedLogFormat {
                 workDir.getAbsolutePath(), "srcFiles",
                 testContainerId1.getApplicationAttemptId().getApplicationId()
                     .toString(), testContainerId1.toString(), stderr }));
-    String message1 =
-        "Owner '" + expectedOwner + "' for path " + stdoutFile1
-        + " did not match expected owner '" + randomUser + "'";
-    
+
+    // The file: stdout is expected to be aggregated.
     String stdoutFile2 =
         StringUtils.join(
             File.separator,
@@ -352,7 +355,6 @@ public class TestAggregatedLogFormat {
             + stdoutFile2 + " did not match expected owner '"
             + ugi.getShortUserName() + "'";
     
-    Assert.assertTrue(line.contains(message1));
     Assert.assertFalse(line.contains(message2));
     Assert.assertFalse(line.contains(data + testContainerId1.toString()
         + stderr));

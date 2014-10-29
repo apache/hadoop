@@ -723,6 +723,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2741. Made NM web UI serve logs on the drive other than C: on Windows. (Craig
     Welch via zjshen)
 
+    YARN-2747. Fixed the test failure of TestAggregatedLogFormat when native I/O is
+    enabled. (Xuan Gong via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
