@@ -70,7 +70,7 @@
          described in the APR documentation -->
     <Connector port="${kms.http.port}" protocol="HTTP/1.1" SSLEnabled="true"
                maxThreads="${kms.max.threads}" scheme="https" secure="true"
-               clientAuth="false" sslProtocol="TLS"
+               clientAuth="false" sslEnabledProtocols="TLSv1"
                keystoreFile="${kms.ssl.keystore.file}"
                keystorePass="${kms.ssl.keystore.pass}"/>
 
