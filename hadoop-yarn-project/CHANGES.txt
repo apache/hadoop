@@ -795,6 +795,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2747. Fixed the test failure of TestAggregatedLogFormat when native I/O is
     enabled. (Xuan Gong via zjshen)
 
+    YARN-2769. Fixed the problem that timeline domain is not set in distributed shell
+    AM when using shell_command on Windows. (Varun Vasudev via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
