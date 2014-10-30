@@ -152,17 +152,21 @@
     or, in some unlikely case, the upgrade fails (due to bugs in the newer release),
     administrators may choose to downgrade HDFS back to the pre-upgrade release,
     or rollback HDFS to the pre-upgrade release and the pre-upgrade state.
-    Both downgrade and rollback require cluster downtime and are not done in a rolling fashion.
   </p>
   <p>
-    Note that downgrade and rollback are possible only after a rolling upgrade is started and
+    Note that downgrade can be done in a rolling fashion but rollback cannot.
+    Rollback requires cluster downtime.
+  </p>
+  <p>
+    Note also that downgrade and rollback are possible only after a rolling upgrade is started and
     before the upgrade is terminated.
     An upgrade can be terminated by either finalize, downgrade or rollback.
     Therefore, it may not be possible to perform rollback after finalize or downgrade,
     or to perform downgrade after finalize.
   </p>
+  </section>
 
-  <subsection name="Downgrade" id="Downgrade">
+  <section name="Downgrade" id="Downgrade">
   <p>
     <em>Downgrade</em> restores the software back to the pre-upgrade release
     and preserves the user data.
@@ -174,21 +178,70 @@
     A newer release is downgradable to the pre-upgrade release
     only if both the namenode layout version and the datenode layout version
     are not changed between these two releases.
-    Below are the steps for downgrade:
   </p>
-  <ul>
-    <li>Downgrade HDFS<ol>
+
+  <subsection name="Downgrade without Downtime" id="DowngradeWithoutDowntime">
+  <p>
+    In a HA cluster,
+    when a rolling upgrade from an old software release to a new software release is in progress,
+    it is possible to downgrade, in a rolling fashion, the upgraded machines back to the old software release.
+    Same as before, suppose <em>NN1</em> and <em>NN2</em> are respectively in active and standby states.
+    Below are the steps for rolling downgrade:
+  </p>
+  <ol>
+    <li>Downgrade <em>DNs</em><ol>
+      <li>Choose a small subset of datanodes (e.g. all datanodes under a particular rack).</li>
+      <ol>
+        <li>Run "<code><a href="#dfsadmin_-shutdownDatanode">hdfs dfsadmin -shutdownDatanode &lt;DATANODE_HOST:IPC_PORT&gt; upgrade</a></code>"
+          to shutdown one of the chosen datanodes.</li>
+        <li>Run "<code><a href="#dfsadmin_-getDatanodeInfo">hdfs dfsadmin -getDatanodeInfo &lt;DATANODE_HOST:IPC_PORT&gt;</a></code>"
+          to check and wait for the datanode to shutdown.</li>
+        <li>Downgrade and restart the datanode.</li>
+        <li>Perform the above steps for all the chosen datanodes in the subset in parallel.</li>
+      </ol>
+      <li>Repeat the above steps until all upgraded datanodes in the cluster are downgraded.</li>
+    </ol></li>
+    <li>Downgrade Active and Standby <em>NNs</em><ol>
+      <li>Shutdown and downgrade <em>NN2</em>.</li>
+      <li>Start <em>NN2</em> as standby normally. (Note that it is incorrect to use the
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade downgrade</code></a>"
+        option here.)
+      </li>
+      <li>Failover from <em>NN1</em> to <em>NN2</em>
+        so that <em>NN2</em> becomes active and <em>NN1</em> becomes standby.</li>
+      <li>Shutdown and upgrade <em>NN1</em>.</li>
+      <li>Start <em>NN1</em> as standby normally. (Note that it is incorrect to use the
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade downgrade</code></a>"
+        option here.)
+      </li>
+    </ol></li>
+    <li>Finalize Rolling Downgrade<ul>
+      <li>Run "<code><a href="#dfsadmin_-rollingUpgrade">hdfs dfsadmin -rollingUpgrade finalize</a></code>"
+       to finalize the rolling downgrade.</li>
+    </ul></li>
+  </ol>
+  <p>
+    Note that the datanodes must be downgraded before downgrading the namenodes
+    since protocols may be changed in a backward compatible manner but not forward compatible,
+    i.e. old datanodes can talk to the new namenodes but not vice versa.
+  </p>
+  </subsection>
+  <subsection name="Downgrade with Downtime" id="DowngradeWithDowntime">
+  <p>
+    Administrator may choose to first shutdown the cluster and then downgrade it.
+    The following are the steps:
+  </p>
+  <ol>
       <li>Shutdown all <em>NNs</em> and <em>DNs</em>.</li>
       <li>Restore the pre-upgrade release in all machines.</li>
       <li>Start <em>NNs</em> with the 
         "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade downgrade</code></a>" option.</li>
       <li>Start <em>DNs</em> normally.</li>
-    </ol></li>
-  </ul>
-
+  </ol>
   </subsection>
+  </section>
 
-  <subsection name="Rollback" id="Rollback">
+  <section name="Rollback" id="Rollback">
   <p>
     <em>Rollback</em> restores the software back to the pre-upgrade release
     but also reverts the user data back to the pre-upgrade state.
@@ -198,6 +251,7 @@
   </p>
   <p>
     Rollback from a newer release to the pre-upgrade release is always supported.
+    However, it cannot be done in a rolling fashion.  It requires cluster downtime.
     Below are the steps for rollback:
   </p>
   <ul>
@@ -210,7 +264,6 @@
     </ol></li>
   </ul>
 
-  </subsection>
   </section>
   
   <section name="Commands and Startup Options for Rolling Upgrade" id="dfsadminCommands">
@@ -248,7 +301,7 @@
   <p>
     Note that the command does not wait for the datanode shutdown to complete.
     The "<a href="#dfsadmin_-getDatanodeInfo">dfsadmin -getDatanodeInfo</a>"
-   command can be used for checking if the datanode shutdown is complete.
+   command can be used for checking if the datanode shutdown is completed.
   </p>
   </subsection>
 
