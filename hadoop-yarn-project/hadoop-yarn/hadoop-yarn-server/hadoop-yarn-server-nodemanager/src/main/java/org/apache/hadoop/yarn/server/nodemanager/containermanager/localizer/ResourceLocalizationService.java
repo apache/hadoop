@@ -1324,7 +1324,7 @@ public class ResourceLocalizationService extends CompositeService
     RemoteIterator<FileStatus> userDirStatus = lfs.listStatus(userDirPath);
     FileDeletionTask dependentDeletionTask =
         del.createFileDeletionTask(null, userDirPath, new Path[] {});
-    if (userDirStatus != null) {
+    if (userDirStatus != null && userDirStatus.hasNext()) {
       List<FileDeletionTask> deletionTasks = new ArrayList<FileDeletionTask>();
       while (userDirStatus.hasNext()) {
         FileStatus status = userDirStatus.next();

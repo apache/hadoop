@@ -35,7 +35,9 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
@@ -190,34 +192,9 @@ public class TestNodeManagerReboot {
         ResourceLocalizationService.NM_PRIVATE_DIR) > 0);
 
     // restart the NodeManager
-    nm.stop();
-    nm = new MyNodeManager();
-    nm.start();
-
-    numTries = 0;
-    while ((numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-      ContainerLocalizer.USERCACHE) > 0
-        || numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-          ContainerLocalizer.FILECACHE) > 0 || numOfLocalDirs(
-      nmLocalDir.getAbsolutePath(), ResourceLocalizationService.NM_PRIVATE_DIR) > 0)
-        && numTries < MAX_TRIES) {
-      try {
-        Thread.sleep(500);
-      } catch (InterruptedException ex) {
-        // Do nothing
-      }
-      numTries++;
-    }
-
-    Assert
-      .assertTrue(
-        "After NM reboots, all local files should be deleted",
-        numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-          ContainerLocalizer.USERCACHE) == 0
-            && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-              ContainerLocalizer.FILECACHE) == 0
-            && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
-              ResourceLocalizationService.NM_PRIVATE_DIR) == 0);
+    restartNM(MAX_TRIES);
+    checkNumOfLocalDirs();
+    
     verify(delService, times(1)).delete(
       (String) isNull(),
       argThat(new PathInclude(ResourceLocalizationService.NM_PRIVATE_DIR
@@ -230,8 +207,52 @@ public class TestNodeManagerReboot {
     verify(delService, times(1)).scheduleFileDeletionTask(
       argThat(new FileDeletionInclude(null, ContainerLocalizer.USERCACHE
           + "_DEL_", new String[] {})));
+    
+    // restart the NodeManager again
+    // this time usercache directory should be empty
+    restartNM(MAX_TRIES);
+    checkNumOfLocalDirs();
+    
   }
 
+  private void restartNM(int maxTries) {
+    nm.stop();
+    nm = new MyNodeManager();
+    nm.start();
+
+    int numTries = 0;
+    while ((numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+      ContainerLocalizer.USERCACHE) > 0
+        || numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+          ContainerLocalizer.FILECACHE) > 0 || numOfLocalDirs(
+      nmLocalDir.getAbsolutePath(), ResourceLocalizationService.NM_PRIVATE_DIR) > 0)
+        && numTries < maxTries) {
+      try {
+        Thread.sleep(500);
+      } catch (InterruptedException ex) {
+        // Do nothing
+      }
+      numTries++;
+    }
+  }
+  
+  private void checkNumOfLocalDirs() throws IOException {
+    Assert
+      .assertTrue(
+        "After NM reboots, all local files should be deleted",
+        numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+          ContainerLocalizer.USERCACHE) == 0
+            && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+              ContainerLocalizer.FILECACHE) == 0
+            && numOfLocalDirs(nmLocalDir.getAbsolutePath(),
+              ResourceLocalizationService.NM_PRIVATE_DIR) == 0);
+    
+    Assert
+    .assertTrue(
+      "After NM reboots, usercache_DEL_* directory should be deleted",
+      numOfUsercacheDELDirs(nmLocalDir.getAbsolutePath()) == 0);
+  }
+  
   private int numOfLocalDirs(String localDir, String localSubDir) {
     File[] listOfFiles = new File(localDir, localSubDir).listFiles();
     if (listOfFiles == null) {
@@ -239,6 +260,19 @@ public class TestNodeManagerReboot {
     } else {
       return listOfFiles.length;
     }
+  }
+  
+  private int numOfUsercacheDELDirs(String localDir) throws IOException {
+    int count = 0;
+    RemoteIterator<FileStatus> fileStatus = localFS.listStatus(new Path(localDir));
+    while (fileStatus.hasNext()) {
+      FileStatus status = fileStatus.next();
+      if (status.getPath().getName().matches(".*" +
+          ContainerLocalizer.USERCACHE + "_DEL_.*")) {
+        count++;
+      }
+    }
+    return count;
   }
 
   private void createFiles(String dir, String subDir, int numOfFiles) {
