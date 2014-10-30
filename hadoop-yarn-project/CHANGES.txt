@@ -722,6 +722,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2700 TestSecureRMRegistryOperations failing on windows: auth problems
     (stevel)
 
+    YARN-2677 registry punycoding of usernames doesn't fix all usernames to be
+    DNS-valid (stevel)
+
     ---
 
     YARN-2598 GHS should show N/A instead of null for the inaccessible information
