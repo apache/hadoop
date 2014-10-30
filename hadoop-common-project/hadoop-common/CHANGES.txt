@@ -304,6 +304,7 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11195. Move Id-Name mapping in NFS to the hadoop-common area for
     better maintenance (Yongjun Zhang via brandonli)
 
+    HADOOP-11247. Fix a couple javac warnings in NFS. (Brandon Li via wheat9)
 
   BUG FIXES
 
