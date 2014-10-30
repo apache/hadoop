@@ -174,7 +174,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     this.config = config;
     config.set(FsPermission.UMASK_LABEL, "000");
     iug = new ShellBasedIdMapping(config,
-        Nfs3Constant.NFS_STATIC_MAPPING_FILE_DEFAULT);
+        IdMappingConstant.STATIC_ID_MAPPING_FILE_DEFAULT);
 
     aixCompatMode = config.getBoolean(
         NfsConfigKeys.AIX_COMPAT_MODE_KEY,
