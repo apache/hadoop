@@ -2364,6 +2364,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
   
   /**
+   * Returns count of blocks with replication factor 1 and have
+   * lost the only replica.
+   * @throws IOException
+   */
+  public long getMissingReplOneBlocksCount() throws IOException {
+    return namenode.getStats()[ClientProtocol.
+        GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX];
+  }
+
+  /**
    * Returns count of blocks with one of more replica missing.
    * @throws IOException
    */ 

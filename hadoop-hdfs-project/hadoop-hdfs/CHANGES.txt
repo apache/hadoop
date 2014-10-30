@@ -45,6 +45,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-6824. Additional user documentation for HDFS encryption. (wang)
 
+    HDFS-7165. Separate block metrics for files with replication count 1.
+    (Zhe Zhang via wang)
+
     HDFS-7222. Expose DataNode network errors as a metric. (Charles Lamb via wang)
 
     HDFS-7257. Add the time of last HA state transition to NN's /jmx page.

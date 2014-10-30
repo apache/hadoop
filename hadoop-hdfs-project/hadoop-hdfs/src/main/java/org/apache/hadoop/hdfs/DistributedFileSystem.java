@@ -975,6 +975,16 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
+   * Returns count of blocks with replication factor 1 and have
+   * lost the only replica.
+   *
+   * @throws IOException
+   */
+  public long getMissingReplOneBlocksCount() throws IOException {
+    return dfs.getMissingReplOneBlocksCount();
+  }
+
+  /**
    * Returns count of blocks with one of more replica missing.
    * 
    * @throws IOException

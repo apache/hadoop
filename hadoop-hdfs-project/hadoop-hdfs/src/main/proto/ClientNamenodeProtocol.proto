@@ -283,6 +283,7 @@ message GetFsStatsResponseProto {
   required uint64 under_replicated = 4;
   required uint64 corrupt_blocks = 5;
   required uint64 missing_blocks = 6;
+  optional uint64 missing_repl_one_blocks = 7;
 }
 
 enum DatanodeReportTypeProto {  // type of the datanode report
