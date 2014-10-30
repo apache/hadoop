@@ -616,6 +616,8 @@ Release 2.6.0 - UNRELEASED
     proxy-users on Delegation-token management operations. (Zhijie Shen via
     vinodkv)
 
+    HADOOP-11216. Improve Openssl library finding. (cmccabe via yliu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

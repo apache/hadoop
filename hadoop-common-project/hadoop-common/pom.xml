@@ -524,6 +524,7 @@
         <openssl.include></openssl.include>
         <require.openssl>false</require.openssl>
         <runningWithNative>true</runningWithNative>
+        <bundle.openssl.in.bin>false</bundle.openssl.in.bin>
       </properties>
       <build>
         <plugins>
@@ -644,7 +645,7 @@
         <openssl.include></openssl.include>
         <require.openssl>false</require.openssl>
         <runningWithNative>true</runningWithNative>
-        <bundle.openssl.in.bin>true</bundle.openssl.in.bin>
+        <bundle.openssl.in.bin>false</bundle.openssl.in.bin>
       </properties>
       <build>
         <plugins>
