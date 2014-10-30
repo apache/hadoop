@@ -367,6 +367,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7235. DataNode#transferBlock should report blocks that don't exist
     using reportBadBlock (yzhang via cmccabe)
 
+    HDFS-7263. Snapshot read can reveal future bytes for appended files.
+    (Tao Luo via shv)
 
 Release 2.6.0 - UNRELEASED
 
