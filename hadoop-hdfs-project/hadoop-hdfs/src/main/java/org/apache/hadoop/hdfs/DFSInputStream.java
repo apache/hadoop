@@ -804,7 +804,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           }
           int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
           if (locatedBlocks.isLastBlockComplete()) {
-            realLen = (int) Math.min(realLen, locatedBlocks.getFileLength());
+            realLen = (int) Math.min(realLen,
+                locatedBlocks.getFileLength() - pos);
           }
           int result = readBuffer(strategy, off, realLen, corruptedBlockMap);
           
