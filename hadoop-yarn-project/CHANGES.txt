@@ -771,6 +771,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2769. Fixed the problem that timeline domain is not set in distributed shell
     AM when using shell_command on Windows. (Varun Vasudev via zjshen)
 
+    YARN-2755. NM fails to clean up usercache_DEL_<timestamp> dirs after
+    YARN-661 (Siqi Li via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
