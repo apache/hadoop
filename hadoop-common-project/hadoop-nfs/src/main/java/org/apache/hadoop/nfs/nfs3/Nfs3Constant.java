@@ -193,12 +193,4 @@ public class Nfs3Constant {
   /** Expiration time for nfs exports cache entry */
   public static final String NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_KEY = "nfs.exports.cache.expirytime.millis";
   public static final long NFS_EXPORTS_CACHE_EXPIRYTIME_MILLIS_DEFAULT = 15 * 60 * 1000; // 15 min
-
-  @Deprecated
-  public final static String NFS_USERGROUP_UPDATE_MILLIS_KEY = "nfs.usergroup.update.millis";
-  
-  // Used for finding the configured static mapping file.
-  @Deprecated
-  public static final String NFS_STATIC_MAPPING_FILE_KEY = "nfs.static.mapping.file";
-  public static final String NFS_STATIC_MAPPING_FILE_DEFAULT = "/etc/nfs.map";
 }

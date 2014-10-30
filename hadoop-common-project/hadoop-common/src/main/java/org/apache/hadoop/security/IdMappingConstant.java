@@ -32,5 +32,5 @@ public class IdMappingConstant {
   
   // Used for finding the configured static mapping file.
   public static final String STATIC_ID_MAPPING_FILE_KEY = "static.id.mapping.file";
-  public static final String STATIC_ID_MAPPING_FILE_DEFAULT = "/etc/usergroupid.map";
+  public static final String STATIC_ID_MAPPING_FILE_DEFAULT = "/etc/nfs.map";
 }
