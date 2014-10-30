@@ -39,6 +39,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
 import java.security.MessageDigest;
 import java.util.Arrays;
@@ -239,6 +240,15 @@ class DataXceiver extends Receiver implements Runnable {
           LOG.trace(s, t);
         } else {
           LOG.info(s + "; " + t);
+        }
+      } else if (op == Op.READ_BLOCK && t instanceof SocketTimeoutException) {
+        String s1 =
+            "Likely the client has stopped reading, disconnecting it";
+        s1 += " (" + s + ")";
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(s1, t);
+        } else {
+          LOG.info(s1 + "; " + t);          
         }
       } else {
         LOG.error(s, t);
@@ -520,9 +530,11 @@ class DataXceiver extends Receiver implements Runnable {
       /* What exactly should we do here?
        * Earlier version shutdown() datanode if there is disk error.
        */
-      LOG.warn(dnR + ":Got exception while serving " + block + " to "
+      if (!(ioe instanceof SocketTimeoutException)) {
+        LOG.warn(dnR + ":Got exception while serving " + block + " to "
           + remoteAddress, ioe);
-      datanode.metrics.incrDatanodeNetworkErrors();
+        datanode.metrics.incrDatanodeNetworkErrors();
+      }
       throw ioe;
     } finally {
       IOUtils.closeStream(blockSender);

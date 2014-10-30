@@ -319,6 +319,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7280. Use netty 4 in WebImageViewer. (wheat9)
 
+    HDFS-3342. SocketTimeoutException in BlockSender.sendChunks could
+    have a better error message. (Yongjun Zhang via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
