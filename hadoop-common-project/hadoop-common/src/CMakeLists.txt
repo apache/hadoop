@@ -94,7 +94,7 @@ macro(set_find_shared_library_without_version)
         # Most UNIX variants use .so
         SET(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
     ENDIF()
-endmacro(set_find_shared_library_version LVERS)
+endmacro(set_find_shared_library_without_version)
 
 if (NOT GENERATED_JAVAH)
     # Must identify where the generated headers have been placed
