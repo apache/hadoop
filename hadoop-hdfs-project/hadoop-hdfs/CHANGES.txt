@@ -252,7 +252,6 @@ Trunk (Unreleased)
 
     HDFS-7204. balancer doesn't run as a daemon (aw)
 
-
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -663,6 +662,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6988. Improve HDFS-6581 eviction configuration (Xiaoyu Yao via Colin
     P. McCabe)
+
+    HDFS-7230. Add rolling downgrade documentation. (szetszwo via jing9)
 
   OPTIMIZATIONS
 
