@@ -301,4 +301,32 @@ public class TestRegistryOperations extends AbstractRegistryTest {
     assertEquals(r1stat, stats.get("r1"));
     assertEquals(r2stat, stats.get("r2"));
   }
+
+
+  @Test
+  public void testComplexUsernames() throws Throwable {
+    operations.mknode("/users/user with spaces", true);
+    operations.mknode("/users/user-with_underscores", true);
+    operations.mknode("/users/000000", true);
+    operations.mknode("/users/-storm", true);
+    operations.mknode("/users/windows\\ user", true);
+    String home = RegistryUtils.homePathForUser("\u0413PA\u0414_3");
+    operations.mknode(home, true);
+    operations.mknode(
+        RegistryUtils.servicePath(home, "service.class", "service 4_5"),
+        true);
+
+    operations.mknode(
+        RegistryUtils.homePathForUser("hbase@HADOOP.APACHE.ORG"),
+        true);
+    operations.mknode(
+        RegistryUtils.homePathForUser("hbase/localhost@HADOOP.APACHE.ORG"),
+        true);
+    home = RegistryUtils.homePathForUser("ADMINISTRATOR/127.0.0.1");
+    assertTrue("No 'administrator' in " + home, home.contains("administrator"));
+    operations.mknode(
+        home,
+        true);
+
+  }
 }

@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -58,21 +59,46 @@ public class RegistryUtils {
   /**
    * Buld the user path -switches to the system path if the user is "".
    * It also cross-converts the username to ascii via punycode
-   * @param shortname username or ""
+   * @param username username or ""
    * @return the path to the user
    */
-  public static String homePathForUser(String shortname) {
-    Preconditions.checkArgument(shortname != null, "null user");
+  public static String homePathForUser(String username) {
+    Preconditions.checkArgument(username != null, "null user");
 
     // catch recursion
-    if (shortname.startsWith(RegistryConstants.PATH_USERS)) {
-      return shortname;
+    if (username.startsWith(RegistryConstants.PATH_USERS)) {
+      return username;
     }
-    if (shortname.isEmpty()) {
+    if (username.isEmpty()) {
       return RegistryConstants.PATH_SYSTEM_SERVICES;
     }
+
+    // convert username to registry name
+    String convertedName = convertUsername(username);
+
     return RegistryPathUtils.join(RegistryConstants.PATH_USERS,
-        encodeForRegistry(shortname));
+        encodeForRegistry(convertedName));
+  }
+
+  /**
+   * Convert the username to that which can be used for registry
+   * entries. Lower cases it,
+   * Strip the kerberos realm off a username if needed, and any "/" hostname
+   * entries
+   * @param username user
+   * @return the converted username
+   */
+  public static String convertUsername(String username) {
+    String converted= username.toLowerCase(Locale.ENGLISH);
+    int atSymbol = converted.indexOf('@');
+    if (atSymbol > 0) {
+      converted = converted.substring(0, atSymbol);
+    }
+    int slashSymbol = converted.indexOf('/');
+    if (slashSymbol > 0) {
+      converted = converted.substring(0, slashSymbol);
+    }
+    return converted;
   }
 
   /**
