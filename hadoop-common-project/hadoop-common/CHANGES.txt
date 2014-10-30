@@ -655,6 +655,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-9740. Fix FsShell '-text' command to be able to read Avro
     files stored in HDFS and other filesystems. (Allan Yan via jlowe)
 
+    HADOOP-11250. fix endmacro of set_find_shared_library_without_version in
+    CMakeLists (Yi Liu via Colin P. McCabe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
