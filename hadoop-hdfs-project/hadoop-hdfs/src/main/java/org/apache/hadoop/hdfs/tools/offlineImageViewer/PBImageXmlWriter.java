@@ -411,7 +411,8 @@ public final class PBImageXmlWriter {
   }
 
   private PBImageXmlWriter o(final String e, final Object v) {
-    out.print("<" + e + ">" + XMLUtils.mangleXmlString(v.toString()) + "</" + e + ">");
+    out.print("<" + e + ">" +
+        XMLUtils.mangleXmlString(v.toString(), true) + "</" + e + ">");
     return this;
   }
 }

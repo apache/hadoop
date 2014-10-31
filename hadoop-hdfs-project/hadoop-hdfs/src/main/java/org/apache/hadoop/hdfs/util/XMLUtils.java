@@ -94,6 +94,23 @@ public class XMLUtils {
     return String.format("\\%0" + NUM_SLASH_POSITIONS + "x;", cp);
   }
 
+  private static String codePointToEntityRef(int cp) {
+    switch (cp) {
+      case '&':
+        return "&amp;";
+      case '\"':
+        return "&quot;";
+      case '\'':
+        return "&apos;";
+      case '<':
+        return "&lt;";
+      case '>':
+        return "&gt;";
+      default:
+        return null;
+    }
+  }
+
   /**
    * Mangle a string so that it can be represented in an XML document.
    * 
@@ -117,7 +134,7 @@ public class XMLUtils {
    *
    * @return        The mangled string.
    */
-  public static String mangleXmlString(String str) {
+  public static String mangleXmlString(String str, boolean createEntityRefs) {
     final StringBuilder bld = new StringBuilder();
     final int length = str.length();
     for (int offset = 0; offset < length; ) {
@@ -126,8 +143,16 @@ public class XMLUtils {
        if (codePointMustBeMangled(cp)) {
          bld.append(mangleCodePoint(cp));
        } else {
-         for (int i = 0; i < len; i++) {
-           bld.append(str.charAt(offset + i));
+         String entityRef = null;
+         if (createEntityRefs) {
+           entityRef = codePointToEntityRef(cp);
+         }
+         if (entityRef != null) {
+           bld.append(entityRef);
+         } else {
+           for (int i = 0; i < len; i++) {
+             bld.append(str.charAt(offset + i));
+           }
          }
        }
        offset += len;
@@ -137,22 +162,42 @@ public class XMLUtils {
 
   /**
    * Demangle a string from an XML document.
-   * See {@link #mangleXmlString(String)} for a description of the mangling
-   * format.
+   * See {@link #mangleXmlString(String, boolean)} for a description of the
+   * mangling format.
    *
    * @param str    The string to be demangled.
    * 
    * @return       The unmangled string
    * @throws       UnmanglingError if the input is malformed.
    */
-  public static String unmangleXmlString(String str)
+  public static String unmangleXmlString(String str, boolean decodeEntityRefs)
         throws UnmanglingError {
     int slashPosition = -1;
     String escapedCp = "";
     StringBuilder bld = new StringBuilder();
+    StringBuilder entityRef = null;
     for (int i = 0; i < str.length(); i++) {
       char ch = str.charAt(i);
-      if ((slashPosition >= 0) && (slashPosition < NUM_SLASH_POSITIONS)) {
+      if (entityRef != null) {
+        entityRef.append(ch);
+        if (ch == ';') {
+          String e = entityRef.toString();
+          if (e.equals("&quot;")) {
+            bld.append("\"");
+          } else if (e.equals("&apos;")) {
+            bld.append("\'");
+          } else if (e.equals("&amp;")) {
+            bld.append("&");
+          } else if (e.equals("&lt;")) {
+            bld.append("<");
+          } else if (e.equals("&gt;")) {
+            bld.append(">");
+          } else {
+            throw new UnmanglingError("Unknown entity ref " + e);
+          }
+          entityRef = null;
+        }
+      } else  if ((slashPosition >= 0) && (slashPosition < NUM_SLASH_POSITIONS)) {
         escapedCp += ch;
         ++slashPosition;
       } else if (slashPosition == NUM_SLASH_POSITIONS) {
@@ -170,10 +215,22 @@ public class XMLUtils {
       } else if (ch == '\\') {
         slashPosition = 0;
       } else {
-        bld.append(ch);
+        boolean startingEntityRef = false;
+        if (decodeEntityRefs) {
+          startingEntityRef = (ch == '&');
+        }
+        if (startingEntityRef) {
+          entityRef = new StringBuilder();
+          entityRef.append("&");
+        } else {
+          bld.append(ch);
+        }
       }
     }
-    if (slashPosition != -1) {
+    if (entityRef != null) {
+      throw new UnmanglingError("unterminated entity ref starting with " +
+          entityRef.toString());
+    } else if (slashPosition != -1) {
       throw new UnmanglingError("unterminated code point escape: string " +
           "broke off in the middle");
     }
@@ -185,12 +242,12 @@ public class XMLUtils {
    *
    * @param contentHandler     the SAX content handler
    * @param tag                the element tag to use  
-   * @param value              the string to put inside the tag
+   * @param val                the string to put inside the tag
    */
   public static void addSaxString(ContentHandler contentHandler,
       String tag, String val) throws SAXException {
     contentHandler.startElement("", "", tag, new AttributesImpl());
-    char c[] = mangleXmlString(val).toCharArray();
+    char c[] = mangleXmlString(val, false).toCharArray();
     contentHandler.characters(c, 0, c.length);
     contentHandler.endElement("", "", tag);
   }
