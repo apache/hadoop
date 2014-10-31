@@ -6575,6 +6575,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return blockManager.getPendingDeletionBlocksCount();
   }
 
+  @Override
+  public long getBlockDeletionStartTime() {
+    return startTime + blockManager.getStartupDelayBlockDeletionInMs();
+  }
+
   @Metric
   public long getExcessBlocks() {
     return blockManager.getExcessBlocksCount();
