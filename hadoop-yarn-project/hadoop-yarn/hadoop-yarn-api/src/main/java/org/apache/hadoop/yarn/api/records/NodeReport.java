@@ -64,6 +64,7 @@ public abstract class NodeReport {
     nodeReport.setNumContainers(numContainers);
     nodeReport.setHealthReport(healthReport);
     nodeReport.setLastHealthReportTime(lastHealthReportTime);
+    nodeReport.setNodeLabels(nodeLabels);
     return nodeReport;
   }
 
