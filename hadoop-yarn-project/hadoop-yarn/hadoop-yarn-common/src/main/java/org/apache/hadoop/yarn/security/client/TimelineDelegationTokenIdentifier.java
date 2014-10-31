@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.yarn.security.client;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenRenewer;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 @Public
 @Unstable
@@ -52,10 +58,50 @@ public class TimelineDelegationTokenIdentifier extends YARNDelegationTokenIdenti
   }
 
   @InterfaceAudience.Private
-  public static class Renewer extends Token.TrivialRenewer {
+  public static class Renewer extends TokenRenewer {
+
     @Override
-    protected Text getKind() {
-      return KIND_NAME;
+    public boolean handleKind(Text kind) {
+      return KIND_NAME.equals(kind);
+    }
+
+    @Override
+    public boolean isManaged(Token<?> token) throws IOException {
+      return true;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public long renew(Token<?> token, Configuration conf) throws IOException,
+        InterruptedException {
+      TimelineClient client = TimelineClient.createTimelineClient();
+      try {
+        client.init(conf);
+        client.start();
+        return client.renewDelegationToken(
+            (Token<TimelineDelegationTokenIdentifier>) token);
+      } catch (YarnException e) {
+        throw new IOException(e);
+      } finally {
+        client.stop();
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void cancel(Token<?> token, Configuration conf) throws IOException,
+        InterruptedException {
+      TimelineClient client = TimelineClient.createTimelineClient();
+      try {
+        client.init(conf);
+        client.start();
+        client.cancelDelegationToken(
+            (Token<TimelineDelegationTokenIdentifier>) token);
+      } catch (YarnException e) {
+        throw new IOException(e);
+      } finally {
+        client.stop();
+      }
     }
   }
 

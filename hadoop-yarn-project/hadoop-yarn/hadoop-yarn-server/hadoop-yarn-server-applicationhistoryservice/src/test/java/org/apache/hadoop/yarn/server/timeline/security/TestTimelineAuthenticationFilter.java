@@ -214,7 +214,7 @@ public class TestTimelineAuthenticationFilter {
   }
 
   @Test
-  public void testGetDelegationToken() throws Exception {
+  public void testDelegationTokenOperations() throws Exception {
     KerberosTestUtils.doAs(HTTP_USER + "/localhost", new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -226,6 +226,23 @@ public class TestTimelineAuthenticationFilter {
         TimelineDelegationTokenIdentifier tDT = token.decodeIdentifier();
         Assert.assertNotNull(tDT);
         Assert.assertEquals(new Text(HTTP_USER), tDT.getOwner());
+
+        // Renew token
+        long renewTime1 = client.renewDelegationToken(token);
+        Thread.sleep(100);
+        long renewTime2 = client.renewDelegationToken(token);
+        Assert.assertTrue(renewTime1 < renewTime2);
+
+        // Cancel token
+        client.cancelDelegationToken(token);
+        // Renew should not be successful because the token is canceled
+        try {
+          client.renewDelegationToken(token);
+          Assert.fail();
+        } catch (Exception e) {
+          Assert.assertTrue(e.getMessage().contains(
+              "Renewal request for unknown token"));
+        }
 
         // Let HTTP user to get the delegation token for FOO user
         UserGroupInformation fooUgi = UserGroupInformation.createProxyUser(
@@ -244,6 +261,49 @@ public class TestTimelineAuthenticationFilter {
         Assert.assertNotNull(tDT);
         Assert.assertEquals(new Text(FOO_USER), tDT.getOwner());
         Assert.assertEquals(new Text(HTTP_USER), tDT.getRealUser());
+
+        // Renew token
+        final Token<TimelineDelegationTokenIdentifier> tokenToRenew = token;
+        renewTime1 = fooUgi.doAs(
+            new PrivilegedExceptionAction<Long>() {
+          @Override
+          public Long run() throws Exception {
+            return client.renewDelegationToken(tokenToRenew);
+          }
+        });
+        renewTime2 = fooUgi.doAs(
+            new PrivilegedExceptionAction<Long>() {
+          @Override
+          public Long run() throws Exception {
+            return client.renewDelegationToken(tokenToRenew);
+          }
+        });
+        Assert.assertTrue(renewTime1 < renewTime2);
+
+        // Cancel token
+        fooUgi.doAs(
+            new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            client.cancelDelegationToken(tokenToRenew);
+            return null;
+          }
+        });
+        // Renew should not be successful because the token is canceled
+        try {
+          fooUgi.doAs(
+              new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              client.renewDelegationToken(tokenToRenew);
+              return null;
+            }
+          });
+          Assert.fail();
+        } catch (Exception e) {
+          Assert.assertTrue(e.getMessage().contains(
+              "Renewal request for unknown token"));
+        }
 
         // Let HTTP user to get the delegation token for BAR user
         UserGroupInformation barUgi = UserGroupInformation.createProxyUser(

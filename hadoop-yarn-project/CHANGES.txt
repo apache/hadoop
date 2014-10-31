@@ -351,6 +351,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2778. Moved node-lables' reports to the yarn nodes CLI from the admin
     CLI. (Wangda Tan via vinodkv)
 
+    YARN-2770. Added functionality to renew/cancel TimeLineDelegationToken.
+    (Zhijie Shen via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

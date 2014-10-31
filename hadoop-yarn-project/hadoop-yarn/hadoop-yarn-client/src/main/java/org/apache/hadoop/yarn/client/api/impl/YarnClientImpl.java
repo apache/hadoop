@@ -36,6 +36,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -319,8 +320,14 @@ public class YarnClientImpl extends YarnClient {
   @VisibleForTesting
   org.apache.hadoop.security.token.Token<TimelineDelegationTokenIdentifier>
       getTimelineDelegationToken() throws IOException, YarnException {
-    return timelineClient.getDelegationToken(
-            UserGroupInformation.getCurrentUser().getUserName());
+    // Parse the RM daemon user if it exists in the config
+    String rmPrincipal = getConfig().get(YarnConfiguration.RM_PRINCIPAL);
+    String renewer = null;
+    if (rmPrincipal != null && rmPrincipal.length() > 0) {
+      HadoopKerberosName renewerKrbName = new HadoopKerberosName(rmPrincipal);
+      renewer = renewerKrbName.getShortName();
+    }
+    return timelineClient.getDelegationToken(renewer);
   }
 
   @Private
