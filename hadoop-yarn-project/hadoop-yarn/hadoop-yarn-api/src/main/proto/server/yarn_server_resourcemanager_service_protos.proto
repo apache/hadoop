@@ -89,31 +89,12 @@ message RemoveFromClusterNodeLabelsRequestProto {
 message RemoveFromClusterNodeLabelsResponseProto {
 }
 
-message NodeIdToLabelsProto {
-  optional NodeIdProto nodeId = 1;
-  repeated string nodeLabels = 2;
-}
-
 message ReplaceLabelsOnNodeRequestProto {
   repeated NodeIdToLabelsProto nodeToLabels = 1;
 }
 
 message ReplaceLabelsOnNodeResponseProto {
   
-}
-
-message GetNodesToLabelsRequestProto {
-}
-
-message GetNodesToLabelsResponseProto {
-  repeated NodeIdToLabelsProto nodeToLabels = 1;
-}
-
-message GetClusterNodeLabelsRequestProto {
-}
-
-message GetClusterNodeLabelsResponseProto {
-  repeated string nodeLabels = 1;
 }
 
 //////////////////////////////////////////////////////////////////

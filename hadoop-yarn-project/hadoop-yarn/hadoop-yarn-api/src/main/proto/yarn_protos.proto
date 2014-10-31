@@ -229,8 +229,13 @@ message NodeReportProto {
   optional NodeStateProto node_state = 7;
   optional string health_report = 8;
   optional int64 last_health_report_time = 9;
+  repeated string node_labels = 10;
 }
 
+message NodeIdToLabelsProto {
+  optional NodeIdProto nodeId = 1;
+  repeated string nodeLabels = 2;
+}
 
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////

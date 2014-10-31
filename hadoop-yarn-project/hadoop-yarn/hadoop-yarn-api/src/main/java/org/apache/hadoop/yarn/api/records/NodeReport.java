@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import java.util.Set;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -50,7 +52,8 @@ public abstract class NodeReport {
   @Unstable
   public static NodeReport newInstance(NodeId nodeId, NodeState nodeState,
       String httpAddress, String rackName, Resource used, Resource capability,
-      int numContainers, String healthReport, long lastHealthReportTime) {
+      int numContainers, String healthReport, long lastHealthReportTime,
+      Set<String> nodeLabels) {
     NodeReport nodeReport = Records.newRecord(NodeReport.class);
     nodeReport.setNodeId(nodeId);
     nodeReport.setNodeState(nodeState);
@@ -172,4 +175,16 @@ public abstract class NodeReport {
   @Private
   @Unstable
   public abstract void setLastHealthReportTime(long lastHealthReport);
+  
+  /**
+   * Get labels of this node
+   * @return labels of this node
+   */
+  @Public
+  @Stable
+  public abstract Set<String> getNodeLabels();
+  
+  @Private
+  @Unstable
+  public abstract void setNodeLabels(Set<String> nodeLabels);
 }

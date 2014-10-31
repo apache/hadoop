@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -41,7 +44,8 @@ public class NodeReportPBImpl extends NodeReport {
   private NodeId nodeId;
   private Resource used;
   private Resource capability;
-  
+  Set<String> labels;
+
   public NodeReportPBImpl() {
     builder = NodeReportProto.newBuilder();
   }
@@ -255,6 +259,10 @@ public class NodeReportPBImpl extends NodeReport {
             builder.getCapability())) {
       builder.setCapability(convertToProtoFormat(this.capability));
     }
+    if (this.labels != null) {
+      builder.clearNodeLabels();
+      builder.addAllNodeLabels(this.labels);
+    }
   }
 
   private void mergeLocalToProto() {
@@ -289,4 +297,25 @@ public class NodeReportPBImpl extends NodeReport {
     return ((ResourcePBImpl) r).getProto();
   }
 
+  @Override
+  public Set<String> getNodeLabels() {
+    initNodeLabels();
+    return this.labels;
+  }
+
+  @Override
+  public void setNodeLabels(Set<String> nodeLabels) {
+    maybeInitBuilder();
+    builder.clearNodeLabels();
+    this.labels = nodeLabels;
+  }
+    
+  private void initNodeLabels() {
+    if (this.labels != null) {
+      return;
+    }
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    this.labels = new HashSet<String>();
+    this.labels.addAll(p.getNodeLabelsList());
+  }
 }
