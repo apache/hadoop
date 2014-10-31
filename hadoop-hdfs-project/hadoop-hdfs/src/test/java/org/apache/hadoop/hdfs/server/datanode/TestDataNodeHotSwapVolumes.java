@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.BlockLocation;
@@ -33,6 +35,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -58,9 +62,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.hamcrest.CoreMatchers.anyOf;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -197,10 +206,11 @@ public class TestDataNodeHotSwapVolumes {
     }
     assertFalse(oldLocations.isEmpty());
 
-    String newPaths = "/foo/path1,/foo/path2";
-    conf.set(DFS_DATANODE_DATA_DIR_KEY, newPaths);
+    String newPaths = oldLocations.get(0).getFile().getAbsolutePath() +
+        ",/foo/path1,/foo/path2";
 
-    DataNode.ChangedVolumes changedVolumes =dn.parseChangedVolumes();
+    DataNode.ChangedVolumes changedVolumes =
+        dn.parseChangedVolumes(newPaths);
     List<StorageLocation> newVolumes = changedVolumes.newLocations;
     assertEquals(2, newVolumes.size());
     assertEquals(new File("/foo/path1").getAbsolutePath(),
@@ -209,21 +219,21 @@ public class TestDataNodeHotSwapVolumes {
       newVolumes.get(1).getFile().getAbsolutePath());
 
     List<StorageLocation> removedVolumes = changedVolumes.deactivateLocations;
-    assertEquals(oldLocations.size(), removedVolumes.size());
-    for (int i = 0; i < removedVolumes.size(); i++) {
-      assertEquals(oldLocations.get(i).getFile(),
-          removedVolumes.get(i).getFile());
-    }
+    assertEquals(1, removedVolumes.size());
+    assertEquals(oldLocations.get(1).getFile(),
+        removedVolumes.get(0).getFile());
+
+    assertEquals(1, changedVolumes.unchangedLocations.size());
+    assertEquals(oldLocations.get(0).getFile(),
+        changedVolumes.unchangedLocations.get(0).getFile());
   }
 
   @Test
   public void testParseChangedVolumesFailures() throws IOException {
     startDFSCluster(1, 1);
     DataNode dn = cluster.getDataNodes().get(0);
-    Configuration conf = dn.getConf();
     try {
-      conf.set(DFS_DATANODE_DATA_DIR_KEY, "");
-      dn.parseChangedVolumes();
+      dn.parseChangedVolumes("");
       fail("Should throw IOException: empty inputs.");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("No directory is specified.", e);
@@ -231,7 +241,8 @@ public class TestDataNodeHotSwapVolumes {
   }
 
   /** Add volumes to the first DataNode. */
-  private void addVolumes(int numNewVolumes) throws ReconfigurationException {
+  private void addVolumes(int numNewVolumes)
+      throws ReconfigurationException, IOException {
     File dataDir = new File(cluster.getDataDirectory());
     DataNode dn = cluster.getDataNodes().get(0);  // First DataNode.
     Configuration conf = dn.getConf();
@@ -253,12 +264,26 @@ public class TestDataNodeHotSwapVolumes {
       newVolumeDirs.add(volumeDir);
       volumeDir.mkdirs();
       newDataDirBuf.append(",");
-      newDataDirBuf.append(volumeDir.toURI());
+      newDataDirBuf.append(
+          StorageLocation.parse(volumeDir.toString()).toString());
     }
 
     String newDataDir = newDataDirBuf.toString();
     dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, newDataDir);
-    assertEquals(newDataDir, conf.get(DFS_DATANODE_DATA_DIR_KEY));
+
+    // Verify the configuration value is appropriately set.
+    String[] effectiveDataDirs = conf.get(DFS_DATANODE_DATA_DIR_KEY).split(",");
+    String[] expectDataDirs = newDataDir.split(",");
+    assertEquals(expectDataDirs.length, effectiveDataDirs.length);
+    for (int i = 0; i < expectDataDirs.length; i++) {
+      StorageLocation expectLocation = StorageLocation.parse(expectDataDirs[i]);
+      StorageLocation effectiveLocation =
+          StorageLocation.parse(effectiveDataDirs[i]);
+      assertEquals(expectLocation.getStorageType(),
+          effectiveLocation.getStorageType());
+      assertEquals(expectLocation.getFile().getCanonicalFile(),
+          effectiveLocation.getFile().getCanonicalFile());
+    }
 
     // Check that all newly created volumes are appropriately formatted.
     for (File volumeDir : newVolumeDirs) {
@@ -439,12 +464,65 @@ public class TestDataNodeHotSwapVolumes {
     dn.reconfigurePropertyImpl(
         DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs);
     assertFileLocksReleased(
-      new ArrayList<String>(oldDirs).subList(1, oldDirs.size()));
+        new ArrayList<String>(oldDirs).subList(1, oldDirs.size()));
 
     triggerDeleteReport(dn);
 
     waitReplication(fs, testFile, 1, 1);
     DFSTestUtil.waitReplication(fs, testFile, replFactor);
+  }
+
+  @Test
+  public void testAddVolumeFailures() throws IOException {
+    startDFSCluster(1, 1);
+    final String dataDir = cluster.getDataDirectory();
+
+    DataNode dn = cluster.getDataNodes().get(0);
+    List<String> newDirs = Lists.newArrayList();
+    final int NUM_NEW_DIRS = 4;
+    for (int i = 0; i < NUM_NEW_DIRS; i++) {
+      File newVolume = new File(dataDir, "new_vol" + i);
+      newDirs.add(newVolume.toString());
+      if (i % 2 == 0) {
+        // Make addVolume() fail.
+        newVolume.createNewFile();
+      }
+    }
+
+    String newValue = dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY) + "," +
+        Joiner.on(",").join(newDirs);
+    try {
+      dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, newValue);
+      fail("Expect to throw IOException.");
+    } catch (ReconfigurationException e) {
+      String errorMessage = e.getCause().getMessage();
+      String messages[] = errorMessage.split("\\r?\\n");
+      assertEquals(2, messages.length);
+      assertThat(messages[0], containsString("new_vol0"));
+      assertThat(messages[1], containsString("new_vol2"));
+    }
+
+    // Make sure that vol0 and vol2's metadata are not left in memory.
+    FsDatasetSpi<?> dataset = dn.getFSDataset();
+    for (FsVolumeSpi volume : dataset.getVolumes()) {
+      assertThat(volume.getBasePath(), is(not(anyOf(
+          is(newDirs.get(0)), is(newDirs.get(2))))));
+    }
+    DataStorage storage = dn.getStorage();
+    for (int i = 0; i < storage.getNumStorageDirs(); i++) {
+      Storage.StorageDirectory sd = storage.getStorageDir(i);
+      assertThat(sd.getRoot().toString(),
+          is(not(anyOf(is(newDirs.get(0)), is(newDirs.get(2))))));
+    }
+
+    // The newly effective conf does not have vol0 and vol2.
+    String[] effectiveVolumes =
+        dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY).split(",");
+    assertEquals(4, effectiveVolumes.length);
+    for (String ev : effectiveVolumes) {
+      assertThat(new File(ev).getCanonicalPath(),
+          is(not(anyOf(is(newDirs.get(0)), is(newDirs.get(2))))));
+    }
   }
 
   /**

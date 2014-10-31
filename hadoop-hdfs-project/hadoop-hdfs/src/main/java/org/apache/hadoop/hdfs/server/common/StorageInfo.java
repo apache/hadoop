@@ -192,6 +192,10 @@ public class StorageInfo {
     namespaceID = nsId;
   }
 
+  public void setServiceLayoutVersion(int lv) {
+    this.layoutVersion = lv;
+  }
+
   public int getServiceLayoutVersion() {
     return storageType == NodeType.DATA_NODE ? HdfsConstants.DATANODE_LAYOUT_VERSION
         : HdfsConstants.NAMENODE_LAYOUT_VERSION;
