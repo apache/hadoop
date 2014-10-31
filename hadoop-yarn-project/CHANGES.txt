@@ -15,6 +15,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2183. [YARN-1492] Cleaner service for cache manager.
     (Chris Trezzo and Sangjin Lee via kasha)
 
+    YARN-2186. [YARN-1492] Node Manager uploader service for cache manager. 
+    (Chris Trezzo and Sangjin Lee via kasha)
+
   IMPROVEMENTS
 
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.

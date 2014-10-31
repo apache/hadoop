@@ -76,3 +76,20 @@ message NMContainerStatusProto {
   optional int32 container_exit_status = 6;
   optional int64 creation_time = 7;
 }
+
+message SCMUploaderNotifyRequestProto {
+  optional string resource_key = 1;
+  optional string filename = 2;
+}
+
+message SCMUploaderNotifyResponseProto {
+  optional bool accepted = 1;
+}
+
+message SCMUploaderCanUploadRequestProto {
+  optional string resource_key = 1;
+}
+
+message SCMUploaderCanUploadResponseProto {
+  optional bool uploadable = 1;
+}
