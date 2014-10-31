@@ -126,6 +126,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7263. Snapshot read can reveal future bytes for appended files.
     (Tao Luo via shv)
 
+    HDFS-7315. DFSTestUtil.readFileBuffer opens extra FSDataInputStream.
+    (Plamen Jeliazkov via wheat9)
 
 Release 2.6.0 - UNRELEASED
 
