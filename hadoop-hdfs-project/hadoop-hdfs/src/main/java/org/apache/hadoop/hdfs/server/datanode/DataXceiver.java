@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Receiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
+import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.InvalidMagicNumberException;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientReadStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
@@ -178,11 +179,19 @@ class DataXceiver extends Receiver implements Runnable {
       dataXceiverServer.addPeer(peer, Thread.currentThread(), this);
       peer.setWriteTimeout(datanode.getDnConf().socketWriteTimeout);
       InputStream input = socketIn;
-      IOStreamPair saslStreams = datanode.saslServer.receive(peer, socketOut,
-        socketIn, datanode.getDatanodeId());
-      input = new BufferedInputStream(saslStreams.in,
-        HdfsConstants.SMALL_BUFFER_SIZE);
-      socketOut = saslStreams.out;
+      try {
+        IOStreamPair saslStreams = datanode.saslServer.receive(peer, socketOut,
+          socketIn, datanode.getDatanodeId());
+        input = new BufferedInputStream(saslStreams.in,
+          HdfsConstants.SMALL_BUFFER_SIZE);
+        socketOut = saslStreams.out;
+      } catch (InvalidMagicNumberException imne) {
+        LOG.info("Failed to read expected encryption handshake from client " +
+            "at " + peer.getRemoteAddressString() + ". Perhaps the client " +
+            "is running an older version of Hadoop which does not support " +
+            "encryption");
+        return;
+      }
       
       super.initialize(new DataInputStream(input));
       

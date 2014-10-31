@@ -297,6 +297,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6385. Show when block deletion will start after NameNode startup in
     WebUI. (cnauroth)
 
+    HDFS-7313. Support optional configuration of AES cipher suite on
+    DataTransferProtocol. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
