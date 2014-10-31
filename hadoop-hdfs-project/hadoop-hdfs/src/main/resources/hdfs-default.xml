@@ -1517,6 +1517,19 @@
     
     Note that if AES is supported by both the client and server then this 
     encryption algorithm will only be used to initially transfer keys for AES.
+    (See dfs.encrypt.data.transfer.cipher.suites.)
+  </description>
+</property>
+
+<property>
+  <name>dfs.encrypt.data.transfer.cipher.suites</name>
+  <value></value>
+  <description>
+    This value may be either undefined or AES/CTR/NoPadding.  If defined, then
+    dfs.encrypt.data.transfer uses the specified cipher suite for data
+    encryption.  If not defined, then only the algorithm specified in
+    dfs.encrypt.data.transfer.algorithm is used.  By default, the property is
+    not defined.
   </description>
 </property>
 
