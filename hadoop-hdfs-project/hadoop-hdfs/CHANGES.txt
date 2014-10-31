@@ -252,6 +252,9 @@ Trunk (Unreleased)
 
     HDFS-7204. balancer doesn't run as a daemon (aw)
 
+    HDFS-7319. Remove dead link to HFTP documentation from index.xml.
+    (Masatake Iwasaki via wheat9)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
