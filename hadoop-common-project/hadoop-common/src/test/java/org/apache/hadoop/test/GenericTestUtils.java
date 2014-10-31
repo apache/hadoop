@@ -328,6 +328,12 @@ public abstract class GenericTestUtils {
     }
   }
 
+  public static void assertDoesNotMatch(String output, String pattern) {
+    Assert.assertFalse("Expected output to match /" + pattern + "/" +
+        " but got:\n" + output,
+        Pattern.compile(pattern).matcher(output).find());
+  }
+
   public static void assertMatches(String output, String pattern) {
     Assert.assertTrue("Expected output to match /" + pattern + "/" +
         " but got:\n" + output,

@@ -23,6 +23,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.protocolPB.PBHelper.vintPrefixed;
 
 import java.io.IOException;
@@ -249,14 +250,25 @@ public final class DataTransferSaslUtil {
   /**
    * Negotiate a cipher option which server supports.
    * 
+   * @param conf the configuration
    * @param options the cipher options which client supports
    * @return CipherOption negotiated cipher option
    */
   public static CipherOption negotiateCipherOption(Configuration conf,
-      List<CipherOption> options) {
+      List<CipherOption> options) throws IOException {
+    // Negotiate cipher suites if configured.  Currently, the only supported
+    // cipher suite is AES/CTR/NoPadding, but the protocol allows multiple
+    // values for future expansion.
+    String cipherSuites = conf.get(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
+    if (cipherSuites == null || cipherSuites.isEmpty()) {
+      return null;
+    }
+    if (!cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName())) {
+      throw new IOException(String.format("Invalid cipher suite, %s=%s",
+          DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuites));
+    }
     if (options != null) {
       for (CipherOption option : options) {
-        // Currently we support AES/CTR/NoPadding
         CipherSuite suite = option.getCipherSuite();
         if (suite == CipherSuite.AES_CTR_NOPADDING) {
           int keyLen = conf.getInt(

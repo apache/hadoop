@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.*;
 
 import java.io.DataInputStream;
@@ -450,10 +451,20 @@ public class SaslDataTransferClient {
       byte[] localResponse = sasl.evaluateChallengeOrResponse(remoteResponse);
       List<CipherOption> cipherOptions = null;
       if (requestedQopContainsPrivacy(saslProps)) {
-        // Negotiation cipher options
-        CipherOption option = new CipherOption(CipherSuite.AES_CTR_NOPADDING);
-        cipherOptions = Lists.newArrayListWithCapacity(1);
-        cipherOptions.add(option);
+        // Negotiate cipher suites if configured.  Currently, the only supported
+        // cipher suite is AES/CTR/NoPadding, but the protocol allows multiple
+        // values for future expansion.
+        String cipherSuites = conf.get(
+            DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
+        if (cipherSuites != null && !cipherSuites.isEmpty()) {
+          if (!cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName())) {
+            throw new IOException(String.format("Invalid cipher suite, %s=%s",
+                DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuites));
+          }
+          CipherOption option = new CipherOption(CipherSuite.AES_CTR_NOPADDING);
+          cipherOptions = Lists.newArrayListWithCapacity(1);
+          cipherOptions.add(option);
+        }
       }
       sendSaslMessageAndNegotiationCipherOptions(out, localResponse, 
           cipherOptions);

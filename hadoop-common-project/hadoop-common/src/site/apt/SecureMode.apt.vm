@@ -314,6 +314,21 @@ KVNO Timestamp         Principal
   You need to set <<<dfs.encrypt.data.transfer>>> to <<<"true">>> in the hdfs-site.xml
   in order to activate data encryption for data transfer protocol of DataNode.
 
+  Optionally, you may set <<<dfs.encrypt.data.transfer.algorithm>>> to either
+  "3des" or "rc4" to choose the specific encryption algorithm.  If unspecified,
+  then the configured JCE default on the system is used, which is usually 3DES.
+
+  Setting <<<dfs.encrypt.data.transfer.cipher.suites>>> to
+  <<<AES/CTR/NoPadding>>> activates AES encryption.  By default, this is
+  unspecified, so AES is not used.  When AES is used, the algorithm specified in
+  <<<dfs.encrypt.data.transfer.algorithm>>> is still used during an initial key
+  exchange.  The AES key bit length can be configured by setting
+  <<<dfs.encrypt.data.transfer.cipher.key.bitlength>>> to 128, 192 or 256.  The
+  default is 128.
+
+  AES offers the greatest cryptographic strength and the best performance.  At
+  this time, 3DES and RC4 have been used more often in Hadoop clusters.
+
 ** Data Encryption on HTTP
 
   Data transfer between Web-console and clients are protected by using SSL(HTTPS).
@@ -490,6 +505,18 @@ Configuration for <<<conf/hdfs-site.xml>>>
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.encrypt.data.transfer>>> | <false> | |
 | | | set to <<<true>>> when using data encryption |
+*-------------------------+-------------------------+------------------------+
+| <<<dfs.encrypt.data.transfer.algorithm>>> | | |
+| | | optionally set to <<<3des>>> or <<<rc4>>> when using data encryption to |
+| | | control encryption algorithm |
+*-------------------------+-------------------------+------------------------+
+| <<<dfs.encrypt.data.transfer.cipher.suites>>> | | |
+| | | optionally set to <<<AES/CTR/NoPadding>>> to activate AES encryption    |
+| | | when using data encryption |
+*-------------------------+-------------------------+------------------------+
+| <<<dfs.encrypt.data.transfer.cipher.key.bitlength>>> | | |
+| | | optionally set to <<<128>>>, <<<192>>> or <<<256>>> to control key bit  |
+| | | length when using AES with data encryption |
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.data.transfer.protection>>> | | |
 | | | <authentication> : authentication only \
