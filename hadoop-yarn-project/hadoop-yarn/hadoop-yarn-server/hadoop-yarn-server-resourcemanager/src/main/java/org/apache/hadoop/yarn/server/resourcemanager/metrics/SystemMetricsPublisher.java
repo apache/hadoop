@@ -28,8 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -42,7 +40,6 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
@@ -65,13 +62,10 @@ public class SystemMetricsPublisher extends CompositeService {
 
   private static final Log LOG = LogFactory
       .getLog(SystemMetricsPublisher.class);
-  private static final int MAX_GET_TIMELINE_DELEGATION_TOKEN_ATTEMPTS = 10;
 
   private Dispatcher dispatcher;
   private TimelineClient client;
   private boolean publishSystemMetrics;
-  private int getTimelineDelegtionTokenAttempts = 0;
-  private boolean hasReceivedTimelineDelegtionToken = false;
 
   public SystemMetricsPublisher() {
     super(SystemMetricsPublisher.class.getName());
@@ -423,27 +417,6 @@ public class SystemMetricsPublisher extends CompositeService {
   }
 
   private void putEntity(TimelineEntity entity) {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      if (!hasReceivedTimelineDelegtionToken
-          && getTimelineDelegtionTokenAttempts < MAX_GET_TIMELINE_DELEGATION_TOKEN_ATTEMPTS) {
-        try {
-          Token<TimelineDelegationTokenIdentifier> token =
-              client.getDelegationToken(
-                  UserGroupInformation.getCurrentUser().getUserName());
-          UserGroupInformation.getCurrentUser().addToken(token);
-          hasReceivedTimelineDelegtionToken = true;
-        } catch (Exception e) {
-          LOG.error("Error happens when getting timeline delegation token", e);
-        } finally {
-          ++getTimelineDelegtionTokenAttempts;
-          if (!hasReceivedTimelineDelegtionToken
-              && getTimelineDelegtionTokenAttempts == MAX_GET_TIMELINE_DELEGATION_TOKEN_ATTEMPTS) {
-            LOG.error("Run out of the attempts to get timeline delegation token. " +
-              "Use kerberos authentication only.");
-          }
-        }
-      }
-    }
     try {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Publishing the entity " + entity.getEntityId() +

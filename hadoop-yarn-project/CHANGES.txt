@@ -345,6 +345,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2503. Added node lablels in web UI. (Wangda Tan via jianhe)
 
+    YARN-2779. Fixed ResourceManager to not require delegation tokens for 
+    communicating with Timeline Service. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
