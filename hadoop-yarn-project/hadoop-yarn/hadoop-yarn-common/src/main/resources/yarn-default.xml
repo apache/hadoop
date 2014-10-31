@@ -1434,6 +1434,20 @@
     <value>0</value>
   </property>
 
+  <property>
+    <description>The address of the node manager interface in the SCM
+    (shared cache manager)</description>
+    <name>yarn.sharedcache.uploader.server.address</name>
+    <value>0.0.0.0:8046</value>
+  </property>
+
+  <property>
+    <description>The number of threads used to handle shared cache manager
+    requests from the node manager (50 by default)</description>
+    <name>yarn.sharedcache.uploader.server.thread-count</name>
+    <value>50</value>
+  </property>
+
   <!-- Other configuration -->
   <property>
     <description>The interval that the yarn client library uses to poll the
