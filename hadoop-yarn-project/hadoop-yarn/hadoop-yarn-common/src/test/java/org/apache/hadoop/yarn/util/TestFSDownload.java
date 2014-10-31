@@ -500,9 +500,8 @@ public class TestFSDownload {
     pending.put(rsrc, exec.submit(fsd));
     exec.shutdown();
     while (!exec.awaitTermination(1000, TimeUnit.MILLISECONDS));
-    Assert.assertTrue(pending.get(rsrc).isDone());
-    
     try {
+      pending.get(rsrc).get(); // see if there was an Exception during download
       FileStatus[] filesstatus = files.getDefaultFileSystem().listStatus(
           basedir);
       for (FileStatus filestatus : filesstatus) {

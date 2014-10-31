@@ -796,6 +796,9 @@ Release 2.6.0 - UNRELEASED
     modified in YARN-2698 so that tests in YARN frameworks don't break. (Wangda
     Tan via vinodkv)
 
+    YARN-2707. Potential null dereference in FSDownload (Gera Shegalov via
+    jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
