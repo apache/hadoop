@@ -423,6 +423,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7230. Add rolling downgrade documentation. (szetszwo via jing9)
 
+    HDFS-6385. Show when block deletion will start after NameNode startup in
+    WebUI. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
