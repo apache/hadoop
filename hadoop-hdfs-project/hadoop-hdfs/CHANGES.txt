@@ -8,6 +8,9 @@ Release 2.6.1 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-7035. Make adding a new data directory to the DataNode an atomic
+    operation and improve error handling (Lei Xu via Colin P. McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
