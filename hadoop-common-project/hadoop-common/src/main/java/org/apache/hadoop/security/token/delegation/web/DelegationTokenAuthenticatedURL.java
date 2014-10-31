@@ -78,9 +78,13 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
     org.apache.hadoop.security.token.Token<AbstractDelegationTokenIdentifier>
         delegationToken;
 
-    org.apache.hadoop.security.token.Token<AbstractDelegationTokenIdentifier>
+    public org.apache.hadoop.security.token.Token<AbstractDelegationTokenIdentifier>
     getDelegationToken() {
       return delegationToken;
+    }
+    public void setDelegationToken(
+        org.apache.hadoop.security.token.Token<AbstractDelegationTokenIdentifier> delegationToken) {
+      this.delegationToken = delegationToken;
     }
 
   }
