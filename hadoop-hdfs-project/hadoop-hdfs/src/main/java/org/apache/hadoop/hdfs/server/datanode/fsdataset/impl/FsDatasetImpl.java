@@ -31,7 +31,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -94,6 +93,7 @@ import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskRepli
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
@@ -307,30 +307,39 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaMap tempVolumeMap = new ReplicaMap(this);
     fsVolume.getVolumeMap(tempVolumeMap, ramDiskReplicaTracker);
 
-    volumeMap.addAll(tempVolumeMap);
-    volumes.addVolume(fsVolume);
-    storageMap.put(sd.getStorageUuid(),
-        new DatanodeStorage(sd.getStorageUuid(),
-            DatanodeStorage.State.NORMAL,
-            storageType));
-    asyncDiskService.addVolume(sd.getCurrentDir());
+    synchronized (this) {
+      volumeMap.addAll(tempVolumeMap);
+      storageMap.put(sd.getStorageUuid(),
+          new DatanodeStorage(sd.getStorageUuid(),
+              DatanodeStorage.State.NORMAL,
+              storageType));
+      asyncDiskService.addVolume(sd.getCurrentDir());
+      volumes.addVolume(fsVolume);
+    }
 
     LOG.info("Added volume - " + dir + ", StorageType: " + storageType);
   }
 
-  private void addVolumeAndBlockPool(Collection<StorageLocation> dataLocations,
-      Storage.StorageDirectory sd, final Collection<String> bpids)
+  @Override
+  public void addVolume(final StorageLocation location,
+      final List<NamespaceInfo> nsInfos)
       throws IOException {
-    final File dir = sd.getCurrentDir();
-    final StorageType storageType =
-        getStorageTypeFromLocations(dataLocations, sd.getRoot());
+    final File dir = location.getFile();
 
+    // Prepare volume in DataStorage
+    DataStorage.VolumeBuilder builder =
+        dataStorage.prepareVolume(datanode, location.getFile(), nsInfos);
+
+    final Storage.StorageDirectory sd = builder.getStorageDirectory();
+
+    StorageType storageType = location.getStorageType();
     final FsVolumeImpl fsVolume = new FsVolumeImpl(
         this, sd.getStorageUuid(), dir, this.conf, storageType);
     final ReplicaMap tempVolumeMap = new ReplicaMap(fsVolume);
+    ArrayList<IOException> exceptions = Lists.newArrayList();
 
-    List<IOException> exceptions = Lists.newArrayList();
-    for (final String bpid : bpids) {
+    for (final NamespaceInfo nsInfo : nsInfos) {
+      String bpid = nsInfo.getBlockPoolID();
       try {
         fsVolume.addBlockPool(bpid, this.conf);
         fsVolume.getVolumeMap(bpid, tempVolumeMap, ramDiskReplicaTracker);
@@ -341,89 +350,22 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     }
     if (!exceptions.isEmpty()) {
-      // The states of FsDatasteImpl are not modified, thus no need to rolled back.
       throw MultipleIOException.createIOException(exceptions);
     }
 
-    volumeMap.addAll(tempVolumeMap);
-    storageMap.put(sd.getStorageUuid(),
-        new DatanodeStorage(sd.getStorageUuid(),
-            DatanodeStorage.State.NORMAL,
-            storageType));
-    asyncDiskService.addVolume(sd.getCurrentDir());
-    volumes.addVolume(fsVolume);
+    setupAsyncLazyPersistThread(fsVolume);
 
+    builder.build();
+    synchronized (this) {
+      volumeMap.addAll(tempVolumeMap);
+      storageMap.put(sd.getStorageUuid(),
+          new DatanodeStorage(sd.getStorageUuid(),
+              DatanodeStorage.State.NORMAL,
+              storageType));
+      asyncDiskService.addVolume(sd.getCurrentDir());
+      volumes.addVolume(fsVolume);
+    }
     LOG.info("Added volume - " + dir + ", StorageType: " + storageType);
-  }
-
-  /**
-   * Add an array of StorageLocation to FsDataset.
-   *
-   * @pre dataStorage must have these volumes.
-   * @param volumes an array of storage locations for adding volumes.
-   * @param bpids block pool IDs.
-   * @return an array of successfully loaded volumes.
-   */
-  @Override
-  public synchronized List<StorageLocation> addVolumes(
-      final List<StorageLocation> volumes, final Collection<String> bpids) {
-    final Collection<StorageLocation> dataLocations =
-        DataNode.getStorageLocations(this.conf);
-    final Map<String, Storage.StorageDirectory> allStorageDirs =
-        new HashMap<String, Storage.StorageDirectory>();
-    List<StorageLocation> succeedVolumes = Lists.newArrayList();
-    try {
-      for (int idx = 0; idx < dataStorage.getNumStorageDirs(); idx++) {
-        Storage.StorageDirectory sd = dataStorage.getStorageDir(idx);
-        allStorageDirs.put(sd.getRoot().getCanonicalPath(), sd);
-      }
-    } catch (IOException ioe) {
-      LOG.warn("Caught exception when parsing storage URL.", ioe);
-      return succeedVolumes;
-    }
-
-    final boolean[] successFlags = new boolean[volumes.size()];
-    Arrays.fill(successFlags, false);
-    List<Thread> volumeAddingThreads = Lists.newArrayList();
-    for (int i = 0; i < volumes.size(); i++) {
-      final int idx = i;
-      Thread t = new Thread() {
-        public void run() {
-          StorageLocation vol = volumes.get(idx);
-          try {
-            String key = vol.getFile().getCanonicalPath();
-            if (!allStorageDirs.containsKey(key)) {
-              LOG.warn("Attempt to add an invalid volume: " + vol.getFile());
-            } else {
-              addVolumeAndBlockPool(dataLocations, allStorageDirs.get(key),
-                  bpids);
-              successFlags[idx] = true;
-            }
-          } catch (IOException e) {
-            LOG.warn("Caught exception when adding volume " + vol, e);
-          }
-        }
-      };
-      volumeAddingThreads.add(t);
-      t.start();
-    }
-
-    for (Thread t : volumeAddingThreads) {
-      try {
-        t.join();
-      } catch (InterruptedException e) {
-        LOG.warn("Caught InterruptedException when adding volume.", e);
-      }
-    }
-
-    setupAsyncLazyPersistThreads();
-
-    for (int i = 0; i < volumes.size(); i++) {
-      if (successFlags[i]) {
-        succeedVolumes.add(volumes.get(i));
-      }
-    }
-    return succeedVolumes;
   }
 
   /**
@@ -2476,24 +2418,27 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   // added or removed.
   // This should only be called when the FsDataSetImpl#volumes list is finalized.
   private void setupAsyncLazyPersistThreads() {
-    boolean ramDiskConfigured = ramDiskConfigured();
     for (FsVolumeImpl v: getVolumes()){
-      // Skip transient volumes
-      if (v.isTransientStorage()) {
-        continue;
-      }
+      setupAsyncLazyPersistThread(v);
+    }
+  }
 
-      // Add thread for DISK volume if RamDisk is configured
-      if (ramDiskConfigured &&
-          !asyncLazyPersistService.queryVolume(v.getCurrentDir())) {
-        asyncLazyPersistService.addVolume(v.getCurrentDir());
-      }
+  private void setupAsyncLazyPersistThread(final FsVolumeImpl v) {
+    // Skip transient volumes
+    if (v.isTransientStorage()) {
+      return;
+    }
+    boolean ramDiskConfigured = ramDiskConfigured();
+    // Add thread for DISK volume if RamDisk is configured
+    if (ramDiskConfigured &&
+        !asyncLazyPersistService.queryVolume(v.getCurrentDir())) {
+      asyncLazyPersistService.addVolume(v.getCurrentDir());
+    }
 
-      // Remove thread for DISK volume if RamDisk is not configured
-      if (!ramDiskConfigured &&
-          asyncLazyPersistService.queryVolume(v.getCurrentDir())) {
-        asyncLazyPersistService.removeVolume(v.getCurrentDir());
-      }
+    // Remove thread for DISK volume if RamDisk is not configured
+    if (!ramDiskConfigured &&
+        asyncLazyPersistService.queryVolume(v.getCurrentDir())) {
+      asyncLazyPersistService.removeVolume(v.getCurrentDir());
     }
   }
 

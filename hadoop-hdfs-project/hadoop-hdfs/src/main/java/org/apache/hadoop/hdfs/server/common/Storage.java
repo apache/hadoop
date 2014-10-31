@@ -821,6 +821,21 @@ public abstract class Storage extends StorageInfo {
   }
 
   /**
+   * Returns true if the storage directory on the given directory is already
+   * loaded.
+   * @param root the root directory of a {@link StorageDirectory}
+   * @throws IOException if failed to get canonical path.
+   */
+  protected boolean containsStorageDir(File root) throws IOException {
+    for (StorageDirectory sd : storageDirs) {
+      if (sd.getRoot().getCanonicalPath().equals(root.getCanonicalPath())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Return true if the layout of the given storage directory is from a version
    * of Hadoop prior to the introduction of the "current" and "previous"
    * directories which allow upgrade and rollback.
