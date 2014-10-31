@@ -53,6 +53,7 @@ function hadoop_usage
   echo "  zkfc                 run the ZK Failover Controller daemon"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
+  # There are also debug commands, but they don't show up in this listing.
 }
 
 # let's locate libexec...
@@ -120,6 +121,9 @@ case ${COMMAND} in
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DATANODE_OPTS}"
       CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
     fi
+  ;;
+  debug)
+    CLASS='org.apache.hadoop.hdfs.tools.DebugAdmin'
   ;;
   dfs)
     CLASS=org.apache.hadoop.fs.FsShell
