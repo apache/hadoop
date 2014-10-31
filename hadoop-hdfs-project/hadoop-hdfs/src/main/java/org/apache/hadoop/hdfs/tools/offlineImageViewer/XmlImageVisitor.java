@@ -84,6 +84,7 @@ public class XmlImageVisitor extends TextWriterImageVisitor {
   }
 
   private void writeTag(String tag, String value) throws IOException {
-    write("<" + tag + ">" + XMLUtils.mangleXmlString(value) + "</" + tag + ">\n");
+    write("<" + tag + ">" +
+        XMLUtils.mangleXmlString(value, true) + "</" + tag + ">\n");
   }
 }

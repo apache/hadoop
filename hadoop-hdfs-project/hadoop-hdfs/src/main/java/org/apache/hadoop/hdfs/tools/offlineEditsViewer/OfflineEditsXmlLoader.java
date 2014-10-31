@@ -177,7 +177,7 @@ class OfflineEditsXmlLoader
   
   @Override
   public void endElement (String uri, String name, String qName) {
-    String str = XMLUtils.unmangleXmlString(cbuf.toString()).trim();
+    String str = XMLUtils.unmangleXmlString(cbuf.toString(), false).trim();
     cbuf = new StringBuffer();
     switch (state) {
     case EXPECT_EDITS_TAG:

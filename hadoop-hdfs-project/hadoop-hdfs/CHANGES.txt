@@ -446,6 +446,9 @@ Release 2.6.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-7309. XMLUtils.mangleXmlString doesn't seem to handle less than sign
+    (Colin Patrick McCabe via raviprak)
+
     HDFS-6823. dfs.web.authentication.kerberos.principal shows up in logs for 
     insecure HDFS (Allen Wittenauer via raviprak)
 
