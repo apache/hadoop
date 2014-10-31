@@ -73,8 +73,8 @@ fi
 
 # Special case for git-diff patches without --no-prefix
 if is_git_diff_with_prefix "$PATCH_FILE"; then
-  GIT_FLAGS="--binary -p1 -v --stat --apply"
-  [[ -n $DRY_RUN ]] && GIT_FLAGS="$GIT_FLAGS --dry-run "
+  GIT_FLAGS="--binary -p1 -v --stat"
+  [[ -n $DRY_RUN ]] || GIT_FLAGS="$GIT_FLAGS --apply "
   echo Going to apply git patch with: git apply "${GIT_FLAGS}"
   git apply ${GIT_FLAGS} "${PATCH_FILE}"
   exit $?
