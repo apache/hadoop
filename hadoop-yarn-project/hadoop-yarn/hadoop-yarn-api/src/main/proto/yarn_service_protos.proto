@@ -194,6 +194,19 @@ message GetQueueUserAclsInfoResponseProto {
   repeated QueueUserACLInfoProto queueUserAcls = 1;
 }
 
+message GetNodesToLabelsRequestProto {
+}
+
+message GetNodesToLabelsResponseProto {
+  repeated NodeIdToLabelsProto nodeToLabels = 1;
+}
+
+message GetClusterNodeLabelsRequestProto {
+}
+
+message GetClusterNodeLabelsResponseProto {
+  repeated string nodeLabels = 1;
+}
 
 //////////////////////////////////////////////////////
 /////// client_NM_Protocol ///////////////////////////

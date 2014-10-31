@@ -22,14 +22,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -51,8 +49,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.GetClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
@@ -104,10 +100,6 @@ public class RMAdminCLI extends HAAdmin {
           .put("-replaceLabelsOnNode",
               new UsageInfo("[node1:port,label1,label2 node2:port,label1,label2]",
                   "replace labels on nodes"))
-          .put("-getNodeToLabels", new UsageInfo("", 
-              "Get node to label mappings"))
-          .put("-getClusterNodeLabels",
-              new UsageInfo("", "Get node labels in the cluster"))
           .put("-directlyAccessNodeLabelStore",
               new UsageInfo("", "Directly access node label store, "
                   + "with this option, all node label related operations"
@@ -115,9 +107,10 @@ public class RMAdminCLI extends HAAdmin {
                   + " access/modify stored node labels directly."
                   + " By default, it is false (access via RM)."
                   + " AND PLEASE NOTE: if you configured"
-                  + " yarn.node-labels.fs-store.uri to a local directory"
+                  + " yarn.node-labels.fs-store.root-dir to a local directory"
                   + " (instead of NFS or HDFS), this option will only work"
-                  + " when the command run on the machine where RM is running."))              
+                  +
+                  " when the command run on the machine where RM is running."))
               .build();
 
   public RMAdminCLI() {
@@ -368,9 +361,10 @@ public class RMAdminCLI extends HAAdmin {
     for (String p : args.split(",")) {
       labels.add(p);
     }
-    
+
     if (directlyAccessNodeLabelStore) {
-      getNodeLabelManagerInstance(getConf()).removeFromClusterNodeLabels(labels);
+      getNodeLabelManagerInstance(getConf()).removeFromClusterNodeLabels(
+          labels);
     } else {
       ResourceManagerAdministrationProtocol adminProtocol =
           createAdminProtocol();
@@ -380,57 +374,6 @@ public class RMAdminCLI extends HAAdmin {
     }
 
     return 0;
-  }
-
-  private int getNodeToLabels() throws IOException, YarnException {
-    Map<NodeId, Set<String>> nodeToLabels = null;
-
-    if (directlyAccessNodeLabelStore) {
-      nodeToLabels = getNodeLabelManagerInstance(getConf()).getNodeLabels();
-    } else {
-      ResourceManagerAdministrationProtocol adminProtocol =
-          createAdminProtocol();
-
-      nodeToLabels =
-          adminProtocol.getNodeToLabels(GetNodesToLabelsRequest.newInstance())
-              .getNodeToLabels();
-    }
-    for (NodeId host : sortNodeIdSet(nodeToLabels.keySet())) {
-      System.out.println(String.format("Host=%s, Node-labels=[%s]",
-          (host.getPort() == 0 ? host.getHost() : host.toString()),
-          StringUtils.join(sortStrSet(nodeToLabels.get(host)), ",")));
-    }
-    return 0;
-  }
-
-  private int getClusterNodeLabels() throws IOException, YarnException {
-    Set<String> labels = null;
-    if (directlyAccessNodeLabelStore) {
-      labels = getNodeLabelManagerInstance(getConf()).getClusterNodeLabels();
-    } else {
-      ResourceManagerAdministrationProtocol adminProto = createAdminProtocol();
-      labels =
-          adminProto.getClusterNodeLabels(
-              GetClusterNodeLabelsRequest.newInstance()).getNodeLabels();
-    }
-
-    System.out.println(String.format("Node-labels=%s",
-        StringUtils.join(sortStrSet(labels).iterator(), ",")));
-    return 0;
-  }
-  
-  private List<NodeId> sortNodeIdSet(Set<NodeId> nodes) {
-    List<NodeId> list = new ArrayList<NodeId>();
-    list.addAll(nodes);
-    Collections.sort(list);
-    return list;
-  }
-  
-  private List<String> sortStrSet(Set<String> labels) {
-    List<String> list = new ArrayList<String>();
-    list.addAll(labels);
-    Collections.sort(list);
-    return list;
   }
   
   private Map<NodeId, Set<String>> buildNodeLabelsFromStr(String args)
@@ -593,10 +536,6 @@ public class RMAdminCLI extends HAAdmin {
         } else {
           exitCode = replaceLabelsOnNodes(args[i]);
         }
-      } else if ("-getNodeToLabels".equals(cmd)) {
-        exitCode = getNodeToLabels();
-      } else if ("-getClusterNodeLabels".equals(cmd)) {
-        exitCode = getClusterNodeLabels();
       } else {
         exitCode = -1;
         System.err.println(cmd.substring(1) + ": Unknown command");

@@ -60,6 +60,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
@@ -70,6 +72,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
@@ -116,6 +120,7 @@ import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationInputValidator;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
@@ -857,12 +862,12 @@ public class ClientRMService extends AbstractService implements
       numContainers = schedulerNodeReport.getNumContainers();
     } 
     
-    NodeReport report = BuilderUtils.newNodeReport(rmNode.getNodeID(),
-        rmNode.getState(),
-        rmNode.getHttpAddress(), rmNode.getRackName(), used,
-        rmNode.getTotalCapability(), numContainers,
-        rmNode.getHealthReport(),
-        rmNode.getLastHealthReportTime());
+    NodeReport report =
+        BuilderUtils.newNodeReport(rmNode.getNodeID(), rmNode.getState(),
+            rmNode.getHttpAddress(), rmNode.getRackName(), used,
+            rmNode.getTotalCapability(), numContainers,
+            rmNode.getHealthReport(), rmNode.getLastHealthReportTime(),
+            rmNode.getNodeLabels());
 
     return report;
   }
@@ -1183,6 +1188,25 @@ public class ClientRMService extends AbstractService implements
     }
     RMAuditLogger.logSuccess(user, AuditConstants.DELETE_RESERVATION_REQUEST,
         "ClientRMService: " + reservationId);
+    return response;
+  }
+
+  @Override
+  public GetNodesToLabelsResponse getNodeToLabels(
+      GetNodesToLabelsRequest request) throws YarnException, IOException {
+    RMNodeLabelsManager labelsMgr = rmContext.getNodeLabelManager();
+    GetNodesToLabelsResponse response =
+        GetNodesToLabelsResponse.newInstance(labelsMgr.getNodeLabels());
+    return response;
+  }
+
+  @Override
+  public GetClusterNodeLabelsResponse getClusterNodeLabels(
+      GetClusterNodeLabelsRequest request) throws YarnException, IOException {
+    RMNodeLabelsManager labelsMgr = rmContext.getNodeLabelManager();
+    GetClusterNodeLabelsResponse response =
+        GetClusterNodeLabelsResponse.newInstance(
+            labelsMgr.getClusterNodeLabels());
     return response;
   }
 

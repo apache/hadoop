@@ -502,24 +502,6 @@ public class TestRMAdminCLI {
     assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
         NodeId.newInstance("node2", 8000)));
   }
-  
-  @Test
-  public void testGetClusterNodeLabels() throws Exception {
-    // Successfully get labels
-    String[] args =
-        { "-getClusterNodeLabels",
-            "-directlyAccessNodeLabelStore" };
-    assertEquals(0, rmAdminCLI.run(args));
-  }
-  
-  @Test
-  public void testGetNodeToLabels() throws Exception {
-    // Successfully get node-to-labels
-    String[] args =
-        { "-getNodeToLabels",
-            "-directlyAccessNodeLabelStore" };
-    assertEquals(0, rmAdminCLI.run(args));
-  }
 
   private void testError(String[] args, String template,
       ByteArrayOutputStream data, int resultCode) throws Exception {

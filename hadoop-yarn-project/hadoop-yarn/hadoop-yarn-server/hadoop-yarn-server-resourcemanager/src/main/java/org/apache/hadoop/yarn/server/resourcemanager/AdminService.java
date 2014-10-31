@@ -59,10 +59,10 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.GetClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.GetClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.GetNodesToLabelsRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.GetNodesToLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -81,8 +81,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.GetClusterNodeLabelsResponsePBImpl;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.GetNodesToLabelsResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetClusterNodeLabelsResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetNodesToLabelsResponsePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
@@ -721,19 +721,5 @@ public class AdminService extends CompositeService implements
           "Exception set node to labels.");
       throw RPCUtil.getRemoteException(ioe);
     }
-  }
-
-  @Override
-  public GetNodesToLabelsResponse getNodeToLabels(GetNodesToLabelsRequest request)
-      throws YarnException, IOException {
-    return GetNodesToLabelsResponsePBImpl.newInstance(rmContext
-        .getNodeLabelManager().getNodeLabels());
-  }
-
-  @Override
-  public GetClusterNodeLabelsResponse getClusterNodeLabels(GetClusterNodeLabelsRequest request)
-      throws YarnException, IOException {
-    return GetClusterNodeLabelsResponsePBImpl.newInstance(rmContext.getNodeLabelManager()
-        .getClusterNodeLabels());
   }
 }
