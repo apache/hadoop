@@ -68,6 +68,7 @@ function print_usage(){
   echo "  version              print the version"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
+  # There are also debug commands, but they don't show up in this listing.
 }
 
 if [ $# = 0 ]; then
@@ -198,6 +199,8 @@ elif [ "$COMMAND" = "crypto" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.CryptoAdmin
 elif [ "$COMMAND" = "version" ] ; then
   CLASS=org.apache.hadoop.util.VersionInfo
+elif [ "$COMMAND" = "debug" ]; then
+  CLASS=org.apache.hadoop.hdfs.tools.DebugAdmin
 else
   CLASS="$COMMAND"
 fi

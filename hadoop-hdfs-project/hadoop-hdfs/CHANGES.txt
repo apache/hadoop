@@ -72,6 +72,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7035. Make adding a new data directory to the DataNode an atomic
     operation and improve error handling (Lei Xu via Colin P. McCabe)
+    
+    HDFS-6917. Add an hdfs debug command to validate blocks, call recoverlease,
+    etc. (cmccabe)
 
   OPTIMIZATIONS
 
