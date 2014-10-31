@@ -267,7 +267,7 @@ public class DFSTestUtil {
     try {
       FSDataInputStream in = fs.open(fileName);
       try {
-        IOUtils.copyBytes(fs.open(fileName), os, 1024, true);
+        IOUtils.copyBytes(in, os, 1024, true);
         return os.toByteArray();
       } finally {
         in.close();
