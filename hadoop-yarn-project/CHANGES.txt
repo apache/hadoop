@@ -735,6 +735,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2755. NM fails to clean up usercache_DEL_<timestamp> dirs after
     YARN-661 (Siqi Li via jlowe)
 
+    YARN-2698. Moved some node label APIs to be correctly placed in client
+    protocol. (Wangda Tan via vinodkv)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

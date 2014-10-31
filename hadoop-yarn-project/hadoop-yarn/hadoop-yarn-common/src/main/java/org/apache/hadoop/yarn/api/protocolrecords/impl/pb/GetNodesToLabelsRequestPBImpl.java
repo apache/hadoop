@@ -16,30 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
+package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.GetNodesToLabelsRequestProto;
-import org.apache.hadoop.yarn.server.api.protocolrecords.GetNodesToLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 
 import com.google.protobuf.TextFormat;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 
 public class GetNodesToLabelsRequestPBImpl extends GetNodesToLabelsRequest {
 
-  GetNodesToLabelsRequestProto proto = GetNodesToLabelsRequestProto
-      .getDefaultInstance();
-  GetNodesToLabelsRequestProto.Builder builder = null;
+  YarnServiceProtos.GetNodesToLabelsRequestProto proto =
+      YarnServiceProtos.GetNodesToLabelsRequestProto
+          .getDefaultInstance();
+  YarnServiceProtos.GetNodesToLabelsRequestProto.Builder builder = null;
   boolean viaProto = false;
 
   public GetNodesToLabelsRequestPBImpl() {
-    builder = GetNodesToLabelsRequestProto.newBuilder();
+    builder = YarnServiceProtos.GetNodesToLabelsRequestProto.newBuilder();
   }
 
-  public GetNodesToLabelsRequestPBImpl(GetNodesToLabelsRequestProto proto) {
+  public GetNodesToLabelsRequestPBImpl(
+      YarnServiceProtos.GetNodesToLabelsRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public GetNodesToLabelsRequestProto getProto() {
+  public YarnServiceProtos.GetNodesToLabelsRequestProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;

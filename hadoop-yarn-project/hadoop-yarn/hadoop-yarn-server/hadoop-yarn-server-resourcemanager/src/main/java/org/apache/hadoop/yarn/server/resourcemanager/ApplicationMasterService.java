@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NMToken;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.PreemptionContainer;
 import org.apache.hadoop.yarn.api.records.PreemptionContract;
@@ -553,12 +554,13 @@ public class ApplicationMasterService extends AbstractService implements
             used = schedulerNodeReport.getUsedResource();
             numContainers = schedulerNodeReport.getNumContainers();
           }
-          NodeReport report = BuilderUtils.newNodeReport(rmNode.getNodeID(),
-              rmNode.getState(),
-              rmNode.getHttpAddress(), rmNode.getRackName(), used,
-              rmNode.getTotalCapability(), numContainers,
-              rmNode.getHealthReport(),
-              rmNode.getLastHealthReportTime());
+          NodeId nodeId = rmNode.getNodeID();
+          NodeReport report =
+              BuilderUtils.newNodeReport(nodeId, rmNode.getState(),
+                  rmNode.getHttpAddress(), rmNode.getRackName(), used,
+                  rmNode.getTotalCapability(), numContainers,
+                  rmNode.getHealthReport(), rmNode.getLastHealthReportTime(),
+                  rmNode.getNodeLabels());
 
           updatedNodeReports.add(report);
         }

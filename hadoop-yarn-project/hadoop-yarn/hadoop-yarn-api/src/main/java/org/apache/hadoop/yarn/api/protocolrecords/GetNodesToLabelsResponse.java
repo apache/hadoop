@@ -16,12 +16,30 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.api.protocolrecords;
+package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.util.Records;
 
-public abstract class GetNodesToLabelsRequest {
-  public static GetNodesToLabelsRequest newInstance() {
-    return Records.newRecord(GetNodesToLabelsRequest.class);
+public abstract class GetNodesToLabelsResponse {
+  public static GetNodesToLabelsResponse newInstance(
+      Map<NodeId, Set<String>> map) {
+    GetNodesToLabelsResponse response =
+        Records.newRecord(GetNodesToLabelsResponse.class);
+    response.setNodeToLabels(map);
+    return response;
   }
+
+  @Public
+  @Evolving
+  public abstract void setNodeToLabels(Map<NodeId, Set<String>> map);
+
+  @Public
+  @Evolving
+  public abstract Map<NodeId, Set<String>> getNodeToLabels();
 }
