@@ -102,4 +102,34 @@ public abstract class TimelineClient extends AbstractService {
   public abstract Token<TimelineDelegationTokenIdentifier> getDelegationToken(
       String renewer) throws IOException, YarnException;
 
+  /**
+   * <p>
+   * Renew a timeline delegation token.
+   * </p>
+   * 
+   * @param timelineDT
+   *          the delegation token to renew
+   * @return the new expiration time
+   * @throws IOException
+   * @throws YarnException
+   */
+  @Public
+  public abstract long renewDelegationToken(
+      Token<TimelineDelegationTokenIdentifier> timelineDT)
+          throws IOException, YarnException;
+
+  /**
+   * <p>
+   * Cancel a timeline delegation token.
+   * </p>
+   * 
+   * @param timelineDT
+   *          the delegation token to cancel
+   * @throws IOException
+   * @throws YarnException
+   */
+  @Public
+  public abstract void cancelDelegationToken(
+      Token<TimelineDelegationTokenIdentifier> timelineDT)
+          throws IOException, YarnException;
 }
