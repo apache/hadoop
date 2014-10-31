@@ -348,6 +348,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2779. Fixed ResourceManager to not require delegation tokens for 
     communicating with Timeline Service. (Zhijie Shen via vinodkv)
 
+    YARN-2778. Moved node-lables' reports to the yarn nodes CLI from the admin
+    CLI. (Wangda Tan via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
