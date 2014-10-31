@@ -266,7 +266,7 @@ public class FSDownload implements Callable<Path> {
     return dCopy;
   }
 
-  private long unpack(File localrsrc, File dst, Pattern pattern) throws IOException {
+  private long unpack(File localrsrc, File dst) throws IOException {
     switch (resource.getType()) {
     case ARCHIVE: {
       String lowerDst = dst.getName().toLowerCase();
@@ -290,7 +290,9 @@ public class FSDownload implements Callable<Path> {
     case PATTERN: {
       String lowerDst = dst.getName().toLowerCase();
       if (lowerDst.endsWith(".jar")) {
-        RunJar.unJar(localrsrc, dst, pattern);
+        String p = resource.getPattern();
+        RunJar.unJar(localrsrc, dst,
+            p == null ? RunJar.MATCH_ANY : Pattern.compile(p));
         File newDst = new File(dst, dst.getName());
         if (!dst.exists() && !dst.mkdir()) {
           throw new IOException("Unable to create directory: [" + dst + "]");
@@ -356,12 +358,7 @@ public class FSDownload implements Callable<Path> {
               return files.makeQualified(copy(sCopy, dst_work));
             };
           });
-      Pattern pattern = null;
-      String p = resource.getPattern();
-      if (p != null) {
-        pattern = Pattern.compile(p);
-      }
-      unpack(new File(dTmp.toUri()), new File(dFinal.toUri()), pattern);
+      unpack(new File(dTmp.toUri()), new File(dFinal.toUri()));
       changePermissions(dFinal.getFileSystem(conf), dFinal);
       files.rename(dst_work, destDirPath, Rename.OVERWRITE);
     } catch (Exception e) {
