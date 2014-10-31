@@ -173,6 +173,13 @@ public class BuilderUtils {
   
   public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
       String httpAddress, String rackName, Resource used, Resource capability,
+      int numContainers, String healthReport, long lastHealthReportTime) {
+    return newNodeReport(nodeId, nodeState, httpAddress, rackName, used,
+        capability, numContainers, healthReport, lastHealthReportTime, null);
+  }
+  
+  public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
+      String httpAddress, String rackName, Resource used, Resource capability,
       int numContainers, String healthReport, long lastHealthReportTime,
       Set<String> nodeLabels) {
     NodeReport nodeReport = recordFactory.newRecordInstance(NodeReport.class);

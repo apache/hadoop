@@ -47,6 +47,15 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Stable
 public abstract class NodeReport {
+  
+  @Private
+  @Unstable
+  public static NodeReport newInstance(NodeId nodeId, NodeState nodeState,
+      String httpAddress, String rackName, Resource used, Resource capability,
+      int numContainers, String healthReport, long lastHealthReportTime) {
+    return newInstance(nodeId, nodeState, httpAddress, rackName, used,
+        capability, numContainers, healthReport, lastHealthReportTime, null);
+  }
 
   @Private
   @Unstable
