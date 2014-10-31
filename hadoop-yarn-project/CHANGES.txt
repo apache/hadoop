@@ -747,6 +747,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2698. Moved some node label APIs to be correctly placed in client
     protocol. (Wangda Tan via vinodkv)
 
+    YARN-2789. Re-instated the NodeReport.newInstance private unstable API
+    modified in YARN-2698 so that tests in YARN frameworks don't break. (Wangda
+    Tan via vinodkv)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
