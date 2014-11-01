@@ -613,10 +613,26 @@ public class MRApps extends Apps {
    * @param logSize See {@link ContainerLogAppender#setTotalLogFileSize(long)}
    * @param numBackups See {@link RollingFileAppender#setMaxBackupIndex(int)}
    * @param vargs the argument list to append to
+   * @param conf configuration of MR job
    */
   public static void addLog4jSystemProperties(
-      String logLevel, long logSize, int numBackups, List<String> vargs) {
-    vargs.add("-Dlog4j.configuration=container-log4j.properties");
+      String logLevel, long logSize, int numBackups, List<String> vargs, 
+      Configuration conf) {
+    String log4jPropertyFile =
+        conf.get(MRJobConfig.MAPREDUCE_JOB_LOG4J_PROPERTIES_FILE, "");
+    if (log4jPropertyFile.isEmpty()) {
+      vargs.add("-Dlog4j.configuration=container-log4j.properties");
+    } else {
+      URI log4jURI = null;
+      try {
+        log4jURI = new URI(log4jPropertyFile);
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException(e);
+      }
+      Path log4jPath = new Path(log4jURI);
+      vargs.add("-Dlog4j.configuration="+log4jPath.getName());
+    }
+    
     vargs.add("-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_DIR + "=" +
         ApplicationConstants.LOG_DIR_EXPANSION_VAR);
     vargs.add(

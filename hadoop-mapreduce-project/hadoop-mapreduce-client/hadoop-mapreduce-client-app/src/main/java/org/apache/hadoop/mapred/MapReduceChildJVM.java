@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapreduce.ID;
@@ -148,11 +149,11 @@ public class MapReduceChildJVM {
 
   private static void setupLog4jProperties(Task task,
       Vector<String> vargs,
-      long logSize) {
+      long logSize, Configuration conf) {
     String logLevel = getChildLogLevel(task.conf, task.isMapTask());
     int numBackups = task.conf.getInt(MRJobConfig.TASK_LOG_BACKUPS,
         MRJobConfig.DEFAULT_TASK_LOG_BACKUPS);
-    MRApps.addLog4jSystemProperties(logLevel, logSize, numBackups, vargs);
+    MRApps.addLog4jSystemProperties(logLevel, logSize, numBackups, vargs, conf);
   }
 
   public static List<String> getVMCommand(
@@ -208,7 +209,7 @@ public class MapReduceChildJVM {
 
     // Setup the log4j prop
     long logSize = TaskLog.getTaskLogLength(conf);
-    setupLog4jProperties(task, vargs, logSize);
+    setupLog4jProperties(task, vargs, logSize, conf);
 
     if (conf.getProfileEnabled()) {
       if (conf.getProfileTaskRange(task.isMapTask()
