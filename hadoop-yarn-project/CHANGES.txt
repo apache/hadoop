@@ -754,6 +754,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2707. Potential null dereference in FSDownload (Gera Shegalov via
     jlowe)
 
+    YARN-2711. Fixed TestDefaultContainerExecutor#testContainerLaunchError failure on
+    Windows. (Varun Vasudev via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
