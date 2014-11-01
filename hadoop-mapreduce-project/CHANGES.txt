@@ -64,6 +64,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6018. Added an MR specific config to enable emitting job history
     data to the timeline server. (Robert Kanter via zjshen)
 
+    MAPREDUCE-6052. Supported overriding the default container-log4j.properties
+    file per job. (Junping Du via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

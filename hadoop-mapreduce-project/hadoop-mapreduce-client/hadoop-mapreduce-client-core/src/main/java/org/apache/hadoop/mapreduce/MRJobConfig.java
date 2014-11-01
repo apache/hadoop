@@ -719,6 +719,9 @@ public interface MRJobConfig {
    */
   public static final String MAPREDUCE_APPLICATION_CLASSPATH = 
       "mapreduce.application.classpath";
+  
+  public static final String MAPREDUCE_JOB_LOG4J_PROPERTIES_FILE = 
+      "mapreduce.job.log4j-properties-file";
 
   /**
    * Path to MapReduce framework archive
