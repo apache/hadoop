@@ -300,6 +300,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7313. Support optional configuration of AES cipher suite on
     DataTransferProtocol. (cnauroth)
 
+    HDFS-7276. Limit the number of byte arrays used by DFSOutputStream and
+    provide a mechanism for recycling arrays. (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
