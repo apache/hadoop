@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregatio
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -43,19 +42,21 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogWriter;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -195,6 +196,19 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private void uploadLogsForContainers() {
     if (this.logAggregationDisabled) {
       return;
+    }
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      Credentials systemCredentials =
+          context.getSystemCredentialsForApps().get(appId);
+      if (systemCredentials != null) {
+        for (Token<?> token : systemCredentials.getAllTokens()) {
+          LOG.info("Adding new framework-token for " + appId
+              + " for log-aggregation: " + token + " user=" + userUgi);
+        }
+        // this will replace old token
+        userUgi.addCredentials(systemCredentials);
+      }
     }
 
     // Create a set of Containers whose logs will be uploaded in this cycle.
@@ -537,5 +551,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       this.uploadedFileMeta = Sets.newHashSet(mask);
       return logValue.getCurrentUpLoadedFilesPath();
     }
+  }
+
+  // only for test
+  @VisibleForTesting
+  public UserGroupInformation getUgi() {
+    return this.userUgi;
   }
 }

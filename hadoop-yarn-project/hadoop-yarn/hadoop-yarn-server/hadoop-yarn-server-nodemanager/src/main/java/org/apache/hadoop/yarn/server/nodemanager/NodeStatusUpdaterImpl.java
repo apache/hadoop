@@ -626,7 +626,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                 response.getSystemCredentialsForApps();
             if (systemCredentials != null && !systemCredentials.isEmpty()) {
               ((NMContext) context)
-                .setSystemCrendentials(parseCredentials(systemCredentials));
+                .setSystemCrendentialsForApps(parseCredentials(systemCredentials));
             }
           } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM
