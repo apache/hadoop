@@ -77,6 +77,36 @@ public class TestMapReduceChildJVM {
       app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"));
     Assert.assertEquals("", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
   }
+  
+  @Test (timeout = 30000)
+  public void testCommandLineWithLog4JConifg() throws Exception {
+
+    MyMRApp app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
+    String testLogPropertieFile = "test-log4j.properties";
+    String testLogPropertiePath = "../"+"test-log4j.properties";
+    conf.set(MRJobConfig.MAPREDUCE_JOB_LOG4J_PROPERTIES_FILE, testLogPropertiePath);
+    Job job = app.submit(conf);
+    app.waitForState(job, JobState.SUCCEEDED);
+    app.verifyCompleted();
+
+    Assert.assertEquals(
+      "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
+      " -Djava.net.preferIPv4Stack=true" +
+      " -Dhadoop.metrics.log.level=WARN" +
+      "  -Xmx200m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
+      " -Dlog4j.configuration=" + testLogPropertieFile +
+      " -Dyarn.app.container.log.dir=<LOG_DIR>" +
+      " -Dyarn.app.container.log.filesize=0" +
+      " -Dhadoop.root.logger=INFO,CLA" +
+      " org.apache.hadoop.mapred.YarnChild 127.0.0.1" +
+      " 54321" +
+      " attempt_0_0000_m_000000_0" +
+      " 0" +
+      " 1><LOG_DIR>/stdout" +
+      " 2><LOG_DIR>/stderr ]", app.myCommandLine);
+  }
 
   private static final class MyMRApp extends MRApp {
 
