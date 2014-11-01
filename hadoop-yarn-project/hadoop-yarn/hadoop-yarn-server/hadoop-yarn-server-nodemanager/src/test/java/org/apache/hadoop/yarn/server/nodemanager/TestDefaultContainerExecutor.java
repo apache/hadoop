@@ -27,10 +27,12 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.junit.Assert.assertTrue;
 
+import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.LineNumberReader;
@@ -59,6 +61,7 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -118,7 +121,7 @@ public class TestDefaultContainerExecutor {
   }
   */
 
-  private static final Path BASE_TMP_PATH = new Path("target",
+  private static Path BASE_TMP_PATH = new Path("target",
       TestDefaultContainerExecutor.class.getSimpleName());
 
   @AfterClass
@@ -217,6 +220,12 @@ public class TestDefaultContainerExecutor {
   public void testContainerLaunchError()
       throws IOException, InterruptedException {
 
+    if (Shell.WINDOWS) {
+      BASE_TMP_PATH =
+          new Path(new File("target").getAbsolutePath(),
+            TestDefaultContainerExecutor.class.getSimpleName());
+    }
+
     Path localDir = new Path(BASE_TMP_PATH, "localDir");
     List<String> localDirs = new ArrayList<String>();
     localDirs.add(localDir.toString());
@@ -226,7 +235,7 @@ public class TestDefaultContainerExecutor {
 
     Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
-       conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.toString());
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.toString());
     conf.set(YarnConfiguration.NM_LOG_DIRS, logDir.toString());
     
     FileContext lfs = FileContext.getLocalFSFileContext(conf);
@@ -284,6 +293,17 @@ public class TestDefaultContainerExecutor {
 
       Path scriptPath = new Path("file:///bin/echo");
       Path tokensPath = new Path("file:///dev/null");
+      if (Shell.WINDOWS) {
+        File tmp = new File(BASE_TMP_PATH.toString(), "test_echo.cmd");
+        BufferedWriter output = new BufferedWriter(new FileWriter(tmp));
+        output.write("Exit 1");
+        output.write("Echo No such file or directory 1>&2");
+        output.close();
+        scriptPath = new Path(tmp.getAbsolutePath());
+        tmp = new File(BASE_TMP_PATH.toString(), "tokens");
+        tmp.createNewFile();
+        tokensPath = new Path(tmp.getAbsolutePath());
+      }
       Path workDir = localDir;
       Path pidFile = new Path(workDir, "pid.txt");
 
