@@ -1039,6 +1039,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11221. IdentityHashStore assumes System.identityHashCode() is
     non-negative. (Jinghui Wang via szetszwo)
 
+    HADOOP-11241. Fixed intermittent TestNMSimulator failure due to timing issue.
+    (Varun Vasudev via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
