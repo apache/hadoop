@@ -433,7 +433,7 @@ public class NodeManager extends CompositeService
       return systemCredentials;
     }
 
-    public void setSystemCrendentials(
+    public void setSystemCrendentialsForApps(
         Map<ApplicationId, Credentials> systemCredentials) {
       this.systemCredentials = systemCredentials;
     }

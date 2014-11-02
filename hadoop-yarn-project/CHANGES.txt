@@ -832,6 +832,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2711. Fixed TestDefaultContainerExecutor#testContainerLaunchError failure on
     Windows. (Varun Vasudev via zjshen)
 
+    YARN-2790. Fixed a NodeManager bug that was causing log-aggregation to fail
+    beyond HFDS delegation-token expiry even when RM is a proxy-user (YARN-2704).
+    (Jian He via vinodkv)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
