@@ -806,6 +806,9 @@ Release 2.6.0 - UNRELEASED
     beyond HFDS delegation-token expiry even when RM is a proxy-user (YARN-2704).
     (Jian He via vinodkv)
 
+    YARN-2785. Fixed intermittent TestContainerResourceUsage failure. (Varun Vasudev
+    via zjshen)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
