@@ -229,6 +229,11 @@ void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_WriteOptions_sync(JNIEnv *, jcla
   options->sync = value;
 }
 
+void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_WriteOptions_skipWal(JNIEnv *, jclass, jlong handle, jboolean value) {
+  leveldb::WriteOptions *options = reinterpret_cast<leveldb::WriteOptions*>(handle);
+  options->skip_wal = value;
+}
+
 void JNICALL Java_org_apache_hadoop_hdfs_hdfsdb_WriteOptions_destruct(JNIEnv *, jclass, jlong handle) {
   delete reinterpret_cast<leveldb::WriteOptions*>(handle);
 }

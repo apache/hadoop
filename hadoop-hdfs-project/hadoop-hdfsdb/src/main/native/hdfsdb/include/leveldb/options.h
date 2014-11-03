@@ -184,9 +184,12 @@ struct WriteOptions {
   //
   // Default: false
   bool sync;
+  // If true, the write will not write the write-ahead log.
+  bool skip_wal;
 
   WriteOptions()
-      : sync(false) {
+      : sync(false)
+      , skip_wal(false) {
   }
 };
 
