@@ -845,6 +845,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2798. Fixed YarnClient to populate the renewer correctly for Timeline
     delegation tokens. (Zhijie Shen via vinodkv)
 
+    YARN-2788. Fixed backwards compatiblity issues with log-aggregation feature
+    that were caused when adding log-upload-time via YARN-2703. (Xuan Gong via
+    vinodkv)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
