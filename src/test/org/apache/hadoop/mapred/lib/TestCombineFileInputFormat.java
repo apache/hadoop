@@ -898,6 +898,28 @@ public class TestCombineFileInputFormat extends TestCase{
     }
   }
 
+  public void testGetConfiguredMaxSplitSize() throws Throwable {
+    JobConf conf = new JobConf();
+    DummyInputFormat inFormat = new DummyInputFormat();
+    // if both mapred.max.split.size and
+    // mapreduce.input.fileinputformat.split.maxsize are not set, return 0.
+    long maxSize = inFormat.getConfiguredMaxSplitSize(conf);
+    assertEquals(maxSize, 0L);
+
+    // if only mapreduce.input.fileinputformat.split.maxsize is set,
+    // return the value of mapreduce.input.fileinputformat.split.maxsize.
+    conf.setLong("mapreduce.input.fileinputformat.split.maxsize", 100L);
+    maxSize = inFormat.getConfiguredMaxSplitSize(conf);
+    assertEquals(maxSize, 100L);
+
+    // if both mapred.max.split.size and
+    // mapreduce.input.fileinputformat.split.maxsize are set,
+    // return the value of mapred.max.split.size.
+    conf.setLong("mapred.max.split.size", 1000L);
+    maxSize = inFormat.getConfiguredMaxSplitSize(conf);
+    assertEquals(maxSize, 1000L);
+  }
+
   static class TestFilter implements PathFilter {
     private Path p;
 
