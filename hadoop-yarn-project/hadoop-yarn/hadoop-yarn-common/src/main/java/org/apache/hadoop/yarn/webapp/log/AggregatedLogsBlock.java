@@ -126,6 +126,7 @@ public class AggregatedLogsBlock extends HtmlBlock {
                 .endsWith(LogAggregationUtils.TMP_FILE_SUFFIX)) {
             continue;
           }
+          long logUploadedTime = thisNodeFile.getModificationTime();
           reader =
               new AggregatedLogFormat.LogReader(conf, thisNodeFile.getPath());
 
@@ -164,7 +165,7 @@ public class AggregatedLogsBlock extends HtmlBlock {
           }
 
           foundLog = readContainerLogs(html, logReader, logLimits,
-              desiredLogType);
+              desiredLogType, logUploadedTime);
         } catch (IOException ex) {
           LOG.error("Error getting logs for " + logEntity, ex);
           continue;
@@ -189,7 +190,7 @@ public class AggregatedLogsBlock extends HtmlBlock {
 
   private boolean readContainerLogs(Block html,
       AggregatedLogFormat.ContainerLogsReader logReader, LogLimits logLimits,
-      String desiredLogType) throws IOException {
+      String desiredLogType, long logUpLoadTime) throws IOException {
     int bufferSize = 65536;
     char[] cbuf = new char[bufferSize];
 
@@ -199,13 +200,12 @@ public class AggregatedLogsBlock extends HtmlBlock {
       if (desiredLogType == null || desiredLogType.isEmpty()
           || desiredLogType.equals(logType)) {
         long logLength = logReader.getCurrentLogLength();
-        long logUpLoadTime = logReader.getCurrentLogUpLoadTime();
         if (foundLog) {
           html.pre()._("\n\n")._();
         }
 
         html.p()._("Log Type: " + logType)._();
-        html.p()._("Log UpLoadTime: " + Times.format(logUpLoadTime))._();
+        html.p()._("Log Upload Time: " + Times.format(logUpLoadTime))._();
         html.p()._("Log Length: " + Long.toString(logLength))._();
 
         long start = logLimits.start < 0
