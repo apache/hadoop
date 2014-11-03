@@ -28,8 +28,6 @@ import java.net.InetSocketAddress;
 
 import javax.ws.rs.core.MediaType;
 
-import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,10 +35,10 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthCheckFailedException;
-import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -54,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -64,7 +63,7 @@ import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 public class TestRMHA {
   private Log LOG = LogFactory.getLog(TestRMHA.class);
-  private final Configuration configuration = new YarnConfiguration();
+  private Configuration configuration;
   private MockRM rm = null;
   private RMApp app = null;
   private RMAppAttempt attempt = null;
@@ -82,6 +81,8 @@ public class TestRMHA {
 
   @Before
   public void setUp() throws Exception {
+    configuration = new Configuration();
+    UserGroupInformation.setConfiguration(configuration);
     configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     configuration.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + ","
         + RM2_NODE_ID);

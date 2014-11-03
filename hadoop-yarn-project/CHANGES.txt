@@ -819,6 +819,9 @@ Release 2.6.0 - UNRELEASED
     that were caused when adding log-upload-time via YARN-2703. (Xuan Gong via
     vinodkv)
 
+    YARN-2795. Fixed ResourceManager to not crash loading node-label data from
+    HDFS in secure mode. (Wangda Tan via vinodkv)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
