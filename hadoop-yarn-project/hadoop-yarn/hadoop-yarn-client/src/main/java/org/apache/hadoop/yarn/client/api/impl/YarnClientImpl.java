@@ -36,7 +36,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.HadoopKerberosName;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
@@ -124,6 +123,8 @@ public class YarnClientImpl extends YarnClient {
   protected TimelineClient timelineClient;
   @VisibleForTesting
   Text timelineService;
+  @VisibleForTesting
+  String timelineDTRenewer;
   protected boolean timelineServiceEnabled;
 
   private static final String ROOT = "root";
@@ -161,6 +162,7 @@ public class YarnClientImpl extends YarnClient {
       timelineServiceEnabled = true;
       timelineClient = TimelineClient.createTimelineClient();
       timelineClient.init(conf);
+      timelineDTRenewer = getTimelineDelegationTokenRenewer(conf);
       timelineService = TimelineUtils.buildTimelineTokenService(conf);
     }
     super.serviceInit(conf);
@@ -320,14 +322,22 @@ public class YarnClientImpl extends YarnClient {
   @VisibleForTesting
   org.apache.hadoop.security.token.Token<TimelineDelegationTokenIdentifier>
       getTimelineDelegationToken() throws IOException, YarnException {
+    return timelineClient.getDelegationToken(timelineDTRenewer);
+  }
+
+  private static String getTimelineDelegationTokenRenewer(Configuration conf)
+      throws IOException, YarnException  {
     // Parse the RM daemon user if it exists in the config
-    String rmPrincipal = getConfig().get(YarnConfiguration.RM_PRINCIPAL);
+    String rmPrincipal = conf.get(YarnConfiguration.RM_PRINCIPAL);
     String renewer = null;
     if (rmPrincipal != null && rmPrincipal.length() > 0) {
-      HadoopKerberosName renewerKrbName = new HadoopKerberosName(rmPrincipal);
-      renewer = renewerKrbName.getShortName();
+      String rmHost = conf.getSocketAddr(
+          YarnConfiguration.RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_PORT).getHostName();
+      renewer = SecurityUtil.getServerPrincipal(rmPrincipal, rmHost);
     }
-    return timelineClient.getDelegationToken(renewer);
+    return renewer;
   }
 
   @Private

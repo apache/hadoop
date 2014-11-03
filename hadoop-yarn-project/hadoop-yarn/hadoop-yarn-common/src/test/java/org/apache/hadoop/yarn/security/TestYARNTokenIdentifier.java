@@ -19,14 +19,18 @@ package org.apache.hadoop.yarn.security;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
@@ -297,6 +301,21 @@ public class TestYARNTokenIdentifier {
     
     Assert.assertEquals("masterKeyId from proto is not the same with original token",
         anotherToken.getMasterKeyId(), masterKeyId);
+  }
+
+  @Test
+  public void testParseTimelineDelegationTokenIdentifierRenewer() throws IOException {
+    // Server side when generation a timeline DT
+    Configuration conf = new YarnConfiguration();
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
+        "RULE:[2:$1@$0]([nr]m@.*EXAMPLE.COM)s/.*/yarn/");
+    HadoopKerberosName.setConfiguration(conf);
+    Text owner = new Text("owner");
+    Text renewer = new Text("rm/localhost@EXAMPLE.COM");
+    Text realUser = new Text("realUser");
+    TimelineDelegationTokenIdentifier token =
+        new TimelineDelegationTokenIdentifier(owner, renewer, realUser);
+    Assert.assertEquals(new Text("yarn"), token.getRenewer());
   }
 
 }
