@@ -25,6 +25,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -33,6 +34,7 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -170,9 +172,9 @@ public class TestLogsCLI {
     ApplicationId appId = ApplicationIdPBImpl.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptIdPBImpl.newInstance(appId, 1);
+    ContainerId containerId0 = ContainerIdPBImpl.newInstance(appAttemptId, 0);
     ContainerId containerId1 = ContainerIdPBImpl.newInstance(appAttemptId, 1);
     ContainerId containerId2 = ContainerIdPBImpl.newInstance(appAttemptId, 2);
-
     NodeId nodeId = NodeId.newInstance("localhost", 1234);
 
     // create local logs
@@ -201,7 +203,15 @@ public class TestLogsCLI {
       fs.delete(path, true);
     }
     assertTrue(fs.mkdirs(path));
+
     // upload container logs into remote directory
+    // the first two logs is empty. When we try to read first two logs,
+    // we will meet EOF exception, but it will not impact other logs.
+    // Other logs should be read successfully.
+    uploadEmptyContainerLogIntoRemoteDir(ugi, configuration, rootLogDirs, nodeId,
+      containerId0, path, fs);
+    uploadEmptyContainerLogIntoRemoteDir(ugi, configuration, rootLogDirs, nodeId,
+      containerId1, path, fs);
     uploadContainerLogIntoRemoteDir(ugi, configuration, rootLogDirs, nodeId,
       containerId1, path, fs);
     uploadContainerLogIntoRemoteDir(ugi, configuration, rootLogDirs, nodeId,
@@ -220,6 +230,9 @@ public class TestLogsCLI {
       "Hello container_0_0001_01_000002!"));
     sysOutStream.reset();
 
+    // uploaded two logs for container1. The first log is empty.
+    // The second one is not empty.
+    // We can still successfully read logs for container1.
     exitCode =
         cli.run(new String[] { "-applicationId", appId.toString(),
             "-nodeAddress", nodeId.toString(), "-containerId",
@@ -227,7 +240,23 @@ public class TestLogsCLI {
     assertTrue(exitCode == 0);
     assertTrue(sysOutStream.toString().contains(
         "Hello container_0_0001_01_000001!"));
-    assertTrue(sysOutStream.toString().contains("LogUploadTime"));
+    assertTrue(sysOutStream.toString().contains("Log Upload Time"));
+    assertTrue(!sysOutStream.toString().contains(
+      "Logs for container " + containerId1.toString()
+          + " are not present in this log-file."));
+    sysOutStream.reset();
+
+    // Uploaded the empty log for container0.
+    // We should see the message showing the log for container0
+    // are not present.
+    exitCode =
+        cli.run(new String[] { "-applicationId", appId.toString(),
+            "-nodeAddress", nodeId.toString(), "-containerId",
+            containerId0.toString() });
+    assertTrue(exitCode == -1);
+    assertTrue(sysOutStream.toString().contains(
+      "Logs for container " + containerId0.toString()
+          + " are not present in this log-file."));
 
     fs.delete(new Path(remoteLogRootDir), true);
     fs.delete(new Path(rootLogDir), true);
@@ -263,6 +292,31 @@ public class TestLogsCLI {
     writer.append(new AggregatedLogFormat.LogKey(containerId),
       new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
         UserGroupInformation.getCurrentUser().getShortUserName()));
+    writer.close();
+  }
+
+  private static void uploadEmptyContainerLogIntoRemoteDir(UserGroupInformation ugi,
+      Configuration configuration, List<String> rootLogDirs, NodeId nodeId,
+      ContainerId containerId, Path appDir, FileSystem fs) throws Exception {
+    Path path =
+        new Path(appDir, LogAggregationUtils.getNodeString(nodeId)
+            + System.currentTimeMillis());
+    AggregatedLogFormat.LogWriter writer =
+        new AggregatedLogFormat.LogWriter(configuration, path, ugi);
+    writer.writeApplicationOwner(ugi.getUserName());
+
+    Map<ApplicationAccessType, String> appAcls =
+        new HashMap<ApplicationAccessType, String>();
+    appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
+    writer.writeApplicationACLs(appAcls);
+    DataOutputStream out = writer.getWriter().prepareAppendKey(-1);
+    new AggregatedLogFormat.LogKey(containerId).write(out);
+    out.close();
+    out = writer.getWriter().prepareAppendValue(-1);
+    new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
+      UserGroupInformation.getCurrentUser().getShortUserName()).write(out,
+      new HashSet<File>());
+    out.close();
     writer.close();
   }
 

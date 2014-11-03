@@ -78,7 +78,8 @@ public class LogCLIHelpers implements Configurable {
           reader =
               new AggregatedLogFormat.LogReader(getConf(),
                 thisNodeFile.getPath());
-          if (dumpAContainerLogs(containerId, reader, System.out) > -1) {
+          if (dumpAContainerLogs(containerId, reader, System.out,
+              thisNodeFile.getModificationTime()) > -1) {
             foundContainerLogs = true;
           }
         } finally {
@@ -97,7 +98,8 @@ public class LogCLIHelpers implements Configurable {
 
   @Private
   public int dumpAContainerLogs(String containerIdStr,
-      AggregatedLogFormat.LogReader reader, PrintStream out) throws IOException {
+      AggregatedLogFormat.LogReader reader, PrintStream out,
+      long logUploadedTime) throws IOException {
     DataInputStream valueStream;
     LogKey key = new LogKey();
     valueStream = reader.next(key);
@@ -112,14 +114,20 @@ public class LogCLIHelpers implements Configurable {
       return -1;
     }
 
+    boolean foundContainerLogs = false;
     while (true) {
       try {
-        LogReader.readAContainerLogsForALogType(valueStream, out);
+        LogReader.readAContainerLogsForALogType(valueStream, out,
+          logUploadedTime);
+        foundContainerLogs = true;
       } catch (EOFException eof) {
         break;
       }
     }
-    return 0;
+    if (foundContainerLogs) {
+      return 0;
+    }
+    return -1;
   }
 
   @Private
@@ -157,13 +165,15 @@ public class LogCLIHelpers implements Configurable {
           valueStream = reader.next(key);
 
           while (valueStream != null) {
+
             String containerString =
                 "\n\nContainer: " + key + " on " + thisNodeFile.getPath().getName();
             out.println(containerString);
             out.println(StringUtils.repeat("=", containerString.length()));
             while (true) {
               try {
-                LogReader.readAContainerLogsForALogType(valueStream, out);
+                LogReader.readAContainerLogsForALogType(valueStream, out,
+                  thisNodeFile.getModificationTime());
                 foundAnyLogs = true;
               } catch (EOFException eof) {
                 break;
