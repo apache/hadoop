@@ -11,12 +11,12 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  HDFS Archival Storage
+  Archival Storage, SSD & Memory
   ---
   ---
   ${maven.build.timestamp}
 
-HDFS Archival Storage
+Archival Storage, SSD & Memory
 
 %{toc|section=1|fromDepth=0}
 
@@ -29,9 +29,13 @@ HDFS Archival Storage
   Adding more nodes to the cold storage can grow the storage independent of the compute capacity
   in the cluster.
 
+  The frameworks provided by Heterogeneous Storage and Archival Storage generalizes the HDFS architecture
+  to include other kinds of storage media including <SSD> and <memory>.
+  Users may choose to store their data in SSD or memory for a better performance.
+
 * {Storage Types and Storage Policies}
 
-** {Storage Types: DISK, SSD and ARCHIVE}
+** {Storage Types: ARCHIVE, DISK, SSD and RAM_DISK}
 
   The first phase of
   {{{https://issues.apache.org/jira/browse/HDFS-2832}Heterogeneous Storage (HDFS-2832)}}
@@ -45,7 +49,9 @@ HDFS Archival Storage
   which has high storage density (petabyte of storage) but little compute power,
   is added for supporting archival storage.
 
-** {Storage Policies: Hot, Warm and Cold}
+  Another new storage type <RAM_DISK> is added for supporting writing single replica files in memory.
+
+** {Storage Policies: Hot, Warm, Cold, All_SSD, One_SSD and Lazy_Persist}
 
   A new concept of storage policies is introduced in order to allow files to be stored
   in different storage types according to the storage policy.
@@ -64,6 +70,14 @@ HDFS Archival Storage
   * <<Warm>> - partially hot and partially cold.
                When a block is warm, some of its replicas are stored in DISK
                and the remaining replicas are stored in ARCHIVE.
+
+  * <<All_SSD>> - for storing all replicas in SSD.
+
+  * <<One_SSD>> - for storing one of the replicas in SSD.
+                  The remaining replicas are stored in DISK.
+
+  * <<Lazy_Persist>> - for writing blocks with single replica in memory.
+                       The replica is first written in RAM_DISK and then it is lazily persisted in DISK.
 
   []
 
@@ -89,149 +103,54 @@ HDFS Archival Storage
 
   The following is a typical storage policy table.
 
-*--------+---------------+-------------------------+-----------------------+-----------------------+
-| <<Policy>> | <<Policy>>| <<Block Placement>>     | <<Fallback storages>> | <<Fallback storages>> |
-| <<ID>>     | <<Name>>  | <<(n\ replicas)>>      | <<for creation>>      | <<for replication>>   |
-*--------+---------------+-------------------------+-----------------------+-----------------------+
-| 12     | Hot (default) | DISK: <n>               | \<none\>              | ARCHIVE               |
-*--------+---------------+-------------------------+-----------------------+-----------------------+
-| 8      | Warm          | DISK: 1, ARCHIVE: <n>-1 | ARCHIVE, DISK         | ARCHIVE, DISK         |
-*--------+---------------+-------------------------+-----------------------+-----------------------+
-| 4      | Cold          | ARCHIVE: <n>            | \<none\>              | \<none\>              |
-*--------+---------------+-------------------------+-----------------------+-----------------------+
+*--------+---------------+--------------------------+-----------------------+-----------------------+
+| <<Policy>> | <<Policy>>| <<Block Placement>>      | <<Fallback storages>> | <<Fallback storages>> |
+| <<ID>>     | <<Name>>  | <<(n\ replicas)>>        | <<for creation>>      | <<for replication>>   |
+*--------+---------------+--------------------------+-----------------------+-----------------------+
+| 15     | Lasy_Persist  | RAM_DISK: 1, DISK: <n>-1 | DISK                  | DISK                  |
+*--------+---------------+--------------------------+-----------------------+-----------------------+
+| 12     | All_SSD       | SSD: <n>                 | DISK                  | DISK                  |
+*--------+---------------+--------------------------+-----------------------+-----------------------+
+| 10     | One_SSD       | SSD: 1, DISK: <n>-1      | SSD, DISK             | SSD, DISK             |
+*--------+---------------+--------------------------+-----------------------+-----------------------+
+| 7      | Hot (default) | DISK: <n>                | \<none\>              | ARCHIVE               |
+*--------+---------------+--------------------------+-----------------------+-----------------------+
+| 5      | Warm          | DISK: 1, ARCHIVE: <n>-1  | ARCHIVE, DISK         | ARCHIVE, DISK         |
+*--------+---------------+--------------------------+-----------------------+-----------------------+
+| 2      | Cold          | ARCHIVE: <n>             | \<none\>              | \<none\>              |
+*--------+---------------+--------------------------+-----------------------+-----------------------+
 
-  Note that cluster administrators may change the storage policy table
-  according to the characteristic of the cluster.
-  For example, in order to prevent losing archival data,
-  administrators may want to use DISK as fallback storage for replication in the Cold policy.
-  A drawback of such setting is that the DISK storages could be filled up with archival data.
-  As a result, the entire cluster may become full and cannot serve hot data anymore.
+  Note that the Lasy_Persist policy is useful only for single replica blocks.
+  For blocks with more than one replicas, all the replicas will be written to DISK
+  since writing only one of the replicas to RAM_DISK does not improve the overall performance.
 
-** {Configurations}
+** {Storage Policy Resolution}
 
-*** {Setting The List of All Storage Policies}
+  When a file or directory is created, its storage policy is <unspecified>.
+  The storage policy can be specified using
+  the "<<<{{{Set Storage Policy}dfsadmin -setStoragePolicy}}>>>" command.
+  The effective storage policy of a file or directory is resolved by the following rules.
 
-  * <<dfs.block.storage.policies>>
-    - a list of block storage policy names and IDs.
-    The syntax is
+  [[1]] If the file or directory is specificed with a storage policy, return it.
 
-      NAME_1:ID_1, NAME_2:ID_2, ..., NAME_<n>:ID_<n>
-
-    where ID is an integer in the closed range [1,15] and NAME is case insensitive.
-    The first element is the <default policy>.  Empty list is not allowed.
-
-    The default value is shown below.
-
-+------------------------------------------+
-<property>
-  <name>dfs.block.storage.policies</name>
-  <value>HOT:12, WARM:8, COLD:4</value>
-</property>
-+------------------------------------------+
+  [[2]] For an unspecified file or directory,
+        if it is the root directory, return the <default storage policy>.
+        Otherwise, return its parent's effective storage policy.
 
   []
 
-*** {Setting Storage Policy Details}
+  The effective storage policy can be retrieved by
+  the "<<<{{{Set Storage Policy}dfsadmin -getStoragePolicy}}>>>" command.
 
-  The following configuration properties are for setting the details of each storage policy,
-  where <<<\<ID\>>>> is the actual policy ID.
 
-  * <<dfs.block.storage.policy.\<ID\>>>
-    - a list of storage types for storing the block replicas.
-    The syntax is
+** {Configuration}
 
-      STORAGE_TYPE_1, STORAGE_TYPE_2, ..., STORAGE_TYPE_<n>
-  
-    When creating a block, the <i>-th replica is stored using <i>-th storage type
-    for <i> less than or equal to <n>, and
-    the <j>-th replica is stored using <n>-th storage type for <j> greater than <n>.
-
-    Empty list is not allowed.
-
-    Examples:
-
-+------------------------------------------+
-DISK          : all replicas stored using DISK.
-DISK, ARCHIVE : the first replica is stored using DISK and all the
-                remaining replicas are stored using ARCHIVE.
-+------------------------------------------+
-
-  * <<dfs.block.storage.policy.creation-fallback.\<ID\>>>
-    - a list of storage types for creation fallback storage.
-    The syntax is
-
-      STORAGE_TYPE_1, STORAGE_TYPE_2, ..., STORAGE_TYPE_n
-  
-    When creating a block, if a particular storage type specified in the policy
-    is unavailable, the fallback STORAGE_TYPE_1 is used.  Further, if
-    STORAGE_TYPE_<i> is also unavailable, the fallback STORAGE_TYPE_<(i+1)> is used.
-    In case all fallback storages are unavailable, the block will be created
-    with number of replicas less than the specified replication factor.
-
-    An empty list indicates that there is no fallback storage.
-
-  * <<dfs.block.storage.policy.replication-fallback.\<ID\>>>
-    - a list of storage types for replication fallback storage.
-    The usage of this configuration property is similar to
-    <<<dfs.block.storage.policy.creation-fallback.\<ID\>>>>
-    except that it takes effect on replication but not block creation.
+  * <<dfs.storage.policy.enabled>>
+    - for enabling/disabling the storage policy feature.
+    The default value is <<<true>>>.
 
   []
 
-  The following are the default configuration values for Hot, Warm and Cold storage policies.
-
-  * Block Storage Policy <<HOT:12>>
-
-+------------------------------------------+
-<property>
-  <name>dfs.block.storage.policy.12</name>
-  <value>DISK</value>
-</property>
-<property>
-  <name>dfs.block.storage.policy.creation-fallback.12</name>
-  <value></value>
-</property>
-<property>
-  <name>dfs.block.storage.policy.replication-fallback.12</name>
-  <value>ARCHIVE</value>
-</property>
-+------------------------------------------+
-
-  * Block Storage Policy <<WARM:8>>
-
-+------------------------------------------+
-<property>
-  <name>dfs.block.storage.policy.8</name>
-  <value>DISK, ARCHIVE</value>
-</property>
-<property>
-  <name>dfs.block.storage.policy.creation-fallback.8</name>
-  <value>DISK, ARCHIVE</value>
-</property>
-<property>
-  <name>dfs.block.storage.policy.replication-fallback.8</name>
-  <value>DISK, ARCHIVE</value>
-</property>
-+------------------------------------------+
-
-  * Block Storage Policy <<COLD:4>>
-
-+------------------------------------------+
-<property>
-  <name>dfs.block.storage.policy.4</name>
-  <value>ARCHIVE</value>
-</property>
-<property>
-  <name>dfs.block.storage.policy.creation-fallback.4</name>
-  <value></value>
-</property>
-<property>
-  <name>dfs.block.storage.policy.replication-fallback.4</name>
-  <value></value>
-</property>
-+------------------------------------------+
-
-  []
 
 * {Mover - A New Data Migration Tool}
 
@@ -261,7 +180,19 @@ hdfs mover [-p <files/dirs> | -f <local file name>]
   []
 
 
-* {<<<DFSAdmin>>> Commands}
+* {Storage Policy Commands}
+
+** {List Storage Policies}
+
+  List out all the storage policies.
+
+  * Command:
+
++------------------------------------------+
+hdfs storagepolicies
++------------------------------------------+
+
+  * Arguments: none.
 
 ** {Set Storage Policy}
 

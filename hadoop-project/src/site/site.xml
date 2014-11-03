@@ -93,7 +93,7 @@
       <item name="Extended Attributes" href="hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html"/>
       <item name="Transparent Encryption" href="hadoop-project-dist/hadoop-hdfs/TransparentEncryption.html"/>
       <item name="HDFS Support for Multihoming" href="hadoop-project-dist/hadoop-hdfs/HdfsMultihoming.html"/>
-      <item name="Archival Storage" href="hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html"/>
+      <item name="Archival Storage, SSD &amp; Memory" href="hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
