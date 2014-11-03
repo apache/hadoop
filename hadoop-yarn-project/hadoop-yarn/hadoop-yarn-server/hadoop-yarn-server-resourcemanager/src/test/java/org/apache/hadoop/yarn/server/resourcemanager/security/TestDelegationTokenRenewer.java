@@ -808,7 +808,12 @@ public class TestDelegationTokenRenewer {
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     UserGroupInformation.setConfiguration(conf);
-    MockRM rm = new MockRM(conf);
+    MockRM rm = new MockRM(conf) {
+      @Override
+      protected void doSecureLogin() throws IOException {
+        // Skip the login.
+      }
+    };
     ByteBuffer tokens = ByteBuffer.wrap("BOGUS".getBytes()); 
     ContainerLaunchContext amContainer =
         ContainerLaunchContext.newInstance(
