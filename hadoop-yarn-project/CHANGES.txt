@@ -767,6 +767,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2730. DefaultContainerExecutor runs only one localizer at a time
     (Siqi Li via jlowe)
 
+    YARN-2798. Fixed YarnClient to populate the renewer correctly for Timeline
+    delegation tokens. (Zhijie Shen via vinodkv)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

@@ -852,7 +852,25 @@ public class TestYarnClient {
       client.stop();
     }
   }
-  
+
+  @Test
+  public void testParseTimelineDelegationTokenRenewer() throws Exception {
+    // Client side
+    YarnClientImpl client = (YarnClientImpl) YarnClient.createYarnClient();
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.set(YarnConfiguration.RM_PRINCIPAL, "rm/_HOST@EXAMPLE.COM");
+    conf.set(
+        YarnConfiguration.RM_ADDRESS, "localhost:8188");
+    try {
+      client.init(conf);
+      client.start();
+      Assert.assertEquals("rm/localhost@EXAMPLE.COM", client.timelineDTRenewer);
+    } finally {
+      client.stop();
+    }
+  }
+
   @Test
   public void testReservationAPIs() {
     // initialize
