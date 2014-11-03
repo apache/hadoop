@@ -94,17 +94,13 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   }
 
   @Override
-  public synchronized void startLocalizer(Path nmPrivateContainerTokensPath,
+  public void startLocalizer(Path nmPrivateContainerTokensPath,
       InetSocketAddress nmAddr, String user, String appId, String locId,
       LocalDirsHandlerService dirsHandler)
       throws IOException, InterruptedException {
 
     List<String> localDirs = dirsHandler.getLocalDirs();
     List<String> logDirs = dirsHandler.getLogDirs();
-    
-    ContainerLocalizer localizer =
-        new ContainerLocalizer(lfs, user, appId, locId, getPaths(localDirs),
-            RecordFactoryProvider.getRecordFactory(getConf()));
     
     createUserLocalDirs(localDirs, user);
     createUserCacheDirs(localDirs, user);
@@ -118,8 +114,17 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     Path tokenDst = new Path(appStorageDir, tokenFn);
     copyFile(nmPrivateContainerTokensPath, tokenDst, user);
     LOG.info("Copying from " + nmPrivateContainerTokensPath + " to " + tokenDst);
-    lfs.setWorkingDirectory(appStorageDir);
-    LOG.info("CWD set to " + appStorageDir + " = " + lfs.getWorkingDirectory());
+
+
+    FileContext localizerFc = FileContext.getFileContext(
+        lfs.getDefaultFileSystem(), getConf());
+    localizerFc.setUMask(lfs.getUMask());
+    localizerFc.setWorkingDirectory(appStorageDir);
+    LOG.info("Localizer CWD set to " + appStorageDir + " = " 
+        + localizerFc.getWorkingDirectory());
+    ContainerLocalizer localizer =
+        new ContainerLocalizer(localizerFc, user, appId, locId, 
+            getPaths(localDirs), RecordFactoryProvider.getRecordFactory(getConf()));
     // TODO: DO it over RPC for maintaining similarity?
     localizer.runLocalization(nmAddr);
   }
