@@ -23,9 +23,7 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -195,7 +193,17 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
     this.rmContext = new RMContextImpl();
-
+    
+    // Set UGI and do login
+    // If security is enabled, use login user
+    // If security is not enabled, use current user
+    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
+    try {
+      doSecureLogin();
+    } catch(IOException ie) {
+      throw new YarnRuntimeException("Failed to login", ie);
+    }
+    
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -242,13 +250,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
     if (this.rmContext.isHAEnabled()) {
       HAUtil.verifyAndSetConfiguration(this.conf);
     }
+    
     createAndInitActiveServices();
 
     webAppAddress = WebAppUtils.getWebAppBindURL(this.conf,
                       YarnConfiguration.RM_BIND_HOST,
                       WebAppUtils.getRMWebAppURLWithoutScheme(this.conf));
-
-    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
 
     super.serviceInit(this.conf);
   }
@@ -1019,17 +1026,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   synchronized void transitionToActive() throws Exception {
-    if (rmContext.getHAServiceState() ==
-        HAServiceProtocol.HAServiceState.ACTIVE) {
+    if (rmContext.getHAServiceState() == HAServiceProtocol.HAServiceState.ACTIVE) {
       LOG.info("Already in active state");
       return;
     }
 
     LOG.info("Transitioning to active state");
 
-    // use rmLoginUGI to startActiveServices.
-    // in non-secure model, rmLoginUGI will be current UGI
-    // in secure model, rmLoginUGI will be LoginUser UGI
     this.rmLoginUGI.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -1071,12 +1074,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   @Override
   protected void serviceStart() throws Exception {
-    try {
-      doSecureLogin();
-    } catch(IOException ie) {
-      throw new YarnRuntimeException("Failed to login", ie);
-    }
-
     if (this.rmContext.isHAEnabled()) {
       transitionToStandby(true);
     } else {
@@ -1084,7 +1081,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     startWepApp();
-    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER,
+        false)) {
       int port = webApp.port();
       WebAppUtils.setRMWebAppPort(conf, port);
     }

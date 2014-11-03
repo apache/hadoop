@@ -57,6 +57,7 @@ public class TestResourceManager {
   @Before
   public void setUp() throws Exception {
     Configuration conf = new YarnConfiguration();
+    UserGroupInformation.setConfiguration(conf);
     resourceManager = new ResourceManager();
     resourceManager.init(conf);
     resourceManager.getRMContext().getContainerTokenSecretManager().rollMasterKey();
@@ -254,7 +255,12 @@ public class TestResourceManager {
             AuthenticationFilterInitializer.class.getName() + ", "
                 + this.getClass().getName() };
     for (String filterInitializer : filterInitializers) {
-      resourceManager = new ResourceManager();
+      resourceManager = new ResourceManager() {
+        @Override
+        protected void doSecureLogin() throws IOException {
+          // Skip the login.
+        }
+      };
       Configuration conf = new YarnConfiguration();
       conf.set(filterInitializerConfKey, filterInitializer);
       conf.set("hadoop.security.authentication", "kerberos");
