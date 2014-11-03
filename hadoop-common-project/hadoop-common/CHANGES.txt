@@ -6,6 +6,8 @@ Release 2.7.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-10987. Provide an iterator-based listing API for FileSystem (kihwal)
+
   IMPROVEMENTS
 
     HADOOP-11156. DelegateToFileSystem should implement
