@@ -461,9 +461,8 @@ public class ContainerLaunch implements Callable<Integer> {
     final int sleepInterval = 100;
 
     // loop waiting for pid file to show up 
-    // until either the completed flag is set which means something bad 
-    // happened or our timer expires in which case we admit defeat
-    while (!completed.get()) {
+    // until our timer expires in which case we admit defeat
+    while (true) {
       processId = ProcessIdFileReader.getProcessId(pidFilePath);
       if (processId != null) {
         LOG.debug("Got pid " + processId + " for container "

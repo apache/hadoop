@@ -777,6 +777,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2795. Fixed ResourceManager to not crash loading node-label data from
     HDFS in secure mode. (Wangda Tan via vinodkv)
 
+    YARN-1922. Fixed NodeManager to kill process-trees correctly in the presence 
+    of races between the launch and the stop-container call and when root
+    processes crash. (Billie Rinaldi via vinodkv)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
