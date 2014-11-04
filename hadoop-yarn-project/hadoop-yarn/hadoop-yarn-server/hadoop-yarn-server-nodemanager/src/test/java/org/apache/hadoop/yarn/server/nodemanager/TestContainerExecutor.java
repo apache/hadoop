@@ -34,7 +34,7 @@ public class TestContainerExecutor {
   public void testRunCommandNoPriority() throws Exception {
     Configuration conf = new Configuration();
     String[] command = containerExecutor.getRunCommand("echo", "group1", "user", null, conf);
-    assertTrue("first command should be the run command for the platform " + command[0], 
+    assertTrue("first command should be the run command for the platform", 
                command[0].equals(Shell.WINUTILS) || command[0].equals("bash"));  
   }
 
