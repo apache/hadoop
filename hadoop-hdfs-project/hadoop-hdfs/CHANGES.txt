@@ -716,6 +716,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7340. Make rollingUpgrade start/finalize idempotent. (jing9)
 
+    HDFS-7334. Fix periodic failures of TestCheckpoint
+    #testTooManyEditReplayFailures. (Charles Lamb via wheat9)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
