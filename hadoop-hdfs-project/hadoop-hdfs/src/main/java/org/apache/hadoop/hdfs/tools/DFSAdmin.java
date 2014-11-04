@@ -331,7 +331,8 @@ public class DFSAdmin extends FsShell {
           out.println(info);
         }
       } else {
-        out.println("There is no rolling upgrade in progress.");
+        out.println("There is no rolling upgrade in progress or rolling " +
+            "upgrade has already been finalized.");
       }
     }
 
@@ -353,7 +354,7 @@ public class DFSAdmin extends FsShell {
         Preconditions.checkState(info.isStarted());
         break;
       case FINALIZE:
-        Preconditions.checkState(info.isFinalized());
+        Preconditions.checkState(info == null || info.isFinalized());
         break;
       }
       printMessage(info, System.out);
