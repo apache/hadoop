@@ -1584,8 +1584,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
      */
     HdfsFileStatus[] fstatus = dlisting.getPartialListing();    
     int n = (int) Math.min(fstatus.length, count-2);
-    boolean eof = (n < fstatus.length) ? false : (dlisting
-        .getRemainingEntries() == 0);
+    boolean eof = (n >= fstatus.length) && !dlisting.hasMore();
 
     Entry3[] entries;
     if (cookie == 0) {
@@ -1733,8 +1732,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     // Set up the dirents in the response
     HdfsFileStatus[] fstatus = dlisting.getPartialListing();
     int n = (int) Math.min(fstatus.length, dirCount-2);
-    boolean eof = (n < fstatus.length) ? false : (dlisting
-        .getRemainingEntries() == 0);
+    boolean eof = (n >= fstatus.length) && !dlisting.hasMore();
 
     READDIRPLUS3Response.EntryPlus3[] entries;
     if (cookie == 0) {
