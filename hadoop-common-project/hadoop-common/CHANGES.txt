@@ -383,6 +383,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11186. documentation should talk about
     hadoop.htrace.spanreceiver.classes, not hadoop.trace.spanreceiver.classes (cmccabe)
 
+    HADOOP-11165. TestUTF8 fails when run against java 8.
+    (Stephen Chu via cnauroth)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

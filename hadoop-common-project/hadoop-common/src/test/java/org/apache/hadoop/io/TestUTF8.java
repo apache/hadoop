@@ -19,8 +19,11 @@
 package org.apache.hadoop.io;
 
 import junit.framework.TestCase;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UTFDataFormatException;
+import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.apache.hadoop.test.GenericTestUtils;
@@ -54,9 +57,20 @@ public class TestUTF8 extends TestCase {
       // generate a random string
       String before = getTestString();
 
-      // check its utf8
-      assertEquals(before, new String(UTF8.getBytes(before), "UTF-8"));
+      // Check that the bytes are stored correctly in Modified-UTF8 format.
+      // Note that the DataInput and DataOutput interfaces convert between
+      // bytes and Strings using the Modified-UTF8 format.
+      assertEquals(before, readModifiedUTF(UTF8.getBytes(before)));
     }
+  }
+
+  private String readModifiedUTF(byte[] bytes) throws IOException {
+    final short lengthBytes = (short)2;
+    ByteBuffer bb = ByteBuffer.allocate(bytes.length + lengthBytes);
+    bb.putShort((short)bytes.length).put(bytes);
+    ByteArrayInputStream bis = new ByteArrayInputStream(bb.array());
+    DataInputStream dis = new DataInputStream(bis);
+    return dis.readUTF();
   }
 
   public void testIO() throws Exception {
@@ -80,11 +94,6 @@ public class TestUTF8 extends TestCase {
       in.reset(out.getData(), out.getLength());
       String after2 = in.readUTF();
       assertEquals(before, after2);
-
-      // test that it is compatible with Java's other decoder
-      String after3 = new String(out.getData(), 2, out.getLength()-2, "UTF-8");
-      assertEquals(before, after3);
-
     }
 
   }
