@@ -306,9 +306,6 @@ Trunk (Unreleased)
     HADOOP-10625. Trim configuration names when putting/getting them
     to properties. (Wangda Tan via xgong)
 
-    HADOOP-10717. HttpServer2 should load jsp DTD from local jars instead of
-    going remote. (Dapeng Sun via wheat9)
-
     HADOOP-10689. InputStream is not closed in
     AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
 
@@ -388,6 +385,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11165. TestUTF8 fails when run against java 8.
     (Stephen Chu via cnauroth)
+
+    HADOOP-10717. HttpServer2 should load jsp DTD from local jars instead of
+    going remote. (Dapeng Sun via wheat9)
 
 Release 2.6.0 - UNRELEASED
 
