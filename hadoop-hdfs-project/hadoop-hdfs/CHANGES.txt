@@ -1074,6 +1074,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7274. Disable SSLv3 in HttpFS. (Robert Kanter via kasha)
 
+    HDFS-7328. TestTraceAdmin assumes Unix line endings. (cnauroth)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
