@@ -8293,6 +8293,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
+      if (isRollingUpgrade()) {
+        return rollingUpgradeInfo;
+      }
       long startTime = now();
       if (!haEnabled) { // for non-HA, we require NN to be in safemode
         startRollingUpgradeInternalForNonHA(startTime);
@@ -8401,13 +8404,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  RollingUpgradeInfo finalizeRollingUpgrade() throws IOException {
+  void finalizeRollingUpgrade() throws IOException {
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.WRITE);
     writeLock();
     final RollingUpgradeInfo returnInfo;
     try {
       checkOperation(OperationCategory.WRITE);
+      if (!isRollingUpgrade()) {
+        return;
+      }
       checkNameNodeSafeMode("Failed to finalize rolling upgrade");
 
       returnInfo = finalizeRollingUpgradeInternal(now());
@@ -8431,16 +8437,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(true, "finalizeRollingUpgrade", null, null, null);
     }
-    return returnInfo;
+    return;
   }
 
   RollingUpgradeInfo finalizeRollingUpgradeInternal(long finalizeTime)
       throws RollingUpgradeException {
-    if (!isRollingUpgrade()) {
-      throw new RollingUpgradeException(
-          "Failed to finalize rolling upgrade since there is no rolling upgrade in progress.");
-    }
-
     final long startTime = rollingUpgradeInfo.getStartTime();
     rollingUpgradeInfo = null;
     return new RollingUpgradeInfo(blockPoolId, false, startTime, finalizeTime);
