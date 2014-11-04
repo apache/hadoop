@@ -858,6 +858,10 @@ Release 2.6.0 - UNRELEASED
     HDFS-7334. Fix periodic failures of TestCheckpoint
     #testTooManyEditReplayFailures. (Charles Lamb via wheat9)
 
+    HDFS-7355. TestDataNodeVolumeFailure#testUnderReplicationAfterVolFailure
+    fails on Windows, because we cannot deny access to the file owner.
+    (Chris Nauroth via wheat9)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
