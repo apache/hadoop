@@ -276,32 +276,39 @@ public abstract class ContainerExecutor implements Configurable {
   }
   
   /** 
-   * Return a command to execute the given command in OS shell.
-   * On Windows, the passed in groupId can be used to launch
-   * and associate the given groupId in a process group. On
-   * non-Windows, groupId is ignored.
+   *  Return a command to execute the given command in OS shell.
+   *  On Windows, the passed in groupId can be used to launch
+   *  and associate the given groupId in a process group. On
+   *  non-Windows, groupId is ignored. 
    */
   protected String[] getRunCommand(String command, String groupId,
-       String userName, Path pidFile, Configuration conf) {
+      String userName, Path pidFile, Configuration conf) {
+    boolean containerSchedPriorityIsSet = false;
     int containerSchedPriorityAdjustment = 
         YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY;
-    if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY) !=
+
+    if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY) != 
         null) {
-      containerSchedPriorityAdjustment = conf
-          .getInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 0);
+      containerSchedPriorityIsSet = true;
+      containerSchedPriorityAdjustment = conf 
+          .getInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 
+          YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY);
     }
-    
+  
     if (Shell.WINDOWS) {
       return new String[] { Shell.WINUTILS, "task", "create", groupId,
           "cmd /c " + command };
     } else {
       List<String> retCommand = new ArrayList<String>();
-      retCommand.addAll(Arrays.asList("nice", "-n",
-          Integer.toString(containerSchedPriorityAdjustment)));
+      if (containerSchedPriorityIsSet) {
+        retCommand.addAll(Arrays.asList("nice", "-n",
+            Integer.toString(containerSchedPriorityAdjustment)));
+      }
       retCommand.addAll(Arrays.asList("bash", command));
       return retCommand.toArray(new String[retCommand.size()]);
     }
-  }   
+
+  }
 
   /**
    * Is the container still active?
