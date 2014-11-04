@@ -21,6 +21,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-6857. FsShell should report raw disk usage including replication
     factor. (Byron Wong via shv)
 
+    HADOOP-10847. Remove the usage of sun.security.x509.* in testing code.
+    (Pascal Oliva via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
