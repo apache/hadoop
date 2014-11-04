@@ -302,8 +302,8 @@ public class TestCheckpoint {
   @Test(timeout=30000)
   public void testTooManyEditReplayFailures() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_KEY, "1");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, "1");
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 1);
 
     FSDataOutputStream fos = null;
     SecondaryNameNode secondary = null;
