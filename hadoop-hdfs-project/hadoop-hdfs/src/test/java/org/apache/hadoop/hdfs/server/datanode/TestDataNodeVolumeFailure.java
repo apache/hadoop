@@ -205,6 +205,11 @@ public class TestDataNodeVolumeFailure {
    */
   @Test
   public void testUnderReplicationAfterVolFailure() throws Exception {
+    // This test relies on denying access to data volumes to simulate data volume
+    // failure.  This doesn't work on Windows, because an owner of an object
+    // always has the ability to read and change permissions on the object.
+    assumeTrue(!Path.WINDOWS);
+
     // Bring up one more datanode
     cluster.startDataNodes(conf, 1, true, null, null);
     cluster.waitActive();
