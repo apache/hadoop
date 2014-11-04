@@ -118,8 +118,6 @@ Trunk (Unreleased)
     HADOOP-10342. Add a new method to UGI to use a Kerberos login subject to
     build a new UGI. (Larry McCay via omalley)
 
-    HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
-
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
     HADOOP-11013. CLASSPATH handling should be consolidated, debuggable (aw)
@@ -371,6 +369,8 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-10847. Remove the usage of sun.security.x509.* in testing code.
     (Pascal Oliva via wheat9)
+
+    HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
 
   OPTIMIZATIONS
 
