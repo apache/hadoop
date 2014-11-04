@@ -900,6 +900,12 @@
        <artifactId>curator-test</artifactId>
        <version>2.6.0</version>
      </dependency>
+     <dependency>
+       <groupId>org.bouncycastle</groupId>
+       <artifactId>bcprov-jdk16</artifactId>
+       <version>1.46</version>
+       <scope>test</scope>
+     </dependency>
       
     </dependencies>
   </dependencyManagement>
