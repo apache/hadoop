@@ -862,6 +862,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2804. Fixed Timeline service to not fill the logs with JAXB bindings
     exceptions. (Zhijie Shen via vinodkv)
 
+    YARN-2767. Added a test case to verify that http static user cannot kill or submit
+    apps in the secure mode. (Varun Vasudev via zjshen)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
