@@ -161,7 +161,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
       fp.close();
       fp = null;
     } finally {
-      IOUtils.cleanup(FSNamesystem.LOG, fc, fp);
+      IOUtils.cleanup(LOG, fc, fp);
       doubleBuf = null;
       fc = null;
       fp = null;
@@ -233,8 +233,8 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
       size += fillCapacity;
       total += fillCapacity;
     }
-    if(FSNamesystem.LOG.isDebugEnabled()) {
-      FSNamesystem.LOG.debug("Preallocated " + total + " bytes at the end of " +
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Preallocated " + total + " bytes at the end of " +
       		"the edit log (offset " + oldSize + ")");
     }
   }

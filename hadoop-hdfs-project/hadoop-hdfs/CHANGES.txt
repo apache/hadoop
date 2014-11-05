@@ -78,6 +78,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7356. Use DirectoryListing.hasMore() directly in nfs. (Li Lu via jing9)
 
+    HDFS-7357. FSNamesystem.checkFileProgress should log file path.
+    (Tsz Wo Nicholas Sze via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
