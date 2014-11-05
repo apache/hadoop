@@ -3151,7 +3151,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     String clientMachine = null;
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: "
+      NameNode.stateChangeLog.debug("BLOCK* getAdditionalBlock: "
           + src + " inodeId " +  fileId  + " for " + clientName);
     }
 
@@ -3374,7 +3374,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     // Check if the penultimate block is minimally replicated
-    if (!checkFileProgress(pendingFile, false)) {
+    if (!checkFileProgress(src, pendingFile, false)) {
       throw new NotReplicatedYetException("Not replicated yet: " + src);
     }
     return new FileState(pendingFile, src);
@@ -3622,14 +3622,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     // Check the state of the penultimate block. It should be completed
     // before attempting to complete the last one.
-    if (!checkFileProgress(pendingFile, false)) {
+    if (!checkFileProgress(src, pendingFile, false)) {
       return false;
     }
 
     // commit the last block and complete it if it has minimum replicas
     commitOrCompleteLastBlock(pendingFile, last);
 
-    if (!checkFileProgress(pendingFile, true)) {
+    if (!checkFileProgress(src, pendingFile, true)) {
       return false;
     }
 
@@ -3653,8 +3653,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throws IOException {
     assert hasWriteLock();
     BlockInfo b = dir.addBlock(src, inodesInPath, newBlock, targets);
-    NameNode.stateChangeLog.info("BLOCK* allocateBlock: " + src + ". "
-        + getBlockPoolId() + " " + b);
+    NameNode.stateChangeLog.info("BLOCK* allocate " + b + " for " + src);
     DatanodeStorageInfo.incrementBlocksScheduled(targets);
     return b;
   }
@@ -3675,30 +3674,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * replicated.  If not, return false. If checkall is true, then check
    * all blocks, otherwise check only penultimate block.
    */
-  boolean checkFileProgress(INodeFile v, boolean checkall) {
+  private boolean checkFileProgress(String src, INodeFile v, boolean checkall) {
     readLock();
     try {
       if (checkall) {
-        //
         // check all blocks of the file.
-        //
         for (BlockInfo block: v.getBlocks()) {
-          if (!block.isComplete()) {
-            LOG.info("BLOCK* checkFileProgress: " + block
-                + " has not reached minimal replication "
-                + blockManager.minReplication);
+          if (!isCompleteBlock(src, block, blockManager.minReplication)) {
             return false;
           }
         }
       } else {
-        //
         // check the penultimate block of this file
-        //
         BlockInfo b = v.getPenultimateBlock();
-        if (b != null && !b.isComplete()) {
-          LOG.warn("BLOCK* checkFileProgress: " + b
-              + " has not reached minimal replication "
-              + blockManager.minReplication);
+        if (b != null
+            && !isCompleteBlock(src, b, blockManager.minReplication)) {
           return false;
         }
       }
@@ -3706,6 +3696,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       readUnlock();
     }
+  }
+
+  private static boolean isCompleteBlock(String src, BlockInfo b, int minRepl) {
+    if (!b.isComplete()) {
+      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)b;
+      final int numNodes = b.numNodes();
+      LOG.info("BLOCK* " + b + " is not COMPLETE (ucState = "
+          + uc.getBlockUCState() + ", replication# = " + numNodes
+          + (numNodes < minRepl? " < ": " >= ")
+          + " minimum = " + minRepl + ") in file " + src);
+      return false;
+    }
+    return true;
   }
 
   ////////////////////////////////////////////////////////////////
@@ -5152,9 +5155,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           if(!nameNodeHasResourcesAvailable()) {
             String lowResourcesMsg = "NameNode low on available disk space. ";
             if (!isInSafeMode()) {
-              FSNamesystem.LOG.warn(lowResourcesMsg + "Entering safe mode.");
+              LOG.warn(lowResourcesMsg + "Entering safe mode.");
             } else {
-              FSNamesystem.LOG.warn(lowResourcesMsg + "Already in safe mode.");
+              LOG.warn(lowResourcesMsg + "Already in safe mode.");
             }
             enterSafeMode(true);
           }
@@ -7014,11 +7017,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
-    LOG.info("updatePipeline(block=" + oldBlock
-             + ", newGenerationStamp=" + newBlock.getGenerationStamp()
+    LOG.info("updatePipeline(" + oldBlock.getLocalBlock()
+             + ", newGS=" + newBlock.getGenerationStamp()
              + ", newLength=" + newBlock.getNumBytes()
              + ", newNodes=" + Arrays.asList(newNodes)
-             + ", clientName=" + clientName
+             + ", client=" + clientName
              + ")");
     waitForLoadingFSImage();
     writeLock();
@@ -7036,7 +7039,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       RetryCache.setState(cacheEntry, success);
     }
     getEditLog().logSync();
-    LOG.info("updatePipeline(" + oldBlock + ") successfully to " + newBlock);
+    LOG.info("updatePipeline(" + oldBlock.getLocalBlock() + " => "
+        + newBlock.getLocalBlock() + ") success");
   }
 
   /**

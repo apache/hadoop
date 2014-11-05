@@ -338,6 +338,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7333. Improve logging in Storage.tryLock(). (shv)
 
+    HDFS-7357. FSNamesystem.checkFileProgress should log file path.
+    (Tsz Wo Nicholas Sze via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

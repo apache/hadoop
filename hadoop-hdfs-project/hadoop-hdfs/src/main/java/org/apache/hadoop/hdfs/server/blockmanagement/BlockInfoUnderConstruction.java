@@ -141,7 +141,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     
     @Override
     public void appendStringTo(StringBuilder sb) {
-      sb.append("ReplicaUnderConstruction[")
+      sb.append("ReplicaUC[")
         .append(expectedLocation)
         .append("|")
         .append(state)
@@ -370,7 +370,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   }
 
   private void appendUCParts(StringBuilder sb) {
-    sb.append("{blockUCState=").append(blockUCState)
+    sb.append("{UCState=").append(blockUCState)
       .append(", primaryNodeIndex=").append(primaryNodeIndex)
       .append(", replicas=[");
     if (replicas != null) {

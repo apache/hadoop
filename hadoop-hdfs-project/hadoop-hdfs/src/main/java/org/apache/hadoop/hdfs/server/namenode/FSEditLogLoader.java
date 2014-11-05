@@ -329,8 +329,8 @@ public class FSEditLogLoader {
       AddCloseOp addCloseOp = (AddCloseOp)op;
       final String path =
           renameReservedPathsOnUpgrade(addCloseOp.path, logVersion);
-      if (FSNamesystem.LOG.isDebugEnabled()) {
-        FSNamesystem.LOG.debug(op.opCode + ": " + path +
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(op.opCode + ": " + path +
             " numblocks : " + addCloseOp.blocks.length +
             " clientHolder " + addCloseOp.clientName +
             " clientMachine " + addCloseOp.clientMachine);
