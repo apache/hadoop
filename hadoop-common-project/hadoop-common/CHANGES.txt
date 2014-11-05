@@ -671,6 +671,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11241. Fixed intermittent TestNMSimulator failure due to timing issue.
     (Varun Vasudev via zjshen)
 
+    HADOOP-11260. Patch up Jetty to disable SSLv3. (Mike Yoder via kasha)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
