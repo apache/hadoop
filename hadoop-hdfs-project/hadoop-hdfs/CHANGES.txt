@@ -336,6 +336,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7335. Redundant checkOperation() in FSN.analyzeFileState().
     (Milan Desai via shv)
 
+    HDFS-7333. Improve logging in Storage.tryLock(). (shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
