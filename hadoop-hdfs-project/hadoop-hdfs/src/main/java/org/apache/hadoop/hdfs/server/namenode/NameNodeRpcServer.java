@@ -399,7 +399,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         DSQuotaExceededException.class,
         AclException.class,
         FSLimitException.PathComponentTooLongException.class,
-        FSLimitException.MaxDirectoryItemsExceededException.class);
+        FSLimitException.MaxDirectoryItemsExceededException.class,
+        UnresolvedPathException.class);
  }
 
   /** Allow access to the client RPC server for testing */

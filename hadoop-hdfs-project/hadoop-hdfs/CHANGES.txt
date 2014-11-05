@@ -694,6 +694,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7276. Limit the number of byte arrays used by DFSOutputStream and
     provide a mechanism for recycling arrays. (szetszwo)
 
+    HDFS-7233. NN logs unnecessary org.apache.hadoop.hdfs.protocol.UnresolvedPathException.
+    (Rushabh S Shah via jing9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
