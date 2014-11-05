@@ -3287,7 +3287,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     checkBlock(previous);
     onRetryBlock[0] = null;
-    checkOperation(OperationCategory.WRITE);
     checkNameNodeSafeMode("Cannot add block to " + src);
 
     // have we exceeded the configured limit of fs objects.

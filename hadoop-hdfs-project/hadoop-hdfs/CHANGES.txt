@@ -333,6 +333,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7356. Use DirectoryListing.hasMore() directly in nfs. (Li Lu via jing9)
 
+    HDFS-7335. Redundant checkOperation() in FSN.analyzeFileState().
+    (Milan Desai via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
