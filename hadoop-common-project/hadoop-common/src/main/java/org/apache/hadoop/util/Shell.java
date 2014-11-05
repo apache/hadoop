@@ -449,7 +449,7 @@ abstract public class Shell {
 
   /** check to see if a command needs to be executed and execute if needed */
   protected void run() throws IOException {
-    if (lastTime + interval > Time.now())
+    if (lastTime + interval > Time.monotonicNow())
       return;
     exitCode = 0; // reset for next run
     runCommand();
@@ -578,7 +578,7 @@ abstract public class Shell {
         LOG.warn("Error while closing the error stream", ioe);
       }
       process.destroy();
-      lastTime = Time.now();
+      lastTime = Time.monotonicNow();
     }
   }
 
