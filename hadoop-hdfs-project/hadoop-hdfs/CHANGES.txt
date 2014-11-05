@@ -81,6 +81,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7357. FSNamesystem.checkFileProgress should log file path.
     (Tsz Wo Nicholas Sze via wheat9)
 
+    HDFS-7335. Redundant checkOperation() in FSN.analyzeFileState().
+    (Milan Desai via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
