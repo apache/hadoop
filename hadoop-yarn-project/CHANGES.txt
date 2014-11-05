@@ -793,6 +793,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2767. Added a test case to verify that http static user cannot kill or submit
     apps in the secure mode. (Varun Vasudev via zjshen)
 
+    YARN-2805. Fixed ResourceManager to load HA configs correctly before kerberos
+    login. (Wangda Tan via vinodkv)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
