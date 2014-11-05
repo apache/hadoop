@@ -389,6 +389,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10717. HttpServer2 should load jsp DTD from local jars instead of
     going remote. (Dapeng Sun via wheat9)
 
+    HADOOP-11268. Update BUILDING.txt to remove the workaround for tools.jar.
+    (Li Lu via wheat9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
