@@ -1065,6 +1065,8 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11241. Fixed intermittent TestNMSimulator failure due to timing issue.
     (Varun Vasudev via zjshen)
 
+    HADOOP-11265. Credential and Key Shell Commands not available on Windows.
+    (Larry McCay via cnauroth)
 
 Release 2.5.2 - UNRELEASED
 
