@@ -400,6 +400,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11271. Use Time.monotonicNow() in Shell.java instead of Time.now()
     (vinayakumarb)
 
+    HADOOP-11266. Remove no longer supported activation properties for packaging
+    from pom. (Masatake Iwasaki via wheat9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
