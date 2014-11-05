@@ -890,6 +890,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7305. NPE seen in wbhdfs FS while running SLive. (jing9)
 
+    HDFS-7199. DFSOutputStream should not silently drop data if DataStreamer
+    crashes with an unchecked exception (rushabhs via cmccabe)
+
   BREAKDOWN OF HDFS-6584 ARCHIVAL STORAGE
 
     HDFS-6677. Change INodeFile and FSImage to support storage policy ID.
