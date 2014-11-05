@@ -856,6 +856,9 @@ Release 2.6.0 - UNRELEASED
     of races between the launch and the stop-container call and when root
     processes crash. (Billie Rinaldi via vinodkv)
 
+    YARN-2010. Handle app-recovery failures gracefully. 
+    (Jian He and Karthik Kambatla via kasha)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
