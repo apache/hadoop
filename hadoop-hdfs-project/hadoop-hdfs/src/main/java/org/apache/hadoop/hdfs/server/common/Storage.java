@@ -716,12 +716,13 @@ public abstract class Storage extends StorageInfo {
       } catch(OverlappingFileLockException oe) {
         // Cannot read from the locked file on Windows.
         String lockingJvmName = Path.WINDOWS ? "" : (" " + file.readLine());
-        LOG.error("It appears that another namenode" + lockingJvmName
-            + " has already locked the storage directory");
+        LOG.error("It appears that another node " + lockingJvmName
+            + " has already locked the storage directory: " + root, oe);
         file.close();
         return null;
       } catch(IOException e) {
-        LOG.error("Failed to acquire lock on " + lockF + ". If this storage directory is mounted via NFS, " 
+        LOG.error("Failed to acquire lock on " + lockF
+            + ". If this storage directory is mounted via NFS, " 
             + "ensure that the appropriate nfs lock services are running.", e);
         file.close();
         throw e;
