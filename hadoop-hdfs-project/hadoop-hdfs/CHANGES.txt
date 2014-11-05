@@ -1368,9 +1368,22 @@ Release 2.6.0 - UNRELEASED
     HDFS-7291. Persist in-memory replicas with appropriate unbuffered copy API
     on POSIX and Windows. (Xiaoyu Yao via cnauroth)
 
+    HDFS-7328. TestTraceAdmin assumes Unix line endings. (cnauroth)
+
+Release 2.5.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
     HDFS-7274. Disable SSLv3 in HttpFS. (Robert Kanter via kasha)
 
-    HDFS-7328. TestTraceAdmin assumes Unix line endings. (cnauroth)
 
 Release 2.5.1 - 2014-09-05
 
