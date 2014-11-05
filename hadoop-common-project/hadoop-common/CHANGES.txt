@@ -60,6 +60,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11266. Remove no longer supported activation properties for packaging
     from pom. (Masatake Iwasaki via wheat9)
 
+    HADOOP-11267. TestSecurityUtil fails when run with JDK8 because of empty
+    principal names. (Stephen Chu via wheat9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
