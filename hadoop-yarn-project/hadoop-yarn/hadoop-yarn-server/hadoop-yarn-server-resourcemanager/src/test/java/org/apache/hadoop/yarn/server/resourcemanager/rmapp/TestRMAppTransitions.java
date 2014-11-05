@@ -28,6 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
@@ -35,6 +36,8 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -43,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
@@ -73,9 +77,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -199,10 +205,11 @@ public class TestRMAppTransitions {
     AMLivelinessMonitor amFinishingMonitor = mock(AMLivelinessMonitor.class);
     store = mock(RMStateStore.class);
     writer = mock(RMApplicationHistoryWriter.class);
+    DelegationTokenRenewer renewer = mock(DelegationTokenRenewer.class);
     RMContext realRMContext = 
         new RMContextImpl(rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-          null, new AMRMTokenSecretManager(conf, this.rmContext),
+          renewer, new AMRMTokenSecretManager(conf, this.rmContext),
           new RMContainerTokenSecretManager(conf),
           new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM(),
@@ -387,8 +394,12 @@ public class TestRMAppTransitions {
       ApplicationSubmissionContext submissionContext) throws IOException {
     RMApp application = createNewTestApp(submissionContext);
     // NEW => SUBMITTED event RMAppEventType.RECOVER
+    RMState state = new RMState();
+    ApplicationState appState = new ApplicationState(123, 123, null, "user");
+    state.getApplicationState().put(application.getApplicationId(), appState);
     RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.RECOVER);
+        new RMAppRecoverEvent(application.getApplicationId(), state);
+
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.SUBMITTED, application);
@@ -514,7 +525,46 @@ public class TestRMAppTransitions {
   @Test (timeout = 30000)
   public void testAppRecoverPath() throws IOException {
     LOG.info("--- START: testAppRecoverPath ---");
-    testCreateAppSubmittedRecovery(null);
+    ApplicationSubmissionContext sub =
+        Records.newRecord(ApplicationSubmissionContext.class);
+    ContainerLaunchContext clc =
+        Records.newRecord(ContainerLaunchContext.class);
+    Credentials credentials = new Credentials();
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    ByteBuffer securityTokens =
+        ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    clc.setTokens(securityTokens);
+    sub.setAMContainerSpec(clc);
+    testCreateAppSubmittedRecovery(sub);
+  }
+
+  @Test (timeout = 30000)
+  public void testAppRecoverToFailed() throws IOException {
+    LOG.info("--- START: testAppRecoverToFailed ---");
+    ApplicationSubmissionContext sub =
+        Records.newRecord(ApplicationSubmissionContext.class);
+    ContainerLaunchContext clc =
+        Records.newRecord(ContainerLaunchContext.class);
+    Credentials credentials = new Credentials();
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    ByteBuffer securityTokens =
+        ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    clc.setTokens(securityTokens);
+    sub.setAMContainerSpec(clc);
+
+    RMApp application = createNewTestApp(sub);
+    // NEW => FINAL_SAVING, event RMAppEventType.RECOVER
+    RMState state = new RMState();
+    RMAppEvent event =
+        new RMAppRecoverEvent(application.getApplicationId(), state);
+    // NPE will throw on recovery.
+    application.handle(event);
+    assertAppState(RMAppState.FINAL_SAVING, application);
+    sendAppUpdateSavedEvent(application);
+    rmDispatcher.await();
+    assertAppState(RMAppState.FAILED, application);
   }
 
   @Test (timeout = 30000)
@@ -917,7 +967,6 @@ public class TestRMAppTransitions {
     }
   }
   
-  @SuppressWarnings("deprecation")
   public void testRecoverApplication(ApplicationState appState, RMState rmState)
       throws Exception {
     ApplicationSubmissionContext submissionContext =
@@ -932,15 +981,15 @@ public class TestRMAppTransitions {
                 RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
                 submissionContext.getResource(), 1));
     Assert.assertEquals(RMAppState.NEW, application.getState());
-    application.recover(rmState);
 
+    RMAppEvent recoverEvent =
+        new RMAppRecoverEvent(application.getApplicationId(), rmState);
+    // Trigger RECOVER event.
+    application.handle(recoverEvent);
     // Application final status looked from recoveredFinalStatus
     Assert.assertTrue("Application is not in recoveredFinalStatus.",
         RMAppImpl.isAppInFinalState(application));
 
-    // Trigger RECOVER event.
-    application.handle(new RMAppEvent(appState.getAppId(),
-        RMAppEventType.RECOVER));
     rmDispatcher.await();
     RMAppState finalState = appState.getState();
     Assert.assertEquals("Application is not in finalState.", finalState,
