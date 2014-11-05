@@ -77,7 +77,7 @@
       <activation>
         <activeByDefault>false</activeByDefault>
         <property>
-          <name>tar|rpm|deb</name>
+          <name>tar</name>
         </property>
       </activation>
       <build>
