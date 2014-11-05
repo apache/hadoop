@@ -91,10 +91,23 @@ public class GetJournalEditServlet extends HttpServlet {
 
     Set<String> validRequestors = new HashSet<String>();
     validRequestors.addAll(DFSUtil.getAllNnPrincipals(conf));
-    validRequestors.add(
-        SecurityUtil.getServerPrincipal(conf
-            .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
-            SecondaryNameNode.getHttpAddress(conf).getHostName()));
+    try {
+      validRequestors.add(
+          SecurityUtil.getServerPrincipal(conf
+              .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
+              SecondaryNameNode.getHttpAddress(conf).getHostName()));
+    } catch (Exception e) {
+      // Don't halt if SecondaryNameNode principal could not be added.
+      LOG.debug("SecondaryNameNode principal could not be added", e);
+      String msg = String.format(
+        "SecondaryNameNode principal not considered, %s = %s, %s = %s",
+        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY,
+        conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
+        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+        conf.get(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+          DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
+      LOG.warn(msg);
+    }
 
     // Check the full principal name of all the configured valid requestors.
     for (String v : validRequestors) {
