@@ -19,19 +19,19 @@
 package org.apache.hadoop.yarn.api.records.timeline;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-
-import org.junit.Assert;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.WeakHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestTimelineRecords {
@@ -202,4 +202,118 @@ public class TestTimelineRecords {
     }
   }
 
+  @Test
+  public void testMapInterfaceOrTimelineRecords() throws Exception {
+    TimelineEntity entity = new TimelineEntity();
+    List<Map<String, Set<Object>>> primaryFiltersList =
+        new ArrayList<Map<String, Set<Object>>>();
+    primaryFiltersList.add(
+        Collections.singletonMap("pkey", Collections.singleton((Object) "pval")));
+    Map<String, Set<Object>> primaryFilters = new TreeMap<String, Set<Object>>();
+    primaryFilters.put("pkey1", Collections.singleton((Object) "pval1"));
+    primaryFilters.put("pkey2", Collections.singleton((Object) "pval2"));
+    primaryFiltersList.add(primaryFilters);
+    entity.setPrimaryFilters(null);
+    for (Map<String, Set<Object>> primaryFiltersToSet : primaryFiltersList) {
+      entity.setPrimaryFilters(primaryFiltersToSet);
+      assertPrimaryFilters(entity);
+
+      Map<String, Set<Object>> primaryFiltersToAdd =
+          new WeakHashMap<String, Set<Object>>();
+      primaryFiltersToAdd.put("pkey3", Collections.singleton((Object) "pval3"));
+      entity.addPrimaryFilters(primaryFiltersToAdd);
+      assertPrimaryFilters(entity);
+    }
+
+    List<Map<String, Set<String>>> relatedEntitiesList =
+        new ArrayList<Map<String, Set<String>>>();
+    relatedEntitiesList.add(
+        Collections.singletonMap("rkey", Collections.singleton("rval")));
+    Map<String, Set<String>> relatedEntities = new TreeMap<String, Set<String>>();
+    relatedEntities.put("rkey1", Collections.singleton("rval1"));
+    relatedEntities.put("rkey2", Collections.singleton("rval2"));
+    relatedEntitiesList.add(relatedEntities);
+    entity.setRelatedEntities(null);
+    for (Map<String, Set<String>> relatedEntitiesToSet : relatedEntitiesList) {
+      entity.setRelatedEntities(relatedEntitiesToSet);
+      assertRelatedEntities(entity);
+
+      Map<String, Set<String>> relatedEntitiesToAdd =
+          new WeakHashMap<String, Set<String>>();
+      relatedEntitiesToAdd.put("rkey3", Collections.singleton("rval3"));
+      entity.addRelatedEntities(relatedEntitiesToAdd);
+      assertRelatedEntities(entity);
+    }
+
+    List<Map<String, Object>> otherInfoList =
+        new ArrayList<Map<String, Object>>();
+    otherInfoList.add(Collections.singletonMap("okey", (Object) "oval"));
+    Map<String, Object> otherInfo = new TreeMap<String, Object>();
+    otherInfo.put("okey1", "oval1");
+    otherInfo.put("okey2", "oval2");
+    otherInfoList.add(otherInfo);
+    entity.setOtherInfo(null);
+    for (Map<String, Object> otherInfoToSet : otherInfoList) {
+      entity.setOtherInfo(otherInfoToSet);
+      assertOtherInfo(entity);
+
+      Map<String, Object> otherInfoToAdd = new WeakHashMap<String, Object>();
+      otherInfoToAdd.put("okey3", "oval3");
+      entity.addOtherInfo(otherInfoToAdd);
+      assertOtherInfo(entity);
+    }
+
+    TimelineEvent event = new TimelineEvent();
+    List<Map<String, Object>> eventInfoList =
+        new ArrayList<Map<String, Object>>();
+    eventInfoList.add(Collections.singletonMap("ekey", (Object) "eval"));
+    Map<String, Object> eventInfo = new TreeMap<String, Object>();
+    eventInfo.put("ekey1", "eval1");
+    eventInfo.put("ekey2", "eval2");
+    eventInfoList.add(eventInfo);
+    event.setEventInfo(null);
+    for (Map<String, Object> eventInfoToSet : eventInfoList) {
+      event.setEventInfo(eventInfoToSet);
+      assertEventInfo(event);
+
+      Map<String, Object> eventInfoToAdd = new WeakHashMap<String, Object>();
+      eventInfoToAdd.put("ekey3", "eval3");
+      event.addEventInfo(eventInfoToAdd);
+      assertEventInfo(event);
+    }
+  }
+
+  private static void assertPrimaryFilters(TimelineEntity entity) {
+    Assert.assertNotNull(entity.getPrimaryFilters());
+    Assert.assertNotNull(entity.getPrimaryFiltersJAXB());
+    Assert.assertTrue(entity.getPrimaryFilters() instanceof HashMap);
+    Assert.assertTrue(entity.getPrimaryFiltersJAXB() instanceof HashMap);
+    Assert.assertEquals(
+        entity.getPrimaryFilters(), entity.getPrimaryFiltersJAXB());
+  }
+
+  private static void assertRelatedEntities(TimelineEntity entity) {
+    Assert.assertNotNull(entity.getRelatedEntities());
+    Assert.assertNotNull(entity.getRelatedEntitiesJAXB());
+    Assert.assertTrue(entity.getRelatedEntities() instanceof HashMap);
+    Assert.assertTrue(entity.getRelatedEntitiesJAXB() instanceof HashMap);
+    Assert.assertEquals(
+        entity.getRelatedEntities(), entity.getRelatedEntitiesJAXB());
+  }
+
+  private static void assertOtherInfo(TimelineEntity entity) {
+    Assert.assertNotNull(entity.getOtherInfo());
+    Assert.assertNotNull(entity.getOtherInfoJAXB());
+    Assert.assertTrue(entity.getOtherInfo() instanceof HashMap);
+    Assert.assertTrue(entity.getOtherInfoJAXB() instanceof HashMap);
+    Assert.assertEquals(entity.getOtherInfo(), entity.getOtherInfoJAXB());
+  }
+
+  private static void assertEventInfo(TimelineEvent event) {
+    Assert.assertNotNull(event);
+    Assert.assertNotNull(event.getEventInfoJAXB());
+    Assert.assertTrue(event.getEventInfo() instanceof HashMap);
+    Assert.assertTrue(event.getEventInfoJAXB() instanceof HashMap);
+    Assert.assertEquals(event.getEventInfo(), event.getEventInfoJAXB());
+  }
 }

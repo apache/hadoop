@@ -31,6 +31,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
@@ -58,11 +59,11 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
   private String entityId;
   private Long startTime;
   private List<TimelineEvent> events = new ArrayList<TimelineEvent>();
-  private Map<String, Set<String>> relatedEntities =
+  private HashMap<String, Set<String>> relatedEntities =
       new HashMap<String, Set<String>>();
-  private Map<String, Set<Object>> primaryFilters =
+  private HashMap<String, Set<Object>> primaryFilters =
       new HashMap<String, Set<Object>>();
-  private Map<String, Object> otherInfo =
+  private HashMap<String, Object> otherInfo =
       new HashMap<String, Object>();
   private String domainId;
 
@@ -175,8 +176,14 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    * 
    * @return the related entities
    */
-  @XmlElement(name = "relatedentities")
   public Map<String, Set<String>> getRelatedEntities() {
+    return relatedEntities;
+  }
+
+  // Required by JAXB
+  @Private
+  @XmlElement(name = "relatedentities")
+  public HashMap<String, Set<String>> getRelatedEntitiesJAXB() {
     return relatedEntities;
   }
 
@@ -224,7 +231,11 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    */
   public void setRelatedEntities(
       Map<String, Set<String>> relatedEntities) {
-    this.relatedEntities = relatedEntities;
+    if (relatedEntities != null && !(relatedEntities instanceof HashMap)) {
+      this.relatedEntities = new HashMap<String, Set<String>>(relatedEntities);
+    } else {
+      this.relatedEntities = (HashMap<String, Set<String>>) relatedEntities;
+    }
   }
 
   /**
@@ -232,8 +243,14 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    * 
    * @return the primary filters
    */
-  @XmlElement(name = "primaryfilters")
   public Map<String, Set<Object>> getPrimaryFilters() {
+    return primaryFilters;
+  }
+
+  // Required by JAXB
+  @Private
+  @XmlElement(name = "primaryfilters")
+  public HashMap<String, Set<Object>> getPrimaryFiltersJAXB() {
     return primaryFilters;
   }
 
@@ -280,7 +297,11 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    *          a map of primary filters
    */
   public void setPrimaryFilters(Map<String, Set<Object>> primaryFilters) {
-    this.primaryFilters = primaryFilters;
+    if (primaryFilters != null && !(primaryFilters instanceof HashMap)) {
+      this.primaryFilters = new HashMap<String, Set<Object>>(primaryFilters);
+    } else {
+      this.primaryFilters = (HashMap<String, Set<Object>>) primaryFilters;
+    }
   }
 
   /**
@@ -288,8 +309,14 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    * 
    * @return the other information of the entity
    */
-  @XmlElement(name = "otherinfo")
   public Map<String, Object> getOtherInfo() {
+    return otherInfo;
+  }
+
+  // Required by JAXB
+  @Private
+  @XmlElement(name = "otherinfo")
+  public HashMap<String, Object> getOtherInfoJAXB() {
     return otherInfo;
   }
 
@@ -323,7 +350,11 @@ public class TimelineEntity implements Comparable<TimelineEntity> {
    *          a map of other information
    */
   public void setOtherInfo(Map<String, Object> otherInfo) {
-    this.otherInfo = otherInfo;
+    if (otherInfo != null && !(otherInfo instanceof HashMap)) {
+      this.otherInfo = new HashMap<String, Object>(otherInfo);
+    } else {
+      this.otherInfo = (HashMap<String, Object>) otherInfo;
+    }
   }
 
   /**
