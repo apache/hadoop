@@ -52,6 +52,8 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11230. Add missing dependency of bouncycastle for kms, httpfs, hdfs, MR
     and YARN. (Robert Kanter via wheat9)
 
+    HADOOP-11269. Add java 8 profile for hadoop-annotations. (Li Lu via wheat9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
