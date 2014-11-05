@@ -1,5 +1,20 @@
 Hadoop HDFS Change Log
 
+Release 2.5.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-7274. Disable SSLv3 in HttpFS. (Robert Kanter via kasha)
+
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

@@ -1,5 +1,22 @@
 Hadoop Change Log
 
+Release 2.5.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+  
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-11243. SSLFactory shouldn't allow SSLv3. (Wei Yan via kasha)
+
+    HADOOP-11260. Patch up Jetty to disable SSLv3. (Mike Yoder via kasha)
+
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES
