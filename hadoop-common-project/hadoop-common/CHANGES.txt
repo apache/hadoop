@@ -21,6 +21,9 @@ Release 2.6.3 - UNRELEASED
     HADOOP-10668. TestZKFailoverControllerStress#testExpireBackAndForth
     occasionally fails. (Ming Ma via cnauroth)
 
+    HADOOP-11267. TestSecurityUtil fails when run with JDK8 because of empty
+    principal names. (Stephen Chu via wheat9)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
