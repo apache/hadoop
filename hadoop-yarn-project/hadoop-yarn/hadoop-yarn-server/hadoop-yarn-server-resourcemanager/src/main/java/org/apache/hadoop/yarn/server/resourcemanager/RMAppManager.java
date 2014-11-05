@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -274,12 +275,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     ApplicationId appId = submissionContext.getApplicationId();
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      Credentials credentials = null;
       try {
-        credentials = parseCredentials(submissionContext);
         this.rmContext.getDelegationTokenRenewer().addApplicationAsync(appId,
-          credentials, submissionContext.getCancelTokensWhenComplete(),
-          application.getUser());
+            parseCredentials(submissionContext),
+            submissionContext.getCancelTokensWhenComplete(),
+            application.getUser());
       } catch (Exception e) {
         LOG.warn("Unable to parse credentials.", e);
         // Sending APP_REJECTED is fine, since we assume that the
@@ -299,10 +299,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
   }
 
-  @SuppressWarnings("unchecked")
-  protected void
-      recoverApplication(ApplicationState appState, RMState rmState)
-          throws Exception {
+  protected void recoverApplication(ApplicationState appState, RMState rmState)
+      throws Exception {
     ApplicationSubmissionContext appContext =
         appState.getApplicationSubmissionContext();
     ApplicationId appId = appState.getAppId();
@@ -311,33 +309,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
           appState.getUser());
-    application.recover(rmState);
-    if (isApplicationInFinalState(appState.getState())) {
-      // We are synchronously moving the application into final state so that
-      // momentarily client will not see this application in NEW state. Also
-      // for finished applications we will avoid renewing tokens.
-      application.handle(new RMAppEvent(appId, RMAppEventType.RECOVER));
-      return;
-    }
-
-    if (UserGroupInformation.isSecurityEnabled()) {
-      Credentials credentials = null;
-      try {
-        credentials = parseCredentials(appContext);
-        // synchronously renew delegation token on recovery.
-        rmContext.getDelegationTokenRenewer().addApplicationSync(appId,
-          credentials, appContext.getCancelTokensWhenComplete(),
-          application.getUser());
-        application.handle(new RMAppEvent(appId, RMAppEventType.RECOVER));
-      } catch (Exception e) {
-        LOG.warn("Unable to parse and renew delegation tokens.", e);
-        this.rmContext.getDispatcher().getEventHandler()
-          .handle(new RMAppRejectedEvent(appId, e.getMessage()));
-        throw e;
-      }
-    } else {
-      application.handle(new RMAppEvent(appId, RMAppEventType.RECOVER));
-    }
+    application.handle(new RMAppRecoverEvent(appId, rmState));
   }
 
   private RMAppImpl createAndPopulateNewRMApp(
@@ -416,18 +388,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     
     return null;
   }
-
-  private boolean isApplicationInFinalState(RMAppState rmAppState) {
-    if (rmAppState == RMAppState.FINISHED || rmAppState == RMAppState.FAILED
-        || rmAppState == RMAppState.KILLED) {
-      return true;
-    } else {
-      return false;
-    }
-  }
   
-  protected Credentials parseCredentials(ApplicationSubmissionContext application)
-      throws IOException {
+  protected Credentials parseCredentials(
+      ApplicationSubmissionContext application) throws IOException {
     Credentials credentials = new Credentials();
     DataInputByteBuffer dibb = new DataInputByteBuffer();
     ByteBuffer tokens = application.getAMContainerSpec().getTokens();

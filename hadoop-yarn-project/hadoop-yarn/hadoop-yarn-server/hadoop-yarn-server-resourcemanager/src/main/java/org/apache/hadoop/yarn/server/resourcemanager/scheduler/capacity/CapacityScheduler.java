@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueNotFoundException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QueueMapping;
@@ -676,15 +677,13 @@ public class CapacityScheduler extends
       //During a restart, this indicates a queue was removed, which is
       //not presently supported
       if (isAppRecovering) {
-        //throwing RuntimeException because some other exceptions are caught
-        //(including YarnRuntimeException) and we want this to force an exit
-        String queueErrorMsg = "Queue named " + queueName 
+        String queueErrorMsg = "Queue named " + queueName
            + " missing during application recovery."
            + " Queue removal during recovery is not presently supported by the"
            + " capacity scheduler, please restart with all queues configured"
            + " which were present before shutdown/restart.";
         LOG.fatal(queueErrorMsg);
-        throw new RuntimeException(queueErrorMsg);
+        throw new QueueNotFoundException(queueErrorMsg);
       }
       String message = "Application " + applicationId + 
       " submitted by user " + user + " to unknown queue: " + queueName;

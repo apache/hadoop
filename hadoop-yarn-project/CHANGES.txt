@@ -829,6 +829,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2752. Made ContainerExecutor append "nice -n" arg only when priority
     adjustment flag is set. (Xuan Gong via zjshen)
 
+    YARN-2010. Handle app-recovery failures gracefully. 
+    (Jian He and Karthik Kambatla via kasha)
+
 
 Release 2.5.2 - UNRELEASED
 
