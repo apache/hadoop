@@ -859,6 +859,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2010. Handle app-recovery failures gracefully. 
     (Jian He and Karthik Kambatla via kasha)
 
+    YARN-2804. Fixed Timeline service to not fill the logs with JAXB bindings
+    exceptions. (Zhijie Shen via vinodkv)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
