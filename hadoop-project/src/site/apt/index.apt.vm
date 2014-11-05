@@ -18,10 +18,10 @@
   
 Apache Hadoop ${project.version}
 
-  Apache Hadoop ${project.version} is a minor release in the 2.x.y release
-  line, building upon the previous stable release 2.4.1.
+  Apache Hadoop ${project.version} is a point release in the 2.5.x release
+  line, and includes some critical bug fixes to the base 2.5.0 release.
 
-  Here is a short overview of the major features and improvements.
+  Here is a short overview of the major features and improvements in 2.5.x:
 
   * {Common}
 
