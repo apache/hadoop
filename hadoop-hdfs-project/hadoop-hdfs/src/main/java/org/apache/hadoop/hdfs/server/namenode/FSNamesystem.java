@@ -7862,6 +7862,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public FSDirectory getFSDirectory() {
     return dir;
   }
+  /** Set the FSDirectory. */
+  @VisibleForTesting
+  public void setFSDirectory(FSDirectory dir) {
+    this.dir = dir;
+  }
   /** @return the cache manager. */
   public CacheManager getCacheManager() {
     return cacheManager;
@@ -8728,6 +8733,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       List<AclEntry> newAcl = dir.modifyAclEntries(src, aclSpec);
       getEditLog().logSetAcl(src, newAcl);
       resultingStat = getAuditFileInfo(src, false);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "modifyAclEntries", srcArg);
+      throw e;
     } finally {
       writeUnlock();
     }
@@ -8752,6 +8760,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       List<AclEntry> newAcl = dir.removeAclEntries(src, aclSpec);
       getEditLog().logSetAcl(src, newAcl);
       resultingStat = getAuditFileInfo(src, false);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "removeAclEntries", srcArg);
+      throw e;
     } finally {
       writeUnlock();
     }
@@ -8775,6 +8786,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       List<AclEntry> newAcl = dir.removeDefaultAcl(src);
       getEditLog().logSetAcl(src, newAcl);
       resultingStat = getAuditFileInfo(src, false);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "removeDefaultAcl", srcArg);
+      throw e;
     } finally {
       writeUnlock();
     }
@@ -8798,6 +8812,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       dir.removeAcl(src);
       getEditLog().logSetAcl(src, AclFeature.EMPTY_ENTRY_LIST);
       resultingStat = getAuditFileInfo(src, false);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "removeAcl", srcArg);
+      throw e;
     } finally {
       writeUnlock();
     }
@@ -8821,6 +8838,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       List<AclEntry> newAcl = dir.setAcl(src, aclSpec);
       getEditLog().logSetAcl(src, newAcl);
       resultingStat = getAuditFileInfo(src, false);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "setAcl", srcArg);
+      throw e;
     } finally {
       writeUnlock();
     }
@@ -8833,6 +8853,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    boolean success = false;
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -8840,9 +8861,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (isPermissionEnabled) {
         checkPermission(pc, src, false, null, null, null, null);
       }
-      return dir.getAclStatus(src);
+      final AclStatus ret = dir.getAclStatus(src);
+      success = true;
+      return ret;
     } finally {
       readUnlock();
+      logAuditEvent(success, "getAclStatus", src);
     }
   }
 

@@ -1010,6 +1010,9 @@ Release 2.6.0 - UNRELEASED
     fails on Windows, because we cannot deny access to the file owner.
     (Chris Nauroth via wheat9)
 
+    HDFS-7218. FSNamesystem ACL operations should write to audit log on
+    failure. (clamb via yliu)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
