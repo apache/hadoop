@@ -810,7 +810,7 @@ public class MiniDFSCluster {
             format, startOpt, clusterId, conf);
       } catch (IOException ioe) {
         LOG.error("IOE creating namenodes. Permissions dump:\n" +
-            createPermissionsDiagnosisString(data_dir));
+            createPermissionsDiagnosisString(data_dir), ioe);
         throw ioe;
       }
       if (format) {
