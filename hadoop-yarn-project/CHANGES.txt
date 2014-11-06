@@ -874,6 +874,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2813. Fixed NPE from MemoryTimelineStore.getDomains. (Zhijie Shen via xgong)
 
+    YARN-2812. TestApplicationHistoryServer is likely to fail on less powerful machine.
+    (Zhijie Shen via xgong)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
