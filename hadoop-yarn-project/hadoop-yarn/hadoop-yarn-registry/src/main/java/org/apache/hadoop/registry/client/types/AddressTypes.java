@@ -38,6 +38,8 @@ public interface AddressTypes {
    * </pre>
    */
   public static final String ADDRESS_HOSTNAME_AND_PORT = "host/port";
+  public static final String ADDRESS_HOSTNAME_FIELD = "host";
+  public static final String ADDRESS_PORT_FIELD = "port";
 
 
   /**

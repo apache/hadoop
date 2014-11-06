@@ -24,6 +24,7 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
@@ -174,24 +175,22 @@ public class RegistryCli extends Configured implements Tool {
 				ServiceRecord record = registry.resolve(argsList.get(1));
 
 				for (Endpoint endpoint : record.external) {
-					if ((endpoint.protocolType.equals(ProtocolTypes.PROTOCOL_WEBUI))
-							|| (endpoint.protocolType.equals(ProtocolTypes.PROTOCOL_REST))) {
-						sysout.print(" Endpoint(ProtocolType="
-								+ endpoint.protocolType + ", Api="
-								+ endpoint.api + "); Uris are: ");
-					} else {
-						sysout.print(" Endpoint(ProtocolType="
+						sysout.println(" Endpoint(ProtocolType="
 								+ endpoint.protocolType + ", Api="
 								+ endpoint.api + ");"
 								+ " Addresses(AddressType="
 								+ endpoint.addressType + ") are: ");
 
-					}
-					for (List<String> a : endpoint.addresses) {
-						sysout.print(a + " ");
-					}
-					sysout.println();
-				}
+          for (Map<String, String> address : endpoint.addresses) {
+            sysout.println("  [ ");
+            for (Map.Entry<String, String> entry : address.entrySet()) {
+              sysout.println("    " + entry.getKey()
+                             + ": \"" + entry.getValue() + "\"");
+            }
+            sysout.println("  ]");
+          }
+          sysout.println();
+        }
 				return 0;
       } catch (Exception e) {
         syserr.println(analyzeException("resolve", e, argsList));

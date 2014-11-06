@@ -19,6 +19,7 @@
 package org.apache.hadoop.registry.client.binding;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -45,8 +46,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 /**
  * Support for marshalling objects to and from JSON.
@@ -62,30 +61,30 @@ public class JsonSerDeser<T> {
 
   private static final Logger LOG = LoggerFactory.getLogger(JsonSerDeser.class);
   private static final String UTF_8 = "UTF-8";
-  public static final String E_NO_SERVICE_RECORD = "No service record at path";
+  public static final String E_NO_DATA = "No data at path";
+  public static final String E_DATA_TOO_SHORT = "Data at path too short";
+  public static final String E_MISSING_MARKER_STRING =
+      "Missing marker string: ";
 
   private final Class<T> classType;
   private final ObjectMapper mapper;
-  private final byte[] header;
 
   /**
    * Create an instance bound to a specific type
    * @param classType class to marshall
-   * @param header byte array to use as header
    */
-  public JsonSerDeser(Class<T> classType, byte[] header) {
+  public JsonSerDeser(Class<T> classType) {
     Preconditions.checkArgument(classType != null, "null classType");
-    Preconditions.checkArgument(header != null, "null header");
     this.classType = classType;
     this.mapper = new ObjectMapper();
     mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES,
         false);
-    // make an immutable copy to keep findbugs happy.
-    byte[] h = new byte[header.length];
-    System.arraycopy(header, 0, h, 0, header.length);
-    this.header = h;
   }
 
+  /**
+   * Get the simple name of the class type to be marshalled
+   * @return the name of the class being marshalled
+   */
   public String getName() {
     return classType.getSimpleName();
   }
@@ -183,7 +182,7 @@ public class JsonSerDeser<T> {
     if (count != len) {
       throw new EOFException(path.toString() + ": read finished prematurely");
     }
-    return fromBytes(path.toString(), b, 0);
+    return fromBytes(path.toString(), b);
   }
 
   /**
@@ -206,8 +205,7 @@ public class JsonSerDeser<T> {
    * @throws IOException on any failure
    */
   private void writeJsonAsBytes(T instance,
-      DataOutputStream dataOutputStream) throws
-      IOException {
+      DataOutputStream dataOutputStream) throws IOException {
     try {
       byte[] b = toBytes(instance);
       dataOutputStream.write(b);
@@ -228,36 +226,50 @@ public class JsonSerDeser<T> {
   }
 
   /**
-   * Convert JSON To bytes, inserting the header
-   * @param instance instance to convert
-   * @return a byte array
-   * @throws IOException
-   */
-  public byte[] toByteswithHeader(T instance) throws IOException {
-    byte[] body = toBytes(instance);
-
-    ByteBuffer buffer = ByteBuffer.allocate(body.length + header.length);
-    buffer.put(header);
-    buffer.put(body);
-    return buffer.array();
-  }
-
-  /**
    * Deserialize from a byte array
    * @param path path the data came from
    * @param bytes byte array
-   * @return offset in the array to read from
    * @throws IOException all problems
    * @throws EOFException not enough data
    * @throws InvalidRecordException if the parsing failed -the record is invalid
    */
-  public T fromBytes(String path, byte[] bytes, int offset) throws IOException,
+  public T fromBytes(String path, byte[] bytes) throws IOException,
       InvalidRecordException {
-    int data = bytes.length - offset;
-    if (data <= 0) {
-      throw new EOFException("No data at " + path);
+    return fromBytes(path, bytes, "");
+  }
+
+  /**
+   * Deserialize from a byte array, optionally checking for a marker string.
+   * <p>
+   * If the marker parameter is supplied (and not empty), then its presence
+   * will be verified before the JSON parsing takes place; it is a fast-fail
+   * check. If not found, an {@link InvalidRecordException} exception will be
+   * raised
+   * @param path path the data came from
+   * @param bytes byte array
+   * @param marker an optional string which, if set, MUST be present in the
+   * UTF-8 parsed payload.
+   * @return The parsed record
+   * @throws IOException all problems
+   * @throws EOFException not enough data
+   * @throws InvalidRecordException if the JSON parsing failed.
+   * @throws NoRecordException if the data is not considered a record: either
+   * it is too short or it did not contain the marker string.
+   */
+  public T fromBytes(String path, byte[] bytes, String marker)
+      throws IOException, NoRecordException, InvalidRecordException {
+    int len = bytes.length;
+    if (len == 0 ) {
+      throw new NoRecordException(path, E_NO_DATA);
     }
-    String json = new String(bytes, offset, data, UTF_8);
+    if (StringUtils.isNotEmpty(marker) && len < marker.length()) {
+      throw new NoRecordException(path, E_DATA_TOO_SHORT);
+    }
+    String json = new String(bytes, 0, len, UTF_8);
+    if (StringUtils.isNotEmpty(marker)
+        && !json.contains(marker)) {
+      throw new NoRecordException(path, E_MISSING_MARKER_STRING + marker);
+    }
     try {
       return fromJson(json);
     } catch (JsonProcessingException e) {
@@ -266,52 +278,7 @@ public class JsonSerDeser<T> {
   }
 
   /**
-   * Read from a byte array to a type, checking the header first
-   * @param path source of data
-   * @param buffer buffer
-   * @return the parsed structure
-   * Null if the record was too short or the header did not match
-   * @throws IOException on a failure
-   * @throws NoRecordException if header checks implied there was no record
-   * @throws InvalidRecordException if record parsing failed
-   */
-  @SuppressWarnings("unchecked")
-  public T fromBytesWithHeader(String path, byte[] buffer) throws IOException {
-    int hlen = header.length;
-    int blen = buffer.length;
-    if (hlen > 0) {
-      if (blen < hlen) {
-        throw new NoRecordException(path, E_NO_SERVICE_RECORD);
-      }
-      byte[] magic = Arrays.copyOfRange(buffer, 0, hlen);
-      if (!Arrays.equals(header, magic)) {
-        LOG.debug("start of entry does not match service record header at {}",
-            path);
-        throw new NoRecordException(path, E_NO_SERVICE_RECORD);
-      }
-    }
-    return fromBytes(path, buffer, hlen);
-  }
-
-  /**
-   * Check if a buffer has a header which matches this record type
-   * @param buffer buffer
-   * @return true if there is a match
-   * @throws IOException
-   */
-  public boolean headerMatches(byte[] buffer) throws IOException {
-    int hlen = header.length;
-    int blen = buffer.length;
-    boolean matches = false;
-    if (blen > hlen) {
-      byte[] magic = Arrays.copyOfRange(buffer, 0, hlen);
-      matches = Arrays.equals(header, magic);
-    }
-    return matches;
-  }
-
-  /**
-   * Convert an object to a JSON string
+   * Convert an instance to a JSON string
    * @param instance instance to convert
    * @return a JSON string description
    * @throws JsonParseException parse problems
@@ -324,4 +291,19 @@ public class JsonSerDeser<T> {
     return mapper.writeValueAsString(instance);
   }
 
+  /**
+   * Convert an instance to a string form for output. This is a robust
+   * operation which will convert any JSON-generating exceptions into
+   * error text.
+   * @param instance non-null instance
+   * @return a JSON string
+   */
+  public String toString(T instance) {
+    Preconditions.checkArgument(instance != null, "Null instance argument");
+    try {
+      return toJson(instance);
+    } catch (IOException e) {
+      return "Failed to convert to a string: " + e;
+    }
+  }
 }

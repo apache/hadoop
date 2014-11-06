@@ -353,6 +353,10 @@ application.
         <td>Description</td>
       </tr>
       <tr>
+        <td>type: String</td>
+        <td>Always: "JSONServiceRecord"</td>
+      </tr>
+      <tr>
         <td>description: String</td>
         <td>Human-readable description.</td>
       </tr>
@@ -366,6 +370,8 @@ application.
       </tr>
     </table>
 
+The type field MUST be `"JSONServiceRecord"`. Mandating this string allows future record types *and* permits rapid rejection of byte arrays that lack this string before attempting JSON parsing.
+
 ### YARN Persistence policies
 
 The YARN Resource Manager integration integrates cleanup of service records
@@ -378,7 +384,6 @@ any use of the registry without the RM's participation.
 
 The attributes, `yarn:id` and `yarn:persistence` specify which records
 *and any child entries* may be deleted as the associated YARN components complete.
-
 
 The `yarn:id` field defines the application, attempt or container ID to match;
 the `yarn:persistence` attribute defines the trigger for record cleanup, and
@@ -432,31 +437,32 @@ up according the lifecycle of that application.
     <td>Description</td>
   </tr>
   <tr>
-    <td>addresses: List[List[String]]</td>
-    <td>a list of address tuples whose format depends on the address type</td>
-  </tr>
-  <tr>
-    <td>addressType: String</td>
-    <td>format of the binding</td>
-  </tr>
+    <td>api: URI as String</td>
+    <td>API implemented at the end of the binding</td>
   <tr>
     <td>protocol: String</td>
     <td>Protocol. Examples:
 `http`, `https`, `hadoop-rpc`, `zookeeper`, `web`, `REST`, `SOAP`, ...</td>
   </tr>
   <tr>
-    <td>api: String</td>
-    <td>API implemented at the end of the binding</td>
+    <td>addressType: String</td>
+    <td>format of the binding</td>
   </tr>
+  </tr>
+    <tr>
+    <td>addresses: List[Map[String, String]]</td>
+    <td>a list of address maps</td>
+  </tr>
+
 </table>
 
 
 All string fields have a limit on size, to dissuade services from hiding
 complex JSON structures in the text description.
 
-### Field: Address Type
+#### Field `addressType`: Address Type
 
-The addressType field defines the string format of entries.
+The `addressType` field defines the string format of entries.
 
 Having separate types is that tools (such as a web viewer) can process binding
 strings without having to recognize the protocol.
@@ -467,43 +473,58 @@ strings without having to recognize the protocol.
     <td>binding format</td>
   </tr>
   <tr>
-    <td>`url`</td>
-    <td>`[URL]`</td>
+    <td>uri</td>
+    <td>uri:URI of endpoint</td>
   </tr>
   <tr>
-    <td>`hostname`</td>
-    <td>`[hostname]`</td>
+    <td>hostname</td>
+    <td>hostname: service host</td>
   </tr>
   <tr>
-    <td>`inetaddress`</td>
-    <td>`[hostname, port]`</td>
+    <td>inetaddress</td>
+    <td>hostname: service host, port: service port</td>
   </tr>
   <tr>
-    <td>`path`</td>
-    <td>`[/path/to/something]`</td>
+    <td>path</td>
+    <td>path: generic unix filesystem path</td>
   </tr>
   <tr>
-    <td>`zookeeper`</td>
-    <td>`[quorum-entry, path]`</td>
+    <td>zookeeper</td>
+    <td>hostname: service host, port: service port, path: ZK path</td>
   </tr>
 </table>
 
 
-An actual zookeeper binding consists of a list of `hostname:port` bindings –the
-quorum— and the path within. In the proposed schema, every quorum entry will be
-listed as a triple of `[hostname, port, path]`. Client applications do not
-expect the path to de be different across the quorum. The first entry in the
-list of quorum hosts MUST define the path to be used by all clients. Later
-entries SHOULD list the same path, though clients MUST ignore these.
+In the zookeeper binding, every entry represents a single node in quorum,
+the `hostname` and `port` fields defining the hostname of the ZK instance
+and the port on which it is listening. The `path` field lists zookeeper path
+for applications to use. For example, for HBase this would refer to the znode
+containing information about the HBase cluster.
+
+The path MUST be identical across all address elements in the `addresses` list.
+This ensures that any single address contains enough information to connect
+to the quorum and connect to the relevant znode.
 
 New Address types may be defined; if not standard please prefix with the
 character sequence `"x-"`.
 
-#### **Field: API**
+### Field `api`: API identifier
 
-APIs may be unique to a service class, or may be common across by service
-classes. They MUST be given unique names. These MAY be based on service
-packages but MAY be derived from other naming schemes:
+The API field MUST contain a URI that identifies the specific API of an endpoint.
+These MUST be unique to an API to avoid confusion.
+
+The following strategies are suggested to provide unique URIs for an API
+
+1. The SOAP/WS-* convention of using the URL to where the WSDL defining the service
+2. A URL to the svn/git hosted document defining a REST API
+3. the `classpath` schema followed by a path to a class or package in an application.
+4. The `uuid` schema with a generated UUID.
+
+It is hoped that standard API URIs will be defined for common APIs. Two such non-normative APIs are used in this document
+
+* `http://` : A web site for humans
+* `classpath:javax.management.jmx`: and endpoint supporting the JMX management protocol (RMI-based)
+
 
 ### Examples of Service Entries
 
@@ -524,12 +545,14 @@ overall application. It exports the URL to a load balancer.
 
     {
       "description" : "tomcat-based web application",
-      "registrationTime" : 1408638082444,
       "external" : [ {
-        "api" : "www",
+        "api" : "http://internal.example.org/restapis/scheduler/20141026v1",
         "addressType" : "uri",
-        "protocolType" : "REST",
-        "addresses" : [ [ "http://loadbalancer/" ] [ "http://loadbalancer2/" ] ]
+        "protocol" : "REST",
+        "addresses" : [
+         { "uri" : "http://loadbalancer/" },
+         { "uri" : "http://loadbalancer2/" }
+          ]
       } ],
       "internal" : [ ]
     }
@@ -545,21 +568,23 @@ will trigger the deletion of this entry
     /users/devteam/org-apache-tomcat/test1/components/container-1408631738011-0001-01-000001
 
     {
-      "registrationTime" : 1408638082445,
       "yarn:id" : "container_1408631738011_0001_01_000001",
-      "yarn:persistence" : "3",
-      "description" : null,
+      "yarn:persistence" : "container",
+      "description" : "",
       "external" : [ {
-        "api" : "www",
+        "api" : "http://internal.example.org/restapis/scheduler/20141026v1",
         "addressType" : "uri",
-        "protocolType" : "REST",
-        "addresses" : [ [ "http://rack4server3:43572" ] ]
+        "protocol" : "REST",
+        "addresses" : [{ "uri" : "rack4server3:43572" }  ]
       } ],
       "internal" : [ {
-        "api" : "jmx",
+        "api" : "classpath:javax.management.jmx",
         "addressType" : "host/port",
-        "protocolType" : "JMX",
-        "addresses" : [ [ "rack4server3", "43573" ] ]
+        "protocol" : "rmi",
+        "addresses" : [ {
+          "host" : "rack4server3",
+          "port" : "48551"
+        } ]
       } ]
     }
 
@@ -571,19 +596,22 @@ external endpoint, the JMX addresses as internal.
     {
       "registrationTime" : 1408638082445,
       "yarn:id" : "container_1408631738011_0001_01_000002",
-      "yarn:persistence" : "3",
+      "yarn:persistence" : "container",
       "description" : null,
       "external" : [ {
-        "api" : "www",
+        "api" : "http://internal.example.org/restapis/scheduler/20141026v1",
         "addressType" : "uri",
-        "protocolType" : "REST",
+        "protocol" : "REST",
         "addresses" : [ [ "http://rack1server28:35881" ] ]
       } ],
       "internal" : [ {
-        "api" : "jmx",
+        "api" : "classpath:javax.management.jmx",
         "addressType" : "host/port",
-        "protocolType" : "JMX",
-        "addresses" : [ [ "rack1server28", "35882" ] ]
+        "protocol" : "rmi",
+        "addresses" : [ {
+          "host" : "rack1server28",
+          "port" : "48551"
+        } ]
       } ]
     }
 
@@ -887,3 +915,106 @@ Implementations may throttle update operations.
 **Rate of Polling**
 
 Clients which poll the registry may be throttled.
+
+# Complete service record example
+
+Below is a (non-normative) example of a service record retrieved
+from a YARN application.
+
+
+    {
+      "type" : "JSONServiceRecord",
+      "description" : "Slider Application Master",
+      "yarn:persistence" : "application",
+      "yarn:id" : "application_1414052463672_0028",
+      "external" : [ {
+        "api" : "classpath:org.apache.slider.appmaster",
+        "addressType" : "host/port",
+        "protocol" : "hadoop/IPC",
+        "addresses" : [ {
+          "port" : "48551",
+          "host" : "nn.example.com"
+        } ]
+      }, {
+        "api" : "http://",
+        "addressType" : "uri",
+        "protocol" : "web",
+        "addresses" : [ {
+          "uri" : "http://nn.example.com:40743"
+        } ]
+      }, {
+        "api" : "classpath:org.apache.slider.management",
+        "addressType" : "uri",
+        "protocol" : "REST",
+        "addresses" : [ {
+          "uri" : "http://nn.example.com:40743/ws/v1/slider/mgmt"
+        } ]
+      }, {
+        "api" : "classpath:org.apache.slider.publisher",
+        "addressType" : "uri",
+        "protocol" : "REST",
+        "addresses" : [ {
+          "uri" : "http://nn.example.com:40743/ws/v1/slider/publisher"
+        } ]
+      }, {
+        "api" : "classpath:org.apache.slider.registry",
+        "addressType" : "uri",
+        "protocol" : "REST",
+        "addresses" : [ {
+          "uri" : "http://nn.example.com:40743/ws/v1/slider/registry"
+        } ]
+      }, {
+        "api" : "classpath:org.apache.slider.publisher.configurations",
+        "addressType" : "uri",
+        "protocol" : "REST",
+        "addresses" : [ {
+          "uri" : "http://nn.example.com:40743/ws/v1/slider/publisher/slider"
+        } ]
+      }, {
+        "api" : "classpath:org.apache.slider.publisher.exports",
+        "addressType" : "uri",
+        "protocol" : "REST",
+        "addresses" : [ {
+          "uri" : "http://nn.example.com:40743/ws/v1/slider/publisher/exports"
+        } ]
+      } ],
+      "internal" : [ {
+        "api" : "classpath:org.apache.slider.agents.secure",
+        "addressType" : "uri",
+        "protocol" : "REST",
+        "addresses" : [ {
+          "uri" : "https://nn.example.com:52705/ws/v1/slider/agents"
+        } ]
+      }, {
+        "api" : "classpath:org.apache.slider.agents.oneway",
+        "addressType" : "uri",
+        "protocol" : "REST",
+        "addresses" : [ {
+          "uri" : "https://nn.example.com:33425/ws/v1/slider/agents"
+        } ]
+      } ]
+    }
+
+It publishes a number of endpoints, both internal and external.
+
+External:
+
+1. The IPC hostname and port for client-AM communications
+1. URL to the AM's web UI
+1. A series of REST URLs under the web UI for specific application services.
+The details are irrelevant —note that they use an application-specific API
+value to ensure uniqueness.
+
+Internal:
+1. Two URLS to REST APIs offered by the AM for containers deployed by
+ the application itself.
+
+Python agents running in the containers retrieve the internal endpoint
+URLs to communicate with their AM. The record is resolved on container startup
+and cached until communications problems occur. At that point the registry is
+queried for the current record, then an attempt is made to reconnect to the AM.
+
+Here "connectivity" problems means both "low level socket/IO errors" and
+"failures in HTTPS authentication". The agents use two-way HTTPS authentication
+—if the AM fails and another application starts listening on the same ports
+it will trigger an authentication failure and hence service record reread.
