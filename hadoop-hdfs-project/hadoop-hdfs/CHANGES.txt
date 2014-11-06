@@ -729,6 +729,10 @@ Release 2.6.0 - UNRELEASED
     fails on Windows, because we cannot deny access to the file owner.
     (Chris Nauroth via wheat9)
 
+    HDFS-7367. HDFS short-circuit read cannot negotiate shared memory slot and
+    file descriptors when SASL is enabled on DataTransferProtocol.
+    (Chris Nauroth via wheat9)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
