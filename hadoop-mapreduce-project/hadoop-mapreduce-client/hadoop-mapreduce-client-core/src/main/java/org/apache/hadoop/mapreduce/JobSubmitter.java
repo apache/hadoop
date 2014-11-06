@@ -249,11 +249,10 @@ class JobSubmitter {
       }
       Path jobJarPath = new Path(jobJar);
       URI jobJarURI = jobJarPath.toUri();
-      // If the job jar is already in fs, we don't need to copy it from local fs
-      if (jobJarURI.getScheme() == null || jobJarURI.getAuthority() == null
-              || !(jobJarURI.getScheme().equals(jtFs.getUri().getScheme()) 
-                  && jobJarURI.getAuthority().equals(
-                                            jtFs.getUri().getAuthority()))) {
+      // If the job jar is already in a global fs,
+      // we don't need to copy it from local fs
+      if (     jobJarURI.getScheme() == null
+            || jobJarURI.getScheme().equals("file")) {
         copyJar(jobJarPath, JobSubmissionFiles.getJobJar(submitJobDir), 
             replication);
         job.setJar(JobSubmissionFiles.getJobJar(submitJobDir).toString());

@@ -40,6 +40,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.FailingMapper;
 import org.apache.hadoop.RandomTextWriterJob;
 import org.apache.hadoop.RandomTextWriterJob.RandomInputFormat;
+import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.mapreduce.SleepJob.SleepMapper;
 import org.apache.hadoop.conf.Configuration;
@@ -85,6 +86,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ApplicationClassLoader;
+import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -93,6 +95,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -105,6 +108,9 @@ public class TestMRJobs {
       EnumSet.of(RMAppState.FINISHED, RMAppState.FAILED, RMAppState.KILLED);
   private static final int NUM_NODE_MGRS = 3;
   private static final String TEST_IO_SORT_MB = "11";
+
+  private static final int DEFAULT_REDUCES = 2;
+  protected int numSleepReducers = DEFAULT_REDUCES;
 
   protected static MiniMRYarnCluster mrCluster;
   protected static MiniDFSCluster dfsCluster;
@@ -170,10 +176,23 @@ public class TestMRJobs {
     }
   }
 
+  @After
+  public void resetInit() {
+    numSleepReducers = DEFAULT_REDUCES;
+  }
+
   @Test (timeout = 300000)
-  public void testSleepJob() throws IOException, InterruptedException,
-      ClassNotFoundException { 
-    LOG.info("\n\n\nStarting testSleepJob().");
+  public void testSleepJob() throws Exception {
+    testSleepJobInternal(false);
+  }
+
+  @Test (timeout = 300000)
+  public void testSleepJobWithRemoteJar() throws Exception {
+    testSleepJobInternal(true);
+  }
+
+  private void testSleepJobInternal(boolean useRemoteJar) throws Exception {
+    LOG.info("\n\n\nStarting testSleepJob: useRemoteJar=" + useRemoteJar);
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
@@ -187,14 +206,20 @@ public class TestMRJobs {
     
     SleepJob sleepJob = new SleepJob();
     sleepJob.setConf(sleepConf);
-
-    int numReduces = sleepConf.getInt("TestMRJobs.testSleepJob.reduces", 2); // or sleepConf.getConfig().getInt(MRJobConfig.NUM_REDUCES, 2);
    
     // job with 3 maps (10s) and numReduces reduces (5s), 1 "record" each:
-    Job job = sleepJob.createJob(3, numReduces, 10000, 1, 5000, 1);
+    Job job = sleepJob.createJob(3, numSleepReducers, 10000, 1, 5000, 1);
 
     job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
-    job.setJarByClass(SleepJob.class);
+    if (useRemoteJar) {
+      final Path localJar = new Path(
+          ClassUtil.findContainingJar(SleepJob.class));
+      ConfigUtil.addLink(job.getConfiguration(), "/jobjars",
+          localFs.makeQualified(localJar.getParent()).toUri());
+      job.setJar("viewfs:///jobjars/" + localJar.getName());
+    } else {
+      job.setJarByClass(SleepJob.class);
+    }
     job.setMaxMapAttempts(1); // speed up failures
     job.submit();
     String trackingUrl = job.getTrackingURL();
@@ -329,7 +354,7 @@ public class TestMRJobs {
         .getValue());
     Assert.assertEquals(3, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
         .getValue());
-    Assert.assertEquals(2,
+    Assert.assertEquals(numSleepReducers,
         counters.findCounter(JobCounter.TOTAL_LAUNCHED_REDUCES).getValue());
     Assert
         .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null

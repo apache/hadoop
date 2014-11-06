@@ -225,6 +225,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6048. Fixed TestJavaSerialization failure. (Varun Vasudev via
     jianhe)
 
+    MAPREDUCE-5960. JobSubmitter's check whether job.jar is local is incorrect
+    with no authority in job jar path. (Gera Shegalov via jlowe)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

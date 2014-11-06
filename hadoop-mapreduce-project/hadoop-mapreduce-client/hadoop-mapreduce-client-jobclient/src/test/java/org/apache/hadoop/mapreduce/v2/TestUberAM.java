@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.v2;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,8 +39,7 @@ import org.junit.Test;
 public class TestUberAM extends TestMRJobs {
 
   private static final Log LOG = LogFactory.getLog(TestUberAM.class);
-  private int numSleepReducers;
-  
+
   @BeforeClass
   public static void setup() throws IOException {
     TestMRJobs.setup();
@@ -54,21 +52,15 @@ public class TestUberAM extends TestMRJobs {
   @Override
   @Test
   public void testSleepJob()
-  throws IOException, InterruptedException, ClassNotFoundException {
+  throws Exception {
     numSleepReducers = 1;
-    if (mrCluster != null) {
-    	mrCluster.getConfig().setInt("TestMRJobs.testSleepJob.reduces", numSleepReducers);
-    }
     super.testSleepJob();
   }
   
   @Test
   public void testSleepJobWithMultipleReducers()
-  throws IOException, InterruptedException, ClassNotFoundException {
+  throws Exception {
     numSleepReducers = 3;
-    if (mrCluster != null) {
-      mrCluster.getConfig().setInt("TestMRJobs.testSleepJob.reduces", numSleepReducers);
-    }
     super.testSleepJob();
   }
   
@@ -76,20 +68,7 @@ public class TestUberAM extends TestMRJobs {
   protected void verifySleepJobCounters(Job job) throws InterruptedException,
       IOException {
     Counters counters = job.getCounters();
-
-    Assert.assertEquals(3, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
-        .getValue());
-    Assert.assertEquals(3, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
-        .getValue());
-    Assert.assertEquals(numSleepReducers,
-        counters.findCounter(JobCounter.TOTAL_LAUNCHED_REDUCES).getValue());
-    Assert
-        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
-            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
-    Assert
-        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
-            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
-
+    super.verifySleepJobCounters(job);
     Assert.assertEquals(3,
         counters.findCounter(JobCounter.NUM_UBER_SUBMAPS).getValue());
     Assert.assertEquals(numSleepReducers,
@@ -168,16 +147,7 @@ public class TestUberAM extends TestMRJobs {
   protected void verifyFailingMapperCounters(Job job)
       throws InterruptedException, IOException {
     Counters counters = job.getCounters();
-    Assert.assertEquals(2, counters.findCounter(JobCounter.OTHER_LOCAL_MAPS)
-        .getValue());
-    Assert.assertEquals(2, counters.findCounter(JobCounter.TOTAL_LAUNCHED_MAPS)
-        .getValue());
-    Assert.assertEquals(2, counters.findCounter(JobCounter.NUM_FAILED_MAPS)
-        .getValue());
-    Assert
-        .assertTrue(counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS) != null
-            && counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue() != 0);
-
+    super.verifyFailingMapperCounters(job);
     Assert.assertEquals(2,
         counters.findCounter(JobCounter.TOTAL_LAUNCHED_UBERTASKS).getValue());
     Assert.assertEquals(2, counters.findCounter(JobCounter.NUM_UBER_SUBMAPS)
