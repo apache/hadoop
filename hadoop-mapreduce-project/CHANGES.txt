@@ -228,6 +228,9 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5960. JobSubmitter's check whether job.jar is local is incorrect
     with no authority in job jar path. (Gera Shegalov via jlowe)
 
+    MAPREDUCE-5958. Wrong reduce task progress if map output is compressed
+    (Emilio Coppa and jlowe via kihwal)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
