@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.AbstractRegistryTest;
 import org.apache.hadoop.registry.client.api.BindFlags;
+import org.apache.hadoop.registry.client.binding.RegistryTypeUtils;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.exceptions.NoRecordException;
@@ -91,10 +92,8 @@ public class TestRegistryOperations extends AbstractRegistryTest {
             childStats.values());
     assertEquals(1, records.size());
     ServiceRecord record = records.get(ENTRY_PATH);
-    assertNotNull(record);
-    record.validate();
+    RegistryTypeUtils.validateServiceRecord(ENTRY_PATH, record);
     assertMatches(written, record);
-
   }
 
   @Test

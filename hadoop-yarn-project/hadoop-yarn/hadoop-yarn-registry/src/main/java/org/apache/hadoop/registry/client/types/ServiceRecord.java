@@ -21,6 +21,7 @@ package org.apache.hadoop.registry.client.types;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.registry.client.exceptions.InvalidRecordException;
 import org.codehaus.jackson.annotate.JsonAnyGetter;
 import org.codehaus.jackson.annotate.JsonAnySetter;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
@@ -39,6 +40,17 @@ import java.util.Map;
 @InterfaceStability.Evolving
 @JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
 public class ServiceRecord implements Cloneable {
+
+  /**
+   * A type string which MUST be in the serialized json. This permits
+   * fast discarding of invalid entries
+   */
+  public static final String RECORD_TYPE = "JSONServiceRecord";
+
+  /**
+   * The type field. This must be the string {@link #RECORD_TYPE}
+   */
+  public String type = RECORD_TYPE;
 
   /**
    * Description string
@@ -233,17 +245,5 @@ public class ServiceRecord implements Cloneable {
     return super.clone();
   }
 
-  /**
-   * Validate the record by checking for null fields and other invalid
-   * conditions
-   * @throws NullPointerException if a field is null when it
-   * MUST be set.
-   * @throws RuntimeException on invalid entries
-   */
-  public void validate() {
-    for (Endpoint endpoint : external) {
-      Preconditions.checkNotNull("null endpoint", endpoint);
-      endpoint.validate();
-    }
-  }
+
 }

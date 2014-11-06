@@ -34,14 +34,9 @@ public interface ProtocolTypes {
   String PROTOCOL_FILESYSTEM = "hadoop/filesystem";
 
   /**
-   * Classic Hadoop IPC : {@value}.
+   * Hadoop IPC,  "classic" or protobuf : {@value}.
    */
   String PROTOCOL_HADOOP_IPC = "hadoop/IPC";
-
-  /**
-   * Hadoop protocol buffers IPC: {@value}.
-   */
-  String PROTOCOL_HADOOP_IPC_PROTOBUF = "hadoop/protobuf";
 
   /**
    * Corba IIOP: {@value}.

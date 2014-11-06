@@ -4,6 +4,7 @@ EXTENDS FiniteSets, Sequences, Naturals, TLC
 
 
 (*
+============================================================================
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,6 +20,7 @@ EXTENDS FiniteSets, Sequences, Naturals, TLC
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+============================================================================
  *)
 
 (*
@@ -71,12 +73,21 @@ CONSTANTS
     MknodeActions    \* all possible mkdir actions
 
 
+ASSUME PathChars \in STRING
+ASSUME Paths \in STRING
+
+(* Data in records is JSON, hence a string *)
+ASSUME Data \in STRING
+
+----------------------------------------------------------------------------------------
 
 (* the registry*)
 VARIABLE registry
 
+
 (* Sequence of actions to apply to the registry *)
 VARIABLE actions
+
 
 ----------------------------------------------------------------------------------------
 (* Tuple of all variables.  *)
@@ -92,7 +103,6 @@ vars == << registry, actions >>
 
 (* Persistence policy *)
 PersistPolicySet == {
-    "",                      \* Undefined; field not present. PERMANENT is implied.
     "permanent",            \* persists until explicitly removed
     "application",          \* persists until the application finishes
     "application-attempt",  \* persists until the application attempt finishes
@@ -102,7 +112,6 @@ PersistPolicySet == {
 (* Type invariants. *)
 TypeInvariant ==
     /\ \A p \in PersistPolicies: p \in PersistPolicySet
-
 
 
 ----------------------------------------------------------------------------------------
@@ -129,6 +138,14 @@ RegistryEntry == [
     ]
 
 
+(* Define the set of all string to string mappings *)
+
+StringMap == [
+  STRING |-> STRING
+]
+
+
+
 (*
     An endpoint in a service record
 *)
@@ -140,21 +157,14 @@ Endpoint == [
     addresses: Addresses
 ]
 
-(* Attributes are the set of all string to string mappings *)
-
-Attributes == [
-STRING |-> STRING
-]
-
 (*
     A service record
 *)
 ServiceRecord == [
-    \* ID -used when applying the persistence policy
-    yarn_id: STRING,
 
-    \* the persistence policy
-    yarn_persistence: PersistPolicySet,
+    \* This MUST be present: if it is not then the data is not a service record
+    \* This permits shortcut scan & reject of byte arrays without parsing
+    type: "JSONServiceRecord",
 
     \*A description
     description: STRING,
@@ -166,8 +176,33 @@ ServiceRecord == [
     internal: Endpoints,
 
     \* Attributes are a function
-    attributes: Attributes
+    attributes: StringMap
 ]
+
+----------------------------------------------------------------------------------------
+
+(*
+ There is an operation serialize whose internals are not defined,
+ Which converts the service records to JSON
+ *)
+
+CONSTANT serialize(_)
+
+(* A function which returns true iff the byte stream is considered a valid service record. *)
+CONSTANT containsServiceRecord(_)
+
+(* A function to deserialize a string to JSON *)
+CONSTANT deserialize(_)
+
+ASSUME \A json \in STRING: containsServiceRecord(json) \in BOOLEAN
+
+(* Records can be serialized *)
+ASSUME \A r \in ServiceRecord : serialize(r) \in STRING /\ containsServiceRecord(serialize(r))
+
+(* All strings for which containsServiceRecord() holds can be deserialized *)
+ASSUME \A json \in STRING: containsServiceRecord(json) => deserialize(json) \in ServiceRecord
+
+
 
 
 ----------------------------------------------------------------------------------------
@@ -304,8 +339,8 @@ validRegistry(R) ==
         \* an entry must be the root entry or have a parent entry
         /\ \A e \in R: isRootEntry(e) \/ exists(R, parent(e.path))
 
-        \* If the entry has data, it must be a service record
-        /\ \A e \in R: (e.data = << >> \/ e.data \in ServiceRecords)
+        \* If the entry has data, it must contain a service record
+        /\ \A e \in R: (e.data = << >> \/ containsServiceRecord(e.data))
 
 
 ----------------------------------------------------------------------------------------
@@ -336,13 +371,13 @@ mknode() adds a new empty entry where there was none before, iff
 *)
 
 mknodeSimple(R, path) ==
-    LET record == [ path |-> path, data |-> <<>>  ]
+    LET entry == [ path |-> path, data |-> <<>>  ]
     IN  \/ exists(R, path)
-        \/ (exists(R, parent(path))  /\ canBind(R, record) /\ (R' = R \union {record} ))
+        \/ (exists(R, parent(path))  /\ canBind(R, entry) /\ (R' = R \union {entry} ))
 
 
 (*
-For all parents, the mknodeSimpl() criteria must apply.
+For all parents, the mknodeSimple() criteria must apply.
 This could be defined recursively, though as TLA+ does not support recursion,
 an alternative is required
 
@@ -350,7 +385,8 @@ an alternative is required
 Because this specification is declaring the final state of a operation, not
 the implemental, all that is needed is to describe those parents.
 
-It declares that the mkdirSimple state applies to the path and all its parents in the set R'
+It declares that the mknodeSimple() state applies to the path and all
+its parents in the set R'
 
 *)
 mknodeWithParents(R, path) ==
@@ -402,7 +438,7 @@ purge(R, path, id, persistence) ==
          => recursiveDelete(R, p2.path)
 
 (*
-resolveRecord() resolves the record at a path or fails.
+resolveEntry() resolves the record entry at a path or fails.
 
 It relies on the fact that if the cardinality of a set is 1, then the CHOOSE operator
 is guaranteed to return the single entry of that set, iff the choice predicate holds.
@@ -411,10 +447,17 @@ Using a predicate of TRUE, it always succeeds, so this function selects
 the sole entry of the resolve operation.
 *)
 
-resolveRecord(R, path) ==
+resolveEntry(R, path) ==
     LET l == resolve(R, path) IN
         /\ Cardinality(l) = 1
         /\ CHOOSE e \in l : TRUE
+
+(*
+ Resolve a record by resolving the entry and deserializing the result
+ *)
+resolveRecord(R, path) ==
+    deserialize(resolveEntry(R, path))
+
 
 (*
 The specific action of putting an entry into a record includes validating the record
@@ -422,8 +465,10 @@ The specific action of putting an entry into a record includes validating the re
 
 validRecordToBind(path, record) ==
       \* The root entry must have permanent persistence
-     isRootPath(path) => (record.attributes["yarn:persistence"] = "permanent"
-     \/ record.attributes["yarn:persistence"] = "")
+     isRootPath(path) => (
+        record.attributes["yarn:persistence"] = "permanent"
+        \/ record.attributes["yarn:persistence"]
+        \/ record.attributes["yarn:persistence"] = {})
 
 
 (*
@@ -432,11 +477,10 @@ marshalled as the data in the entry
  *)
 bindRecord(R, path, record) ==
     /\ validRecordToBind(path, record)
-    /\ bind(R, [path |-> path, data |-> record])
+    /\ bind(R, [path |-> path, data |-> serialize(record)])
 
 
 ----------------------------------------------------------------------------------------
-
 
 
 (*
