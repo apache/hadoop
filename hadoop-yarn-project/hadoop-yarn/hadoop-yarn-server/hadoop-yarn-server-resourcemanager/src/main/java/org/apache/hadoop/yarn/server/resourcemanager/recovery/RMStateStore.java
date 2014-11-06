@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
@@ -87,6 +88,7 @@ public abstract class RMStateStore extends AbstractService {
       "AMRMTokenSecretManagerRoot";
   protected static final String VERSION_NODE = "RMVersionNode";
   protected static final String EPOCH_NODE = "EpochNode";
+  private ResourceManager resourceManager;
 
   public static final Log LOG = LogFactory.getLog(RMStateStore.class);
 
@@ -818,13 +820,15 @@ public abstract class RMStateStore extends AbstractService {
    * @param failureCause the exception due to which the operation failed
    */
   protected void notifyStoreOperationFailed(Exception failureCause) {
-    RMFatalEventType type;
     if (failureCause instanceof StoreFencedException) {
-      type = RMFatalEventType.STATE_STORE_FENCED;
+      Thread standByTransitionThread =
+          new Thread(new StandByTransitionThread());
+      standByTransitionThread.setName("StandByTransitionThread Handler");
+      standByTransitionThread.start();
     } else {
-      type = RMFatalEventType.STATE_STORE_OP_FAILED;
+      rmDispatcher.getEventHandler().handle(
+        new RMFatalEvent(RMFatalEventType.STATE_STORE_OP_FAILED, failureCause));
     }
-    rmDispatcher.getEventHandler().handle(new RMFatalEvent(type, failureCause));
   }
  
   @SuppressWarnings("unchecked")
@@ -866,4 +870,16 @@ public abstract class RMStateStore extends AbstractService {
    * @throws Exception
    */
   public abstract void deleteStore() throws Exception;
+
+  public void setResourceManager(ResourceManager rm) {
+    this.resourceManager = rm;
+  }
+
+  private class StandByTransitionThread implements Runnable {
+    @Override
+    public void run() {
+      LOG.info("RMStateStore has been fenced");
+      resourceManager.handleTransitionToStandBy();
+    }
+  }
 }
