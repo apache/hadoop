@@ -112,4 +112,23 @@ public abstract class AbstractContractMkdirTest extends AbstractFSContractTestBa
     assertPathExists("mkdir failed", path);
     assertDeleted(path, true);
   }
+
+  @Test
+  public void testMkdirSlashHandling() throws Throwable {
+    describe("verify mkdir slash handling");
+    FileSystem fs = getFileSystem();
+
+    // No trailing slash
+    assertTrue(fs.mkdirs(path("testmkdir/a")));
+    assertPathExists("mkdir without trailing slash failed",
+        path("testmkdir/a"));
+
+    // With trailing slash
+    assertTrue(fs.mkdirs(path("testmkdir/b/")));
+    assertPathExists("mkdir with trailing slash failed", path("testmkdir/b/"));
+
+    // Mismatched slashes
+    assertPathExists("check path existence without trailing slash failed",
+        path("testmkdir/b"));
+  }
 }

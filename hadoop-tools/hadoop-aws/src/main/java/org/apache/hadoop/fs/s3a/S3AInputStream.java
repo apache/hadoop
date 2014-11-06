@@ -22,6 +22,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
 
@@ -65,6 +66,7 @@ public class S3AInputStream extends FSInputStream {
   }
 
   private synchronized void reopen(long pos) throws IOException {
+
     if (wrappedStream != null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Aborting old stream to open at pos " + pos);
@@ -73,15 +75,17 @@ public class S3AInputStream extends FSInputStream {
     }
 
     if (pos < 0) {
-      throw new EOFException("Trying to seek to a negative offset " + pos);
+      throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK
+          +" " + pos);
     }
 
     if (contentLength > 0 && pos > contentLength-1) {
-      throw new EOFException("Trying to seek to an offset " + pos + 
-                             " past the end of the file");
+      throw new EOFException(
+          FSExceptionMessages.CANNOT_SEEK_PAST_EOF
+          + " " + pos);
     }
 
-    LOG.info("Actually opening file " + key + " at pos " + pos);
+    LOG.debug("Actually opening file " + key + " at pos " + pos);
 
     GetObjectRequest request = new GetObjectRequest(bucket, key);
     request.setRange(pos, contentLength-1);
@@ -103,11 +107,14 @@ public class S3AInputStream extends FSInputStream {
 
   @Override
   public synchronized void seek(long pos) throws IOException {
+    checkNotClosed();
+
     if (this.pos == pos) {
       return;
     }
 
-    LOG.info("Reopening " + this.key + " to seek to new offset " + (pos - this.pos));
+    LOG.debug(
+        "Reopening " + this.key + " to seek to new offset " + (pos - this.pos));
     reopen(pos);
   }
 
@@ -118,9 +125,7 @@ public class S3AInputStream extends FSInputStream {
 
   @Override
   public synchronized int read() throws IOException {
-    if (closed) {
-      throw new IOException("Stream closed");
-    }
+    checkNotClosed();
 
     openIfNeeded();
 
@@ -148,10 +153,8 @@ public class S3AInputStream extends FSInputStream {
   }
 
   @Override
-  public synchronized int read(byte buf[], int off, int len) throws IOException {
-    if (closed) {
-      throw new IOException("Stream closed");
-    }
+  public synchronized int read(byte[] buf, int off, int len) throws IOException {
+    checkNotClosed();
 
     openIfNeeded();
 
@@ -179,6 +182,12 @@ public class S3AInputStream extends FSInputStream {
     return byteRead;
   }
 
+  private void checkNotClosed() throws IOException {
+    if (closed) {
+      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+  }
+
   @Override
   public synchronized void close() throws IOException {
     super.close();
@@ -190,9 +199,8 @@ public class S3AInputStream extends FSInputStream {
 
   @Override
   public synchronized int available() throws IOException {
-    if (closed) {
-      throw new IOException("Stream closed");
-    }
+    checkNotClosed();
+
     long remaining = this.contentLength - this.pos;
     if (remaining > Integer.MAX_VALUE) {
       return Integer.MAX_VALUE;

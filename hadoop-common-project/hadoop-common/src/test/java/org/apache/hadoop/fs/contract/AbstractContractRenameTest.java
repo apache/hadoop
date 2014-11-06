@@ -182,4 +182,45 @@ public abstract class AbstractContractRenameTest extends
       assertFalse(renameCreatesDestDirs);
     }
   }
+
+  @Test
+  public void testRenameWithNonEmptySubDir() throws Throwable {
+    final Path renameTestDir = path("testRenameWithNonEmptySubDir");
+    final Path srcDir = new Path(renameTestDir, "src1");
+    final Path srcSubDir = new Path(srcDir, "sub");
+    final Path finalDir = new Path(renameTestDir, "dest");
+    FileSystem fs = getFileSystem();
+    boolean renameRemoveEmptyDest = isSupported(RENAME_REMOVE_DEST_IF_EMPTY_DIR);
+    ContractTestUtils.rm(fs, renameTestDir, true, false);
+
+    fs.mkdirs(srcDir);
+    fs.mkdirs(finalDir);
+    ContractTestUtils.writeTextFile(fs, new Path(srcDir, "source.txt"),
+        "this is the file in src dir", false);
+    ContractTestUtils.writeTextFile(fs, new Path(srcSubDir, "subfile.txt"),
+        "this is the file in src/sub dir", false);
+
+    ContractTestUtils.assertPathExists(fs, "not created in src dir",
+        new Path(srcDir, "source.txt"));
+    ContractTestUtils.assertPathExists(fs, "not created in src/sub dir",
+        new Path(srcSubDir, "subfile.txt"));
+
+    fs.rename(srcDir, finalDir);
+    // Accept both POSIX rename behavior and CLI rename behavior
+    if (renameRemoveEmptyDest) {
+      // POSIX rename behavior
+      ContractTestUtils.assertPathExists(fs, "not renamed into dest dir",
+          new Path(finalDir, "source.txt"));
+      ContractTestUtils.assertPathExists(fs, "not renamed into dest/sub dir",
+          new Path(finalDir, "sub/subfile.txt"));
+    } else {
+      // CLI rename behavior
+      ContractTestUtils.assertPathExists(fs, "not renamed into dest dir",
+          new Path(finalDir, "src1/source.txt"));
+      ContractTestUtils.assertPathExists(fs, "not renamed into dest/sub dir",
+          new Path(finalDir, "src1/sub/subfile.txt"));
+    }
+    ContractTestUtils.assertPathDoesNotExist(fs, "not deleted",
+        new Path(srcDir, "source.txt"));
+  }
 }
