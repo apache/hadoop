@@ -800,6 +800,8 @@ Release 2.6.0 - UNRELEASED
     FatalEventDispatcher try to transition RM to StandBy at the same time.
     (Rohith Sharmaks via jianhe)
 
+    YARN-2813. Fixed NPE from MemoryTimelineStore.getDomains. (Zhijie Shen via xgong)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
