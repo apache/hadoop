@@ -443,11 +443,7 @@ public class TestTimelineWebServices extends JerseyTest {
         .post(ClientResponse.class, entities);
     TimelinePutResponse putResposne =
         response.getEntity(TimelinePutResponse.class);
-    Assert.assertEquals(1, putResposne.getErrors().size());
-    List<TimelinePutError> errors = putResposne.getErrors();
-    Assert.assertEquals(
-        TimelinePutResponse.TimelinePutError.SYSTEM_FILTER_CONFLICT,
-        errors.get(0).getErrorCode());
+    Assert.assertEquals(0, putResposne.getErrors().size());
   }
 
   @Test
