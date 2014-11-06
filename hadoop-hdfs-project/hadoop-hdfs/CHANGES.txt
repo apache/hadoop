@@ -347,6 +347,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7329. Improve logging when MiniDFSCluster fails to start.
     (Byron Wong via shv)
 
+    HDFS-7336. Unused member DFSInputStream.buffersize. (Milan Desai via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES

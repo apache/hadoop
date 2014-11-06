@@ -41,7 +41,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -215,19 +214,17 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * parallel accesses to DFSInputStream (through ptreads) properly */
   private final ConcurrentHashMap<DatanodeInfo, DatanodeInfo> deadNodes =
              new ConcurrentHashMap<DatanodeInfo, DatanodeInfo>();
-  private int buffersize = 1;
-  
+
   private final byte[] oneByteBuf = new byte[1]; // used for 'int read()'
 
   void addToDeadNodes(DatanodeInfo dnInfo) {
     deadNodes.put(dnInfo, dnInfo);
   }
   
-  DFSInputStream(DFSClient dfsClient, String src, int buffersize, boolean verifyChecksum
+  DFSInputStream(DFSClient dfsClient, String src, boolean verifyChecksum
                  ) throws IOException, UnresolvedLinkException {
     this.dfsClient = dfsClient;
     this.verifyChecksum = verifyChecksum;
-    this.buffersize = buffersize;
     this.src = src;
     this.cachingStrategy =
         dfsClient.getDefaultReadCachingStrategy();
