@@ -94,6 +94,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7336. Unused member DFSInputStream.buffersize. (Milan Desai via shv)
 
+    HDFS-7365. Remove hdfs.server.blockmanagement.MutableBlockCollection.
+    (Li Lu via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
