@@ -219,6 +219,19 @@ public class AuthenticationFilter implements Filter {
       authHandlerClassName = authHandlerName;
     }
 
+    validity = Long.parseLong(config.getProperty(AUTH_TOKEN_VALIDITY, "36000"))
+        * 1000; //10 hours
+    initializeSecretProvider(filterConfig);
+
+    initializeAuthHandler(authHandlerClassName, filterConfig);
+
+
+    cookieDomain = config.getProperty(COOKIE_DOMAIN, null);
+    cookiePath = config.getProperty(COOKIE_PATH, null);
+  }
+
+  protected void initializeAuthHandler(String authHandlerClassName, FilterConfig filterConfig)
+      throws ServletException {
     try {
       Class<?> klass = Thread.currentThread().getContextClassLoader().loadClass(authHandlerClassName);
       authHandler = (AuthenticationHandler) klass.newInstance();
@@ -230,9 +243,10 @@ public class AuthenticationFilter implements Filter {
     } catch (IllegalAccessException ex) {
       throw new ServletException(ex);
     }
+  }
 
-    validity = Long.parseLong(config.getProperty(AUTH_TOKEN_VALIDITY, "36000"))
-        * 1000; //10 hours
+  protected void initializeSecretProvider(FilterConfig filterConfig)
+      throws ServletException {
     secretProvider = (SignerSecretProvider) filterConfig.getServletContext().
         getAttribute(SIGNER_SECRET_PROVIDER_ATTRIBUTE);
     if (secretProvider == null) {
@@ -254,9 +268,6 @@ public class AuthenticationFilter implements Filter {
       customSecretProvider = true;
     }
     signer = new Signer(secretProvider);
-
-    cookieDomain = config.getProperty(COOKIE_DOMAIN, null);
-    cookiePath = config.getProperty(COOKIE_PATH, null);
   }
 
   @SuppressWarnings("unchecked")
