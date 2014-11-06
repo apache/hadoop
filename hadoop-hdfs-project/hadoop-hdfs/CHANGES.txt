@@ -344,6 +344,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7361. TestCheckpoint fails after change of log message related to
     locking violation. (shv)
 
+    HDFS-7329. Improve logging when MiniDFSCluster fails to start.
+    (Byron Wong via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
