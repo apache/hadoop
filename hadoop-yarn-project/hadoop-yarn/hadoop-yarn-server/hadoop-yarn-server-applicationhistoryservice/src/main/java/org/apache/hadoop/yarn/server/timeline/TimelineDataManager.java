@@ -109,7 +109,6 @@ public class TimelineDataManager extends AbstractService {
       EnumSet<Field> fields,
       UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineEntities entities = null;
-    boolean modified = extendFields(fields);
     entities = store.getEntities(
         entityType,
         limit,
@@ -130,13 +129,6 @@ public class TimelineDataManager extends AbstractService {
           if (!timelineACLsManager.checkAccess(
               callerUGI, ApplicationAccessType.VIEW_APP, entity)) {
             entitiesItr.remove();
-          } else {
-            // clean up system data
-            if (modified) {
-              entity.setPrimaryFilters(null);
-            } else {
-              cleanupOwnerInfo(entity);
-            }
           }
         } catch (YarnException e) {
           LOG.error("Error when verifying access for user " + callerUGI
@@ -166,7 +158,6 @@ public class TimelineDataManager extends AbstractService {
       EnumSet<Field> fields,
       UserGroupInformation callerUGI) throws YarnException, IOException {
     TimelineEntity entity = null;
-    boolean modified = extendFields(fields);
     entity =
         store.getEntity(entityId, entityType, fields);
     if (entity != null) {
@@ -174,13 +165,6 @@ public class TimelineDataManager extends AbstractService {
       if (!timelineACLsManager.checkAccess(
           callerUGI, ApplicationAccessType.VIEW_APP, entity)) {
         entity = null;
-      } else {
-        // clean up the system data
-        if (modified) {
-          entity.setPrimaryFilters(null);
-        } else {
-          cleanupOwnerInfo(entity);
-        }
       }
     }
     return entity;
@@ -283,36 +267,13 @@ public class TimelineDataManager extends AbstractService {
         }
       } catch (Exception e) {
         // Skip the entity which already exists and was put by others
-        LOG.error("Skip the timeline entity: " + entityID + ", because "
-            + e.getMessage());
+        LOG.error("Skip the timeline entity: " + entityID, e);
         TimelinePutResponse.TimelinePutError error =
             new TimelinePutResponse.TimelinePutError();
         error.setEntityId(entityID.getId());
         error.setEntityType(entityID.getType());
         error.setErrorCode(
             TimelinePutResponse.TimelinePutError.ACCESS_DENIED);
-        errors.add(error);
-        continue;
-      }
-
-      // inject owner information for the access check if this is the first
-      // time to post the entity, in case it's the admin who is updating
-      // the timeline data.
-      try {
-        if (existingEntity == null) {
-          injectOwnerInfo(entity, callerUGI.getShortUserName());
-        }
-      } catch (YarnException e) {
-        // Skip the entity which messes up the primary filter and record the
-        // error
-        LOG.error("Skip the timeline entity: " + entityID + ", because "
-            + e.getMessage());
-        TimelinePutResponse.TimelinePutError error =
-            new TimelinePutResponse.TimelinePutError();
-        error.setEntityId(entityID.getId());
-        error.setEntityType(entityID.getType());
-        error.setErrorCode(
-            TimelinePutResponse.TimelinePutError.SYSTEM_FILTER_CONFLICT);
         errors.add(error);
         continue;
       }
@@ -391,36 +352,6 @@ public class TimelineDataManager extends AbstractService {
       return domains;
     } else {
       return new TimelineDomains();
-    }
-  }
-
-  private static boolean extendFields(EnumSet<Field> fieldEnums) {
-    boolean modified = false;
-    if (fieldEnums != null && !fieldEnums.contains(Field.PRIMARY_FILTERS)) {
-      fieldEnums.add(Field.PRIMARY_FILTERS);
-      modified = true;
-    }
-    return modified;
-  }
-
-  private static void injectOwnerInfo(TimelineEntity timelineEntity,
-      String owner) throws YarnException {
-    if (timelineEntity.getPrimaryFilters() != null &&
-        timelineEntity.getPrimaryFilters().containsKey(
-            TimelineStore.SystemFilter.ENTITY_OWNER.toString())) {
-      throw new YarnException(
-          "User should not use the timeline system filter key: "
-              + TimelineStore.SystemFilter.ENTITY_OWNER);
-    }
-    timelineEntity.addPrimaryFilter(
-        TimelineStore.SystemFilter.ENTITY_OWNER
-            .toString(), owner);
-  }
-
-  private static void cleanupOwnerInfo(TimelineEntity timelineEntity) {
-    if (timelineEntity.getPrimaryFilters() != null) {
-      timelineEntity.getPrimaryFilters().remove(
-          TimelineStore.SystemFilter.ENTITY_OWNER.toString());
     }
   }
 
