@@ -385,7 +385,7 @@ public class TestBlockManager {
 
   private BlockInfo blockOnNodes(long blkId, List<DatanodeDescriptor> nodes) {
     Block block = new Block(blkId);
-    BlockInfo blockInfo = new BlockInfo(block, 3);
+    BlockInfo blockInfo = new BlockInfo(block, (short) 3);
 
     for (DatanodeDescriptor dn : nodes) {
       for (DatanodeStorageInfo storage : dn.getStorageInfos()) {

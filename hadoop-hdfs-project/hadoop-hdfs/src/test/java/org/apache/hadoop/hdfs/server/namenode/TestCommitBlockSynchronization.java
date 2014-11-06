@@ -63,7 +63,7 @@ public class TestCommitBlockSynchronization {
 
     FSNamesystem namesystemSpy = spy(namesystem);
     BlockInfoUnderConstruction blockInfo = new BlockInfoUnderConstruction(
-        block, 1, HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
+        block, (short) 1, HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION, targets);
     blockInfo.setBlockCollection(file);
     blockInfo.setGenerationStamp(genStamp);
     blockInfo.initializeBlockRecovery(genStamp);
@@ -100,7 +100,7 @@ public class TestCommitBlockSynchronization {
         lastBlock, genStamp, length, false, false, newTargets, null);
 
     // Simulate 'completing' the block.
-    BlockInfo completedBlockInfo = new BlockInfo(block, 1);
+    BlockInfo completedBlockInfo = new BlockInfo(block, (short) 1);
     completedBlockInfo.setBlockCollection(file);
     completedBlockInfo.setGenerationStamp(genStamp);
     doReturn(completedBlockInfo).when(namesystemSpy)
@@ -171,7 +171,7 @@ public class TestCommitBlockSynchronization {
     namesystemSpy.commitBlockSynchronization(
         lastBlock, genStamp, length, true, false, newTargets, null);
 
-    BlockInfo completedBlockInfo = new BlockInfo(block, 1);
+    BlockInfo completedBlockInfo = new BlockInfo(block, (short) 1);
     completedBlockInfo.setBlockCollection(file);
     completedBlockInfo.setGenerationStamp(genStamp);
     doReturn(completedBlockInfo).when(namesystemSpy)

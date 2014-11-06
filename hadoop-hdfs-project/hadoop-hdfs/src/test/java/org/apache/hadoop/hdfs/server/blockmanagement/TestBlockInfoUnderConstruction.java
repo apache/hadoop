@@ -41,7 +41,7 @@ public class TestBlockInfoUnderConstruction {
     dd1.isAlive = dd2.isAlive = dd3.isAlive = true;
     BlockInfoUnderConstruction blockInfo = new BlockInfoUnderConstruction(
         new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP),
-        3,
+        (short) 3,
         BlockUCState.UNDER_CONSTRUCTION,
         new DatanodeStorageInfo[] {s1, s2, s3});
 
