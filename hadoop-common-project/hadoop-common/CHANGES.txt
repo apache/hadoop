@@ -63,6 +63,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11267. TestSecurityUtil fails when run with JDK8 because of empty
     principal names. (Stephen Chu via wheat9)
 
+    HADOOP-10714. AmazonS3Client.deleteObjects() need to be limited to 1000
+    entries per call. (Juan Yu via atm)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
