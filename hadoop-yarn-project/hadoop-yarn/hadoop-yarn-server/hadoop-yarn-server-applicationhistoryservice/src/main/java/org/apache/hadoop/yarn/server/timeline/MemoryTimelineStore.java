@@ -241,6 +241,10 @@ public class MemoryTimelineStore
   public TimelineDomains getDomains(String owner)
       throws IOException {
     List<TimelineDomain> domains = new ArrayList<TimelineDomain>();
+    Set<TimelineDomain> domainsOfOneOwner = domainsByOwner.get(owner);
+    if (domainsOfOneOwner == null) {
+      return new TimelineDomains();
+    }
     for (TimelineDomain domain : domainsByOwner.get(owner)) {
       TimelineDomain domainToReturn = createTimelineDomain(
           domain.getId(),

@@ -946,6 +946,10 @@ public class TimelineStoreTestUtils {
     assertEquals(2, actualDomains.getDomains().size());
     verifyDomainInfo(domain3, actualDomains.getDomains().get(0));
     verifyDomainInfo(domain1, actualDomains.getDomains().get(1));
+
+    // owner without any domain
+    actualDomains = store.getDomains("owner_4");
+    assertEquals(0, actualDomains.getDomains().size());
   }
 
   private static void verifyDomainInfo(
