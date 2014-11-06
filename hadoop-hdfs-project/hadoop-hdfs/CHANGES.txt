@@ -1027,8 +1027,12 @@ Release 2.6.0 - UNRELEASED
     HDFS-7218. FSNamesystem ACL operations should write to audit log on
     failure. (clamb via yliu)
 
-    HDFS-7199.  DFSOutputStream should not silently drop data if DataStreamer
+    HDFS-7199. DFSOutputStream should not silently drop data if DataStreamer
     crashes with an unchecked exception (rushabhs via cmccabe)
+
+    HDFS-7367. HDFS short-circuit read cannot negotiate shared memory slot and
+    file descriptors when SASL is enabled on DataTransferProtocol.
+    (Chris Nauroth via wheat9)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
