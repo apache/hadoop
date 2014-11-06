@@ -331,7 +331,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
     String authorization = request.getHeader(KerberosAuthenticator.AUTHORIZATION);
 
     if (authorization == null || !authorization.startsWith(KerberosAuthenticator.NEGOTIATE)) {
-      response.setHeader(KerberosAuthenticator.WWW_AUTHENTICATE, KerberosAuthenticator.NEGOTIATE);
+      response.setHeader(WWW_AUTHENTICATE, KerberosAuthenticator.NEGOTIATE);
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       if (authorization == null) {
         LOG.trace("SPNEGO starting");

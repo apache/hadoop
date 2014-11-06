@@ -412,6 +412,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11272. Allow ZKSignerSecretProvider and
     ZKDelegationTokenSecretManager to use the same curator client. (Arun Suresh via atm)
 
+    HADOOP-11187 NameNode - KMS communication fails after a long period of
+    inactivity. (Arun Suresh via atm)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

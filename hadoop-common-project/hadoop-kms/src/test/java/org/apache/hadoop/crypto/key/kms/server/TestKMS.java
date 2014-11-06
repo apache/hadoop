@@ -900,6 +900,7 @@ public class TestKMS {
         keytab.getAbsolutePath());
     conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
     conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+    conf.set("hadoop.kms.authentication.token.validity", "1");
 
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
       conf.set(type.getAclConfigKey(), type.toString());
@@ -930,11 +931,16 @@ public class TestKMS {
                   @Override
                   public Void run() throws Exception {
                     KMSClientProvider kp = new KMSClientProvider(uri, conf);
+
+                    kp.createKey("k0", new byte[16],
+                        new KeyProvider.Options(conf));
+                    // This happens before rollover
                     kp.createKey("k1", new byte[16],
                         new KeyProvider.Options(conf));
-                    makeAuthTokenStale(kp);
+                    // Atleast 2 rollovers.. so should induce signer Exception
+                    Thread.sleep(3500);
                     kp.createKey("k2", new byte[16],
-                        new KeyProvider.Options(conf));
+                      new KeyProvider.Options(conf));
                     return null;
                   }
                 });
@@ -958,15 +964,16 @@ public class TestKMS {
                     KMSClientProvider kp = new KMSClientProvider(uri, conf);
                     kp.createKey("k3", new byte[16],
                         new KeyProvider.Options(conf));
-                    makeAuthTokenStale(kp);
+                    // Atleast 2 rollovers.. so should induce signer Exception
+                    Thread.sleep(3500);
                     try {
                       kp.createKey("k4", new byte[16],
                           new KeyProvider.Options(conf));
-                      Assert.fail("Shoud fail since retry count == 0");
+                      Assert.fail("This should not succeed..");
                     } catch (IOException e) {
                       Assert.assertTrue(
-                          "HTTP exception must be a 403 : " + e.getMessage(), e
-                              .getMessage().contains("403"));
+                          "HTTP exception must be a 401 : " + e.getMessage(), e
+                              .getMessage().contains("401"));
                     }
                     return null;
                   }
@@ -974,19 +981,6 @@ public class TestKMS {
             return null;
           }
         });
-  }
-
-  private void makeAuthTokenStale(KMSClientProvider kp) throws Exception {
-    Field tokF = KMSClientProvider.class.getDeclaredField("authToken");
-    tokF.setAccessible(true);
-    DelegationTokenAuthenticatedURL.Token delToken =
-        (DelegationTokenAuthenticatedURL.Token) tokF.get(kp);
-    String oldTokStr = delToken.toString();
-    Method setM =
-        AuthenticatedURL.Token.class.getDeclaredMethod("set", String.class);
-    setM.setAccessible(true);
-    String newTokStr = oldTokStr.replaceAll("e=[^&]*", "e=1000");
-    setM.invoke(((AuthenticatedURL.Token)delToken), newTokStr);
   }
 
   @Test

@@ -18,6 +18,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.Properties;
 
@@ -29,6 +30,8 @@ import java.util.Properties;
  * Implementations must be thread-safe as one instance is initialized and used for all requests.
  */
 public interface AuthenticationHandler {
+
+  public static final String WWW_AUTHENTICATE = "WWW-Authenticate";
 
   /**
    * Returns the authentication type of the authentication handler.
