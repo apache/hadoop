@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.server.KeyAuthorizationKeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -1583,6 +1584,106 @@ public class TestKMS {
       }
     });
   }
+
+  @Test
+  public void testKMSWithZKSigner() throws Exception {
+    doKMSWithZK(true, false);
+  }
+
+  @Test
+  public void testKMSWithZKDTSM() throws Exception {
+    doKMSWithZK(false, true);
+  }
+
+  @Test
+  public void testKMSWithZKSignerAndDTSM() throws Exception {
+    doKMSWithZK(true, true);
+  }
+
+  public void doKMSWithZK(boolean zkDTSM, boolean zkSigner) throws Exception {
+    TestingServer zkServer = null;
+    try {
+      zkServer = new TestingServer();
+      zkServer.start();
+
+      Configuration conf = new Configuration();
+      conf.set("hadoop.security.authentication", "kerberos");
+      UserGroupInformation.setConfiguration(conf);
+      final File testDir = getTestDir();
+      conf = createBaseKMSConf(testDir);
+      conf.set("hadoop.kms.authentication.type", "kerberos");
+      conf.set("hadoop.kms.authentication.kerberos.keytab", keytab.getAbsolutePath());
+      conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
+      conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+
+      if (zkSigner) {
+        conf.set("hadoop.kms.authentication.signer.secret.provider", "zookeeper");
+        conf.set("hadoop.kms.authentication.signer.secret.provider.zookeeper.path","/testKMSWithZKDTSM");
+        conf.set("hadoop.kms.authentication.signer.secret.provider.zookeeper.connection.string",zkServer.getConnectString());
+      }
+
+      if (zkDTSM) {
+        conf.set("hadoop.kms.authentication.zk-dt-secret-manager.enable", "true");
+      }
+      if (zkDTSM && !zkSigner) {
+        conf.set("hadoop.kms.authentication.zk-dt-secret-manager.zkConnectionString", zkServer.getConnectString());
+        conf.set("hadoop.kms.authentication.zk-dt-secret-manager.znodeWorkingPath", "testZKPath");
+        conf.set("hadoop.kms.authentication.zk-dt-secret-manager.zkAuthType", "none");
+      }
+
+      for (KMSACLs.Type type : KMSACLs.Type.values()) {
+        conf.set(type.getAclConfigKey(), type.toString());
+      }
+      conf.set(KMSACLs.Type.CREATE.getAclConfigKey(),
+          KMSACLs.Type.CREATE.toString() + ",SET_KEY_MATERIAL");
+
+      conf.set(KMSACLs.Type.ROLLOVER.getAclConfigKey(),
+          KMSACLs.Type.ROLLOVER.toString() + ",SET_KEY_MATERIAL");
+
+      conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k0.ALL", "*");
+      conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k1.ALL", "*");
+      conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k2.ALL", "*");
+      conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "k3.ALL", "*");
+
+      writeConf(testDir, conf);
+
+      KMSCallable<KeyProvider> c =
+          new KMSCallable<KeyProvider>() {
+        @Override
+        public KeyProvider call() throws Exception {
+          final Configuration conf = new Configuration();
+          conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
+          final URI uri = createKMSUri(getKMSUrl());
+
+          final KeyProvider kp =
+              doAs("SET_KEY_MATERIAL",
+                  new PrivilegedExceptionAction<KeyProvider>() {
+                    @Override
+                    public KeyProvider run() throws Exception {
+                      KMSClientProvider kp = new KMSClientProvider(uri, conf);
+                          kp.createKey("k1", new byte[16],
+                              new KeyProvider.Options(conf));
+                          kp.createKey("k2", new byte[16],
+                              new KeyProvider.Options(conf));
+                          kp.createKey("k3", new byte[16],
+                              new KeyProvider.Options(conf));
+                      return kp;
+                    }
+                  });
+          return kp;
+        }
+      };
+
+      runServer(null, null, testDir, c);
+    } finally {
+      if (zkServer != null) {
+        zkServer.stop();
+        zkServer.close();
+      }
+    }
+
+  }
+
 
   @Test
   public void testProxyUserKerb() throws Exception {

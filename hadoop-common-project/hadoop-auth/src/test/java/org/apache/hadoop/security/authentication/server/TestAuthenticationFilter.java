@@ -283,6 +283,8 @@ public class TestAuthenticationFilter {
     filter = new AuthenticationFilter();
     try {
       FilterConfig config = Mockito.mock(FilterConfig.class);
+      ServletContext sc = Mockito.mock(ServletContext.class);
+      Mockito.when(config.getServletContext()).thenReturn(sc);
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn("kerberos");
       Mockito.when(config.getInitParameterNames()).thenReturn(
         new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());

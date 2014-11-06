@@ -136,7 +136,11 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         conf.getLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL,
             DelegationTokenManager.REMOVAL_SCAN_INTERVAL_DEFAULT) * 1000);
     if (CURATOR_TL.get() != null) {
-      zkClient = CURATOR_TL.get();
+      zkClient =
+          CURATOR_TL.get().usingNamespace(
+              conf.get(ZK_DTSM_ZNODE_WORKING_PATH,
+                  ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT)
+                  + "/" + ZK_DTSM_NAMESPACE);
       isExternalClient = true;
     } else {
       String connString = conf.get(ZK_DTSM_ZK_CONNECTION_STRING);
