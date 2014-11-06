@@ -397,6 +397,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7324. haadmin command usage prints incorrect command name.
     (Brahma Reddy Battula via suresh)
 
+    HDFS-7366. BlockInfo should take replication as an short in the constructor.
+    (Li Lu via wheat9)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

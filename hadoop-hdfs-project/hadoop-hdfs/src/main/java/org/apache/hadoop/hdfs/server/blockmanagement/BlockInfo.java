@@ -56,12 +56,12 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * Construct an entry for blocksmap
    * @param replication the block's replication factor
    */
-  public BlockInfo(int replication) {
+  public BlockInfo(short replication) {
     this.triplets = new Object[3*replication];
     this.bc = null;
   }
   
-  public BlockInfo(Block blk, int replication) {
+  public BlockInfo(Block blk, short replication) {
     super(blk);
     this.triplets = new Object[3*replication];
     this.bc = null;
