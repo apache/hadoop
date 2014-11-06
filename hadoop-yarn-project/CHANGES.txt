@@ -841,6 +841,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2805. Fixed ResourceManager to load HA configs correctly before kerberos
     login. (Wangda Tan via vinodkv)
 
+    YARN-2579. Fixed a deadlock issue when EmbeddedElectorService and
+    FatalEventDispatcher try to transition RM to StandBy at the same time.
+    (Rohith Sharmaks via jianhe)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

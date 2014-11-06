@@ -43,8 +43,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
-import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer;
 import org.junit.After;
@@ -173,7 +171,6 @@ public class TestRMFailover extends ClientBaseWithFixes {
     verifyConnections();
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void testAutomaticFailover()
       throws YarnException, InterruptedException, IOException {
@@ -196,10 +193,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
     // so it transitions to standby.
     ResourceManager rm = cluster.getResourceManager(
         cluster.getActiveRMIndex());
-    RMFatalEvent event =
-        new RMFatalEvent(RMFatalEventType.STATE_STORE_FENCED,
-            "Fake RMFatalEvent");
-    rm.getRMContext().getDispatcher().getEventHandler().handle(event);
+    rm.handleTransitionToStandBy();
     int maxWaitingAttempts = 2000;
     while (maxWaitingAttempts-- > 0 ) {
       if (rm.getRMContext().getHAServiceState() == HAServiceState.STANDBY) {
