@@ -399,6 +399,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2770. Added functionality to renew/cancel TimeLineDelegationToken.
     (Zhijie Shen via jianhe)
 
+    YARN-2818. Removed the now unnecessary user entity injection from Timeline
+    service given we now have domains. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
