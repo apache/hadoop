@@ -24,9 +24,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.registry.client.api.BindFlags;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 
+import org.apache.hadoop.registry.client.binding.RegistryTypeUtils;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.exceptions.InvalidPathnameException;
+import org.apache.hadoop.registry.client.exceptions.NoRecordException;
 import org.apache.hadoop.registry.client.types.RegistryPathStatus;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.zookeeper.CreateMode;
@@ -103,10 +105,12 @@ public class RegistryOperationsService extends CuratorService
       int flags) throws IOException {
     Preconditions.checkArgument(record != null, "null record");
     validatePath(path);
+    // validate the record before putting it
+    RegistryTypeUtils.validateServiceRecord(path, record);
     LOG.info("Bound at {} : {}", path, record);
 
     CreateMode mode = CreateMode.PERSISTENT;
-    byte[] bytes = serviceRecordMarshal.toByteswithHeader(record);
+    byte[] bytes = serviceRecordMarshal.toBytes(record);
     zkSet(path, mode, bytes, getClientAcls(),
         ((flags & BindFlags.OVERWRITE) != 0));
   }
@@ -114,7 +118,11 @@ public class RegistryOperationsService extends CuratorService
   @Override
   public ServiceRecord resolve(String path) throws IOException {
     byte[] bytes = zkRead(path);
-    return serviceRecordMarshal.fromBytesWithHeader(path, bytes);
+
+    ServiceRecord record = serviceRecordMarshal.fromBytes(path,
+        bytes, ServiceRecord.RECORD_TYPE);
+    RegistryTypeUtils.validateServiceRecord(path, record);
+    return record;
   }
 
   @Override

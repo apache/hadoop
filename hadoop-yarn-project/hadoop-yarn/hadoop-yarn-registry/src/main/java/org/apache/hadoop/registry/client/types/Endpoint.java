@@ -21,14 +21,16 @@ package org.apache.hadoop.registry.client.types;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.registry.client.binding.JsonSerDeser;
 import org.apache.hadoop.registry.client.binding.RegistryTypeUtils;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Description of a single service/component endpoint.
@@ -67,7 +69,7 @@ public final class Endpoint implements Cloneable {
   /**
    * a list of address tuples —tuples whose format depends on the address type
    */
-  public List<List<String>> addresses;
+  public List<Map<String, String>> addresses;
 
   /**
    * Create an empty instance.
@@ -84,10 +86,11 @@ public final class Endpoint implements Cloneable {
     this.api = that.api;
     this.addressType = that.addressType;
     this.protocolType = that.protocolType;
-    this.addresses = new ArrayList<List<String>>(that.addresses.size());
-    for (List<String> address : addresses) {
-      List<String> addr2 = new ArrayList<String>(address.size());
-      Collections.copy(address, addr2);
+    this.addresses = newAddresses(that.addresses.size());
+    for (Map<String, String> address : that.addresses) {
+      Map<String, String> addr2 = new HashMap<String, String>(address.size());
+      addr2.putAll(address);
+      addresses.add(addr2);
     }
   }
 
@@ -101,14 +104,80 @@ public final class Endpoint implements Cloneable {
   public Endpoint(String api,
       String addressType,
       String protocolType,
-      List<List<String>> addrs) {
+      List<Map<String, String>> addrs) {
     this.api = api;
     this.addressType = addressType;
     this.protocolType = protocolType;
-    this.addresses = new ArrayList<List<String>>();
+    this.addresses = newAddresses(0);
     if (addrs != null) {
       addresses.addAll(addrs);
     }
+  }
+
+  /**
+   * Build an endpoint with an empty address list
+   * @param api API name
+   * @param addressType address type
+   * @param protocolType protocol type
+   */
+  public Endpoint(String api,
+      String addressType,
+      String protocolType) {
+    this.api = api;
+    this.addressType = addressType;
+    this.protocolType = protocolType;
+    this.addresses = newAddresses(0);
+  }
+
+  /**
+   * Build an endpoint with a single address entry.
+   * <p>
+   * This constructor is superfluous given the varags constructor is equivalent
+   * for a single element argument. However, type-erasure in java generics
+   * causes javac to warn about unchecked generic array creation. This
+   * constructor, which represents the common "one address" case, does
+   * not generate compile-time warnings.
+   * @param api API name
+   * @param addressType address type
+   * @param protocolType protocol type
+   * @param addr address. May be null —in which case it is not added
+   */
+  public Endpoint(String api,
+      String addressType,
+      String protocolType,
+      Map<String, String> addr) {
+    this(api, addressType, protocolType);
+    if (addr != null) {
+      addresses.add(addr);
+    }
+  }
+
+  /**
+   * Build an endpoint with a list of addresses
+   * @param api API name
+   * @param addressType address type
+   * @param protocolType protocol type
+   * @param addrs addresses. Null elements will be skipped
+   */
+  public Endpoint(String api,
+      String addressType,
+      String protocolType,
+      Map<String, String>...addrs) {
+    this(api, addressType, protocolType);
+    for (Map<String, String> addr : addrs) {
+      if (addr!=null) {
+        addresses.add(addr);
+      }
+    }
+  }
+
+  /**
+   * Create a new address structure of the requested size
+   * @param size size to create
+   * @return the new list
+   */
+  private List<Map<String, String>> newAddresses(int size) {
+    return new ArrayList<Map<String, String>>(size);
   }
 
   /**
@@ -125,40 +194,16 @@ public final class Endpoint implements Cloneable {
     this.addressType = AddressTypes.ADDRESS_URI;
 
     this.protocolType = protocolType;
-    List<List<String>> addrs = new ArrayList<List<String>>(uris.length);
+    List<Map<String, String>> addrs = newAddresses(uris.length);
     for (URI uri : uris) {
-      addrs.add(RegistryTypeUtils.tuple(uri.toString()));
+      addrs.add(RegistryTypeUtils.uri(uri.toString()));
     }
     this.addresses = addrs;
   }
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder("Endpoint{");
-    sb.append("api='").append(api).append('\'');
-    sb.append(", addressType='").append(addressType).append('\'');
-    sb.append(", protocolType='").append(protocolType).append('\'');
-
-    sb.append(", addresses=");
-    if (addresses != null) {
-      sb.append("[ ");
-      for (List<String> address : addresses) {
-        sb.append("[ ");
-        if (address == null) {
-          sb.append("NULL entry in address list");
-        } else {
-          for (String elt : address) {
-            sb.append('"').append(elt).append("\" ");
-          }
-        }
-        sb.append("] ");
-      };
-      sb.append("] ");
-    } else {
-      sb.append("(null) ");
-    }
-    sb.append('}');
-    return sb.toString();
+      return marshalToString.toString(this);
   }
 
   /**
@@ -173,7 +218,7 @@ public final class Endpoint implements Cloneable {
     Preconditions.checkNotNull(addressType, "null addressType field");
     Preconditions.checkNotNull(protocolType, "null protocolType field");
     Preconditions.checkNotNull(addresses, "null addresses field");
-    for (List<String> address : addresses) {
+    for (Map<String, String> address : addresses) {
       Preconditions.checkNotNull(address, "null element in address");
     }
   }
@@ -184,7 +229,19 @@ public final class Endpoint implements Cloneable {
    * @throws CloneNotSupportedException
    */
   @Override
-  protected Object clone() throws CloneNotSupportedException {
+  public Object clone() throws CloneNotSupportedException {
     return super.clone();
   }
+
+
+  /**
+   * Static instance of service record marshalling
+   */
+  private static class Marshal extends JsonSerDeser<Endpoint> {
+    private Marshal() {
+      super(Endpoint.class);
+    }
+  }
+
+  private static final Marshal marshalToString = new Marshal();
 }
