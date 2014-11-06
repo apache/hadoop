@@ -1503,7 +1503,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throws IOException, UnresolvedLinkException {
     checkOpen();
     //    Get block info from namenode
-    return new DFSInputStream(this, src, buffersize, verifyChecksum);
+    return new DFSInputStream(this, src, verifyChecksum);
   }
 
   /**

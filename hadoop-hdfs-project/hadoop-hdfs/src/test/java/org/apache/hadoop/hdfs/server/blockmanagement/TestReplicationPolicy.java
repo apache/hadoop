@@ -1170,7 +1170,7 @@ public class TestReplicationPolicy {
     // block under construction, the BlockManager will realize the expected
     // replication has been achieved and remove it from the under-replicated
     // queue.
-    BlockInfoUnderConstruction info = new BlockInfoUnderConstruction(block1, 1);
+    BlockInfoUnderConstruction info = new BlockInfoUnderConstruction(block1, (short) 1);
     BlockCollection bc = mock(BlockCollection.class);
     when(bc.getBlockReplication()).thenReturn((short)1);
     bm.addBlockCollection(info, bc);
@@ -1214,7 +1214,7 @@ public class TestReplicationPolicy {
     chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
 
-    final BlockInfo info = new BlockInfo(block1, 1);
+    final BlockInfo info = new BlockInfo(block1, (short) 1);
     final BlockCollection mbc = mock(BlockCollection.class);
     when(mbc.getLastBlock()).thenReturn(info);
     when(mbc.getPreferredBlockSize()).thenReturn(block1.getNumBytes() + 1);

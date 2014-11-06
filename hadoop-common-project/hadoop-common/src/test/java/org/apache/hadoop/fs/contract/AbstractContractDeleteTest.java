@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -94,4 +95,30 @@ public abstract class AbstractContractDeleteTest extends
     ContractTestUtils.assertPathDoesNotExist(getFileSystem(), "not deleted", file);
   }
 
+  @Test
+  public void testDeleteDeepEmptyDir() throws Throwable {
+    mkdirs(path("testDeleteDeepEmptyDir/d1/d2/d3/d4"));
+    assertDeleted(path("testDeleteDeepEmptyDir/d1/d2/d3"), true);
+
+    FileSystem fs = getFileSystem();
+    ContractTestUtils.assertPathDoesNotExist(fs,
+        "not deleted", path("testDeleteDeepEmptyDir/d1/d2/d3/d4"));
+    ContractTestUtils.assertPathDoesNotExist(fs,
+        "not deleted", path("testDeleteDeepEmptyDir/d1/d2/d3"));
+    ContractTestUtils.assertPathExists(fs, "parent dir is deleted",
+        path("testDeleteDeepEmptyDir/d1/d2"));
+  }
+
+  @Test
+  public void testDeleteSingleFile() throws Throwable {
+    // Test delete of just a file
+    Path path = path("testDeleteSingleFile/d1/d2");
+    mkdirs(path);
+    Path file = new Path(path, "childfile");
+    ContractTestUtils.writeTextFile(getFileSystem(), file,
+        "single file to be deleted.", true);
+    ContractTestUtils.assertPathExists(getFileSystem(),
+        "single file not created", file);
+    assertDeleted(file, false);
+  }
 }

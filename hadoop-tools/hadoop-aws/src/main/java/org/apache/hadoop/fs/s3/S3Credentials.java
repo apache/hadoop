@@ -61,10 +61,10 @@ public class S3Credentials {
     String secretAccessKeyProperty =
       String.format("fs.%s.awsSecretAccessKey", scheme);
     if (accessKey == null) {
-      accessKey = conf.get(accessKeyProperty);
+      accessKey = conf.getTrimmed(accessKeyProperty);
     }
     if (secretAccessKey == null) {
-      secretAccessKey = conf.get(secretAccessKeyProperty);
+      secretAccessKey = conf.getTrimmed(secretAccessKeyProperty);
     }
     if (accessKey == null && secretAccessKey == null) {
       throw new IllegalArgumentException("AWS " +

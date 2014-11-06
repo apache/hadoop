@@ -198,6 +198,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk16</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

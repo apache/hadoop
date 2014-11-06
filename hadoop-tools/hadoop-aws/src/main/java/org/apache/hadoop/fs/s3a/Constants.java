@@ -20,12 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 
 public class Constants {
-  // s3 access key
-  public static final String ACCESS_KEY = "fs.s3a.access.key";
 
-  // s3 secret key
-  public static final String SECRET_KEY = "fs.s3a.secret.key";
-  
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 15;
@@ -75,4 +70,6 @@ public class Constants {
     "fs.s3a.server-side-encryption-algorithm";
   
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
+  public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
+  public static final String FS_S3A = "s3a";
 }

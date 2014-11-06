@@ -18,6 +18,7 @@
 package org.apache.hadoop.security.token.delegation.web;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -46,6 +47,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.Charset;
@@ -156,14 +158,7 @@ public class DelegationTokenAuthenticationFilter
 
   @Override
   public void init(FilterConfig filterConfig) throws ServletException {
-    // A single CuratorFramework should be used for a ZK cluster.
-    // If the ZKSignerSecretProvider has already created it, it has to
-    // be set here... to be used by the ZKDelegationTokenSecretManager
-    ZKDelegationTokenSecretManager.setCurator((CuratorFramework)
-        filterConfig.getServletContext().getAttribute(ZKSignerSecretProvider.
-            ZOOKEEPER_SIGNER_SECRET_PROVIDER_CURATOR_CLIENT_ATTRIBUTE));
     super.init(filterConfig);
-    ZKDelegationTokenSecretManager.setCurator(null);
     AuthenticationHandler handler = getAuthenticationHandler();
     AbstractDelegationTokenSecretManager dtSecretManager =
         (AbstractDelegationTokenSecretManager) filterConfig.getServletContext().
@@ -186,6 +181,19 @@ public class DelegationTokenAuthenticationFilter
     // proxyuser configuration
     Configuration conf = getProxyuserConfiguration(filterConfig);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf, PROXYUSER_PREFIX);
+  }
+
+  @Override
+  protected void initializeAuthHandler(String authHandlerClassName,
+      FilterConfig filterConfig) throws ServletException {
+    // A single CuratorFramework should be used for a ZK cluster.
+    // If the ZKSignerSecretProvider has already created it, it has to
+    // be set here... to be used by the ZKDelegationTokenSecretManager
+    ZKDelegationTokenSecretManager.setCurator((CuratorFramework)
+        filterConfig.getServletContext().getAttribute(ZKSignerSecretProvider.
+            ZOOKEEPER_SIGNER_SECRET_PROVIDER_CURATOR_CLIENT_ATTRIBUTE));
+    super.initializeAuthHandler(authHandlerClassName, filterConfig);
+    ZKDelegationTokenSecretManager.setCurator(null);
   }
 
   protected void setHandlerAuthMethod(SaslRpcServer.AuthMethod authMethod) {

@@ -17,6 +17,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.authentication.util.SignerException;
 import org.apache.hadoop.security.authentication.util.RandomSignerSecretProvider;
@@ -36,6 +37,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.security.Principal;
 import java.text.SimpleDateFormat;
@@ -219,6 +221,19 @@ public class AuthenticationFilter implements Filter {
       authHandlerClassName = authHandlerName;
     }
 
+    validity = Long.parseLong(config.getProperty(AUTH_TOKEN_VALIDITY, "36000"))
+        * 1000; //10 hours
+    initializeSecretProvider(filterConfig);
+
+    initializeAuthHandler(authHandlerClassName, filterConfig);
+
+
+    cookieDomain = config.getProperty(COOKIE_DOMAIN, null);
+    cookiePath = config.getProperty(COOKIE_PATH, null);
+  }
+
+  protected void initializeAuthHandler(String authHandlerClassName, FilterConfig filterConfig)
+      throws ServletException {
     try {
       Class<?> klass = Thread.currentThread().getContextClassLoader().loadClass(authHandlerClassName);
       authHandler = (AuthenticationHandler) klass.newInstance();
@@ -230,9 +245,10 @@ public class AuthenticationFilter implements Filter {
     } catch (IllegalAccessException ex) {
       throw new ServletException(ex);
     }
+  }
 
-    validity = Long.parseLong(config.getProperty(AUTH_TOKEN_VALIDITY, "36000"))
-        * 1000; //10 hours
+  protected void initializeSecretProvider(FilterConfig filterConfig)
+      throws ServletException {
     secretProvider = (SignerSecretProvider) filterConfig.getServletContext().
         getAttribute(SIGNER_SECRET_PROVIDER_ATTRIBUTE);
     if (secretProvider == null) {
@@ -254,9 +270,6 @@ public class AuthenticationFilter implements Filter {
       customSecretProvider = true;
     }
     signer = new Signer(secretProvider);
-
-    cookieDomain = config.getProperty(COOKIE_DOMAIN, null);
-    cookiePath = config.getProperty(COOKIE_PATH, null);
   }
 
   @SuppressWarnings("unchecked")
@@ -554,6 +567,13 @@ public class AuthenticationFilter implements Filter {
       if (!httpResponse.isCommitted()) {
         createAuthCookie(httpResponse, "", getCookieDomain(),
                 getCookiePath(), 0, isHttps);
+        // If response code is 401. Then WWW-Authenticate Header should be
+        // present.. reset to 403 if not found..
+        if ((errCode == HttpServletResponse.SC_UNAUTHORIZED)
+            && (!httpResponse.containsHeader(
+                KerberosAuthenticator.WWW_AUTHENTICATE))) {
+          errCode = HttpServletResponse.SC_FORBIDDEN;
+        }
         if (authenticationEx == null) {
           httpResponse.sendError(errCode, "Authentication required");
         } else {

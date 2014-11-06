@@ -856,6 +856,40 @@ Release 2.6.0 - UNRELEASED
     of races between the launch and the stop-container call and when root
     processes crash. (Billie Rinaldi via vinodkv)
 
+    YARN-2010. Handle app-recovery failures gracefully. 
+    (Jian He and Karthik Kambatla via kasha)
+
+    YARN-2804. Fixed Timeline service to not fill the logs with JAXB bindings
+    exceptions. (Zhijie Shen via vinodkv)
+
+    YARN-2767. Added a test case to verify that http static user cannot kill or submit
+    apps in the secure mode. (Varun Vasudev via zjshen)
+
+    YARN-2805. Fixed ResourceManager to load HA configs correctly before kerberos
+    login. (Wangda Tan via vinodkv)
+
+    YARN-2579. Fixed a deadlock issue when EmbeddedElectorService and
+    FatalEventDispatcher try to transition RM to StandBy at the same time.
+    (Rohith Sharmaks via jianhe)
+
+    YARN-2813. Fixed NPE from MemoryTimelineStore.getDomains. (Zhijie Shen via xgong)
+
+    YARN-2812. TestApplicationHistoryServer is likely to fail on less powerful machine.
+    (Zhijie Shen via xgong)
+
+Release 2.5.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

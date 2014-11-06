@@ -57,8 +57,8 @@ public class TestDatanodeDescriptor {
   public void testBlocksCounter() throws Exception {
     DatanodeDescriptor dd = BlockManagerTestUtil.getLocalDatanodeDescriptor(true);
     assertEquals(0, dd.numBlocks());
-    BlockInfo blk = new BlockInfo(new Block(1L), 1);
-    BlockInfo blk1 = new BlockInfo(new Block(2L), 2);
+    BlockInfo blk = new BlockInfo(new Block(1L), (short) 1);
+    BlockInfo blk1 = new BlockInfo(new Block(2L), (short) 2);
     DatanodeStorageInfo[] storages = dd.getStorageInfos();
     assertTrue(storages.length > 0);
     final String storageID = storages[0].getStorageID();

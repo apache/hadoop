@@ -21,6 +21,7 @@ import org.mockito.Mockito;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.util.Properties;
 
 public class TestPseudoAuthenticationHandler {
@@ -74,12 +75,8 @@ public class TestPseudoAuthenticationHandler {
       HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
       HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-      handler.authenticate(request, response);
-      Assert.fail();
-    } catch (AuthenticationException ex) {
-      // Expected
-    } catch (Exception ex) {
-      Assert.fail();
+      AuthenticationToken token = handler.authenticate(request, response);
+      Assert.assertNull(token);
     } finally {
       handler.destroy();
     }

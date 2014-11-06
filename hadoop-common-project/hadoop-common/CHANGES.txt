@@ -118,8 +118,6 @@ Trunk (Unreleased)
     HADOOP-10342. Add a new method to UGI to use a Kerberos login subject to
     build a new UGI. (Larry McCay via omalley)
 
-    HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
-
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
     HADOOP-11013. CLASSPATH handling should be consolidated, debuggable (aw)
@@ -308,9 +306,6 @@ Trunk (Unreleased)
     HADOOP-10625. Trim configuration names when putting/getting them
     to properties. (Wangda Tan via xgong)
 
-    HADOOP-10717. HttpServer2 should load jsp DTD from local jars instead of
-    going remote. (Dapeng Sun via wheat9)
-
     HADOOP-10689. InputStream is not closed in
     AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
 
@@ -369,6 +364,11 @@ Release 2.7.0 - UNRELEASED
     HADOOP-6857. FsShell should report raw disk usage including replication
     factor. (Byron Wong via shv)
 
+    HADOOP-10847. Remove the usage of sun.security.x509.* in testing code.
+    (Pascal Oliva via wheat9)
+
+    HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -382,6 +382,38 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11186. documentation should talk about
     hadoop.htrace.spanreceiver.classes, not hadoop.trace.spanreceiver.classes (cmccabe)
+
+    HADOOP-11165. TestUTF8 fails when run against java 8.
+    (Stephen Chu via cnauroth)
+
+    HADOOP-10717. HttpServer2 should load jsp DTD from local jars instead of
+    going remote. (Dapeng Sun via wheat9)
+
+    HADOOP-11268. Update BUILDING.txt to remove the workaround for tools.jar.
+    (Li Lu via wheat9)
+
+    HADOOP-11230. Add missing dependency of bouncycastle for kms, httpfs, hdfs, MR
+    and YARN. (Robert Kanter via wheat9)
+
+    HADOOP-11269. Add java 8 profile for hadoop-annotations. (Li Lu via wheat9)
+
+    HADOOP-11271. Use Time.monotonicNow() in Shell.java instead of Time.now()
+    (vinayakumarb)
+
+    HADOOP-11266. Remove no longer supported activation properties for packaging
+    from pom. (Masatake Iwasaki via wheat9)
+
+    HADOOP-11267. TestSecurityUtil fails when run with JDK8 because of empty
+    principal names. (Stephen Chu via wheat9)
+
+    HADOOP-10714. AmazonS3Client.deleteObjects() need to be limited to 1000
+    entries per call. (Juan Yu via atm)
+
+    HADOOP-11272. Allow ZKSignerSecretProvider and
+    ZKDelegationTokenSecretManager to use the same curator client. (Arun Suresh via atm)
+
+    HADOOP-11187 NameNode - KMS communication fails after a long period of
+    inactivity. (Arun Suresh via atm)
 
 Release 2.6.0 - UNRELEASED
 
@@ -1036,8 +1068,6 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11217. Disable SSLv3 in KMS. (Robert Kanter via kasha)
 
-    HADOOP-11243. SSLFactory shouldn't allow SSLv3. (Wei Yan via kasha)
-
     HADOOP-11068. Match hadoop.auth cookie format to jetty output.
     (Gregory Chanan via cnauroth)
 
@@ -1049,6 +1079,26 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11241. Fixed intermittent TestNMSimulator failure due to timing issue.
     (Varun Vasudev via zjshen)
+
+    HADOOP-11265. Credential and Key Shell Commands not available on Windows.
+    (Larry McCay via cnauroth)
+
+Release 2.5.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+  
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-11243. SSLFactory shouldn't allow SSLv3. (Wei Yan via kasha)
+
+    HADOOP-11260. Patch up Jetty to disable SSLv3. (Mike Yoder via kasha)
+
 
 Release 2.5.1 - 2014-09-05
 

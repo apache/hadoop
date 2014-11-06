@@ -22,10 +22,11 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.AWSCredentials;
+import org.apache.commons.lang.StringUtils;
 
 public class BasicAWSCredentialsProvider implements AWSCredentialsProvider {
-  private String accessKey;
-  private String secretKey;
+  private final String accessKey;
+  private final String secretKey;
 
   public BasicAWSCredentialsProvider(String accessKey, String secretKey) {
     this.accessKey = accessKey;
@@ -33,10 +34,9 @@ public class BasicAWSCredentialsProvider implements AWSCredentialsProvider {
   }
 
   public AWSCredentials getCredentials() {
-    if (accessKey != null && secretKey != null) {
+    if (!StringUtils.isEmpty(accessKey) && !StringUtils.isEmpty(secretKey)) {
       return new BasicAWSCredentials(accessKey, secretKey);
     }
-
     throw new AmazonClientException(
         "Access key or secret key is null");
   }

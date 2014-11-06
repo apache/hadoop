@@ -237,9 +237,23 @@ public class ImageServlet extends HttpServlet {
     validRequestors.add(SecurityUtil.getServerPrincipal(conf
         .get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY),
         NameNode.getAddress(conf).getHostName()));
-    validRequestors.add(SecurityUtil.getServerPrincipal(
+    try {
+      validRequestors.add(
+          SecurityUtil.getServerPrincipal(conf
+              .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
+              SecondaryNameNode.getHttpAddress(conf).getHostName()));
+    } catch (Exception e) {
+      // Don't halt if SecondaryNameNode principal could not be added.
+      LOG.debug("SecondaryNameNode principal could not be added", e);
+      String msg = String.format(
+        "SecondaryNameNode principal not considered, %s = %s, %s = %s",
+        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY,
         conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
-        SecondaryNameNode.getHttpAddress(conf).getHostName()));
+        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+        conf.get(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+          DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
+      LOG.warn(msg);
+    }
 
     if (HAUtil.isHAEnabled(conf, DFSUtil.getNamenodeNameServiceId(conf))) {
       Configuration otherNnConf = HAUtil.getConfForOtherNode(conf);

@@ -456,6 +456,22 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6022. map_input_file is missing from streaming job environment.
     (jlowe via kihwal)
 
+    MAPREDUCE-6048. Fixed TestJavaSerialization failure. (Varun Vasudev via
+    jianhe)
+
+Release 2.5.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

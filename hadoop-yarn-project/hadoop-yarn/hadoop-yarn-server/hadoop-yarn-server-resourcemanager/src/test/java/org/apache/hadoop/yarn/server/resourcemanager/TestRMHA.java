@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFencedException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -449,6 +450,67 @@ public class TestRMHA {
     rm.adminService.transitionToActive(requestInfo);
     checkMonitorHealth();
     checkActiveRMFunctionality();
+  }
+
+  @Test(timeout = 90000)
+  public void testTransitionedToStandbyShouldNotHang() throws Exception {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    Configuration conf = new YarnConfiguration(configuration);
+
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      @Override
+      public synchronized void updateApplicationState(ApplicationState appState) {
+        notifyStoreOperationFailed(new StoreFencedException());
+      }
+    };
+    memStore.init(conf);
+    rm = new MockRM(conf, memStore) {
+      @Override
+      void stopActiveServices() throws Exception {
+        Thread.sleep(10000);
+        super.stopActiveServices();
+      }
+    };
+    rm.init(conf);
+    final StateChangeRequestInfo requestInfo =
+        new StateChangeRequestInfo(
+            HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+
+    assertEquals(STATE_ERR, HAServiceState.INITIALIZING, rm.adminService
+        .getServiceStatus().getState());
+    assertFalse("RM is ready to become active before being started",
+        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    checkMonitorHealth();
+
+    rm.start();
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    // 2. Transition to Active.
+    rm.adminService.transitionToActive(requestInfo);
+
+    // 3. Try Transition to standby
+    Thread t = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          rm.transitionToStandby(true);
+        } catch (IOException e) {
+          e.printStackTrace();
+        } catch (Exception e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      }
+    });
+    t.start();
+
+    rm.getRMContext().getStateStore().updateApplicationState(null);
+    t.join(); // wait for thread to finish
+
+    rm.adminService.transitionToStandby(requestInfo);
+    checkStandbyRMFunctionality();
+    rm.stop();
   }
 
   public void innerTestHAWithRMHostName(boolean includeBindHost) {

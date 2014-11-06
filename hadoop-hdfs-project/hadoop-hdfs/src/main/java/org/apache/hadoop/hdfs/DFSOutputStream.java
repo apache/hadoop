@@ -692,6 +692,8 @@ public class DFSOutputStream extends FSOutputSummer
           }
           if (e instanceof IOException) {
             setLastException((IOException)e);
+          } else {
+            setLastException(new IOException("DataStreamer Exception: ",e));
           }
           hasError = true;
           if (errorIndex == -1 && restartingNodeIndex == -1) {

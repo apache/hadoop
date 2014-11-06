@@ -37,6 +37,7 @@ import java.util.Set;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -61,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueNotFoundException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
@@ -570,10 +572,10 @@ public class TestWorkPreservingRMRestart {
   //   submission
   //2. Remove one of the queues, restart the RM
   //3. Verify that the expected exception was thrown
-  @Test (timeout = 30000)
+  @Test (timeout = 30000, expected = QueueNotFoundException.class)
   public void testCapacitySchedulerQueueRemovedRecovery() throws Exception {
     if (!schedulerClass.equals(CapacityScheduler.class)) {
-      return;
+      throw new QueueNotFoundException("Dummy");
     }
     conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
     conf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
@@ -614,17 +616,7 @@ public class TestWorkPreservingRMRestart {
         new CapacitySchedulerConfiguration(conf);
     setupQueueConfigurationOnlyA(csConf);
     rm2 = new MockRM(csConf, memStore);
-    boolean runtimeThrown = false;
-    try {
-      rm2.start();
-    } catch (RuntimeException e) {
-      //we're catching it because we want to verify the message
-      //and we don't want to set it as an expected exception for the 
-      //test because we only want it to happen here
-      assertTrue(e.getMessage().contains(B + " missing"));
-      runtimeThrown = true;
-    }
-    assertTrue(runtimeThrown);
+    rm2.start();
   }
 
   private void checkParentQueue(ParentQueue parentQueue, int numContainers,

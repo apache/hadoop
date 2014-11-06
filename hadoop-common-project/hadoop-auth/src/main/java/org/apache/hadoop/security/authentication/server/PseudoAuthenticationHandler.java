@@ -15,13 +15,13 @@ package org.apache.hadoop.security.authentication.server;
 
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
-
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.NameValuePair;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -54,6 +54,9 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
   public static final String ANONYMOUS_ALLOWED = TYPE + ".anonymous.allowed";
 
   private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
+
+  private static final String PSEUDO_AUTH = "PseudoAuth";
+
   private boolean acceptAnonymous;
   private String type;
 
@@ -181,7 +184,9 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
       if (getAcceptAnonymous()) {
         token = AuthenticationToken.ANONYMOUS;
       } else {
-        throw new AuthenticationException("Anonymous requests are disallowed");
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setHeader(WWW_AUTHENTICATE, PSEUDO_AUTH);
+        token = null;
       }
     } else {
       token = new AuthenticationToken(userName, userName, getType());

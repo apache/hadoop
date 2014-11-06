@@ -81,6 +81,8 @@ import com.google.common.base.Preconditions;
 public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     KeyProviderDelegationTokenExtension.DelegationTokenExtension {
 
+  private static final String INVALID_SIGNATURE = "Invalid signature";
+
   private static final String ANONYMOUS_REQUESTS_DISALLOWED = "Anonymous requests are disallowed";
 
   public static final String TOKEN_KIND = "kms-dt";
@@ -453,7 +455,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       throw ex;
     }
     if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
-        && conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED))
+        && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED) ||
+            conn.getResponseMessage().contains(INVALID_SIGNATURE)))
         || conn.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
       // Ideally, this should happen only when there is an Authentication
       // failure. Unfortunately, the AuthenticationFilter returns 403 when it
