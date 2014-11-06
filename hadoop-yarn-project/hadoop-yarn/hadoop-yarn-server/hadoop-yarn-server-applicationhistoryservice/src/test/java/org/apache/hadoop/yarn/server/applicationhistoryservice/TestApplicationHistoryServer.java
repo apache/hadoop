@@ -29,6 +29,8 @@ import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
+import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
+import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
 import org.junit.After;
 import org.junit.Test;
@@ -38,45 +40,56 @@ import java.util.Map;
 
 public class TestApplicationHistoryServer {
 
-  ApplicationHistoryServer historyServer = null;
-
   // simple test init/start/stop ApplicationHistoryServer. Status should change.
-  @Test(timeout = 50000)
+  @Test(timeout = 60000)
   public void testStartStopServer() throws Exception {
-    historyServer = new ApplicationHistoryServer();
+    ApplicationHistoryServer historyServer = new ApplicationHistoryServer();
     Configuration config = new YarnConfiguration();
-    historyServer.init(config);
-    assertEquals(STATE.INITED, historyServer.getServiceState());
-    assertEquals(5, historyServer.getServices().size());
-    ApplicationHistoryClientService historyService =
-        historyServer.getClientService();
-    assertNotNull(historyServer.getClientService());
-    assertEquals(STATE.INITED, historyService.getServiceState());
+    config.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
+        MemoryTimelineStore.class, TimelineStore.class);
+    config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, "localhost:0");
+    try {
+      historyServer.init(config);
+      assertEquals(STATE.INITED, historyServer.getServiceState());
+      assertEquals(5, historyServer.getServices().size());
+      ApplicationHistoryClientService historyService =
+          historyServer.getClientService();
+      assertNotNull(historyServer.getClientService());
+      assertEquals(STATE.INITED, historyService.getServiceState());
 
-    historyServer.start();
-    assertEquals(STATE.STARTED, historyServer.getServiceState());
-    assertEquals(STATE.STARTED, historyService.getServiceState());
-    historyServer.stop();
-    assertEquals(STATE.STOPPED, historyServer.getServiceState());
+      historyServer.start();
+      assertEquals(STATE.STARTED, historyServer.getServiceState());
+      assertEquals(STATE.STARTED, historyService.getServiceState());
+      historyServer.stop();
+      assertEquals(STATE.STOPPED, historyServer.getServiceState());
+    } finally {
+      historyServer.stop();
+    }
   }
 
   // test launch method
   @Test(timeout = 60000)
   public void testLaunch() throws Exception {
-
     ExitUtil.disableSystemExit();
+    ApplicationHistoryServer historyServer = null;
     try {
+      // Not able to modify the config of this test case,
+      // but others have been customized to avoid conflicts
       historyServer =
           ApplicationHistoryServer.launchAppHistoryServer(new String[0]);
     } catch (ExitUtil.ExitException e) {
       assertEquals(0, e.status);
       ExitUtil.resetFirstExitException();
       fail();
+    } finally {
+      if (historyServer != null) {
+        historyServer.stop();
+      }
     }
   }
 
-  @Test(timeout = 50000)
-  public void testFilteOverrides() throws Exception {
+  @Test(timeout = 240000)
+  public void testFilterOverrides() throws Exception {
 
     HashMap<String, String> driver = new HashMap<String, String>();
     driver.put("", TimelineAuthenticationFilterInitializer.class.getName());
@@ -97,21 +110,21 @@ public class TestApplicationHistoryServer {
     for (Map.Entry<String, String> entry : driver.entrySet()) {
       String filterInitializer = entry.getKey();
       String expectedValue = entry.getValue();
-      historyServer = new ApplicationHistoryServer();
+      ApplicationHistoryServer historyServer = new ApplicationHistoryServer();
       Configuration config = new YarnConfiguration();
-      config.set("hadoop.http.filter.initializers", filterInitializer);
-      historyServer.init(config);
-      historyServer.start();
-      Configuration tmp = historyServer.getConfig();
-      assertEquals(expectedValue, tmp.get("hadoop.http.filter.initializers"));
-      historyServer.stop();
+      config.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
+          MemoryTimelineStore.class, TimelineStore.class);
+      config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, "localhost:0");
+      try {
+        config.set("hadoop.http.filter.initializers", filterInitializer);
+        historyServer.init(config);
+        historyServer.start();
+        Configuration tmp = historyServer.getConfig();
+        assertEquals(expectedValue, tmp.get("hadoop.http.filter.initializers"));
+      } finally {
+        historyServer.stop();
+      }
     }
   }
 
-  @After
-  public void stop() {
-    if (historyServer != null) {
-      historyServer.stop();
-    }
-  }
 }
