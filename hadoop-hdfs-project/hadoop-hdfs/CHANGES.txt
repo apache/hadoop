@@ -333,13 +333,16 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7356. Use DirectoryListing.hasMore() directly in nfs. (Li Lu via jing9)
 
+    HDFS-7357. FSNamesystem.checkFileProgress should log file path.
+    (Tsz Wo Nicholas Sze via wheat9)
+
     HDFS-7335. Redundant checkOperation() in FSN.analyzeFileState().
     (Milan Desai via shv)
 
     HDFS-7333. Improve logging in Storage.tryLock(). (shv)
 
-    HDFS-7357. FSNamesystem.checkFileProgress should log file path.
-    (Tsz Wo Nicholas Sze via wheat9)
+    HDFS-7361. TestCheckpoint fails after change of log message related to
+    locking violation. (shv)
 
   OPTIMIZATIONS
 

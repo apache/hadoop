@@ -837,7 +837,7 @@ public class TestCheckpoint {
   }
   
   /**
-   * Test that, an attempt to lock a storage that is already locked by a nodename,
+   * Test that, an attempt to lock a storage that is already locked by nodename,
    * logs error message that includes JVM name of the namenode that locked it.
    */
   @Test
@@ -853,16 +853,18 @@ public class TestCheckpoint {
         savedSd = sd;
       }
       
-      LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(LogFactory.getLog(Storage.class));
+      LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+          LogFactory.getLog(Storage.class));
       try {
         // try to lock the storage that's already locked
         savedSd.lock();
-        fail("Namenode should not be able to lock a storage that is already locked");
+        fail("Namenode should not be able to lock a storage" +
+            " that is already locked");
       } catch (IOException ioe) {
         // cannot read lock file on Windows, so message cannot get JVM name
         String lockingJvmName = Path.WINDOWS ? "" :
           " " + ManagementFactory.getRuntimeMXBean().getName();
-        String expectedLogMessage = "It appears that another namenode"
+        String expectedLogMessage = "It appears that another node "
           + lockingJvmName + " has already locked the storage directory";
         assertTrue("Log output does not contain expected log message: "
           + expectedLogMessage, logs.getOutput().contains(expectedLogMessage));
