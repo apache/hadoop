@@ -690,26 +690,26 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   @SuppressWarnings("unchecked")
   public Configuration(Configuration other) {
-   this.resources = (ArrayList<Resource>) other.resources.clone();
-   synchronized(other) {
-     if (other.properties != null) {
-       this.properties = (Properties)other.properties.clone();
-     }
+    synchronized(other) {
+      this.resources = (ArrayList<Resource>) other.resources.clone();
+      if (other.properties != null) {
+        this.properties = (Properties)other.properties.clone();
+      }
 
-     if (other.overlay!=null) {
-       this.overlay = (Properties)other.overlay.clone();
-     }
+      if (other.overlay!=null) {
+        this.overlay = (Properties)other.overlay.clone();
+      }
 
-     this.updatingResource = new HashMap<String, String[]>(other.updatingResource);
-     this.finalParameters = new HashSet<String>(other.finalParameters);
-   }
-   
+      this.updatingResource = new HashMap<String, String[]>(other.updatingResource);
+      this.finalParameters = new HashSet<String>(other.finalParameters);
+
+      this.classLoader = other.classLoader;
+      this.loadDefaults = other.loadDefaults;
+      setQuietMode(other.getQuietMode());
+    }
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
-    this.classLoader = other.classLoader;
-    this.loadDefaults = other.loadDefaults;
-    setQuietMode(other.getQuietMode());
   }
   
   /**
@@ -1019,26 +1019,28 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     getProps().setProperty(name, value);
     String newSource = (source == null ? "programatically" : source);
 
-    if (!isDeprecated(name)) {
-      updatingResource.put(name, new String[] {newSource});
-      String[] altNames = getAlternativeNames(name);
-      if(altNames != null) {
-        for(String n: altNames) {
-          if(!n.equals(name)) {
-            getOverlay().setProperty(n, value);
-            getProps().setProperty(n, value);
-            updatingResource.put(n, new String[] {newSource});
+    synchronized (this) {
+      if (!isDeprecated(name)) {
+        updatingResource.put(name, new String[] {newSource});
+        String[] altNames = getAlternativeNames(name);
+        if(altNames != null) {
+          for(String n: altNames) {
+            if(!n.equals(name)) {
+              getOverlay().setProperty(n, value);
+              getProps().setProperty(n, value);
+              updatingResource.put(n, new String[] {newSource});
+            }
           }
         }
       }
-    }
-    else {
-      String[] names = handleDeprecation(deprecationContext.get(), name);
-      String altSource = "because " + name + " is deprecated";
-      for(String n : names) {
-        getOverlay().setProperty(n, value);
-        getProps().setProperty(n, value);
-        updatingResource.put(n, new String[] {altSource});
+      else {
+        String[] names = handleDeprecation(deprecationContext.get(), name);
+        String altSource = "because " + name + " is deprecated";
+        for(String n : names) {
+          getOverlay().setProperty(n, value);
+          getProps().setProperty(n, value);
+          updatingResource.put(n, new String[] {altSource});
+        }
       }
     }
   }
@@ -2269,7 +2271,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *
    * @return final parameter set.
    */
-  public Set<String> getFinalParameters() {
+  public synchronized Set<String> getFinalParameters() {
     return new HashSet<String>(finalParameters);
   }
 
@@ -2532,14 +2534,18 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (value != null) {
       if (!finalParameters.contains(attr)) {
         properties.setProperty(attr, value);
-        updatingResource.put(attr, source);
+        synchronized(this) {
+          updatingResource.put(attr, source);
+        }
       } else if (!value.equals(properties.getProperty(attr))) {
         LOG.warn(name+":an attempt to override final parameter: "+attr
             +";  Ignoring.");
       }
     }
     if (finalParameter) {
-      finalParameters.add(attr);
+      synchronized(this) {
+        finalParameters.add(attr);
+      }
     }
   }
 
@@ -2733,7 +2739,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   @Override
-  public void readFields(DataInput in) throws IOException {
+  public synchronized void readFields(DataInput in) throws IOException {
     clear();
     int size = WritableUtils.readVInt(in);
     for(int i=0; i < size; ++i) {
@@ -2745,9 +2751,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
-  //@Override
   @Override
-  public void write(DataOutput out) throws IOException {
+  public synchronized void write(DataOutput out) throws IOException {
     Properties props = getProps();
     WritableUtils.writeVInt(out, props.size());
     for(Map.Entry<Object, Object> item: props.entrySet()) {
