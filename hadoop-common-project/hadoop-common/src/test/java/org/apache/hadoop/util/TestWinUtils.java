@@ -371,7 +371,7 @@ public class TestWinUtils {
     testChmodInternalR("a+rX", "rw-r--r--", "rwxr-xr-x");
 
     // Test a new file created in a chmod'ed directory has expected permission
-    testNewFileChmodInternal("-rwx------");
+    testNewFileChmodInternal("-rwxr-xr-x");
   }
 
   private void chown(String userGroup, File file) throws IOException {
