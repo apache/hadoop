@@ -1215,7 +1215,7 @@ public class TestBalancer {
       DFSTestUtil.createFile(fs, path1, true,
         DEFAULT_RAM_DISK_BLOCK_SIZE, 4 * DEFAULT_RAM_DISK_BLOCK_SIZE,
         DEFAULT_RAM_DISK_BLOCK_SIZE, REPL_FACT, SEED, true);
-      DFSTestUtil.createFile(fs, path1, true,
+      DFSTestUtil.createFile(fs, path2, true,
         DEFAULT_RAM_DISK_BLOCK_SIZE, 1 * DEFAULT_RAM_DISK_BLOCK_SIZE,
         DEFAULT_RAM_DISK_BLOCK_SIZE, REPL_FACT, SEED, true);
 
