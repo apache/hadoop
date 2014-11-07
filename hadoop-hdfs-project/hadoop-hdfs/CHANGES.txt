@@ -125,8 +125,6 @@ Release 2.7.0 - UNRELEASED
     HDFS-7252. small refinement to the use of isInAnEZ in FSNamesystem.
     (Yi Liu via vinayakumarb)
 
-    HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
-
     HDFS-7277. Remove explicit dependency on netty 3.2 in BKJournal. (wheat9)
 
     HDFS-7232. Populate hostname in httpfs audit log (Zoran Dimitrijevic
@@ -1263,6 +1261,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7359. NameNode in secured HA cluster fails to start if
     dfs.namenode.secondary.http-address cannot be interpreted as a network
     address. (cnauroth)
+
+    HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
 
 Release 2.5.2 - UNRELEASED
 
