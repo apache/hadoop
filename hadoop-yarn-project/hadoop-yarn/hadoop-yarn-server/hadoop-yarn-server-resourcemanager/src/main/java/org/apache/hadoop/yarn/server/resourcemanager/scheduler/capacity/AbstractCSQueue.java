@@ -105,9 +105,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     // inherit from parent if labels not set
     if (this.accessibleLabels == null && parent != null) {
       this.accessibleLabels = parent.getAccessibleNodeLabels();
-      SchedulerUtils.checkIfLabelInClusterNodeLabels(labelManager,
-          this.accessibleLabels);
     }
+    SchedulerUtils.checkIfLabelInClusterNodeLabels(labelManager,
+        this.accessibleLabels);
     
     // inherit from parent if labels not set
     if (this.defaultLabelExpression == null && parent != null
