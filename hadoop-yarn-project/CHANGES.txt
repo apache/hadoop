@@ -816,6 +816,10 @@ Release 2.6.0 - UNRELEASED
     YARN-2744. Fixed CapacityScheduler to validate node-labels correctly against
     queues. (Wangda Tan via vinodkv)
 
+    YARN-2823. Fixed ResourceManager app-attempt state machine to inform
+    schedulers about previous finished attempts of a running appliation to avoid
+    expectation mismatch w.r.t transferred containers. (Jian He via vinodkv)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
