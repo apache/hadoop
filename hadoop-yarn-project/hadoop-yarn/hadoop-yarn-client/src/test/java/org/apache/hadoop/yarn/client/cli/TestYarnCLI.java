@@ -58,6 +58,8 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -1235,6 +1237,57 @@ public class TestYarnCLI {
     Assert.assertEquals(String.format("Missing argument for options%n%1s",
         createNodeCLIHelpMessage()), sysOutStream.toString());
   }
+  
+  @Test
+  public void testGetQueueInfo() throws Exception {
+    QueueCLI cli = createAndGetQueueCLI();
+    Set<String> nodeLabels = new HashSet<String>();
+    nodeLabels.add("GPU");
+    nodeLabels.add("JDK_7");
+    QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels, "GPU");
+    when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
+    int result = cli.run(new String[] { "queue", "-status", "queueA" });
+    assertEquals(0, result);
+    verify(client).getQueueInfo("queueA");
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Queue Information : ");
+    pw.println("Queue Name : " + "queueA");
+    pw.println("\tState : " + "RUNNING");
+    pw.println("\tCapacity : " + "40.0%");
+    pw.println("\tCurrent Capacity : " + "50.0%");
+    pw.println("\tMaximum Capacity : " + "80.0%");
+    pw.println("\tDefault Node Label expression : " + "GPU");
+    pw.println("\tAccessible Node Labels : " + "JDK_7,GPU");
+    pw.close();
+    String queueInfoStr = baos.toString("UTF-8");
+    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+  }
+  
+  @Test
+  public void testGetQueueInfoWithEmptyNodeLabel() throws Exception {
+    QueueCLI cli = createAndGetQueueCLI();
+    QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, null, null);
+    when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
+    int result = cli.run(new String[] { "queue", "-status", "queueA" });
+    assertEquals(0, result);
+    verify(client).getQueueInfo("queueA");
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Queue Information : ");
+    pw.println("Queue Name : " + "queueA");
+    pw.println("\tState : " + "RUNNING");
+    pw.println("\tCapacity : " + "40.0%");
+    pw.println("\tCurrent Capacity : " + "50.0%");
+    pw.println("\tMaximum Capacity : " + "80.0%");
+    pw.println("\tDefault Node Label expression : ");
+    pw.println("\tAccessible Node Labels : ");
+    pw.close();
+    String queueInfoStr = baos.toString("UTF-8");
+    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+  }
 
   private void verifyUsageInfo(YarnCLI cli) throws Exception {
     cli.setSysErrPrintStream(sysErr);
@@ -1270,6 +1323,14 @@ public class TestYarnCLI {
     ApplicationCLI cli = new ApplicationCLI();
     cli.setClient(client);
     cli.setSysOutPrintStream(sysOut);
+    return cli;
+  }
+  
+  private QueueCLI createAndGetQueueCLI() {
+    QueueCLI cli = new QueueCLI();
+    cli.setClient(client);
+    cli.setSysOutPrintStream(sysOut);
+    cli.setSysErrPrintStream(sysErr);
     return cli;
   }
 

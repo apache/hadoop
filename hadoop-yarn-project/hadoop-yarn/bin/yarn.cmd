@@ -196,6 +196,11 @@ goto :eof
   set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
   goto :eof
 
+:queue
+  set CLASS=org.apache.hadoop.yarn.client.cli.QueueCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  goto :eof
+
 :resourcemanager
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\rm-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.resourcemanager.ResourceManager
@@ -298,6 +303,7 @@ goto :eof
   @echo   applicationattempt   prints applicationattempt(s) report
   @echo   container            prints container(s) report
   @echo   node                 prints node report(s)
+  @echo   queue                prints queue information
   @echo   logs                 dump container logs
   @echo   classpath            prints the class path needed to get the
   @echo                        Hadoop jar and the required libraries
