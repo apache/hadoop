@@ -898,6 +898,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7364. Balancer always shows zero Bytes Already Moved.
     (Tsz Wo Nicholas Sze via jing9)
 
+    HDFS-7379. TestBalancer#testBalancerWithRamDisk creates test files
+    incorrectly. (Xiaoyu Yao via wheat9)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
