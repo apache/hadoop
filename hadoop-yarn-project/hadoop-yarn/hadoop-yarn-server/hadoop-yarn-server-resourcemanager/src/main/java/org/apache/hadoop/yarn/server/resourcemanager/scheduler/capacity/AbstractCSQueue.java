@@ -395,16 +395,15 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   @Private
   public float getCapacityByNodeLabel(String label) {
-    if (null == parent) {
-      return 1f;
-    }
-    
     if (StringUtils.equals(label, RMNodeLabelsManager.NO_LABEL)) {
+      if (null == parent) {
+        return 1f;
+      }
       return getCapacity();
     }
     
     if (!capacitiyByNodeLabels.containsKey(label)) {
-      return 0;
+      return 0f;
     } else {
       return capacitiyByNodeLabels.get(label);
     }
@@ -412,18 +411,17 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   @Private
   public float getAbsoluteCapacityByNodeLabel(String label) {
-    if (null == parent) {
-      return 1; 
-    }
-    
     if (StringUtils.equals(label, RMNodeLabelsManager.NO_LABEL)) {
+      if (null == parent) {
+        return 1f; 
+      }
       return getAbsoluteCapacity();
     }
     
-    if (!absoluteMaxCapacityByNodeLabels.containsKey(label)) {
-      return 0;
+    if (!absoluteCapacityByNodeLabels.containsKey(label)) {
+      return 0f;
     } else {
-      return absoluteMaxCapacityByNodeLabels.get(label);
+      return absoluteCapacityByNodeLabels.get(label);
     }
   }
   
@@ -433,7 +431,11 @@ public abstract class AbstractCSQueue implements CSQueue {
       return getAbsoluteMaximumCapacity();
     }
     
-    return getAbsoluteCapacityByNodeLabel(label);
+    if (!absoluteMaxCapacityByNodeLabels.containsKey(label)) {
+      return 0f;
+    } else {
+      return absoluteMaxCapacityByNodeLabels.get(label);
+    }
   }
   
   @Private

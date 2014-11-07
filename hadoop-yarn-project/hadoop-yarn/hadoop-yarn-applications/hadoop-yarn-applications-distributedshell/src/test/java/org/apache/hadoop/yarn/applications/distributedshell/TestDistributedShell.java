@@ -86,6 +86,8 @@ public class TestDistributedShell {
 
     // Setup queue access to node labels
     conf.set("yarn.scheduler.capacity.root.accessible-node-labels", "x");
+    conf.set("yarn.scheduler.capacity.root.accessible-node-labels.x.capacity",
+        "100");
     conf.set("yarn.scheduler.capacity.root.default.accessible-node-labels", "x");
     conf.set(
         "yarn.scheduler.capacity.root.default.accessible-node-labels.x.capacity",

@@ -461,19 +461,8 @@ public class CapacitySchedulerConfiguration extends Configuration {
 
     for (String label : labels.contains(CommonNodeLabelsManager.ANY) ? mgr
         .getClusterNodeLabels() : labels) {
-      // capacity of all labels in each queue should be 1
-      if (org.apache.commons.lang.StringUtils.equals(ROOT, queue)) {
-        nodeLabelCapacities.put(label, 1.0f);
-        continue;
-      }
       String capacityPropertyName = getNodeLabelPrefix(queue, label) + CAPACITY;
-      float capacity = getFloat(capacityPropertyName, UNDEFINED);
-      if (capacity == UNDEFINED) {
-        throw new IllegalArgumentException("Configuration issue: "
-            + " node-label=" + label + " is accessible from queue=" + queue
-            + " but has no capacity set, you should set " 
-            + capacityPropertyName + " in range of [0, 100].");
-      }
+      float capacity = getFloat(capacityPropertyName, 0f);
       if (capacity < MINIMUM_CAPACITY_VALUE
           || capacity > MAXIMUM_CAPACITY_VALUE) {
         throw new IllegalArgumentException("Illegal capacity of " + capacity
@@ -501,9 +490,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
         .getClusterNodeLabels() : labels) {
       float maxCapacity =
           getFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY,
-              UNDEFINED);
-      maxCapacity = (maxCapacity == DEFAULT_MAXIMUM_CAPACITY_VALUE) ? 
-          MAXIMUM_CAPACITY_VALUE : maxCapacity;
+              100f);
       if (maxCapacity < MINIMUM_CAPACITY_VALUE
           || maxCapacity > MAXIMUM_CAPACITY_VALUE) {
         throw new IllegalArgumentException("Illegal " + "capacity of "
