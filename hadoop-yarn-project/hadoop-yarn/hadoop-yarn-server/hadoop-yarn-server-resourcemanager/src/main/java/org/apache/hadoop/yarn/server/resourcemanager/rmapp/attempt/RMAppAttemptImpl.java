@@ -1021,6 +1021,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         // state but application is not in final state.
         if (rmApp.getCurrentAppAttempt() == appAttempt
             && !RMAppImpl.isAppInFinalState(rmApp)) {
+          // Add the previous finished attempt to scheduler synchronously so
+          // that scheduler knows the previous attempt.
+          appAttempt.scheduler.handle(new AppAttemptAddedSchedulerEvent(
+            appAttempt.getAppAttemptId(), false, true));
           (new BaseFinalTransition(appAttempt.recoveredFinalState)).transition(
               appAttempt, event);
         }
