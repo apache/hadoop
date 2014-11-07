@@ -894,6 +894,10 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2810. TestRMProxyUsersConf fails on Windows VMs. (Varun Vasudev via xgong)
 
+    YARN-2824. Fixed Capacity Scheduler to not crash when some node-labels are
+    not mapped to queues by making default capacities per label to be zero.
+    (Wangda Tan via vinodkv)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
