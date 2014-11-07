@@ -1086,6 +1086,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11280. TestWinUtils#testChmod fails after removal of
     NO_PROPAGATE_INHERIT_ACE. (cnauroth)
 
+    HADOOP-11282. Skip NFS TestShellBasedIdMapping tests that are irrelevant on
+    Windows. (cnauroth)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
