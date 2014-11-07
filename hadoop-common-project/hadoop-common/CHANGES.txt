@@ -381,9 +381,6 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11253. Hadoop streaming test TestStreamXmlMultipleRecords fails on
     Windows. (Varun Vasudev via wheat9)
 
-    HADOOP-11274. ConcurrentModificationException in Configuration Copy Constructor.
-    (Junping Du via jing9)
-
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
