@@ -900,6 +900,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2827. Fixed bugs in "yarn queue" CLI. (Wangda Tan via vinodkv)
 
+    YARN-2803. MR distributed cache not working correctly on Windows after
+    NodeManager privileged account changes. (Craig Welch via cnauroth)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
