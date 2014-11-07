@@ -165,6 +165,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2198. Remove the need to run NodeManager as privileged account for
     Windows Secure Container Executor. (Remus Rusanu via jianhe)
 
+    YARN-2647. Added a queue CLI for getting queue information. (Sunil Govind via
+    vinodkv)
+
   IMPROVEMENTS
 
     YARN-2242. Improve exception information on AM launch crashes. (Li Lu 
