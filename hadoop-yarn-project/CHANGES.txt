@@ -865,6 +865,8 @@ Release 2.6.0 - UNRELEASED
     schedulers about previous finished attempts of a running appliation to avoid
     expectation mismatch w.r.t transferred containers. (Jian He via vinodkv)
 
+    YARN-2810. TestRMProxyUsersConf fails on Windows VMs. (Varun Vasudev via xgong)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
