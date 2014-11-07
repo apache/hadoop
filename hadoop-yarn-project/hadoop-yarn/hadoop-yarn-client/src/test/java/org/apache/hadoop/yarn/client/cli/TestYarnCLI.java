@@ -1247,7 +1247,7 @@ public class TestYarnCLI {
     QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
         null, null, QueueState.RUNNING, nodeLabels, "GPU");
     when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
-    int result = cli.run(new String[] { "queue", "-status", "queueA" });
+    int result = cli.run(new String[] { "-status", "queueA" });
     assertEquals(0, result);
     verify(client).getQueueInfo("queueA");
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -1271,7 +1271,7 @@ public class TestYarnCLI {
     QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
         null, null, QueueState.RUNNING, null, null);
     when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
-    int result = cli.run(new String[] { "queue", "-status", "queueA" });
+    int result = cli.run(new String[] { "-status", "queueA" });
     assertEquals(0, result);
     verify(client).getQueueInfo("queueA");
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -1288,6 +1288,23 @@ public class TestYarnCLI {
     String queueInfoStr = baos.toString("UTF-8");
     Assert.assertEquals(queueInfoStr, sysOutStream.toString());
   }
+  
+  @Test
+  public void testGetQueueInfoWithNonExistedQueue() throws Exception {
+    String queueName = "non-existed-queue";
+    QueueCLI cli = createAndGetQueueCLI();
+    when(client.getQueueInfo(any(String.class))).thenReturn(null);
+    int result = cli.run(new String[] { "-status", queueName });
+    assertEquals(-1, result);;
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Cannot get queue from RM by queueName = " + queueName
+        + ", please check.");
+    pw.close();
+    String queueInfoStr = baos.toString("UTF-8");
+    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+  }
+
 
   private void verifyUsageInfo(YarnCLI cli) throws Exception {
     cli.setSysErrPrintStream(sysErr);

@@ -52,16 +52,11 @@ public class QueueCLI extends YarnCLI {
   @Override
   public int run(String[] args) throws Exception {
     Options opts = new Options();
-    int exitCode = -1;
-    if (args.length > 0) {
-      opts.addOption(STATUS_CMD, true,
-          "List queue information about given queue.");
-      opts.addOption(HELP_CMD, false, "Displays help for all commands.");
-      opts.getOption(STATUS_CMD).setArgName("Queue Name");
-    } else {
-      syserr.println("Invalid Command usage. Command must start with 'queue'");
-      return exitCode;
-    }
+
+    opts.addOption(STATUS_CMD, true,
+        "List queue information about given queue.");
+    opts.addOption(HELP_CMD, false, "Displays help for all commands.");
+    opts.getOption(STATUS_CMD).setArgName("Queue Name");
 
     CommandLine cliParser = null;
     try {
@@ -69,23 +64,23 @@ public class QueueCLI extends YarnCLI {
     } catch (MissingArgumentException ex) {
       sysout.println("Missing argument for options");
       printUsage(opts);
-      return exitCode;
+      return -1;
     }
 
     if (cliParser.hasOption(STATUS_CMD)) {
-      if (args.length != 3) {
+      if (args.length != 2) {
         printUsage(opts);
-        return exitCode;
+        return -1;
       }
-      listQueue(cliParser.getOptionValue(STATUS_CMD));
+      return listQueue(cliParser.getOptionValue(STATUS_CMD));
     } else if (cliParser.hasOption(HELP_CMD)) {
       printUsage(opts);
       return 0;
     } else {
       syserr.println("Invalid Command Usage : ");
       printUsage(opts);
+      return -1;
     }
-    return 0;
   }
 
   /**
@@ -105,13 +100,22 @@ public class QueueCLI extends YarnCLI {
    * @throws YarnException
    * @throws IOException
    */
-  private void listQueue(String queueName) throws YarnException, IOException {
+  private int listQueue(String queueName) throws YarnException, IOException {
+    int rc;
     PrintWriter writer = new PrintWriter(sysout);
 
     QueueInfo queueInfo = client.getQueueInfo(queueName);
-    writer.println("Queue Information : ");
-    printQueueInfo(writer, queueInfo);
+    if (queueInfo != null) {
+      writer.println("Queue Information : ");
+      printQueueInfo(writer, queueInfo);
+      rc = 0;
+    } else {
+      writer.println("Cannot get queue from RM by queueName = " + queueName
+          + ", please check.");
+      rc = -1;
+    }
     writer.flush();
+    return rc;
   }
 
   private void printQueueInfo(PrintWriter writer, QueueInfo queueInfo) {

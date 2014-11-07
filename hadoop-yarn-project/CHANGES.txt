@@ -826,6 +826,8 @@ Release 2.6.0 - UNRELEASED
     not mapped to queues by making default capacities per label to be zero.
     (Wangda Tan via vinodkv)
 
+    YARN-2827. Fixed bugs in "yarn queue" CLI. (Wangda Tan via vinodkv).
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
