@@ -28,6 +28,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -108,6 +110,7 @@ public class NameNodeConnector implements Closeable {
   private final Path idPath;
   private final OutputStream out;
   private final List<Path> targetPaths;
+  private final AtomicLong bytesMoved = new AtomicLong();
 
   private int notChangedIterations = 0;
 
@@ -146,6 +149,10 @@ public class NameNodeConnector implements Closeable {
   /** @return the block pool ID */
   public String getBlockpoolID() {
     return blockpoolID;
+  }
+
+  AtomicLong getBytesMoved() {
+    return bytesMoved;
   }
 
   /** @return blocks with locations. */
