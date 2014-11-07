@@ -144,9 +144,7 @@ public class CommonNodeLabelsManager extends AbstractService {
 
     @Override
     public void handle(NodeLabelsStoreEvent event) {
-      if (isInState(STATE.STARTED)) {
-        handleStoreEvent(event);
-      }
+      handleStoreEvent(event);
     }
   }
   
@@ -256,7 +254,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     if (null == labels || labels.isEmpty()) {
       return;
     }
-
+    Set<String> newLabels = new HashSet<String>();
     labels = normalizeLabels(labels);
 
     // do a check before actual adding them, will throw exception if any of them
@@ -266,11 +264,15 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
 
     for (String label : labels) {
-      this.labelCollections.put(label, new Label());
+      // shouldn't overwrite it to avoid changing the Label.resource
+      if (this.labelCollections.get(label) == null) {
+        this.labelCollections.put(label, new Label());
+        newLabels.add(label);
+      }
     }
-    if (null != dispatcher) {
+    if (null != dispatcher && !newLabels.isEmpty()) {
       dispatcher.getEventHandler().handle(
-          new StoreNewClusterNodeLabels(labels));
+          new StoreNewClusterNodeLabels(newLabels));
     }
 
     LOG.info("Add labels: [" + StringUtils.join(labels.iterator(), ",") + "]");
@@ -453,12 +455,15 @@ public class CommonNodeLabelsManager extends AbstractService {
         LOG.error(msg);
         throw new IOException(msg);
       }
-      
-      if (labels == null || labels.isEmpty()) {
+
+      // the labels will never be null
+      if (labels.isEmpty()) {
         continue;
       }
 
-      if (!originalLabels.containsAll(labels)) {
+      // originalLabels may be null,
+      // because when a Node is created, Node.labels can be null.
+      if (originalLabels == null || !originalLabels.containsAll(labels)) {
         String msg =
             "Try to remove labels = [" + StringUtils.join(labels, ",")
                 + "], but not all labels contained by NM=" + nodeId;

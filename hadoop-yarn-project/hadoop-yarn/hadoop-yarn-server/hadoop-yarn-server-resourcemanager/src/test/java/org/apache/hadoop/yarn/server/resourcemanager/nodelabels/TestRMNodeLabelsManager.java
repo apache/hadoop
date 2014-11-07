@@ -74,6 +74,13 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     Assert.assertEquals(mgr.getResourceByLabel("p1", null),
         Resources.add(SMALL_RESOURCE, LARGE_NODE));
 
+    // check add labels multiple times shouldn't overwrite
+    // original attributes on labels like resource
+    mgr.addToCluserNodeLabels(toSet("p1", "p4"));
+    Assert.assertEquals(mgr.getResourceByLabel("p1", null),
+        Resources.add(SMALL_RESOURCE, LARGE_NODE));
+    Assert.assertEquals(mgr.getResourceByLabel("p4", null), EMPTY_RESOURCE);
+
     // change the large NM to small, check if resource updated
     mgr.updateNodeResource(NodeId.newInstance("n1", 2), SMALL_RESOURCE);
     Assert.assertEquals(mgr.getResourceByLabel("p1", null),
@@ -374,7 +381,7 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     Assert.assertEquals(clusterResource,
         mgr.getQueueResource("Q5", q5Label, clusterResource));
   }
-  
+
   @Test(timeout=5000)
   public void testGetLabelResourceWhenMultipleNMsExistingInSameHost() throws IOException {
     // active two NM to n1, one large and one small
@@ -400,5 +407,25 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     Assert.assertEquals(
             mgr.getResourceByLabel("p1", null),
             Resources.multiply(SMALL_RESOURCE, 2));
+  }
+
+  @Test(timeout = 5000)
+  public void testRemoveLabelsFromNode() throws Exception {
+    mgr.addToCluserNodeLabels(toSet("p1", "p2", "p3"));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1"),
+            toNodeId("n2"), toSet("p2"), toNodeId("n3"), toSet("p3")));
+    // active one NM to n1:1
+    mgr.activateNode(NodeId.newInstance("n1", 1), SMALL_RESOURCE);
+    try {
+      mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p1")));
+      Assert.fail("removeLabelsFromNode should trigger IOException");
+    } catch (IOException e) {
+    }
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p1")));
+    try {
+      mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p1")));
+    } catch (IOException e) {
+      Assert.fail("IOException from removeLabelsFromNode " + e);
+    }
   }
 }
