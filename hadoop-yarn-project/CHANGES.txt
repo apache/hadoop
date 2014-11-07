@@ -831,6 +831,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2803. MR distributed cache not working correctly on Windows after
     NodeManager privileged account changes. (Craig Welch via cnauroth)
 
+    YARN-2753. Fixed a bunch of bugs in the NodeLabelsManager classes. (Zhihai xu
+    via vinodkv)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
