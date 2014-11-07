@@ -834,6 +834,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2753. Fixed a bunch of bugs in the NodeLabelsManager classes. (Zhihai xu
     via vinodkv)
 
+    YARN-2825. Container leak on NM (Jian He via jlowe)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
