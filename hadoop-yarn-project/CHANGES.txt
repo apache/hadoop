@@ -195,6 +195,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2647. Added a queue CLI for getting queue information. (Sunil Govind via
     vinodkv)
 
+    YARN-2632. Document NM Restart feature. (Junping Du and Vinod Kumar
+    Vavilapalli via jlowe)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
