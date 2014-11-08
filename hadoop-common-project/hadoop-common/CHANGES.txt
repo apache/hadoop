@@ -656,6 +656,10 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11254. Changed visibility of AccessControlList to be public for
     consumption by ecosystem. (Zhijie Shen via vinodkv)
 
+    HADOOP-11286. Copied LimitInputStream from guava-0.14 to hadoop to avoid
+    issues with newer versions of guava in applications. (Christopher Tubbs
+    via acmurthy)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)

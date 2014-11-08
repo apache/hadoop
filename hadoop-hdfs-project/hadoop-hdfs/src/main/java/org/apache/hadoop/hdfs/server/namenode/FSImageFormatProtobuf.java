@@ -62,11 +62,11 @@ import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressorStream;
+import org.apache.hadoop.util.LimitInputStream;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.io.LimitInputStream;
 import com.google.protobuf.CodedOutputStream;
 
 /**
