@@ -124,6 +124,7 @@ public class TimelineDataManager extends AbstractService {
           entities.getEntities().iterator();
       while (entitiesItr.hasNext()) {
         TimelineEntity entity = entitiesItr.next();
+        addDefaultDomainIdIfAbsent(entity);
         try {
           // check ACLs
           if (!timelineACLsManager.checkAccess(
@@ -161,6 +162,7 @@ public class TimelineDataManager extends AbstractService {
     entity =
         store.getEntity(entityId, entityType, fields);
     if (entity != null) {
+      addDefaultDomainIdIfAbsent(entity);
       // check ACLs
       if (!timelineACLsManager.checkAccess(
           callerUGI, ApplicationAccessType.VIEW_APP, entity)) {
@@ -203,6 +205,7 @@ public class TimelineDataManager extends AbstractService {
               eventsOfOneEntity.getEntityId(),
               eventsOfOneEntity.getEntityType(),
               EnumSet.of(Field.PRIMARY_FILTERS));
+          addDefaultDomainIdIfAbsent(entity);
           // check ACLs
           if (!timelineACLsManager.checkAccess(
               callerUGI, ApplicationAccessType.VIEW_APP, entity)) {
@@ -254,10 +257,12 @@ public class TimelineDataManager extends AbstractService {
         existingEntity =
             store.getEntity(entityID.getId(), entityID.getType(),
                 EnumSet.of(Field.PRIMARY_FILTERS));
-        if (existingEntity != null &&
-            !existingEntity.getDomainId().equals(entity.getDomainId())) {
-          throw new YarnException("The domain of the timeline entity "
-            + entityID + " is not allowed to be changed.");
+        if (existingEntity != null) {
+          addDefaultDomainIdIfAbsent(existingEntity);
+          if (!existingEntity.getDomainId().equals(entity.getDomainId())) {
+            throw new YarnException("The domain of the timeline entity "
+              + entityID + " is not allowed to be changed.");
+          }
         }
         if (!timelineACLsManager.checkAccess(
             callerUGI, ApplicationAccessType.MODIFY_APP, entity)) {
@@ -352,6 +357,13 @@ public class TimelineDataManager extends AbstractService {
       return domains;
     } else {
       return new TimelineDomains();
+    }
+  }
+
+  private static void addDefaultDomainIdIfAbsent(TimelineEntity entity) {
+    // be compatible with the timeline data created before 2.6
+    if (entity.getDomainId() == null) {
+      entity.setDomainId(DEFAULT_DOMAIN_ID);
     }
   }
 
