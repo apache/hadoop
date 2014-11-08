@@ -884,6 +884,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2825. Container leak on NM (Jian He via jlowe)
 
+    YARN-2819. NPE in ATS Timeline Domains when upgrading from 2.4 to 2.6.
+    (Zhijie Shen via xgong)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
