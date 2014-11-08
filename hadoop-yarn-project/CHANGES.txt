@@ -848,6 +848,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2826. Fixed user-groups mappings' refresh bug caused by YARN-2826.
     (Wangda Tan via vinodkv)
 
+    YARN-2607. Fixed issues in TestDistributedShell. (Wangda Tan via vinodkv)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
