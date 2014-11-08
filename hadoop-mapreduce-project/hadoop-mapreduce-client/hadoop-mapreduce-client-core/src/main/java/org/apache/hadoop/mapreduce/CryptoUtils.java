@@ -37,8 +37,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.UserGroupInformation;
-
-import com.google.common.io.LimitInputStream;
+import org.apache.hadoop.util.LimitInputStream;
 
 /**
  * This class provides utilities to make it easier to work with Cryptographic
