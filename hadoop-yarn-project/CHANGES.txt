@@ -198,6 +198,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2632. Document NM Restart feature. (Junping Du and Vinod Kumar
     Vavilapalli via jlowe)
 
+    YARN-2505. Supported get/add/remove/change labels in RM REST API. (Craig Welch
+    via zjshen)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
