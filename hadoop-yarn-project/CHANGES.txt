@@ -842,6 +842,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2819. NPE in ATS Timeline Domains when upgrading from 2.4 to 2.6.
     (Zhijie Shen via xgong)
 
+    YARN-2826. Fixed user-groups mappings' refresh bug caused by YARN-2826.
+    (Wangda Tan via vinodkv)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
