@@ -207,7 +207,7 @@ public class TestAggregatedLogsBlock {
       throws Exception {
     ApplicationId appId =  ApplicationIdPBImpl.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =  ApplicationAttemptIdPBImpl.newInstance(appId, 1);
-    ContainerId containerId = ContainerIdPBImpl.newInstance(appAttemptId, 1);
+    ContainerId containerId = ContainerIdPBImpl.newContainerId(appAttemptId, 1);
 
     String path = "target/logs/" + user
         + "/logs/application_0_0001/localhost_1234";

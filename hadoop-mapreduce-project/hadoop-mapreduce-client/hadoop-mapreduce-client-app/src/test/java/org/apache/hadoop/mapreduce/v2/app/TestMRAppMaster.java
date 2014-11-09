@@ -382,7 +382,7 @@ public class TestMRAppMaster {
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId =
-        ContainerId.newInstance(applicationAttemptId, 546);
+        ContainerId.newContainerId(applicationAttemptId, 546);
     String userName = UserGroupInformation.getCurrentUser().getShortUserName();
 
     // Create staging dir, so MRAppMaster doesn't barf.

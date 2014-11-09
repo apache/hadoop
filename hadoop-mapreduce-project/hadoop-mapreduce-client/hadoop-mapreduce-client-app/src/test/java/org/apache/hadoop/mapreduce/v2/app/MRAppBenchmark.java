@@ -140,7 +140,7 @@ public class MRAppBenchmark {
                 if (concurrentRunningTasks < maxConcurrentRunningTasks) {
                   event = eventQueue.take();
                   ContainerId cId =
-                      ContainerId.newInstance(getContext()
+                      ContainerId.newContainerId(getContext()
                         .getApplicationAttemptId(), containerCount++);
 
                   //System.out.println("Allocating " + containerCount);
@@ -233,7 +233,7 @@ public class MRAppBenchmark {
                   int numContainers = req.getNumContainers();
                   for (int i = 0; i < numContainers; i++) {
                     ContainerId containerId =
-                        ContainerId.newInstance(
+                        ContainerId.newContainerId(
                           getContext().getApplicationAttemptId(),
                           request.getResponseId() + i);
                     containers.add(Container.newInstance(containerId,

@@ -226,7 +226,7 @@ public class TestNMLeveldbStateStoreService {
     ApplicationId appId = ApplicationId.newInstance(1234, 3);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 4);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 5);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 5);
     LocalResource lrsrc = LocalResource.newInstance(
         URL.newInstance("hdfs", "somehost", 12345, "/some/path/to/rsrc"),
         LocalResourceType.FILE, LocalResourceVisibility.APPLICATION, 123L,

@@ -667,7 +667,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     }
 
     public ContainerId createFakeContainerId() {
-      return ContainerId.newInstance(createFakeApplicationAttemptId(), 0);
+      return ContainerId.newContainerId(createFakeApplicationAttemptId(), 0);
     }
 
     public YarnClusterMetrics createFakeYarnClusterMetrics() {

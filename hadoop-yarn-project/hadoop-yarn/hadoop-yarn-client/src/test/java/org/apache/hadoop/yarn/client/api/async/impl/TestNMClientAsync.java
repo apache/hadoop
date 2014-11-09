@@ -547,7 +547,7 @@ public class TestNMClientAsync {
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     ApplicationAttemptId attemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, i);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, i);
     nodeId = NodeId.newInstance("localhost", 0);
     // Create an empty record
     containerToken = recordFactory.newRecordInstance(Token.class);

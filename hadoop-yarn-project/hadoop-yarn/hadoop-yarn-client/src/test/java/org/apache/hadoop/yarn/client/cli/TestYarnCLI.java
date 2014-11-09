@@ -146,7 +146,7 @@ public class TestYarnCLI {
         applicationId, 1);
     ApplicationAttemptReport attemptReport = ApplicationAttemptReport
         .newInstance(attemptId, "host", 124, "url", "oUrl", "diagnostics",
-            YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
+            YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
                 attemptId, 1));
     when(
         client
@@ -182,11 +182,11 @@ public class TestYarnCLI {
         applicationId, 2);
     ApplicationAttemptReport attemptReport = ApplicationAttemptReport
         .newInstance(attemptId, "host", 124, "url", "oUrl", "diagnostics",
-            YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
+            YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
                 attemptId, 1));
     ApplicationAttemptReport attemptReport1 = ApplicationAttemptReport
         .newInstance(attemptId1, "host", 124, "url", "oUrl", "diagnostics",
-            YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
+            YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
                 attemptId1, 1));
     List<ApplicationAttemptReport> reports = new ArrayList<ApplicationAttemptReport>();
     reports.add(attemptReport);
@@ -223,7 +223,7 @@ public class TestYarnCLI {
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
     ContainerReport container = ContainerReport.newInstance(containerId, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
         "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
@@ -255,8 +255,8 @@ public class TestYarnCLI {
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
-    ContainerId containerId1 = ContainerId.newInstance(attemptId, 2);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    ContainerId containerId1 = ContainerId.newContainerId(attemptId, 2);
     ContainerReport container = ContainerReport.newInstance(containerId, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
         "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
@@ -766,7 +766,7 @@ public class TestYarnCLI {
         sysOutStream.toString());
 
     sysOutStream.reset();
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 7);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 7);
     result = cli.run(
         new String[] { "container", "-status", containerId.toString(), "args" });
     verify(spyCli).printUsage(any(String.class), any(Options.class));

@@ -207,7 +207,7 @@ public class TestContainerResourceUsage {
     // usage metrics. This will cause the attempt to fail, and, since the max
     // attempt retries is 1, the app will also fail. This is intentional so
     // that all containers will complete prior to saving.
-    ContainerId cId = ContainerId.newInstance(attempt0.getAppAttemptId(), 1);
+    ContainerId cId = ContainerId.newContainerId(attempt0.getAppAttemptId(), 1);
     nm.nodeHeartbeat(attempt0.getAppAttemptId(),
                  cId.getContainerId(), ContainerState.COMPLETE);
     rm0.waitForState(nm, cId, RMContainerState.COMPLETED);
@@ -289,7 +289,7 @@ public class TestContainerResourceUsage {
 
     // launch the 2nd container.
     ContainerId containerId2 =
-        ContainerId.newInstance(am0.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am0.getApplicationAttemptId(), 2);
     nm.nodeHeartbeat(am0.getApplicationAttemptId(),
                       containerId2.getContainerId(), ContainerState.RUNNING);
     rm.waitForState(nm, containerId2, RMContainerState.RUNNING);

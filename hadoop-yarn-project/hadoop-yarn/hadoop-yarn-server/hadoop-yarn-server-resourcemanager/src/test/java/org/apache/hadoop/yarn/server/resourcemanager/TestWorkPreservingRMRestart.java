@@ -773,7 +773,7 @@ public class TestWorkPreservingRMRestart {
 
     // try to release a container before the container is actually recovered.
     final ContainerId runningContainer =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     am1.allocate(null, Arrays.asList(runningContainer));
 
     // send container statuses to recover the containers

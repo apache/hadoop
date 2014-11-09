@@ -189,7 +189,7 @@ public abstract class MockAsm extends MockApps {
     final ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(newAppID(i), 0);
     final Container masterContainer = Records.newRecord(Container.class);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 0);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 0);
     masterContainer.setId(containerId);
     masterContainer.setNodeHttpAddress("node:port");
     final String user = newUserName();

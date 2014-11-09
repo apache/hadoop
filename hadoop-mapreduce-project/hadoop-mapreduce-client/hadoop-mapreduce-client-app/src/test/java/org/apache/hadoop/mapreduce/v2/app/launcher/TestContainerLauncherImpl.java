@@ -139,7 +139,7 @@ public class TestContainerLauncherImpl {
   
   public static ContainerId makeContainerId(long ts, int appId, int attemptId,
       int id) {
-    return ContainerId.newInstance(
+    return ContainerId.newContainerId(
       ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(ts, appId), attemptId), id);
   }
