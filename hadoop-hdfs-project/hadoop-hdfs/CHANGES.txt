@@ -1267,6 +1267,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
 
+    HDFS-7382. DataNode in secure mode may throw NullPointerException if client
+    connects before DataNode registers itself with NameNode. (cnauroth)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

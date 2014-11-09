@@ -94,12 +94,14 @@ public class SaslDataTransferServer {
    * @param peer connection peer
    * @param underlyingOut connection output stream
    * @param underlyingIn connection input stream
+   * @param int xferPort data transfer port of DataNode accepting connection
    * @param datanodeId ID of DataNode accepting connection
    * @return new pair of streams, wrapped after SASL negotiation
    * @throws IOException for any error
    */
   public IOStreamPair receive(Peer peer, OutputStream underlyingOut,
-      InputStream underlyingIn, DatanodeID datanodeId) throws IOException {
+      InputStream underlyingIn, int xferPort, DatanodeID datanodeId)
+      throws IOException {
     if (dnConf.getEncryptDataTransfer()) {
       LOG.debug(
         "SASL server doing encrypted handshake for peer = {}, datanodeId = {}",
@@ -110,16 +112,16 @@ public class SaslDataTransferServer {
         "SASL server skipping handshake in unsecured configuration for "
         + "peer = {}, datanodeId = {}", peer, datanodeId);
       return new IOStreamPair(underlyingIn, underlyingOut);
-    } else if (datanodeId.getXferPort() < 1024) {
+    } else if (xferPort < 1024) {
       LOG.debug(
-        "SASL server skipping handshake in unsecured configuration for "
+        "SASL server skipping handshake in secured configuration for "
         + "peer = {}, datanodeId = {}", peer, datanodeId);
       return new IOStreamPair(underlyingIn, underlyingOut);
     } else if (dnConf.getSaslPropsResolver() != null) {
       LOG.debug(
         "SASL server doing general handshake for peer = {}, datanodeId = {}",
         peer, datanodeId);
-      return getSaslStreams(peer, underlyingOut, underlyingIn, datanodeId);
+      return getSaslStreams(peer, underlyingOut, underlyingIn);
     } else if (dnConf.getIgnoreSecurePortsForTesting()) {
       // It's a secured cluster using non-privileged ports, but no SASL.  The
       // only way this can happen is if the DataNode has
@@ -271,12 +273,11 @@ public class SaslDataTransferServer {
    * @param peer connection peer
    * @param underlyingOut connection output stream
    * @param underlyingIn connection input stream
-   * @param datanodeId ID of DataNode accepting connection
    * @return new pair of streams, wrapped after SASL negotiation
    * @throws IOException for any error
    */
   private IOStreamPair getSaslStreams(Peer peer, OutputStream underlyingOut,
-      InputStream underlyingIn, final DatanodeID datanodeId) throws IOException {
+      InputStream underlyingIn) throws IOException {
     if (peer.hasSecureChannel() ||
         dnConf.getTrustedChannelResolver().isTrusted(getPeerAddress(peer))) {
       return new IOStreamPair(underlyingIn, underlyingOut);
