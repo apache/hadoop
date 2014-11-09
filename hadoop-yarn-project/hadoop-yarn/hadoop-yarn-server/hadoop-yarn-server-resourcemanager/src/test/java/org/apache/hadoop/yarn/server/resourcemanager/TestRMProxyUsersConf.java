@@ -38,6 +38,7 @@ public class TestRMProxyUsersConf {
       UserGroupInformation.createUserForTesting("foo", new String[] { "foo_group" });
   private static final UserGroupInformation BAR_USER =
       UserGroupInformation.createUserForTesting("bar", new String[] { "bar_group" });
+  private final String ipAddress = "127.0.0.1";
 
   @Parameterized.Parameters
   public static Collection<Object[]> headers() {
@@ -51,13 +52,13 @@ public class TestRMProxyUsersConf {
     switch (round) {
       case 0:
         // hadoop.proxyuser prefix
-        conf.set("hadoop.proxyuser.foo.hosts", "localhost");
+        conf.set("hadoop.proxyuser.foo.hosts", ipAddress);
         conf.set("hadoop.proxyuser.foo.users", "bar");
         conf.set("hadoop.proxyuser.foo.groups", "bar_group");
         break;
       case 1:
         // yarn.resourcemanager.proxyuser prefix
-        conf.set("yarn.resourcemanager.proxyuser.foo.hosts", "localhost");
+        conf.set("yarn.resourcemanager.proxyuser.foo.hosts", ipAddress);
         conf.set("yarn.resourcemanager.proxyuser.foo.users", "bar");
         conf.set("yarn.resourcemanager.proxyuser.foo.groups", "bar_group");
         break;
@@ -67,7 +68,7 @@ public class TestRMProxyUsersConf {
         conf.set("hadoop.proxyuser.foo.hosts", "xyz");
         conf.set("hadoop.proxyuser.foo.users", "xyz");
         conf.set("hadoop.proxyuser.foo.groups", "xyz");
-        conf.set("yarn.resourcemanager.proxyuser.foo.hosts", "localhost");
+        conf.set("yarn.resourcemanager.proxyuser.foo.hosts", ipAddress);
         conf.set("yarn.resourcemanager.proxyuser.foo.users", "bar");
         conf.set("yarn.resourcemanager.proxyuser.foo.groups", "bar_group");
         break;
@@ -89,7 +90,7 @@ public class TestRMProxyUsersConf {
               BAR_USER.getShortUserName(), FOO_USER);
       try {
         ProxyUsers.getDefaultImpersonationProvider().authorize(proxyUser,
-            "localhost");
+            ipAddress);
       } catch (AuthorizationException e) {
         // Exception is not expected
         Assert.fail();

@@ -31,9 +31,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.LimitInputStream;
 
 import com.google.common.base.Preconditions;
-import com.google.common.io.LimitInputStream;
 
 /**
  * This is the tool for analyzing file sizes in the namespace image. In order to

@@ -51,9 +51,9 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.LimitInputStream;
 
 import com.google.common.collect.Lists;
-import com.google.common.io.LimitInputStream;
 
 /**
  * PBImageXmlWriter walks over an fsimage structure and writes out

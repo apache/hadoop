@@ -15,24 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.io.IOException;
+package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-/** 
- * This interface is used by the block manager to expose a
- * few characteristics of a collection of Block/BlockUnderConstruction.
- */
-public interface MutableBlockCollection extends BlockCollection {
-  /**
-   * Set the block at the given index.
-   */
-  public void setBlock(int index, BlockInfo blk);
+import java.util.*;
 
-  /**
-   * Convert the last block of the collection to an under-construction block
-   * and set the locations.
-   */
-  public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
-      DatanodeStorageInfo[] storages) throws IOException;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
+
+@XmlRootElement(name = "nodeToLabelsInfo")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class NodeToLabelsInfo {
+
+  protected HashMap<String, NodeLabelsInfo> nodeToLabels = 
+    new HashMap<String, NodeLabelsInfo>();
+
+  public NodeToLabelsInfo() {
+  } // JAXB needs this
+  
+  public HashMap<String, NodeLabelsInfo> getNodeToLabels() {
+   return nodeToLabels; 
+  }
+  
 }

@@ -30,6 +30,7 @@ function hadoop_usage
   echo "  node                                  prints node report(s)"
   echo "  nodemanager                           run a nodemanager on each slave"
   echo "  proxyserver                           run the web app proxy server"
+  echo "  queue                                 prints queue information"
   echo "  resourcemanager                       run the ResourceManager"
   echo "  resourcemanager -format-state-store   deletes the RMStateStore"
   echo "  rmadmin                               admin tools"
@@ -126,6 +127,11 @@ case "${COMMAND}" in
     if [[ -n "${YARN_PROXYSERVER_HEAPSIZE}" ]]; then
       JAVA_HEAP_MAX="-Xmx${YARN_PROXYSERVER_HEAPSIZE}m"
     fi
+  ;;
+  queue)
+    CLASS=org.apache.hadoop.yarn.client.cli.QueueCLI
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   resourcemanager)
     daemon="true"

@@ -287,8 +287,6 @@ Release 2.7.0 - UNRELEASED
     HDFS-7266. HDFS Peercache enabled check should not lock on object (awang
     via cmccabe)
 
-    HDFS-7221. TestDNFencingWithReplication fails consistently. (Charles Lamb via wang)
-
     HDFS-7254. Add documentation for hot swaping DataNode drives (Lei Xu via
     Colin P. McCabe)
 
@@ -349,6 +347,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7336. Unused member DFSInputStream.buffersize. (Milan Desai via shv)
 
+    HDFS-7365. Remove hdfs.server.blockmanagement.MutableBlockCollection.
+    (Li Lu via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -378,8 +379,6 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7252. small refinement to the use of isInAnEZ in FSNamesystem.
     (Yi Liu via vinayakumarb)
-
-    HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
 
     HDFS-7277. Remove explicit dependency on netty 3.2 in BKJournal. (wheat9)
 
@@ -716,6 +715,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-7233. NN logs unnecessary org.apache.hadoop.hdfs.protocol.UnresolvedPathException.
     (Rushabh S Shah via jing9)
 
+    HDFS-7221. TestDNFencingWithReplication fails consistently. (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -1038,6 +1039,12 @@ Release 2.6.0 - UNRELEASED
     HDFS-7367. HDFS short-circuit read cannot negotiate shared memory slot and
     file descriptors when SASL is enabled on DataTransferProtocol.
     (Chris Nauroth via wheat9)
+
+    HDFS-7364. Balancer always shows zero Bytes Already Moved.
+    (Tsz Wo Nicholas Sze via jing9)
+
+    HDFS-7379. TestBalancer#testBalancerWithRamDisk creates test files
+    incorrectly. (Xiaoyu Yao via wheat9)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
@@ -1402,6 +1409,11 @@ Release 2.6.0 - UNRELEASED
     HDFS-7359. NameNode in secured HA cluster fails to start if
     dfs.namenode.secondary.http-address cannot be interpreted as a network
     address. (cnauroth)
+
+    HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
+
+    HDFS-7382. DataNode in secure mode may throw NullPointerException if client
+    connects before DataNode registers itself with NameNode. (cnauroth)
 
 Release 2.5.2 - UNRELEASED
 

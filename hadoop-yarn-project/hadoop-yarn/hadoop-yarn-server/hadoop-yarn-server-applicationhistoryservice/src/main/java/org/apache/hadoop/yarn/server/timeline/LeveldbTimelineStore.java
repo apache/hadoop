@@ -792,7 +792,8 @@ public class LeveldbTimelineStore extends AbstractService
    * Put a single entity.  If there is an error, add a TimelinePutError to the
    * given response.
    */
-  private void put(TimelineEntity entity, TimelinePutResponse response) {
+  private void put(TimelineEntity entity, TimelinePutResponse response,
+      boolean allowEmptyDomainId) {
     LockMap.CountingReentrantLock<EntityIdentifier> lock =
         writeLocks.getLock(new EntityIdentifier(entity.getEntityId(),
             entity.getEntityType()));
@@ -867,10 +868,18 @@ public class LeveldbTimelineStore extends AbstractService
                   new EntityIdentifier(relatedEntityId, relatedEntityType));
               continue;
             } else {
+              // This is the existing entity
               byte[] domainIdBytes = db.get(createDomainIdKey(
                   relatedEntityId, relatedEntityType, relatedEntityStartTime));
-              // This is the existing entity
-              String domainId = new String(domainIdBytes);
+              // The timeline data created by the server before 2.6 won't have
+              // the domain field. We assume this timeline data is in the
+              // default timeline domain.
+              String domainId = null;
+              if (domainIdBytes == null) {
+                domainId = TimelineDataManager.DEFAULT_DOMAIN_ID;
+              } else {
+                domainId = new String(domainIdBytes);
+              }
               if (!domainId.equals(entity.getDomainId())) {
                 // in this case the entity will be put, but the relation will be
                 // ignored
@@ -923,12 +932,14 @@ public class LeveldbTimelineStore extends AbstractService
           entity.getEntityType(), revStartTime);
       if (entity.getDomainId() == null ||
           entity.getDomainId().length() == 0) {
-        TimelinePutError error = new TimelinePutError();
-        error.setEntityId(entity.getEntityId());
-        error.setEntityType(entity.getEntityType());
-        error.setErrorCode(TimelinePutError.NO_DOMAIN);
-        response.addError(error);
-        return;
+        if (!allowEmptyDomainId) {
+          TimelinePutError error = new TimelinePutError();
+          error.setEntityId(entity.getEntityId());
+          error.setEntityType(entity.getEntityType());
+          error.setErrorCode(TimelinePutError.NO_DOMAIN);
+          response.addError(error);
+          return;
+        }
       } else {
         writeBatch.put(key, entity.getDomainId().getBytes());
         writePrimaryFilterEntries(writeBatch, primaryFilters, key,
@@ -1011,7 +1022,22 @@ public class LeveldbTimelineStore extends AbstractService
       deleteLock.readLock().lock();
       TimelinePutResponse response = new TimelinePutResponse();
       for (TimelineEntity entity : entities.getEntities()) {
-        put(entity, response);
+        put(entity, response, false);
+      }
+      return response;
+    } finally {
+      deleteLock.readLock().unlock();
+    }
+  }
+
+  @Private
+  @VisibleForTesting
+  public TimelinePutResponse putWithNoDomainId(TimelineEntities entities) {
+    try {
+      deleteLock.readLock().lock();
+      TimelinePutResponse response = new TimelinePutResponse();
+      for (TimelineEntity entity : entities.getEntities()) {
+        put(entity, response, true);
       }
       return response;
     } finally {

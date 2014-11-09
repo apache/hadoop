@@ -202,6 +202,7 @@
       <Field name="accessibleLabels" />
       <Field name="absoluteNodeLabelCapacities" />
       <Field name="reservationsContinueLooking" />
+      <Field name="absoluteCapacityByNodeLabels" />
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>

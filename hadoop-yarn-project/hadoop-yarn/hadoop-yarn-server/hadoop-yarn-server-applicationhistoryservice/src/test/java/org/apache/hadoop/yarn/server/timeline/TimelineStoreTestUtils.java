@@ -210,6 +210,18 @@ public class TimelineStoreTestUtils {
     assertEquals(entityId7, response.getErrors().get(0).getEntityId());
     assertEquals(TimelinePutError.FORBIDDEN_RELATION,
         response.getErrors().get(0).getErrorCode());
+
+    if (store instanceof LeveldbTimelineStore) {
+      LeveldbTimelineStore leveldb = (LeveldbTimelineStore) store;
+      entities.setEntities(Collections.singletonList(createEntity(
+          "OLD_ENTITY_ID_1", "OLD_ENTITY_TYPE_1", 63l, null, null, null, null,
+          null)));
+      leveldb.putWithNoDomainId(entities);
+      entities.setEntities(Collections.singletonList(createEntity(
+          "OLD_ENTITY_ID_2", "OLD_ENTITY_TYPE_1", 64l, null, null, null, null,
+          null)));
+      leveldb.putWithNoDomainId(entities);
+    }
   }
 
   /**

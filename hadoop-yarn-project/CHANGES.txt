@@ -192,6 +192,15 @@ Release 2.6.0 - UNRELEASED
     YARN-2198. Remove the need to run NodeManager as privileged account for
     Windows Secure Container Executor. (Remus Rusanu via jianhe)
 
+    YARN-2647. Added a queue CLI for getting queue information. (Sunil Govind via
+    vinodkv)
+
+    YARN-2632. Document NM Restart feature. (Junping Du and Vinod Kumar
+    Vavilapalli via jlowe)
+
+    YARN-2505. Supported get/add/remove/change labels in RM REST API. (Craig Welch
+    via zjshen)
+
   IMPROVEMENTS
 
     YARN-2197. Add a link to YARN CHANGES.txt in the left side of doc
@@ -428,6 +437,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2770. Added functionality to renew/cancel TimeLineDelegationToken.
     (Zhijie Shen via jianhe)
+
+    YARN-2818. Removed the now unnecessary user entity injection from Timeline
+    service given we now have domains. (Zhijie Shen via vinodkv)
 
   OPTIMIZATIONS
 
@@ -737,6 +749,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2677 registry punycoding of usernames doesn't fix all usernames to be
     DNS-valid (stevel)
 
+    YARN-2768 Improved Yarn Registry service record structure (stevel)
+
     ---
 
     YARN-2598 GHS should show N/A instead of null for the inaccessible information
@@ -876,6 +890,37 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2812. TestApplicationHistoryServer is likely to fail on less powerful machine.
     (Zhijie Shen via xgong)
+
+    YARN-2744. Fixed CapacityScheduler to validate node-labels correctly against
+    queues. (Wangda Tan via vinodkv)
+
+    YARN-2823. Fixed ResourceManager app-attempt state machine to inform
+    schedulers about previous finished attempts of a running appliation to avoid
+    expectation mismatch w.r.t transferred containers. (Jian He via vinodkv)
+
+    YARN-2810. TestRMProxyUsersConf fails on Windows VMs. (Varun Vasudev via xgong)
+
+    YARN-2824. Fixed Capacity Scheduler to not crash when some node-labels are
+    not mapped to queues by making default capacities per label to be zero.
+    (Wangda Tan via vinodkv)
+
+    YARN-2827. Fixed bugs in "yarn queue" CLI. (Wangda Tan via vinodkv)
+
+    YARN-2803. MR distributed cache not working correctly on Windows after
+    NodeManager privileged account changes. (Craig Welch via cnauroth)
+
+    YARN-2753. Fixed a bunch of bugs in the NodeLabelsManager classes. (Zhihai xu
+    via vinodkv)
+
+    YARN-2825. Container leak on NM (Jian He via jlowe)
+
+    YARN-2819. NPE in ATS Timeline Domains when upgrading from 2.4 to 2.6.
+    (Zhijie Shen via xgong)
+
+    YARN-2826. Fixed user-groups mappings' refresh bug caused by YARN-2826.
+    (Wangda Tan via vinodkv)
+
+    YARN-2607. Fixed issues in TestDistributedShell. (Wangda Tan via vinodkv)
 
 Release 2.5.2 - UNRELEASED
 
