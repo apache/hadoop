@@ -404,7 +404,7 @@ public class TestClientRMService {
         .newRecordInstance(GetContainerReportRequest.class);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
     request.setContainerId(containerId);
 
     try {
@@ -425,7 +425,7 @@ public class TestClientRMService {
         .newRecordInstance(GetContainersRequest.class);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
     request.setApplicationAttemptId(attemptId);
     try {
       GetContainersResponse response = rmService.getContainers(request);
@@ -1213,7 +1213,7 @@ public class TestClientRMService {
     RMAppAttemptImpl rmAppAttemptImpl = spy(new RMAppAttemptImpl(attemptId,
         rmContext, yarnScheduler, null, asContext, config, false, null));
     Container container = Container.newInstance(
-        ContainerId.newInstance(attemptId, 1), null, "", null, null, null);
+        ContainerId.newContainerId(attemptId, 1), null, "", null, null, null);
     RMContainerImpl containerimpl = spy(new RMContainerImpl(container,
         attemptId, null, "", rmContext));
     Map<ApplicationAttemptId, RMAppAttempt> attempts = 

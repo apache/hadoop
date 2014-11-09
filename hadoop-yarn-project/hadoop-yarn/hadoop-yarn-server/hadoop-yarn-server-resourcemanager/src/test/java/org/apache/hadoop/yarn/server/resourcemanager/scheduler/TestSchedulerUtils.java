@@ -560,7 +560,7 @@ public class TestSchedulerUtils {
   @Test
   public void testCreateAbnormalContainerStatus() {
     ContainerStatus cd = SchedulerUtils.createAbnormalContainerStatus(
-        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+        ContainerId.newContainerId(ApplicationAttemptId.newInstance(
           ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
     Assert.assertEquals(ContainerExitStatus.ABORTED, cd.getExitStatus());
   }
@@ -568,7 +568,7 @@ public class TestSchedulerUtils {
   @Test
   public void testCreatePreemptedContainerStatus() {
     ContainerStatus cd = SchedulerUtils.createPreemptedContainerStatus(
-        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+        ContainerId.newContainerId(ApplicationAttemptId.newInstance(
           ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
     Assert.assertEquals(ContainerExitStatus.PREEMPTED, cd.getExitStatus());
   }

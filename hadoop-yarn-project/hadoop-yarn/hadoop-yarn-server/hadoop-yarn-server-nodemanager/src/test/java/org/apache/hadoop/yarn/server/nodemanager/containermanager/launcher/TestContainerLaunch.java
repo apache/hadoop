@@ -385,7 +385,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
 
-    ContainerId cId = ContainerId.newInstance(appAttemptId, 0);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
     Map<String, String> userSetEnv = new HashMap<String, String>();
     userSetEnv.put(Environment.CONTAINER_ID.name(), "user_set_container_id");
     userSetEnv.put(Environment.NM_HOST.name(), "user_set_NM_HOST");
@@ -634,7 +634,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ApplicationId appId = ApplicationId.newInstance(1, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId cId = ContainerId.newInstance(appAttemptId, 0);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
     File processStartFile =
         new File(tmpDir, "pid.txt").getAbsoluteFile();
 
@@ -771,7 +771,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   @Test (timeout = 10000)
   public void testCallFailureWithNullLocalizedResources() {
     Container container = mock(Container.class);
-    when(container.getContainerId()).thenReturn(ContainerId.newInstance(
+    when(container.getContainerId()).thenReturn(ContainerId.newContainerId(
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(
             System.currentTimeMillis(), 1), 1), 1));
     ContainerLaunchContext clc = mock(ContainerLaunchContext.class);
@@ -980,7 +980,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ApplicationId appId = ApplicationId.newInstance(2, 2);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId cId = ContainerId.newInstance(appAttemptId, 0);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
     File processStartFile =
         new File(tmpDir, "pid.txt").getAbsoluteFile();
     File childProcessStartFile =

@@ -142,7 +142,7 @@ public class TestApplicationHistoryClientService {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     GetContainerReportRequest request =
         GetContainerReportRequest.newInstance(containerId);
     GetContainerReportResponse response =
@@ -160,8 +160,8 @@ public class TestApplicationHistoryClientService {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
-    ContainerId containerId1 = ContainerId.newInstance(appAttemptId, 2);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
+    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 2);
     GetContainersRequest request =
         GetContainersRequest.newInstance(appAttemptId);
     GetContainersResponse response =

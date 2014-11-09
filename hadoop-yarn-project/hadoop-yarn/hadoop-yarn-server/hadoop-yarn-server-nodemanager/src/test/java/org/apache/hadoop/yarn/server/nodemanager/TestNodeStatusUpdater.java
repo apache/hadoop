@@ -224,7 +224,7 @@ public class TestNodeStatusUpdater {
         ApplicationAttemptId appAttemptID =
             ApplicationAttemptId.newInstance(appId1, 0);
         ContainerId firstContainerID =
-            ContainerId.newInstance(appAttemptID, heartBeatID);
+            ContainerId.newContainerId(appAttemptID, heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
         Resource resource = BuilderUtils.newResource(2, 1);
@@ -254,7 +254,7 @@ public class TestNodeStatusUpdater {
         ApplicationAttemptId appAttemptID =
             ApplicationAttemptId.newInstance(appId2, 0);
         ContainerId secondContainerID =
-            ContainerId.newInstance(appAttemptID, heartBeatID);
+            ContainerId.newContainerId(appAttemptID, heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
         long currentTime = System.currentTimeMillis();
@@ -818,7 +818,7 @@ public class TestNodeStatusUpdater {
     ApplicationId appId = ApplicationId.newInstance(0, 0);                    
     ApplicationAttemptId appAttemptId =                                       
         ApplicationAttemptId.newInstance(appId, 0);                           
-    ContainerId cId = ContainerId.newInstance(appAttemptId, 0);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
     nm.getNMContext().getApplications().putIfAbsent(appId,
         mock(Application.class));
     nm.getNMContext().getContainers().putIfAbsent(cId, mock(Container.class));
@@ -855,7 +855,7 @@ public class TestNodeStatusUpdater {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 0);
   
-    ContainerId cId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 1);
     Token containerToken =
         BuilderUtils.newContainerToken(cId, "anyHost", 1234, "anyUser",
             BuilderUtils.newResource(1024, 1), 0, 123,
@@ -876,7 +876,7 @@ public class TestNodeStatusUpdater {
     };
 
     ContainerId runningContainerId =
-        ContainerId.newInstance(appAttemptId, 3);
+        ContainerId.newContainerId(appAttemptId, 3);
     Token runningContainerToken =
         BuilderUtils.newContainerToken(runningContainerId, "anyHost",
           1234, "anyUser", BuilderUtils.newResource(1024, 1), 0, 123,
@@ -936,7 +936,7 @@ public class TestNodeStatusUpdater {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 0);
 
-    ContainerId cId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 1);
     Token containerToken =
         BuilderUtils.newContainerToken(cId, "anyHost", 1234, "anyUser",
             BuilderUtils.newResource(1024, 1), 0, 123,
@@ -1494,7 +1494,7 @@ public class TestNodeStatusUpdater {
     ApplicationId applicationId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, 1);
-    ContainerId contaierId = ContainerId.newInstance(applicationAttemptId, id);
+    ContainerId contaierId = ContainerId.newContainerId(applicationAttemptId, id);
     ContainerStatus containerStatus =
         BuilderUtils.newContainerStatus(contaierId, containerState,
           "test_containerStatus: id=" + id + ", containerState: "

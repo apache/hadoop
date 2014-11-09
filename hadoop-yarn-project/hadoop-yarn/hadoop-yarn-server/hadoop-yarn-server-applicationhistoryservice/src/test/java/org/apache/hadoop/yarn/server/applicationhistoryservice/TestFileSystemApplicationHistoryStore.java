@@ -121,7 +121,7 @@ public class TestFileSystemApplicationHistoryStore extends
         }
         // write container history data
         for (int k = 1; k <= num; ++k) {
-          ContainerId containerId = ContainerId.newInstance(appAttemptId, k);
+          ContainerId containerId = ContainerId.newContainerId(appAttemptId, k);
           writeContainerStartData(containerId);
           if (missingContainer && k == num) {
             continue;
@@ -172,7 +172,7 @@ public class TestFileSystemApplicationHistoryStore extends
         // read container history data
         Assert.assertEquals(num, store.getContainers(appAttemptId).size());
         for (int k = 1; k <= num; ++k) {
-          ContainerId containerId = ContainerId.newInstance(appAttemptId, k);
+          ContainerId containerId = ContainerId.newContainerId(appAttemptId, k);
           ContainerHistoryData containerData = store.getContainer(containerId);
           Assert.assertNotNull(containerData);
           Assert.assertEquals(Priority.newInstance(containerId.getId()),
@@ -187,7 +187,7 @@ public class TestFileSystemApplicationHistoryStore extends
         ContainerHistoryData masterContainer =
             store.getAMContainer(appAttemptId);
         Assert.assertNotNull(masterContainer);
-        Assert.assertEquals(ContainerId.newInstance(appAttemptId, 1),
+        Assert.assertEquals(ContainerId.newContainerId(appAttemptId, 1),
           masterContainer.getContainerId());
       }
     }
@@ -215,7 +215,7 @@ public class TestFileSystemApplicationHistoryStore extends
       Assert.assertTrue(e.getMessage().contains("is not opened"));
     }
     // write container history data
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     try {
       writeContainerStartData(containerId);
       Assert.fail();
@@ -240,7 +240,7 @@ public class TestFileSystemApplicationHistoryStore extends
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     for (int i = 1; i <= 100000; ++i) {
-      ContainerId containerId = ContainerId.newInstance(appAttemptId, i);
+      ContainerId containerId = ContainerId.newContainerId(appAttemptId, i);
       writeContainerStartData(containerId);
       writeContainerFinishData(containerId);
     }

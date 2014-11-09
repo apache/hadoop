@@ -137,7 +137,7 @@ public class TestMemoryApplicationHistoryStore extends
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     try {
       writeContainerFinishData(containerId);
       Assert.fail();
@@ -149,14 +149,14 @@ public class TestMemoryApplicationHistoryStore extends
     writeApplicationAttemptStartData(appAttemptId);
     int numContainers = 5;
     for (int i = 1; i <= numContainers; ++i) {
-      containerId = ContainerId.newInstance(appAttemptId, i);
+      containerId = ContainerId.newContainerId(appAttemptId, i);
       writeContainerStartData(containerId);
       writeContainerFinishData(containerId);
     }
     Assert
       .assertEquals(numContainers, store.getContainers(appAttemptId).size());
     for (int i = 1; i <= numContainers; ++i) {
-      containerId = ContainerId.newInstance(appAttemptId, i);
+      containerId = ContainerId.newContainerId(appAttemptId, i);
       ContainerHistoryData data = store.getContainer(containerId);
       Assert.assertNotNull(data);
       Assert.assertEquals(Priority.newInstance(containerId.getId()),
@@ -165,11 +165,11 @@ public class TestMemoryApplicationHistoryStore extends
     }
     ContainerHistoryData masterContainer = store.getAMContainer(appAttemptId);
     Assert.assertNotNull(masterContainer);
-    Assert.assertEquals(ContainerId.newInstance(appAttemptId, 1),
+    Assert.assertEquals(ContainerId.newContainerId(appAttemptId, 1),
       masterContainer.getContainerId());
     writeApplicationAttemptFinishData(appAttemptId);
     // Write again
-    containerId = ContainerId.newInstance(appAttemptId, 1);
+    containerId = ContainerId.newContainerId(appAttemptId, 1);
     try {
       writeContainerStartData(containerId);
       Assert.fail();
@@ -194,7 +194,7 @@ public class TestMemoryApplicationHistoryStore extends
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     for (int i = 1; i <= numContainers; ++i) {
-      ContainerId containerId = ContainerId.newInstance(appAttemptId, i);
+      ContainerId containerId = ContainerId.newContainerId(appAttemptId, i);
       writeContainerStartData(containerId);
       writeContainerFinishData(containerId);
     }

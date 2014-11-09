@@ -250,7 +250,7 @@ public class TestSystemMetricsPublisher {
   @Test(timeout = 10000)
   public void testPublishContainerMetrics() throws Exception {
     ContainerId containerId =
-        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+        ContainerId.newContainerId(ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(0, 1), 1), 1);
     RMContainer container = createRMContainer(containerId);
     metricsPublisher.containerCreated(container, container.getCreationTime());
@@ -347,7 +347,7 @@ public class TestSystemMetricsPublisher {
     when(appAttempt.getRpcPort()).thenReturn(-100);
     Container container = mock(Container.class);
     when(container.getId())
-        .thenReturn(ContainerId.newInstance(appAttemptId, 1));
+        .thenReturn(ContainerId.newContainerId(appAttemptId, 1));
     when(appAttempt.getMasterContainer()).thenReturn(container);
     when(appAttempt.getDiagnostics()).thenReturn("test diagnostics info");
     when(appAttempt.getTrackingUrl()).thenReturn("test tracking url");

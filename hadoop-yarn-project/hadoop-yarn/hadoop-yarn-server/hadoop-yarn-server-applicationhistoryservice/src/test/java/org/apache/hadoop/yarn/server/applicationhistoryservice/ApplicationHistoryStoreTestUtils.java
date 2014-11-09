@@ -58,7 +58,7 @@ public class ApplicationHistoryStoreTestUtils {
       ApplicationAttemptId appAttemptId) throws IOException {
     store.applicationAttemptStarted(ApplicationAttemptStartData.newInstance(
       appAttemptId, appAttemptId.toString(), 0,
-      ContainerId.newInstance(appAttemptId, 1)));
+      ContainerId.newContainerId(appAttemptId, 1)));
   }
 
   protected void writeApplicationAttemptFinishData(

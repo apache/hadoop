@@ -3530,7 +3530,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // ResourceRequest will be empty once NodeUpdate is completed
     Assert.assertNull(app.getResourceRequest(priority, host));
 
-    ContainerId containerId1 = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 1);
     RMContainer rmContainer = app.getRMContainer(containerId1);
 
     // Create a preempt event and register for preemption

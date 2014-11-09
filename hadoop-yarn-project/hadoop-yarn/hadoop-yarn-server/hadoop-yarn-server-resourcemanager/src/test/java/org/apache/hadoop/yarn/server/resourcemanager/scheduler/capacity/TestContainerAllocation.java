@@ -164,7 +164,7 @@ public class TestContainerAllocation {
     // request a container.
     am1.allocate("127.0.0.1", 1024, 1, new ArrayList<ContainerId>());
     ContainerId containerId2 =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     rm1.waitForState(nm1, containerId2, RMContainerState.ALLOCATED);
 
     RMContainer container =
@@ -194,7 +194,7 @@ public class TestContainerAllocation {
     // request a container.
     am1.allocate("127.0.0.1", 1024, 1, new ArrayList<ContainerId>());
     ContainerId containerId2 =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     rm1.waitForState(nm1, containerId2, RMContainerState.ALLOCATED);
 
     // acquire the container.
@@ -247,7 +247,7 @@ public class TestContainerAllocation {
     // request a container.
     am2.allocate("127.0.0.1", 512, 1, new ArrayList<ContainerId>());
     ContainerId containerId =
-        ContainerId.newInstance(am2.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
     rm1.waitForState(nm1, containerId, RMContainerState.ALLOCATED);
 
     // acquire the container.
@@ -480,13 +480,13 @@ public class TestContainerAllocation {
     
     // A has only 10% of x, so it can only allocate one container in label=empty
     ContainerId containerId =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "");
     Assert.assertTrue(rm1.waitForState(nm3, containerId,
           RMContainerState.ALLOCATED, 10 * 1000));
     // Cannot allocate 2nd label=empty container
     containerId =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 3);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "");
     Assert.assertFalse(rm1.waitForState(nm3, containerId,
           RMContainerState.ALLOCATED, 10 * 1000));
@@ -495,7 +495,7 @@ public class TestContainerAllocation {
     // We can allocate floor(8000 / 1024) = 7 containers
     for (int id = 3; id <= 8; id++) {
       containerId =
-          ContainerId.newInstance(am1.getApplicationAttemptId(), id);
+          ContainerId.newContainerId(am1.getApplicationAttemptId(), id);
       am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "x");
       Assert.assertTrue(rm1.waitForState(nm1, containerId,
           RMContainerState.ALLOCATED, 10 * 1000));
@@ -571,7 +571,7 @@ public class TestContainerAllocation {
     // request a container (label = x && y). can only allocate on nm2 
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "x && y");
     containerId =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertTrue(rm1.waitForState(nm2, containerId,
@@ -588,7 +588,7 @@ public class TestContainerAllocation {
     // and now b1's queue capacity will be used, cannot allocate more containers
     // (Maximum capacity reached)
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>());
-    containerId = ContainerId.newInstance(am2.getApplicationAttemptId(), 2);
+    containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm4, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertFalse(rm1.waitForState(nm5, containerId,
@@ -601,7 +601,7 @@ public class TestContainerAllocation {
     // request a container. try to allocate on nm1 (label = x) and nm3 (label =
     // y,z). Will successfully allocate on nm3
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
-    containerId = ContainerId.newInstance(am3.getApplicationAttemptId(), 2);
+    containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertTrue(rm1.waitForState(nm3, containerId,
@@ -612,7 +612,7 @@ public class TestContainerAllocation {
     // try to allocate container (request label = y && z) on nm3 (label = y) and
     // nm4 (label = y,z). Will sucessfully allocate on nm4 only.
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y && z");
-    containerId = ContainerId.newInstance(am3.getApplicationAttemptId(), 3);
+    containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 3);
     Assert.assertFalse(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertTrue(rm1.waitForState(nm4, containerId,
@@ -654,7 +654,7 @@ public class TestContainerAllocation {
     // request a container.
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "x");
     containerId =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertTrue(rm1.waitForState(nm1, containerId,
@@ -669,7 +669,7 @@ public class TestContainerAllocation {
 
     // request a container.
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
-    containerId = ContainerId.newInstance(am2.getApplicationAttemptId(), 2);
+    containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertTrue(rm1.waitForState(nm2, containerId,
@@ -684,7 +684,7 @@ public class TestContainerAllocation {
 
     // request a container.
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>());
-    containerId = ContainerId.newInstance(am3.getApplicationAttemptId(), 2);
+    containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertTrue(rm1.waitForState(nm3, containerId,
@@ -730,7 +730,7 @@ public class TestContainerAllocation {
     // request a container.
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertTrue(rm1.waitForState(nm1, containerId,
@@ -745,7 +745,7 @@ public class TestContainerAllocation {
 
     // request a container.
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>());
-    containerId = ContainerId.newInstance(am2.getApplicationAttemptId(), 2);
+    containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertTrue(rm1.waitForState(nm2, containerId,
@@ -760,7 +760,7 @@ public class TestContainerAllocation {
 
     // request a container.
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>());
-    containerId = ContainerId.newInstance(am3.getApplicationAttemptId(), 2);
+    containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
     Assert.assertFalse(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertTrue(rm1.waitForState(nm3, containerId,

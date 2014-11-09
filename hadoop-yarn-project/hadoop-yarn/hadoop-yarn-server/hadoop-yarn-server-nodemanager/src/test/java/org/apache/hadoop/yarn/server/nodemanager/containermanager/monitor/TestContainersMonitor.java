@@ -206,7 +206,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     // ////// Construct the Container-id
     ApplicationId appId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId cId = ContainerId.newInstance(appAttemptId, 0);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
     int port = 12345;
 
     URL resource_alpha =

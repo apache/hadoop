@@ -169,7 +169,7 @@ public class TestMRJobsWithHistoryService {
     Assert.assertEquals(1, amInfos.size());
     AMInfo amInfo = amInfos.get(0);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(jobId.getAppId(), 1);
-    ContainerId amContainerId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId amContainerId = ContainerId.newContainerId(appAttemptId, 1);
     Assert.assertEquals(appAttemptId, amInfo.getAppAttemptId());
     Assert.assertEquals(amContainerId, amInfo.getContainerId());
     Assert.assertTrue(jobReport.getSubmitTime() > 0);

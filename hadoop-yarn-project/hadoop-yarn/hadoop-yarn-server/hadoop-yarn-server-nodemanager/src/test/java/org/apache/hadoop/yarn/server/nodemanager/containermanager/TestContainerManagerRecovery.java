@@ -111,7 +111,7 @@ public class TestContainerManagerRecovery {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId attemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId cid = ContainerId.newInstance(attemptId, 1);
+    ContainerId cid = ContainerId.newContainerId(attemptId, 1);
     Map<String, LocalResource> localResources = Collections.emptyMap();
     Map<String, String> containerEnv = Collections.emptyMap();
     List<String> containerCmds = Collections.emptyList();
