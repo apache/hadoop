@@ -194,6 +194,193 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10534. KeyProvider getKeysMetadata should take a list of names
     rather than returning all keys. (omalley)
 
+    HADOOP-10719. Add generateEncryptedKey and decryptEncryptedKey
+    methods to KeyProvider. (asuresh via tucu)
+
+    HADOOP-10817. ProxyUsers configuration should support configurable
+    prefixes. (tucu)
+
+    HADOOP-10881. Clarify usage of encryption and encrypted encryption
+    key in KeyProviderCryptoExtension. (wang)
+
+    HADOOP-10770. KMS add delegation token support. (tucu)
+
+    HADOOP-10698. KMS, add proxyuser support. (tucu)
+
+    HADOOP-8896. Javadoc points to Wrong Reader and Writer classes 
+    in SequenceFile (Ray Chiang via aw)
+
+    HADOOP-10998. Fix bash tab completion code to work (Jim Hester via aw)
+
+    HADOOP-10880. Move HTTP delegation tokens out of URL querystring to 
+    a header. (tucu)
+
+    HADOOP-11005. Fix HTTP content type for ReconfigurationServlet.
+    (Lei Xu via wang)
+
+    HADOOP-10814. Update Tomcat version used by HttpFS and KMS to latest
+    6.x version. (rkanter via tucu)
+
+    HADOOP-10994. KeyProviderCryptoExtension should use CryptoCodec for 
+    generation/decryption of keys. (tucu)
+
+    HADOOP-11021. Configurable replication factor in the hadoop archive
+    command. (Zhe Zhang via wang)
+
+    HADOOP-11030. Define a variable jackson.version instead of using constant 
+    at multiple places. (Juan Yu via kasha)
+
+    HADOOP-10990. Add missed NFSv3 request and response classes (brandonli)
+
+    HADOOP-10863. KMS should have a blacklist for decrypting EEKs. 
+    (asuresh via tucu)
+
+    HADOOP-11054. Add a KeyProvider instantiation based on a URI. (tucu)
+
+    HADOOP-11015. Http server/client utils to propagate and recreate 
+    Exceptions from server to client. (tucu)
+
+    HADOOP-11060. Create a CryptoCodec test that verifies interoperability 
+    between the JCE and OpenSSL implementations. (hitliuyi via tucu)
+
+    HADOOP-11070. Create MiniKMS for testing. (tucu)
+
+    HADOOP-11057. checknative command to probe for winutils.exe on windows.
+    (Xiaoyu Yao via cnauroth)
+
+    HADOOP-10758. KMS: add ACLs on per key basis. (tucu)
+
+    HADOOP-9540. Expose the InMemoryS3 and S3N FilesystemStores implementations
+    for Unit testing. (Steve Lougran)
+
+    HADOOP-10373 create tools/hadoop-amazon for aws/EMR support (stevel)
+
+    HADOOP-11074. Move s3-related FS connector code to hadoop-aws (David S.
+    Wang via Colin Patrick McCabe)
+
+    HADOOP-11091. Eliminate old configuration parameter names from s3a (David
+    S. Wang via Colin Patrick McCabe)
+
+    HADOOP-10868. AuthenticationFilter should support externalizing the 
+    secret for signing and provide rotation support. (rkanter via tucu)
+
+    HADOOP-10922. User documentation for CredentialShell. (Larry McCay via wang)
+
+    HADOOP-11016. KMS should support signing cookies with zookeeper secret
+    manager. (tucu)
+
+    HADOOP-11106. Document considerations of HAR and Encryption. (clamb via wang)
+
+    HADOOP-10970. Cleanup KMS configuration keys. (wang)
+
+    HADOOP-11017. KMS delegation token secret manager should be able to use 
+    zookeeper as store. (asuresh via tucu)
+
+    HADOOP-11009. Add Timestamp Preservation to DistCp (Gary Steelman via aw)
+
+    HADOOP-11101. How about inputstream close statement from catch block to
+    finally block in FileContext#copy() ( skrho via vinayakumarb )
+
+    HADOOP-8808. Update FsShell documentation to mention deprecation of some 
+    of the commands, and mention alternatives (Akira AJISAKA via aw)
+
+    HADOOP-10954. Adding site documents of hadoop-tools (Masatake Iwasaki 
+    via aw)
+
+    HADOOP-10731. Remove @date JavaDoc comment in ProgramDriver class (Henry 
+    Saputra via aw)
+
+    HADOOP-11153. Make number of KMS threads configurable. (wang)
+
+    HADOOP-11007. Reinstate building of ant tasks support. (jlowe via kihwal)
+
+    HADOOP-11178. Fix findbugs exclude file. (Arun Suresh via wang)
+
+    HADOOP-11174. Delegation token for KMS should only be got once if it
+    already exists. (Yi Liu via wang)
+
+    HADOOP-11184. Update Hadoop's lz4 to version r123. (cmccabe)
+
+    HADOOP-11181. Generalized o.a.h.s.t.d.DelegationTokenManager to handle all
+    sub-classes of AbstractDelegationTokenIdentifier. (zjshen)
+
+    HADOOP-11207. Enhanced common DelegationTokenAuthenticationHandler to support
+    proxy-users on Delegation-token management operations. (Zhijie Shen via
+    vinodkv)
+
+    HADOOP-11216. Improve Openssl library finding. (cmccabe via yliu)
+
+    HADOOP-11254. Changed visibility of AccessControlList to be public for
+    consumption by ecosystem. (Zhijie Shen via vinodkv)
+
+  OPTIMIZATIONS
+
+    HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
+
+    HADOOP-10696. Add optional attributes to KeyProvider Options and Metadata.
+    (tucu)
+
+    HADOOP-10695. KMSClientProvider should respect a configurable timeout.
+    (yoderme via tucu)
+
+    HADOOP-10757. KeyProvider KeyVersion should provide the key name.
+    (asuresh via tucu)
+
+    HADOOP-10769. Create KeyProvider extension to handle delegation tokens.
+    (Arun Suresh via atm)
+
+    HADOOP-10812. Delegate KeyProviderExtension#toString to underlying
+    KeyProvider. (wang)
+
+    HADOOP-10736. Add key attributes to the key shell. (Mike Yoder via wang)
+
+    HADOOP-10824. Refactor KMSACLs to avoid locking. (Benoy Antony via umamahesh)
+
+    HADOOP-10841. EncryptedKeyVersion should have a key name property.
+    (asuresh via tucu)
+
+    HADOOP-10842. CryptoExtension generateEncryptedKey method should
+    receive the key name. (asuresh via tucu)
+
+    HADOOP-10750. KMSKeyProviderCache should be in hadoop-common.
+    (asuresh via tucu)
+
+    HADOOP-10720. KMS: Implement generateEncryptedKey and decryptEncryptedKey
+    in the REST API. (asuresh via tucu)
+
+    HADOOP-10891. Add EncryptedKeyVersion factory method to
+    KeyProviderCryptoExtension. (wang)
+
+    HADOOP-10756. KMS audit log should consolidate successful similar requests.
+    (asuresh via tucu)
+
+    HADOOP-10793. KeyShell args should use single-dash style. (wang)
+
+    HADOOP-10936. Change default KeyProvider bitlength to 128. (wang)
+
+    HADOOP-10224. JavaKeyStoreProvider has to protect against corrupting
+    underlying store. (asuresh via tucu)
+
+    HADOOP-10282. Create a FairCallQueue: a multi-level call queue which
+    schedules incoming calls and multiplexes outgoing calls. (Chris Li via
+    Arpit Agarwal)
+
+    HADOOP-10833. Remove unused cache in UserProvider. (Benoy Antony)
+
+    HADOOP-11112. TestKMSWithZK does not use KEY_PROVIDER_URI. (tucu via wang)
+
+    HADOOP-11111 MiniKDC to use locale EN_US for case conversions. (stevel)
+
+    HADOOP-10681. Remove unnecessary synchronization from Snappy & Zlib
+    codecs. (Gopal Vijayaraghavan via acmurthy)
+
+    HADOOP-11194. Ignore .keep files. (kasha)
+
+    HADOOP-11195. Move Id-Name mapping in NFS to the hadoop-common area for
+    better maintenance (Yongjun Zhang via brandonli)
+
+    HADOOP-11247. Fix a couple javac warnings in NFS. (Brandon Li via wheat9)
+
   BUG FIXES
 
     HADOOP-11182. GraphiteSink emits wrong timestamps (Sascha Coenen via raviprak)
