@@ -141,7 +141,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         store.put(entities);
         for (int k = 1; k <= scale; ++k) {
           entities = new TimelineEntities();
-          ContainerId containerId = ContainerId.newInstance(appAttemptId, k);
+          ContainerId containerId = ContainerId.newContainerId(appAttemptId, k);
           entities.addEntity(createContainerEntity(containerId));
           store.put(entities);
         }
@@ -238,7 +238,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     }
     Assert.assertNotNull(appAttempt);
     Assert.assertEquals(appAttemptId, appAttempt.getApplicationAttemptId());
-    Assert.assertEquals(ContainerId.newInstance(appAttemptId, 1),
+    Assert.assertEquals(ContainerId.newContainerId(appAttemptId, 1),
         appAttempt.getAMContainerId());
     Assert.assertEquals("test host", appAttempt.getHost());
     Assert.assertEquals(100, appAttempt.getRpcPort());
@@ -253,7 +253,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
   @Test
   public void testGetContainerReport() throws Exception {
     final ContainerId containerId =
-        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+        ContainerId.newContainerId(ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(0, 1), 1), 1);
     ContainerReport container;
     if (callerUGI == null) {
@@ -466,7 +466,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     eventInfo.put(AppAttemptMetricsConstants.HOST_EVENT_INFO, "test host");
     eventInfo.put(AppAttemptMetricsConstants.RPC_PORT_EVENT_INFO, 100);
     eventInfo.put(AppAttemptMetricsConstants.MASTER_CONTAINER_EVENT_INFO,
-        ContainerId.newInstance(appAttemptId, 1));
+        ContainerId.newContainerId(appAttemptId, 1));
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
     tEvent = new TimelineEvent();

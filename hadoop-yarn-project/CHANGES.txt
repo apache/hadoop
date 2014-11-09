@@ -922,6 +922,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2607. Fixed issues in TestDistributedShell. (Wangda Tan via vinodkv)
 
+    YARN-2830. Add backwords compatible ContainerId.newInstance constructor.
+    (jeagles via acmurthy) 
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

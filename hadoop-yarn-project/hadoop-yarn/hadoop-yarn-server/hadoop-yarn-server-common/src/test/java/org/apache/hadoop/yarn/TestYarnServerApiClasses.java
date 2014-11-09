@@ -223,7 +223,7 @@ public class TestYarnServerApiClasses {
   }
 
   private ContainerId getContainerId(int containerID, int appAttemptId) {
-    ContainerId containerId = ContainerIdPBImpl.newInstance(
+    ContainerId containerId = ContainerIdPBImpl.newContainerId(
         getApplicationAttemptId(appAttemptId), containerID);
     return containerId;
   }

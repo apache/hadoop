@@ -352,7 +352,7 @@ public class TestAMRMClientOnRMRestart {
     // new NM to represent NM re-register
     nm1 = new MockNM("h1:1234", 10240, rm2.getResourceTrackerService());
 
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     NMContainerStatus containerReport =
         NMContainerStatus.newInstance(containerId, ContainerState.RUNNING,
             Resource.newInstance(1024, 1), "recover container", 0,

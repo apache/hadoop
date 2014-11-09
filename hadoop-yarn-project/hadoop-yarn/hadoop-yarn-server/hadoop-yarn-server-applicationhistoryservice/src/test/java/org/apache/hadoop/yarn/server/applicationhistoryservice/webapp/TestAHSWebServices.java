@@ -338,7 +338,7 @@ public class TestAHSWebServices extends JerseyTest {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     WebResource r = resource();
     ClientResponse response =
         r.path("ws").path("v1").path("applicationhistory").path("apps")

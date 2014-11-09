@@ -510,7 +510,7 @@ public class TestResourceTrackerService {
     // Case 1.1: AppAttemptId is null
     NMContainerStatus report =
         NMContainerStatus.newInstance(
-          ContainerId.newInstance(
+          ContainerId.newContainerId(
             ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
@@ -522,7 +522,7 @@ public class TestResourceTrackerService {
         (RMAppAttemptImpl) app.getCurrentAppAttempt();
     currentAttempt.setMasterContainer(null);
     report = NMContainerStatus.newInstance(
-          ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
+          ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0),
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
     rm.getResourceTrackerService().handleNMContainerStatus(report, null);
@@ -533,7 +533,7 @@ public class TestResourceTrackerService {
 
     // Case 2.1: AppAttemptId is null
     report = NMContainerStatus.newInstance(
-          ContainerId.newInstance(
+          ContainerId.newContainerId(
             ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
@@ -549,7 +549,7 @@ public class TestResourceTrackerService {
         (RMAppAttemptImpl) app.getCurrentAppAttempt();
     currentAttempt.setMasterContainer(null);
     report = NMContainerStatus.newInstance(
-      ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
+      ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0),
       ContainerState.COMPLETE, Resource.newInstance(1024, 1),
       "Dummy Completed", 0, Priority.newInstance(10), 1234);
     try {

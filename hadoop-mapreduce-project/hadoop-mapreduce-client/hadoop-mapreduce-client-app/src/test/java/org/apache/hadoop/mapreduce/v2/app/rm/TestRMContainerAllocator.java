@@ -689,7 +689,7 @@ public class TestRMContainerAllocator {
     rm.sendAMLaunched(appAttemptId);
     rmDispatcher.await();
 
-    MRApp mrApp = new MRApp(appAttemptId, ContainerId.newInstance(
+    MRApp mrApp = new MRApp(appAttemptId, ContainerId.newContainerId(
       appAttemptId, 0), 10, 10, false, this.getClass().getName(), true, 1) {
       @Override
       protected Dispatcher createDispatcher() {
@@ -841,7 +841,7 @@ public class TestRMContainerAllocator {
     rm.sendAMLaunched(appAttemptId);
     rmDispatcher.await();
 
-    MRApp mrApp = new MRApp(appAttemptId, ContainerId.newInstance(
+    MRApp mrApp = new MRApp(appAttemptId, ContainerId.newContainerId(
       appAttemptId, 0), 10, 0, false, this.getClass().getName(), true, 1) {
       @Override
         protected Dispatcher createDispatcher() {
@@ -2026,7 +2026,7 @@ public class TestRMContainerAllocator {
     ApplicationId applicationId = ApplicationId.newInstance(1, 1);
     ApplicationAttemptId applicationAttemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
-    ContainerId containerId = ContainerId.newInstance(applicationAttemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(applicationAttemptId, 1);
     ContainerStatus status = ContainerStatus.newInstance(
         containerId, ContainerState.RUNNING, "", 0);
 
@@ -2043,7 +2043,7 @@ public class TestRMContainerAllocator {
         abortedStatus, attemptId);
     Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent.getType());
     
-    ContainerId containerId2 = ContainerId.newInstance(applicationAttemptId, 2);
+    ContainerId containerId2 = ContainerId.newContainerId(applicationAttemptId, 2);
     ContainerStatus status2 = ContainerStatus.newInstance(containerId2,
         ContainerState.RUNNING, "", 0);
 
@@ -2082,7 +2082,7 @@ public class TestRMContainerAllocator {
     rmDispatcher.await();
 
     MRApp mrApp =
-        new MRApp(appAttemptId, ContainerId.newInstance(appAttemptId, 0), 10,
+        new MRApp(appAttemptId, ContainerId.newContainerId(appAttemptId, 0), 10,
             0, false, this.getClass().getName(), true, 1) {
           @Override
           protected Dispatcher createDispatcher() {

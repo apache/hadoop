@@ -51,7 +51,7 @@ public class TestProtocolRecords {
   public void testNMContainerStatus() {
     ApplicationId appId = ApplicationId.newInstance(123456789, 1);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
     Resource resource = Resource.newInstance(1000, 200);
 
     NMContainerStatus report =
@@ -76,7 +76,7 @@ public class TestProtocolRecords {
   public void testRegisterNodeManagerRequest() {
     ApplicationId appId = ApplicationId.newInstance(123456789, 1);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
 
     NMContainerStatus containerReport =
         NMContainerStatus.newInstance(containerId,

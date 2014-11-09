@@ -180,7 +180,7 @@ public class MRApp extends MRAppMaster {
     ApplicationAttemptId appAttemptId =
         getApplicationAttemptId(applicationId, startCount);
     ContainerId containerId =
-        ContainerId.newInstance(appAttemptId, startCount);
+        ContainerId.newContainerId(appAttemptId, startCount);
     return containerId;
   }
 
@@ -567,7 +567,7 @@ public class MRApp extends MRAppMaster {
      @Override
       public void handle(ContainerAllocatorEvent event) {
         ContainerId cId =
-            ContainerId.newInstance(getContext().getApplicationAttemptId(),
+            ContainerId.newContainerId(getContext().getApplicationAttemptId(),
               containerCount++);
         NodeId nodeId = NodeId.newInstance(NM_HOST, NM_PORT);
         Resource resource = Resource.newInstance(1234, 2);
@@ -775,7 +775,7 @@ public class MRApp extends MRAppMaster {
     ApplicationId applicationId = ApplicationId.newInstance(timestamp, appId);
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, appAttemptId);
-    return ContainerId.newInstance(applicationAttemptId, containerId);
+    return ContainerId.newContainerId(applicationAttemptId, containerId);
   }
 
   public static ContainerTokenIdentifier newContainerTokenIdentifier(

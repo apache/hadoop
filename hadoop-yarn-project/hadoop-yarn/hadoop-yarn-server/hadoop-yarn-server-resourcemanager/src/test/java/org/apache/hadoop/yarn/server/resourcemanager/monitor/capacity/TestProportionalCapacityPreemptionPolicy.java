@@ -728,7 +728,7 @@ public class TestProportionalCapacityPreemptionPolicy {
 
   RMContainer mockContainer(ApplicationAttemptId appAttId, int id,
       Resource r, int priority) {
-    ContainerId cId = ContainerId.newInstance(appAttId, id);
+    ContainerId cId = ContainerId.newContainerId(appAttId, id);
     Container c = mock(Container.class);
     when(c.getResource()).thenReturn(r);
     when(c.getPriority()).thenReturn(Priority.create(priority));

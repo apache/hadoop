@@ -157,9 +157,9 @@ public class TestAHSClient {
     List<ContainerReport> reports = client.getContainers(appAttemptId);
     Assert.assertNotNull(reports);
     Assert.assertEquals(reports.get(0).getContainerId(),
-      (ContainerId.newInstance(appAttemptId, 1)));
+      (ContainerId.newContainerId(appAttemptId, 1)));
     Assert.assertEquals(reports.get(1).getContainerId(),
-      (ContainerId.newInstance(appAttemptId, 2)));
+      (ContainerId.newContainerId(appAttemptId, 2)));
     client.stop();
   }
 
@@ -176,11 +176,11 @@ public class TestAHSClient {
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(applicationId, 1);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     ContainerReport report = client.getContainerReport(containerId);
     Assert.assertNotNull(report);
     Assert.assertEquals(report.getContainerId().toString(), (ContainerId
-      .newInstance(expectedReports.get(0).getCurrentApplicationAttemptId(), 1))
+      .newContainerId(expectedReports.get(0).getCurrentApplicationAttemptId(), 1))
       .toString());
     client.stop();
   }
@@ -349,7 +349,7 @@ public class TestAHSClient {
             "oUrl",
             "diagnostics",
             YarnApplicationAttemptState.FINISHED,
-            ContainerId.newInstance(
+            ContainerId.newContainerId(
               newApplicationReport.getCurrentApplicationAttemptId(), 1));
       appAttempts.add(attempt);
       ApplicationAttemptReport attempt1 =
@@ -361,7 +361,7 @@ public class TestAHSClient {
             "oUrl",
             "diagnostics",
             YarnApplicationAttemptState.FINISHED,
-            ContainerId.newInstance(
+            ContainerId.newContainerId(
               newApplicationReport.getCurrentApplicationAttemptId(), 2));
       appAttempts.add(attempt1);
       attempts.put(applicationId, appAttempts);
@@ -369,14 +369,14 @@ public class TestAHSClient {
       List<ContainerReport> containerReports = new ArrayList<ContainerReport>();
       ContainerReport container =
           ContainerReport.newInstance(
-            ContainerId.newInstance(attempt.getApplicationAttemptId(), 1),
+            ContainerId.newContainerId(attempt.getApplicationAttemptId(), 1),
             null, NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234,
             5678, "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
       containerReports.add(container);
 
       ContainerReport container1 =
           ContainerReport.newInstance(
-            ContainerId.newInstance(attempt.getApplicationAttemptId(), 2),
+            ContainerId.newContainerId(attempt.getApplicationAttemptId(), 2),
             null, NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234,
             5678, "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
       containerReports.add(container1);

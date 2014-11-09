@@ -104,7 +104,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ApplicationId appId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, id);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
     return containerId;
   }
   
