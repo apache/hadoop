@@ -181,7 +181,8 @@ class DataXceiver extends Receiver implements Runnable {
       InputStream input = socketIn;
       try {
         IOStreamPair saslStreams = datanode.saslServer.receive(peer, socketOut,
-          socketIn, datanode.getDatanodeId());
+          socketIn, datanode.getXferAddress().getPort(),
+          datanode.getDatanodeId());
         input = new BufferedInputStream(saslStreams.in,
           HdfsConstants.SMALL_BUFFER_SIZE);
         socketOut = saslStreams.out;
