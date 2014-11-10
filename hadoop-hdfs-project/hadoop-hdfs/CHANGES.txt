@@ -1116,7 +1116,7 @@ Release 2.6.0 - 2014-11-15
     HDFS-7382. DataNode in secure mode may throw NullPointerException if client
     connects before DataNode registers itself with NameNode. (cnauroth)
 
-Release 2.5.2 - UNRELEASED
+Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
 
