@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -373,8 +374,7 @@ public class FsDatasetCache {
         reservedBytes = true;
         try {
           blockIn = (FileInputStream)dataset.getBlockInputStream(extBlk, 0);
-          metaIn = (FileInputStream)dataset.getMetaDataInputStream(extBlk)
-              .getWrappedStream();
+          metaIn = DatanodeUtil.getMetaDataInputStream(extBlk, dataset);
         } catch (ClassCastException e) {
           LOG.warn("Failed to cache " + key +
               ": Underlying blocks are not backed by files.", e);
