@@ -1273,6 +1273,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7382. DataNode in secure mode may throw NullPointerException if client
     connects before DataNode registers itself with NameNode. (cnauroth)
 
+    HDFS-7383. DataNode.requestShortCircuitFdsForRead may throw 
+    NullPointerException. (szetszwo via suresh)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
