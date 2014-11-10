@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,9 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityMockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -68,6 +69,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -935,4 +937,50 @@ public class TestWorkPreservingRMRestart {
     am0.unregisterAppAttempt(false);
   }
 
+  @Test (timeout = 30000)
+  public void testAppFailedToRenewTokenOnRecovery() throws Exception {
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+      "kerberos");
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
+    UserGroupInformation.setConfiguration(conf);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    MockRM rm1 = new TestSecurityMockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 8192, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    RMApp app1 = rm1.submitApp(200);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    MockRM rm2 = new TestSecurityMockRM(conf, memStore) {
+      protected DelegationTokenRenewer createDelegationTokenRenewer() {
+        return new DelegationTokenRenewer() {
+          @Override
+          public void addApplicationSync(ApplicationId applicationId,
+              Credentials ts, boolean shouldCancelAtEnd, String user)
+              throws IOException {
+            throw new IOException("Token renew failed !!");
+          }
+        };
+      }
+    };
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    rm2.start();
+    NMContainerStatus containerStatus =
+        TestRMRestart.createNMContainerStatus(am1.getApplicationAttemptId(), 1,
+          ContainerState.RUNNING);
+    nm1.registerNode(Arrays.asList(containerStatus), null);
+
+    // am re-register
+    rm2.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+    am1.setAMRMProtocol(rm2.getApplicationMasterService(), rm2.getRMContext());
+    am1.registerAppAttempt(true);
+    rm2.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
+
+    // Because the token expired, am could crash.
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    rm2.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    rm2.waitForState(app1.getApplicationId(), RMAppState.FAILED);
+  }
 }

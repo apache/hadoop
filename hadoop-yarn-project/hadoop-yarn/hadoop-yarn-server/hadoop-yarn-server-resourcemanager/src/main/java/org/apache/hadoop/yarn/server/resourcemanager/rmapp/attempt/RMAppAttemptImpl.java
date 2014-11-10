@@ -789,7 +789,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public void recover(RMState state) throws Exception {
+  public void recover(RMState state) {
     ApplicationState appState =
         state.getApplicationState().get(getAppAttemptId().getApplicationId());
     ApplicationAttemptState attemptState =
@@ -823,7 +823,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   private void recoverAppAttemptCredentials(Credentials appAttemptTokens,
-      RMAppAttemptState state) throws IOException {
+      RMAppAttemptState state) {
     if (appAttemptTokens == null || state == RMAppAttemptState.FAILED
         || state == RMAppAttemptState.FINISHED
         || state == RMAppAttemptState.KILLED) {
