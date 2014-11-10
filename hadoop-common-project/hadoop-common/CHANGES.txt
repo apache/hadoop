@@ -417,6 +417,8 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11187 NameNode - KMS communication fails after a long period of
     inactivity. (Arun Suresh via atm)
 
+    HADOOP-11289. Fix typo in RpcUtil log message. (Charles Lamb via wheat9)
+
 Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
