@@ -26,6 +26,8 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
 
+    HADOOP-10786. Fix UGI#reloginFromKeytab on Java 8. (Stephen Chu via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -384,8 +386,6 @@ Release 2.6.0 - UNRELEASED
     better maintenance (Yongjun Zhang via brandonli)
 
     HADOOP-11247. Fix a couple javac warnings in NFS. (Brandon Li via wheat9)
-
-    HADOOP-10786. Fix UGI#reloginFromKeytab on Java 8. (Stephen Chu via wheat9)
 
   BUG FIXES
 
