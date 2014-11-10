@@ -540,34 +540,6 @@ public class TestRMAppTransitions {
   }
 
   @Test (timeout = 30000)
-  public void testAppRecoverToFailed() throws IOException {
-    LOG.info("--- START: testAppRecoverToFailed ---");
-    ApplicationSubmissionContext sub =
-        Records.newRecord(ApplicationSubmissionContext.class);
-    ContainerLaunchContext clc =
-        Records.newRecord(ContainerLaunchContext.class);
-    Credentials credentials = new Credentials();
-    DataOutputBuffer dob = new DataOutputBuffer();
-    credentials.writeTokenStorageToStream(dob);
-    ByteBuffer securityTokens =
-        ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-    clc.setTokens(securityTokens);
-    sub.setAMContainerSpec(clc);
-
-    RMApp application = createNewTestApp(sub);
-    // NEW => FINAL_SAVING, event RMAppEventType.RECOVER
-    RMState state = new RMState();
-    RMAppEvent event =
-        new RMAppRecoverEvent(application.getApplicationId(), state);
-    // NPE will throw on recovery.
-    application.handle(event);
-    assertAppState(RMAppState.FINAL_SAVING, application);
-    sendAppUpdateSavedEvent(application);
-    rmDispatcher.await();
-    assertAppState(RMAppState.FAILED, application);
-  }
-
-  @Test (timeout = 30000)
   public void testAppNewKill() throws IOException {
     LOG.info("--- START: testAppNewKill ---");
 
