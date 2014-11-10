@@ -615,6 +615,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7218. FSNamesystem ACL operations should write to audit log on
     failure. (clamb via yliu)
 
+    HDFS-7383. DataNode.requestShortCircuitFdsForRead may throw 
+    NullPointerException. (szetszwo via suresh)
+
     BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
   
       HDFS-6921. Add LazyPersist flag to FileStatus. (Arpit Agarwal)

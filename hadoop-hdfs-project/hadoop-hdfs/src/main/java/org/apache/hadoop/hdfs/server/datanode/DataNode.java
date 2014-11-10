@@ -1522,7 +1522,7 @@ public class DataNode extends ReconfigurableBase
     
     try {
       fis[0] = (FileInputStream)data.getBlockInputStream(blk, 0);
-      fis[1] = (FileInputStream)data.getMetaDataInputStream(blk).getWrappedStream();
+      fis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
     } catch (ClassCastException e) {
       LOG.debug("requestShortCircuitFdsForRead failed", e);
       throw new ShortCircuitFdsUnsupportedException("This DataNode's " +
