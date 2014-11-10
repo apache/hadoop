@@ -898,6 +898,10 @@ Release 2.6.0 - 2014-11-15
     YARN-2830. Add backwords compatible ContainerId.newInstance constructor.
     (jeagles via acmurthy) 
 
+    YARN-2834. Fixed ResourceManager to ignore token-renewal failures on recovery
+    consistent with the (somewhat incorrect) behaviour in the non-recovery case.
+    (Jian He via vinodkv)
+
 Release 2.5.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
