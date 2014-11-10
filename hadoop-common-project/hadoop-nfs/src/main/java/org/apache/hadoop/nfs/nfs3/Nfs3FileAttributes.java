@@ -49,8 +49,6 @@ public class Nfs3FileAttributes {
    * values should be agreed upon by the client and server. If the client and
    * server do not agree upon the values, the client should treat these fields
    * as if they are set to 0.
-   * <br>
-   * For Hadoop, currently this field is always zero.
    */
   public static class Specdata3 {
     final int specdata1;
@@ -82,20 +80,17 @@ public class Nfs3FileAttributes {
   }
    
   public Nfs3FileAttributes() {
-    this(NfsFileType.NFSREG, 0, (short)0, 0, 0, 0, 0, 0, 0, 0);
+    this(NfsFileType.NFSREG, 1, (short)0, 0, 0, 0, 0, 0, 0, 0, new Specdata3());
   }
 
   public Nfs3FileAttributes(NfsFileType nfsType, int nlink, short mode, int uid,
-      int gid, long size, long fsid, long fileId, long mtime, long atime) {
+      int gid, long size, long fsid, long fileId, long mtime, long atime, Specdata3 rdev) {
     this.type = nfsType.toValue();
     this.mode = mode;
-    this.nlink = (type == NfsFileType.NFSDIR.toValue()) ? (nlink + 2) : 1;
+    this.nlink = nlink;
     this.uid = uid;
     this.gid = gid;
     this.size = size;
-    if(type == NfsFileType.NFSDIR.toValue()) {
-      this.size = getDirSize(nlink);
-    }
     this.used = this.size;
     this.rdev = new Specdata3();
     this.fsid = fsid;
@@ -103,6 +98,7 @@ public class Nfs3FileAttributes {
     this.mtime = new NfsTime(mtime);
     this.atime = atime != 0 ? new NfsTime(atime) : this.mtime;
     this.ctime = this.mtime;
+    this.rdev = rdev;
   }
   
   public Nfs3FileAttributes(Nfs3FileAttributes other) {
@@ -147,10 +143,7 @@ public class Nfs3FileAttributes {
     attr.gid = xdr.readInt();
     attr.size = xdr.readHyper();
     attr.used = xdr.readHyper();
-    // Ignore rdev
-    xdr.readInt();
-    xdr.readInt();
-    attr.rdev = new Specdata3();
+    attr.rdev = new Specdata3(xdr.readInt(), xdr.readInt());
     attr.fsid = xdr.readHyper();
     attr.fileId = xdr.readHyper();
     attr.atime = NfsTime.deserialize(xdr);
@@ -228,11 +221,11 @@ public class Nfs3FileAttributes {
     return this.gid;
   }
   
-  /**
-   * HDFS directory size is always zero. Try to return something meaningful
-   * here. Assume each child take 32bytes.
-   */
-  public static long getDirSize(int childNum) {
-    return (childNum + 2) * 32;
+  public Specdata3 getRdev() {
+    return rdev;
+  }
+
+  public void setRdev(Specdata3 rdev) {
+    this.rdev = rdev;
   }
 }
