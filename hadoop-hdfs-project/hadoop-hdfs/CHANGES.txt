@@ -155,9 +155,6 @@ Release 2.7.0 - UNRELEASED
     HDFS-7366. BlockInfo should take replication as an short in the constructor.
     (Li Lu via wheat9)
 
-    HDFS-7383. DataNode.requestShortCircuitFdsForRead may throw 
-    NullPointerException. (szetszwo via suresh)
-
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -777,6 +774,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7199.  DFSOutputStream should not silently drop data if DataStreamer
     crashes with an unchecked exception (rushabhs via cmccabe)
+
+    HDFS-7383. DataNode.requestShortCircuitFdsForRead may throw 
+    NullPointerException. (szetszwo via suresh)
 
     BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
   
