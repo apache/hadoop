@@ -12,7 +12,7 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
-Release 2.6.0 - UNRELEASED
+Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
 
