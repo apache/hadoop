@@ -329,6 +329,8 @@ Release 2.6.0 - 2014-11-18
 
     HADOOP-11247. Fix a couple javac warnings in NFS. (Brandon Li via wheat9)
 
+    HADOOP-10786. Fix UGI#reloginFromKeytab on Java 8. (Stephen Chu via wheat9)
+
   BUG FIXES
 
     HADOOP-11182. GraphiteSink emits wrong timestamps (Sascha Coenen via raviprak)
