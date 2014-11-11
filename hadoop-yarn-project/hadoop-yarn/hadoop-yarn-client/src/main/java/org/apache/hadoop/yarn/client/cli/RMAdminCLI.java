@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsC
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -393,18 +394,7 @@ public class RMAdminCLI extends HAAdmin {
         throw new IOException("node name cannot be empty");
       }
 
-      String nodeName;
-      int port;
-      if (nodeIdStr.contains(":")) {
-        nodeName = nodeIdStr.substring(0, nodeIdStr.indexOf(":"));
-        port = Integer.valueOf(nodeIdStr.substring(nodeIdStr.indexOf(":") + 1));
-      } else {
-        nodeName = nodeIdStr;
-        port = 0;
-      }
-
-      NodeId nodeId = NodeId.newInstance(nodeName, port);
-
+      NodeId nodeId = ConverterUtils.toNodeIdWithDefaultPort(nodeIdStr);
       map.put(nodeId, new HashSet<String>());
 
       for (int i = 1; i < splits.length; i++) {
