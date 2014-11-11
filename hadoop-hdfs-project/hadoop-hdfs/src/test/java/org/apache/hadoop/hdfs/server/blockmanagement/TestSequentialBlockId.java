@@ -15,10 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -31,9 +30,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -45,19 +43,12 @@ import static org.mockito.Mockito.*;
  * collision handling.
  */
 public class TestSequentialBlockId {
-
   private static final Log LOG = LogFactory.getLog("TestSequentialBlockId");
-
-  private static final DataChecksum DEFAULT_CHECKSUM =
-      DataChecksum.newDataChecksum(DataChecksum.Type.CRC32C, 512);
 
   final int BLOCK_SIZE = 1024;
   final int IO_SIZE = BLOCK_SIZE;
   final short REPLICATION = 1;
   final long SEED = 0;
-
-  DatanodeID datanode;
-  InetSocketAddress dnAddr;
 
   /**
    * Test that block IDs are generated sequentially.
@@ -125,7 +116,8 @@ public class TestSequentialBlockId {
 
       // Rewind the block ID counter in the name system object. This will result
       // in block ID collisions when we try to allocate new blocks.
-      SequentialBlockIdGenerator blockIdGenerator = fsn.getBlockIdGenerator();
+      SequentialBlockIdGenerator blockIdGenerator = fsn.getBlockIdManager()
+        .getBlockIdGenerator();
       blockIdGenerator.setCurrentValue(blockIdGenerator.getCurrentValue() - 5);
 
       // Trigger collisions by creating a new file.
@@ -156,10 +148,10 @@ public class TestSequentialBlockId {
 
     // Setup a mock object and stub out a few routines to
     // retrieve the generation stamp counters.
-    FSNamesystem fsn = mock(FSNamesystem.class);
+    BlockIdManager bid = mock(BlockIdManager.class);
     final long maxGenStampForLegacyBlocks = 10000;
 
-    when(fsn.getGenerationStampV1Limit())
+    when(bid.getGenerationStampV1Limit())
         .thenReturn(maxGenStampForLegacyBlocks);
 
     Block legacyBlock = spy(new Block());
@@ -172,9 +164,9 @@ public class TestSequentialBlockId {
 
     // Make sure that isLegacyBlock() can correctly detect
     // legacy and new blocks.
-    when(fsn.isLegacyBlock(any(Block.class))).thenCallRealMethod();
-    assertThat(fsn.isLegacyBlock(legacyBlock), is(true));
-    assertThat(fsn.isLegacyBlock(newBlock), is(false));
+    when(bid.isLegacyBlock(any(Block.class))).thenCallRealMethod();
+    assertThat(bid.isLegacyBlock(legacyBlock), is(true));
+    assertThat(bid.isLegacyBlock(newBlock), is(false));
   }
 
   /**
@@ -185,25 +177,21 @@ public class TestSequentialBlockId {
    */
   @Test
   public void testGenerationStampUpdate() throws IOException {
-
     // Setup a mock object and stub out a few routines to
     // retrieve the generation stamp counters.
-    FSNamesystem fsn = mock(FSNamesystem.class);
-    FSEditLog editLog = mock(FSEditLog.class);
+    BlockIdManager bid = mock(BlockIdManager.class);
     final long nextGenerationStampV1 = 5000;
     final long nextGenerationStampV2 = 20000;
 
-    when(fsn.getNextGenerationStampV1())
+    when(bid.getNextGenerationStampV1())
         .thenReturn(nextGenerationStampV1);
-    when(fsn.getNextGenerationStampV2())
+    when(bid.getNextGenerationStampV2())
         .thenReturn(nextGenerationStampV2);
 
     // Make sure that the generation stamp is set correctly for both
     // kinds of blocks.
-    when(fsn.nextGenerationStamp(anyBoolean())).thenCallRealMethod();
-    when(fsn.hasWriteLock()).thenReturn(true);
-    when(fsn.getEditLog()).thenReturn(editLog);
-    assertThat(fsn.nextGenerationStamp(true), is(nextGenerationStampV1));
-    assertThat(fsn.nextGenerationStamp(false), is(nextGenerationStampV2));
+    when(bid.nextGenerationStamp(anyBoolean())).thenCallRealMethod();
+    assertThat(bid.nextGenerationStamp(true), is(nextGenerationStampV1));
+    assertThat(bid.nextGenerationStamp(false), is(nextGenerationStampV2));
   }
 }
