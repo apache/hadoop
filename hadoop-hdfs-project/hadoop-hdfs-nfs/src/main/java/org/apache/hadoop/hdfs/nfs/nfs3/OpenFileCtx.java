@@ -818,6 +818,42 @@ class OpenFileCtx {
     return ret;
   }
   
+  // Check if the to-commit range is sequential
+  @VisibleForTesting
+  synchronized boolean checkSequential(final long commitOffset,
+      final long nextOffset) {
+    Preconditions.checkState(commitOffset >= nextOffset, "commitOffset "
+        + commitOffset + " less than nextOffset " + nextOffset);
+    long offset = nextOffset;
+    Iterator<OffsetRange> it = pendingWrites.descendingKeySet().iterator();
+    while (it.hasNext()) {
+      OffsetRange range = it.next();
+      if (range.getMin() != offset) {
+        // got a hole
+        return false;
+      }
+      offset = range.getMax();
+      if (offset > commitOffset) {
+        return true;
+      }
+    }
+    // there is gap between the last pending write and commitOffset
+    return false;
+  }
+
+  private COMMIT_STATUS handleSpecialWait(boolean fromRead, long commitOffset,
+      Channel channel, int xid, Nfs3FileAttributes preOpAttr) {
+    if (!fromRead) {
+      // let client retry the same request, add pending commit to sync later
+      CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid, preOpAttr);
+      pendingCommits.put(commitOffset, commitCtx);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("return COMMIT_SPECIAL_WAIT");
+    }
+    return COMMIT_STATUS.COMMIT_SPECIAL_WAIT;
+  }
+  
   @VisibleForTesting
   synchronized COMMIT_STATUS checkCommitInternal(long commitOffset,
       Channel channel, int xid, Nfs3FileAttributes preOpAttr, boolean fromRead) {
@@ -829,11 +865,6 @@ class OpenFileCtx {
         return COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE;
       }
     }
-    if (pendingWrites.isEmpty()) {
-      // Note that, there is no guarantee data is synced. Caller should still
-      // do a sync here though the output stream might be closed.
-      return COMMIT_STATUS.COMMIT_FINISHED;
-    }
 
     long flushed = 0;
     try {
@@ -842,10 +873,33 @@ class OpenFileCtx {
       LOG.error("Can't get flushed offset, error:" + e);
       return COMMIT_STATUS.COMMIT_ERROR;
     }
+    
     if (LOG.isDebugEnabled()) {
-      LOG.debug("getFlushedOffset=" + flushed + " commitOffset=" + commitOffset);
+      LOG.debug("getFlushedOffset=" + flushed + " commitOffset=" + commitOffset
+          + "nextOffset=" + nextOffset.get());
     }
-
+    
+    if (pendingWrites.isEmpty()) {
+      if (aixCompatMode) {
+        // Note that, there is no guarantee data is synced. Caller should still
+        // do a sync here though the output stream might be closed.
+        return COMMIT_STATUS.COMMIT_FINISHED;
+      } else {
+        if (flushed < nextOffset.get()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("get commit while still writing to the requested offset,"
+                + " with empty queue");
+          }
+          return handleSpecialWait(fromRead, nextOffset.get(), channel, xid,
+              preOpAttr);
+        } else {
+          return COMMIT_STATUS.COMMIT_FINISHED;
+        }
+      }
+    }
+    
+    Preconditions.checkState(flushed <= nextOffset.get(), "flushed " + flushed
+        + " is larger than nextOffset " + nextOffset.get());
     // Handle large file upload
     if (uploadLargeFile && !aixCompatMode) {
       long co = (commitOffset > 0) ? commitOffset : pendingWrites.firstEntry()
@@ -854,21 +908,20 @@ class OpenFileCtx {
       if (co <= flushed) {
         return COMMIT_STATUS.COMMIT_DO_SYNC;
       } else if (co < nextOffset.get()) {
-        if (!fromRead) {
-          // let client retry the same request, add pending commit to sync later
-          CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
-              preOpAttr);
-          pendingCommits.put(commitOffset, commitCtx);
-        }
         if (LOG.isDebugEnabled()) {
-          LOG.debug("return COMMIT_SPECIAL_WAIT");
+          LOG.debug("get commit while still writing to the requested offset");
         }
-        return COMMIT_STATUS.COMMIT_SPECIAL_WAIT;
+        return handleSpecialWait(fromRead, co, channel, xid, preOpAttr);
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("return COMMIT_SPECIAL_SUCCESS");
+        // co >= nextOffset
+        if (checkSequential(co, nextOffset.get())) {
+          return handleSpecialWait(fromRead, co, channel, xid, preOpAttr);
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("return COMMIT_SPECIAL_SUCCESS");
+          }
+          return COMMIT_STATUS.COMMIT_SPECIAL_SUCCESS;
         }
-        return COMMIT_STATUS.COMMIT_SPECIAL_SUCCESS;
       }
     }
     

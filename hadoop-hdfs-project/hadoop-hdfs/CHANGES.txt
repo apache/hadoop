@@ -158,6 +158,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7366. BlockInfo should take replication as an short in the constructor.
     (Li Lu via wheat9)
 
+    HDFS-7387. NFS may only do partial commit due to a race between COMMIT and write
+    (brandonli)
+
 Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
