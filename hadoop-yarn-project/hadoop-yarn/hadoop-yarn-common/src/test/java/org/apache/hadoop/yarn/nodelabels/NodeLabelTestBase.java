@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.nodelabels;
 
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,12 +49,10 @@ public class NodeLabelTestBase {
 
   public static void assertCollectionEquals(Collection<String> c1,
       Collection<String> c2) {
-    Assert.assertEquals(c1.size(), c2.size());
-    Iterator<String> i1 = c1.iterator();
-    Iterator<String> i2 = c2.iterator();
-    while (i1.hasNext()) {
-      Assert.assertEquals(i1.next(), i2.next());
-    }
+    Set<String> s1 = new HashSet<String>(c1);
+    Set<String> s2 = new HashSet<String>(c2);
+    Assert.assertEquals(s1, s2);
+    Assert.assertTrue(s1.containsAll(s2));
   }
 
   public static <E> Set<E> toSet(E... elements) {
