@@ -929,6 +929,8 @@ Release 2.6.0 - 2014-11-15
     consistent with the (somewhat incorrect) behaviour in the non-recovery case.
     (Jian He via vinodkv)
 
+    YARN-2841. RMProxy should retry EOFException. (Jian He via xgong)
+
 Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
