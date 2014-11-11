@@ -422,6 +422,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11294. Nfs3FileAttributes should not change the values of rdev,
     nlink and size in the constructor. (Brandon Li via wheat9)
 
+    HADOOP-9576. Changed NetUtils#wrapException to throw EOFException instead
+    of wrapping it as IOException. (Steve Loughran via jianhe)
+
 Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
