@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -737,8 +738,14 @@ public class TestNodeStatusUpdater {
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
         throws YarnException, IOException {
       heartBeatID++;
+      if(heartBeatID == 1) {
+        // EOFException should be retried as well.
+        throw new EOFException("NodeHeartbeat exception");
+      }
+      else {
       throw new java.net.ConnectException(
           "NodeHeartbeat exception");
+      }
     }
   }
 

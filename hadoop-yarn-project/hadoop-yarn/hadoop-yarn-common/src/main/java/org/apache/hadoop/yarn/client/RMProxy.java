@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -240,6 +241,7 @@ public class RMProxy<T> {
     Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
         new HashMap<Class<? extends Exception>, RetryPolicy>();
 
+    exceptionToPolicyMap.put(EOFException.class, retryPolicy);
     exceptionToPolicyMap.put(ConnectException.class, retryPolicy);
     exceptionToPolicyMap.put(NoRouteToHostException.class, retryPolicy);
     exceptionToPolicyMap.put(UnknownHostException.class, retryPolicy);
