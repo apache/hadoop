@@ -65,6 +65,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2735. diskUtilizationPercentageCutoff and diskUtilizationSpaceCutoff 
     are initialized twice in DirectoryCollection. (Zhihai Xu via kasha)
 
+    YARN-570. Time strings are formated in different timezone. 
+    (Akira Ajisaka and Peng Zhang via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
