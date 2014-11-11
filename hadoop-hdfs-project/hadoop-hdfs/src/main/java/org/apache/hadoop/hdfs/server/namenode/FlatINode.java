@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -25,11 +26,17 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  * In-memory representation of an INode.
  */
 public final class FlatINode extends FlatObject {
+  public static final int FEATURE_OFFSET = Encoding.SIZEOF_LONG * 5 +
+    Encoding.SIZEOF_INT;
+
   private FlatINode(ByteString data) {
     super(data);
   }
@@ -132,10 +139,67 @@ public final class FlatINode extends FlatObject {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("INode[");
-    sb.append(isFile() ? "file" : "dir")
-        .append(", id=" + id())
-        .append("]");
+    sb.append(isFile() ? "file" : "dir").append(", id=" + id()).append("]");
     return sb.toString();
+  }
+
+  abstract static class Feature extends FlatObject {
+    protected Feature(ByteString data) {
+      super(data);
+    }
+
+    protected Feature(ByteBuffer data) {
+      super(data);
+    }
+  }
+
+  private int numOfFeatures() {
+    return data.getInt(Encoding.SIZEOF_LONG * 5);
+  }
+
+  public <T extends Feature> T feature(Class<? extends Feature> clazz) {
+    int off = FEATURE_OFFSET;
+    final FlatINodeFeatureId fid = FlatINodeFeatureId.valueOf(clazz);
+    for (int i = 0, e = numOfFeatures(); i < e; ++i) {
+      int typeId = data.getInt(off);
+      int length = data.getInt(off + Encoding.SIZEOF_INT);
+      off += Encoding.SIZEOF_INT * 2;
+      if (typeId == fid.id()) {
+        ByteBuffer b = (ByteBuffer)(data.duplicate().position(off));
+        @SuppressWarnings("unchecked")
+        T ret = (T) fid.wrap((ByteBuffer) b.slice().limit(length));
+        return ret;
+      }
+    }
+    return null;
+  }
+
+  public Iterable<Feature> features() {
+    final int e = numOfFeatures();
+    return new Iterable<Feature>() {
+      @Override
+      public Iterator<Feature> iterator() {
+        return new Iterator<Feature>() {
+          private int i;
+          private int off = FEATURE_OFFSET;
+          @Override
+          public boolean hasNext() {
+            return i < e;
+          }
+
+          @Override
+          public Feature next() {
+            int typeId = data.getInt(off);
+            int length = data.getInt(off + Encoding.SIZEOF_INT);
+            off += Encoding.SIZEOF_INT * 2;
+            ++i;
+            FlatINodeFeatureId fid = FlatINodeFeatureId.valueOf(typeId);
+            ByteBuffer b = (ByteBuffer)(data.duplicate().position(off));
+            return fid.wrap((ByteBuffer) b.slice().limit(length));
+          }
+        };
+      }
+    };
   }
 
   public static class Builder {
@@ -144,6 +208,8 @@ public final class FlatINode extends FlatObject {
     private long parentId;
     private long atime;
     private long mtime;
+    private final HashMap<Class<? extends Feature>, Feature> features = Maps
+      .newHashMap();
 
     Builder type(Type type) {
       this.header = Header.set(Header.TYPE, header, type.value());
@@ -193,15 +259,40 @@ public final class FlatINode extends FlatObject {
       return this;
     }
 
+    Builder addFeature(Feature f) {
+      Feature old = features.put(f.getClass(), f);
+      assert old == null;
+      return this;
+    }
+
+    Builder replaceFeature(Feature f) {
+      features.put(f.getClass(), f);
+      return this;
+    }
+
+    Builder removeFeature(Class<? extends Feature> clazz) {
+      features.remove(clazz);
+      return this;
+    }
+
     Builder mergeFrom(FlatINode o) {
       header = o.header();
       id(o.id()).parentId(o.parentId()).mtime(o.mtime()).atime(o.atime());
+      features.clear();
+      for (Feature f : o.features()) {
+        addFeature(f);
+      }
       return this;
     }
 
     ByteString build() {
       Preconditions.checkState(id != 0);
-      byte[] res = new byte[4 * Encoding.SIZEOF_LONG];
+      int size = 5 * Encoding.SIZEOF_LONG + Encoding.SIZEOF_INT;
+      for (Feature f : features.values()) {
+        size += Encoding.SIZEOF_INT * 2 + f.asReadOnlyByteBuffer().remaining();
+      }
+
+      byte[] res = new byte[size];
       CodedOutputStream o = CodedOutputStream.newInstance(res);
       try {
         o.writeFixed64NoTag(header);
@@ -209,6 +300,14 @@ public final class FlatINode extends FlatObject {
         o.writeFixed64NoTag(parentId);
         o.writeFixed64NoTag(atime);
         o.writeFixed64NoTag(mtime);
+        o.writeFixed32NoTag(features.size());
+        for (Feature f : features.values()) {
+          FlatINodeFeatureId fid = FlatINodeFeatureId.valueOf(f.getClass());
+          o.writeFixed32NoTag(fid.id());
+          o.writeFixed32NoTag(f.data.remaining());
+          ByteString b = ByteString.copyFrom(f.data.asReadOnlyBuffer());
+          o.writeRawBytes(b);
+        }
         o.flush();
       } catch (IOException ignored) {
       }
