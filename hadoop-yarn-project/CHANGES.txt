@@ -45,6 +45,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2713. "RM Home" link in NM should point to one of the RMs in an 
     HA setup. (kasha)
 
+    YARN-2841. RMProxy should retry EOFException. (Jian He via xgong)
+
 Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
@@ -901,8 +903,6 @@ Release 2.6.0 - 2014-11-15
     YARN-2834. Fixed ResourceManager to ignore token-renewal failures on recovery
     consistent with the (somewhat incorrect) behaviour in the non-recovery case.
     (Jian He via vinodkv)
-
-    YARN-2841. RMProxy should retry EOFException. (Jian He via xgong)
 
 Release 2.5.2 - 2014-11-10
 
