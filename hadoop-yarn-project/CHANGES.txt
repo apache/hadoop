@@ -35,6 +35,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2712. TestWorkPreservingRMRestart: Augment FS tests with
     queue and headroom checks. (Tsuyoshi Ozawa via kasha)
 
+    YARN-2735. diskUtilizationPercentageCutoff and diskUtilizationSpaceCutoff 
+    are initialized twice in DirectoryCollection. (Zhihai Xu via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
