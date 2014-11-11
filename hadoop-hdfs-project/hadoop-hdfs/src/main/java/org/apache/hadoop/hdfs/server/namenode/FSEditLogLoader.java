@@ -533,7 +533,7 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V1: {
       SetGenstampV1Op setGenstampV1Op = (SetGenstampV1Op)op;
-      fsNamesys.setGenerationStampV1(setGenstampV1Op.genStampV1);
+      fsNamesys.getBlockIdManager().setGenerationStampV1(setGenstampV1Op.genStampV1);
       break;
     }
     case OP_SET_PERMISSIONS: {
@@ -726,12 +726,12 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V2: {
       SetGenstampV2Op setGenstampV2Op = (SetGenstampV2Op) op;
-      fsNamesys.setGenerationStampV2(setGenstampV2Op.genStampV2);
+      fsNamesys.getBlockIdManager().setGenerationStampV2(setGenstampV2Op.genStampV2);
       break;
     }
     case OP_ALLOCATE_BLOCK_ID: {
       AllocateBlockIdOp allocateBlockIdOp = (AllocateBlockIdOp) op;
-      fsNamesys.setLastAllocatedBlockId(allocateBlockIdOp.blockId);
+      fsNamesys.getBlockIdManager().setLastAllocatedBlockId(allocateBlockIdOp.blockId);
       break;
     }
     case OP_ROLLING_UPGRADE_START: {

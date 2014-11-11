@@ -95,6 +95,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7365. Remove hdfs.server.blockmanagement.MutableBlockCollection.
     (Li Lu via wheat9)
 
+    HDFS-7381. Decouple the management of block id and gen stamps from
+    FSNamesystem. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

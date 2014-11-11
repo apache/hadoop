@@ -342,24 +342,26 @@ public class FSImageFormat {
 
         // read in the last generation stamp for legacy blocks.
         long genstamp = in.readLong();
-        namesystem.setGenerationStampV1(genstamp);
-        
+        namesystem.getBlockIdManager().setGenerationStampV1(genstamp);
+
         if (NameNodeLayoutVersion.supports(
             LayoutVersion.Feature.SEQUENTIAL_BLOCK_ID, imgVersion)) {
           // read the starting generation stamp for sequential block IDs
           genstamp = in.readLong();
-          namesystem.setGenerationStampV2(genstamp);
+          namesystem.getBlockIdManager().setGenerationStampV2(genstamp);
 
           // read the last generation stamp for blocks created after
           // the switch to sequential block IDs.
           long stampAtIdSwitch = in.readLong();
-          namesystem.setGenerationStampV1Limit(stampAtIdSwitch);
+          namesystem.getBlockIdManager().setGenerationStampV1Limit(stampAtIdSwitch);
 
           // read the max sequential block ID.
           long maxSequentialBlockId = in.readLong();
-          namesystem.setLastAllocatedBlockId(maxSequentialBlockId);
+          namesystem.getBlockIdManager().setLastAllocatedBlockId(maxSequentialBlockId);
         } else {
-          long startingGenStamp = namesystem.upgradeGenerationStampToV2();
+
+          long startingGenStamp = namesystem.getBlockIdManager()
+            .upgradeGenerationStampToV2();
           // This is an upgrade.
           LOG.info("Upgrading to sequential block IDs. Generation stamp " +
                    "for new blocks set to " + startingGenStamp);
@@ -1256,10 +1258,10 @@ public class FSImageFormat {
         out.writeInt(sourceNamesystem.unprotectedGetNamespaceInfo()
             .getNamespaceID());
         out.writeLong(numINodes);
-        out.writeLong(sourceNamesystem.getGenerationStampV1());
-        out.writeLong(sourceNamesystem.getGenerationStampV2());
-        out.writeLong(sourceNamesystem.getGenerationStampAtblockIdSwitch());
-        out.writeLong(sourceNamesystem.getLastAllocatedBlockId());
+        out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampV1());
+        out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampV2());
+        out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampAtblockIdSwitch());
+        out.writeLong(sourceNamesystem.getBlockIdManager().getLastAllocatedBlockId());
         out.writeLong(context.getTxId());
         out.writeLong(sourceNamesystem.getLastInodeId());
 
