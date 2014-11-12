@@ -1122,9 +1122,9 @@ public class ResourceLocalizationService extends CompositeService
       if (systemCredentials == null) {
         return null;
       }
-      for (Token<?> token : systemCredentials.getAllTokens()) {
-        LOG.info("Adding new framework-token for " + appId
-            + " for localization: " + token);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adding new framework-token for " + appId
+            + " for localization: " + systemCredentials.getAllTokens());
       }
       return systemCredentials;
     }
