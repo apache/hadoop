@@ -865,6 +865,9 @@ Release 2.6.0 - 2014-11-15
     YARN-2843. Fixed NodeLabelsManager to trim inputs for hosts and labels so
     as to make them work correctly. (Wangda Tan via vinodkv)
 
+    YARN-2794. Fixed log messages about distributing system-credentials. (Jian He via
+    zjshen)
+
 Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES

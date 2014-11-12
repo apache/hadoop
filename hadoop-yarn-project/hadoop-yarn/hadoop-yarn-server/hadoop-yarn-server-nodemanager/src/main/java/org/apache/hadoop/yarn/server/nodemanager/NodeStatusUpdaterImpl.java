@@ -552,7 +552,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       map.put(entry.getKey(), credentials);
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Retrieved credentials form RM: " + map);
+      for (Map.Entry<ApplicationId, Credentials> entry : map.entrySet()) {
+        LOG.debug("Retrieved credentials form RM for " + entry.getKey() + ": "
+            + entry.getValue().getAllTokens());
+      }
     }
     return map;
   }
