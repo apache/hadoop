@@ -130,7 +130,8 @@ public class TestReplicationPolicyConsiderLoad {
       final int load = 2 + 4 + 4;
       
       FSNamesystem fsn = namenode.getNamesystem();
-      assertEquals((double)load/6, fsn.getInServiceXceiverAverage(), EPSILON);
+      assertEquals((double)load/6, dnManager.getFSClusterStats()
+        .getInServiceXceiverAverage(), EPSILON);
       
       // Decommission DNs so BlockPlacementPolicyDefault.isGoodTarget()
       // returns false
@@ -139,7 +140,8 @@ public class TestReplicationPolicyConsiderLoad {
         dnManager.startDecommission(d);
         d.setDecommissioned();
       }
-      assertEquals((double)load/3, fsn.getInServiceXceiverAverage(), EPSILON);
+      assertEquals((double)load/3, dnManager.getFSClusterStats()
+        .getInServiceXceiverAverage(), EPSILON);
 
       // update references of writer DN to update the de-commissioned state
       List<DatanodeDescriptor> liveNodes = new ArrayList<DatanodeDescriptor>();
