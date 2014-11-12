@@ -16,53 +16,25 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS3_COMMON_STATUS_H_
-#define _HDFS_LIBHDFS3_COMMON_STATUS_H_
+#ifndef _HDFS_LIBHDFS3_COMMON_ATOI_H_
+#define _HDFS_LIBHDFS3_COMMON_ATOI_H_
 
-#include <string>
+#include "StatusInternal.h"
+
+#include <stdint.h>
 
 namespace hdfs {
+namespace internal {
 
-class Status {
-public:
-    Status();
+  Status StrToInt32(const char *str, int32_t *ret);
 
-    Status(int code);
+  Status StrToInt64(const char *str, int64_t *ret);
 
-    Status(int code, const std::string &msg);
+  Status StrToBool(const char *str, bool *ret);
 
-    bool operator==(const Status &other) const {
-        return code == other.code;
-    }
+  Status StrToDouble(const char *str, double *ret);
 
-    bool isError() const {
-        return code != 0;
-    }
-
-    int getCode() const {
-        return code;
-    }
-
-    const char *getErrorMsg() {
-        return msg.c_str();
-    }
-
-    static Status OK() {
-        return Status();
-    }
-
-private:
-    int code;
-    std::string msg;
-};
+}
 }
 
-#define RETURN_NOT_OK(expr) \
-    do { \
-        Status s = expr; \
-        if (s.isError()) { \
-            return s; \
-        } \
-    } while (0);
-
-#endif /* _HDFS_LIBHDFS3_COMMON_STATUS_H_ */
+#endif

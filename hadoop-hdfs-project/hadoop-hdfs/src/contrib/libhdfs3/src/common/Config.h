@@ -27,49 +27,15 @@
 
 namespace hdfs {
 
-class FileSystem;
-class NamenodeInfo;
-
-namespace internal {
-class ConfigImpl;
-class FileSystemImpl;
-}
-
 /**
  * A configure file parser.
  */
 class Config {
 public:
     /**
-     * Create an instance from a XML file
-     * @param path the path of the configure file.
-     */
-    static Config CreateFromXmlFile(const std::string &path);
-
-    /**
      * Construct a empty Config instance.
      */
-    Config();
-
-    /**
-     * Copy constructor
-     */
-    Config(const Config &other);
-
-    /**
-     * Assignment operator.
-     */
-    Config &operator=(const Config &other);
-
-    /**
-     * Operator equal
-     */
-    bool operator==(const Config &other) const;
-
-    /**
-     * Destroy this instance
-     */
-    ~Config();
+    explicit Config();
 
     /**
      * Get a string with given configure key.
@@ -96,7 +62,7 @@ public:
      * @param output the pointer of the output parameter.
      * @return the result status of this operation
      */
-    Status getInt64(const std::string &key, std::string *output) const;
+    Status getInt64(const std::string &key, int64_t *output) const;
 
     /**
      * Get a 64 bit integer with given configure key.
@@ -107,7 +73,7 @@ public:
      * @return the result status of this operation
      */
     Status getInt64(const std::string &key, int64_t def,
-                    std::string *output) const;
+                    int64_t *output) const;
 
     /**
      * Get a 32 bit integer with given configure key.
@@ -115,7 +81,7 @@ public:
      * @param output the pointer of the output parameter.
      * @return the result status of this operation
      */
-    Status getInt32(const std::string &key, std::string *output) const;
+    Status getInt32(const std::string &key, int32_t *output) const;
 
     /**
      * Get a 32 bit integer with given configure key.
@@ -126,7 +92,7 @@ public:
      * @return the result status of this operation
      */
     Status getInt32(const std::string &key, int32_t def,
-                    std::string *output) const;
+                    int32_t *output) const;
 
     /**
      * Get a double with given configure key.
@@ -134,7 +100,7 @@ public:
      * @param output the pointer of the output parameter.
      * @return the result status of this operation
      */
-    Status getDouble(const std::string &key, std::string *output) const;
+    Status getDouble(const std::string &key, double *output) const;
 
     /**
      * Get a double with given configure key.
@@ -145,7 +111,7 @@ public:
      * @return the result status of this operation
      */
     Status getDouble(const std::string &key, double def,
-                     std::string *output) const;
+                     double *output) const;
 
     /**
      * Get a boolean with given configure key.
@@ -153,7 +119,7 @@ public:
      * @param output the pointer of the output parameter.
      * @return the result status of this operation
      */
-    Status getBool(const std::string &key, std::string *output) const;
+    Status getBool(const std::string &key, bool *output) const;
 
     /**
      * Get a boolean with given configure key.
@@ -163,7 +129,7 @@ public:
      * @param output the pointer of the output parameter.
      * @return the result status of this operation
      */
-    Status getBool(const std::string &key, bool def, std::string *output) const;
+    Status getBool(const std::string &key, bool def, bool *output) const;
 
     /**
      * Set a configure item
@@ -200,18 +166,8 @@ public:
      */
     void set(const std::string &key, bool value);
 
-    /**
-     * Get the hash value of this object
-     * @return The hash value
-     */
-    size_t hash_value() const;
-
 private:
-    Config(hdfs::internal::ConfigImpl *impl);
-    hdfs::internal::ConfigImpl *impl;
-    friend class hdfs::FileSystem;
-    friend class hdfs::internal::FileSystemImpl;
-    friend class hdfs::NamenodeInfo;
+    std::map<std::string, std::string> map_;
 };
 }
 

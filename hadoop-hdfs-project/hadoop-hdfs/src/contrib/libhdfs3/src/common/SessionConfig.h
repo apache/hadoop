@@ -19,7 +19,6 @@
 #ifndef _HDFS_LIBHDFS3_COMMON_SESSIONCONFIG_H_
 #define _HDFS_LIBHDFS3_COMMON_SESSIONCONFIG_H_
 
-#include "ConfigImpl.h"
 #include "Exception.h"
 #include "ExceptionInternal.h"
 #include "Function.h"
@@ -27,7 +26,10 @@
 
 #include <cassert>
 #include <stdint.h>
-#include <vector>
+
+namespace hdfs {
+class Config;
+}
 
 namespace hdfs {
 namespace internal {
@@ -43,7 +45,7 @@ struct ConfigDefault {
 
 class SessionConfig {
 public:
-    SessionConfig(const ConfigImpl &conf);
+    explicit SessionConfig(const hdfs::Config &conf);
 
     /*
      * rpc configure

@@ -18,13 +18,16 @@
 
 #include "SessionConfig.h"
 
-#include <sstream>
-
+#include "Config.h"
 #include "Exception.h"
 #include "ExceptionInternal.h"
 #include "Function.h"
 
+#include <sstream>
+
 #define ARRAYSIZE(A) (sizeof(A) / sizeof(A[0]))
+
+using hdfs::Config;
 
 namespace hdfs {
 namespace internal {
@@ -48,7 +51,7 @@ static void CheckMultipleOf(const char *key, const T &value, int unit) {
     }
 }
 
-SessionConfig::SessionConfig(const ConfigImpl &conf) {
+SessionConfig::SessionConfig(const Config &conf) {
     ConfigDefault<bool> boolValues[] = {
         {&rpcTcpNoDelay, "rpc.client.connect.tcpnodelay", true},
         {&readFromLocal, "dfs.client.read.shortcircuit", true},
@@ -104,8 +107,11 @@ SessionConfig::SessionConfig(const ConfigImpl &conf) {
         {&logSeverity, "dfs.client.log.severity", "INFO"}};
 
     for (size_t i = 0; i < ARRAYSIZE(boolValues); ++i) {
-        *boolValues[i].variable =
-            conf.getBool(boolValues[i].key, boolValues[i].value);
+        Status status = conf.getBool(boolValues[i].key,
+                              boolValues[i].value, boolValues[i].variable);
+        if (status.isError()) {
+            THROW(HdfsConfigInvalid, "%s", status.getErrorMsg());
+        }
 
         if (boolValues[i].check) {
             boolValues[i].check(boolValues[i].key, *boolValues[i].variable);
@@ -113,8 +119,11 @@ SessionConfig::SessionConfig(const ConfigImpl &conf) {
     }
 
     for (size_t i = 0; i < ARRAYSIZE(i32Values); ++i) {
-        *i32Values[i].variable =
-            conf.getInt32(i32Values[i].key, i32Values[i].value);
+        Status status = conf.getInt32(i32Values[i].key,
+                              i32Values[i].value, i32Values[i].variable);
+        if (status.isError()) {
+            THROW(HdfsConfigInvalid, "%s", status.getErrorMsg());
+        }
 
         if (i32Values[i].check) {
             i32Values[i].check(i32Values[i].key, *i32Values[i].variable);
@@ -122,8 +131,11 @@ SessionConfig::SessionConfig(const ConfigImpl &conf) {
     }
 
     for (size_t i = 0; i < ARRAYSIZE(i64Values); ++i) {
-        *i64Values[i].variable =
-            conf.getInt64(i64Values[i].key, i64Values[i].value);
+        Status status = conf.getInt64(i64Values[i].key,
+                              i64Values[i].value, i64Values[i].variable);
+        if (status.isError()) {
+            THROW(HdfsConfigInvalid, "%s", status.getErrorMsg());
+        }
 
         if (i64Values[i].check) {
             i64Values[i].check(i64Values[i].key, *i64Values[i].variable);
@@ -131,8 +143,12 @@ SessionConfig::SessionConfig(const ConfigImpl &conf) {
     }
 
     for (size_t i = 0; i < ARRAYSIZE(strValues); ++i) {
-        *strValues[i].variable =
-            conf.getString(strValues[i].key, strValues[i].value.c_str());
+        Status status = conf.getString(strValues[i].key,
+                              strValues[i].value.c_str(),
+                              strValues[i].variable);
+        if (status.isError()) {
+            THROW(HdfsConfigInvalid, "%s", status.getErrorMsg());
+        }
 
         if (strValues[i].check) {
             strValues[i].check(strValues[i].key, *strValues[i].variable);

@@ -19,10 +19,13 @@
 #ifndef _HDFS_LIBHDFS3_COMMON_XMLCONFIGPARSER_H_
 #define _HDFS_LIBHDFS3_COMMON_XMLCONFIGPARSER_H_
 
-#include <stdint.h>
+#include "StatusInternal.h"
+
 #include <string>
-#include <sstream>
-#include <map>
+
+namespace hdfs {
+class Config;
+}
 
 namespace hdfs {
 namespace internal {
@@ -32,37 +35,32 @@ namespace internal {
  */
 class XmlConfigParser {
 public:
-    /**
-     * Construct a empty Config instance.
-     */
-    XmlConfigParser() {
-    }
+    XmlConfigParser(hdfs::Config *conf);
 
     /**
-     * Construct a Config with given configure file.
-     * @param path The path of configure file.
-     * @throw HdfsBadConfigFoumat
+     * Parse a colon-separated list of paths for HDFS configuration files.
+     * The format is the same as that of CLASSPATH.
+     *
+     * Even when an error is returned, we may still load some entries into the
+     * Config file.
      */
-    XmlConfigParser(const char *path);
+    Status ParseXmls(const std::string &pathList);
 
     /**
-     * Parse the configure file.
-     * @throw HdfsBadConfigFoumat
+     * Parse a single XML file.
+     *
+     * Even when an error is returned, we may still load some entries into the
+     * Config file.
      */
-    void update(const char *path);
-
-    /**
-     * Get Key Values
-     * @return Return the Key Value pairs.
-     */
-    std::map<std::string, std::string> getKeyValue() {
-        return kv;
-    }
+    Status ParseXml(const std::string &path);
 
 private:
-    std::string path;
-    std::map<std::string, std::string> kv;
+    XmlConfigParser(const XmlConfigParser &);
+    XmlConfigParser &operator=(const XmlConfigParser &);
+
+    hdfs::Config *conf_;
 };
+
 }
 }
 

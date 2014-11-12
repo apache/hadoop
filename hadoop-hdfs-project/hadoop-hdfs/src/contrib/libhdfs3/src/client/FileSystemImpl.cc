@@ -34,7 +34,6 @@
 #include <cstring>
 #include <deque>
 #include <inttypes.h>
-#include <libxml/uri.h>
 #include <strings.h>
 
 using std::string;
@@ -99,7 +98,7 @@ FileSystemImpl::FileSystemImpl(const FileSystemKey &key, const Config &c)
       key(key),
       leaseRenewer(this),
       nn(NULL),
-      sconf(*c.impl),
+      sconf(c),
       user(key.getUser()) {
     static atomic<uint32_t> count(0);
     std::stringstream ss;

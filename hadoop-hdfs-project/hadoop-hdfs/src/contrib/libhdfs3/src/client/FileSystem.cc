@@ -131,7 +131,7 @@ static std::string ExtractPrincipalFromToken(const Token &token) {
 }
 }
 
-FileSystem::FileSystem(const Config &conf) : conf(conf) {
+FileSystem::FileSystem(const Config &conf) : conf_(conf) {
 }
 
 FileSystem::~FileSystem() {
@@ -140,7 +140,7 @@ FileSystem::~FileSystem() {
 
 Status FileSystem::connect() {
     try {
-        internal::SessionConfig sconf(*conf.impl);
+        internal::SessionConfig sconf(conf_);
         return connect(sconf.getDefaultUri().c_str(), NULL, NULL);
     } catch (...) {
         return CreateStatusFromException(current_exception());
@@ -183,14 +183,14 @@ Status FileSystem::connect(const std::string &uri, const std::string &username,
     CHECK_PARAMETER(!impl, EIO, "FileSystem: already connected.");
 
     try {
-        SessionConfig sconf(*conf.impl);
+        SessionConfig sconf(conf_);
         auth = RpcAuth::ParseMethod(sconf.getRpcAuthMethod());
 
         if (!token.empty() && auth != AuthMethod::SIMPLE) {
             Token t;
             t.fromString(token);
             principal = ExtractPrincipalFromToken(t);
-            impl = ConnectInternal(uri, principal, &t, conf);
+            impl = ConnectInternal(uri, principal, &t, conf_);
             impl->connect();
             return Status::OK();
         } else if (!username.empty()) {
@@ -202,7 +202,7 @@ Status FileSystem::connect(const std::string &uri, const std::string &username,
                 ExtractPrincipalFromTicketCache(sconf.getKerberosCachePath());
         }
 
-        impl = ConnectInternal(uri, principal, NULL, conf);
+        impl = ConnectInternal(uri, principal, NULL, conf_);
         impl->connect();
     } catch (...) {
         impl.reset();

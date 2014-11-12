@@ -16,198 +16,182 @@
  * limitations under the License.
  */
 
+#include "Atoi.h"
 #include "Config.h"
-#include "ConfigImpl.h"
-#include "XmlConfigParser.h"
 #include "StatusInternal.h"
 
+#include <inttypes.h>
+#include <map>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string>
+
 using namespace hdfs::internal;
+using std::string;
+
+typedef std::map<std::string, std::string> map_t;
+
 
 namespace hdfs {
 
-Config Config::CreateFromXmlFile(const std::string &path) {
-    return Config(new ConfigImpl(XmlConfigParser(path.c_str()).getKeyValue()));
-}
-
-Config::Config() : impl(new ConfigImpl) {
-}
-
-Config::Config(const Config &other) {
-    impl = new ConfigImpl(*other.impl);
-}
-
-Config::Config(ConfigImpl *impl) : impl(impl) {
-}
-
-Config &Config::operator=(const Config &other) {
-    if (this == &other) {
-        return *this;
-    }
-
-    ConfigImpl *temp = impl;
-    impl = new ConfigImpl(*other.impl);
-    delete temp;
-    return *this;
-}
-
-bool Config::operator==(const Config &other) const {
-    if (this == &other) {
-        return true;
-    }
-
-    return *impl == *other.impl;
-}
-
-Config::~Config() {
-    delete impl;
+Config::Config() {
 }
 
 Status Config::getString(const std::string &key, std::string *output) const {
-    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
-
-    try {
-        *output = impl->getString(key.c_str());
-    } catch (...) {
-        return CreateStatusFromException(current_exception());
+    map_t::const_iterator i = map_.find(key);
+    if (i == map_.end()) {
+        return Status(ENOENT, "Configuration key " + key + " was not found.");
     }
-
+    *output = i->second;
     return Status::OK();
 }
 
 Status Config::getString(const std::string &key, const std::string &def,
                          std::string *output) const {
-    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
-
-    try {
-        *output = impl->getString(key.c_str(), def.c_str());
-    } catch (...) {
-        return CreateStatusFromException(current_exception());
+    map_t::const_iterator i = map_.find(key);
+    if (i == map_.end()) {
+        *output = def;
     }
-
+    *output = i->second;
     return Status::OK();
 }
 
-Status Config::getInt64(const std::string &key, std::string *output) const {
-    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
-
-    try {
-        *output = impl->getInt64(key.c_str());
-    } catch (...) {
-        return CreateStatusFromException(current_exception());
+Status Config::getInt64(const std::string &key, int64_t *output) const {
+    string out;
+    Status status = getString(key, &out);
+    if (status.isError()) {
+        return status;
     }
-
+    status = StrToInt64(out.c_str(), output);
+    if (status.isError()) {
+        return status;
+    }
     return Status::OK();
 }
 
 Status Config::getInt64(const std::string &key, int64_t def,
-                        std::string *output) const {
-    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
-
-    try {
-        *output = impl->getInt64(key.c_str(), def);
-    } catch (...) {
-        return CreateStatusFromException(current_exception());
+                        int64_t *output) const {
+    string out;
+    Status status = getString(key, &out);
+    if (status.isError()) {
+        *output = def;
+        return Status::OK();
     }
-
+    status = StrToInt64(out.c_str(), output);
+    if (status.isError()) {
+        return status;
+    }
     return Status::OK();
 }
 
-Status Config::getInt32(const std::string &key, std::string *output) const {
-    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
-
-    try {
-        *output = impl->getInt32(key.c_str());
-    } catch (...) {
-        return CreateStatusFromException(current_exception());
+Status Config::getInt32(const std::string &key, int32_t *output) const {
+    std::string out;
+    Status status = getString(key, &out);
+    if (status.isError()) {
+        return status;
     }
-
+    status = StrToInt32(out.c_str(), output);
+    if (status.isError()) {
+        return status;
+    }
     return Status::OK();
 }
 
 Status Config::getInt32(const std::string &key, int32_t def,
-                        std::string *output) const {
-    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
-
-    try {
-        *output = impl->getInt32(key.c_str(), def);
-    } catch (...) {
-        return CreateStatusFromException(current_exception());
+                        int32_t *output) const {
+    string out;
+    Status status = getString(key, &out);
+    if (status.isError()) {
+        *output = def;
+        return Status::OK();
     }
-
+    status = StrToInt32(out.c_str(), output);
+    if (status.isError()) {
+        return status;
+    }
     return Status::OK();
 }
 
-Status Config::getDouble(const std::string &key, std::string *output) const {
-    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
-
-    try {
-        *output = impl->getDouble(key.c_str());
-    } catch (...) {
-        return CreateStatusFromException(current_exception());
+Status Config::getDouble(const std::string &key, double *output) const {
+    string out;
+    Status status = getString(key, &out);
+    if (status.isError()) {
+        return status;
     }
-
+    status = StrToDouble(out.c_str(), output);
+    if (status.isError()) {
+        return status;
+    }
     return Status::OK();
 }
 
 Status Config::getDouble(const std::string &key, double def,
-                         std::string *output) const {
-    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
-
-    try {
-        *output = impl->getDouble(key.c_str(), def);
-    } catch (...) {
-        return CreateStatusFromException(current_exception());
+                         double *output) const {
+    string out;
+    Status status = getString(key, &out);
+    if (status.isError()) {
+        *output = def;
+        return Status::OK();
     }
-
+    status = StrToDouble(out.c_str(), output);
+    if (status.isError()) {
+        return status;
+    }
     return Status::OK();
 }
 
-Status Config::getBool(const std::string &key, std::string *output) const {
-    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
-
-    try {
-        *output = impl->getBool(key.c_str());
-    } catch (...) {
-        return CreateStatusFromException(current_exception());
+Status Config::getBool(const std::string &key, bool *output) const {
+    string out;
+    Status status = getString(key, &out);
+    if (status.isError()) {
+        return status;
     }
-
+    status = StrToBool(out.c_str(), output);
+    if (status.isError()) {
+        return status;
+    }
     return Status::OK();
 }
 
 Status Config::getBool(const std::string &key, bool def,
-                       std::string *output) const {
-    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
-
-    try {
-        *output = impl->getBool(key.c_str(), def);
-    } catch (...) {
-        return CreateStatusFromException(current_exception());
+                       bool *output) const {
+    string out;
+    Status status = getString(key, &out);
+    if (status.isError()) {
+        *output = def;
+        return Status::OK();
     }
-
+    status = StrToBool(out.c_str(), output);
+    if (status.isError()) {
+        return status;
+    }
     return Status::OK();
 }
 
 void Config::set(const std::string &key, const std::string &value) {
-    impl->set(key.c_str(), value);
+    map_[key] = value;
 }
 
 void Config::set(const std::string &key, int32_t value) {
-    impl->set(key.c_str(), value);
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%" PRId32, value);
+    set(key.c_str(), string(buf));
 }
 
 void Config::set(const std::string &key, int64_t value) {
-    impl->set(key.c_str(), value);
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%" PRId64, value);
+    set(key.c_str(), string(buf));
 }
 
 void Config::set(const std::string &key, double value) {
-    impl->set(key.c_str(), value);
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%f", value);
+    set(key.c_str(), string(buf));
 }
 
 void Config::set(const std::string &key, bool value) {
-    impl->set(key.c_str(), value);
+    set(key.c_str(), value ? string("true") : string("false"));
 }
 
-size_t Config::hash_value() const {
-    return impl->hash_value();
-}
 }

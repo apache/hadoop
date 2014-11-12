@@ -267,7 +267,7 @@ public:
 private:
     FileSystem(const FileSystem &other);
     FileSystem &operator=(const FileSystem &other);
-    Config conf;
+    Config conf_;
     hdfs::internal::shared_ptr<internal::FileSystemImpl> impl;
 
     friend class InputStream;

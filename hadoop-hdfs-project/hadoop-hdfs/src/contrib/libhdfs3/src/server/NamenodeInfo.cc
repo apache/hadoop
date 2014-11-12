@@ -17,7 +17,6 @@
  */
 
 #include "Config.h"
-#include "ConfigImpl.h"
 #include "NamenodeInfo.h"
 #include "StatusInternal.h"
 #include "StringUtil.h"
@@ -26,6 +25,7 @@
 #include <vector>
 
 using namespace hdfs::internal;
+using std::string;
 
 namespace hdfs {
 
@@ -38,28 +38,32 @@ const char *const DFS_NAMENODE_RPC_ADDRESS_KEY = "dfs.namenode.rpc-address";
 const char *const DFS_NAMENODE_HTTP_ADDRESS_KEY = "dfs.namenode.http-address";
 
 Status NamenodeInfo::GetHANamenodeInfo(const std::string &service,
-                                       const Config &c,
+                                       const Config &conf,
                                        std::vector<NamenodeInfo> *output) {
-    ConfigImpl &conf = *c.impl;
     CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
 
     try {
+        std::string strNameNodes;
         std::vector<NamenodeInfo> &retval = *output;
-        std::string strNameNodes = StringTrim(
-            conf.getString(std::string(DFS_NAMENODE_HA) + "." + service));
+        RETURN_NOT_OK(conf.getString(
+                std::string(DFS_NAMENODE_HA) + "." + service, &strNameNodes));
         std::vector<std::string> nns = StringSplit(strNameNodes, ",");
         retval.resize(nns.size());
 
         for (size_t i = 0; i < nns.size(); ++i) {
-            std::string dfsRpcAddress =
+            std::string dfsRpcAddressKey =
                 StringTrim(std::string(DFS_NAMENODE_RPC_ADDRESS_KEY) + "." +
                            service + "." + StringTrim(nns[i]));
-            std::string dfsHttpAddress =
+            string rpcAddress;
+            RETURN_NOT_OK(conf.getString(dfsRpcAddressKey, "", &rpcAddress));
+            retval[i].setRpcAddr(StringTrim(rpcAddress));
+
+            std::string dfsHttpAddressKey =
                 StringTrim(std::string(DFS_NAMENODE_HTTP_ADDRESS_KEY) + "." +
                            service + "." + StringTrim(nns[i]));
-            retval[i].setRpcAddr(StringTrim(conf.getString(dfsRpcAddress, "")));
-            retval[i].setHttpAddr(
-                StringTrim(conf.getString(dfsHttpAddress, "")));
+            string httpAddress;
+            RETURN_NOT_OK(conf.getString(dfsHttpAddressKey, "", &httpAddress));
+            retval[i].setHttpAddr(StringTrim(httpAddress));
         }
 
     } catch (...) {

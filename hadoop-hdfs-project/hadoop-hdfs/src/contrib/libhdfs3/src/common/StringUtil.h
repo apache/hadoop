@@ -24,6 +24,14 @@
 #include <vector>
 #include <cctype>
 
+const char *const HDFS_XML_NAMES[] = {
+    "core-default.xml",
+    "core-site.xml",
+    "hdfs-default.xml",
+    "hdfs-site.xml",
+    NULL
+};
+
 namespace hdfs {
 namespace internal {
 
