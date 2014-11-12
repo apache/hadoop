@@ -317,7 +317,7 @@ public class NodeManager extends CompositeService
     protected final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
 
-    private Map<ApplicationId, Credentials> systemCredentials =
+    private volatile Map<ApplicationId, Credentials> systemCredentials =
         new HashMap<ApplicationId, Credentials>();
 
     protected final ConcurrentMap<ContainerId, Container> containers =
