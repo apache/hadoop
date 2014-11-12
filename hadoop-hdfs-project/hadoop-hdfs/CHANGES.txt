@@ -353,6 +353,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7381. Decouple the management of block id and gen stamps from
     FSNamesystem. (wheat9)
 
+    HDFS-7375. Move FSClusterStats to o.a.h.h.hdfs.server.blockmanagement.
+    (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
