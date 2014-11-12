@@ -57,7 +57,7 @@ public class TestKillAMPreemptionPolicy {
   public void testKillAMPreemptPolicy() {
 
     ApplicationId appId = ApplicationId.newInstance(123456789, 1);
-    ContainerId container = ContainerId.newInstance(
+    ContainerId container = ContainerId.newContainerId(
         ApplicationAttemptId.newInstance(appId, 1), 1);
     AMPreemptionPolicy.Context mPctxt = mock(AMPreemptionPolicy.Context.class);
     when(mPctxt.getTaskAttempt(any(ContainerId.class))).thenReturn(

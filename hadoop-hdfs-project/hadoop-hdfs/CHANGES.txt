@@ -350,6 +350,12 @@ Release 2.7.0 - UNRELEASED
     HDFS-7365. Remove hdfs.server.blockmanagement.MutableBlockCollection.
     (Li Lu via wheat9)
 
+    HDFS-7381. Decouple the management of block id and gen stamps from
+    FSNamesystem. (wheat9)
+
+    HDFS-7375. Move FSClusterStats to o.a.h.h.hdfs.server.blockmanagement.
+    (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -407,7 +413,13 @@ Release 2.7.0 - UNRELEASED
     HDFS-7366. BlockInfo should take replication as an short in the constructor.
     (Li Lu via wheat9)
 
-Release 2.6.0 - UNRELEASED
+    HDFS-7387. NFS may only do partial commit due to a race between COMMIT and write
+    (brandonli)
+
+    HDFS-7389. Named user ACL cannot stop the user from accessing the FS entity.
+    (Vinayakumar B via cnauroth)
+
+Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
 
@@ -1415,7 +1427,10 @@ Release 2.6.0 - UNRELEASED
     HDFS-7382. DataNode in secure mode may throw NullPointerException if client
     connects before DataNode registers itself with NameNode. (cnauroth)
 
-Release 2.5.2 - UNRELEASED
+    HDFS-7383. DataNode.requestShortCircuitFdsForRead may throw 
+    NullPointerException. (szetszwo via suresh)
+
+Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
 

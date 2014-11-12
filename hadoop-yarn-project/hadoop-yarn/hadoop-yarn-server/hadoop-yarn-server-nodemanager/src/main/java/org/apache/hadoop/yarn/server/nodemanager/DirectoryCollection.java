@@ -146,8 +146,6 @@ class DirectoryCollection {
     errorDirs = new CopyOnWriteArrayList<String>();
     fullDirs = new CopyOnWriteArrayList<String>();
 
-    diskUtilizationPercentageCutoff = utilizationPercentageCutOff;
-    diskUtilizationSpaceCutoff = utilizationSpaceCutOff;
     diskUtilizationPercentageCutoff =
         utilizationPercentageCutOff < 0.0F ? 0.0F
             : (utilizationPercentageCutOff > 100.0F ? 100.0F

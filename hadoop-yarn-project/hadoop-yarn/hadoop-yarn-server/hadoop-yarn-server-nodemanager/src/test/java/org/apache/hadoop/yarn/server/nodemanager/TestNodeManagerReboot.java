@@ -290,7 +290,7 @@ public class TestNodeManagerReboot {
     ApplicationId appId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 0);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 0);
     return containerId;
   }
 

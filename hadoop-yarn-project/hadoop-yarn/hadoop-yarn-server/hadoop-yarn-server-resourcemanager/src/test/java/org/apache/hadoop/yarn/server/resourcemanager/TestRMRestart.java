@@ -1963,7 +1963,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
   public static NMContainerStatus createNMContainerStatus(
       ApplicationAttemptId appAttemptId, int id, ContainerState containerState) {
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, id);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
     NMContainerStatus containerReport =
         NMContainerStatus.newInstance(containerId, containerState,
           Resource.newInstance(1024, 1), "recover container", 0,

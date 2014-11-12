@@ -172,9 +172,9 @@ public class TestLogsCLI {
     ApplicationId appId = ApplicationIdPBImpl.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptIdPBImpl.newInstance(appId, 1);
-    ContainerId containerId0 = ContainerIdPBImpl.newInstance(appAttemptId, 0);
-    ContainerId containerId1 = ContainerIdPBImpl.newInstance(appAttemptId, 1);
-    ContainerId containerId2 = ContainerIdPBImpl.newInstance(appAttemptId, 2);
+    ContainerId containerId0 = ContainerIdPBImpl.newContainerId(appAttemptId, 0);
+    ContainerId containerId1 = ContainerIdPBImpl.newContainerId(appAttemptId, 1);
+    ContainerId containerId2 = ContainerIdPBImpl.newContainerId(appAttemptId, 2);
     NodeId nodeId = NodeId.newInstance("localhost", 1234);
 
     // create local logs

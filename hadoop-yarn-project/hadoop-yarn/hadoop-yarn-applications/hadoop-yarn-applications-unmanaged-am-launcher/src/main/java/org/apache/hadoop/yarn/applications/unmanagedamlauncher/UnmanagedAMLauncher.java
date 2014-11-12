@@ -214,7 +214,7 @@ public class UnmanagedAMLauncher {
     if(!setClasspath && classpath!=null) {
       envAMList.add("CLASSPATH="+classpath);
     }
-    ContainerId containerId = ContainerId.newInstance(attemptId, 0);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 0);
 
     String hostname = InetAddress.getLocalHost().getHostName();
     envAMList.add(Environment.CONTAINER_ID.name() + "=" + containerId);

@@ -88,7 +88,7 @@ public class TestCheckpointPreemptionPolicy {
     EventHandler ea = mock(EventHandler.class);
     when(mActxt.getEventHandler()).thenReturn(ea);
     for (int i = 0; i < 40; ++i) {
-      ContainerId cId = ContainerId.newInstance(appAttemptId, i);
+      ContainerId cId = ContainerId.newContainerId(appAttemptId, i);
       if (0 == i % 7) {
         preemptedContainers.add(cId);
       }

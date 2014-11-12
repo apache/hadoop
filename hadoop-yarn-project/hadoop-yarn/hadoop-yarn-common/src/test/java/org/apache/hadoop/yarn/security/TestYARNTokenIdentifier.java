@@ -134,7 +134,7 @@ public class TestYARNTokenIdentifier {
   
   @Test
   public void testContainerTokenIdentifier() throws IOException {
-    ContainerId containerID = ContainerId.newInstance(
+    ContainerId containerID = ContainerId.newContainerId(
         ApplicationAttemptId.newInstance(ApplicationId.newInstance(
             1, 1), 1), 1);
     String hostName = "host0";

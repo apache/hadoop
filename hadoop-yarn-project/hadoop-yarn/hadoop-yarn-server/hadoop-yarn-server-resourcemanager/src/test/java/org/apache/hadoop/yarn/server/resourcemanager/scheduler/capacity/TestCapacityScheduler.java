@@ -1085,7 +1085,7 @@ public class TestCapacityScheduler {
 
     // request a container.
     am1.allocate("127.0.0.1", 1024, 1, new ArrayList<ContainerId>());
-    ContainerId containerId1 = ContainerId.newInstance(
+    ContainerId containerId1 = ContainerId.newContainerId(
         am1.getApplicationAttemptId(), 2);
     rm1.waitForState(nm1, containerId1, RMContainerState.ALLOCATED);
 
@@ -1122,7 +1122,7 @@ public class TestCapacityScheduler {
     }
 
     // New container will be allocated and will move to ALLOCATED state
-    ContainerId containerId2 = ContainerId.newInstance(
+    ContainerId containerId2 = ContainerId.newContainerId(
         am1.getApplicationAttemptId(), 3);
     rm1.waitForState(nm1, containerId2, RMContainerState.ALLOCATED);
 

@@ -66,6 +66,7 @@ public class DatanodeManager {
   private final Namesystem namesystem;
   private final BlockManager blockManager;
   private final HeartbeatManager heartbeatManager;
+  private final FSClusterStats fsClusterStats;
   private Daemon decommissionthread = null;
 
   /**
@@ -169,7 +170,7 @@ public class DatanodeManager {
    * directives that we've already sent.
    */
   private final long timeBetweenResendingCachingDirectivesMs;
-  
+
   DatanodeManager(final BlockManager blockManager, final Namesystem namesystem,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
@@ -178,6 +179,7 @@ public class DatanodeManager {
     networktopology = NetworkTopology.getInstance(conf);
 
     this.heartbeatManager = new HeartbeatManager(namesystem, blockManager, conf);
+    this.fsClusterStats = newFSClusterStats();
 
     this.defaultXferPort = NetUtils.createSocketAddr(
           conf.get(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
@@ -327,6 +329,11 @@ public class DatanodeManager {
   /** @return the heartbeat manager. */
   HeartbeatManager getHeartbeatManager() {
     return heartbeatManager;
+  }
+
+  @VisibleForTesting
+  public FSClusterStats getFSClusterStats() {
+    return fsClusterStats;
   }
 
   /** @return the datanode statistics. */
@@ -1594,6 +1601,37 @@ public class DatanodeManager {
 
   public void setShouldSendCachingCommands(boolean shouldSendCachingCommands) {
     this.shouldSendCachingCommands = shouldSendCachingCommands;
+  }
+
+  FSClusterStats newFSClusterStats() {
+    return new FSClusterStats() {
+      @Override
+      public int getTotalLoad() {
+        return heartbeatManager.getXceiverCount();
+      }
+
+      @Override
+      public boolean isAvoidingStaleDataNodesForWrite() {
+        return shouldAvoidStaleDataNodesForWrite();
+      }
+
+      @Override
+      public int getNumDatanodesInService() {
+        return heartbeatManager.getNumDatanodesInService();
+      }
+
+      @Override
+      public double getInServiceXceiverAverage() {
+        double avgLoad = 0;
+        final int nodes = getNumDatanodesInService();
+        if (nodes != 0) {
+          final int xceivers = heartbeatManager
+            .getInServiceXceiverCount();
+          avgLoad = (double)xceivers/nodes;
+        }
+        return avgLoad;
+      }
+    };
   }
 }
 

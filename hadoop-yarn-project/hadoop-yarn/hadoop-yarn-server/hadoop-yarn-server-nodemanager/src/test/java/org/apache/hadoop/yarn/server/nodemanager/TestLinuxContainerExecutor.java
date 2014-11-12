@@ -431,7 +431,7 @@ public class TestLinuxContainerExecutor {
     ApplicationId appId = ApplicationId.newInstance(12345, 67890);
     ApplicationAttemptId attemptId =
         ApplicationAttemptId.newInstance(appId, 54321);
-    ContainerId cid = ContainerId.newInstance(attemptId, 9876);
+    ContainerId cid = ContainerId.newContainerId(attemptId, 9876);
 
     Configuration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.NM_LINUX_CONTAINER_RESOURCES_HANDLER,

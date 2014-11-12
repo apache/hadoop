@@ -67,17 +67,28 @@ public class Nfs3Utils {
      */
     NfsFileType fileType = fs.isDir() ? NfsFileType.NFSDIR : NfsFileType.NFSREG;
     fileType = fs.isSymlink() ? NfsFileType.NFSLNK : fileType;
-    
-    return new Nfs3FileAttributes(fileType, fs.getChildrenNum(), fs
-        .getPermission().toShort(), iug.getUidAllowingUnknown(fs.getOwner()),
-        iug.getGidAllowingUnknown(fs.getGroup()), fs.getLen(), 0 /* fsid */,
-        fs.getFileId(), fs.getModificationTime(), fs.getAccessTime());
+    int nlink = (fileType == NfsFileType.NFSDIR) ? fs.getChildrenNum() + 2 : 1;
+    long size = (fileType == NfsFileType.NFSDIR) ? getDirSize(fs
+        .getChildrenNum()) : fs.getLen();
+    return new Nfs3FileAttributes(fileType, nlink,
+        fs.getPermission().toShort(), iug.getUidAllowingUnknown(fs.getOwner()),
+        iug.getGidAllowingUnknown(fs.getGroup()), size, 0 /* fsid */,
+        fs.getFileId(), fs.getModificationTime(), fs.getAccessTime(),
+        new Nfs3FileAttributes.Specdata3());
   }
 
   public static Nfs3FileAttributes getFileAttr(DFSClient client,
       String fileIdPath, IdMappingServiceProvider iug) throws IOException {
     HdfsFileStatus fs = getFileStatus(client, fileIdPath);
     return fs == null ? null : getNfs3FileAttrFromFileStatus(fs, iug);
+  }
+
+  /**
+   * HDFS directory size is always zero. Try to return something meaningful
+   * here. Assume each child take 32bytes.
+   */
+  public static long getDirSize(int childNum) {
+    return (childNum + 2) * 32;
   }
 
   public static WccAttr getWccAttr(DFSClient client, String fileIdPath)
@@ -87,8 +98,8 @@ public class Nfs3Utils {
       return null;
     }
 
-    long size = fstat.isDir() ? Nfs3FileAttributes.getDirSize(fstat
-        .getChildrenNum()) : fstat.getLen();
+    long size = fstat.isDir() ? getDirSize(fstat.getChildrenNum()) : fstat
+        .getLen();
     return new WccAttr(size, new NfsTime(fstat.getModificationTime()),
         new NfsTime(fstat.getModificationTime()));
   }

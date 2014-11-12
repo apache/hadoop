@@ -295,7 +295,7 @@ public class TestAggregatedLogFormat {
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, 1);
     ContainerId testContainerId1 =
-        ContainerId.newInstance(applicationAttemptId, 1);
+        ContainerId.newContainerId(applicationAttemptId, 1);
     Path appDir =
         new Path(srcFileRoot, testContainerId1.getApplicationAttemptId()
             .getApplicationId().toString());

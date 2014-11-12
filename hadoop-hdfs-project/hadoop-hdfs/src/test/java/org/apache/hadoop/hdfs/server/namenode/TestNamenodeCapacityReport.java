@@ -193,11 +193,7 @@ public class TestNamenodeCapacityReport {
       int expectedTotalLoad = nodes;  // xceiver server adds 1 to load
       int expectedInServiceNodes = nodes;
       int expectedInServiceLoad = nodes;
-      assertEquals(nodes, namesystem.getNumLiveDataNodes());
-      assertEquals(expectedInServiceNodes, namesystem.getNumDatanodesInService());
-      assertEquals(expectedTotalLoad, namesystem.getTotalLoad());
-      assertEquals((double)expectedInServiceLoad/expectedInServiceLoad,
-          namesystem.getInServiceXceiverAverage(), EPSILON);
+      checkClusterHealth(nodes, namesystem, expectedTotalLoad, expectedInServiceNodes, expectedInServiceLoad);
       
       // shutdown half the nodes and force a heartbeat check to ensure
       // counts are accurate
@@ -209,7 +205,7 @@ public class TestNamenodeCapacityReport {
         BlockManagerTestUtil.checkHeartbeat(namesystem.getBlockManager());
         expectedInServiceNodes--;
         assertEquals(expectedInServiceNodes, namesystem.getNumLiveDataNodes());
-        assertEquals(expectedInServiceNodes, namesystem.getNumDatanodesInService());
+        assertEquals(expectedInServiceNodes, getNumDNInService(namesystem));
       }
 
       // restart the nodes to verify that counts are correct after
@@ -219,11 +215,7 @@ public class TestNamenodeCapacityReport {
       datanodes = cluster.getDataNodes();
       expectedInServiceNodes = nodes;
       assertEquals(nodes, datanodes.size());
-      assertEquals(nodes, namesystem.getNumLiveDataNodes());
-      assertEquals(expectedInServiceNodes, namesystem.getNumDatanodesInService());
-      assertEquals(expectedTotalLoad, namesystem.getTotalLoad());
-      assertEquals((double)expectedInServiceLoad/expectedInServiceLoad,
-          namesystem.getInServiceXceiverAverage(), EPSILON);
+      checkClusterHealth(nodes, namesystem, expectedTotalLoad, expectedInServiceNodes, expectedInServiceLoad);
       
       // create streams and hsync to force datastreamers to start
       DFSOutputStream[] streams = new DFSOutputStream[fileCount];
@@ -239,12 +231,7 @@ public class TestNamenodeCapacityReport {
       }
       // force nodes to send load update
       triggerHeartbeats(datanodes);
-      assertEquals(nodes, namesystem.getNumLiveDataNodes());
-      assertEquals(expectedInServiceNodes,
-          namesystem.getNumDatanodesInService());
-      assertEquals(expectedTotalLoad, namesystem.getTotalLoad());
-      assertEquals((double)expectedInServiceLoad/expectedInServiceNodes,
-          namesystem.getInServiceXceiverAverage(), EPSILON);
+      checkClusterHealth(nodes, namesystem, expectedTotalLoad, expectedInServiceNodes, expectedInServiceLoad);
 
       // decomm a few nodes, substract their load from the expected load,
       // trigger heartbeat to force load update
@@ -256,12 +243,7 @@ public class TestNamenodeCapacityReport {
         dnm.startDecommission(dnd);
         DataNodeTestUtils.triggerHeartbeat(datanodes.get(i));
         Thread.sleep(100);
-        assertEquals(nodes, namesystem.getNumLiveDataNodes());
-        assertEquals(expectedInServiceNodes,
-            namesystem.getNumDatanodesInService());
-        assertEquals(expectedTotalLoad, namesystem.getTotalLoad());
-        assertEquals((double)expectedInServiceLoad/expectedInServiceNodes,
-            namesystem.getInServiceXceiverAverage(), EPSILON);
+        checkClusterHealth(nodes, namesystem, expectedTotalLoad, expectedInServiceNodes, expectedInServiceLoad);
       }
       
       // check expected load while closing each stream.  recalc expected
@@ -289,12 +271,7 @@ public class TestNamenodeCapacityReport {
         }
         triggerHeartbeats(datanodes);
         // verify node count and loads 
-        assertEquals(nodes, namesystem.getNumLiveDataNodes());
-        assertEquals(expectedInServiceNodes,
-            namesystem.getNumDatanodesInService());
-        assertEquals(expectedTotalLoad, namesystem.getTotalLoad());
-        assertEquals((double)expectedInServiceLoad/expectedInServiceNodes,
-            namesystem.getInServiceXceiverAverage(), EPSILON);
+        checkClusterHealth(nodes, namesystem, expectedTotalLoad, expectedInServiceNodes, expectedInServiceLoad);
       }
 
       // shutdown each node, verify node counts based on decomm state
@@ -310,26 +287,49 @@ public class TestNamenodeCapacityReport {
         if (i >= fileRepl) {
           expectedInServiceNodes--;
         }
-        assertEquals(expectedInServiceNodes, namesystem.getNumDatanodesInService());
+        assertEquals(expectedInServiceNodes, getNumDNInService(namesystem));
         
         // live nodes always report load of 1.  no nodes is load 0
         double expectedXceiverAvg = (i == nodes-1) ? 0.0 : 1.0;
         assertEquals((double)expectedXceiverAvg,
-            namesystem.getInServiceXceiverAverage(), EPSILON);
+            getInServiceXceiverAverage(namesystem), EPSILON);
       }
       
       // final sanity check
-      assertEquals(0, namesystem.getNumLiveDataNodes());
-      assertEquals(0, namesystem.getNumDatanodesInService());
-      assertEquals(0.0, namesystem.getTotalLoad(), EPSILON);
-      assertEquals(0.0, namesystem.getInServiceXceiverAverage(), EPSILON);
+      checkClusterHealth(0, namesystem, 0.0, 0, 0.0);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
     }
   }
-  
+
+  private static void checkClusterHealth(
+    int numOfLiveNodes,
+    FSNamesystem namesystem, double expectedTotalLoad,
+    int expectedInServiceNodes, double expectedInServiceLoad) {
+
+    assertEquals(numOfLiveNodes, namesystem.getNumLiveDataNodes());
+    assertEquals(expectedInServiceNodes, getNumDNInService(namesystem));
+    assertEquals(expectedTotalLoad, namesystem.getTotalLoad(), EPSILON);
+    if (expectedInServiceNodes != 0) {
+      assertEquals(expectedInServiceLoad / expectedInServiceNodes,
+        getInServiceXceiverAverage(namesystem), EPSILON);
+    } else {
+      assertEquals(0.0, getInServiceXceiverAverage(namesystem), EPSILON);
+    }
+  }
+
+  private static int getNumDNInService(FSNamesystem fsn) {
+    return fsn.getBlockManager().getDatanodeManager().getFSClusterStats()
+      .getNumDatanodesInService();
+  }
+
+  private static double getInServiceXceiverAverage(FSNamesystem fsn) {
+    return fsn.getBlockManager().getDatanodeManager().getFSClusterStats()
+      .getInServiceXceiverAverage();
+  }
+
   private void triggerHeartbeats(List<DataNode> datanodes)
       throws IOException, InterruptedException {
     for (DataNode dn : datanodes) {

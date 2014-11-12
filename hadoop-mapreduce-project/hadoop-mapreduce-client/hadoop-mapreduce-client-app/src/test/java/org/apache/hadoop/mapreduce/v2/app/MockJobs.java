@@ -183,7 +183,7 @@ public class MockJobs extends MockApps {
   public static TaskAttemptReport newTaskAttemptReport(TaskAttemptId id) {
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         id.getTaskId().getJobId().getAppId(), 0);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 0);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 0);
     TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     report.setTaskAttemptId(id);
     report
@@ -315,7 +315,7 @@ public class MockJobs extends MockApps {
         ApplicationAttemptId appAttemptId =
             ApplicationAttemptId.newInstance(taid.getTaskId().getJobId()
               .getAppId(), 0);
-        ContainerId id = ContainerId.newInstance(appAttemptId, 0);
+        ContainerId id = ContainerId.newContainerId(appAttemptId, 0);
         return id;
       }
 
@@ -640,7 +640,7 @@ public class MockJobs extends MockApps {
   private static AMInfo createAMInfo(int attempt) {
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(100, 1), attempt);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     return MRBuilderUtils.newAMInfo(appAttemptId, System.currentTimeMillis(),
         containerId, NM_HOST, NM_PORT, NM_HTTP_PORT);
   }

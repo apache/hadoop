@@ -62,6 +62,12 @@ Release 2.7.0 - UNRELEASED
     YARN-2712. TestWorkPreservingRMRestart: Augment FS tests with
     queue and headroom checks. (Tsuyoshi Ozawa via kasha)
 
+    YARN-2735. diskUtilizationPercentageCutoff and diskUtilizationSpaceCutoff 
+    are initialized twice in DirectoryCollection. (Zhihai Xu via kasha)
+
+    YARN-570. Time strings are formated in different timezone. 
+    (Akira Ajisaka and Peng Zhang via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -72,7 +78,12 @@ Release 2.7.0 - UNRELEASED
     YARN-2713. "RM Home" link in NM should point to one of the RMs in an 
     HA setup. (kasha)
 
-Release 2.6.0 - UNRELEASED
+    YARN-2841. RMProxy should retry EOFException. (Jian He via xgong)
+
+    YARN-2843. Fixed NodeLabelsManager to trim inputs for hosts and labels so
+    as to make them work correctly. (Wangda Tan via vinodkv)
+
+Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
 
@@ -922,7 +933,14 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2607. Fixed issues in TestDistributedShell. (Wangda Tan via vinodkv)
 
-Release 2.5.2 - UNRELEASED
+    YARN-2830. Add backwords compatible ContainerId.newInstance constructor.
+    (jeagles via acmurthy) 
+
+    YARN-2834. Fixed ResourceManager to ignore token-renewal failures on recovery
+    consistent with the (somewhat incorrect) behaviour in the non-recovery case.
+    (Jian He via vinodkv)
+
+Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
 

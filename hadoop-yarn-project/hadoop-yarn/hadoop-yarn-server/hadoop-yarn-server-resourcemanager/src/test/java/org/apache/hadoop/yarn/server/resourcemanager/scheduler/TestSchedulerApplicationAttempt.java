@@ -138,7 +138,7 @@ public class TestSchedulerApplicationAttempt {
   
   private RMContainer createRMContainer(ApplicationAttemptId appAttId, int id,
       Resource resource) {
-    ContainerId containerId = ContainerId.newInstance(appAttId, id);
+    ContainerId containerId = ContainerId.newContainerId(appAttId, id);
     RMContainer rmContainer = mock(RMContainer.class);
     Container container = mock(Container.class);
     when(container.getResource()).thenReturn(resource);
