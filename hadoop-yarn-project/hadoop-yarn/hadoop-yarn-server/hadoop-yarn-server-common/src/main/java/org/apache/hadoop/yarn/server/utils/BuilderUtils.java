@@ -70,6 +70,7 @@ import com.google.common.annotations.VisibleForTesting;
  * Builder utilities to construct various objects.
  *
  */
+@Private
 public class BuilderUtils {
 
   private static final RecordFactory recordFactory = RecordFactoryProvider
@@ -94,7 +95,8 @@ public class BuilderUtils {
   }
 
   public static LocalResource newLocalResource(URL url, LocalResourceType type,
-      LocalResourceVisibility visibility, long size, long timestamp) {
+      LocalResourceVisibility visibility, long size, long timestamp,
+      boolean shouldBeUploadedToSharedCache) {
     LocalResource resource =
       recordFactory.newRecordInstance(LocalResource.class);
     resource.setResource(url);
@@ -102,14 +104,15 @@ public class BuilderUtils {
     resource.setVisibility(visibility);
     resource.setSize(size);
     resource.setTimestamp(timestamp);
+    resource.setShouldBeUploadedToSharedCache(shouldBeUploadedToSharedCache);
     return resource;
   }
 
   public static LocalResource newLocalResource(URI uri,
       LocalResourceType type, LocalResourceVisibility visibility, long size,
-      long timestamp) {
+      long timestamp, boolean shouldBeUploadedToSharedCache) {
     return newLocalResource(ConverterUtils.getYarnUrlFromURI(uri), type,
-        visibility, size, timestamp);
+        visibility, size, timestamp, shouldBeUploadedToSharedCache);
   }
 
   public static ApplicationId newApplicationId(RecordFactory recordFactory,
@@ -245,7 +248,6 @@ public class BuilderUtils {
     return newToken(Token.class, identifier, kind, password, service);
   }
 
-  @Private
   @VisibleForTesting
   public static Token newContainerToken(NodeId nodeId,
       byte[] password, ContainerTokenIdentifier tokenIdentifier) {
