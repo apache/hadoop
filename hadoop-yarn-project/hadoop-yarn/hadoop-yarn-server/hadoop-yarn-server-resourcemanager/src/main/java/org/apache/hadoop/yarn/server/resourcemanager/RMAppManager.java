@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -155,6 +156,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         trackingUrl = attempt.getTrackingUrl();
         host = attempt.getHost();
       }
+      RMAppMetrics metrics = app.getRMAppMetrics();
       SummaryBuilder summary = new SummaryBuilder()
           .add("appId", app.getApplicationId())
           .add("name", app.getName())
@@ -165,7 +167,12 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           .add("appMasterHost", host)
           .add("startTime", app.getStartTime())
           .add("finishTime", app.getFinishTime())
-          .add("finalStatus", app.getFinalApplicationStatus());
+          .add("finalStatus", app.getFinalApplicationStatus())
+          .add("memorySeconds", metrics.getMemorySeconds())
+          .add("vcoreSeconds", metrics.getVcoreSeconds())
+          .add("preemptedAMContainers", metrics.getNumAMContainersPreempted())
+          .add("preemptedNonAMContainers", metrics.getNumNonAMContainersPreempted())
+          .add("preemptedResources", metrics.getResourcePreempted());
       return summary;
     }
 
