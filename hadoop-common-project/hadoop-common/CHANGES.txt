@@ -340,6 +340,9 @@ Trunk (Unreleased)
     HADOOP-11248. Add hadoop configuration to disable Azure Filesystem metrics
     collection. (Shanyu Zhao via cnauroth)
 
+    HADOOP-11284. Fix variable name mismatches in hadoop-functions.sh (Masatake
+    Iwasaki via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

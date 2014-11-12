@@ -837,13 +837,13 @@ function hadoop_start_daemon_wrapper
   # shellcheck disable=SC2086
   renice "${HADOOP_NICENESS}" $! >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR: Cannot set priority of ${daemoname} process $!"
+    hadoop_error "ERROR: Cannot set priority of ${daemonname} process $!"
   fi
   
   # shellcheck disable=SC2086
   disown %+ >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR: Cannot disconnect ${daemoname} process $!"
+    hadoop_error "ERROR: Cannot disconnect ${daemonname} process $!"
   fi
   sleep 1
   
@@ -898,7 +898,7 @@ function hadoop_start_secure_daemon
   #shellcheck disable=SC2086
   echo $$ > "${privpidfile}" 2>/dev/null
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR:  Cannot write ${daemoname} pid ${privpidfile}."
+    hadoop_error "ERROR:  Cannot write ${daemonname} pid ${privpidfile}."
   fi
   
   exec "${jsvc}" \
@@ -954,7 +954,7 @@ function hadoop_start_secure_daemon_wrapper
   # so let's wait for the fork to finish 
   # before overriding with the daemonized pid
   (( counter=0 ))
-  while [[ ! -f ${pidfile} && ${counter} -le 5 ]]; do
+  while [[ ! -f ${daemonpidfile} && ${counter} -le 5 ]]; do
     sleep 1
     (( counter++ ))
   done
@@ -963,7 +963,7 @@ function hadoop_start_secure_daemon_wrapper
   #shellcheck disable=SC2086
   echo $! > "${jsvcpidfile}" 2>/dev/null
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR:  Cannot write ${daemonname} pid ${pidfile}."
+    hadoop_error "ERROR:  Cannot write ${daemonname} pid ${daemonpidfile}."
   fi
   
   sleep 1
@@ -1037,8 +1037,8 @@ function hadoop_daemon_handler
   local daemonmode=$1
   local daemonname=$2
   local class=$3
-  local pidfile=$4
-  local outfile=$5
+  local daemon_pidfile=$4
+  local daemon_outfile=$5
   shift 5
   
   case ${daemonmode} in
