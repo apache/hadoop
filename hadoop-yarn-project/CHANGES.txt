@@ -84,9 +84,6 @@ Release 2.7.0 - UNRELEASED
     YARN-2713. "RM Home" link in NM should point to one of the RMs in an 
     HA setup. (kasha)
 
-    YARN-2843. Fixed NodeLabelsManager to trim inputs for hosts and labels so
-    as to make them work correctly. (Wangda Tan via vinodkv)
-
 Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
@@ -948,6 +945,9 @@ Release 2.6.0 - 2014-11-15
     (Jian He via vinodkv)
 
     YARN-2841. RMProxy should retry EOFException. (Jian He via xgong)
+
+    YARN-2843. Fixed NodeLabelsManager to trim inputs for hosts and labels so
+    as to make them work correctly. (Wangda Tan via vinodkv)
 
 Release 2.5.2 - 2014-11-10
 
