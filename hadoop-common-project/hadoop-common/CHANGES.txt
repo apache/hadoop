@@ -682,6 +682,9 @@ Release 2.6.0 - 2014-11-15
     HADOOP-11282. Skip NFS TestShellBasedIdMapping tests that are irrelevant on
     Windows. (cnauroth)
 
+    HADOOP-9576. Changed NetUtils#wrapException to throw EOFException instead
+    of wrapping it as IOException. (Steve Loughran via jianhe)
+
 Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
