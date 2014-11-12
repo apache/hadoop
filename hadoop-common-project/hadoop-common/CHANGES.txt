@@ -135,6 +135,9 @@ Trunk (Unreleased)
 
     HADOOP-11231. Remove dead code in ServletUtil. (Li Lu via wheat9)
 
+    HADOOP-11025. hadoop-daemons.sh should just call hdfs directly (Masatake
+    Iwasaki via aw)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
