@@ -20,10 +20,13 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -208,6 +211,34 @@ public abstract class ContainerExecutor implements Configurable {
       return Integer.parseInt(FileUtils.readFileToString(file).trim());
     } catch (NumberFormatException e) {
       throw new IOException("Error parsing exit code from pid " + pid, e);
+    }
+  }
+
+  public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException{
+    ContainerLaunch.ShellScriptBuilder sb = ContainerLaunch.ShellScriptBuilder.create();
+    if (environment != null) {
+      for (Map.Entry<String,String> env : environment.entrySet()) {
+        sb.env(env.getKey().toString(), env.getValue().toString());
+      }
+    }
+    if (resources != null) {
+      for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
+        for (String linkName : entry.getValue()) {
+          sb.symlink(entry.getKey(), new Path(linkName));
+        }
+      }
+    }
+
+    sb.command(command);
+
+    PrintStream pout = null;
+    try {
+      pout = new PrintStream(out);
+      sb.write(pout);
+    } finally {
+      if (out != null) {
+        out.close();
+      }
     }
   }
 

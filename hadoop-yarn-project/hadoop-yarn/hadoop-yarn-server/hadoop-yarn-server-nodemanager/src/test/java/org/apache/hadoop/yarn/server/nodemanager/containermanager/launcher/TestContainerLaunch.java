@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
@@ -144,7 +145,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         commands.add("/bin/sh ./\\\"" + badSymlink + "\\\"");
       }
 
-      ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
+      new DefaultContainerExecutor().writeLaunchEnv(fos, env, resources, commands);
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -211,7 +212,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       } else {
         commands.add("/bin/sh ./\\\"" + symLink + "\\\"");
       }
-      ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
+      new DefaultContainerExecutor().writeLaunchEnv(fos, env, resources, commands);
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -264,7 +265,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           "\"workflowName\":\"\n\ninsert table " +
           "\npartition (cd_education_status)\nselect cd_demo_sk, cd_gender, " );
       List<String> commands = new ArrayList<String>();
-      ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
+      new DefaultContainerExecutor().writeLaunchEnv(fos, env, resources, commands);
       fos.flush();
       fos.close();
 
@@ -341,7 +342,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       Map<String, String> env = new HashMap<String, String>();
       List<String> commands = new ArrayList<String>();
       commands.add(command);
-      ContainerLaunch.writeLaunchEnv(fos, env, resources, commands);
+      ContainerExecutor exec = new DefaultContainerExecutor();
+      exec.writeLaunchEnv(fos, env, resources, commands);
       fos.flush();
       fos.close();
 
