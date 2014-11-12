@@ -1472,6 +1472,25 @@ public class YarnConfiguration extends Configuration {
       SHARED_CACHE_PREFIX + "uploader.server.thread-count";
   public static final int DEFAULT_SCM_UPLOADER_SERVER_THREAD_COUNT = 50;
 
+  /** the checksum algorithm implementation **/
+  public static final String SHARED_CACHE_CHECKSUM_ALGO_IMPL =
+      SHARED_CACHE_PREFIX + "checksum.algo.impl";
+  public static final String DEFAULT_SHARED_CACHE_CHECKSUM_ALGO_IMPL =
+      "org.apache.hadoop.yarn.sharedcache.ChecksumSHA256Impl";
+
+  // node manager (uploader) configs
+  /**
+   * The replication factor for the node manager uploader for the shared cache.
+   */
+  public static final String SHARED_CACHE_NM_UPLOADER_REPLICATION_FACTOR =
+      SHARED_CACHE_PREFIX + "nm.uploader.replication.factor";
+  public static final int DEFAULT_SHARED_CACHE_NM_UPLOADER_REPLICATION_FACTOR =
+      10;
+
+  public static final String SHARED_CACHE_NM_UPLOADER_THREAD_COUNT =
+      SHARED_CACHE_PREFIX + "nm.uploader.thread-count";
+  public static final int DEFAULT_SHARED_CACHE_NM_UPLOADER_THREAD_COUNT = 20;
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////

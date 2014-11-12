@@ -642,7 +642,7 @@ public class TestContainer {
     URL url = BuilderUtils.newURL("file", null, 0, "/local" + vis + "/" + name);
     LocalResource rsrc =
         BuilderUtils.newLocalResource(url, LocalResourceType.FILE, vis,
-            r.nextInt(1024) + 1024L, r.nextInt(1024) + 2048L);
+            r.nextInt(1024) + 1024L, r.nextInt(1024) + 2048L, false);
     return new SimpleEntry<String, LocalResource>(name, rsrc);
   }
 

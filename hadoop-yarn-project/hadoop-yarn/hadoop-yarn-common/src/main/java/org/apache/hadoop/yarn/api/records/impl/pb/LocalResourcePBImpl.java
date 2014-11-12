@@ -192,6 +192,26 @@ public class LocalResourcePBImpl extends LocalResource {
     builder.setPattern(pattern);
   }
 
+  @Override
+  public synchronized boolean getShouldBeUploadedToSharedCache() {
+    LocalResourceProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasShouldBeUploadedToSharedCache()) {
+      return false;
+    }
+    return p.getShouldBeUploadedToSharedCache();
+  }
+
+  @Override
+  public synchronized void setShouldBeUploadedToSharedCache(
+      boolean shouldBeUploadedToSharedCache) {
+    maybeInitBuilder();
+    if (!shouldBeUploadedToSharedCache) {
+      builder.clearShouldBeUploadedToSharedCache();
+      return;
+    }
+    builder.setShouldBeUploadedToSharedCache(shouldBeUploadedToSharedCache);
+  }
+
   private LocalResourceTypeProto convertToProtoFormat(LocalResourceType e) {
     return ProtoUtils.convertToProtoFormat(e);
   }

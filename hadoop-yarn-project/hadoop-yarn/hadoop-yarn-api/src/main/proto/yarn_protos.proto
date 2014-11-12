@@ -159,6 +159,7 @@ message LocalResourceProto {
   optional LocalResourceTypeProto type = 4;
   optional LocalResourceVisibilityProto visibility = 5;
   optional string pattern = 6;
+  optional bool should_be_uploaded_to_shared_cache = 7;
 }
 
 message ApplicationResourceUsageReportProto {

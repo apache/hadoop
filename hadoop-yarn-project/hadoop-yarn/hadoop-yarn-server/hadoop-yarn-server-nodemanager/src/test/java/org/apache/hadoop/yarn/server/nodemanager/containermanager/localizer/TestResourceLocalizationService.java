@@ -1760,7 +1760,7 @@ public class TestResourceLocalizationService {
     URL url = getPath("/local/PRIVATE/" + name);
     LocalResource rsrc =
         BuilderUtils.newLocalResource(url, LocalResourceType.FILE, vis,
-            r.nextInt(1024) + 1024L, r.nextInt(1024) + 2048L);
+            r.nextInt(1024) + 1024L, r.nextInt(1024) + 2048L, false);
     return rsrc;
   }
   

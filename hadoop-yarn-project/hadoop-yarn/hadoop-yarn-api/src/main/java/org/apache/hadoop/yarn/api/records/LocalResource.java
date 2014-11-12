@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -48,6 +49,14 @@ public abstract class LocalResource {
   public static LocalResource newInstance(URL url, LocalResourceType type,
       LocalResourceVisibility visibility, long size, long timestamp,
       String pattern) {
+    return newInstance(url, type, visibility, size, timestamp, pattern, false);
+  }
+
+  @Public
+  @Unstable
+  public static LocalResource newInstance(URL url, LocalResourceType type,
+      LocalResourceVisibility visibility, long size, long timestamp,
+      String pattern, boolean shouldBeUploadedToSharedCache) {
     LocalResource resource = Records.newRecord(LocalResource.class);
     resource.setResource(url);
     resource.setType(type);
@@ -55,6 +64,7 @@ public abstract class LocalResource {
     resource.setSize(size);
     resource.setTimestamp(timestamp);
     resource.setPattern(pattern);
+    resource.setShouldBeUploadedToSharedCache(shouldBeUploadedToSharedCache);
     return resource;
   }
 
@@ -63,6 +73,15 @@ public abstract class LocalResource {
   public static LocalResource newInstance(URL url, LocalResourceType type,
       LocalResourceVisibility visibility, long size, long timestamp) {
     return newInstance(url, type, visibility, size, timestamp, null);
+  }
+
+  @Public
+  @Unstable
+  public static LocalResource newInstance(URL url, LocalResourceType type,
+      LocalResourceVisibility visibility, long size, long timestamp,
+      boolean shouldBeUploadedToSharedCache) {
+    return newInstance(url, type, visibility, size, timestamp, null,
+        shouldBeUploadedToSharedCache);
   }
 
   /**
@@ -170,4 +189,23 @@ public abstract class LocalResource {
   @Public
   @Stable
   public abstract void setPattern(String pattern);
+
+  /**
+   * NM uses it to decide whether if it is necessary to upload the resource to
+   * the shared cache
+   */
+  @Public
+  @Unstable
+  public abstract boolean getShouldBeUploadedToSharedCache();
+
+  /**
+   * Inform NM whether upload to SCM is needed.
+   *
+   * @param shouldBeUploadedToSharedCache <em>shouldBeUploadedToSharedCache</em>
+   *          of this request
+   */
+  @Public
+  @Unstable
+  public abstract void setShouldBeUploadedToSharedCache(
+      boolean shouldBeUploadedToSharedCache);
 }

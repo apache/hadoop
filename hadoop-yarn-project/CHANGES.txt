@@ -45,6 +45,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2186. [YARN-1492] Node Manager uploader service for cache manager. 
     (Chris Trezzo and Sangjin Lee via kasha)
 
+    YARN-2236. [YARN-1492] Shared Cache uploader service on the Node 
+    Manager. (Chris Trezzo and Sanjin Lee via kasha)
+
   IMPROVEMENTS
 
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.
