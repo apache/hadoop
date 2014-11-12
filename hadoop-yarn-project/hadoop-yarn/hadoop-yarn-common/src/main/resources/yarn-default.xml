@@ -23,7 +23,7 @@
 <!-- there.  If yarn-site.xml does not already exist, create it.      -->
 
 <configuration>
-  
+
   <!-- IPC Configs -->
   <property>
     <description>Factory to create client IPC classes.</description>
@@ -1143,6 +1143,16 @@
     store state when recovery is enabled.</description>
     <name>yarn.nodemanager.recovery.dir</name>
     <value>${hadoop.tmp.dir}/yarn-nm-recovery</value>
+  </property>
+
+  <!--Docker configuration-->
+
+  <property>
+    <name>yarn.nodemanager.docker-container-executor.exec-name</name>
+    <value>/usr/bin/docker</value>
+    <description>
+      Name or path to the Docker client.
+    </description>
   </property>
 
   <!--Map Reduce configuration-->
