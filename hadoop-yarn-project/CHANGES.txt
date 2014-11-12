@@ -68,6 +68,9 @@ Release 2.7.0 - UNRELEASED
     YARN-570. Time strings are formated in different timezone. 
     (Akira Ajisaka and Peng Zhang via kasha)
 
+    YARN-2780. Log aggregated resource allocation in rm-appsummary.log (Eric
+    Payne via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
