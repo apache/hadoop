@@ -202,9 +202,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       Credentials systemCredentials =
           context.getSystemCredentialsForApps().get(appId);
       if (systemCredentials != null) {
-        for (Token<?> token : systemCredentials.getAllTokens()) {
-          LOG.info("Adding new framework-token for " + appId
-              + " for log-aggregation: " + token + " user=" + userUgi);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Adding new framework-token for " + appId
+              + " for log-aggregation: " + systemCredentials.getAllTokens()
+              + "; userUgi=" + userUgi);
         }
         // this will replace old token
         userUgi.addCredentials(systemCredentials);
