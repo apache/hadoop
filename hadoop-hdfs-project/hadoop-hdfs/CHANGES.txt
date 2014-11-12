@@ -161,9 +161,6 @@ Release 2.7.0 - UNRELEASED
     HDFS-7366. BlockInfo should take replication as an short in the constructor.
     (Li Lu via wheat9)
 
-    HDFS-7387. NFS may only do partial commit due to a race between COMMIT and write
-    (brandonli)
-
     HDFS-7389. Named user ACL cannot stop the user from accessing the FS entity.
     (Vinayakumar B via cnauroth)
 
@@ -789,6 +786,9 @@ Release 2.6.0 - 2014-11-15
 
     HDFS-7383. DataNode.requestShortCircuitFdsForRead may throw 
     NullPointerException. (szetszwo via suresh)
+
+    HDFS-7387. NFS may only do partial commit due to a race between COMMIT and write
+    (brandonli)
 
     BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
   
