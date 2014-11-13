@@ -12,6 +12,22 @@ These release notes include new developer and user-facing incompatibilities, fea
 <a name="changes"/>
 <h2>Changes since Hadoop 2.5.1</h2>
 <ul>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-2853">YARN-2853</a>.
+     Major bug reported by Jian He and fixed by Jian He <br>
+     <b>Killing app may hang while AM is unregistering</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-2846">YARN-2846</a>.
+     Blocker bug reported by Junping Du and fixed by Junping Du (nodemanager)<br>
+     <b>Incorrect persist exit code for running containers in reacquireContainer() that interrupted by NodeManager restart.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-2843">YARN-2843</a>.
+     Major sub-task reported by Sushmitha Sreenivasan and fixed by Wangda Tan (resourcemanager)<br>
+     <b>NodeLabels manager should trim all inputs for hosts and labels</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-2841">YARN-2841</a>.
+     Critical sub-task reported by Jian He and fixed by Jian He (resourcemanager)<br>
+     <b>RMProxy should retry EOFException </b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-2834">YARN-2834</a>.
      Blocker bug reported by Yesha Vora and fixed by Jian He <br>
      <b>Resource manager crashed with Null Pointer Exception</b><br>
@@ -25,7 +41,7 @@ These release notes include new developer and user-facing incompatibilities, fea
      <b>Fix bugs of yarn queue CLI</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-2826">YARN-2826</a>.
-     Critical bug reported by sidharta seethana and fixed by Wangda Tan <br>
+     Critical bug reported by Sidharta Seethana and fixed by Wangda Tan <br>
      <b>User-Group mappings not updated by RM when a user is removed from a group.</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-2825">YARN-2825</a>.
@@ -79,6 +95,10 @@ These release notes include new developer and user-facing incompatibilities, fea
 <li> <a href="https://issues.apache.org/jira/browse/YARN-2795">YARN-2795</a>.
      Major sub-task reported by Phil D'Amore and fixed by Wangda Tan (resourcemanager)<br>
      <b>Resource Manager fails startup with HDFS label storage and secure cluster</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-2794">YARN-2794</a>.
+     Major bug reported by Jian He and fixed by Jian He <br>
+     <b>Fix log msgs about distributing system-credentials </b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-2790">YARN-2790</a>.
      Critical bug reported by Tassapol Athiapinya and fixed by Jian He (nodemanager)<br>
@@ -303,6 +323,10 @@ These release notes include new developer and user-facing incompatibilities, fea
 <li> <a href="https://issues.apache.org/jira/browse/YARN-2644">YARN-2644</a>.
      Major sub-task reported by Craig Welch and fixed by Craig Welch <br>
      <b>Recalculate headroom more frequently to keep it accurate</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-2635">YARN-2635</a>.
+     Major bug reported by Wei Yan and fixed by Wei Yan <br>
+     <b>TestRM, TestRMRestart, TestClientToAMTokens should run with both CS and FS</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-2632">YARN-2632</a>.
      Blocker sub-task reported by Junping Du and fixed by Junping Du (nodemanager)<br>
@@ -1000,6 +1024,10 @@ These release notes include new developer and user-facing incompatibilities, fea
      Major sub-task reported by Remus Rusanu and fixed by Remus Rusanu (nodemanager)<br>
      <b>Implement secure Windows Container Executor</b><br>
      <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1964">YARN-1964</a>.
+     Major new feature reported by Arun C Murthy and fixed by Abin Shahab <br>
+     <b>Create Docker analog of the LinuxContainerExecutor in YARN</b><br>
+     <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/YARN-1959">YARN-1959</a>.
      Major bug reported by Sandy Ryza and fixed by Anubhav Dhoot <br>
      <b>Fix headroom calculation in FairScheduler</b><br>
@@ -1127,6 +1155,10 @@ These release notes include new developer and user-facing incompatibilities, fea
 <li> <a href="https://issues.apache.org/jira/browse/YARN-90">YARN-90</a>.
      Major sub-task reported by Ravi Gummadi and fixed by Varun Vasudev (nodemanager)<br>
      <b>NodeManager should identify failed disks becoming good again</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6156">MAPREDUCE-6156</a>.
+     Blocker bug reported by Sidharta Seethana and fixed by Junping Du <br>
+     <b>Fetcher - connect() doesn't handle connection refused correctly </b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-6142">MAPREDUCE-6142</a>.
      Critical sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
@@ -1403,6 +1435,18 @@ These release notes include new developer and user-facing incompatibilities, fea
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-883">MAPREDUCE-883</a>.
      Minor improvement reported by Koji Noguchi and fixed by Akira AJISAKA (documentation , harchive)<br>
      <b>harchive: Document how to unarchive</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-7391">HDFS-7391</a>.
+     Blocker bug reported by Robert Kanter and fixed by Robert Kanter (webhdfs)<br>
+     <b>Renable SSLv2Hello in HttpFS</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-7387">HDFS-7387</a>.
+     Critical bug reported by Brandon Li and fixed by Brandon Li (nfs)<br>
+     <b>NFS may only do partial commit due to a race between COMMIT and write</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-7385">HDFS-7385</a>.
+     Blocker bug reported by jiangyu and fixed by jiangyu (namenode)<br>
+     <b>ThreadLocal used in FSEditLog class causes FSImage permission mess up</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-7383">HDFS-7383</a>.
      Major bug reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (datanode)<br>
@@ -1951,10 +1995,6 @@ These release notes include new developer and user-facing incompatibilities, fea
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-6942">HDFS-6942</a>.
      Trivial bug reported by Ray Chiang and fixed by Ray Chiang <br>
      <b>Fix typos in log messages</b><br>
-     <blockquote></blockquote></li>
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-6938">HDFS-6938</a>.
-     Trivial bug reported by Charles Lamb and fixed by Charles Lamb (namenode)<br>
-     <b>Cleanup javac warnings in FSNamesystem</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-6934">HDFS-6934</a>.
      Major sub-task reported by Arpit Agarwal and fixed by Chris Nauroth (datanode , hdfs-client)<br>
@@ -3488,6 +3528,10 @@ with no args would throw an NPE.</blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9740">HADOOP-9740</a>.
      Major bug reported by Allan Yan and fixed by Allan Yan (fs)<br>
      <b>FsShell's Text command does not read avro data files stored on HDFS</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9576">HADOOP-9576</a>.
+     Major bug reported by Jian He and fixed by Steve Loughran <br>
+     <b>Make NetUtils.wrapException throw EOFException instead of wrapping it as IOException</b><br>
      <blockquote></blockquote></li>
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-9540">HADOOP-9540</a>.
      Minor improvement reported by Hari and fixed by  (fs/s3 , test)<br>
