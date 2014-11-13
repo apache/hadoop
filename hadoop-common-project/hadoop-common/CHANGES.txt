@@ -360,6 +360,8 @@ Release 2.7.0 - UNRELEASED
     HADOOP-7984. Add hadoop --loglevel option to change log level.
     (Akira AJISAKA via cnauroth)
 
+    HADOOP-8989. hadoop fs -find feature (Jonathan Allen via aw)
+
   IMPROVEMENTS
 
     HADOOP-11156. DelegateToFileSystem should implement

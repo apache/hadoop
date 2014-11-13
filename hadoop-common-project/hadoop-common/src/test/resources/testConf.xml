@@ -964,6 +964,50 @@
     </test>
 
     <test> <!-- TESTED -->
+      <description>help: help for find</description>
+      <test-commands>
+        <command>-help find</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>-find &lt;path&gt; \.\.\. &lt;expression&gt; \.\.\. :
+  Finds all files that match the specified expression and
+  applies selected actions to them\. If no &lt;path&gt; is specified
+  then defaults to the current working directory\. If no
+  expression is specified then defaults to -print\.
+  
+  The following primary expressions are recognised:
+    -name pattern
+    -iname pattern
+      Evaluates as true if the basename of the file matches the
+      pattern using standard file system globbing\.
+      If -iname is used then the match is case insensitive\.
+  
+    -print
+    -print0
+      Always evaluates to true. Causes the current pathname to be
+      written to standard output followed by a newline. If the -print0
+      expression is used then an ASCII NULL character is appended rather
+      than a newline.
+  
+  The following operators are recognised:
+    expression -a expression
+    expression -and expression
+    expression expression
+      Logical AND operator for joining two expressions\. Returns
+      true if both child expressions return true\. Implied by the
+      juxtaposition of two expressions and so does not need to be
+      explicitly specified\. The second expression will not be
+      applied if the first fails\.
+</expected-output>	
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
       <description>help: help for help</description>
       <test-commands>
         <command>-help help</command>
