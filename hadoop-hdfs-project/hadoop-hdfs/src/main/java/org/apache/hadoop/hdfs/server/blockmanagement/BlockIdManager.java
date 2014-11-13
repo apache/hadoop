@@ -203,6 +203,6 @@ public class BlockIdManager {
     generationStampV2.setCurrentValue(GenerationStamp.LAST_RESERVED_STAMP);
     getBlockIdGenerator().setCurrentValue(SequentialBlockIdGenerator
       .LAST_RESERVED_BLOCK_ID);
-    setGenerationStampV1Limit(GenerationStamp.GRANDFATHER_GENERATION_STAMP);
+    generationStampV1Limit = GenerationStamp.GRANDFATHER_GENERATION_STAMP;
   }
 }

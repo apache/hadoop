@@ -169,6 +169,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7358. Clients may get stuck waiting when using ByteArrayManager.
     (szetszwo)
 
+    HDFS-7395. BlockIdManager#clear() bails out when resetting the
+    GenerationStampV1Limit. (wheat9)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
