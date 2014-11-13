@@ -87,9 +87,6 @@ Release 2.7.0 - UNRELEASED
     YARN-2603. ApplicationConstants missing HADOOP_MAPRED_HOME (Ray Chiang via
     aw)
 
-    YARN-2853. Fixed a bug in ResourceManager causing apps to hang when the user
-    kill request races with ApplicationMaster finish. (Jian He via vinodkv)
-
 Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
@@ -961,6 +958,9 @@ Release 2.6.0 - 2014-11-15
     YARN-2846. Incorrect persist exit code for running containers in
     reacquireContainer() that interrupted by NodeManager restart. (Junping Du
     via jlowe)
+
+    YARN-2853. Fixed a bug in ResourceManager causing apps to hang when the user
+    kill request races with ApplicationMaster finish. (Jian He via vinodkv)
 
 Release 2.5.2 - 2014-11-10
 
