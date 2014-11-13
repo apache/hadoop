@@ -340,11 +340,11 @@ public class TestHFlush {
         // If we made it past the hflush(), then that means that the ack made it back
         // from the pipeline before we got to the wait() call. In that case we should
         // still have interrupted status.
-        assertTrue(Thread.currentThread().interrupted());
+        assertTrue(Thread.interrupted());
       } catch (InterruptedIOException ie) {
         System.out.println("Got expected exception during flush");
       }
-      assertFalse(Thread.currentThread().interrupted());
+      assertFalse(Thread.interrupted());
 
       // Try again to flush should succeed since we no longer have interrupt status
       stm.hflush();
@@ -362,11 +362,11 @@ public class TestHFlush {
         // If we made it past the close(), then that means that the ack made it back
         // from the pipeline before we got to the wait() call. In that case we should
         // still have interrupted status.
-        assertTrue(Thread.currentThread().interrupted());
+        assertTrue(Thread.interrupted());
       } catch (InterruptedIOException ioe) {
         System.out.println("Got expected exception during close");
         // If we got the exception, we shouldn't have interrupted status anymore.
-        assertFalse(Thread.currentThread().interrupted());
+        assertFalse(Thread.interrupted());
 
         // Now do a successful close.
         stm.close();
@@ -374,7 +374,7 @@ public class TestHFlush {
 
 
       // verify that entire file is good
-      AppendTestUtil.checkFullFile(fs, p, fileLen,
+      AppendTestUtil.checkFullFile(fs, p, 4,
         fileContents, "Failed to deal with thread interruptions");
     } finally {
       cluster.shutdown();
