@@ -388,7 +388,7 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7277. Remove explicit dependency on netty 3.2 in BKJournal. (wheat9)
 
-    HDFS-7232. Populate hostname in httpfs audit log (Zoran Dimitrijevic 
+    HDFS-7232. Populate hostname in httpfs audit log (Zoran Dimitrijevic
     via aw)
 
     HDFS-7258. CacheReplicationMonitor rescan schedule log should use DEBUG
@@ -397,6 +397,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7282. Fix intermittent TestShortCircuitCache and
     TestBlockReaderFactory failures resulting from TemporarySocketDirectory GC.
     (Jinghui Wang via Colin Patrick McCabe)
+
+    HDFS-7301. TestMissingBlocksAlert should use MXBeans instead of old web UI.
+    (Zhe Zhang via wheat9)
 
     HDFS-7235. DataNode#transferBlock should report blocks that don't exist
     using reportBadBlock (yzhang via cmccabe)
@@ -415,6 +418,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7389. Named user ACL cannot stop the user from accessing the FS entity.
     (Vinayakumar B via cnauroth)
+
+    HDFS-6938. Cleanup javac warnings in FSNamesystem (Charles Lamb via wheat9)
 
 Release 2.6.0 - 2014-11-15
 
@@ -600,6 +605,9 @@ Release 2.6.0 - 2014-11-15
 
     HDFS-6959. Make the HDFS home directory location customizable. (yzhang via
     cmccabe)
+
+    HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
+    directory. (Jing Zhao via wheat9)
 
     HDFS-6886. Use single editlog record for creating file + overwrite. (Yi Liu
     via jing9)
@@ -873,13 +881,8 @@ Release 2.6.0 - 2014-11-15
 
     HDFS-6892. Add XDR packaging method for each NFS request (brandonli)
 
-    HDFS-6938. Cleanup javac warnings in FSNamesystem (Charles Lamb via wheat9)
-
     HDFS-6902. FileWriter should be closed in finally block in
     BlockReceiver#receiveBlock() (Tsuyoshi OZAWA via Colin Patrick McCabe)
-
-    HDFS-6800. Support Datanode layout changes with rolling upgrade.
-    (James Thomas via Arpit Agarwal)
 
     HDFS-6972. TestRefreshUserMappings.testRefreshSuperUserGroupsConfiguration
     doesn't decode url correctly. (Yongjun Zhang via wang)
@@ -910,6 +913,11 @@ Release 2.6.0 - 2014-11-15
 
     HDFS-6951. Correctly persist raw namespace xattrs to edit log and fsimage.
     (clamb via wang)
+
+    HDFS-6800. Support Datanode layout changes with rolling upgrade.
+    (James Thomas via Arpit Agarwal)
+
+    HDFS-6981. Fix DN upgrade with layout version change. (Arpit Agarwal)
 
     HDFS-6506. Newly moved block replica been invalidated and deleted in
     TestBalancer. (Binglin Chang via cnauroth)
@@ -960,13 +968,16 @@ Release 2.6.0 - 2014-11-15
     HDFS-7132. hdfs namenode -metadataVersion command does not honor
     configured name dirs. (Charles Lamb via wang)
 
+    HDFS-7049. TestByteRangeInputStream.testPropagatedClose fails and throw
+    NPE on branch-2. (Juan Yu via wheat9)
+
     HDFS-7148. TestEncryptionZones#testIsEncryptedMethod fails on branch-2
     after archival storage merge. (wang)
 
     HDFS-7157. Using Time.now() for recording start/end time of reconfiguration
     tasks (Lei Xu via cmccabe)
 
-    HDFS-6664. HDFS permissions guide documentation states incorrect default 
+    HDFS-6664. HDFS permissions guide documentation states incorrect default
     group mapping class. (Ray Chiang via aw)
 
     HDFS-4227. Document dfs.namenode.resource.*  (Daisuke Kobayashi via aw)
@@ -1025,7 +1036,16 @@ Release 2.6.0 - 2014-11-15
     (clamb via yliu)
 
     HADOOP-11233. hadoop.security.kms.client.encrypted.key.cache.expiry
-    property spelled wrong in core-default. (Stephen Chu via yliu) 
+    property spelled wrong in core-default. (Stephen Chu via yliu)
+
+    HDFS-7218. FSNamesystem ACL operations should write to audit log on
+    failure. (clamb via yliu)
+
+    HDFS-7199. DFSOutputStream should not silently drop data if DataStreamer
+    crashes with an unchecked exception (rushabhs via cmccabe)
+
+    HDFS-7383. DataNode.requestShortCircuitFdsForRead may throw
+    NullPointerException. (szetszwo via suresh)
 
     HDFS-7147. Update archival storage user documentation.
     (Tsz Wo Nicholas Sze via wheat9)
@@ -1038,12 +1058,6 @@ Release 2.6.0 - 2014-11-15
     HDFS-7355. TestDataNodeVolumeFailure#testUnderReplicationAfterVolFailure
     fails on Windows, because we cannot deny access to the file owner.
     (Chris Nauroth via wheat9)
-
-    HDFS-7218. FSNamesystem ACL operations should write to audit log on
-    failure. (clamb via yliu)
-
-    HDFS-7199. DFSOutputStream should not silently drop data if DataStreamer
-    crashes with an unchecked exception (rushabhs via cmccabe)
 
     HDFS-7367. HDFS short-circuit read cannot negotiate shared memory slot and
     file descriptors when SASL is enabled on DataTransferProtocol.
@@ -1423,9 +1437,6 @@ Release 2.6.0 - 2014-11-15
 
     HDFS-7382. DataNode in secure mode may throw NullPointerException if client
     connects before DataNode registers itself with NameNode. (cnauroth)
-
-    HDFS-7383. DataNode.requestShortCircuitFdsForRead may throw 
-    NullPointerException. (szetszwo via suresh)
 
     HDFS-7387. NFS may only do partial commit due to a race between COMMIT and write
     (brandonli)
