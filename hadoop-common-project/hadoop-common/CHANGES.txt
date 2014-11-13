@@ -357,6 +357,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-10987. Provide an iterator-based listing API for FileSystem (kihwal)
 
+    HADOOP-7984. Add hadoop --loglevel option to change log level.
+    (Akira AJISAKA via cnauroth)
+
   IMPROVEMENTS
 
     HADOOP-11156. DelegateToFileSystem should implement

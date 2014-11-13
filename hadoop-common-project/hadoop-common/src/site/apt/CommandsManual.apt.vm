@@ -27,7 +27,8 @@ Overview
    hadoop script without any arguments prints the description for all
    commands.
 
-   Usage: <<<hadoop [--config confdir] [COMMAND] [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
+   Usage: <<<hadoop [--config confdir] [--loglevel loglevel] [COMMAND]
+             [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
 
    Hadoop has an option parsing framework that employs parsing generic
    options as well as running classes.
@@ -36,6 +37,10 @@ Overview
 || COMMAND_OPTION       || Description
 *-----------------------+---------------+
 | <<<--config confdir>>>| Overwrites the default Configuration directory.  Default is <<<${HADOOP_HOME}/conf>>>.
+*-----------------------+---------------+
+| <<<--loglevel loglevel>>>| Overwrites the log level. Valid log levels are
+|                       | FATAL, ERROR, WARN, INFO, DEBUG, and TRACE.
+|                       | Default is INFO.
 *-----------------------+---------------+
 | GENERIC_OPTIONS       | The common set of options supported by multiple commands.
 | COMMAND_OPTIONS       | Various commands with their options are described in the following sections. The commands have been grouped into User Commands and Administration Commands.

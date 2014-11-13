@@ -17,7 +17,8 @@
 
 function hadoop_usage
 {
-  echo "Usage: yarn [--config confdir] [--daemon (start|stop|status)] COMMAND"
+  echo "Usage: yarn [--config confdir] [--daemon (start|stop|status)]"
+  echo "           [--loglevel loglevel] COMMAND"
   echo "where COMMAND is one of:"
   echo "  application                           prints application(s) report/kill application"
   echo "  applicationattempt                    prints applicationattempt(s) report"

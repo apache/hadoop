@@ -88,6 +88,10 @@ call :updatepath %HADOOP_BIN_PATH%
     shift
     shift
   )
+  if "%1" == "--loglevel" (
+    shift
+    shift
+  )
 
   set hadoop-command=%1
   if not defined hadoop-command (
@@ -238,6 +242,10 @@ call :updatepath %HADOOP_BIN_PATH%
     shift
     shift
   )
+  if "%1" == "--loglevel" (
+    shift
+    shift
+  )
   if [%2] == [] goto :eof
   shift
   set _arguments=
@@ -256,7 +264,7 @@ call :updatepath %HADOOP_BIN_PATH%
   goto :eof
 
 :print_usage
-  @echo Usage: hadoop [--config confdir] COMMAND
+  @echo Usage: hadoop [--config confdir] [--loglevel loglevel] COMMAND
   @echo where COMMAND is one of:
   @echo   fs                   run a generic filesystem user client
   @echo   version              print the version
