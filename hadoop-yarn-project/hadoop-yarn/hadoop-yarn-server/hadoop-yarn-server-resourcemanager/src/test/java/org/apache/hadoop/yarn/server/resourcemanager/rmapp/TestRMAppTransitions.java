@@ -726,12 +726,6 @@ public class TestRMAppTransitions {
     application.handle(event);
     rmDispatcher.await();
 
-    // Ignore Attempt_Finished if we were supposed to go to Finished.
-    assertAppState(RMAppState.KILLING, application);
-    RMAppEvent finishEvent =
-        new RMAppFinishedAttemptEvent(application.getApplicationId(), null);
-    application.handle(finishEvent);
-    assertAppState(RMAppState.KILLING, application);
     sendAttemptUpdateSavedEvent(application);
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
