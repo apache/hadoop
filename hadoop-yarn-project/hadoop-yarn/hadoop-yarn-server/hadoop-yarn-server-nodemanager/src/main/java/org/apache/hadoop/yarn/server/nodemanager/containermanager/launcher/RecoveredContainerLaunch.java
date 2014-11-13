@@ -73,6 +73,7 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
     dispatcher.getEventHandler().handle(new ContainerEvent(containerId,
         ContainerEventType.CONTAINER_LAUNCHED));
 
+    boolean notInterrupted = true;
     try {
       File pidFile = locatePidFile(appIdStr, containerIdStr);
       if (pidFile != null) {
@@ -85,14 +86,19 @@ public class RecoveredContainerLaunch extends ContainerLaunch {
       }
     } catch (IOException e) {
         LOG.error("Unable to recover container " + containerIdStr, e);
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted while waiting for exit code from " + containerId);
+      notInterrupted = false;
     } finally {
-      this.completed.set(true);
-      exec.deactivateContainer(containerId);
-      try {
-        getContext().getNMStateStore().storeContainerCompleted(containerId,
-            retCode);
-      } catch (IOException e) {
-        LOG.error("Unable to set exit code for container " + containerId);
+      if (notInterrupted) {
+        this.completed.set(true);
+        exec.deactivateContainer(containerId);
+        try {
+          getContext().getNMStateStore().storeContainerCompleted(containerId,
+              retCode);
+        } catch (IOException e) {
+          LOG.error("Unable to set exit code for container " + containerId);
+        }
       }
     }
 

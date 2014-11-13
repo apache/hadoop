@@ -955,6 +955,10 @@ Release 2.6.0 - 2014-11-15
     YARN-2794. Fixed log messages about distributing system-credentials. (Jian He via
     zjshen)
 
+    YARN-2846. Incorrect persist exit code for running containers in
+    reacquireContainer() that interrupted by NodeManager restart. (Junping Du
+    via jlowe)
+
 Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
