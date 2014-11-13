@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -102,7 +103,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         null, null, Long.MAX_VALUE, EnumSet.allOf(Field.class),
         UserGroupInformation.getLoginUser());
     Map<ApplicationId, ApplicationReport> apps =
-        new HashMap<ApplicationId, ApplicationReport>();
+        new LinkedHashMap<ApplicationId, ApplicationReport>();
     if (entities != null && entities.getEntities() != null) {
       for (TimelineEntity entity : entities.getEntities()) {
         ApplicationReportExt app =
@@ -128,7 +129,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         Long.MAX_VALUE, EnumSet.allOf(Field.class),
         UserGroupInformation.getLoginUser());
     Map<ApplicationAttemptId, ApplicationAttemptReport> appAttempts =
-        new HashMap<ApplicationAttemptId, ApplicationAttemptReport>();
+        new LinkedHashMap<ApplicationAttemptId, ApplicationAttemptReport>();
     for (TimelineEntity entity : entities.getEntities()) {
       ApplicationAttemptReport appAttempt =
           convertToApplicationAttemptReport(entity);
@@ -198,7 +199,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         null, null, Long.MAX_VALUE, EnumSet.allOf(Field.class),
         UserGroupInformation.getLoginUser());
     Map<ContainerId, ContainerReport> containers =
-        new HashMap<ContainerId, ContainerReport>();
+        new LinkedHashMap<ContainerId, ContainerReport>();
     if (entities != null && entities.getEntities() != null) {
       for (TimelineEntity entity : entities.getEntities()) {
         ContainerReport container = convertToContainerReport(
