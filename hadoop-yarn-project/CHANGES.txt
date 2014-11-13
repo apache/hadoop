@@ -53,9 +53,6 @@ Release 2.7.0 - UNRELEASED
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.
     (Vinod Kumar Vavilapalli and Tsuyoshi OZAWA via junping_du)
 
-    YARN-2635. TestRM, TestRMRestart, TestClientToAMTokens should run 
-    with both CS and FS. (Wei Yan and kasha via kasha)
-
     YARN-2641. Decommission nodes on -refreshNodes instead of next 
     NM-RM heartbeat. (Zhihai Xu via kasha)
 
@@ -458,6 +455,9 @@ Release 2.6.0 - 2014-11-15
 
     YARN-2818. Removed the now unnecessary user entity injection from Timeline
     service given we now have domains. (Zhijie Shen via vinodkv)
+
+    YARN-2635. TestRM, TestRMRestart, TestClientToAMTokens should run 
+    with both CS and FS. (Wei Yan and kasha via kasha)
 
   OPTIMIZATIONS
 
