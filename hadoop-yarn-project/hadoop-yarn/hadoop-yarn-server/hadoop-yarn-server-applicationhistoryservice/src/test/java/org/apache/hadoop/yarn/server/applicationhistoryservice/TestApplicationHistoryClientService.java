@@ -168,7 +168,7 @@ public class TestApplicationHistoryClientService {
         clientService.getClientHandler().getContainers(request);
     List<ContainerReport> containers = response.getContainerList();
     Assert.assertNotNull(containers);
-    Assert.assertEquals(containerId, containers.get(1).getContainerId());
-    Assert.assertEquals(containerId1, containers.get(0).getContainerId());
+    Assert.assertEquals(containerId, containers.get(0).getContainerId());
+    Assert.assertEquals(containerId1, containers.get(1).getContainerId());
   }
 }
