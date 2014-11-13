@@ -57,6 +57,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2766. Made ApplicationHistoryManager return a sorted list of apps,
     attempts and containers. (Robert Kanter via zjshen)
 
+    YARN-2856. Fixed RMAppImpl to handle ATTEMPT_KILLED event at ACCEPTED state
+    on app recovery. (Rohith Sharmaks via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
