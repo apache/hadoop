@@ -85,6 +85,18 @@ then
 	      HADOOP_CONF_DIR=$confdir
     fi
 fi
+
+# Set log level. Default to INFO.
+if [ $# -gt 1 ]
+then
+  if [ "--loglevel" = "$1" ]
+  then
+    shift
+    HADOOP_LOGLEVEL=$1
+    shift
+  fi
+fi
+HADOOP_LOGLEVEL="${HADOOP_LOGLEVEL:-INFO}"
  
 # Allow alternate conf dir location.
 if [ -e "${HADOOP_PREFIX}/conf/hadoop-env.sh" ]; then
@@ -235,7 +247,7 @@ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.home.dir=$HADOOP_PREFIX"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
-HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.root.logger=${HADOOP_ROOT_LOGGER:-INFO,console}"
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.root.logger=${HADOOP_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$JAVA_LIBRARY_PATH

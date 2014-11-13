@@ -78,6 +78,16 @@ if "%1" == "--config" (
 )
 
 @rem
+@rem Set log level. Default to INFO.
+@rem
+
+if "%1" == "--loglevel" (
+  set HADOOP_LOGLEVEL=%2
+  shift
+  shift
+)
+
+@rem
 @rem check to see it is specified whether to use the slaves or the
 @rem masters file
 @rem
@@ -157,8 +167,12 @@ if not defined HADOOP_LOGFILE (
   set HADOOP_LOGFILE=hadoop.log
 )
 
+if not defined HADOOP_LOGLEVEL (
+  set HADOOP_LOGLEVEL=INFO
+)
+
 if not defined HADOOP_ROOT_LOGGER (
-  set HADOOP_ROOT_LOGGER=INFO,console
+  set HADOOP_ROOT_LOGGER=%HADOOP_LOGLEVEL%,console
 )
 
 @rem

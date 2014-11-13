@@ -26,7 +26,7 @@ HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/hadoop-config.sh
 
 function print_usage(){
-  echo "Usage: hadoop [--config confdir] COMMAND"
+  echo "Usage: hadoop [--config confdir] [--loglevel loglevel] COMMAND"
   echo "       where COMMAND is one of:"
   echo "  fs                   run a generic filesystem user client"
   echo "  version              print the version"

@@ -28,7 +28,7 @@ else
 fi
 
 function print_usage(){
-  echo "Usage: mapred [--config confdir] COMMAND"
+  echo "Usage: mapred [--config confdir] [--loglevel loglevel] COMMAND"
   echo "       where COMMAND is one of:"
   echo "  pipes                run a Pipes job"
   echo "  job                  manipulate MapReduce jobs"

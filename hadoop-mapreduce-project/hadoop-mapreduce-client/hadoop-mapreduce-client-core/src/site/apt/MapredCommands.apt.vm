@@ -28,7 +28,7 @@ MapReduce Commands Guide
   MapReduce commands are invoked by the <<<bin/mapred>>> script. Running the
   script without any arguments prints the description for all commands.
 
-   Usage: <<<mapred [--config confdir] COMMAND>>>
+   Usage: <<<mapred [--config confdir] [--loglevel loglevel] COMMAND>>>
 
    MapReduce has an option parsing framework that employs parsing generic
    options as well as running classes.
@@ -38,6 +38,9 @@ MapReduce Commands Guide
 *-------------------------+---------------------------------------------------+
 | --config confdir | Overwrites the default Configuration directory. Default
 |                  | is $\{HADOOP_PREFIX\}/conf.
+*-------------------------+---------------------------------------------------+
+| --loglevel loglevel | Overwrites the log level. Valid log levels are FATAL,
+|                     | ERROR, WARN, INFO, DEBUG, and TRACE. Default is INFO.
 *-------------------------+---------------------------------------------------+
 | COMMAND COMMAND_OPTIONS | Various commands with their options are described
 |                         | in the following sections. The commands have been

@@ -36,6 +36,10 @@ if "%1" == "--config" (
   shift
   shift
 )
+if "%1" == "--loglevel" (
+  shift
+  shift
+)
 
 :main
   if exist %MAPRED_CONF_DIR%\mapred-env.cmd (
@@ -162,6 +166,10 @@ goto :eof
     shift
     shift
   )
+  if "%1" == "--loglevel" (
+    shift
+    shift
+  )
   shift
   set _mapredarguments=
   :MakeCmdArgsLoop 
@@ -184,7 +192,7 @@ goto :eof
   goto print_usage
 
 :print_usage
-  @echo Usage: mapred [--config confdir] COMMAND
+  @echo Usage: mapred [--config confdir] [--loglevel loglevel] COMMAND
   @echo        where COMMAND is one of:
   @echo   job                  manipulate MapReduce jobs
   @echo   queue                get information regarding JobQueues

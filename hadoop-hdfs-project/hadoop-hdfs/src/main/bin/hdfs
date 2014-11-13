@@ -34,7 +34,7 @@ HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/hdfs-config.sh
 
 function print_usage(){
-  echo "Usage: hdfs [--config confdir] COMMAND"
+  echo "Usage: hdfs [--config confdir] [--loglevel loglevel] COMMAND"
   echo "       where COMMAND is one of:"
   echo "  dfs                  run a filesystem command on the file systems supported in Hadoop."
   echo "  namenode -format     format the DFS filesystem"
