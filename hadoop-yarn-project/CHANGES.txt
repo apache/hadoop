@@ -873,6 +873,9 @@ Release 2.6.0 - 2014-11-15
     reacquireContainer() that interrupted by NodeManager restart. (Junping Du
     via jlowe)
 
+    YARN-2853. Fixed a bug in ResourceManager causing apps to hang when the user
+    kill request races with ApplicationMaster finish. (Jian He via vinodkv)
+
 Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
