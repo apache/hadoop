@@ -27,6 +27,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -141,7 +143,7 @@ public class TestByteArrayManager {
 
       { // recycle half of the arrays
         for(int i = 0; i < countThreshold/2; i++) {
-          recycler.submit(removeLast(allocator.futures));
+          recycler.submit(removeLast(allocator.futures).get());
         }
 
         for(Future<Integer> f : recycler.furtures) {
@@ -186,8 +188,8 @@ public class TestByteArrayManager {
         }
 
         // recycle an array
-        recycler.submit(removeLast(allocator.futures));
-        Assert.assertEquals(1, removeLast(recycler.furtures).intValue());
+        recycler.submit(removeLast(allocator.futures).get());
+        Assert.assertEquals(1, removeLast(recycler.furtures).get().intValue());
 
         // check if the thread is unblocked
         Thread.sleep(100);
@@ -207,11 +209,11 @@ public class TestByteArrayManager {
     }
   }
 
-  static <T> T removeLast(List<Future<T>> furtures) throws Exception {
+  static <T> Future<T> removeLast(List<Future<T>> furtures) throws Exception {
     return remove(furtures, furtures.size() - 1);
   }
-  static <T> T remove(List<Future<T>> furtures, int i) throws Exception {
-    return furtures.isEmpty()? null: furtures.remove(i).get();
+  static <T> Future<T> remove(List<Future<T>> furtures, int i) throws Exception {
+    return furtures.isEmpty()? null: furtures.remove(i);
   }
   
   static <T> void waitForAll(List<Future<T>> furtures) throws Exception {
@@ -320,12 +322,13 @@ public class TestByteArrayManager {
     final Runner[] runners = new Runner[Runner.NUM_RUNNERS];
     final Thread[] threads = new Thread[runners.length];
 
-    final int num = 1 << 8;
+    final int num = 1 << 10;
     for(int i = 0; i < runners.length; i++) {
       runners[i] = new Runner(i, countThreshold, countLimit, pool, i, bam);
       threads[i] = runners[i].start(num);
     }
     
+    final List<Exception> exceptions = new ArrayList<Exception>();
     final Thread randomRecycler = new Thread() {
       @Override
       public void run() {
@@ -336,10 +339,11 @@ public class TestByteArrayManager {
             runners[j].recycle();
           } catch (Exception e) {
             e.printStackTrace();
-            Assert.fail(this + " has " + e);
+            exceptions.add(new Exception(this + " has an exception", e));
           }
 
           if ((i & 0xFF) == 0) {
+            LOG.info("randomRecycler sleep, i=" + i);
             sleepMs(100);
           }
         }
@@ -361,6 +365,7 @@ public class TestByteArrayManager {
     randomRecycler.start();
     
     randomRecycler.join();
+    Assert.assertTrue(exceptions.isEmpty());
 
     Assert.assertNull(counters.get(0, false));
     for(int i = 1; i < runners.length; i++) {
@@ -392,7 +397,7 @@ public class TestByteArrayManager {
   }
 
   static class Runner implements Runnable {
-    static final int NUM_RUNNERS = 4;
+    static final int NUM_RUNNERS = 5;
 
     static int index2arrayLength(int index) {
       return ByteArrayManager.MIN_ARRAY_LENGTH << (index - 1);
@@ -453,16 +458,22 @@ public class TestByteArrayManager {
       return f;
     }
 
-    byte[] removeFirst() throws Exception {
+    Future<byte[]> removeFirst() throws Exception {
       synchronized (arrays) {
         return remove(arrays, 0);
       }
     }
 
     void recycle() throws Exception {
-      final byte[] a = removeFirst();
-      if (a != null) {
-        recycle(a);
+      final Future<byte[]> f = removeFirst();
+      if (f != null) {
+        printf("randomRecycler: ");
+        try {
+          recycle(f.get(10, TimeUnit.MILLISECONDS));
+        } catch(TimeoutException e) {
+          recycle(new byte[maxArrayLength]);
+          printf("timeout, new byte[%d]\n", maxArrayLength);
+        }
       }
     }
 
@@ -490,9 +501,9 @@ public class TestByteArrayManager {
           submitAllocate();
         } else {
           try {
-            final byte[] a = removeFirst();
-            if (a != null) {
-              submitRecycle(a);
+            final Future<byte[]> f = removeFirst();
+            if (f != null) {
+              submitRecycle(f.get());
             }
           } catch (Exception e) {
             e.printStackTrace();

@@ -200,12 +200,7 @@ public abstract class ByteArrayManager {
         debugMessage.get().append(", ").append(this);
       }
 
-      if (numAllocated == maxAllocated) {
-        if (LOG.isDebugEnabled()) {
-          debugMessage.get().append(", notifyAll");
-        }
-        notifyAll();
-      }
+      notify();
       numAllocated--;
       if (numAllocated < 0) {
         // it is possible to drop below 0 since
@@ -346,12 +341,13 @@ public abstract class ByteArrayManager {
      * the number of allocated arrays drops to below the capacity.
      * 
      * The byte array allocated by this method must be returned for recycling
-     * via the {@link ByteArrayManager#recycle(byte[])} method.
+     * via the {@link Impl#release(byte[])} method.
      *
      * @return a byte array with length larger than or equal to the given length.
      */
     @Override
     public byte[] newByteArray(final int arrayLength) throws InterruptedException {
+      Preconditions.checkArgument(arrayLength >= 0);
       if (LOG.isDebugEnabled()) {
         debugMessage.get().append("allocate(").append(arrayLength).append(")");
       }
@@ -375,6 +371,7 @@ public abstract class ByteArrayManager {
       }
   
       if (LOG.isDebugEnabled()) {
+        debugMessage.get().append(", return byte[").append(array.length).append("]");
         logDebugMessage();
       }
       return array;
@@ -384,7 +381,9 @@ public abstract class ByteArrayManager {
      * Recycle the given byte array.
      * 
      * The byte array may or may not be allocated
-     * by the {@link ByteArrayManager#allocate(int)} method.
+     * by the {@link Impl#newByteArray(int)} method.
+     * 
+     * This is a non-blocking call.
      */
     @Override
     public int release(final byte[] array) {
