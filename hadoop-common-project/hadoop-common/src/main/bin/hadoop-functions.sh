@@ -286,6 +286,9 @@ function hadoop_validate_classname
   shift 1
 
   if [[ ! ${class} =~ \. ]]; then
+    # assuming the arg is typo of command if it does not conatain ".".
+    # class belonging to no package is not allowed as a result.
+    hadoop_error "ERROR: ${class} is not COMMAND nor fully qualified CLASSNAME."
     return 1
   fi
   return 0
