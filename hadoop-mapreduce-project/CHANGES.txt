@@ -465,6 +465,9 @@ Release 2.6.0 - 2014-11-15
     MAPREDUCE-5958. Wrong reduce task progress if map output is compressed
     (Emilio Coppa and jlowe via kihwal)
 
+    MAPREDUCE-6156. Fetcher - connect() doesn't handle connection refused
+    correctly (Junping Du via jlowe)
+
 Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
