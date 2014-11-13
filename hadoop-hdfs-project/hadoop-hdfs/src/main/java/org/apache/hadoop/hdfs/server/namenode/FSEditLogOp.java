@@ -421,6 +421,12 @@ public abstract class FSEditLogOp {
       assert(opCode == OP_ADD || opCode == OP_CLOSE);
     }
     
+    <T extends AddCloseOp> T reset() {
+      this.aclEntries = null;
+      this.xAttrs = null;
+      return (T)this;
+    }
+
     <T extends AddCloseOp> T setInodeId(long inodeId) {
       this.inodeId = inodeId;
       return (T)this;
@@ -1410,6 +1416,12 @@ public abstract class FSEditLogOp {
     
     static MkdirOp getInstance(OpInstanceCache cache) {
       return (MkdirOp)cache.get(OP_MKDIR);
+    }
+
+    MkdirOp reset() {
+      this.aclEntries = null;
+      this.xAttrs = null;
+      return this;
     }
 
     MkdirOp setInodeId(long inodeId) {
