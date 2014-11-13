@@ -14,6 +14,8 @@ Release 2.5.2 - UNRELEASED
 
     HDFS-7274. Disable SSLv3 in HttpFS. (Robert Kanter via kasha)
 
+    HDFS-7391. Renable SSLv2Hello in HttpFS. (Robert Kanter via kasha)
+
 
 Release 2.5.1 - 2014-09-05
 
