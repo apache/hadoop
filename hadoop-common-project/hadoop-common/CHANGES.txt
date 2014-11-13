@@ -343,6 +343,8 @@ Trunk (Unreleased)
     HADOOP-11284. Fix variable name mismatches in hadoop-functions.sh (Masatake
     Iwasaki via aw)
 
+    HADOOP-11298. slaves.sh and stop-all.sh are missing slashes (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
