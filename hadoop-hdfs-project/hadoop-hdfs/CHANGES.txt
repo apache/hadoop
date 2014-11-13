@@ -1430,6 +1430,8 @@ Release 2.6.0 - 2014-11-15
     HDFS-7387. NFS may only do partial commit due to a race between COMMIT and write
     (brandonli)
 
+    HDFS-7391. Renable SSLv2Hello in HttpFS. (rkanter via acmurthy)
+
 Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
