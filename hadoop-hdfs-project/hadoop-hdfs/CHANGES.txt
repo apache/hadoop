@@ -1023,6 +1023,9 @@ Release 2.6.0 - 2014-11-15
 
     HDFS-7391. Renable SSLv2Hello in HttpFS. (rkanter via acmurthy)
 
+    HDFS-7385. ThreadLocal used in FSEditLog class causes FSImage permission mess
+    up. (jiangyu via cnauroth)
+
 Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
