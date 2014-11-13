@@ -159,9 +159,10 @@ public abstract class ContainerExecutor implements Configurable {
    * @param containerId The ID of the container to reacquire
    * @return The exit code of the pre-existing container
    * @throws IOException
+   * @throws InterruptedException 
    */
   public int reacquireContainer(String user, ContainerId containerId)
-      throws IOException {
+      throws IOException, InterruptedException {
     Path pidPath = getPidFilePath(containerId);
     if (pidPath == null) {
       LOG.warn(containerId + " is not active, returning terminated error");
@@ -175,13 +176,8 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     LOG.info("Reacquiring " + containerId + " with pid " + pid);
-    try {
-      while(isContainerProcessAlive(user, pid)) {
-        Thread.sleep(1000);
-      }
-    } catch (InterruptedException e) {
-      throw new IOException("Interrupted while waiting for process " + pid
-          + " to exit", e);
+    while(isContainerProcessAlive(user, pid)) {
+      Thread.sleep(1000);
     }
 
     // wait for exit code file to appear
@@ -194,12 +190,9 @@ public abstract class ContainerExecutor implements Configurable {
         LOG.info(containerId + " was deactivated");
         return ExitCode.TERMINATED.getExitCode();
       }
-      try {
-        Thread.sleep(sleepMsec);
-      } catch (InterruptedException e) {
-        throw new IOException(
-            "Interrupted while waiting for exit code from " + containerId, e);
-      }
+      
+      Thread.sleep(sleepMsec);
+      
       msecLeft -= sleepMsec;
     }
     if (msecLeft < 0) {
