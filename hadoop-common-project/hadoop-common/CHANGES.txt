@@ -16,6 +16,8 @@ Release 2.5.2 - 2014-11-19
 
     HADOOP-11260. Patch up Jetty to disable SSLv3. (Mike Yoder via kasha)
 
+    HADOOP-11307. create-release script should run git clean first. (kasha)
+
 
 Release 2.5.1 - 2014-09-05
 
