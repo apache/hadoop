@@ -25,8 +25,9 @@ function hadoop_usage
   echo "  classpath            prints the class path needed for running"
   echo "                       mapreduce subcommands"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
-  echo "  job                  manipulate MapReduce jobs"
   echo "  historyserver        run job history servers as a standalone daemon"
+  echo "  hsadmin              job history server admin interface"
+  echo "  job                  manipulate MapReduce jobs"
   echo "  pipes                run a Pipes job"
   echo "  queue                get information regarding JobQueues"
   echo "  sampler              sampler"
@@ -98,8 +99,15 @@ case ${COMMAND} in
     fi
     HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_JHS_LOGGER:-$HADOOP_DAEMON_ROOT_LOGGER}
   ;;
+  hsadmin)
+    CLASS=org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  ;;
   job)
     CLASS=org.apache.hadoop.mapred.JobClient
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   pipes)
     CLASS=org.apache.hadoop.mapred.pipes.Submitter
