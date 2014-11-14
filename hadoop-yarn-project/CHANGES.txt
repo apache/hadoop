@@ -90,6 +90,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2857. ConcurrentModificationException in ContainerLogAppender
     (Mohammad Kamrul Islam via jlowe)
 
+    YARN-2816. NM fail to start with NPE during container recovery (Zhihai Xu
+    via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
