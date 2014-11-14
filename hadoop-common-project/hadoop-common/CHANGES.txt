@@ -770,6 +770,7 @@ Release 2.6.0 - 2014-11-18
     HADOOP-9576. Changed NetUtils#wrapException to throw EOFException instead
     of wrapping it as IOException. (Steve Loughran via jianhe)
 
+
 Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
@@ -786,6 +787,7 @@ Release 2.5.2 - 2014-11-10
 
     HADOOP-11260. Patch up Jetty to disable SSLv3. (Mike Yoder via kasha)
 
+    HADOOP-11307. create-release script should run git clean first (kasha)
 
 Release 2.5.1 - 2014-09-05
 
