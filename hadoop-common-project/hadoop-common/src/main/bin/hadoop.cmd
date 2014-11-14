@@ -157,6 +157,11 @@ call :updatepath %HADOOP_BIN_PATH%
   goto :eof
 
 :version 
+  if defined YARN_OPTS (
+    @echo WARNING: Use "yarn jar" to launch YARN applications.
+  ) else if defined YARN_CLIENT_OPTS (
+    @echo WARNING: Use "yarn jar" to launch YARN applications.
+  )
   set CLASS=org.apache.hadoop.util.VersionInfo
   goto :eof
 
@@ -241,6 +246,8 @@ call :updatepath %HADOOP_BIN_PATH%
   goto :MakeCmdArgsLoop 
   :EndLoop 
   set hadoop-command-arguments=%_arguments%
+  @echo                        note: please use "yarn jar" to launch
+  @echo                              YARN applications, not this command.
   goto :eof
 
 :print_usage
