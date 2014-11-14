@@ -31,8 +31,6 @@ function print_usage(){
   echo "  fs                   run a generic filesystem user client"
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
-  echo "                       note: please use \"yarn jar\" to launch"
-  echo "                             YARN applications, not this command."
   echo "  checknative [-a|-h]  check native hadoop and compression libraries availability"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
@@ -103,9 +101,6 @@ case $COMMAND in
       CLASS=org.apache.hadoop.util.VersionInfo
     elif [ "$COMMAND" = "jar" ] ; then
       CLASS=org.apache.hadoop.util.RunJar
-      if [[ -n "${YARN_OPTS}" ]] || [[ -n "${YARN_CLIENT_OPTS}" ]]; then
-        echo "WARNING: Use \"yarn jar\" to launch YARN applications."
-      fi
     elif [ "$COMMAND" = "key" ] ; then
       CLASS=org.apache.hadoop.crypto.key.KeyShell
     elif [ "$COMMAND" = "checknative" ] ; then
