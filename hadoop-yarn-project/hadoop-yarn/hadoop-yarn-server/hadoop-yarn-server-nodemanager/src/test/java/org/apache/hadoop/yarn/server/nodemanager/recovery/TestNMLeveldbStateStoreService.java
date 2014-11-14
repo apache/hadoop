@@ -274,6 +274,13 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(containerReq, rcs.getStartRequest());
     assertTrue(rcs.getDiagnostics().isEmpty());
 
+    // store a new container record without StartContainerRequest
+    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 6);
+    stateStore.storeContainerLaunched(containerId1);
+    recoveredContainers = stateStore.loadContainersState();
+    // check whether the new container record is discarded
+    assertEquals(1, recoveredContainers.size());
+
     // launch the container, add some diagnostics, and verify recovered
     StringBuilder diags = new StringBuilder();
     stateStore.storeContainerLaunched(containerId);
