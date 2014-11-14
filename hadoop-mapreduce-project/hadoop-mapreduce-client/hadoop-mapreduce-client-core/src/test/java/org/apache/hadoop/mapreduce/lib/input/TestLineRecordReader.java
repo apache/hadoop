@@ -27,10 +27,15 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.compress.BZip2Codec;
+import org.apache.hadoop.io.compress.CodecPool;
+import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
@@ -230,5 +235,38 @@ public class TestLineRecordReader {
     reader.close();
 
     assertTrue("BOM is not skipped", skipBOM);
+  }
+
+  @Test
+  public void testMultipleClose() throws IOException {
+    URL testFileUrl = getClass().getClassLoader().
+        getResource("recordSpanningMultipleSplits.txt.bz2");
+    assertNotNull("Cannot find recordSpanningMultipleSplits.txt.bz2",
+        testFileUrl);
+    File testFile = new File(testFileUrl.getFile());
+    Path testFilePath = new Path(testFile.getAbsolutePath());
+    long testFileSize = testFile.length();
+    Configuration conf = new Configuration();
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+        LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
+    TaskAttemptContext context = new TaskAttemptContextImpl(conf, new TaskAttemptID());
+
+    // read the data and check whether BOM is skipped
+    FileSplit split = new FileSplit(testFilePath, 0, testFileSize, null);
+    LineRecordReader reader = new LineRecordReader();
+    reader.initialize(split, context);
+
+    //noinspection StatementWithEmptyBody
+    while (reader.nextKeyValue()) ;
+    reader.close();
+    reader.close();
+
+    BZip2Codec codec = new BZip2Codec();
+    codec.setConf(conf);
+    Set<Decompressor> decompressors = new HashSet<Decompressor>();
+    for (int i = 0; i < 10; ++i) {
+      decompressors.add(CodecPool.getDecompressor(codec));
+    }
+    assertEquals(10, decompressors.size());
   }
 }

@@ -19,21 +19,18 @@ package org.apache.hadoop.io.compress;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class TestCodecPool {
   private final String LEASE_COUNT_ERR =
@@ -61,6 +58,25 @@ public class TestCodecPool {
     CodecPool.returnCompressor(comp1);
     assertEquals(LEASE_COUNT_ERR, 0,
         CodecPool.getLeasedCompressorsCount(codec));
+
+    CodecPool.returnCompressor(comp1);
+    assertEquals(LEASE_COUNT_ERR, 0,
+        CodecPool.getLeasedCompressorsCount(codec));
+  }
+
+  @Test(timeout = 1000)
+  public void testCompressorNotReturnSameInstance() {
+    Compressor comp = CodecPool.getCompressor(codec);
+    CodecPool.returnCompressor(comp);
+    CodecPool.returnCompressor(comp);
+    Set<Compressor> compressors = new HashSet<Compressor>();
+    for (int i = 0; i < 10; ++i) {
+      compressors.add(CodecPool.getCompressor(codec));
+    }
+    assertEquals(10, compressors.size());
+    for (Compressor compressor : compressors) {
+      CodecPool.returnCompressor(compressor);
+    }
   }
 
   @Test(timeout = 1000)
@@ -78,6 +94,10 @@ public class TestCodecPool {
     CodecPool.returnDecompressor(decomp1);
     assertEquals(LEASE_COUNT_ERR, 0,
         CodecPool.getLeasedDecompressorsCount(codec));
+
+    CodecPool.returnDecompressor(decomp1);
+    assertEquals(LEASE_COUNT_ERR, 0,
+        CodecPool.getLeasedCompressorsCount(codec));
   }
 
   @Test(timeout = 1000)
@@ -153,5 +173,20 @@ public class TestCodecPool {
 
     assertEquals(LEASE_COUNT_ERR, 0,
         CodecPool.getLeasedDecompressorsCount(codec));
+  }
+
+  @Test(timeout = 1000)
+  public void testDecompressorNotReturnSameInstance() {
+    Decompressor decomp = CodecPool.getDecompressor(codec);
+    CodecPool.returnDecompressor(decomp);
+    CodecPool.returnDecompressor(decomp);
+    Set<Decompressor> decompressors = new HashSet<Decompressor>();
+    for (int i = 0; i < 10; ++i) {
+      decompressors.add(CodecPool.getDecompressor(codec));
+    }
+    assertEquals(10, decompressors.size());
+    for (Decompressor decompressor : decompressors) {
+      CodecPool.returnDecompressor(decompressor);
+    }
   }
 }

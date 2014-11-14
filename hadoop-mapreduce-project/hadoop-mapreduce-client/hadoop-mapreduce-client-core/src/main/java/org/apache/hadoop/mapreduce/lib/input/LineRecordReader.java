@@ -232,6 +232,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     } finally {
       if (decompressor != null) {
         CodecPool.returnDecompressor(decompressor);
+        decompressor = null;
       }
     }
   }
