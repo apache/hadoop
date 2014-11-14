@@ -1,6 +1,6 @@
 Hadoop YARN Change Log
 
-Release 2.5.2 - 2014-11-10
+Release 2.5.2 - 2014-11-19
 
   INCOMPATIBLE CHANGES
 
