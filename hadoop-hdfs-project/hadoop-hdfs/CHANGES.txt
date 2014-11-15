@@ -101,6 +101,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7375. Move FSClusterStats to o.a.h.h.hdfs.server.blockmanagement.
     (wheat9)
 
+    HDFS-7386. Replace check "port number < 1024" with shared isPrivilegedPort
+    method. (Yongjun Zhang via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
