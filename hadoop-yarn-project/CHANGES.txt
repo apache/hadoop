@@ -96,6 +96,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2432. RMStateStore should process the pending events before close.
     (Varun Saxena via jianhe)
 
+    YARN-1703. Fixed ResourceManager web-proxy to close connections correctly.
+    (Rohith Sharma via vinodkv)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
