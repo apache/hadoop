@@ -72,7 +72,8 @@ abstract class ShortParam extends Param<Short, ShortParam.Domain> {
     @Override
     Short parse(final String str) {
       try {
-        return NULL.equals(str)? null: Short.parseShort(str, radix);
+        return NULL.equals(str) || str == null ? null : Short.parseShort(str,
+          radix);
       } catch(NumberFormatException e) {
         throw new IllegalArgumentException("Failed to parse \"" + str
             + "\" as a radix-" + radix + " short integer.", e);

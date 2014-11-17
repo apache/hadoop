@@ -362,6 +362,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7394. Log at INFO level, not WARN level, when InvalidToken is seen in
     ShortCircuitCache (Keith Pak via Colin P. McCabe)
 
+    HDFS-7279. Use netty to implement DatanodeWebHdfsMethods. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
