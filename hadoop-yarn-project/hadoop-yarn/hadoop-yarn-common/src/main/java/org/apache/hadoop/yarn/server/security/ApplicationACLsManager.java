@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @InterfaceAudience.Private
 public class ApplicationACLsManager {
 
@@ -48,6 +50,11 @@ public class ApplicationACLsManager {
   private final ConcurrentMap<ApplicationId, Map<ApplicationAccessType, AccessControlList>> applicationACLS
     = new ConcurrentHashMap<ApplicationId, Map<ApplicationAccessType, AccessControlList>>();
 
+  @VisibleForTesting
+  public ApplicationACLsManager() {
+    this(new Configuration());
+  }
+  
   public ApplicationACLsManager(Configuration conf) {
     this.conf = conf;
     this.adminAclsManager = new AdminACLsManager(this.conf);

@@ -33,6 +33,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -45,6 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
@@ -113,8 +115,23 @@ public class AppBlock extends HtmlBlock {
     setTitle(join("Application ", aid));
 
     RMAppMetrics appMerics = rmApp.getRMAppMetrics();
-    RMAppAttemptMetrics attemptMetrics =
-        rmApp.getCurrentAppAttempt().getRMAppAttemptMetrics();
+    
+    // Get attempt metrics and fields, it is possible currentAttempt of RMApp is
+    // null. In that case, we will assume resource preempted and number of Non
+    // AM container preempted on that attempt is 0
+    RMAppAttemptMetrics attemptMetrics;
+    if (null == rmApp.getCurrentAppAttempt()) {
+      attemptMetrics = null;
+    } else {
+      attemptMetrics = rmApp.getCurrentAppAttempt().getRMAppAttemptMetrics();
+    }
+    Resource attemptResourcePreempted =
+        attemptMetrics == null ? Resources.none() : attemptMetrics
+            .getResourcePreempted();
+    int attemptNumNonAMContainerPreempted =
+        attemptMetrics == null ? 0 : attemptMetrics
+            .getNumNonAMContainersPreempted();
+    
     info("Application Overview")
         ._("User:", app.getUser())
         ._("Name:", app.getName())
@@ -143,13 +160,12 @@ public class AppBlock extends HtmlBlock {
         ._("Total Number of AM Containers Preempted:",
           String.valueOf(appMerics.getNumAMContainersPreempted()))
         ._("Resource Preempted from Current Attempt:",
-          attemptMetrics.getResourcePreempted())
+          attemptResourcePreempted)
         ._("Number of Non-AM Containers Preempted from Current Attempt:",
-          String.valueOf(attemptMetrics
-            .getNumNonAMContainersPreempted()))
+          attemptNumNonAMContainerPreempted)
         ._("Aggregate Resource Allocation:",
-            String.format("%d MB-seconds, %d vcore-seconds", 
-                appMerics.getMemorySeconds(), appMerics.getVcoreSeconds()));
+          String.format("%d MB-seconds, %d vcore-seconds", 
+              appMerics.getMemorySeconds(), appMerics.getVcoreSeconds()));
     pdiv._();
 
     Collection<RMAppAttempt> attempts = rmApp.getAppAttempts().values();
