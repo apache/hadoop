@@ -167,7 +167,9 @@ public class JHAdminConfig {
    */
   public static final String MR_HS_SECURITY_SERVICE_AUTHORIZATION =
       "security.mrhs.client.protocol.acl";
-  
+  public static final String MR_HS_SECURITY_SERVICE_AUTHORIZATION_ADMIN_REFRESH =
+      "security.mrhs.admin.refresh.protocol.acl";
+
   /**
    * The HistoryStorage class to use to cache history data.
    */

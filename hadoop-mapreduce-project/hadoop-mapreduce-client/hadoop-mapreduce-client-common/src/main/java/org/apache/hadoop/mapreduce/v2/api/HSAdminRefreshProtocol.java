@@ -16,23 +16,44 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.v2.hs.protocol;
+package org.apache.hadoop.mapreduce.v2.api;
+
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.KerberosInfo;
-import org.apache.hadoop.security.RefreshUserMappingsProtocol;
-import org.apache.hadoop.tools.GetUserMappingsProtocol;
 
-/**
- * Protocol use
- * 
- */
 @KerberosInfo(serverPrincipal = CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
 @Private
 @InterfaceStability.Evolving
-public interface HSAdminProtocol extends GetUserMappingsProtocol,
-    RefreshUserMappingsProtocol, HSAdminRefreshProtocol {
+public interface HSAdminRefreshProtocol {
+  /**
+   * Refresh admin acls.
+   * 
+   * @throws IOException
+   */
+  public void refreshAdminAcls() throws IOException;
+  
+  /**
+   * Refresh loaded job cache
+   * @throws IOException
+   */
+  public void refreshLoadedJobCache() throws IOException;
 
+  /**
+   * Refresh job retention settings.
+   * 
+   * @throws IOException
+   */
+  public void refreshJobRetentionSettings() throws IOException;
+
+  /**
+   * Refresh log retention settings.
+   * 
+   * @throws IOException
+   */
+  public void refreshLogRetentionSettings() throws IOException;
+  
 }
