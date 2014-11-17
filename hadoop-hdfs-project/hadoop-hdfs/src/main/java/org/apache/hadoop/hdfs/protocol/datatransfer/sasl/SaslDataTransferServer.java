@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.security.SaslPropertiesResolver;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,7 +113,7 @@ public class SaslDataTransferServer {
         "SASL server skipping handshake in unsecured configuration for "
         + "peer = {}, datanodeId = {}", peer, datanodeId);
       return new IOStreamPair(underlyingIn, underlyingOut);
-    } else if (xferPort < 1024) {
+    } else if (SecurityUtil.isPrivilegedPort(xferPort)) {
       LOG.debug(
         "SASL server skipping handshake in secured configuration for "
         + "peer = {}, datanodeId = {}", peer, datanodeId);

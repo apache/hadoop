@@ -714,6 +714,29 @@ public class TestRMAppTransitions {
     verifyApplicationFinished(RMAppState.KILLED);
     verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
   }
+  
+  @Test
+  public void testAppAcceptedAttemptKilled() throws IOException,
+      InterruptedException {
+    LOG.info("--- START: testAppAcceptedAttemptKilled ---");
+    RMApp application = testCreateAppAccepted(null);
+
+    // ACCEPTED => FINAL_SAVING event RMAppEventType.ATTEMPT_KILLED
+    // When application recovery happens for attempt is KILLED but app is
+    // RUNNING.
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(),
+            RMAppEventType.ATTEMPT_KILLED);
+    application.handle(event);
+    rmDispatcher.await();
+
+    assertAppState(RMAppState.FINAL_SAVING, application);
+    sendAppUpdateSavedEvent(application);
+    assertKilled(application);
+    assertAppFinalStateSaved(application);
+    verifyApplicationFinished(RMAppState.KILLED);
+    verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
+  }
 
   @Test
   public void testAppRunningKill() throws IOException {
@@ -726,12 +749,6 @@ public class TestRMAppTransitions {
     application.handle(event);
     rmDispatcher.await();
 
-    // Ignore Attempt_Finished if we were supposed to go to Finished.
-    assertAppState(RMAppState.KILLING, application);
-    RMAppEvent finishEvent =
-        new RMAppFinishedAttemptEvent(application.getApplicationId(), null);
-    application.handle(finishEvent);
-    assertAppState(RMAppState.KILLING, application);
     sendAttemptUpdateSavedEvent(application);
     sendAppUpdateSavedEvent(application);
     assertKilled(application);

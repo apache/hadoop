@@ -41,6 +41,7 @@ public class ContainerLogAppender extends FileAppender
   //so that log4j can configure it from the configuration(log4j.properties). 
   private int maxEvents;
   private Queue<LoggingEvent> tail = null;
+  private boolean closing = false;
 
   @Override
   public void activateOptions() {
@@ -57,6 +58,9 @@ public class ContainerLogAppender extends FileAppender
   @Override
   public void append(LoggingEvent event) {
     synchronized (this) {
+      if (closing) { // When closing drop any new/transitive CLA appending
+        return;
+      }
       if (tail == null) {
         super.append(event);
       } else {
@@ -77,8 +81,9 @@ public class ContainerLogAppender extends FileAppender
 
   @Override
   public synchronized void close() {
+    closing = true;
     if (tail != null) {
-      for(LoggingEvent event: tail) {
+      for (LoggingEvent event : tail) {
         super.append(event);
       }
     }

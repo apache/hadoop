@@ -20,10 +20,13 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -156,9 +159,10 @@ public abstract class ContainerExecutor implements Configurable {
    * @param containerId The ID of the container to reacquire
    * @return The exit code of the pre-existing container
    * @throws IOException
+   * @throws InterruptedException 
    */
   public int reacquireContainer(String user, ContainerId containerId)
-      throws IOException {
+      throws IOException, InterruptedException {
     Path pidPath = getPidFilePath(containerId);
     if (pidPath == null) {
       LOG.warn(containerId + " is not active, returning terminated error");
@@ -172,13 +176,8 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     LOG.info("Reacquiring " + containerId + " with pid " + pid);
-    try {
-      while(isContainerProcessAlive(user, pid)) {
-        Thread.sleep(1000);
-      }
-    } catch (InterruptedException e) {
-      throw new IOException("Interrupted while waiting for process " + pid
-          + " to exit", e);
+    while(isContainerProcessAlive(user, pid)) {
+      Thread.sleep(1000);
     }
 
     // wait for exit code file to appear
@@ -191,12 +190,9 @@ public abstract class ContainerExecutor implements Configurable {
         LOG.info(containerId + " was deactivated");
         return ExitCode.TERMINATED.getExitCode();
       }
-      try {
-        Thread.sleep(sleepMsec);
-      } catch (InterruptedException e) {
-        throw new IOException(
-            "Interrupted while waiting for exit code from " + containerId, e);
-      }
+      
+      Thread.sleep(sleepMsec);
+      
       msecLeft -= sleepMsec;
     }
     if (msecLeft < 0) {
@@ -208,6 +204,34 @@ public abstract class ContainerExecutor implements Configurable {
       return Integer.parseInt(FileUtils.readFileToString(file).trim());
     } catch (NumberFormatException e) {
       throw new IOException("Error parsing exit code from pid " + pid, e);
+    }
+  }
+
+  public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException{
+    ContainerLaunch.ShellScriptBuilder sb = ContainerLaunch.ShellScriptBuilder.create();
+    if (environment != null) {
+      for (Map.Entry<String,String> env : environment.entrySet()) {
+        sb.env(env.getKey().toString(), env.getValue().toString());
+      }
+    }
+    if (resources != null) {
+      for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
+        for (String linkName : entry.getValue()) {
+          sb.symlink(entry.getKey(), new Path(linkName));
+        }
+      }
+    }
+
+    sb.command(command);
+
+    PrintStream pout = null;
+    try {
+      pout = new PrintStream(out);
+      sb.write(pout);
+    } finally {
+      if (out != null) {
+        out.close();
+      }
     }
   }
 

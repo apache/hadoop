@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
@@ -572,6 +573,10 @@ public class TestAppManager{
     when(app.getQueue()).thenReturn("Multiline\n\n\r\rQueueName");
     when(app.getState()).thenReturn(RMAppState.RUNNING);
 
+    RMAppMetrics metrics =
+        new RMAppMetrics(Resource.newInstance(1234, 56), 10, 1, 16384, 64);
+    when(app.getRMAppMetrics()).thenReturn(metrics);
+
     RMAppManager.ApplicationSummary.SummaryBuilder summary =
         new RMAppManager.ApplicationSummary().createAppSummary(app);
     String msg = summary.toString();
@@ -583,7 +588,12 @@ public class TestAppManager{
     Assert.assertTrue(msg.contains("Multiline" + escaped +"AppName"));
     Assert.assertTrue(msg.contains("Multiline" + escaped +"UserName"));
     Assert.assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
-  }
+    Assert.assertTrue(msg.contains("memorySeconds=16384"));
+    Assert.assertTrue(msg.contains("vcoreSeconds=64"));
+    Assert.assertTrue(msg.contains("preemptedAMContainers=1"));
+    Assert.assertTrue(msg.contains("preemptedNonAMContainers=10"));
+    Assert.assertTrue(msg.contains("preemptedResources=<memory:1234\\, vCores:56>"));
+ }
 
   private static ResourceScheduler mockResourceScheduler() {
     ResourceScheduler scheduler = mock(ResourceScheduler.class);

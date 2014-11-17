@@ -17,7 +17,8 @@
 
 function hadoop_usage
 {
-  echo "Usage: hdfs [--config confdir] [--daemon (start|stop|status)] COMMAND"
+  echo "Usage: hdfs [--config confdir] [--daemon (start|stop|status)]"
+  echo "           [--loglevel loglevel] COMMAND"
   echo "       where COMMAND is one of:"
   echo "  balancer             run a cluster balancing utility"
   echo "  cacheadmin           configure the HDFS cache"

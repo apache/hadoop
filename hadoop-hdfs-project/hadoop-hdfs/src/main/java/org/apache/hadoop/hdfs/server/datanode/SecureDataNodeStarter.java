@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.mortbay.jetty.Connector;
 
@@ -110,7 +111,7 @@ public class SecureDataNodeStarter implements Daemon {
               + ss.getLocalPort());
     }
 
-    if (ss.getLocalPort() > 1023 && isSecure) {
+    if (!SecurityUtil.isPrivilegedPort(ss.getLocalPort()) && isSecure) {
       throw new RuntimeException(
         "Cannot start secure datanode with unprivileged RPC ports");
     }

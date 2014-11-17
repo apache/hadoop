@@ -23,7 +23,7 @@
 <!-- there.  If yarn-site.xml does not already exist, create it.      -->
 
 <configuration>
-  
+
   <!-- IPC Configs -->
   <property>
     <description>Factory to create client IPC classes.</description>
@@ -1146,6 +1146,16 @@
     <value>${hadoop.tmp.dir}/yarn-nm-recovery</value>
   </property>
 
+  <!--Docker configuration-->
+
+  <property>
+    <name>yarn.nodemanager.docker-container-executor.exec-name</name>
+    <value>/usr/bin/docker</value>
+    <description>
+      Name or path to the Docker client.
+    </description>
+  </property>
+
   <!--Map Reduce configuration-->
   <property>
     <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
@@ -1446,6 +1456,24 @@
     requests from the node manager (50 by default)</description>
     <name>yarn.sharedcache.uploader.server.thread-count</name>
     <value>50</value>
+  </property>
+
+  <property>
+    <description>The algorithm used to compute checksums of files (SHA-256 by default)</description>
+    <name>yarn.sharedcache.checksum.algo.impl</name>
+    <value>org.apache.hadoop.yarn.sharedcache.ChecksumSHA256Impl</value>
+  </property>
+
+  <property>
+    <description>The replication factor for the node manager uploader for the shared cache (10 by default)</description>
+    <name>yarn.sharedcache.nm.uploader.replication.factor</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The number of threads used to upload files from a node manager instance (20 by default)</description>
+    <name>yarn.sharedcache.nm.uploader.thread-count</name>
+    <value>20</value>
   </property>
 
   <!-- Other configuration -->

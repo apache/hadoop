@@ -175,7 +175,8 @@ esac
 # This sets the hadoop.root.logger property
 # export HADOOP_ROOT_LOGGER=INFO,console
 
-# Default log level for daemons spawned explicitly by hadoop-daemon.sh
+# Default log level for daemons spawned explicitly by 
+# --daemon option of hadoop, hdfs, mapred and yarn command.
 # This sets the hadoop.root.logger property
 # export HADOOP_DAEMON_ROOT_LOGGER=INFO,RFA
 

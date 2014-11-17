@@ -42,7 +42,7 @@ if not defined YARN_POLICYFILE (
 )
 
 if not defined YARN_ROOT_LOGGER (
-  set YARN_ROOT_LOGGER=INFO,console
+  set YARN_ROOT_LOGGER=%HADOOP_LOGLEVEL%,console
 )
 
 set YARN_OPTS=%YARN_OPTS% -Dhadoop.log.dir=%YARN_LOG_DIR%

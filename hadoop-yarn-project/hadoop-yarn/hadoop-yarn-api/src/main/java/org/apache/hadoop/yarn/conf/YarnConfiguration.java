@@ -891,7 +891,19 @@ public class YarnConfiguration extends Configuration {
   /** The arguments to pass to the health check script.*/
   public static final String NM_HEALTH_CHECK_SCRIPT_OPTS = 
     NM_PREFIX + "health-checker.script.opts";
-  
+
+  /** The Docker image name(For DockerContainerExecutor).*/
+  public static final String NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME =
+    NM_PREFIX + "docker-container-executor.image-name";
+
+  /** The name of the docker executor (For DockerContainerExecutor).*/
+  public static final String NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
+    NM_PREFIX + "docker-container-executor.exec-name";
+
+  /** The default docker executor (For DockerContainerExecutor).*/
+  public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
+          "/usr/bin/docker";
+
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";
@@ -1459,6 +1471,25 @@ public class YarnConfiguration extends Configuration {
   public static final String SCM_UPLOADER_SERVER_THREAD_COUNT =
       SHARED_CACHE_PREFIX + "uploader.server.thread-count";
   public static final int DEFAULT_SCM_UPLOADER_SERVER_THREAD_COUNT = 50;
+
+  /** the checksum algorithm implementation **/
+  public static final String SHARED_CACHE_CHECKSUM_ALGO_IMPL =
+      SHARED_CACHE_PREFIX + "checksum.algo.impl";
+  public static final String DEFAULT_SHARED_CACHE_CHECKSUM_ALGO_IMPL =
+      "org.apache.hadoop.yarn.sharedcache.ChecksumSHA256Impl";
+
+  // node manager (uploader) configs
+  /**
+   * The replication factor for the node manager uploader for the shared cache.
+   */
+  public static final String SHARED_CACHE_NM_UPLOADER_REPLICATION_FACTOR =
+      SHARED_CACHE_PREFIX + "nm.uploader.replication.factor";
+  public static final int DEFAULT_SHARED_CACHE_NM_UPLOADER_REPLICATION_FACTOR =
+      10;
+
+  public static final String SHARED_CACHE_NM_UPLOADER_THREAD_COUNT =
+      SHARED_CACHE_PREFIX + "nm.uploader.thread-count";
+  public static final int DEFAULT_SHARED_CACHE_NM_UPLOADER_THREAD_COUNT = 20;
 
   ////////////////////////////////
   // Other Configs

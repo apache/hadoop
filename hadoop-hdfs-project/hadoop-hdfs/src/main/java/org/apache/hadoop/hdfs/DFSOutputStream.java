@@ -262,7 +262,9 @@ public class DFSOutputStream extends FSOutputSummer
       maxChunks = chunksPerPkt;
     }
 
-    void writeData(byte[] inarray, int off, int len) {
+    synchronized void writeData(byte[] inarray, int off, int len)
+        throws ClosedChannelException {
+      checkBuffer();
       if (dataPos + len > buf.length) {
         throw new BufferOverflowException();
       }
@@ -270,7 +272,9 @@ public class DFSOutputStream extends FSOutputSummer
       dataPos += len;
     }
 
-    void writeChecksum(byte[] inarray, int off, int len) {
+    synchronized void writeChecksum(byte[] inarray, int off, int len)
+        throws ClosedChannelException {
+      checkBuffer();
       if (len == 0) {
         return;
       }
@@ -284,7 +288,9 @@ public class DFSOutputStream extends FSOutputSummer
     /**
      * Write the full packet, including the header, to the given output stream.
      */
-    void writeTo(DataOutputStream stm) throws IOException {
+    synchronized void writeTo(DataOutputStream stm) throws IOException {
+      checkBuffer();
+
       final int dataLen = dataPos - dataStart;
       final int checksumLen = checksumPos - checksumStart;
       final int pktLen = HdfsConstants.BYTES_IN_INTEGER + dataLen + checksumLen;
@@ -326,7 +332,13 @@ public class DFSOutputStream extends FSOutputSummer
       }
     }
 
-    private void releaseBuffer(ByteArrayManager bam) {
+    private synchronized void checkBuffer() throws ClosedChannelException {
+      if (buf == null) {
+        throw new ClosedChannelException();
+      }
+    }
+
+    private synchronized void releaseBuffer(ByteArrayManager bam) {
       bam.release(buf);
       buf = null;
     }
@@ -712,7 +724,7 @@ public class DFSOutputStream extends FSOutputSummer
       closeResponder();       // close and join
       closeStream();
       streamerClosed = true;
-      closed = true;
+      setClosed();
       synchronized (dataQueue) {
         dataQueue.notifyAll();
       }
@@ -1616,8 +1628,9 @@ public class DFSOutputStream extends FSOutputSummer
     return sock;
   }
 
+  @Override
   protected void checkClosed() throws IOException {
-    if (closed) {
+    if (isClosed()) {
       IOException e = lastException.get();
       throw e != null ? e : new ClosedChannelException();
     }
@@ -1827,7 +1840,7 @@ public class DFSOutputStream extends FSOutputSummer
     synchronized (dataQueue) {
       try {
       // If queue is full, then wait till we have enough space
-      while (!closed && dataQueue.size() + ackQueue.size()  > dfsClient.getConf().writeMaxPackets) {
+      while (!isClosed() && dataQueue.size() + ackQueue.size() > dfsClient.getConf().writeMaxPackets) {
         try {
           dataQueue.wait();
         } catch (InterruptedException e) {
@@ -2013,8 +2026,9 @@ public class DFSOutputStream extends FSOutputSummer
             // So send an empty sync packet.
             currentPacket = createPacket(packetSize, chunksPerPacket,
                 bytesCurBlock, currentSeqno++);
-          } else {
+          } else if (currentPacket != null) {
             // just discard the current packet since it is already been sent.
+            currentPacket.releaseBuffer(byteArrayManager);
             currentPacket = null;
           }
         }
@@ -2071,7 +2085,7 @@ public class DFSOutputStream extends FSOutputSummer
     } catch (IOException e) {
       DFSClient.LOG.warn("Error while syncing", e);
       synchronized (this) {
-        if (!closed) {
+        if (!isClosed()) {
           lastException.set(new IOException("IOException flush:" + e));
           closeThreads(true);
         }
@@ -2133,7 +2147,7 @@ public class DFSOutputStream extends FSOutputSummer
     long begin = Time.monotonicNow();
     try {
       synchronized (dataQueue) {
-        while (!closed) {
+        while (!isClosed()) {
           checkClosed();
           if (lastAckedSeqno >= seqno) {
             break;
@@ -2166,13 +2180,32 @@ public class DFSOutputStream extends FSOutputSummer
    * resources associated with this stream.
    */
   synchronized void abort() throws IOException {
-    if (closed) {
+    if (isClosed()) {
       return;
     }
     streamer.setLastException(new IOException("Lease timeout of "
         + (dfsClient.getHdfsTimeout()/1000) + " seconds expired."));
     closeThreads(true);
     dfsClient.endFileLease(fileId);
+  }
+
+  boolean isClosed() {
+    return closed;
+  }
+
+  void setClosed() {
+    closed = true;
+    synchronized (dataQueue) {
+      releaseBuffer(dataQueue, byteArrayManager);
+      releaseBuffer(ackQueue, byteArrayManager);
+    }
+  }
+  
+  private static void releaseBuffer(List<Packet> packets, ByteArrayManager bam) {
+    for(Packet p : packets) {
+      p.releaseBuffer(bam);
+    }
+    packets.clear();
   }
 
   // shutdown datastreamer and responseprocessor threads.
@@ -2189,7 +2222,7 @@ public class DFSOutputStream extends FSOutputSummer
     } finally {
       streamer = null;
       s = null;
-      closed = true;
+      setClosed();
     }
   }
   
@@ -2199,7 +2232,7 @@ public class DFSOutputStream extends FSOutputSummer
    */
   @Override
   public synchronized void close() throws IOException {
-    if (closed) {
+    if (isClosed()) {
       IOException e = lastException.getAndSet(null);
       if (e == null)
         return;
@@ -2229,7 +2262,7 @@ public class DFSOutputStream extends FSOutputSummer
       dfsClient.endFileLease(fileId);
     } catch (ClosedChannelException e) {
     } finally {
-      closed = true;
+      setClosed();
     }
   }
 

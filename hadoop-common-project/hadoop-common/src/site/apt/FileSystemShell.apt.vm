@@ -232,6 +232,49 @@ expunge
    Empty the Trash. Refer to the {{{../hadoop-hdfs/HdfsDesign.html}
    HDFS Architecture Guide}} for more information on the Trash feature.
 
+find
+
+   Usage: <<<hdfs dfs -find <path> ... <expression> ... >>>
+
+   Finds all files that match the specified expression and applies selected
+   actions to them. If no <path> is specified then defaults to the current
+   working directory. If no expression is specified then defaults to -print.
+
+   The following primary expressions are recognised:
+
+     * -name pattern \
+       -iname pattern
+
+       Evaluates as true if the basename of the file matches the pattern using
+       standard file system globbing. If -iname is used then the match is case
+       insensitive.
+
+     * -print \
+       -print0
+
+       Always evaluates to true. Causes the current pathname to be written to
+       standard output. If the -print0 expression is used then an ASCII NULL
+       character is appended.
+
+   The following operators are recognised:
+
+     * expression -a expression \
+       expression -and expression \
+       expression expression
+
+       Logical AND operator for joining two expressions. Returns true if both
+       child expressions return true. Implied by the juxtaposition of two
+       expressions and so does not need to be explicitly specified. The second
+       expression will not be applied if the first fails.
+
+   Example:
+
+   <<<hdfs dfs -find / -name test -print>>>
+
+   Exit Code:
+
+     Returns 0 on success and -1 on error.
+
 get
 
    Usage: <<<hdfs dfs -get [-ignorecrc] [-crc] <src> <localdst> >>>

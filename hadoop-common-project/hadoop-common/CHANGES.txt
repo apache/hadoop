@@ -135,6 +135,12 @@ Trunk (Unreleased)
 
     HADOOP-11231. Remove dead code in ServletUtil. (Li Lu via wheat9)
 
+    HADOOP-11025. hadoop-daemons.sh should just call hdfs directly (Masatake
+    Iwasaki via aw)
+
+    HADOOP-11150. hadoop command should show the reason on failure by 
+    invalid COMMAND or CLASSNAME (Masatake Iwasaki via aw)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -337,6 +343,11 @@ Trunk (Unreleased)
     HADOOP-11248. Add hadoop configuration to disable Azure Filesystem metrics
     collection. (Shanyu Zhao via cnauroth)
 
+    HADOOP-11284. Fix variable name mismatches in hadoop-functions.sh (Masatake
+    Iwasaki via aw)
+
+    HADOOP-11298. slaves.sh and stop-all.sh are missing slashes (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -350,6 +361,11 @@ Release 2.7.0 - UNRELEASED
   NEW FEATURES
 
     HADOOP-10987. Provide an iterator-based listing API for FileSystem (kihwal)
+
+    HADOOP-7984. Add hadoop --loglevel option to change log level.
+    (Akira AJISAKA via cnauroth)
+
+    HADOOP-8989. hadoop fs -find feature (Jonathan Allen via aw)
 
   IMPROVEMENTS
 
@@ -370,6 +386,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
 
     HADOOP-10786. Fix UGI#reloginFromKeytab on Java 8. (Stephen Chu via wheat9)
+
+    HADOOP-11291. Log the cause of SASL connection failures.
+    (Stephen Chu via cnauroth)
 
   OPTIMIZATIONS
 
@@ -422,10 +441,7 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11294. Nfs3FileAttributes should not change the values of rdev,
     nlink and size in the constructor. (Brandon Li via wheat9)
 
-    HADOOP-9576. Changed NetUtils#wrapException to throw EOFException instead
-    of wrapping it as IOException. (Steve Loughran via jianhe)
-
-Release 2.6.0 - 2014-11-15
+Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
 
@@ -1103,6 +1119,10 @@ Release 2.6.0 - 2014-11-15
     HADOOP-11282. Skip NFS TestShellBasedIdMapping tests that are irrelevant on
     Windows. (cnauroth)
 
+    HADOOP-9576. Changed NetUtils#wrapException to throw EOFException instead
+    of wrapping it as IOException. (Steve Loughran via jianhe)
+
+
 Release 2.5.2 - 2014-11-10
 
   INCOMPATIBLE CHANGES
@@ -1119,6 +1139,7 @@ Release 2.5.2 - 2014-11-10
 
     HADOOP-11260. Patch up Jetty to disable SSLv3. (Mike Yoder via kasha)
 
+    HADOOP-11307. create-release script should run git clean first (kasha)
 
 Release 2.5.1 - 2014-09-05
 

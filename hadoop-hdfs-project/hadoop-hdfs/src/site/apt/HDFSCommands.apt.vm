@@ -26,8 +26,8 @@ HDFS Commands Guide
    hdfs script without any arguments prints the description for all
    commands.
 
-   Usage: <<<hdfs [--config confdir] [COMMAND] [GENERIC_OPTIONS]
-          [COMMAND_OPTIONS]>>>
+   Usage: <<<hdfs [--config confdir] [--loglevel loglevel] [COMMAND]
+          [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
 
    Hadoop has an option parsing framework that employs parsing generic options
    as well as running classes.
@@ -37,6 +37,10 @@ HDFS Commands Guide
 *-----------------------+---------------+
 | <<<--config confdir>>>| Overwrites the default Configuration directory.
 |                       | Default is <<<${HADOOP_HOME}/conf>>>.
+*-----------------------+---------------+
+| <<<--loglevel loglevel>>>| Overwrites the log level. Valid log levels are
+|                       | FATAL, ERROR, WARN, INFO, DEBUG, and TRACE.
+|                       | Default is INFO.
 *-----------------------+---------------+
 | GENERIC_OPTIONS       | The common set of options supported by multiple
 |                       | commands. Full list is

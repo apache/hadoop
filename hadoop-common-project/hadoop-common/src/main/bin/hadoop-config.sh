@@ -148,6 +148,12 @@ while [[ -z "${_hadoop_common_done}" ]]; do
       hadoop_populate_slaves_file "$1"
       shift
     ;;
+    --loglevel)
+      shift
+      # shellcheck disable=SC2034
+      HADOOP_LOGLEVEL="$1"
+      shift
+    ;;
     *)
       _hadoop_common_done=true
     ;;

@@ -45,13 +45,13 @@ Release 2.7.0 - UNRELEASED
     YARN-2186. [YARN-1492] Node Manager uploader service for cache manager. 
     (Chris Trezzo and Sangjin Lee via kasha)
 
+    YARN-2236. [YARN-1492] Shared Cache uploader service on the Node 
+    Manager. (Chris Trezzo and Sanjin Lee via kasha)
+
   IMPROVEMENTS
 
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.
     (Vinod Kumar Vavilapalli and Tsuyoshi OZAWA via junping_du)
-
-    YARN-2635. TestRM, TestRMRestart, TestClientToAMTokens should run 
-    with both CS and FS. (Wei Yan and kasha via kasha)
 
     YARN-2641. Decommission nodes on -refreshNodes instead of next 
     NM-RM heartbeat. (Zhihai Xu via kasha)
@@ -68,6 +68,9 @@ Release 2.7.0 - UNRELEASED
     YARN-570. Time strings are formated in different timezone. 
     (Akira Ajisaka and Peng Zhang via kasha)
 
+    YARN-2780. Log aggregated resource allocation in rm-appsummary.log (Eric
+    Payne via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -78,16 +81,32 @@ Release 2.7.0 - UNRELEASED
     YARN-2713. "RM Home" link in NM should point to one of the RMs in an 
     HA setup. (kasha)
 
-    YARN-2841. RMProxy should retry EOFException. (Jian He via xgong)
+    YARN-2766. Made ApplicationHistoryManager return a sorted list of apps,
+    attempts and containers. (Robert Kanter via zjshen)
 
-    YARN-2843. Fixed NodeLabelsManager to trim inputs for hosts and labels so
-    as to make them work correctly. (Wangda Tan via vinodkv)
+    YARN-2856. Fixed RMAppImpl to handle ATTEMPT_KILLED event at ACCEPTED state
+    on app recovery. (Rohith Sharmaks via jianhe)
 
-Release 2.6.0 - 2014-11-15
+    YARN-2857. ConcurrentModificationException in ContainerLogAppender
+    (Mohammad Kamrul Islam via jlowe)
+
+    YARN-2816. NM fail to start with NPE during container recovery (Zhihai Xu
+    via jlowe)
+
+    YARN-2432. RMStateStore should process the pending events before close.
+    (Varun Saxena via jianhe)
+
+    YARN-1703. Fixed ResourceManager web-proxy to close connections correctly.
+    (Rohith Sharma via vinodkv)
+
+Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+    YARN-1964. Create Docker analog of the LinuxContainerExecutor in YARN. (Abin 
+    Shahab via raviprak)
 
     YARN-2131. Add a way to format the RMStateStore. (Robert Kanter via kasha)
 
@@ -211,6 +230,9 @@ Release 2.6.0 - 2014-11-15
 
     YARN-2505. Supported get/add/remove/change labels in RM REST API. (Craig Welch
     via zjshen)
+
+    YARN-2811. In Fair Scheduler, reservation fulfillments shouldn't ignore max
+    share (Siqi Li via Sandy Ryza)
 
   IMPROVEMENTS
 
@@ -451,6 +473,9 @@ Release 2.6.0 - 2014-11-15
 
     YARN-2818. Removed the now unnecessary user entity injection from Timeline
     service given we now have domains. (Zhijie Shen via vinodkv)
+
+    YARN-2635. TestRM, TestRMRestart, TestClientToAMTokens should run 
+    with both CS and FS. (Wei Yan and kasha via kasha)
 
   OPTIMIZATIONS
 
@@ -939,6 +964,21 @@ Release 2.6.0 - 2014-11-15
     YARN-2834. Fixed ResourceManager to ignore token-renewal failures on recovery
     consistent with the (somewhat incorrect) behaviour in the non-recovery case.
     (Jian He via vinodkv)
+
+    YARN-2841. RMProxy should retry EOFException. (Jian He via xgong)
+
+    YARN-2843. Fixed NodeLabelsManager to trim inputs for hosts and labels so
+    as to make them work correctly. (Wangda Tan via vinodkv)
+
+    YARN-2794. Fixed log messages about distributing system-credentials. (Jian He via
+    zjshen)
+
+    YARN-2846. Incorrect persist exit code for running containers in
+    reacquireContainer() that interrupted by NodeManager restart. (Junping Du
+    via jlowe)
+
+    YARN-2853. Fixed a bug in ResourceManager causing apps to hang when the user
+    kill request races with ApplicationMaster finish. (Jian He via vinodkv)
 
 Release 2.5.2 - 2014-11-10
 

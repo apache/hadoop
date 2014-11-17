@@ -27,6 +27,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -59,6 +60,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationCleanupEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationRequestEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStartMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStopMonitoringEvent;
@@ -104,6 +107,10 @@ public class ContainerImpl implements Container {
     new ArrayList<LocalResourceRequest>();
   private final List<LocalResourceRequest> appRsrcs =
     new ArrayList<LocalResourceRequest>();
+  private final Map<LocalResourceRequest, Path> resourcesToBeUploaded =
+      new ConcurrentHashMap<LocalResourceRequest, Path>();
+  private final Map<LocalResourceRequest, Boolean> resourcesUploadPolicies =
+      new ConcurrentHashMap<LocalResourceRequest, Boolean>();
 
   // whether container has been recovered after a restart
   private RecoveredContainerStatus recoveredStatus =
@@ -637,6 +644,8 @@ public class ContainerImpl implements Container {
                 container.pendingResources.put(req, links);
               }
               links.add(rsrc.getKey());
+              storeSharedCacheUploadPolicy(container, req, rsrc.getValue()
+                  .getShouldBeUploadedToSharedCache());
               switch (rsrc.getValue().getVisibility()) {
               case PUBLIC:
                 container.publicRsrcs.add(req);
@@ -686,30 +695,76 @@ public class ContainerImpl implements Container {
   }
 
   /**
+   * Store the resource's shared cache upload policies
+   * Given LocalResourceRequest can be shared across containers in
+   * LocalResourcesTrackerImpl, we preserve the upload policies here.
+   * In addition, it is possible for the application to create several
+   * "identical" LocalResources as part of
+   * ContainerLaunchContext.setLocalResources with different symlinks.
+   * There is a corner case where these "identical" local resources have
+   * different upload policies. For that scenario, upload policy will be set to
+   * true as long as there is at least one LocalResource entry with
+   * upload policy set to true.
+   */
+  private static void storeSharedCacheUploadPolicy(ContainerImpl container,
+      LocalResourceRequest resourceRequest, Boolean uploadPolicy) {
+    Boolean storedUploadPolicy =
+        container.resourcesUploadPolicies.get(resourceRequest);
+    if (storedUploadPolicy == null || (!storedUploadPolicy && uploadPolicy)) {
+      container.resourcesUploadPolicies.put(resourceRequest, uploadPolicy);
+    }
+  }
+
+  /**
    * Transition when one of the requested resources for this container
    * has been successfully localized.
    */
   static class LocalizedTransition implements
       MultipleArcTransition<ContainerImpl,ContainerEvent,ContainerState> {
+    @SuppressWarnings("unchecked")
     @Override
     public ContainerState transition(ContainerImpl container,
         ContainerEvent event) {
       ContainerResourceLocalizedEvent rsrcEvent = (ContainerResourceLocalizedEvent) event;
-      List<String> syms =
-          container.pendingResources.remove(rsrcEvent.getResource());
+      LocalResourceRequest resourceRequest = rsrcEvent.getResource();
+      Path location = rsrcEvent.getLocation();
+      List<String> syms = container.pendingResources.remove(resourceRequest);
       if (null == syms) {
-        LOG.warn("Localized unknown resource " + rsrcEvent.getResource() +
+        LOG.warn("Localized unknown resource " + resourceRequest +
                  " for container " + container.containerId);
         assert false;
         // fail container?
         return ContainerState.LOCALIZING;
       }
-      container.localizedResources.put(rsrcEvent.getLocation(), syms);
+      container.localizedResources.put(location, syms);
+
+      // check to see if this resource should be uploaded to the shared cache
+      // as well
+      if (shouldBeUploadedToSharedCache(container, resourceRequest)) {
+        container.resourcesToBeUploaded.put(resourceRequest, location);
+      }
       if (!container.pendingResources.isEmpty()) {
         return ContainerState.LOCALIZING;
       }
 
       container.sendLaunchEvent();
+
+      // If this is a recovered container that has already launched, skip
+      // uploading resources to the shared cache. We do this to avoid uploading
+      // the same resources multiple times. The tradeoff is that in the case of
+      // a recovered container, there is a chance that resources don't get
+      // uploaded into the shared cache. This is OK because resources are not
+      // acknowledged by the SCM until they have been uploaded by the node
+      // manager.
+      if (container.recoveredStatus != RecoveredContainerStatus.LAUNCHED
+          && container.recoveredStatus != RecoveredContainerStatus.COMPLETED) {
+        // kick off uploads to the shared cache
+        container.dispatcher.getEventHandler().handle(
+            new SharedCacheUploadEvent(container.resourcesToBeUploaded, container
+                .getLaunchContext(), container.getUser(),
+                SharedCacheUploadEventType.UPLOAD));
+      }
+
       container.metrics.endInitingContainer();
       return ContainerState.LOCALIZED;
     }
@@ -1017,5 +1072,14 @@ public class ContainerImpl implements Container {
 
   private boolean hasDefaultExitCode() {
     return (this.exitCode == ContainerExitStatus.INVALID);
+  }
+
+  /**
+   * Returns whether the specific resource should be uploaded to the shared
+   * cache.
+   */
+  private static boolean shouldBeUploadedToSharedCache(ContainerImpl container,
+      LocalResourceRequest resource) {
+    return container.resourcesUploadPolicies.get(resource);
   }
 }
