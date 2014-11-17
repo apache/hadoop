@@ -12,9 +12,11 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
-  MAPREDUCE-5918. LineRecordReader can return the same decompressor to CodecPool
-  multiple times (Sergey Murylev via raviprak)
+    MAPREDUCE-5918. LineRecordReader can return the same decompressor to
+    CodecPool multiple times (Sergey Murylev via raviprak)
 
+    MAPREDUCE-6162. mapred hsadmin fails on a secure cluster (jlowe)
+ 
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
