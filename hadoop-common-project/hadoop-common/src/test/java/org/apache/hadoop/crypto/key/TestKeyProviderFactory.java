@@ -33,6 +33,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -328,6 +329,16 @@ public class TestKeyProviderFactory {
     // check permission retention after explicit change
     fs.setPermission(path, new FsPermission("777"));
     checkPermissionRetention(conf, ourUrl, path);
+
+    // Check that an uppercase keyname results in an error
+    provider = KeyProviderFactory.getProviders(conf).get(0);
+    try {
+      provider.createKey("UPPERCASE", KeyProvider.options(conf));
+      Assert.fail("Expected failure on creating key name with uppercase " +
+          "characters");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("Uppercase key names", e);
+    }
   }
 
   private void verifyAfterReload(File file, KeyProvider provider)
