@@ -342,12 +342,12 @@ public class DFSOutputStream extends FSOutputSummer
       bam.release(buf);
       buf = null;
     }
-    
+
     // get the packet's last byte's offset in the block
-    long getLastByteOffsetBlock() {
+    synchronized long getLastByteOffsetBlock() {
       return offsetInBlock + dataPos - dataStart;
     }
-    
+
     /**
      * Check if this packet is a heart beat packet
      * @return true if the sequence number is HEART_BEAT_SEQNO
