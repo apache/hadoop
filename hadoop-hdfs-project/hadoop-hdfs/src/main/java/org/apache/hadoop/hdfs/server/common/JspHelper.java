@@ -173,8 +173,7 @@ public class JspHelper {
     return value == null? null: Long.parseLong(value);
   }
 
-  private static String getDefaultWebUserName(Configuration conf
-      ) throws IOException {
+  public static String getDefaultWebUserName(Configuration conf) throws IOException {
     String user = conf.get(
         HADOOP_HTTP_STATIC_USER, DEFAULT_HADOOP_HTTP_STATIC_USER);
     if (user == null || user.length() == 0) {
@@ -322,7 +321,7 @@ public class JspHelper {
   /**
    * Expected user name should be a short name.
    */
-  private static void checkUsername(final String expected, final String name
+  public static void checkUsername(final String expected, final String name
       ) throws IOException {
     if (expected == null && name != null) {
       throw new IOException("Usernames not matched: expecting null but name="
