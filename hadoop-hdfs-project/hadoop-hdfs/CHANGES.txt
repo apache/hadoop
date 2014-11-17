@@ -438,6 +438,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7399. Lack of synchronization in
     DFSOutputStream#Packet#getLastByteOffsetBlock() (vinayakumarb)
 
+    HDFS-7146. NFS ID/Group lookup requires SSSD enumeration on the server
+    (Yongjun Zhang via brandonli)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
