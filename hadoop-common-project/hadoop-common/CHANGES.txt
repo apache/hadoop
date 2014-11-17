@@ -85,6 +85,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11294. Nfs3FileAttributes should not change the values of rdev,
     nlink and size in the constructor. (Brandon Li via wheat9)
 
+    HADOOP-11157. ZKDelegationTokenSecretManager never shuts down
+    listenerThreadPool. (Arun Suresh via atm)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
