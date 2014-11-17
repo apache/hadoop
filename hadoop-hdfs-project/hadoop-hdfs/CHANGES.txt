@@ -104,6 +104,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7386. Replace check "port number < 1024" with shared isPrivilegedPort
     method. (Yongjun Zhang via cnauroth)
 
+    HDFS-7394. Log at INFO level, not WARN level, when InvalidToken is seen in
+    ShortCircuitCache (Keith Pak via Colin P. McCabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
