@@ -743,7 +743,7 @@ public class ShortCircuitCache implements Closeable {
       throw new RetriableException("interrupted");
     }
     if (info.getInvalidTokenException() != null) {
-      LOG.warn(this + ": could not get " + key + " due to InvalidToken " +
+      LOG.info(this + ": could not get " + key + " due to InvalidToken " +
             "exception.", info.getInvalidTokenException());
       return info;
     }
@@ -802,7 +802,7 @@ public class ShortCircuitCache implements Closeable {
         Waitable<ShortCircuitReplicaInfo> waitableInMap = replicaInfoMap.get(key);
         if (waitableInMap == newWaitable) replicaInfoMap.remove(key);
         if (info.getInvalidTokenException() != null) {
-          LOG.warn(this + ": could not load " + key + " due to InvalidToken " +
+          LOG.info(this + ": could not load " + key + " due to InvalidToken " +
               "exception.", info.getInvalidTokenException());
         } else {
           LOG.warn(this + ": failed to load " + key);
