@@ -239,6 +239,9 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Co
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Status;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
+import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
+import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
+import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -881,7 +884,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw re;
     }
   }
-  
+
+  @VisibleForTesting
+  public List<AuditLogger> getAuditLoggers() {
+    return auditLoggers;
+  }
+
   @VisibleForTesting
   public RetryCache getRetryCache() {
     return retryCache;
@@ -970,6 +978,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (auditLoggers.isEmpty()) {
       auditLoggers.add(new DefaultAuditLogger());
     }
+
+    // Add audit logger to calculate top users
+    if (conf.getBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY,
+        DFSConfigKeys.NNTOP_ENABLED_DEFAULT)) {
+      String sessionId = conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY);
+      TopConf nntopConf = new TopConf(conf);
+      TopMetrics.initSingleton(conf, NamenodeRole.NAMENODE.name(), sessionId,
+          nntopConf.nntopReportingPeriodsMs);
+      auditLoggers.add(new TopAuditLogger());
+    }
+
     return Collections.unmodifiableList(auditLoggers);
   }
 
