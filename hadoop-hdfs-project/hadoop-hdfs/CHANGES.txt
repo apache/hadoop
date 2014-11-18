@@ -112,6 +112,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7279. Use netty to implement DatanodeWebHdfsMethods. (wheat9)
 
+    HDFS-7404. Remove o.a.h.hdfs.server.datanode.web.resources.
+    (Li Lu via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
