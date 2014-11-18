@@ -56,7 +56,7 @@ public class TestReservedRawPaths {
   private MiniDFSCluster cluster;
   private HdfsAdmin dfsAdmin;
   private DistributedFileSystem fs;
-  private final String TEST_KEY = "testKey";
+  private final String TEST_KEY = "test_key";
 
   protected FileSystemTestWrapper fsWrapper;
   protected FileContextTestWrapper fcWrapper;

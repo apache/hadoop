@@ -48,7 +48,7 @@ public class TestEncryptionZonesWithHA {
   private FileSystemTestHelper fsHelper;
   private File testRootDir;
 
-  private final String TEST_KEY = "testKey";
+  private final String TEST_KEY = "test_key";
 
 
   @Before
