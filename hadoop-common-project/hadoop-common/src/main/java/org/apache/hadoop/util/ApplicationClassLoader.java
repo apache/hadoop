@@ -228,10 +228,13 @@ public class ApplicationClassLoader extends URLClassLoader {
           c = c.substring(1);
           result = false;
         }
-        if (c.endsWith(".") && canonicalName.startsWith(c)) {
-          return result;
-        } else if (canonicalName.equals(c)) {
-          return result;
+        if (canonicalName.startsWith(c)) {
+          if (   c.endsWith(".")                                   // package
+              || canonicalName.length() == c.length()              // class
+              ||    canonicalName.length() > c.length()            // nested
+                 && canonicalName.charAt(c.length()) == '$' ) {
+            return result;
+          }
         }
       }
     }
