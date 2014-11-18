@@ -243,6 +243,9 @@ Release 2.7.0 - UNRELEASED
     CodecPool multiple times (Sergey Murylev via raviprak)
 
     MAPREDUCE-6162. mapred hsadmin fails on a secure cluster (jlowe)
+
+    MAPREDUCE-6049. AM JVM does not exit if MRClientService graceful shutdown
+    fails (Rohith via devaraj)
  
 Release 2.6.0 - 2014-11-18
 

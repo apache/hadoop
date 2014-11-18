@@ -604,7 +604,8 @@ public class MRAppMaster extends CompositeService {
       }
       clientService.stop();
     } catch (Throwable t) {
-      LOG.warn("Graceful stop failed ", t);
+      LOG.warn("Graceful stop failed. Exiting.. ", t);
+      ExitUtil.terminate(1, t);
     }
 
   }
