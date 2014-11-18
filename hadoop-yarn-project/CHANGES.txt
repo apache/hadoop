@@ -48,6 +48,7 @@ Release 2.7.0 - UNRELEASED
     YARN-2236. [YARN-1492] Shared Cache uploader service on the Node 
     Manager. (Chris Trezzo and Sanjin Lee via kasha)
 
+
   IMPROVEMENTS
 
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.
@@ -70,6 +71,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2780. Log aggregated resource allocation in rm-appsummary.log (Eric
     Payne via jlowe)
+
+    YARN-2690. [YARN-2574] Make ReservationSystem and its dependent classes 
+    independent of Scheduler type. (Anubhav Dhoot via kasha)
 
   OPTIMIZATIONS
 

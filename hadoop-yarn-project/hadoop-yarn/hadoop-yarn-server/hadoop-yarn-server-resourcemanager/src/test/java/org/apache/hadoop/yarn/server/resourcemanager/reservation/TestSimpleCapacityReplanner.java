@@ -32,7 +32,6 @@ import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -60,13 +59,10 @@ public class TestSimpleCapacityReplanner {
     when(clock.getTime()).thenReturn(0L);
     SimpleCapacityReplanner enf = new SimpleCapacityReplanner(clock);
 
-    CapacitySchedulerConfiguration conf =
-        mock(CapacitySchedulerConfiguration.class);
+    ReservationSchedulerConfiguration conf =
+        mock(ReservationSchedulerConfiguration.class);
     when(conf.getEnforcementWindow(any(String.class))).thenReturn(6L);
 
-    conf.setLong(CapacitySchedulerConfiguration.PREFIX + "blah"
-        + CapacitySchedulerConfiguration.DOT
-        + CapacitySchedulerConfiguration.RESERVATION_ENFORCEMENT_WINDOW, 6);
     enf.init("blah", conf);
 
     // Initialize the plan with more resources

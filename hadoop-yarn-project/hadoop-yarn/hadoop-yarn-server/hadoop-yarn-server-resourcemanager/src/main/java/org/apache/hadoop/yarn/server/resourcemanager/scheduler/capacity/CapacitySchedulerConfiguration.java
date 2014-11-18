@@ -41,13 +41,14 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.collect.ImmutableSet;
 
-public class CapacitySchedulerConfiguration extends Configuration {
+public class CapacitySchedulerConfiguration extends ReservationSchedulerConfiguration {
 
   private static final Log LOG = 
     LogFactory.getLog(CapacitySchedulerConfiguration.class);
@@ -222,9 +223,6 @@ public class CapacitySchedulerConfiguration extends Configuration {
       "instantaneous-max-capacity";
 
   @Private
-  public static final long DEFAULT_RESERVATION_WINDOW = 86400000L;
-
-  @Private
   public static final String RESERVATION_ADMISSION_POLICY =
       "reservation-policy";
 
@@ -236,34 +234,15 @@ public class CapacitySchedulerConfiguration extends Configuration {
       "show-reservations-as-queues";
 
   @Private
-  public static final String DEFAULT_RESERVATION_ADMISSION_POLICY =
-      "org.apache.hadoop.yarn.server.resourcemanager.reservation.CapacityOverTimePolicy";
-
-  @Private
-  public static final String DEFAULT_RESERVATION_AGENT_NAME =
-      "org.apache.hadoop.yarn.server.resourcemanager.reservation.GreedyReservationAgent";
-
-  @Private
   public static final String RESERVATION_PLANNER_NAME = "reservation-planner";
-
-  @Private
-  public static final String DEFAULT_RESERVATION_PLANNER_NAME =
-      "org.apache.hadoop.yarn.server.resourcemanager.reservation.SimpleCapacityReplanner";
 
   @Private
   public static final String RESERVATION_MOVE_ON_EXPIRY =
       "reservation-move-on-expiry";
 
   @Private
-  public static final boolean DEFAULT_RESERVATION_MOVE_ON_EXPIRY = true;
-
-  @Private
   public static final String RESERVATION_ENFORCEMENT_WINDOW =
       "reservation-enforcement-window";
-
-  // default to 1h lookahead enforcement
-  @Private
-  public static final long DEFAULT_RESERVATION_ENFORCEMENT_WINDOW = 3600000;
 
   public CapacitySchedulerConfiguration() {
     this(new Configuration());
@@ -721,6 +700,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
         + ", isReservableQueue=" + isReservable(queue));
   }
 
+  @Override
   public long getReservationWindow(String queue) {
     long reservationWindow =
         getLong(getQueuePrefix(queue) + RESERVATION_WINDOW,
@@ -728,6 +708,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
     return reservationWindow;
   }
 
+  @Override
   public float getAverageCapacity(String queue) {
     float avgCapacity =
         getFloat(getQueuePrefix(queue) + AVERAGE_CAPACITY,
@@ -735,6 +716,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
     return avgCapacity;
   }
 
+  @Override
   public float getInstantaneousMaxCapacity(String queue) {
     float instMaxCapacity =
         getFloat(getQueuePrefix(queue) + INSTANTANEOUS_MAX_CAPACITY,
@@ -755,6 +737,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
     setFloat(getQueuePrefix(queue) + AVERAGE_CAPACITY, avgCapacity);
   }
 
+  @Override
   public String getReservationAdmissionPolicy(String queue) {
     String reservationPolicy =
         get(getQueuePrefix(queue) + RESERVATION_ADMISSION_POLICY,
@@ -767,6 +750,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
     set(getQueuePrefix(queue) + RESERVATION_ADMISSION_POLICY, reservationPolicy);
   }
 
+  @Override
   public String getReservationAgent(String queue) {
     String reservationAgent =
         get(getQueuePrefix(queue) + RESERVATION_AGENT_NAME,
@@ -778,13 +762,16 @@ public class CapacitySchedulerConfiguration extends Configuration {
     set(getQueuePrefix(queue) + RESERVATION_AGENT_NAME, reservationPolicy);
   }
 
+  @Override
   public boolean getShowReservationAsQueues(String queuePath) {
     boolean showReservationAsQueues =
         getBoolean(getQueuePrefix(queuePath)
-            + RESERVATION_SHOW_RESERVATION_AS_QUEUE, false);
+            + RESERVATION_SHOW_RESERVATION_AS_QUEUE,
+            DEFAULT_SHOW_RESERVATIONS_AS_QUEUES);
     return showReservationAsQueues;
   }
 
+  @Override
   public String getReplanner(String queue) {
     String replanner =
         get(getQueuePrefix(queue) + RESERVATION_PLANNER_NAME,
@@ -792,6 +779,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
     return replanner;
   }
 
+  @Override
   public boolean getMoveOnExpiry(String queue) {
     boolean killOnExpiry =
         getBoolean(getQueuePrefix(queue) + RESERVATION_MOVE_ON_EXPIRY,
@@ -799,6 +787,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
     return killOnExpiry;
   }
 
+  @Override
   public long getEnforcementWindow(String queue) {
     long enforcementWindow =
         getLong(getQueuePrefix(queue) + RESERVATION_ENFORCEMENT_WINDOW,
