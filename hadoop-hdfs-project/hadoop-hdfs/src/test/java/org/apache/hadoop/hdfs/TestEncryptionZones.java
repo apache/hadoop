@@ -120,7 +120,7 @@ public class TestEncryptionZones {
   protected HdfsAdmin dfsAdmin;
   protected DistributedFileSystem fs;
   private File testRootDir;
-  protected final String TEST_KEY = "testKey";
+  protected final String TEST_KEY = "test_key";
 
   protected FileSystemTestWrapper fsWrapper;
   protected FileContextTestWrapper fcWrapper;
@@ -985,7 +985,7 @@ public class TestEncryptionZones {
 
     // Test when the parent directory becomes a different EZ
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
-    final String otherKey = "otherKey";
+    final String otherKey = "other_key";
     DFSTestUtil.createKey(otherKey, cluster, conf);
     dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
 
@@ -1005,7 +1005,7 @@ public class TestEncryptionZones {
 
     // Test that the retry limit leads to an error
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
-    final String anotherKey = "anotherKey";
+    final String anotherKey = "another_key";
     DFSTestUtil.createKey(anotherKey, cluster, conf);
     dfsAdmin.createEncryptionZone(zone1, anotherKey);
     String keyToUse = otherKey;
