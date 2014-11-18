@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 
@@ -44,5 +43,5 @@ public interface Planner {
    * @param planQueueName the name of the queue for this plan
    * @param conf the scheduler configuration
    */
-  void init(String planQueueName, Configuration conf);
+  void init(String planQueueName, ReservationSchedulerConfiguration conf);
 }
