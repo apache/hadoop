@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityHeadroomProvider;
 
 /**
  * Represents an application attempt from the viewpoint of the FIFO or Capacity
@@ -64,6 +65,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   private final Set<ContainerId> containersToPreempt =
     new HashSet<ContainerId>();
+    
+  private CapacityHeadroomProvider headroomProvider;
 
   public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, ActiveUsersManager activeUsersManager,
@@ -254,5 +257,57 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       currentContPreemption, Collections.singletonList(rr),
       allocation.getNMTokenList());
   }
+  
+  synchronized public NodeId getNodeIdToUnreserve(Priority priority,
+      Resource capability) {
+
+    // first go around make this algorithm simple and just grab first
+    // reservation that has enough resources
+    Map<NodeId, RMContainer> reservedContainers = this.reservedContainers
+        .get(priority);
+
+    if ((reservedContainers != null) && (!reservedContainers.isEmpty())) {
+      for (Map.Entry<NodeId, RMContainer> entry : reservedContainers.entrySet()) {
+        // make sure we unreserve one with at least the same amount of
+        // resources, otherwise could affect capacity limits
+        if (Resources.fitsIn(capability, entry.getValue().getContainer()
+            .getResource())) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("unreserving node with reservation size: "
+                + entry.getValue().getContainer().getResource()
+                + " in order to allocate container with size: " + capability);
+          }
+          return entry.getKey();
+        }
+      }
+    }
+    return null;
+  }
+  
+  public synchronized void setHeadroomProvider(
+    CapacityHeadroomProvider headroomProvider) {
+    this.headroomProvider = headroomProvider;
+  }
+
+  public synchronized CapacityHeadroomProvider getHeadroomProvider() {
+    return headroomProvider;
+  }
+  
+  @Override
+  public synchronized Resource getHeadroom() {
+    if (headroomProvider != null) {
+      return headroomProvider.getHeadroom();
+    }
+    return super.getHeadroom();
+  }
+  
+  @Override
+  public synchronized void transferStateFromPreviousAttempt(
+      SchedulerApplicationAttempt appAttempt) {
+    super.transferStateFromPreviousAttempt(appAttempt);
+    this.headroomProvider = 
+      ((FiCaSchedulerApp) appAttempt).getHeadroomProvider();
+  }
+
 
 }

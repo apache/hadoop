@@ -23,7 +23,7 @@
 <!-- there.  If yarn-site.xml does not already exist, create it.      -->
 
 <configuration>
-  
+
   <!-- IPC Configs -->
   <property>
     <description>Factory to create client IPC classes.</description>
@@ -554,6 +554,21 @@
   </property>
 
   <property>
+  <description>If true, ResourceManager will have proxy-user privileges.
+    Use case: In a secure cluster, YARN requires the user hdfs delegation-tokens to
+    do localization and log-aggregation on behalf of the user. If this is set to true,
+    ResourceManager is able to request new hdfs delegation tokens on behalf of
+    the user. This is needed by long-running-service, because the hdfs tokens
+    will eventually expire and YARN requires new valid tokens to do localization
+    and log-aggregation. Note that to enable this use case, the corresponding
+    HDFS NameNode has to configure ResourceManager as the proxy-user so that
+    ResourceManager can itself ask for new tokens on behalf of the user when
+    tokens are past their max-life-time.</description>
+    <name>yarn.resourcemanager.proxy-user-privileges.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Interval for the roll over for the master key used to generate
         application tokens
     </description>
@@ -948,7 +963,7 @@
     for full disk. This applies to yarn-nodemanager.local-dirs and 
     yarn.nodemanager.log-dirs.</description>
     <name>yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage</name>
-    <value>100.0</value>
+    <value>90.0</value>
   </property>
 
   <property>
@@ -1081,23 +1096,41 @@
     <name>yarn.client.nodemanager-client-async.thread-pool-max-size</name>
     <value>500</value>
   </property>
-  
+
   <property>
-  	<description>
-  	  Maximum number of proxy connections for node manager. It should always be
-      more than 1. NMClient and MRAppMaster will use this to cache connection
-      with node manager. There will be at max one connection per node manager.
-      Ex. configuring it to a value of 5 will make sure that client will at
-      max have 5 connections cached with 5 different node managers. These
-      connections will be timed out if idle for more than system wide idle
-      timeout period. The token if used for authentication then it will be used
-      only at connection creation time. If new token is received then earlier
-      connection should be closed in order to use newer token. This and
+    <description>Max time to wait to establish a connection to NM</description>
+    <name>yarn.client.nodemanager-connect.max-wait-ms</name>
+    <value>900000</value>
+  </property>
+
+  <property>
+    <description>Time interval between each attempt to connect to NM</description>
+    <name>yarn.client.nodemanager-connect.retry-interval-ms</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>
+      Maximum number of proxy connections to cache for node managers. If set
+      to a value greater than zero then the cache is enabled and the NMClient
+      and MRAppMaster will cache the specified number of node manager proxies.
+      There will be at max one proxy per node manager. Ex. configuring it to a
+      value of 5 will make sure that client will at max have 5 proxies cached
+      with 5 different node managers. These connections for these proxies will
+      be timed out if idle for more than the system wide idle timeout period.
+      Note that this could cause issues on large clusters as many connections
+      could linger simultaneously and lead to a large number of connection
+      threads. The token used for authentication will be used only at
+      connection creation time. If a new token is received then the earlier
+      connection should be closed in order to use the new token. This and
       (yarn.client.nodemanager-client-async.thread-pool-max-size) are related
-      and should be sync (no need for them to be equal).
-  	</description>
-  	<name>yarn.client.max-nodemanagers-proxies</name>
-  	<value>500</value>
+      and should be in sync (no need for them to be equal).
+      If the value of this property is zero then the connection cache is
+      disabled and connections will use a zero idle timeout to prevent too
+      many connection threads on large clusters.
+    </description>
+    <name>yarn.client.max-cached-nodemanagers-proxies</name>
+    <value>0</value>
   </property>
   
   <property>
@@ -1111,6 +1144,16 @@
     store state when recovery is enabled.</description>
     <name>yarn.nodemanager.recovery.dir</name>
     <value>${hadoop.tmp.dir}/yarn-nm-recovery</value>
+  </property>
+
+  <!--Docker configuration-->
+
+  <property>
+    <name>yarn.nodemanager.docker-container-executor.exec-name</name>
+    <value>/usr/bin/docker</value>
+    <description>
+      Name or path to the Docker client.
+    </description>
   </property>
 
   <!--Map Reduce configuration-->
@@ -1310,6 +1353,129 @@
     <value>/etc/krb5.keytab</value>
   </property>
 
+  <property>
+    <description>
+    Default maximum number of retires for timeline servive client.
+    </description>
+    <name>yarn.timeline-service.client.max-retries</name>
+    <value>30</value>
+  </property>
+
+  <property>
+    <description>
+    Default retry time interval for timeline servive client.
+    </description>
+    <name>yarn.timeline-service.client.retry-interval-ms</name>
+    <value>1000</value>
+  </property>
+
+  <!--  Shared Cache Configuration -->
+  <property>
+    <description>Whether the shared cache is enabled</description>
+    <name>yarn.sharedcache.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The root directory for the shared cache</description>
+    <name>yarn.sharedcache.root-dir</name>
+    <value>/sharedcache</value>
+  </property>
+
+  <property>
+    <description>The level of nested directories before getting to the checksum
+    directories. It must be non-negative.</description>
+    <name>yarn.sharedcache.nested-level</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>The implementation to be used for the SCM store</description>
+    <name>yarn.sharedcache.store.class</name>
+    <value>org.apache.hadoop.yarn.server.sharedcachemanager.store.InMemorySCMStore</value>
+  </property>
+
+  <property>
+    <description>The implementation to be used for the SCM app-checker</description>
+    <name>yarn.sharedcache.app-checker.class</name>
+    <value>org.apache.hadoop.yarn.server.sharedcachemanager.RemoteAppChecker</value>
+  </property>
+  
+  <property>
+    <description>A resource in the in-memory store is considered stale
+    if the time since the last reference exceeds the staleness period.
+    This value is specified in minutes.</description>
+    <name>yarn.sharedcache.store.in-memory.staleness-period-mins</name>
+    <value>10080</value>
+  </property>
+  
+  <property>
+    <description>Initial delay before the in-memory store runs its first check
+    to remove dead initial applications. Specified in minutes.</description>
+    <name>yarn.sharedcache.store.in-memory.initial-delay-mins</name>
+    <value>10</value>
+  </property>
+  
+  <property>
+    <description>The frequency at which the in-memory store checks to remove
+    dead initial applications. Specified in minutes.</description>
+    <name>yarn.sharedcache.store.in-memory.check-period-mins</name>
+    <value>720</value>
+  </property>
+
+  <property>
+    <description>The frequency at which a cleaner task runs.
+    Specified in minutes.</description>
+    <name>yarn.sharedcache.cleaner.period-mins</name>
+    <value>1440</value>
+  </property>
+
+  <property>
+    <description>Initial delay before the first cleaner task is scheduled.
+    Specified in minutes.</description>
+    <name>yarn.sharedcache.cleaner.initial-delay-mins</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The time to sleep between processing each shared cache
+    resource. Specified in milliseconds.</description>
+    <name>yarn.sharedcache.cleaner.resource-sleep-ms</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>The address of the node manager interface in the SCM
+    (shared cache manager)</description>
+    <name>yarn.sharedcache.uploader.server.address</name>
+    <value>0.0.0.0:8046</value>
+  </property>
+
+  <property>
+    <description>The number of threads used to handle shared cache manager
+    requests from the node manager (50 by default)</description>
+    <name>yarn.sharedcache.uploader.server.thread-count</name>
+    <value>50</value>
+  </property>
+
+  <property>
+    <description>The algorithm used to compute checksums of files (SHA-256 by default)</description>
+    <name>yarn.sharedcache.checksum.algo.impl</name>
+    <value>org.apache.hadoop.yarn.sharedcache.ChecksumSHA256Impl</value>
+  </property>
+
+  <property>
+    <description>The replication factor for the node manager uploader for the shared cache (10 by default)</description>
+    <name>yarn.sharedcache.nm.uploader.replication.factor</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The number of threads used to upload files from a node manager instance (20 by default)</description>
+    <name>yarn.sharedcache.nm.uploader.thread-count</name>
+    <value>20</value>
+  </property>
+
   <!-- Other configuration -->
   <property>
     <description>The interval that the yarn client library uses to poll the
@@ -1330,5 +1496,141 @@
     </description>
     <name>yarn.nodemanager.container-monitor.procfs-tree.smaps-based-rss.enabled</name>
     <value>false</value>
+  </property>
+
+  <!-- YARN registry -->
+
+  <property>
+    <description>
+      Is the registry enabled: does the RM start it up,
+      create the user and system paths, and purge
+      service records when containers, application attempts
+      and applications complete
+    </description>
+    <name>hadoop.registry.rm.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+    </description>
+    <name>hadoop.registry.zk.root</name>
+    <value>/registry</value>
+  </property>
+
+  <property>
+    <description>
+      Zookeeper session timeout in milliseconds
+    </description>
+    <name>hadoop.registry.zk.session.timeout.ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>
+      Zookeeper session timeout in milliseconds
+    </description>
+    <name>hadoop.registry.zk.connection.timeout.ms</name>
+    <value>15000</value>
+  </property>
+
+  <property>
+    <description>
+      Zookeeper connection retry count before failing
+    </description>
+    <name>hadoop.registry.zk.retry.times</name>
+    <value>5</value>
+  </property>
+
+  <property>
+    <description>
+    </description>
+    <name>hadoop.registry.zk.retry.interval.ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      Zookeeper retry limit in milliseconds, during
+      exponential backoff: {@value}
+
+      This places a limit even
+      if the retry times and interval limit, combined
+      with the backoff policy, result in a long retry
+      period
+    </description>
+    <name>hadoop.registry.zk.retry.ceiling.ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>
+      List of hostname:port pairs defining the
+      zookeeper quorum binding for the registry
+    </description>
+    <name>hadoop.registry.zk.quorum</name>
+    <value>localhost:2181</value>
+  </property>
+
+  <property>
+    <description>
+      Key to set if the registry is secure. Turning it on
+      changes the permissions policy from "open access"
+      to restrictions on kerberos with the option of
+      a user adding one or more auth key pairs down their
+      own tree.
+    </description>
+    <name>hadoop.registry.secure</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      A comma separated list of Zookeeper ACL identifiers with
+      system access to the registry in a secure cluster.
+
+      These are given full access to all entries.
+
+      If there is an "@" at the end of a SASL entry it
+      instructs the registry client to append the default kerberos domain.
+    </description>
+    <name>hadoop.registry.system.acls</name>
+    <value>sasl:yarn@, sasl:mapred@, sasl:mapred@hdfs@</value>
+  </property>
+
+  <property>
+    <description>
+      The kerberos realm: used to set the realm of
+      system principals which do not declare their realm,
+      and any other accounts that need the value.
+
+      If empty, the default realm of the running process
+      is used.
+
+      If neither are known and the realm is needed, then the registry
+      service/client will fail.
+    </description>
+    <name>hadoop.registry.kerberos.realm</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Key to define the JAAS context. Used in secure
+      mode
+    </description>
+    <name>hadoop.registry.jaas.context</name>
+    <value>Client</value>
+  </property>
+
+  <property>
+    <description>Defines how often NMs wake up to upload log files.
+    The default value is -1. By default, the logs will be uploaded when
+    the application is finished. By setting this configure, logs can be uploaded
+    periodically when the application is running. The minimum rolling-interval-seconds
+    can be set is 3600.
+    </description>
+    <name>yarn.nodemanager.log-aggregation.roll-monitoring-interval-seconds</name>
+    <value>-1</value>
   </property>
 </configuration>

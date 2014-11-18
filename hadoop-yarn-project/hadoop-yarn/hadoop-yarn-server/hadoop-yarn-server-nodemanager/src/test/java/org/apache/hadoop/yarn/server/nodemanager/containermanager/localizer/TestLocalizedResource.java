@@ -49,7 +49,7 @@ import org.mockito.ArgumentMatcher;
 
 public class TestLocalizedResource {
 
-  static ContainerId getMockContainer(int id) {
+  static ContainerId getMockContainer(long id) {
     ApplicationId appId = mock(ApplicationId.class);
     when(appId.getClusterTimestamp()).thenReturn(314159265L);
     when(appId.getId()).thenReturn(3);
@@ -57,7 +57,7 @@ public class TestLocalizedResource {
     when(appAttemptId.getApplicationId()).thenReturn(appId);
     when(appAttemptId.getAttemptId()).thenReturn(0);
     ContainerId container = mock(ContainerId.class);
-    when(container.getId()).thenReturn(id);
+    when(container.getContainerId()).thenReturn(id);
     when(container.getApplicationAttemptId()).thenReturn(appAttemptId);
     return container;
   }
@@ -77,7 +77,7 @@ public class TestLocalizedResource {
       // mock resource
       LocalResource apiRsrc = createMockResource();
 
-      final ContainerId container0 = getMockContainer(0);
+      final ContainerId container0 = getMockContainer(0L);
       final Credentials creds0 = new Credentials();
       final LocalResourceVisibility vis0 = LocalResourceVisibility.PRIVATE;
       final LocalizerContext ctxt0 =
@@ -96,7 +96,7 @@ public class TestLocalizedResource {
 
       // Register C1, verify request event
       final Credentials creds1 = new Credentials();
-      final ContainerId container1 = getMockContainer(1);
+      final ContainerId container1 = getMockContainer(1L);
       final LocalizerContext ctxt1 =
         new LocalizerContext("yak", container1, creds1);
       final LocalResourceVisibility vis1 = LocalResourceVisibility.PUBLIC;
@@ -120,13 +120,13 @@ public class TestLocalizedResource {
       assertEquals(ResourceState.DOWNLOADING, local.getState());
 
       // Register C2, C3
-      final ContainerId container2 = getMockContainer(2);
+      final ContainerId container2 = getMockContainer(2L);
       final LocalResourceVisibility vis2 = LocalResourceVisibility.PRIVATE;
       final Credentials creds2 = new Credentials();
       final LocalizerContext ctxt2 =
         new LocalizerContext("yak", container2, creds2);
 
-      final ContainerId container3 = getMockContainer(3);
+      final ContainerId container3 = getMockContainer(3L);
       final LocalResourceVisibility vis3 = LocalResourceVisibility.PRIVATE;
       final Credentials creds3 = new Credentials();
       final LocalizerContext ctxt3 =
@@ -159,7 +159,7 @@ public class TestLocalizedResource {
       assertEquals(ResourceState.LOCALIZED, local.getState());
 
       // Register C4, verify notification
-      final ContainerId container4 = getMockContainer(4);
+      final ContainerId container4 = getMockContainer(4L);
       final Credentials creds4 = new Credentials();
       final LocalizerContext ctxt4 =
         new LocalizerContext("yak", container4, creds4);

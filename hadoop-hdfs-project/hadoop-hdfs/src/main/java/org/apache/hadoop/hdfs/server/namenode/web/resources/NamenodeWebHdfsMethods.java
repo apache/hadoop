@@ -75,44 +75,7 @@ import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
-import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
-import org.apache.hadoop.hdfs.web.resources.AclPermissionParam;
-import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
-import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
-import org.apache.hadoop.hdfs.web.resources.ConcatSourcesParam;
-import org.apache.hadoop.hdfs.web.resources.CreateParentParam;
-import org.apache.hadoop.hdfs.web.resources.DelegationParam;
-import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
-import org.apache.hadoop.hdfs.web.resources.DestinationParam;
-import org.apache.hadoop.hdfs.web.resources.DoAsParam;
-import org.apache.hadoop.hdfs.web.resources.ExcludeDatanodesParam;
-import org.apache.hadoop.hdfs.web.resources.GetOpParam;
-import org.apache.hadoop.hdfs.web.resources.GroupParam;
-import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
-import org.apache.hadoop.hdfs.web.resources.LengthParam;
-import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
-import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
-import org.apache.hadoop.hdfs.web.resources.OffsetParam;
-import org.apache.hadoop.hdfs.web.resources.OldSnapshotNameParam;
-import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
-import org.apache.hadoop.hdfs.web.resources.OwnerParam;
-import org.apache.hadoop.hdfs.web.resources.Param;
-import org.apache.hadoop.hdfs.web.resources.PermissionParam;
-import org.apache.hadoop.hdfs.web.resources.PostOpParam;
-import org.apache.hadoop.hdfs.web.resources.PutOpParam;
-import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
-import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
-import org.apache.hadoop.hdfs.web.resources.RenewerParam;
-import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
-import org.apache.hadoop.hdfs.web.resources.SnapshotNameParam;
-import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
-import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
-import org.apache.hadoop.hdfs.web.resources.UserParam;
-import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
-import org.apache.hadoop.hdfs.web.resources.XAttrNameParam;
-import org.apache.hadoop.hdfs.web.resources.XAttrSetFlagParam;
-import org.apache.hadoop.hdfs.web.resources.XAttrValueParam;
-import org.apache.hadoop.hdfs.web.resources.FsActionParam;
+import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
@@ -758,10 +721,15 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(ExcludeDatanodesParam.NAME) @DefaultValue(ExcludeDatanodesParam.DEFAULT)
           final ExcludeDatanodesParam excludeDatanodes,
       @QueryParam(FsActionParam.NAME) @DefaultValue(FsActionParam.DEFAULT)
-          final FsActionParam fsAction
+          final FsActionParam fsAction,
+      @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
+          final TokenKindParam tokenKind,
+      @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
+          final TokenServiceParam tokenService
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
-        renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes, fsAction);
+        renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes, fsAction,
+        tokenKind, tokenService);
   }
 
   /** Handle HTTP GET request. */
@@ -794,11 +762,16 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(ExcludeDatanodesParam.NAME) @DefaultValue(ExcludeDatanodesParam.DEFAULT)
           final ExcludeDatanodesParam excludeDatanodes,
       @QueryParam(FsActionParam.NAME) @DefaultValue(FsActionParam.DEFAULT)
-          final FsActionParam fsAction
+          final FsActionParam fsAction,
+      @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
+          final TokenKindParam tokenKind,
+      @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
+          final TokenServiceParam tokenService
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
-        renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction);
+        renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
+        tokenKind, tokenService);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -806,7 +779,8 @@ public class NamenodeWebHdfsMethods {
         try {
           return get(ugi, delegation, username, doAsUser,
               path.getAbsolutePath(), op, offset, length, renewer, bufferSize,
-              xattrNames, xattrEncoding, excludeDatanodes, fsAction);
+              xattrNames, xattrEncoding, excludeDatanodes, fsAction, tokenKind,
+              tokenService);
         } finally {
           reset();
         }
@@ -828,7 +802,9 @@ public class NamenodeWebHdfsMethods {
       final List<XAttrNameParam> xattrNames,
       final XAttrEncodingParam xattrEncoding,
       final ExcludeDatanodesParam excludeDatanodes,
-      final FsActionParam fsAction
+      final FsActionParam fsAction,
+      final TokenKindParam tokenKind,
+      final TokenServiceParam tokenService
       ) throws IOException, URISyntaxException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final NamenodeProtocols np = getRPCServer(namenode);
@@ -885,6 +861,15 @@ public class NamenodeWebHdfsMethods {
       }
       final Token<? extends TokenIdentifier> token = generateDelegationToken(
           namenode, ugi, renewer.getValue());
+
+      final String setServiceName = tokenService.getValue();
+      final String setKind = tokenKind.getValue();
+      if (setServiceName != null) {
+        token.setService(new Text(setServiceName));
+      }
+      if (setKind != null) {
+        token.setKind(new Text(setKind));
+      }
       final String js = JsonUtil.toJsonString(token);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }

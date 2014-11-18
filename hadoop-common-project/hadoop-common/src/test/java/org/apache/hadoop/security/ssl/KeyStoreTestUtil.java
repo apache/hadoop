@@ -24,18 +24,6 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 
-import sun.security.x509.AlgorithmId;
-import sun.security.x509.CertificateAlgorithmId;
-import sun.security.x509.CertificateIssuerName;
-import sun.security.x509.CertificateSerialNumber;
-import sun.security.x509.CertificateSubjectName;
-import sun.security.x509.CertificateValidity;
-import sun.security.x509.CertificateVersion;
-import sun.security.x509.CertificateX509Key;
-import sun.security.x509.X500Name;
-import sun.security.x509.X509CertImpl;
-import sun.security.x509.X509CertInfo;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -57,6 +45,15 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchProviderException;
+import java.security.SignatureException;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import javax.security.auth.x500.X500Principal;
+import org.bouncycastle.x509.X509V1CertificateGenerator;
+
 public class KeyStoreTestUtil {
 
   public static String getClasspathDir(Class klass) throws Exception {
@@ -68,50 +65,38 @@ public class KeyStoreTestUtil {
     return baseDir;
   }
 
+  @SuppressWarnings("deprecation")
   /**
    * Create a self-signed X.509 Certificate.
-   * From http://bfo.com/blog/2011/03/08/odds_and_ends_creating_a_new_x_509_certificate.html.
    *
    * @param dn the X.509 Distinguished Name, eg "CN=Test, L=London, C=GB"
    * @param pair the KeyPair
    * @param days how many days from now the Certificate is valid for
    * @param algorithm the signing algorithm, eg "SHA1withRSA"
    * @return the self-signed certificate
-   * @throws IOException thrown if an IO error ocurred.
-   * @throws GeneralSecurityException thrown if an Security error ocurred.
    */
-  public static X509Certificate generateCertificate(String dn, KeyPair pair,
-      int days, String algorithm)
-      throws GeneralSecurityException, IOException {
-    PrivateKey privkey = pair.getPrivate();
-    X509CertInfo info = new X509CertInfo();
+  public static X509Certificate generateCertificate(String dn, KeyPair pair, int days, String algorithm)
+      throws CertificateEncodingException,
+             InvalidKeyException,
+             IllegalStateException,
+             NoSuchProviderException, NoSuchAlgorithmException, SignatureException{
+
     Date from = new Date();
     Date to = new Date(from.getTime() + days * 86400000l);
-    CertificateValidity interval = new CertificateValidity(from, to);
     BigInteger sn = new BigInteger(64, new SecureRandom());
-    X500Name owner = new X500Name(dn);
+    KeyPair keyPair = pair;
+    X509V1CertificateGenerator certGen = new X509V1CertificateGenerator();
+    X500Principal  dnName = new X500Principal(dn);
 
-    info.set(X509CertInfo.VALIDITY, interval);
-    info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(sn));
-    info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(owner));
-    info.set(X509CertInfo.ISSUER, new CertificateIssuerName(owner));
-    info.set(X509CertInfo.KEY, new CertificateX509Key(pair.getPublic()));
-    info
-        .set(X509CertInfo.VERSION, new CertificateVersion(CertificateVersion.V3));
-    AlgorithmId algo = new AlgorithmId(AlgorithmId.md5WithRSAEncryption_oid);
-    info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(algo));
+    certGen.setSerialNumber(sn);
+    certGen.setIssuerDN(dnName);
+    certGen.setNotBefore(from);
+    certGen.setNotAfter(to);
+    certGen.setSubjectDN(dnName);
+    certGen.setPublicKey(keyPair.getPublic());
+    certGen.setSignatureAlgorithm(algorithm);
 
-    // Sign the cert to identify the algorithm that's used.
-    X509CertImpl cert = new X509CertImpl(info);
-    cert.sign(privkey, algorithm);
-
-    // Update the algorith, and resign.
-    algo = (AlgorithmId) cert.get(X509CertImpl.SIG_ALG);
-    info
-        .set(CertificateAlgorithmId.NAME + "." + CertificateAlgorithmId.ALGORITHM,
-            algo);
-    cert = new X509CertImpl(info);
-    cert.sign(privkey, algorithm);
+    X509Certificate cert = certGen.generate(pair.getPrivate());
     return cert;
   }
 

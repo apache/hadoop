@@ -18,39 +18,39 @@
 
 package org.apache.hadoop.tools.util;
 
-import com.google.common.collect.Maps;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.text.DecimalFormat;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.tools.CopyListing.AclsNotSupportedException;
 import org.apache.hadoop.tools.CopyListing.XAttrsNotSupportedException;
 import org.apache.hadoop.tools.CopyListingFileStatus;
+import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.mapred.UniformSizeInputFormat;
-import org.apache.hadoop.tools.CopyListing.AclsNotSupportedException;
-import org.apache.hadoop.tools.DistCpOptions;
-import org.apache.hadoop.mapreduce.InputFormat;
 
-import java.io.IOException;
-import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.text.DecimalFormat;
-import java.net.URI;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import com.google.common.collect.Maps;
 
 /**
  * Utility functions used in DistCp.
@@ -163,7 +163,7 @@ public class DistCpUtils {
   }
 
   /**
-   * Un packs preservation attribute string containing the first character of
+   * Unpacks preservation attribute string containing the first character of
    * each preservation attribute back to a set of attributes to preserve
    * @param attributes - Attribute string
    * @return - Attribute set
@@ -209,7 +209,7 @@ public class DistCpUtils {
       if (!srcAcl.equals(targetAcl)) {
         targetFS.setAcl(path, srcAcl);
       }
-      // setAcl can't preserve sticky bit, so also call setPermission if needed.
+      // setAcl doesn't preserve sticky bit, so also call setPermission if needed.
       if (srcFileStatus.getPermission().getStickyBit() !=
           targetFileStatus.getPermission().getStickyBit()) {
         targetFS.setPermission(path, srcFileStatus.getPermission());
@@ -225,36 +225,40 @@ public class DistCpUtils {
       Map<String, byte[]> srcXAttrs = srcFileStatus.getXAttrs();
       Map<String, byte[]> targetXAttrs = getXAttrs(targetFS, path);
       if (srcXAttrs != null && !srcXAttrs.equals(targetXAttrs)) {
-        Iterator<Entry<String, byte[]>> iter = srcXAttrs.entrySet().iterator();
-        while (iter.hasNext()) {
-          Entry<String, byte[]> entry = iter.next();
-          final String xattrName = entry.getKey();
+        for (Entry<String, byte[]> entry : srcXAttrs.entrySet()) {
+          String xattrName = entry.getKey();
           if (xattrName.startsWith(rawNS) || preserveXAttrs) {
-            targetFS.setXAttr(path, entry.getKey(), entry.getValue());
+            targetFS.setXAttr(path, xattrName, entry.getValue());
           }
         }
       }
     }
 
-    if (attributes.contains(FileAttribute.REPLICATION) && ! targetFileStatus.isDirectory() &&
-        srcFileStatus.getReplication() != targetFileStatus.getReplication()) {
+    if (attributes.contains(FileAttribute.REPLICATION) && !targetFileStatus.isDirectory() &&
+        (srcFileStatus.getReplication() != targetFileStatus.getReplication())) {
       targetFS.setReplication(path, srcFileStatus.getReplication());
     }
 
     if (attributes.contains(FileAttribute.GROUP) &&
-            !group.equals(srcFileStatus.getGroup())) {
+        !group.equals(srcFileStatus.getGroup())) {
       group = srcFileStatus.getGroup();
       chown = true;
     }
 
     if (attributes.contains(FileAttribute.USER) &&
-            !user.equals(srcFileStatus.getOwner())) {
+        !user.equals(srcFileStatus.getOwner())) {
       user = srcFileStatus.getOwner();
       chown = true;
     }
 
     if (chown) {
       targetFS.setOwner(path, user, group);
+    }
+    
+    if (attributes.contains(FileAttribute.TIMES)) {
+      targetFS.setTimes(path, 
+          srcFileStatus.getModificationTime(), 
+          srcFileStatus.getAccessTime());
     }
   }
 

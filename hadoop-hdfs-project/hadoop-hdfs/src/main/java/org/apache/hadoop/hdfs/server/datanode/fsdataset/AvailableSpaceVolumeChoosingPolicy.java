@@ -99,7 +99,7 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
 
   @Override
   public synchronized V chooseVolume(List<V> volumes,
-      final long replicaSize) throws IOException {
+      long replicaSize) throws IOException {
     if (volumes.size() < 1) {
       throw new DiskOutOfSpaceException("No more available volumes");
     }
@@ -138,8 +138,7 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
       if (mostAvailableAmongLowVolumes < replicaSize ||
           random.nextFloat() < scaledPreferencePercent) {
         volume = roundRobinPolicyHighAvailable.chooseVolume(
-            highAvailableVolumes,
-            replicaSize);
+            highAvailableVolumes, replicaSize);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Volumes are imbalanced. Selecting " + volume +
               " from high available space volumes for write of block size "
@@ -147,8 +146,7 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
         }
       } else {
         volume = roundRobinPolicyLowAvailable.chooseVolume(
-            lowAvailableVolumes,
-            replicaSize);
+            lowAvailableVolumes, replicaSize);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Volumes are imbalanced. Selecting " + volume +
               " from low available space volumes for write of block size "

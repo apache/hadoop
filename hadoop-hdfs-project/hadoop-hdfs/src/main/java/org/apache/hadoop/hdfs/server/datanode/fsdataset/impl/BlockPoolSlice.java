@@ -28,6 +28,9 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.Scanner;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
@@ -42,6 +45,7 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -56,16 +60,20 @@ import org.apache.hadoop.util.Time;
  * This class is synchronized by {@link FsVolumeImpl}.
  */
 class BlockPoolSlice {
+  static final Log LOG = LogFactory.getLog(BlockPoolSlice.class);
+
   private final String bpid;
   private final FsVolumeImpl volume; // volume to which this BlockPool belongs to
   private final File currentDir; // StorageDirectory/current/bpid/current
   // directory where finalized replicas are stored
   private final File finalizedDir;
+  private final File lazypersistDir;
   private final File rbwDir; // directory store RBW replica
   private final File tmpDir; // directory store Temporary replica
   private static final String DU_CACHE_FILE = "dfsUsed";
   private volatile boolean dfsUsedSaved = false;
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
+  private final boolean deleteDuplicateReplicas;
   
   // TODO:FEDERATION scalability issue - a thread per DU is needed
   private final DU dfsUsage;
@@ -85,11 +93,16 @@ class BlockPoolSlice {
     this.currentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT); 
     this.finalizedDir = new File(
         currentDir, DataStorage.STORAGE_DIR_FINALIZED);
+    this.lazypersistDir = new File(currentDir, DataStorage.STORAGE_DIR_LAZY_PERSIST);
     if (!this.finalizedDir.exists()) {
       if (!this.finalizedDir.mkdirs()) {
         throw new IOException("Failed to mkdirs " + this.finalizedDir);
       }
     }
+
+    this.deleteDuplicateReplicas = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION,
+        DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION_DEFAULT);
 
     // Files that were being written when the datanode was last shutdown
     // are now moved back to the data directory. It is possible that
@@ -136,6 +149,10 @@ class BlockPoolSlice {
     return finalizedDir;
   }
   
+  File getLazypersistDir() {
+    return lazypersistDir;
+  }
+
   File getRbwDir() {
     return rbwDir;
   }
@@ -147,6 +164,10 @@ class BlockPoolSlice {
   
   long getDfsUsed() throws IOException {
     return dfsUsage.getUsed();
+  }
+
+  void incDfsUsed(long value) {
+    dfsUsage.incDfsUsed(value);
   }
   
    /**
@@ -252,18 +273,46 @@ class BlockPoolSlice {
     dfsUsage.incDfsUsed(b.getNumBytes()+metaFile.length());
     return blockFile;
   }
-    
+
+  /**
+   * Move a persisted replica from lazypersist directory to a subdirectory
+   * under finalized.
+   */
+  File activateSavedReplica(Block b, File metaFile, File blockFile)
+      throws IOException {
+    final File blockDir = DatanodeUtil.idToBlockDir(finalizedDir, b.getBlockId());
+    final File targetBlockFile = new File(blockDir, blockFile.getName());
+    final File targetMetaFile = new File(blockDir, metaFile.getName());
+    FileUtils.moveFile(blockFile, targetBlockFile);
+    FsDatasetImpl.LOG.info("Moved " + blockFile + " to " + targetBlockFile);
+    FileUtils.moveFile(metaFile, targetMetaFile);
+    FsDatasetImpl.LOG.info("Moved " + metaFile + " to " + targetMetaFile);
+    return targetBlockFile;
+  }
+
   void checkDirs() throws DiskErrorException {
     DiskChecker.checkDirs(finalizedDir);
     DiskChecker.checkDir(tmpDir);
     DiskChecker.checkDir(rbwDir);
   }
+
+
     
-  void getVolumeMap(ReplicaMap volumeMap) throws IOException {
+  void getVolumeMap(ReplicaMap volumeMap,
+                    final RamDiskReplicaTracker lazyWriteReplicaMap)
+      throws IOException {
+    // Recover lazy persist replicas, they will be added to the volumeMap
+    // when we scan the finalized directory.
+    if (lazypersistDir.exists()) {
+      int numRecovered = moveLazyPersistReplicasToFinalized(lazypersistDir);
+      FsDatasetImpl.LOG.info(
+          "Recovered " + numRecovered + " replicas from " + lazypersistDir);
+    }
+
     // add finalized replicas
-    addToReplicasMap(volumeMap, finalizedDir, true);
+    addToReplicasMap(volumeMap, finalizedDir, lazyWriteReplicaMap, true);
     // add rbw replicas
-    addToReplicasMap(volumeMap, rbwDir, false);
+    addToReplicasMap(volumeMap, rbwDir, lazyWriteReplicaMap, false);
   }
 
   /**
@@ -292,18 +341,82 @@ class BlockPoolSlice {
 
 
   /**
+   * Move replicas in the lazy persist directory to their corresponding locations
+   * in the finalized directory.
+   * @return number of replicas recovered.
+   */
+  private int moveLazyPersistReplicasToFinalized(File source)
+      throws IOException {
+    File files[] = FileUtil.listFiles(source);
+    int numRecovered = 0;
+    for (File file : files) {
+      if (file.isDirectory()) {
+        numRecovered += moveLazyPersistReplicasToFinalized(file);
+      }
+
+      if (Block.isMetaFilename(file.getName())) {
+        File metaFile = file;
+        File blockFile = Block.metaToBlockFile(metaFile);
+        long blockId = Block.filename2id(blockFile.getName());
+        File targetDir = DatanodeUtil.idToBlockDir(finalizedDir, blockId);
+
+        if (blockFile.exists()) {
+
+          if (!targetDir.exists() && !targetDir.mkdirs()) {
+            LOG.warn("Failed to mkdirs " + targetDir);
+            continue;
+          }
+
+          final File targetMetaFile = new File(targetDir, metaFile.getName());
+          try {
+            NativeIO.renameTo(metaFile, targetMetaFile);
+          } catch (IOException e) {
+            LOG.warn("Failed to move meta file from "
+                + metaFile + " to " + targetMetaFile, e);
+            continue;
+
+          }
+
+          final File targetBlockFile = new File(targetDir, blockFile.getName());
+          try {
+            NativeIO.renameTo(blockFile, targetBlockFile);
+          } catch (IOException e) {
+            LOG.warn("Failed to move block file from "
+                + blockFile + " to " + targetBlockFile, e);
+            continue;
+          }
+
+          if (targetBlockFile.exists() && targetMetaFile.exists()) {
+            ++numRecovered;
+          } else {
+            // Failure should be rare.
+            LOG.warn("Failed to move " + blockFile + " to " + targetDir);
+          }
+        }
+      }
+    }
+
+    FileUtil.fullyDelete(source);
+    return numRecovered;
+  }
+
+  /**
    * Add replicas under the given directory to the volume map
    * @param volumeMap the replicas map
    * @param dir an input directory
+   * @param lazyWriteReplicaMap Map of replicas on transient
+   *                                storage.
    * @param isFinalized true if the directory has finalized replicas;
    *                    false if the directory has rbw replicas
    */
-  void addToReplicasMap(ReplicaMap volumeMap, File dir, boolean isFinalized
-      ) throws IOException {
+  void addToReplicasMap(ReplicaMap volumeMap, File dir,
+                        final RamDiskReplicaTracker lazyWriteReplicaMap,
+                        boolean isFinalized)
+      throws IOException {
     File files[] = FileUtil.listFiles(dir);
     for (File file : files) {
       if (file.isDirectory()) {
-        addToReplicasMap(volumeMap, file, isFinalized);
+        addToReplicasMap(volumeMap, file, lazyWriteReplicaMap, isFinalized);
       }
 
       if (isFinalized && FsDatasetUtil.isUnlinkTmpFile(file)) {
@@ -361,12 +474,95 @@ class BlockPoolSlice {
         }
       }
 
-      ReplicaInfo oldReplica = volumeMap.add(bpid, newReplica);
-      if (oldReplica != null) {
-        FsDatasetImpl.LOG.warn("Two block files with the same block id exist " +
-            "on disk: " + oldReplica.getBlockFile() + " and " + file );
+      ReplicaInfo oldReplica = volumeMap.get(bpid, newReplica.getBlockId());
+      if (oldReplica == null) {
+        volumeMap.add(bpid, newReplica);
+      } else {
+        // We have multiple replicas of the same block so decide which one
+        // to keep.
+        newReplica = resolveDuplicateReplicas(newReplica, oldReplica, volumeMap);
+      }
+
+      // If we are retaining a replica on transient storage make sure
+      // it is in the lazyWriteReplicaMap so it can be persisted
+      // eventually.
+      if (newReplica.getVolume().isTransientStorage()) {
+        lazyWriteReplicaMap.addReplica(bpid, blockId,
+                                       (FsVolumeImpl) newReplica.getVolume());
+      } else {
+        lazyWriteReplicaMap.discardReplica(bpid, blockId, false);
       }
     }
+  }
+
+  /**
+   * This method is invoked during DN startup when volumes are scanned to
+   * build up the volumeMap.
+   *
+   * Given two replicas, decide which one to keep. The preference is as
+   * follows:
+   *   1. Prefer the replica with the higher generation stamp.
+   *   2. If generation stamps are equal, prefer the replica with the
+   *      larger on-disk length.
+   *   3. If on-disk length is the same, prefer the replica on persistent
+   *      storage volume.
+   *   4. All other factors being equal, keep replica1.
+   *
+   * The other replica is removed from the volumeMap and is deleted from
+   * its storage volume.
+   *
+   * @param replica1
+   * @param replica2
+   * @param volumeMap
+   * @return the replica that is retained.
+   * @throws IOException
+   */
+  ReplicaInfo resolveDuplicateReplicas(
+      final ReplicaInfo replica1, final ReplicaInfo replica2,
+      final ReplicaMap volumeMap) throws IOException {
+
+    if (!deleteDuplicateReplicas) {
+      // Leave both block replicas in place.
+      return replica1;
+    }
+
+    ReplicaInfo replicaToKeep;
+    ReplicaInfo replicaToDelete;
+
+    if (replica1.getGenerationStamp() != replica2.getGenerationStamp()) {
+      replicaToKeep = replica1.getGenerationStamp() > replica2.getGenerationStamp()
+          ? replica1 : replica2;
+    } else if (replica1.getNumBytes() != replica2.getNumBytes()) {
+      replicaToKeep = replica1.getNumBytes() > replica2.getNumBytes() ?
+          replica1 : replica2;
+    } else if (replica1.getVolume().isTransientStorage() &&
+               !replica2.getVolume().isTransientStorage()) {
+      replicaToKeep = replica2;
+    } else {
+      replicaToKeep = replica1;
+    }
+
+    replicaToDelete = (replicaToKeep == replica1) ? replica2 : replica1;
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("resolveDuplicateReplicas decide to keep " + replicaToKeep
+          + ".  Will try to delete " + replicaToDelete);
+    }
+
+    // Update volumeMap.
+    volumeMap.add(bpid, replicaToKeep);
+
+    // Delete the files on disk. Failure here is okay.
+    final File blockFile = replicaToDelete.getBlockFile();
+    if (!blockFile.delete()) {
+      LOG.warn("Failed to delete block file " + blockFile);
+    }
+    final File metaFile = replicaToDelete.getMetaFile();
+    if (!metaFile.delete()) {
+      LOG.warn("Failed to delete meta file " + metaFile);
+    }
+
+    return replicaToKeep;
   }
   
   /**
@@ -397,13 +593,8 @@ class BlockPoolSlice {
               HdfsConstants.IO_FILE_BUFFER_SIZE));
 
       // read and handle the common header here. For now just a version
-      BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
-      short version = header.getVersion();
-      if (version != BlockMetadataHeader.VERSION) {
-        FsDatasetImpl.LOG.warn("Wrong version (" + version + ") for metadata file "
-            + metaFile + " ignoring ...");
-      }
-      DataChecksum checksum = header.getChecksum();
+      final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(
+          checksumIn, metaFile);
       int bytesPerChecksum = checksum.getBytesPerChecksum();
       int checksumSize = checksum.getChecksumSize();
       long numChunks = Math.min(

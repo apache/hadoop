@@ -165,10 +165,11 @@ public class TestCgroupsLCEResourcesHandler {
 
   private int readIntFromFile(File targetFile) throws IOException {
     Scanner scanner = new Scanner(targetFile);
-    if (scanner.hasNextInt()) {
-      return scanner.nextInt();
+    try {
+      return scanner.hasNextInt() ? scanner.nextInt() : -1;
+    } finally {
+      scanner.close();
     }
-    return -1;
   }
 
   @Test

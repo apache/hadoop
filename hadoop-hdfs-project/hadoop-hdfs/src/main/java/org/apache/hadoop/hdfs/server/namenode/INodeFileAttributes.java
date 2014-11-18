@@ -21,7 +21,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile.HeaderFormat;
 import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
-
 /**
  * The attributes of a file.
  */
@@ -47,11 +46,12 @@ public interface INodeFileAttributes extends INodeAttributes {
 
     public SnapshotCopy(byte[] name, PermissionStatus permissions,
         AclFeature aclFeature, long modificationTime, long accessTime,
-        short replication, long preferredBlockSize, byte storagePolicyID,
-        XAttrFeature xAttrsFeature) {
+        short replication, long preferredBlockSize,
+        byte storagePolicyID, XAttrFeature xAttrsFeature) {
       super(name, permissions, aclFeature, modificationTime, accessTime, 
           xAttrsFeature);
-      header = HeaderFormat.toLong(preferredBlockSize, replication, storagePolicyID);
+      header = HeaderFormat.toLong(preferredBlockSize, replication,
+          storagePolicyID);
     }
 
     public SnapshotCopy(INodeFile file) {

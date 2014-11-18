@@ -16,10 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.nio.channels.ServerSocketChannel;
-
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
 import org.apache.hadoop.conf.Configuration;
@@ -28,11 +25,12 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.mortbay.jetty.Connector;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.nio.channels.ServerSocketChannel;
 
 /**
  * Utility class to start a datanode in a secure cluster, first obtaining 
@@ -44,17 +42,17 @@ public class SecureDataNodeStarter implements Daemon {
    */
   public static class SecureResources {
     private final ServerSocket streamingSocket;
-    private final Connector listener;
-    public SecureResources(ServerSocket streamingSocket,
-        Connector listener) {
-
+    private final ServerSocketChannel httpServerSocket;
+    public SecureResources(ServerSocket streamingSocket, ServerSocketChannel httpServerSocket) {
       this.streamingSocket = streamingSocket;
-      this.listener = listener;
+      this.httpServerSocket = httpServerSocket;
     }
 
     public ServerSocket getStreamingSocket() { return streamingSocket; }
 
-    public Connector getListener() { return listener; }
+    public ServerSocketChannel getHttpServerChannel() {
+      return httpServerSocket;
+    }
   }
   
   private String [] args;
@@ -110,7 +108,7 @@ public class SecureDataNodeStarter implements Daemon {
               + ss.getLocalPort());
     }
 
-    if (ss.getLocalPort() > 1023 && isSecure) {
+    if (!SecurityUtil.isPrivilegedPort(ss.getLocalPort()) && isSecure) {
       throw new RuntimeException(
         "Cannot start secure datanode with unprivileged RPC ports");
     }
@@ -120,29 +118,31 @@ public class SecureDataNodeStarter implements Daemon {
     // Bind a port for the web server. The code intends to bind HTTP server to
     // privileged port only, as the client can authenticate the server using
     // certificates if they are communicating through SSL.
-    Connector listener = null;
+    final ServerSocketChannel httpChannel;
     if (policy.isHttpEnabled()) {
-      listener = HttpServer2.createDefaultChannelConnector();
+      httpChannel = ServerSocketChannel.open();
       InetSocketAddress infoSocAddr = DataNode.getInfoAddr(conf);
-      listener.setHost(infoSocAddr.getHostName());
-      listener.setPort(infoSocAddr.getPort());
-      // Open listener here in order to bind to port as root
-      listener.open();
-      if (listener.getPort() != infoSocAddr.getPort()) {
+      httpChannel.socket().bind(infoSocAddr);
+      InetSocketAddress localAddr = (InetSocketAddress) httpChannel.socket()
+        .getLocalSocketAddress();
+
+      if (localAddr.getPort() != infoSocAddr.getPort()) {
         throw new RuntimeException("Unable to bind on specified info port in secure " +
             "context. Needed " + streamingAddr.getPort() + ", got " + ss.getLocalPort());
       }
       System.err.println("Successfully obtained privileged resources (streaming port = "
-          + ss + " ) (http listener port = " + listener.getConnection() +")");
+          + ss + " ) (http listener port = " + localAddr.getPort() +")");
 
-      if (listener.getPort() > 1023 && isSecure) {
+      if (localAddr.getPort() > 1023 && isSecure) {
         throw new RuntimeException(
             "Cannot start secure datanode with unprivileged HTTP ports");
       }
       System.err.println("Opened info server at " + infoSocAddr);
+    } else {
+      httpChannel = null;
     }
 
-    return new SecureResources(ss, listener);
+    return new SecureResources(ss, httpChannel);
   }
 
 }

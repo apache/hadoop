@@ -134,7 +134,7 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
     containerPageInstance.set(
       YarnWebParams.CONTAINER_ID,
       ContainerId
-        .newInstance(
+        .newContainerId(
           ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1),
           1).toString());
     containerPageInstance.render();
@@ -153,7 +153,7 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
             ApplicationAttemptId.newInstance(appId, j);
         writeApplicationAttemptStartData(appAttemptId);
         for (int k = 1; k <= numContainers; ++k) {
-          ContainerId containerId = ContainerId.newInstance(appAttemptId, k);
+          ContainerId containerId = ContainerId.newContainerId(appAttemptId, k);
           writeContainerStartData(containerId);
           writeContainerFinishData(containerId);
         }

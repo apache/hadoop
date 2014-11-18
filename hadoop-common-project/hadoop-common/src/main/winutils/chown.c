@@ -18,93 +18,6 @@
 #include "winutils.h"
 
 //----------------------------------------------------------------------------
-// Function: ChangeFileOwnerBySid
-//
-// Description:
-//  Change a file or directory ownership by giving new owner and group SIDs
-//
-// Returns:
-//  ERROR_SUCCESS: on success
-//  Error code: otherwise
-//
-// Notes:
-//  This function is long path safe, i.e. the path will be converted to long
-//  path format if not already converted. So the caller does not need to do
-//  the converstion before calling the method.
-//
-static DWORD ChangeFileOwnerBySid(__in LPCWSTR path,
-  __in_opt PSID pNewOwnerSid, __in_opt PSID pNewGroupSid)
-{
-  LPWSTR longPathName = NULL;
-  INT oldMode = 0;
-
-  SECURITY_INFORMATION securityInformation = 0;
-
-  DWORD dwRtnCode = ERROR_SUCCESS;
-
-  // Convert the path the the long path
-  //
-  dwRtnCode = ConvertToLongPath(path, &longPathName);
-  if (dwRtnCode != ERROR_SUCCESS)
-  {
-    goto ChangeFileOwnerByNameEnd;
-  }
-
-  // Get a pointer to the existing owner information and DACL
-  //
-  dwRtnCode = FindFileOwnerAndPermission(longPathName, FALSE, NULL, NULL, &oldMode);
-  if (dwRtnCode != ERROR_SUCCESS)
-  {
-    goto ChangeFileOwnerByNameEnd;
-  }
-
-  // We need SeTakeOwnershipPrivilege to set the owner if the caller does not
-  // have WRITE_OWNER access to the object; we need SeRestorePrivilege if the
-  // SID is not contained in the caller's token, and have the SE_GROUP_OWNER
-  // permission enabled.
-  //
-  if (!EnablePrivilege(L"SeTakeOwnershipPrivilege"))
-  {
-    fwprintf(stdout, L"INFO: The user does not have SeTakeOwnershipPrivilege.\n");
-  }
-  if (!EnablePrivilege(L"SeRestorePrivilege"))
-  {
-    fwprintf(stdout, L"INFO: The user does not have SeRestorePrivilege.\n");
-  }
-
-  assert(pNewOwnerSid != NULL || pNewGroupSid != NULL);
-
-  // Set the owners of the file.
-  //
-  if (pNewOwnerSid != NULL) securityInformation |= OWNER_SECURITY_INFORMATION;
-  if (pNewGroupSid != NULL) securityInformation |= GROUP_SECURITY_INFORMATION;
-  dwRtnCode = SetNamedSecurityInfoW(
-    longPathName,
-    SE_FILE_OBJECT,
-    securityInformation,
-    pNewOwnerSid,
-    pNewGroupSid,
-    NULL,
-    NULL);
-  if (dwRtnCode != ERROR_SUCCESS)
-  {
-    goto ChangeFileOwnerByNameEnd;
-  }
-
-  // Set the permission on the file for the new owner.
-  //
-  dwRtnCode = ChangeFileModeByMask(longPathName, oldMode);
-  if (dwRtnCode != ERROR_SUCCESS)
-  {
-    goto ChangeFileOwnerByNameEnd;
-  }
-
-ChangeFileOwnerByNameEnd:
-  LocalFree(longPathName);
-  return dwRtnCode;
-}
-
-//----------------------------------------------------------------------------
 // Function: Chown
 //
 // Description:
@@ -129,9 +42,6 @@ int Chown(__in int argc, __in_ecount(argc) wchar_t *argv[])
 
   LPWSTR groupName = NULL;
   size_t groupNameLen = 0;
-
-  PSID pNewOwnerSid = NULL;
-  PSID pNewGroupSid = NULL;
 
   DWORD dwRtnCode = 0;
 
@@ -210,48 +120,16 @@ int Chown(__in int argc, __in_ecount(argc) wchar_t *argv[])
     goto ChownEnd;
   }
 
-  if (userName != NULL)
-  {
-    dwRtnCode = GetSidFromAcctNameW(userName, &pNewOwnerSid);
-    if (dwRtnCode != ERROR_SUCCESS)
-    {
-      ReportErrorCode(L"GetSidFromAcctName", dwRtnCode);
-      fwprintf(stderr, L"Invalid user name: %s\n", userName);
-      goto ChownEnd;
-    }
-  }
-
-  if (groupName != NULL)
-  {
-    dwRtnCode = GetSidFromAcctNameW(groupName, &pNewGroupSid);
-    if (dwRtnCode != ERROR_SUCCESS)
-    {
-      ReportErrorCode(L"GetSidFromAcctName", dwRtnCode);
-      fwprintf(stderr, L"Invalid group name: %s\n", groupName);
-      goto ChownEnd;
-    }
-  }
-
-  if (wcslen(pathName) == 0 || wcsspn(pathName, L"/?|><:*\"") != 0)
-  {
-    fwprintf(stderr, L"Incorrect file name format: %s\n", pathName);
-    goto ChownEnd;
-  }
-
-  dwRtnCode = ChangeFileOwnerBySid(pathName, pNewOwnerSid, pNewGroupSid);
-  if (dwRtnCode != ERROR_SUCCESS)
-  {
-    ReportErrorCode(L"ChangeFileOwnerBySid", dwRtnCode);
-    goto ChownEnd;
-  }
+	dwRtnCode = ChownImpl(userName, groupName, pathName);
+	if (dwRtnCode) {
+		goto ChownEnd;
+	}
 
   ret = EXIT_SUCCESS;
 
 ChownEnd:
   LocalFree(userName);
   LocalFree(groupName);
-  LocalFree(pNewOwnerSid);
-  LocalFree(pNewGroupSid);
 
   return ret;
 }

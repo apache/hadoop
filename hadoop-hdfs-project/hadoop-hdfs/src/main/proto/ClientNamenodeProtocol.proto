@@ -65,6 +65,7 @@ enum CreateFlagProto {
   CREATE = 0x01;    // Create a file
   OVERWRITE = 0x02; // Truncate/overwrite a file. Same as POSIX O_TRUNC
   APPEND = 0x04;    // Append to a file
+  LAZY_PERSIST = 0x10; // File with reduced durability guarantees.
 }
 
 message CreateRequestProto {
@@ -75,7 +76,7 @@ message CreateRequestProto {
   required bool createParent = 5;
   required uint32 replication = 6; // Short: Only 16 bits used
   required uint64 blockSize = 7;
-  repeated CipherSuite cipherSuites = 8;
+  repeated CryptoProtocolVersionProto cryptoProtocolVersion = 8;
 }
 
 message CreateResponseProto {
@@ -106,6 +107,13 @@ message SetStoragePolicyRequestProto {
 }
 
 message SetStoragePolicyResponseProto { // void response
+}
+
+message GetStoragePoliciesRequestProto { // void request
+}
+
+message GetStoragePoliciesResponseProto {
+  repeated BlockStoragePolicyProto policies = 1;
 }
 
 message SetPermissionRequestProto {
@@ -275,6 +283,7 @@ message GetFsStatsResponseProto {
   required uint64 under_replicated = 4;
   required uint64 corrupt_blocks = 5;
   required uint64 missing_blocks = 6;
+  optional uint64 missing_repl_one_blocks = 7;
 }
 
 enum DatanodeReportTypeProto {  // type of the datanode report
@@ -699,6 +708,8 @@ service ClientNamenodeProtocol {
       returns(SetReplicationResponseProto);
   rpc setStoragePolicy(SetStoragePolicyRequestProto)
       returns(SetStoragePolicyResponseProto);
+  rpc getStoragePolicies(GetStoragePoliciesRequestProto)
+      returns(GetStoragePoliciesResponseProto);
   rpc setPermission(SetPermissionRequestProto)
       returns(SetPermissionResponseProto);
   rpc setOwner(SetOwnerRequestProto) returns(SetOwnerResponseProto);

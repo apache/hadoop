@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.io.compress;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,15 +47,15 @@ public class CodecPool {
    * A global compressor pool used to save the expensive 
    * construction/destruction of (possibly native) decompression codecs.
    */
-  private static final Map<Class<Compressor>, List<Compressor>> compressorPool = 
-    new HashMap<Class<Compressor>, List<Compressor>>();
+  private static final Map<Class<Compressor>, Set<Compressor>> compressorPool =
+    new HashMap<Class<Compressor>, Set<Compressor>>();
   
   /**
    * A global decompressor pool used to save the expensive 
    * construction/destruction of (possibly native) decompression codecs.
    */
-  private static final Map<Class<Decompressor>, List<Decompressor>> decompressorPool = 
-    new HashMap<Class<Decompressor>, List<Decompressor>>();
+  private static final Map<Class<Decompressor>, Set<Decompressor>> decompressorPool =
+    new HashMap<Class<Decompressor>, Set<Decompressor>>();
 
   private static <T> LoadingCache<Class<T>, AtomicInteger> createCache(
       Class<T> klass) {
@@ -80,20 +80,21 @@ public class CodecPool {
   private static final LoadingCache<Class<Decompressor>, AtomicInteger> decompressorCounts =
       createCache(Decompressor.class);
 
-  private static <T> T borrow(Map<Class<T>, List<T>> pool,
+  private static <T> T borrow(Map<Class<T>, Set<T>> pool,
                              Class<? extends T> codecClass) {
     T codec = null;
     
     // Check if an appropriate codec is available
-    List<T> codecList;
+    Set<T> codecSet;
     synchronized (pool) {
-      codecList = pool.get(codecClass);
+      codecSet = pool.get(codecClass);
     }
 
-    if (codecList != null) {
-      synchronized (codecList) {
-        if (!codecList.isEmpty()) {
-          codec = codecList.remove(codecList.size() - 1);
+    if (codecSet != null) {
+      synchronized (codecSet) {
+        if (!codecSet.isEmpty()) {
+          codec = codecSet.iterator().next();
+          codecSet.remove(codec);
         }
       }
     }
@@ -101,22 +102,23 @@ public class CodecPool {
     return codec;
   }
 
-  private static <T> void payback(Map<Class<T>, List<T>> pool, T codec) {
+  private static <T> boolean payback(Map<Class<T>, Set<T>> pool, T codec) {
     if (codec != null) {
       Class<T> codecClass = ReflectionUtils.getClass(codec);
-      List<T> codecList;
+      Set<T> codecSet;
       synchronized (pool) {
-        codecList = pool.get(codecClass);
-        if (codecList == null) {
-          codecList = new ArrayList<T>();
-          pool.put(codecClass, codecList);
+        codecSet = pool.get(codecClass);
+        if (codecSet == null) {
+          codecSet = new HashSet<T>();
+          pool.put(codecClass, codecSet);
         }
       }
 
-      synchronized (codecList) {
-        codecList.add(codec);
+      synchronized (codecSet) {
+        return codecSet.add(codec);
       }
     }
+    return false;
   }
   
   @SuppressWarnings("unchecked")
@@ -200,8 +202,9 @@ public class CodecPool {
       return;
     }
     compressor.reset();
-    payback(compressorPool, compressor);
-    updateLeaseCount(compressorCounts, compressor, -1);
+    if (payback(compressorPool, compressor)) {
+      updateLeaseCount(compressorCounts, compressor, -1);
+    }
   }
   
   /**
@@ -219,8 +222,9 @@ public class CodecPool {
       return;
     }
     decompressor.reset();
-    payback(decompressorPool, decompressor);
-    updateLeaseCount(decompressorCounts, decompressor, -1);
+    if (payback(decompressorPool, decompressor)) {
+      updateLeaseCount(decompressorCounts, decompressor, -1);
+    }
   }
 
   /**

@@ -29,10 +29,10 @@ import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,15 +43,14 @@ import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
-import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -60,27 +59,37 @@ public class TestDistributedShell {
   private static final Log LOG =
       LogFactory.getLog(TestDistributedShell.class);
 
-  protected MiniYARNCluster yarnCluster = null;
-  protected Configuration conf = new YarnConfiguration();
+  protected MiniYARNCluster yarnCluster = null;  
+  protected YarnConfiguration conf = null;
+  private static final int NUM_NMS = 1;
 
   protected final static String APPMASTER_JAR =
       JarFinder.getJar(ApplicationMaster.class);
 
   @Before
   public void setup() throws Exception {
+    setupInternal(NUM_NMS);
+  }
+
+  protected void setupInternal(int numNodeManager) throws Exception {
+
     LOG.info("Starting up YARN cluster");
+    
+    conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, 
-        FifoScheduler.class, ResourceScheduler.class);
     conf.set("yarn.log.dir", "target");
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
+    
     if (yarnCluster == null) {
-      yarnCluster = new MiniYARNCluster(
-        TestDistributedShell.class.getSimpleName(), 1, 1, 1, 1, true);
+      yarnCluster =
+          new MiniYARNCluster(TestDistributedShell.class.getSimpleName(), 1,
+              numNodeManager, 1, 1, true);
       yarnCluster.init(conf);
+      
       yarnCluster.start();
-      NodeManager  nm = yarnCluster.getNodeManager(0);
-      waitForNMToRegister(nm);
+      
+      waitForNMsToRegister();
       
       URL url = Thread.currentThread().getContextClassLoader().getResource("yarn-site.xml");
       if (url == null) {
@@ -129,8 +138,16 @@ public class TestDistributedShell {
   }
   
   @Test(timeout=90000)
-  public void testDSShell() throws Exception {
+  public void testDSShellWithDomain() throws Exception {
+    testDSShell(true);
+  }
 
+  @Test(timeout=90000)
+  public void testDSShellWithoutDomain() throws Exception {
+    testDSShell(false);
+  }
+
+  public void testDSShell(boolean haveDomain) throws Exception {
     String[] args = {
         "--jar",
         APPMASTER_JAR,
@@ -147,6 +164,20 @@ public class TestDistributedShell {
         "--container_vcores",
         "1"
     };
+    if (haveDomain) {
+      String[] domainArgs = {
+          "--domain",
+          "TEST_DOMAIN",
+          "--view_acls",
+          "reader_user reader_group",
+          "--modify_acls",
+          "writer_user writer_group",
+          "--create"
+      };
+      List<String> argsList = new ArrayList<String>(Arrays.asList(args));
+      argsList.addAll(Arrays.asList(domainArgs));
+      args = argsList.toArray(new String[argsList.size()]);
+    }
 
     LOG.info("Initializing DS Client");
     final Client client = new Client(new Configuration(yarnCluster.getConfig()));
@@ -198,7 +229,15 @@ public class TestDistributedShell {
     t.join();
     LOG.info("Client run completed. Result=" + result);
     Assert.assertTrue(result.get());
-    
+
+    TimelineDomain domain = null;
+    if (haveDomain) {
+      domain = yarnCluster.getApplicationHistoryServer()
+          .getTimelineStore().getDomain("TEST_DOMAIN");
+      Assert.assertNotNull(domain);
+      Assert.assertEquals("reader_user reader_group", domain.getReaders());
+      Assert.assertEquals("writer_user writer_group", domain.getWriters());
+    }
     TimelineEntities entitiesAttempts = yarnCluster
         .getApplicationHistoryServer()
         .getTimelineStore()
@@ -210,6 +249,13 @@ public class TestDistributedShell {
         .size());
     Assert.assertEquals(entitiesAttempts.getEntities().get(0).getEntityType()
         .toString(), ApplicationMaster.DSEntity.DS_APP_ATTEMPT.toString());
+    if (haveDomain) {
+      Assert.assertEquals(domain.getId(),
+          entitiesAttempts.getEntities().get(0).getDomainId());
+    } else {
+      Assert.assertEquals("DEFAULT",
+          entitiesAttempts.getEntities().get(0).getDomainId());
+    }
     TimelineEntities entities = yarnCluster
         .getApplicationHistoryServer()
         .getTimelineStore()
@@ -219,6 +265,13 @@ public class TestDistributedShell {
     Assert.assertEquals(2, entities.getEntities().size());
     Assert.assertEquals(entities.getEntities().get(0).getEntityType()
         .toString(), ApplicationMaster.DSEntity.DS_CONTAINER.toString());
+    if (haveDomain) {
+      Assert.assertEquals(domain.getId(),
+          entities.getEntities().get(0).getDomainId());
+    } else {
+      Assert.assertEquals("DEFAULT",
+          entities.getEntities().get(0).getDomainId());
+    }
   }
 
   /*
@@ -711,13 +764,15 @@ public class TestDistributedShell {
     }
   }
 
-  protected static void waitForNMToRegister(NodeManager nm)
-      throws Exception {
-    int attempt = 60;
-    ContainerManagerImpl cm =
-        ((ContainerManagerImpl) nm.getNMContext().getContainerManager());
-    while (cm.getBlockNewContainerRequestsStatus() && attempt-- > 0) {
-      Thread.sleep(2000);
+  protected void waitForNMsToRegister() throws Exception {
+    int sec = 60;
+    while (sec >= 0) {
+      if (yarnCluster.getResourceManager().getRMContext().getRMNodes().size() 
+          >= NUM_NMS) {
+        break;
+      }
+      Thread.sleep(1000);
+      sec--;
     }
   }
 

@@ -159,6 +159,7 @@ message LocalResourceProto {
   optional LocalResourceTypeProto type = 4;
   optional LocalResourceVisibilityProto visibility = 5;
   optional string pattern = 6;
+  optional bool should_be_uploaded_to_shared_cache = 7;
 }
 
 message ApplicationResourceUsageReportProto {
@@ -229,8 +230,13 @@ message NodeReportProto {
   optional NodeStateProto node_state = 7;
   optional string health_report = 8;
   optional int64 last_health_report_time = 9;
+  repeated string node_labels = 10;
 }
 
+message NodeIdToLabelsProto {
+  optional NodeIdProto nodeId = 1;
+  repeated string nodeLabels = 2;
+}
 
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
@@ -241,6 +247,7 @@ message ResourceRequestProto {
   optional ResourceProto capability = 3;
   optional int32 num_containers = 4;
   optional bool relax_locality = 5 [default = true];
+  optional string node_label_expression = 6;
 }
 
 enum AMCommandProto {
@@ -292,6 +299,15 @@ message ApplicationSubmissionContextProto {
   optional bool keep_containers_across_application_attempts = 11 [default = false];
   repeated string applicationTags = 12;
   optional int64 attempt_failures_validity_interval = 13 [default = -1];
+  optional LogAggregationContextProto log_aggregation_context = 14;
+  optional ReservationIdProto reservation_id = 15;
+  optional string node_label_expression = 16;
+  optional ResourceRequestProto am_container_resource_request = 17;
+}
+
+message LogAggregationContextProto {
+ optional string include_pattern = 1 [default = ".*"];
+ optional string exclude_pattern = 2 [default = ""];
 }
 
 enum ApplicationAccessTypeProto {
@@ -321,6 +337,8 @@ message QueueInfoProto {
   optional QueueStateProto state = 5;
   repeated QueueInfoProto childQueues = 6;
   repeated ApplicationReportProto applications = 7;
+  repeated string accessibleNodeLabels = 8;
+  optional string defaultNodeLabelExpression = 9;
 }
 
 enum QueueACLProto {
@@ -332,6 +350,41 @@ message QueueUserACLInfoProto {
   optional string queueName = 1;
   repeated QueueACLProto userAcls = 2;
 }
+
+////////////////////////////////////////////////////////////////////////
+////// From reservation_protocol /////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+message ReservationIdProto {
+  optional int64 id = 1;
+  optional int64 cluster_timestamp = 2;
+}
+
+message ReservationRequestProto {
+  optional ResourceProto capability = 1;
+  optional int32 num_containers = 2 [default = 1];
+  optional int32 concurrency = 3 [default = 1];
+  optional int64 duration = 4 [default = -1];
+}
+
+message ReservationRequestsProto {
+  repeated ReservationRequestProto reservation_resources = 1;
+  optional ReservationRequestInterpreterProto interpreter = 2 [default = R_ALL];
+}
+
+message ReservationDefinitionProto {
+  optional ReservationRequestsProto reservation_requests = 1;
+  optional int64 arrival = 2;
+  optional int64 deadline = 3;
+  optional string reservation_name = 4;
+}
+
+enum ReservationRequestInterpreterProto {
+  R_ANY = 0;
+  R_ALL = 1;
+  R_ORDER = 2;
+  R_ORDER_NO_GAP = 3;
+ }
 
 ////////////////////////////////////////////////////////////////////////
 ////// From container_manager //////////////////////////////////////////

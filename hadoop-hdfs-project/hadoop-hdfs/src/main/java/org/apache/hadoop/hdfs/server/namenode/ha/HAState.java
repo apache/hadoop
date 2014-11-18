@@ -21,8 +21,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
-import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.util.Time;
 
 /**
  * Namenode base state to implement state machine pattern.
@@ -30,6 +30,7 @@ import org.apache.hadoop.ipc.StandbyException;
 @InterfaceAudience.Private
 abstract public class HAState {
   protected final HAServiceState state;
+  private long lastHATransitionTime;
 
   /**
    * Constructor
@@ -61,9 +62,23 @@ abstract public class HAState {
       exitState(context);
       context.setState(s);
       s.enterState(context);
+      s.updateLastHATransitionTime();
     } finally {
       context.writeUnlock();
     }
+  }
+
+  /**
+   * Gets the most recent HA transition time in milliseconds from the epoch.
+   *
+   * @return the most recent HA transition time in milliseconds from the epoch.
+   */
+  public long getLastHATransitionTime() {
+    return lastHATransitionTime;
+  }
+
+  private void updateLastHATransitionTime() {
+    lastHATransitionTime = Time.now();
   }
 
   /**

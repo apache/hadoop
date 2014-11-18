@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,7 +37,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.VersionUtil;
@@ -62,7 +65,9 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -110,6 +115,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private Runnable statusUpdaterRunnable;
   private Thread  statusUpdater;
   private long rmIdentifier = ResourceManagerConstants.RM_INVALID_IDENTIFIER;
+  Set<ContainerId> pendingContainersToRemove = new HashSet<ContainerId>();
 
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
@@ -354,18 +360,22 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       ContainerId containerId = container.getContainerId();
       ApplicationId applicationId = container.getContainerId()
           .getApplicationAttemptId().getApplicationId();
-      if (!this.context.getApplications().containsKey(applicationId)) {
-        context.getContainers().remove(containerId);
-        continue;
-      }
       org.apache.hadoop.yarn.api.records.ContainerStatus containerStatus =
           container.cloneAndGetContainerStatus();
       containerStatuses.add(containerStatus);
-      if (containerStatus.getState().equals(ContainerState.COMPLETE)) {
-        // Adding to finished containers cache. Cache will keep it around at
-        // least for #durationToTrackStoppedContainers duration. In the
-        // subsequent call to stop container it will get removed from cache.
-        addCompletedContainer(container.getContainerId());
+      if (containerStatus.getState() == ContainerState.COMPLETE) {
+        if (isApplicationStopped(applicationId)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(applicationId + " is completing, " + " remove "
+                + containerId + " from NM context.");
+          }
+          context.getContainers().remove(containerId);
+        } else {
+          // Adding to finished containers cache. Cache will keep it around at
+          // least for #durationToTrackStoppedContainers duration. In the
+          // subsequent call to stop container it will get removed from cache.
+          addCompletedContainer(container.getContainerId());
+        }
       }
     }
     if (LOG.isDebugEnabled()) {
@@ -396,7 +406,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       NMContainerStatus status =
           container.getNMContainerStatus();
       containerStatuses.add(status);
-      if (status.getContainerState().equals(ContainerState.COMPLETE)) {
+      if (status.getContainerState() == ContainerState.COMPLETE) {
         // Adding to finished containers cache. Cache will keep it around at
         // least for #durationToTrackStoppedContainers duration. In the
         // subsequent call to stop container it will get removed from cache.
@@ -406,6 +416,22 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     LOG.info("Sending out " + containerStatuses.size()
       + " NM container statuses: " + containerStatuses);
     return containerStatuses;
+  }
+
+  private boolean isApplicationStopped(ApplicationId applicationId) {
+    if (!this.context.getApplications().containsKey(applicationId)) {
+      return true;
+    }
+
+    ApplicationState applicationState = this.context.getApplications().get(
+        applicationId).getApplicationState();
+    if (applicationState == ApplicationState.FINISHING_CONTAINERS_WAIT
+        || applicationState == ApplicationState.APPLICATION_RESOURCES_CLEANINGUP
+        || applicationState == ApplicationState.FINISHED) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -421,19 +447,27 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   @VisibleForTesting
   @Private
-  public void removeCompletedContainersFromContext(
+  public void removeOrTrackCompletedContainersFromContext(
       List<ContainerId> containerIds) throws IOException {
     Set<ContainerId> removedContainers = new HashSet<ContainerId>();
 
-    // If the AM has pulled the completedContainer it can be removed
-    for (ContainerId containerId : containerIds) {
-      context.getContainers().remove(containerId);
-      removedContainers.add(containerId);
+    pendingContainersToRemove.addAll(containerIds);
+    Iterator<ContainerId> iter = pendingContainersToRemove.iterator();
+    while (iter.hasNext()) {
+      ContainerId containerId = iter.next();
+      // remove the container only if the container is at DONE state
+      Container nmContainer = context.getContainers().get(containerId);
+      if (nmContainer != null && nmContainer.getContainerState().equals(
+        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState.DONE)) {
+        context.getContainers().remove(containerId);
+        removedContainers.add(containerId);
+        iter.remove();
+      }
     }
 
     if (!removedContainers.isEmpty()) {
-      LOG.info("Removed completed containers from NM context: " +
-          removedContainers);
+      LOG.info("Removed completed containers from NM context: "
+          + removedContainers);
     }
   }
 
@@ -504,6 +538,28 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return this.rmIdentifier;
   }
 
+  private static Map<ApplicationId, Credentials> parseCredentials(
+      Map<ApplicationId, ByteBuffer> systemCredentials) throws IOException {
+    Map<ApplicationId, Credentials> map =
+        new HashMap<ApplicationId, Credentials>();
+    for (Map.Entry<ApplicationId, ByteBuffer> entry : systemCredentials.entrySet()) {
+      Credentials credentials = new Credentials();
+      DataInputByteBuffer buf = new DataInputByteBuffer();
+      ByteBuffer buffer = entry.getValue();
+      buffer.rewind();
+      buf.reset(buffer);
+      credentials.readTokenStorageStream(buf);
+      map.put(entry.getKey(), credentials);
+    }
+    if (LOG.isDebugEnabled()) {
+      for (Map.Entry<ApplicationId, Credentials> entry : map.entrySet()) {
+        LOG.debug("Retrieved credentials form RM for " + entry.getKey() + ": "
+            + entry.getValue().getAllTokens());
+      }
+    }
+    return map;
+  }
+
   protected void startStatusUpdater() {
 
     statusUpdaterRunnable = new Runnable() {
@@ -557,8 +613,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             // because these completed containers will be reported back to RM
             // when NM re-registers with RM.
             // Only remove the cleanedup containers that are acked
-            removeCompletedContainersFromContext(response
-                  .getFinishedContainersPulledByAM());
+            removeOrTrackCompletedContainersFromContext(response
+                  .getContainersToBeRemovedFromNM());
 
             lastHeartBeatID = response.getResponseId();
             List<ContainerId> containersToCleanup = response
@@ -576,6 +632,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               dispatcher.getEventHandler().handle(
                   new CMgrCompletedAppsEvent(appsToCleanup,
                       CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER));
+            }
+
+            Map<ApplicationId, ByteBuffer> systemCredentials =
+                response.getSystemCredentialsForApps();
+            if (systemCredentials != null && !systemCredentials.isEmpty()) {
+              ((NMContext) context)
+                .setSystemCrendentialsForApps(parseCredentials(systemCredentials));
             }
           } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM

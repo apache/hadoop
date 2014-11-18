@@ -59,6 +59,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -164,9 +165,10 @@ public class HttpFSServer {
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRoot(@QueryParam(OperationParam.NAME) OperationParam op,
-                          @Context Parameters params)
+                          @Context Parameters params,
+                          @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
-    return get("", op, params);
+    return get("", op, params, request);
   }
 
   private String makeAbsolute(String path) {
@@ -193,12 +195,14 @@ public class HttpFSServer {
   @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response get(@PathParam("path") String path,
                       @QueryParam(OperationParam.NAME) OperationParam op,
-                      @Context Parameters params)
+                      @Context Parameters params,
+                      @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
+    MDC.put("hostname", request.getRemoteAddr());
     switch (op.value()) {
       case OPEN: {
         //Invoking the command directly using an unmanaged FileSystem that is
@@ -334,12 +338,14 @@ public class HttpFSServer {
   @Produces(MediaType.APPLICATION_JSON)
   public Response delete(@PathParam("path") String path,
                          @QueryParam(OperationParam.NAME) OperationParam op,
-                         @Context Parameters params)
+                         @Context Parameters params,
+                         @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
+    MDC.put("hostname", request.getRemoteAddr());
     switch (op.value()) {
       case DELETE: {
         Boolean recursive =
@@ -385,12 +391,14 @@ public class HttpFSServer {
                        @Context UriInfo uriInfo,
                        @PathParam("path") String path,
                        @QueryParam(OperationParam.NAME) OperationParam op,
-                       @Context Parameters params)
+                       @Context Parameters params,
+                       @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
+    MDC.put("hostname", request.getRemoteAddr());
     switch (op.value()) {
       case APPEND: {
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);
@@ -469,12 +477,14 @@ public class HttpFSServer {
                        @Context UriInfo uriInfo,
                        @PathParam("path") String path,
                        @QueryParam(OperationParam.NAME) OperationParam op,
-                       @Context Parameters params)
+                       @Context Parameters params,
+                       @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     UserGroupInformation user = HttpUserGroupInformation.get();
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
+    MDC.put("hostname", request.getRemoteAddr());
     switch (op.value()) {
       case CREATE: {
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);

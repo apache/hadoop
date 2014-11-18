@@ -74,4 +74,15 @@ public class TestNativeAzureFileSystemMetricsSystem {
     assertTrue(name2.startsWith("AzureFileSystemMetrics"));
     assertTrue(!name1.equals(name2));
   }
+
+  @Test
+  public void testSkipMetricsCollection() throws Exception {
+    AzureBlobStorageTestAccount a;
+    a = AzureBlobStorageTestAccount.createMock();
+    a.getFileSystem().getConf().setBoolean(
+      NativeAzureFileSystem.SKIP_AZURE_METRICS_PROPERTY_NAME, true);
+    a.getFileSystem().create(new Path("/foo")).close();
+    a.closeFileSystem(); // Causes the file system to close, which publishes metrics
+    assertEquals(0, getFilesCreated(a));
+  }
 }

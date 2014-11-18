@@ -98,7 +98,7 @@ int write_config_file(char *file_name) {
   }
   fprintf(file, "banned.users=bannedUser\n");
   fprintf(file, "min.user.id=500\n");
-  fprintf(file, "allowed.system.users=allowedUser,bin\n");
+  fprintf(file, "allowed.system.users=allowedUser,daemon\n");
   fclose(file);
   return 0;
 }
@@ -222,20 +222,20 @@ void test_check_user() {
     printf("FAIL: failed check for system user root\n");
     exit(1);
   }
-  if (check_user("bin") == NULL) {
-    printf("FAIL: failed check for whitelisted system user bin\n");
+  if (check_user("daemon") == NULL) {
+    printf("FAIL: failed check for whitelisted system user daemon\n");
     exit(1);
   }
 }
 
 void test_resolve_config_path() {
   printf("\nTesting resolve_config_path\n");
-  if (strcmp(resolve_config_path("/etc/passwd", NULL), "/etc/passwd") != 0) {
-    printf("FAIL: failed to resolve config_name on an absolute path name: /etc/passwd\n");
+  if (strcmp(resolve_config_path("/bin/ls", NULL), "/bin/ls") != 0) {
+    printf("FAIL: failed to resolve config_name on an absolute path name: /bin/ls\n");
     exit(1);
   }
-  if (strcmp(resolve_config_path("../etc/passwd", "/etc/passwd"), "/etc/passwd") != 0) {
-    printf("FAIL: failed to resolve config_name on a relative path name: ../etc/passwd (relative to /etc/passwd)");
+  if (strcmp(resolve_config_path("../bin/ls", "/bin/ls"), "/bin/ls") != 0) {
+    printf("FAIL: failed to resolve config_name on a relative path name: ../bin/ls (relative to /bin/ls)");
     exit(1);
   }
 }
@@ -476,7 +476,7 @@ void test_signal_container_group() {
     printf("FAIL: fork failed\n");
     exit(1);
   } else if (child == 0) {
-    setpgrp();
+    setpgid(0,0);
     if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
       exit(1);
     }

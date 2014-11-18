@@ -18,21 +18,26 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
@@ -40,14 +45,17 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 
 
     
-public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponseProto> implements NodeHeartbeatResponse {
+public class NodeHeartbeatResponsePBImpl extends
+    ProtoBase<NodeHeartbeatResponseProto> implements NodeHeartbeatResponse {
   NodeHeartbeatResponseProto proto = NodeHeartbeatResponseProto.getDefaultInstance();
   NodeHeartbeatResponseProto.Builder builder = null;
   boolean viaProto = false;
   
   private List<ContainerId> containersToCleanup = null;
-  private List<ContainerId> finishedContainersPulledByAM = null;
+  private List<ContainerId> containersToBeRemovedFromNM = null;
   private List<ApplicationId> applicationsToCleanup = null;
+  private Map<ApplicationId, ByteBuffer> systemCredentials = null;
+
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
   
@@ -61,7 +69,7 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
   }
   
   public NodeHeartbeatResponseProto getProto() {
-      mergeLocalToProto();
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -74,8 +82,8 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     if (this.applicationsToCleanup != null) {
       addApplicationsToCleanupToProto();
     }
-    if (this.finishedContainersPulledByAM != null) {
-      addFinishedContainersPulledByAMToProto();
+    if (this.containersToBeRemovedFromNM != null) {
+      addContainersToBeRemovedFromNMToProto();
     }
     if (this.containerTokenMasterKey != null) {
       builder.setContainerTokenMasterKey(
@@ -84,6 +92,19 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     if (this.nmTokenMasterKey != null) {
       builder.setNmTokenMasterKey(
           convertToProtoFormat(this.nmTokenMasterKey));
+    }
+    if (this.systemCredentials != null) {
+      addSystemCredentialsToProto();
+    }
+  }
+
+  private void addSystemCredentialsToProto() {
+    maybeInitBuilder();
+    builder.clearSystemCredentialsForApps();
+    for (Map.Entry<ApplicationId, ByteBuffer> entry : systemCredentials.entrySet()) {
+      builder.addSystemCredentialsForApps(SystemCredentialsForAppsProto.newBuilder()
+        .setAppId(convertToProtoFormat(entry.getKey()))
+        .setCredentialsForApp(ProtoUtils.convertToProtoFormat(entry.getValue())));
     }
   }
 
@@ -204,9 +225,9 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
   }
 
   @Override
-  public List<ContainerId> getFinishedContainersPulledByAM() {
-    initFinishedContainersPulledByAM();
-    return this.finishedContainersPulledByAM;
+  public List<ContainerId> getContainersToBeRemovedFromNM() {
+    initContainersToBeRemovedFromNM();
+    return this.containersToBeRemovedFromNM;
   }
 
   private void initContainersToCleanup() {
@@ -222,16 +243,16 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     }
   }
 
-  private void initFinishedContainersPulledByAM() {
-    if (this.finishedContainersPulledByAM != null) {
+  private void initContainersToBeRemovedFromNM() {
+    if (this.containersToBeRemovedFromNM != null) {
       return;
     }
     NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<ContainerIdProto> list = p.getFinishedContainersPulledByAmList();
-    this.finishedContainersPulledByAM = new ArrayList<ContainerId>();
+    List<ContainerIdProto> list = p.getContainersToBeRemovedFromNmList();
+    this.containersToBeRemovedFromNM = new ArrayList<ContainerId>();
 
     for (ContainerIdProto c : list) {
-      this.finishedContainersPulledByAM.add(convertFromProtoFormat(c));
+      this.containersToBeRemovedFromNM.add(convertFromProtoFormat(c));
     }
   }
 
@@ -245,12 +266,12 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
   }
 
   @Override
-  public void addFinishedContainersPulledByAM(
-      final List<ContainerId> finishedContainersPulledByAM) {
-    if (finishedContainersPulledByAM == null)
+  public void
+      addContainersToBeRemovedFromNM(final List<ContainerId> containers) {
+    if (containers == null)
       return;
-    initFinishedContainersPulledByAM();
-    this.finishedContainersPulledByAM.addAll(finishedContainersPulledByAM);
+    initContainersToBeRemovedFromNM();
+    this.containersToBeRemovedFromNM.addAll(containers);
   }
 
   private void addContainersToCleanupToProto() {
@@ -288,10 +309,10 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
     builder.addAllContainersToCleanup(iterable);
   }
 
-  private void addFinishedContainersPulledByAMToProto() {
+  private void addContainersToBeRemovedFromNMToProto() {
     maybeInitBuilder();
-    builder.clearFinishedContainersPulledByAm();
-    if (finishedContainersPulledByAM == null)
+    builder.clearContainersToBeRemovedFromNm();
+    if (containersToBeRemovedFromNM == null)
       return;
     Iterable<ContainerIdProto> iterable = new Iterable<ContainerIdProto>() {
 
@@ -299,7 +320,7 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
       public Iterator<ContainerIdProto> iterator() {
         return new Iterator<ContainerIdProto>() {
 
-          Iterator<ContainerId> iter = finishedContainersPulledByAM.iterator();
+          Iterator<ContainerId> iter = containersToBeRemovedFromNM.iterator();
 
           @Override
           public boolean hasNext() {
@@ -320,7 +341,7 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
 
       }
     };
-    builder.addAllFinishedContainersPulledByAm(iterable);
+    builder.addAllContainersToBeRemovedFromNm(iterable);
   }
 
   @Override
@@ -384,6 +405,38 @@ public class NodeHeartbeatResponsePBImpl extends ProtoBase<NodeHeartbeatResponse
       }
     };
     builder.addAllApplicationsToCleanup(iterable);
+  }
+
+
+  @Override
+  public Map<ApplicationId, ByteBuffer> getSystemCredentialsForApps() {
+    if (this.systemCredentials != null) {
+      return this.systemCredentials;
+    }
+    initSystemCredentials();
+    return systemCredentials;
+  }
+
+  private void initSystemCredentials() {
+    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<SystemCredentialsForAppsProto> list = p.getSystemCredentialsForAppsList();
+    this.systemCredentials = new HashMap<ApplicationId, ByteBuffer> ();
+    for (SystemCredentialsForAppsProto c : list) {
+      ApplicationId appId = convertFromProtoFormat(c.getAppId());
+      ByteBuffer byteBuffer = ProtoUtils.convertFromProtoFormat(c.getCredentialsForApp());
+      this.systemCredentials.put(appId, byteBuffer);
+    }
+  }
+
+  @Override
+  public void setSystemCredentialsForApps(
+      Map<ApplicationId, ByteBuffer> systemCredentials) {
+    if (systemCredentials == null || systemCredentials.isEmpty()) {
+      return;
+    }
+    maybeInitBuilder();
+    this.systemCredentials = new HashMap<ApplicationId, ByteBuffer>();
+    this.systemCredentials.putAll(systemCredentials);
   }
 
   @Override

@@ -19,19 +19,19 @@
 package org.apache.hadoop.yarn.api.records.timeline;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-
-import org.junit.Assert;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.WeakHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestTimelineRecords {
@@ -61,6 +61,7 @@ public class TestTimelineRecords {
       entity.addPrimaryFilter("pkey2", "pval2");
       entity.addOtherInfo("okey1", "oval1");
       entity.addOtherInfo("okey2", "oval2");
+      entity.setDomainId("domain id " + j);
       entities.addEntity(entity);
     }
     LOG.info("Entities in JSON:");
@@ -74,6 +75,7 @@ public class TestTimelineRecords {
     Assert.assertEquals(2, entity1.getEvents().size());
     Assert.assertEquals(2, entity1.getPrimaryFilters().size());
     Assert.assertEquals(2, entity1.getOtherInfo().size());
+    Assert.assertEquals("domain id 0", entity1.getDomainId());
     TimelineEntity entity2 = entities.getEntities().get(1);
     Assert.assertEquals("entity id 1", entity2.getEntityId());
     Assert.assertEquals("entity type 1", entity2.getEntityType());
@@ -81,6 +83,7 @@ public class TestTimelineRecords {
     Assert.assertEquals(2, entity2.getEvents().size());
     Assert.assertEquals(2, entity2.getPrimaryFilters().size());
     Assert.assertEquals(2, entity2.getOtherInfo().size());
+    Assert.assertEquals("domain id 1", entity2.getDomainId());
   }
 
   @Test
@@ -161,4 +164,156 @@ public class TestTimelineRecords {
     Assert.assertEquals(error2.getErrorCode(), e.getErrorCode());
   }
 
+  @Test
+  public void testTimelineDomain() throws Exception {
+    TimelineDomains domains = new TimelineDomains();
+
+    TimelineDomain domain = null;
+    for (int i = 0; i < 2; ++i) {
+      domain = new TimelineDomain();
+      domain.setId("test id " + (i + 1));
+      domain.setDescription("test description " + (i + 1));
+      domain.setOwner("test owner " + (i + 1));
+      domain.setReaders("test_reader_user_" + (i + 1) +
+          " test_reader_group+" + (i + 1));
+      domain.setWriters("test_writer_user_" + (i + 1) +
+          " test_writer_group+" + (i + 1));
+      domain.setCreatedTime(0L);
+      domain.setModifiedTime(1L);
+      domains.addDomain(domain);
+    }
+    LOG.info("Domain in JSON:");
+    LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(domains, true));
+
+    Assert.assertEquals(2, domains.getDomains().size());
+
+    for (int i = 0; i < domains.getDomains().size(); ++i) {
+      domain = domains.getDomains().get(i);
+      Assert.assertEquals("test id " + (i + 1), domain.getId());
+      Assert.assertEquals("test description " + (i + 1),
+          domain.getDescription());
+      Assert.assertEquals("test owner " + (i + 1), domain.getOwner());
+      Assert.assertEquals("test_reader_user_" + (i + 1) +
+          " test_reader_group+" + (i + 1), domain.getReaders());
+      Assert.assertEquals("test_writer_user_" + (i + 1) +
+          " test_writer_group+" + (i + 1), domain.getWriters());
+      Assert.assertEquals(new Long(0L), domain.getCreatedTime());
+      Assert.assertEquals(new Long(1L), domain.getModifiedTime());
+    }
+  }
+
+  @Test
+  public void testMapInterfaceOrTimelineRecords() throws Exception {
+    TimelineEntity entity = new TimelineEntity();
+    List<Map<String, Set<Object>>> primaryFiltersList =
+        new ArrayList<Map<String, Set<Object>>>();
+    primaryFiltersList.add(
+        Collections.singletonMap("pkey", Collections.singleton((Object) "pval")));
+    Map<String, Set<Object>> primaryFilters = new TreeMap<String, Set<Object>>();
+    primaryFilters.put("pkey1", Collections.singleton((Object) "pval1"));
+    primaryFilters.put("pkey2", Collections.singleton((Object) "pval2"));
+    primaryFiltersList.add(primaryFilters);
+    entity.setPrimaryFilters(null);
+    for (Map<String, Set<Object>> primaryFiltersToSet : primaryFiltersList) {
+      entity.setPrimaryFilters(primaryFiltersToSet);
+      assertPrimaryFilters(entity);
+
+      Map<String, Set<Object>> primaryFiltersToAdd =
+          new WeakHashMap<String, Set<Object>>();
+      primaryFiltersToAdd.put("pkey3", Collections.singleton((Object) "pval3"));
+      entity.addPrimaryFilters(primaryFiltersToAdd);
+      assertPrimaryFilters(entity);
+    }
+
+    List<Map<String, Set<String>>> relatedEntitiesList =
+        new ArrayList<Map<String, Set<String>>>();
+    relatedEntitiesList.add(
+        Collections.singletonMap("rkey", Collections.singleton("rval")));
+    Map<String, Set<String>> relatedEntities = new TreeMap<String, Set<String>>();
+    relatedEntities.put("rkey1", Collections.singleton("rval1"));
+    relatedEntities.put("rkey2", Collections.singleton("rval2"));
+    relatedEntitiesList.add(relatedEntities);
+    entity.setRelatedEntities(null);
+    for (Map<String, Set<String>> relatedEntitiesToSet : relatedEntitiesList) {
+      entity.setRelatedEntities(relatedEntitiesToSet);
+      assertRelatedEntities(entity);
+
+      Map<String, Set<String>> relatedEntitiesToAdd =
+          new WeakHashMap<String, Set<String>>();
+      relatedEntitiesToAdd.put("rkey3", Collections.singleton("rval3"));
+      entity.addRelatedEntities(relatedEntitiesToAdd);
+      assertRelatedEntities(entity);
+    }
+
+    List<Map<String, Object>> otherInfoList =
+        new ArrayList<Map<String, Object>>();
+    otherInfoList.add(Collections.singletonMap("okey", (Object) "oval"));
+    Map<String, Object> otherInfo = new TreeMap<String, Object>();
+    otherInfo.put("okey1", "oval1");
+    otherInfo.put("okey2", "oval2");
+    otherInfoList.add(otherInfo);
+    entity.setOtherInfo(null);
+    for (Map<String, Object> otherInfoToSet : otherInfoList) {
+      entity.setOtherInfo(otherInfoToSet);
+      assertOtherInfo(entity);
+
+      Map<String, Object> otherInfoToAdd = new WeakHashMap<String, Object>();
+      otherInfoToAdd.put("okey3", "oval3");
+      entity.addOtherInfo(otherInfoToAdd);
+      assertOtherInfo(entity);
+    }
+
+    TimelineEvent event = new TimelineEvent();
+    List<Map<String, Object>> eventInfoList =
+        new ArrayList<Map<String, Object>>();
+    eventInfoList.add(Collections.singletonMap("ekey", (Object) "eval"));
+    Map<String, Object> eventInfo = new TreeMap<String, Object>();
+    eventInfo.put("ekey1", "eval1");
+    eventInfo.put("ekey2", "eval2");
+    eventInfoList.add(eventInfo);
+    event.setEventInfo(null);
+    for (Map<String, Object> eventInfoToSet : eventInfoList) {
+      event.setEventInfo(eventInfoToSet);
+      assertEventInfo(event);
+
+      Map<String, Object> eventInfoToAdd = new WeakHashMap<String, Object>();
+      eventInfoToAdd.put("ekey3", "eval3");
+      event.addEventInfo(eventInfoToAdd);
+      assertEventInfo(event);
+    }
+  }
+
+  private static void assertPrimaryFilters(TimelineEntity entity) {
+    Assert.assertNotNull(entity.getPrimaryFilters());
+    Assert.assertNotNull(entity.getPrimaryFiltersJAXB());
+    Assert.assertTrue(entity.getPrimaryFilters() instanceof HashMap);
+    Assert.assertTrue(entity.getPrimaryFiltersJAXB() instanceof HashMap);
+    Assert.assertEquals(
+        entity.getPrimaryFilters(), entity.getPrimaryFiltersJAXB());
+  }
+
+  private static void assertRelatedEntities(TimelineEntity entity) {
+    Assert.assertNotNull(entity.getRelatedEntities());
+    Assert.assertNotNull(entity.getRelatedEntitiesJAXB());
+    Assert.assertTrue(entity.getRelatedEntities() instanceof HashMap);
+    Assert.assertTrue(entity.getRelatedEntitiesJAXB() instanceof HashMap);
+    Assert.assertEquals(
+        entity.getRelatedEntities(), entity.getRelatedEntitiesJAXB());
+  }
+
+  private static void assertOtherInfo(TimelineEntity entity) {
+    Assert.assertNotNull(entity.getOtherInfo());
+    Assert.assertNotNull(entity.getOtherInfoJAXB());
+    Assert.assertTrue(entity.getOtherInfo() instanceof HashMap);
+    Assert.assertTrue(entity.getOtherInfoJAXB() instanceof HashMap);
+    Assert.assertEquals(entity.getOtherInfo(), entity.getOtherInfoJAXB());
+  }
+
+  private static void assertEventInfo(TimelineEvent event) {
+    Assert.assertNotNull(event);
+    Assert.assertNotNull(event.getEventInfoJAXB());
+    Assert.assertTrue(event.getEventInfo() instanceof HashMap);
+    Assert.assertTrue(event.getEventInfoJAXB() instanceof HashMap);
+    Assert.assertEquals(event.getEventInfo(), event.getEventInfoJAXB());
+  }
 }

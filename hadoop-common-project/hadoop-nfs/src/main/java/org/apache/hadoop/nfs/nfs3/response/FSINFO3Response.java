@@ -18,6 +18,7 @@
 package org.apache.hadoop.nfs.nfs3.response;
 
 import org.apache.hadoop.nfs.NfsTime;
+import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.oncrpc.XDR;
@@ -109,9 +110,41 @@ public class FSINFO3Response extends NFS3Response {
     this.properties = properties;
   }
 
+  public static FSINFO3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    xdr.readBoolean();
+    Nfs3FileAttributes postOpObjAttr = Nfs3FileAttributes.deserialize(xdr);
+    int rtmax = 0;
+    int rtpref = 0;
+    int rtmult = 0;
+    int wtmax = 0;
+    int wtpref = 0;
+    int wtmult = 0;
+    int dtpref = 0;
+    long maxFileSize = 0;
+    NfsTime timeDelta = null;
+    int properties = 0;
+
+    if (status == Nfs3Status.NFS3_OK) {
+      rtmax = xdr.readInt();
+      rtpref = xdr.readInt();
+      rtmult = xdr.readInt();
+      wtmax = xdr.readInt();
+      wtpref = xdr.readInt();
+      wtmult = xdr.readInt();
+      dtpref = xdr.readInt();
+      maxFileSize = xdr.readHyper();
+      timeDelta = NfsTime.deserialize(xdr);
+      properties = xdr.readInt();
+    }
+    return new FSINFO3Response(status, postOpObjAttr, rtmax, rtpref, rtmult,
+        wtmax, wtpref, wtmult, dtpref, maxFileSize, timeDelta, properties);
+
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     out.writeBoolean(true);
     postOpAttr.serialize(out);
 

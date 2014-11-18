@@ -17,7 +17,8 @@
 
 function hadoop_usage
 {
-  echo "Usage: yarn [--config confdir] [--daemon (start|stop|status)] COMMAND"
+  echo "Usage: yarn [--config confdir] [--daemon (start|stop|status)]"
+  echo "           [--loglevel loglevel] COMMAND"
   echo "where COMMAND is one of:"
   echo "  application                           prints application(s) report/kill application"
   echo "  applicationattempt                    prints applicationattempt(s) report"
@@ -30,9 +31,11 @@ function hadoop_usage
   echo "  node                                  prints node report(s)"
   echo "  nodemanager                           run a nodemanager on each slave"
   echo "  proxyserver                           run the web app proxy server"
+  echo "  queue                                 prints queue information"
   echo "  resourcemanager                       run the ResourceManager"
   echo "  resourcemanager -format-state-store   deletes the RMStateStore"
   echo "  rmadmin                               admin tools"
+  echo "  sharedcachemanager                    run the SharedCacheManager daemon"
   echo "  timelineserver                        run the timeline server"
   echo "  version                               print the version"
   echo " or"
@@ -126,6 +129,11 @@ case "${COMMAND}" in
       JAVA_HEAP_MAX="-Xmx${YARN_PROXYSERVER_HEAPSIZE}m"
     fi
   ;;
+  queue)
+    CLASS=org.apache.hadoop.yarn.client.cli.QueueCLI
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
   resourcemanager)
     daemon="true"
     CLASS='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
@@ -149,16 +157,21 @@ case "${COMMAND}" in
       JAVA_HEAP_MAX="-Xmx${YARN_TIMELINESERVER_HEAPSIZE}m"
     fi
   ;;
+  sharedcachemanager)
+    daemon="true"
+    CLASS='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
+    YARN_OPTS="$YARN_OPTS $YARN_SHAREDCACHEMANAGER_OPTS"
+  ;;
   version)
     CLASS=org.apache.hadoop.util.VersionInfo
     hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
-  -*)
-    hadoop_exit_with_usage 1
-  ;;
   *)
     CLASS="${COMMAND}"
+    if ! hadoop_validate_classname "${CLASS}"; then
+      hadoop_exit_with_usage 1
+    fi
   ;;
 esac
 

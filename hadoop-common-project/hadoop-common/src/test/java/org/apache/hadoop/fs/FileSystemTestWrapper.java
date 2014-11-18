@@ -334,37 +334,11 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
     return fs.getFileChecksum(f);
   }
 
-  private class FakeRemoteIterator<E> implements RemoteIterator<E> {
-
-    private E[] elements;
-    private int count;
-
-    FakeRemoteIterator(E[] elements) {
-      this.elements = elements;
-      count = 0;
-    }
-
-    @Override
-    public boolean hasNext() throws IOException {
-      return count < elements.length;
-    }
-
-    @Override
-    public E next() throws IOException {
-      if (hasNext()) {
-        return elements[count++];
-      }
-      return null;
-    }
-  }
-
   @Override
   public RemoteIterator<FileStatus> listStatusIterator(Path f)
       throws AccessControlException, FileNotFoundException,
       UnsupportedFileSystemException, IOException {
-    // Fake the RemoteIterator, because FileSystem has no such thing
-    FileStatus[] statuses = fs.listStatus(f);
-    return new FakeRemoteIterator<FileStatus>(statuses);
+    return fs.listStatusIterator(f);
   }
 
   @Override

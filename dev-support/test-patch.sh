@@ -13,7 +13,6 @@
 
 
 #set -x
-ulimit -n 1024
 
 ### Setup some variables.  
 ### BUILD_URL is set by Hudson if it is run by patch process
@@ -454,7 +453,7 @@ checkJavadocWarnings () {
       JIRA_COMMENT="$JIRA_COMMENT
 
     {color:red}-1 javadoc{color}.  The javadoc tool appears to have generated `expr $(($numPatchJavadocWarnings-$numTrunkJavadocWarnings))` warning messages.
-        See $BUILD_URL/artifact/PreCommit-HADOOP-Build-patchprocess/diffJavadocWarnings.txt for details."
+        See $BUILD_URL/artifact/patchprocess/diffJavadocWarnings.txt for details."
         return 1
     fi
   fi
@@ -498,7 +497,7 @@ checkJavacWarnings () {
       {color:red}-1 javac{color}.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the trunk's current $trunkJavacWarnings warnings)."
 
     $DIFF $PATCH_DIR/filteredTrunkJavacWarnings.txt $PATCH_DIR/filteredPatchJavacWarnings.txt > $PATCH_DIR/diffJavacWarnings.txt 
-        JIRA_COMMENT_FOOTER="Javac warnings: $BUILD_URL/artifact/PreCommit-HADOOP-Build-patchprocess/diffJavacWarnings.txt
+        JIRA_COMMENT_FOOTER="Javac warnings: $BUILD_URL/artifact/patchprocess/diffJavacWarnings.txt
 $JIRA_COMMENT_FOOTER"
 
         return 1
@@ -540,7 +539,7 @@ checkReleaseAuditWarnings () {
         {color:red}-1 release audit{color}.  The applied patch generated $patchReleaseAuditWarnings release audit warnings."
         $GREP '\!?????' $PATCH_DIR/patchReleaseAuditWarnings.txt > $PATCH_DIR/patchReleaseAuditProblems.txt
         echo "Lines that start with ????? in the release audit report indicate files that do not have an Apache license header." >> $PATCH_DIR/patchReleaseAuditProblems.txt
-        JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/PreCommit-HADOOP-Build-patchprocess/patchReleaseAuditProblems.txt
+        JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/patchprocess/patchReleaseAuditProblems.txt
 $JIRA_COMMENT_FOOTER"
         return 1
       fi
@@ -659,7 +658,7 @@ checkFindbugsWarnings () {
       $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml \
       $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html
     if [[ $newFindbugsWarnings > 0 ]] ; then
-      JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/PreCommit-HADOOP-Build-patchprocess/newPatchFindbugsWarnings${module_suffix}.html
+      JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/patchprocess/newPatchFindbugsWarnings${module_suffix}.html
 $JIRA_COMMENT_FOOTER"
     fi
   done

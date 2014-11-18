@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -30,9 +31,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
@@ -44,10 +47,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -80,6 +87,7 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
@@ -217,7 +225,7 @@ public class TestNodeStatusUpdater {
         ApplicationAttemptId appAttemptID =
             ApplicationAttemptId.newInstance(appId1, 0);
         ContainerId firstContainerID =
-            ContainerId.newInstance(appAttemptID, heartBeatID);
+            ContainerId.newContainerId(appAttemptID, heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
         Resource resource = BuilderUtils.newResource(2, 1);
@@ -247,7 +255,7 @@ public class TestNodeStatusUpdater {
         ApplicationAttemptId appAttemptID =
             ApplicationAttemptId.newInstance(appId2, 0);
         ContainerId secondContainerID =
-            ContainerId.newInstance(appAttemptID, heartBeatID);
+            ContainerId.newContainerId(appAttemptID, heartBeatID);
         ContainerLaunchContext launchContext = recordFactory
             .newRecordInstance(ContainerLaunchContext.class);
         long currentTime = System.currentTimeMillis();
@@ -560,6 +568,7 @@ public class TestNodeStatusUpdater {
 
   // Test NodeStatusUpdater sends the right container statuses each time it
   // heart beats.
+  private Credentials expectedCredentials = new Credentials();
   private class MyResourceTracker4 implements ResourceTracker {
 
     public NodeAction registerNodeAction = NodeAction.NORMAL;
@@ -575,6 +584,11 @@ public class TestNodeStatusUpdater {
         createContainerStatus(5, ContainerState.COMPLETE);
 
     public MyResourceTracker4(Context context) {
+      // create app Credentials
+      org.apache.hadoop.security.token.Token<DelegationTokenIdentifier> token1 =
+          new org.apache.hadoop.security.token.Token<DelegationTokenIdentifier>();
+      token1.setKind(new Text("kind1"));
+      expectedCredentials.addToken(new Text("token1"), token1);
       this.context = context;
     }
 
@@ -692,7 +706,15 @@ public class TestNodeStatusUpdater {
       NodeHeartbeatResponse nhResponse =
           YarnServerBuilderUtils.newNodeHeartbeatResponse(heartBeatID,
             heartBeatNodeAction, null, null, null, null, 1000L);
-      nhResponse.addFinishedContainersPulledByAM(finishedContainersPulledByAM);
+      nhResponse.addContainersToBeRemovedFromNM(finishedContainersPulledByAM);
+      Map<ApplicationId, ByteBuffer> appCredentials =
+          new HashMap<ApplicationId, ByteBuffer>();
+      DataOutputBuffer dob = new DataOutputBuffer();
+      expectedCredentials.writeTokenStorageToStream(dob);
+      ByteBuffer byteBuffer1 =
+          ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      appCredentials.put(ApplicationId.newInstance(1234, 1), byteBuffer1);
+      nhResponse.setSystemCredentialsForApps(appCredentials);
       return nhResponse;
     }
   }
@@ -716,8 +738,14 @@ public class TestNodeStatusUpdater {
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
         throws YarnException, IOException {
       heartBeatID++;
+      if(heartBeatID == 1) {
+        // EOFException should be retried as well.
+        throw new EOFException("NodeHeartbeat exception");
+      }
+      else {
       throw new java.net.ConnectException(
           "NodeHeartbeat exception");
+      }
     }
   }
 
@@ -797,7 +825,7 @@ public class TestNodeStatusUpdater {
     ApplicationId appId = ApplicationId.newInstance(0, 0);                    
     ApplicationAttemptId appAttemptId =                                       
         ApplicationAttemptId.newInstance(appId, 0);                           
-    ContainerId cId = ContainerId.newInstance(appAttemptId, 0);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
     nm.getNMContext().getApplications().putIfAbsent(appId,
         mock(Application.class));
     nm.getNMContext().getContainers().putIfAbsent(cId, mock(Container.class));
@@ -834,7 +862,7 @@ public class TestNodeStatusUpdater {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 0);
   
-    ContainerId cId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 1);
     Token containerToken =
         BuilderUtils.newContainerToken(cId, "anyHost", 1234, "anyUser",
             BuilderUtils.newResource(1024, 1), 0, 123,
@@ -847,18 +875,57 @@ public class TestNodeStatusUpdater {
       public ContainerState getCurrentState() {
         return ContainerState.COMPLETE;
       }
+
+      @Override
+      public org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState getContainerState() {
+        return org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState.DONE;
+      }
     };
+
+    ContainerId runningContainerId =
+        ContainerId.newContainerId(appAttemptId, 3);
+    Token runningContainerToken =
+        BuilderUtils.newContainerToken(runningContainerId, "anyHost",
+          1234, "anyUser", BuilderUtils.newResource(1024, 1), 0, 123,
+          "password".getBytes(), 0);
+    Container runningContainer =
+        new ContainerImpl(conf, null, null, null, null, null,
+          BuilderUtils.newContainerTokenIdentifier(runningContainerToken)) {
+          @Override
+          public ContainerState getCurrentState() {
+            return ContainerState.RUNNING;
+          }
+
+          @Override
+          public org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState getContainerState() {
+            return org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState.RUNNING;
+          }
+        };
 
     nm.getNMContext().getApplications().putIfAbsent(appId,
         mock(Application.class));
     nm.getNMContext().getContainers().put(cId, anyCompletedContainer);
-    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
+    nm.getNMContext().getContainers()
+      .put(runningContainerId, runningContainer);
+
+    Assert.assertEquals(2, nodeStatusUpdater.getContainerStatuses().size());
 
     List<ContainerId> ackedContainers = new ArrayList<ContainerId>();
     ackedContainers.add(cId);
+    ackedContainers.add(runningContainerId);
 
-    nodeStatusUpdater.removeCompletedContainersFromContext(ackedContainers);
-    Assert.assertTrue(nodeStatusUpdater.getContainerStatuses().isEmpty());
+    nodeStatusUpdater.removeOrTrackCompletedContainersFromContext(ackedContainers);
+
+    Set<ContainerId> containerIdSet = new HashSet<ContainerId>();
+    for (ContainerStatus status : nodeStatusUpdater.getContainerStatuses()) {
+      containerIdSet.add(status.getContainerId());
+    }
+
+    Assert.assertTrue(nodeStatusUpdater.getContainerStatuses().size() == 1);
+    // completed container is removed;
+    Assert.assertFalse(containerIdSet.contains(anyCompletedContainer));
+    // running container is not removed;
+    Assert.assertTrue(containerIdSet.contains(runningContainerId));
   }
 
   @Test
@@ -876,7 +943,7 @@ public class TestNodeStatusUpdater {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 0);
 
-    ContainerId cId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 1);
     Token containerToken =
         BuilderUtils.newContainerToken(cId, "anyHost", 1234, "anyUser",
             BuilderUtils.newResource(1024, 1), 0, 123,
@@ -891,15 +958,23 @@ public class TestNodeStatusUpdater {
       }
     };
 
-    nm.getNMContext().getApplications().putIfAbsent(appId,
-        mock(Application.class));
+    Application application = mock(Application.class);
+    when(application.getApplicationState()).thenReturn(ApplicationState.RUNNING);
+    nm.getNMContext().getApplications().putIfAbsent(appId, application);
     nm.getNMContext().getContainers().put(cId, anyCompletedContainer);
 
     Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
 
+    when(application.getApplicationState()).thenReturn(
+        ApplicationState.FINISHING_CONTAINERS_WAIT);
+    // The completed container will be sent one time. Then we will delete it.
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
+    Assert.assertEquals(0, nodeStatusUpdater.getContainerStatuses().size());
+
+    nm.getNMContext().getContainers().put(cId, anyCompletedContainer);
     nm.getNMContext().getApplications().remove(appId);
-    nodeStatusUpdater.removeCompletedContainersFromContext(new ArrayList
-        <ContainerId>());
+    // The completed container will be sent one time. Then we will delete it.
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
     Assert.assertEquals(0, nodeStatusUpdater.getContainerStatuses().size());
   }
 
@@ -1284,6 +1359,8 @@ public class TestNodeStatusUpdater {
     if(assertionFailedInThread.get()) {
       Assert.fail("ContainerStatus Backup failed");
     }
+    Assert.assertNotNull(nm.getNMContext().getSystemCredentialsForApps()
+      .get(ApplicationId.newInstance(1234, 1)).getToken(new Text("token1")));
     nm.stop();
   }
 
@@ -1424,7 +1501,7 @@ public class TestNodeStatusUpdater {
     ApplicationId applicationId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, 1);
-    ContainerId contaierId = ContainerId.newInstance(applicationAttemptId, id);
+    ContainerId contaierId = ContainerId.newContainerId(applicationAttemptId, id);
     ContainerStatus containerStatus =
         BuilderUtils.newContainerStatus(contaierId, containerState,
           "test_containerStatus: id=" + id + ", containerState: "
@@ -1438,6 +1515,13 @@ public class TestNodeStatusUpdater {
     when(container.getCurrentState()).thenReturn(containerStatus.getState());
     when(container.getContainerId()).thenReturn(
       containerStatus.getContainerId());
+    if (containerStatus.getState().equals(ContainerState.COMPLETE)) {
+      when(container.getContainerState())
+        .thenReturn(org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState.DONE);
+    } else if (containerStatus.getState().equals(ContainerState.RUNNING)) {
+      when(container.getContainerState())
+      .thenReturn(org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState.RUNNING);
+    }
     return container;
   }
 

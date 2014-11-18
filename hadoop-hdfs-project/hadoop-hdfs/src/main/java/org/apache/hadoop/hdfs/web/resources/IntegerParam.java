@@ -72,7 +72,8 @@ abstract class IntegerParam extends Param<Integer, IntegerParam.Domain> {
     @Override
     Integer parse(final String str) {
       try{
-        return NULL.equals(str)? null: Integer.parseInt(str, radix);
+        return NULL.equals(str) || str == null ? null : Integer.parseInt(str,
+          radix);
       } catch(NumberFormatException e) {
         throw new IllegalArgumentException("Failed to parse \"" + str
             + "\" as a radix-" + radix + " integer.", e);

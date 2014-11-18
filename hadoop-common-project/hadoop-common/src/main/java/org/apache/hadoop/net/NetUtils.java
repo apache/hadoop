@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.net;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -716,7 +717,7 @@ public class NetUtils {
                                           final int localPort,
                                           final IOException exception) {
     if (exception instanceof BindException) {
-      return new BindException(
+      return wrapWithMessage(exception,
           "Problem binding to ["
               + localHost
               + ":"
@@ -759,6 +760,13 @@ public class NetUtils {
               + " failed on socket timeout exception: " + exception
               + ";"
               + see("NoRouteToHost"));
+    } else if (exception instanceof EOFException) {
+      return wrapWithMessage(exception,
+          "End of File Exception between "
+              + getHostDetailsAsString(destHost,  destPort, localHost)
+              + ": " + exception
+              + ";"
+              + see("EOFException"));
     }
     else {
       return (IOException) new IOException("Failed on local exception: "

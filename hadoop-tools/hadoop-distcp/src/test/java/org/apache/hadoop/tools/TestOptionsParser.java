@@ -497,7 +497,7 @@ public class TestOptionsParser {
       attribIterator.next();
       i++;
     }
-    Assert.assertEquals(i, 6);
+    Assert.assertEquals(i, DistCpOptionSwitch.PRESERVE_STATUS_DEFAULT.length() - 2);
 
     try {
       OptionsParser.parse(new String[] {

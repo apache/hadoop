@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager;
 
@@ -76,6 +77,13 @@ public class DelegationTokenManager {
     public DelegationTokenIdentifier createIdentifier() {
       return new DelegationTokenIdentifier(tokenKind);
     }
+
+    @Override
+    public DelegationTokenIdentifier decodeTokenIdentifier(
+        Token<DelegationTokenIdentifier> token) throws IOException {
+      return DelegationTokenManager.decodeToken(token, tokenKind);
+    }
+
   }
 
   private static class ZKSecretManager
@@ -92,11 +100,16 @@ public class DelegationTokenManager {
     public DelegationTokenIdentifier createIdentifier() {
       return new DelegationTokenIdentifier(tokenKind);
     }
+
+    @Override
+    public DelegationTokenIdentifier decodeTokenIdentifier(
+        Token<DelegationTokenIdentifier> token) throws IOException {
+      return DelegationTokenManager.decodeToken(token, tokenKind);
+    }
   }
 
   private AbstractDelegationTokenSecretManager secretManager = null;
   private boolean managedSecretManager;
-  private Text tokenKind;
 
   public DelegationTokenManager(Configuration conf, Text tokenKind) {
     if (conf.getBoolean(ENABLE_ZK_KEY, false)) {
@@ -104,7 +117,6 @@ public class DelegationTokenManager {
     } else {
       this.secretManager = new DelegationTokenSecretManager(conf, tokenKind);
     }
-    this.tokenKind = tokenKind;
     managedSecretManager = true;
   }
 
@@ -121,7 +133,6 @@ public class DelegationTokenManager {
       AbstractDelegationTokenSecretManager secretManager) {
     this.secretManager.stopThreads();
     this.secretManager = secretManager;
-    this.tokenKind = secretManager.createIdentifier().getKind();
     managedSecretManager = false;
   }
 
@@ -143,8 +154,8 @@ public class DelegationTokenManager {
   }
 
   @SuppressWarnings("unchecked")
-  public Token<DelegationTokenIdentifier> createToken(UserGroupInformation ugi,
-      String renewer) {
+  public Token<? extends AbstractDelegationTokenIdentifier> createToken(
+      UserGroupInformation ugi, String renewer) {
     renewer = (renewer == null) ? ugi.getShortUserName() : renewer;
     String user = ugi.getUserName();
     Text owner = new Text(user);
@@ -152,19 +163,24 @@ public class DelegationTokenManager {
     if (ugi.getRealUser() != null) {
       realUser = new Text(ugi.getRealUser().getUserName());
     }
-    DelegationTokenIdentifier tokenIdentifier = new DelegationTokenIdentifier(
-        tokenKind, owner, new Text(renewer), realUser);
-    return new Token<DelegationTokenIdentifier>(tokenIdentifier, secretManager);
+    AbstractDelegationTokenIdentifier tokenIdentifier =
+        (AbstractDelegationTokenIdentifier) secretManager.createIdentifier();
+    tokenIdentifier.setOwner(owner);
+    tokenIdentifier.setRenewer(new Text(renewer));
+    tokenIdentifier.setRealUser(realUser);
+    return new Token(tokenIdentifier, secretManager);
   }
 
   @SuppressWarnings("unchecked")
-  public long renewToken(Token<DelegationTokenIdentifier> token, String renewer)
-      throws IOException {
+  public long renewToken(
+      Token<? extends AbstractDelegationTokenIdentifier> token, String renewer)
+          throws IOException {
     return secretManager.renewToken(token, renewer);
   }
 
   @SuppressWarnings("unchecked")
-  public void cancelToken(Token<DelegationTokenIdentifier> token,
+  public void cancelToken(
+      Token<? extends AbstractDelegationTokenIdentifier> token,
       String canceler) throws IOException {
     canceler = (canceler != null) ? canceler :
                verifyToken(token).getShortUserName();
@@ -172,13 +188,10 @@ public class DelegationTokenManager {
   }
 
   @SuppressWarnings("unchecked")
-  public UserGroupInformation verifyToken(Token<DelegationTokenIdentifier>
-      token) throws IOException {
-    ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
-    DataInputStream dis = new DataInputStream(buf);
-    DelegationTokenIdentifier id = new DelegationTokenIdentifier(tokenKind);
-    id.readFields(dis);
-    dis.close();
+  public UserGroupInformation verifyToken(
+      Token<? extends AbstractDelegationTokenIdentifier> token)
+          throws IOException {
+    AbstractDelegationTokenIdentifier id = secretManager.decodeTokenIdentifier(token);
     secretManager.verifyToken(id, token.getPassword());
     return id.getUser();
   }
@@ -187,5 +200,16 @@ public class DelegationTokenManager {
   @SuppressWarnings("rawtypes")
   public AbstractDelegationTokenSecretManager getDelegationTokenSecretManager() {
     return secretManager;
+  }
+
+  private static DelegationTokenIdentifier decodeToken(
+      Token<DelegationTokenIdentifier> token, Text tokenKind)
+          throws IOException {
+    ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
+    DataInputStream dis = new DataInputStream(buf);
+    DelegationTokenIdentifier id = new DelegationTokenIdentifier(tokenKind);
+    id.readFields(dis);
+    dis.close();
+    return id;
   }
 }

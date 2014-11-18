@@ -708,6 +708,7 @@ public class FSEditLog implements LogsPurgeable {
     Preconditions.checkArgument(newNode.isUnderConstruction());
     PermissionStatus permissions = newNode.getPermissionStatus();
     AddOp op = AddOp.getInstance(cache.get())
+      .reset()
       .setInodeId(newNode.getId())
       .setPath(path)
       .setReplication(newNode.getFileReplication())
@@ -719,7 +720,8 @@ public class FSEditLog implements LogsPurgeable {
       .setClientName(newNode.getFileUnderConstructionFeature().getClientName())
       .setClientMachine(
           newNode.getFileUnderConstructionFeature().getClientMachine())
-      .setOverwrite(overwrite);
+      .setOverwrite(overwrite)
+      .setStoragePolicyId(newNode.getStoragePolicyID());
 
     AclFeature f = newNode.getAclFeature();
     if (f != null) {
@@ -777,6 +779,7 @@ public class FSEditLog implements LogsPurgeable {
   public void logMkDir(String path, INode newNode) {
     PermissionStatus permissions = newNode.getPermissionStatus();
     MkdirOp op = MkdirOp.getInstance(cache.get())
+      .reset()
       .setInodeId(newNode.getId())
       .setPath(path)
       .setTimestamp(newNode.getModificationTime())

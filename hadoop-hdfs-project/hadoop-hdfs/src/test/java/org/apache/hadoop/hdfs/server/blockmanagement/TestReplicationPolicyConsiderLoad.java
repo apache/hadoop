@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
@@ -131,7 +130,8 @@ public class TestReplicationPolicyConsiderLoad {
       final int load = 2 + 4 + 4;
       
       FSNamesystem fsn = namenode.getNamesystem();
-      assertEquals((double)load/6, fsn.getInServiceXceiverAverage(), EPSILON);
+      assertEquals((double)load/6, dnManager.getFSClusterStats()
+        .getInServiceXceiverAverage(), EPSILON);
       
       // Decommission DNs so BlockPlacementPolicyDefault.isGoodTarget()
       // returns false
@@ -140,12 +140,21 @@ public class TestReplicationPolicyConsiderLoad {
         dnManager.startDecommission(d);
         d.setDecommissioned();
       }
-      assertEquals((double)load/3, fsn.getInServiceXceiverAverage(), EPSILON);
+      assertEquals((double)load/3, dnManager.getFSClusterStats()
+        .getInServiceXceiverAverage(), EPSILON);
+
+      // update references of writer DN to update the de-commissioned state
+      List<DatanodeDescriptor> liveNodes = new ArrayList<DatanodeDescriptor>();
+      dnManager.fetchDatanodes(liveNodes, null, false);
+      DatanodeDescriptor writerDn = null;
+      if (liveNodes.contains(dataNodes[0])) {
+        writerDn = liveNodes.get(liveNodes.indexOf(dataNodes[0]));
+      }
 
       // Call chooseTarget()
       DatanodeStorageInfo[] targets = namenode.getNamesystem().getBlockManager()
           .getBlockPlacementPolicy().chooseTarget("testFile.txt", 3,
-              dataNodes[0], new ArrayList<DatanodeStorageInfo>(), false, null,
+              writerDn, new ArrayList<DatanodeStorageInfo>(), false, null,
               1024, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY);
 
       assertEquals(3, targets.length);

@@ -29,7 +29,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -87,6 +86,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
@@ -114,6 +114,11 @@ import org.mockito.stubbing.Answer;
 public class TestYARNRunner extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestYARNRunner.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+
+  // prefix before <LOG_DIR>/profile.out
+  private static final String PROFILE_PARAMS =
+      MRJobConfig.DEFAULT_TASK_PROFILE_PARAMS.substring(0,
+          MRJobConfig.DEFAULT_TASK_PROFILE_PARAMS.lastIndexOf("%"));
 
   private YARNRunner yarnRunner;
   private ResourceMgrDelegate resourceMgrDelegate;
@@ -182,6 +187,16 @@ public class TestYARNRunner extends TestCase {
     when(clientDelegate.getJobStatus(any(JobID.class))).thenReturn(new
         org.apache.hadoop.mapreduce.JobStatus(jobId, 0f, 0f, 0f, 0f,
             State.RUNNING, JobPriority.HIGH, "tmp", "tmp", "tmp", "tmp"));
+    yarnRunner.killJob(jobId);
+    verify(clientDelegate).killJob(jobId);
+
+    when(clientDelegate.getJobStatus(any(JobID.class))).thenReturn(null);
+    when(resourceMgrDelegate.getApplicationReport(any(ApplicationId.class)))
+        .thenReturn(
+            ApplicationReport.newInstance(appId, null, "tmp", "tmp", "tmp",
+                "tmp", 0, null, YarnApplicationState.FINISHED, "tmp", "tmp",
+                0l, 0l, FinalApplicationStatus.SUCCEEDED, null, null, 0f,
+                "tmp", null));
     yarnRunner.killJob(jobId);
     verify(clientDelegate).killJob(jobId);
   }
@@ -423,6 +438,8 @@ public class TestYARNRunner extends TestCase {
     
     for(String command : commands) {
       if(command != null) {
+        assertFalse("Profiler should be disabled by default",
+            command.contains(PROFILE_PARAMS));
         adminPos = command.indexOf("-Djava.net.preferIPv4Stack=true");
         if(adminPos >= 0)
           adminIndex = index;
@@ -477,6 +494,30 @@ public class TestYARNRunner extends TestCase {
         "function if hadoop native libraries are used. These values should " +
         "be set as part of the LD_LIBRARY_PATH in the app master JVM env " +
         "using yarn.app.mapreduce.am.env config settings."));
+  }
+
+  @Test(timeout=20000)
+  public void testAMProfiler() throws Exception {
+    JobConf jobConf = new JobConf();
+
+    jobConf.setBoolean(MRJobConfig.MR_AM_PROFILE, true);
+
+    YARNRunner yarnRunner = new YARNRunner(jobConf);
+
+    ApplicationSubmissionContext submissionContext =
+        buildSubmitContext(yarnRunner, jobConf);
+
+    ContainerLaunchContext containerSpec = submissionContext.getAMContainerSpec();
+    List<String> commands = containerSpec.getCommands();
+
+    for(String command : commands) {
+      if (command != null) {
+        if (command.contains(PROFILE_PARAMS)) {
+          return;
+        }
+      }
+    }
+    throw new IllegalStateException("Profiler opts not found!");
   }
 
   @Test

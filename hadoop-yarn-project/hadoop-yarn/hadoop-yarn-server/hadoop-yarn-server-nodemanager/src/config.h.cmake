@@ -20,4 +20,6 @@
 
 #cmakedefine HADOOP_CONF_DIR "@HADOOP_CONF_DIR@"
 
+#cmakedefine HAVE_FCLOSEALL "@HAVE_FCLOSEALL@"
+
 #endif

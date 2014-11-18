@@ -21,12 +21,12 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doThrow;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -35,13 +35,16 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import org.junit.Assert;
-
+import org.apache.commons.cli.Options;
 import org.apache.commons.lang.time.DateFormatUtils;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -55,17 +58,22 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.util.Records;
+import org.jboss.netty.logging.CommonsLoggerFactory;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mortbay.log.Log;
 
-import org.apache.commons.cli.Options;
+import com.google.common.collect.ImmutableSet;
 
 public class TestYarnCLI {
 
@@ -138,7 +146,7 @@ public class TestYarnCLI {
         applicationId, 1);
     ApplicationAttemptReport attemptReport = ApplicationAttemptReport
         .newInstance(attemptId, "host", 124, "url", "oUrl", "diagnostics",
-            YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
+            YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
                 attemptId, 1));
     when(
         client
@@ -174,11 +182,11 @@ public class TestYarnCLI {
         applicationId, 2);
     ApplicationAttemptReport attemptReport = ApplicationAttemptReport
         .newInstance(attemptId, "host", 124, "url", "oUrl", "diagnostics",
-            YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
+            YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
                 attemptId, 1));
     ApplicationAttemptReport attemptReport1 = ApplicationAttemptReport
         .newInstance(attemptId1, "host", 124, "url", "oUrl", "diagnostics",
-            YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
+            YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
                 attemptId1, 1));
     List<ApplicationAttemptReport> reports = new ArrayList<ApplicationAttemptReport>();
     reports.add(attemptReport);
@@ -215,7 +223,7 @@ public class TestYarnCLI {
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
     ContainerReport container = ContainerReport.newInstance(containerId, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
         "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
@@ -247,8 +255,8 @@ public class TestYarnCLI {
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
-    ContainerId containerId1 = ContainerId.newInstance(attemptId, 2);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
+    ContainerId containerId1 = ContainerId.newContainerId(attemptId, 2);
     ContainerReport container = ContainerReport.newInstance(containerId, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
         "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
@@ -758,7 +766,7 @@ public class TestYarnCLI {
         sysOutStream.toString());
 
     sysOutStream.reset();
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 7);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 7);
     result = cli.run(
         new String[] { "container", "-status", containerId.toString(), "args" });
     verify(spyCli).printUsage(any(String.class), any(Options.class));
@@ -1109,6 +1117,40 @@ public class TestYarnCLI {
     NodeId nodeId = NodeId.newInstance("host0", 0);
     NodeCLI cli = new NodeCLI();
     when(client.getNodeReports()).thenReturn(
+                    getNodeReports(3, NodeState.RUNNING, false));
+    cli.setClient(client);
+    cli.setSysOutPrintStream(sysOut);
+    cli.setSysErrPrintStream(sysErr);
+    int result = cli.run(new String[] { "-status", nodeId.toString() });
+    assertEquals(0, result);
+    verify(client).getNodeReports();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Node Report : ");
+    pw.println("\tNode-Id : host0:0");
+    pw.println("\tRack : rack1");
+    pw.println("\tNode-State : RUNNING");
+    pw.println("\tNode-Http-Address : host1:8888");
+    pw.println("\tLast-Health-Update : "
+      + DateFormatUtils.format(new Date(0), "E dd/MMM/yy hh:mm:ss:SSzz"));
+    pw.println("\tHealth-Report : ");
+    pw.println("\tContainers : 0");
+    pw.println("\tMemory-Used : 0MB");
+    pw.println("\tMemory-Capacity : 0MB");
+    pw.println("\tCPU-Used : 0 vcores");
+    pw.println("\tCPU-Capacity : 0 vcores");
+    pw.println("\tNode-Labels : a,b,c,x,y,z");
+    pw.close();
+    String nodeStatusStr = baos.toString("UTF-8");
+    verify(sysOut, times(1)).println(isA(String.class));
+    verify(sysOut).println(nodeStatusStr);
+  }
+  
+  @Test
+  public void testNodeStatusWithEmptyNodeLabels() throws Exception {
+    NodeId nodeId = NodeId.newInstance("host0", 0);
+    NodeCLI cli = new NodeCLI();
+    when(client.getNodeReports()).thenReturn(
                     getNodeReports(3, NodeState.RUNNING));
     cli.setClient(client);
     cli.setSysOutPrintStream(sysOut);
@@ -1131,6 +1173,7 @@ public class TestYarnCLI {
     pw.println("\tMemory-Capacity : 0MB");
     pw.println("\tCPU-Used : 0 vcores");
     pw.println("\tCPU-Capacity : 0 vcores");
+    pw.println("\tNode-Labels : ");
     pw.close();
     String nodeStatusStr = baos.toString("UTF-8");
     verify(sysOut, times(1)).println(isA(String.class));
@@ -1194,21 +1237,100 @@ public class TestYarnCLI {
     Assert.assertEquals(String.format("Missing argument for options%n%1s",
         createNodeCLIHelpMessage()), sysOutStream.toString());
   }
+  
+  @Test
+  public void testGetQueueInfo() throws Exception {
+    QueueCLI cli = createAndGetQueueCLI();
+    Set<String> nodeLabels = new HashSet<String>();
+    nodeLabels.add("GPU");
+    nodeLabels.add("JDK_7");
+    QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, nodeLabels, "GPU");
+    when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
+    int result = cli.run(new String[] { "-status", "queueA" });
+    assertEquals(0, result);
+    verify(client).getQueueInfo("queueA");
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Queue Information : ");
+    pw.println("Queue Name : " + "queueA");
+    pw.println("\tState : " + "RUNNING");
+    pw.println("\tCapacity : " + "40.0%");
+    pw.println("\tCurrent Capacity : " + "50.0%");
+    pw.println("\tMaximum Capacity : " + "80.0%");
+    pw.println("\tDefault Node Label expression : " + "GPU");
+    pw.println("\tAccessible Node Labels : " + "JDK_7,GPU");
+    pw.close();
+    String queueInfoStr = baos.toString("UTF-8");
+    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+  }
+  
+  @Test
+  public void testGetQueueInfoWithEmptyNodeLabel() throws Exception {
+    QueueCLI cli = createAndGetQueueCLI();
+    QueueInfo queueInfo = QueueInfo.newInstance("queueA", 0.4f, 0.8f, 0.5f,
+        null, null, QueueState.RUNNING, null, null);
+    when(client.getQueueInfo(any(String.class))).thenReturn(queueInfo);
+    int result = cli.run(new String[] { "-status", "queueA" });
+    assertEquals(0, result);
+    verify(client).getQueueInfo("queueA");
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Queue Information : ");
+    pw.println("Queue Name : " + "queueA");
+    pw.println("\tState : " + "RUNNING");
+    pw.println("\tCapacity : " + "40.0%");
+    pw.println("\tCurrent Capacity : " + "50.0%");
+    pw.println("\tMaximum Capacity : " + "80.0%");
+    pw.println("\tDefault Node Label expression : ");
+    pw.println("\tAccessible Node Labels : ");
+    pw.close();
+    String queueInfoStr = baos.toString("UTF-8");
+    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+  }
+  
+  @Test
+  public void testGetQueueInfoWithNonExistedQueue() throws Exception {
+    String queueName = "non-existed-queue";
+    QueueCLI cli = createAndGetQueueCLI();
+    when(client.getQueueInfo(any(String.class))).thenReturn(null);
+    int result = cli.run(new String[] { "-status", queueName });
+    assertEquals(-1, result);;
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Cannot get queue from RM by queueName = " + queueName
+        + ", please check.");
+    pw.close();
+    String queueInfoStr = baos.toString("UTF-8");
+    Assert.assertEquals(queueInfoStr, sysOutStream.toString());
+  }
+
 
   private void verifyUsageInfo(YarnCLI cli) throws Exception {
     cli.setSysErrPrintStream(sysErr);
     cli.run(new String[] { "application" });
     verify(sysErr).println("Invalid Command Usage : ");
   }
-
+  
   private List<NodeReport> getNodeReports(int noOfNodes, NodeState state) {
+    return getNodeReports(noOfNodes, state, true);
+  }
+
+  private List<NodeReport> getNodeReports(int noOfNodes, NodeState state,
+      boolean emptyNodeLabel) {
     List<NodeReport> nodeReports = new ArrayList<NodeReport>();
 
     for (int i = 0; i < noOfNodes; i++) {
+      Set<String> nodeLabels = null;
+      if (!emptyNodeLabel) {
+        // node labels is not ordered, but when we output it, it should be
+        // ordered
+        nodeLabels = ImmutableSet.of("c", "b", "a", "x", "z", "y");
+      }
       NodeReport nodeReport = NodeReport.newInstance(NodeId
         .newInstance("host" + i, 0), state, "host" + 1 + ":8888",
           "rack1", Records.newRecord(Resource.class), Records
-              .newRecord(Resource.class), 0, "", 0);
+              .newRecord(Resource.class), 0, "", 0, nodeLabels);
       nodeReports.add(nodeReport);
     }
     return nodeReports;
@@ -1218,6 +1340,14 @@ public class TestYarnCLI {
     ApplicationCLI cli = new ApplicationCLI();
     cli.setClient(client);
     cli.setSysOutPrintStream(sysOut);
+    return cli;
+  }
+  
+  private QueueCLI createAndGetQueueCLI() {
+    QueueCLI cli = new QueueCLI();
+    cli.setClient(client);
+    cli.setSysOutPrintStream(sysOut);
+    cli.setSysErrPrintStream(sysErr);
     return cli;
   }
 

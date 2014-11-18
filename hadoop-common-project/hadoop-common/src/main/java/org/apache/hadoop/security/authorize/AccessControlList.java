@@ -39,7 +39,7 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * Class representing a configured access control list.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AccessControlList implements Writable {
 
@@ -209,7 +209,7 @@ public class AccessControlList implements Writable {
    * Get the names of users allowed for this service.
    * @return the set of user names. the set must not be modified.
    */
-  Collection<String> getUsers() {
+  public Collection<String> getUsers() {
     return users;
   }
   
@@ -217,7 +217,7 @@ public class AccessControlList implements Writable {
    * Get the names of user groups allowed for this service.
    * @return the set of group names. the set must not be modified.
    */
-  Collection<String> getGroups() {
+  public Collection<String> getGroups() {
     return groups;
   }
 

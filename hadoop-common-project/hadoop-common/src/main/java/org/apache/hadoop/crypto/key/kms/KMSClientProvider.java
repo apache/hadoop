@@ -26,9 +26,12 @@ import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -47,6 +50,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -67,6 +71,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -75,6 +80,10 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     KeyProviderDelegationTokenExtension.DelegationTokenExtension {
+
+  private static final String INVALID_SIGNATURE = "Invalid signature";
+
+  private static final String ANONYMOUS_REQUESTS_DISALLOWED = "Anonymous requests are disallowed";
 
   public static final String TOKEN_KIND = "kms-dt";
 
@@ -96,6 +105,13 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   /* It's possible to specify a timeout, in seconds, in the config file */
   public static final String TIMEOUT_ATTR = CONFIG_PREFIX + "timeout";
   public static final int DEFAULT_TIMEOUT = 60;
+
+  /* Number of times to retry authentication in the event of auth failure
+   * (normally happens due to stale authToken) 
+   */
+  public static final String AUTH_RETRY = CONFIG_PREFIX
+      + "authentication.retry-count";
+  public static final int DEFAULT_AUTH_RETRY = 1;
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
 
@@ -237,7 +253,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private SSLFactory sslFactory;
   private ConnectionConfigurator configurator;
   private DelegationTokenAuthenticatedURL.Token authToken;
-  private UserGroupInformation loginUgi;
+  private final int authRetry;
+  private final UserGroupInformation actualUgi;
 
   @Override
   public String toString() {
@@ -296,6 +313,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       }
     }
     int timeout = conf.getInt(TIMEOUT_ATTR, DEFAULT_TIMEOUT);
+    authRetry = conf.getInt(AUTH_RETRY, DEFAULT_AUTH_RETRY);
     configurator = new TimeoutConnConfigurator(timeout, sslFactory);
     encKeyVersionQueue =
         new ValueQueue<KeyProviderCryptoExtension.EncryptedKeyVersion>(
@@ -320,7 +338,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
                     KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS_DEFAULT),
             new EncryptedQueueRefiller());
     authToken = new DelegationTokenAuthenticatedURL.Token();
-    loginUgi = UserGroupInformation.getCurrentUser();
+    actualUgi =
+        (UserGroupInformation.getCurrentUser().getAuthenticationMethod() ==
+        UserGroupInformation.AuthenticationMethod.PROXY) ? UserGroupInformation
+            .getCurrentUser().getRealUser() : UserGroupInformation
+            .getCurrentUser();
   }
 
   private String createServiceURL(URL url) throws IOException {
@@ -391,7 +413,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
                               ? currentUgi.getShortUserName() : null;
 
       // creating the HTTP connection using the current UGI at constructor time
-      conn = loginUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
+      conn = actualUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
         @Override
         public HttpURLConnection run() throws Exception {
           DelegationTokenAuthenticatedURL authUrl =
@@ -415,8 +437,13 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     return conn;
   }
 
-  private static <T> T call(HttpURLConnection conn, Map jsonOutput,
-      int expectedResponse, Class<T> klass)
+  private <T> T call(HttpURLConnection conn, Map jsonOutput,
+      int expectedResponse, Class<T> klass) throws IOException {
+    return call(conn, jsonOutput, expectedResponse, klass, authRetry);
+  }
+
+  private <T> T call(HttpURLConnection conn, Map jsonOutput,
+      int expectedResponse, Class<T> klass, int authRetryCount)
       throws IOException {
     T ret = null;
     try {
@@ -426,6 +453,33 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     } catch (IOException ex) {
       conn.getInputStream().close();
       throw ex;
+    }
+    if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
+        && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED) ||
+            conn.getResponseMessage().contains(INVALID_SIGNATURE)))
+        || conn.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
+      // Ideally, this should happen only when there is an Authentication
+      // failure. Unfortunately, the AuthenticationFilter returns 403 when it
+      // cannot authenticate (Since a 401 requires Server to send
+      // WWW-Authenticate header as well)..
+      KMSClientProvider.this.authToken =
+          new DelegationTokenAuthenticatedURL.Token();
+      if (authRetryCount > 0) {
+        String contentType = conn.getRequestProperty(CONTENT_TYPE);
+        String requestMethod = conn.getRequestMethod();
+        URL url = conn.getURL();
+        conn = createConnection(url, requestMethod);
+        conn.setRequestProperty(CONTENT_TYPE, contentType);
+        return call(conn, jsonOutput, expectedResponse, klass,
+            authRetryCount - 1);
+      }
+    }
+    try {
+      AuthenticatedURL.extractToken(conn, authToken);
+    } catch (AuthenticationException e) {
+      // Ignore the AuthExceptions.. since we are just using the method to
+      // extract and set the authToken.. (Workaround till we actually fix
+      // AuthenticatedURL properly to set authToken post initialization)
     }
     HttpExceptionUtils.validateResponse(conn, expectedResponse);
     if (APPLICATION_JSON_MIME.equalsIgnoreCase(conn.getContentType())
@@ -722,25 +776,57 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     encKeyVersionQueue.drain(keyName);
   }
 
+  @VisibleForTesting
+  public int getEncKeyQueueSize(String keyName) throws IOException {
+    try {
+      return encKeyVersionQueue.getSize(keyName);
+    } catch (ExecutionException e) {
+      throw new IOException(e);
+    }
+  }
+
   @Override
   public Token<?>[] addDelegationTokens(String renewer,
       Credentials credentials) throws IOException {
-    Token<?>[] tokens;
-    URL url = createURL(null, null, null, null);
-    DelegationTokenAuthenticatedURL authUrl =
-        new DelegationTokenAuthenticatedURL(configurator);
-    try {
-      Token<?> token = authUrl.getDelegationToken(url, authToken, renewer);
-      if (token != null) {
-        credentials.addToken(token.getService(), token);
-        tokens = new Token<?>[] { token };
-      } else {
-        throw new IOException("Got NULL as delegation token");
+    Token<?>[] tokens = null;
+    Text dtService = getDelegationTokenService();
+    Token<?> token = credentials.getToken(dtService);
+    if (token == null) {
+      URL url = createURL(null, null, null, null);
+      DelegationTokenAuthenticatedURL authUrl =
+          new DelegationTokenAuthenticatedURL(configurator);
+      try {
+        token = authUrl.getDelegationToken(url, authToken, renewer);
+        if (token != null) {
+          credentials.addToken(token.getService(), token);
+          tokens = new Token<?>[] { token };
+        } else {
+          throw new IOException("Got NULL as delegation token");
+        }
+      } catch (AuthenticationException ex) {
+        throw new IOException(ex);
       }
-    } catch (AuthenticationException ex) {
-      throw new IOException(ex);
     }
     return tokens;
   }
+  
+  private Text getDelegationTokenService() throws IOException {
+    URL url = new URL(kmsUrl);
+    InetSocketAddress addr = new InetSocketAddress(url.getHost(),
+        url.getPort());
+    Text dtService = SecurityUtil.buildTokenService(addr);
+    return dtService;
+  }
 
+  /**
+   * Shutdown valueQueue executor threads
+   */
+  @Override
+  public void close() throws IOException {
+    try {
+      encKeyVersionQueue.shutdown();
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
 }

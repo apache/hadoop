@@ -58,6 +58,8 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -111,6 +113,9 @@ import com.google.common.annotations.VisibleForTesting;
  *     RELATED_ENTITIES_COLUMN + relatedentity type + relatedentity id
  *
  *   ENTITY_ENTRY_PREFIX + entity type + revstarttime + entity id +
+ *     DOMAIN_ID_COLUMN
+ *
+ *   ENTITY_ENTRY_PREFIX + entity type + revstarttime + entity id +
  *     INVISIBLE_REVERSE_RELATED_ENTITIES_COLUMN + relatedentity type +
  *     relatedentity id</pre>
  *
@@ -144,6 +149,15 @@ public class LeveldbTimelineStore extends AbstractService
   private static final byte[] RELATED_ENTITIES_COLUMN = "r".getBytes();
   private static final byte[] INVISIBLE_REVERSE_RELATED_ENTITIES_COLUMN =
       "z".getBytes();
+  private static final byte[] DOMAIN_ID_COLUMN = "d".getBytes();
+
+  private static final byte[] DOMAIN_ENTRY_PREFIX = "d".getBytes();
+  private static final byte[] OWNER_LOOKUP_PREFIX = "o".getBytes();
+  private static final byte[] DESCRIPTION_COLUMN = "d".getBytes();
+  private static final byte[] OWNER_COLUMN = "o".getBytes();
+  private static final byte[] READER_COLUMN = "r".getBytes();
+  private static final byte[] WRITER_COLUMN = "w".getBytes();
+  private static final byte[] TIMESTAMP_COLUMN = "t".getBytes();
 
   private static final byte[] EMPTY_BYTES = new byte[0];
   
@@ -511,6 +525,10 @@ public class LeveldbTimelineStore extends AbstractService
             entity.addEvent(event);
           }
         }
+      } else if (key[prefixlen] == DOMAIN_ID_COLUMN[0]) {
+        byte[] v = iterator.peekNext().getValue();
+        String domainId = new String(v);
+        entity.setDomainId(domainId);
       } else {
         if (key[prefixlen] !=
             INVISIBLE_REVERSE_RELATED_ENTITIES_COLUMN[0]) {
@@ -774,7 +792,8 @@ public class LeveldbTimelineStore extends AbstractService
    * Put a single entity.  If there is an error, add a TimelinePutError to the
    * given response.
    */
-  private void put(TimelineEntity entity, TimelinePutResponse response) {
+  private void put(TimelineEntity entity, TimelinePutResponse response,
+      boolean allowEmptyDomainId) {
     LockMap.CountingReentrantLock<EntityIdentifier> lock =
         writeLocks.getLock(new EntityIdentifier(entity.getEntityId(),
             entity.getEntityType()));
@@ -783,6 +802,7 @@ public class LeveldbTimelineStore extends AbstractService
     List<EntityIdentifier> relatedEntitiesWithoutStartTimes =
         new ArrayList<EntityIdentifier>();
     byte[] revStartTime = null;
+    Map<String, Set<Object>> primaryFilters = null;
     try {
       writeBatch = db.createWriteBatch();
       List<TimelineEvent> events = entity.getEvents();
@@ -802,7 +822,7 @@ public class LeveldbTimelineStore extends AbstractService
       revStartTime = writeReverseOrderedLong(startAndInsertTime
           .startTime);
 
-      Map<String, Set<Object>> primaryFilters = entity.getPrimaryFilters();
+      primaryFilters = entity.getPrimaryFilters();
 
       // write entity marker
       byte[] markerKey = createEntityMarkerKey(entity.getEntityId(),
@@ -847,6 +867,29 @@ public class LeveldbTimelineStore extends AbstractService
               relatedEntitiesWithoutStartTimes.add(
                   new EntityIdentifier(relatedEntityId, relatedEntityType));
               continue;
+            } else {
+              // This is the existing entity
+              byte[] domainIdBytes = db.get(createDomainIdKey(
+                  relatedEntityId, relatedEntityType, relatedEntityStartTime));
+              // The timeline data created by the server before 2.6 won't have
+              // the domain field. We assume this timeline data is in the
+              // default timeline domain.
+              String domainId = null;
+              if (domainIdBytes == null) {
+                domainId = TimelineDataManager.DEFAULT_DOMAIN_ID;
+              } else {
+                domainId = new String(domainIdBytes);
+              }
+              if (!domainId.equals(entity.getDomainId())) {
+                // in this case the entity will be put, but the relation will be
+                // ignored
+                TimelinePutError error = new TimelinePutError();
+                error.setEntityId(entity.getEntityId());
+                error.setEntityType(entity.getEntityType());
+                error.setErrorCode(TimelinePutError.FORBIDDEN_RELATION);
+                response.addError(error);
+                continue;
+              }
             }
             // write "forward" entry (related entity -> entity)
             key = createRelatedEntityKey(relatedEntityId,
@@ -883,6 +926,25 @@ public class LeveldbTimelineStore extends AbstractService
           writePrimaryFilterEntries(writeBatch, primaryFilters, key, value);
         }
       }
+
+      // write domain id entry
+      byte[] key = createDomainIdKey(entity.getEntityId(),
+          entity.getEntityType(), revStartTime);
+      if (entity.getDomainId() == null ||
+          entity.getDomainId().length() == 0) {
+        if (!allowEmptyDomainId) {
+          TimelinePutError error = new TimelinePutError();
+          error.setEntityId(entity.getEntityId());
+          error.setEntityType(entity.getEntityType());
+          error.setErrorCode(TimelinePutError.NO_DOMAIN);
+          response.addError(error);
+          return;
+        }
+      } else {
+        writeBatch.put(key, entity.getDomainId().getBytes());
+        writePrimaryFilterEntries(writeBatch, primaryFilters, key,
+            entity.getDomainId().getBytes());
+      }
       db.write(writeBatch);
     } catch (IOException e) {
       LOG.error("Error putting entity " + entity.getEntityId() +
@@ -910,6 +972,10 @@ public class LeveldbTimelineStore extends AbstractService
         }
         byte[] relatedEntityStartTime = writeReverseOrderedLong(
             relatedEntityStartAndInsertTime.startTime);
+          // This is the new entity, the domain should be the same
+        byte[] key = createDomainIdKey(relatedEntity.getId(),
+            relatedEntity.getType(), relatedEntityStartTime);
+        db.put(key, entity.getDomainId().getBytes());
         db.put(createRelatedEntityKey(relatedEntity.getId(),
             relatedEntity.getType(), relatedEntityStartTime,
             entity.getEntityId(), entity.getEntityType()), EMPTY_BYTES);
@@ -956,7 +1022,22 @@ public class LeveldbTimelineStore extends AbstractService
       deleteLock.readLock().lock();
       TimelinePutResponse response = new TimelinePutResponse();
       for (TimelineEntity entity : entities.getEntities()) {
-        put(entity, response);
+        put(entity, response, false);
+      }
+      return response;
+    } finally {
+      deleteLock.readLock().unlock();
+    }
+  }
+
+  @Private
+  @VisibleForTesting
+  public TimelinePutResponse putWithNoDomainId(TimelineEntities entities) {
+    try {
+      deleteLock.readLock().lock();
+      TimelinePutResponse response = new TimelinePutResponse();
+      for (TimelineEntity entity : entities.getEntities()) {
+        put(entity, response, true);
       }
       return response;
     } finally {
@@ -1255,6 +1336,15 @@ public class LeveldbTimelineStore extends AbstractService
         .add(relatedEntityType).add(relatedEntityId).getBytes();
   }
 
+  /**
+   * Creates a domain id key, serializing ENTITY_ENTRY_PREFIX +
+   * entity type + revstarttime + entity id + DOMAIN_ID_COLUMN.
+   */
+  private static byte[] createDomainIdKey(String entityId,
+      String entityType, byte[] revStartTime) throws IOException {
+    return KeyBuilder.newInstance().add(ENTITY_ENTRY_PREFIX).add(entityType)
+        .add(revStartTime).add(entityId).add(DOMAIN_ID_COLUMN).getBytes();
+  }
   /**
    * Clears the cache to test reloading start times from leveldb (only for
    * testing).
@@ -1558,5 +1648,209 @@ public class LeveldbTimelineStore extends AbstractService
       throw new IOException(incompatibleMessage);
     }
   }
-  
+
+  //TODO: make data retention work with the domain data as well
+  @Override
+  public void put(TimelineDomain domain) throws IOException {
+    WriteBatch writeBatch = null;
+    try {
+      writeBatch = db.createWriteBatch();
+      if (domain.getId() == null || domain.getId().length() == 0) {
+        throw new IllegalArgumentException("Domain doesn't have an ID");
+      }
+      if (domain.getOwner() == null || domain.getOwner().length() == 0) {
+        throw new IllegalArgumentException("Domain doesn't have an owner.");
+      }
+
+      // Write description
+      byte[] domainEntryKey = createDomainEntryKey(
+          domain.getId(), DESCRIPTION_COLUMN);
+      byte[] ownerLookupEntryKey = createOwnerLookupKey(
+          domain.getOwner(), domain.getId(), DESCRIPTION_COLUMN);
+      if (domain.getDescription() != null) {
+        writeBatch.put(domainEntryKey, domain.getDescription().getBytes());
+        writeBatch.put(ownerLookupEntryKey, domain.getDescription().getBytes());
+      } else {
+        writeBatch.put(domainEntryKey, EMPTY_BYTES);
+        writeBatch.put(ownerLookupEntryKey, EMPTY_BYTES);
+      }
+
+      // Write owner
+      domainEntryKey = createDomainEntryKey(domain.getId(), OWNER_COLUMN);
+      ownerLookupEntryKey = createOwnerLookupKey(
+          domain.getOwner(), domain.getId(), OWNER_COLUMN);
+      // Null check for owner is done before
+      writeBatch.put(domainEntryKey, domain.getOwner().getBytes());
+      writeBatch.put(ownerLookupEntryKey, domain.getOwner().getBytes());
+
+      // Write readers
+      domainEntryKey = createDomainEntryKey(domain.getId(), READER_COLUMN);
+      ownerLookupEntryKey = createOwnerLookupKey(
+          domain.getOwner(), domain.getId(), READER_COLUMN);
+      if (domain.getReaders() != null && domain.getReaders().length() > 0) {
+        writeBatch.put(domainEntryKey, domain.getReaders().getBytes());
+        writeBatch.put(ownerLookupEntryKey, domain.getReaders().getBytes());
+      } else {
+        writeBatch.put(domainEntryKey, EMPTY_BYTES);
+        writeBatch.put(ownerLookupEntryKey, EMPTY_BYTES);
+      }
+
+      // Write writers
+      domainEntryKey = createDomainEntryKey(domain.getId(), WRITER_COLUMN);
+      ownerLookupEntryKey = createOwnerLookupKey(
+          domain.getOwner(), domain.getId(), WRITER_COLUMN);
+      if (domain.getWriters() != null && domain.getWriters().length() > 0) {
+        writeBatch.put(domainEntryKey, domain.getWriters().getBytes());
+        writeBatch.put(ownerLookupEntryKey, domain.getWriters().getBytes());
+      } else {
+        writeBatch.put(domainEntryKey, EMPTY_BYTES);
+        writeBatch.put(ownerLookupEntryKey, EMPTY_BYTES);
+      }
+
+      // Write creation time and modification time
+      // We put both timestamps together because they are always retrieved
+      // together, and store them in the same way as we did for the entity's
+      // start time and insert time.
+      domainEntryKey = createDomainEntryKey(domain.getId(), TIMESTAMP_COLUMN);
+      ownerLookupEntryKey = createOwnerLookupKey(
+          domain.getOwner(), domain.getId(), TIMESTAMP_COLUMN);
+      long currentTimestamp = System.currentTimeMillis();
+      byte[] timestamps = db.get(domainEntryKey);
+      if (timestamps == null) {
+        timestamps = new byte[16];
+        writeReverseOrderedLong(currentTimestamp, timestamps, 0);
+        writeReverseOrderedLong(currentTimestamp, timestamps, 8);
+      } else {
+        writeReverseOrderedLong(currentTimestamp, timestamps, 8);
+      }
+      writeBatch.put(domainEntryKey, timestamps);
+      writeBatch.put(ownerLookupEntryKey, timestamps);
+      db.write(writeBatch);
+    } finally {
+      IOUtils.cleanup(LOG, writeBatch);
+    }
+  }
+
+  /**
+   * Creates a domain entity key with column name suffix,
+   * of the form DOMAIN_ENTRY_PREFIX + domain id + column name.
+   */
+  private static byte[] createDomainEntryKey(String domainId,
+      byte[] columnName) throws IOException {
+    return KeyBuilder.newInstance().add(DOMAIN_ENTRY_PREFIX)
+        .add(domainId).add(columnName).getBytes();
+  }
+
+  /**
+   * Creates an owner lookup key with column name suffix,
+   * of the form OWNER_LOOKUP_PREFIX + owner + domain id + column name.
+   */
+  private static byte[] createOwnerLookupKey(
+      String owner, String domainId, byte[] columnName) throws IOException {
+    return KeyBuilder.newInstance().add(OWNER_LOOKUP_PREFIX)
+        .add(owner).add(domainId).add(columnName).getBytes();
+  }
+
+  @Override
+  public TimelineDomain getDomain(String domainId)
+      throws IOException {
+    DBIterator iterator = null;
+    try {
+      byte[] prefix = KeyBuilder.newInstance()
+          .add(DOMAIN_ENTRY_PREFIX).add(domainId).getBytesForLookup();
+      iterator = db.iterator();
+      iterator.seek(prefix);
+      return getTimelineDomain(iterator, domainId, prefix);
+    } finally {
+      IOUtils.cleanup(LOG, iterator);
+    }
+  }
+
+  @Override
+  public TimelineDomains getDomains(String owner)
+      throws IOException {
+    DBIterator iterator = null;
+    try {
+      byte[] prefix = KeyBuilder.newInstance()
+          .add(OWNER_LOOKUP_PREFIX).add(owner).getBytesForLookup();
+      List<TimelineDomain> domains = new ArrayList<TimelineDomain>();
+      for (iterator = db.iterator(), iterator.seek(prefix);
+          iterator.hasNext();) {
+        byte[] key = iterator.peekNext().getKey();
+        if (!prefixMatches(prefix, prefix.length, key)) {
+          break;
+        }
+        // Iterator to parse the rows of an individual domain
+        KeyParser kp = new KeyParser(key, prefix.length);
+        String domainId = kp.getNextString();
+        byte[] prefixExt = KeyBuilder.newInstance().add(OWNER_LOOKUP_PREFIX)
+            .add(owner).add(domainId).getBytesForLookup();
+        TimelineDomain domainToReturn =
+            getTimelineDomain(iterator, domainId, prefixExt);
+        if (domainToReturn != null) {
+          domains.add(domainToReturn);
+        }
+      }
+      // Sort the domains to return
+      Collections.sort(domains, new Comparator<TimelineDomain>() {
+        @Override
+        public int compare(
+            TimelineDomain domain1, TimelineDomain domain2) {
+           int result = domain2.getCreatedTime().compareTo(
+               domain1.getCreatedTime());
+           if (result == 0) {
+             return domain2.getModifiedTime().compareTo(
+                 domain1.getModifiedTime());
+           } else {
+             return result;
+           }
+        }
+      });
+      TimelineDomains domainsToReturn = new TimelineDomains();
+      domainsToReturn.addDomains(domains);
+      return domainsToReturn;
+    } finally {
+      IOUtils.cleanup(LOG, iterator);
+    }
+  }
+
+  private static TimelineDomain getTimelineDomain(
+      DBIterator iterator, String domainId, byte[] prefix) throws IOException {
+    // Iterate over all the rows whose key starts with prefix to retrieve the
+    // domain information.
+    TimelineDomain domain = new TimelineDomain();
+    domain.setId(domainId);
+    boolean noRows = true;
+    for (; iterator.hasNext(); iterator.next()) {
+      byte[] key = iterator.peekNext().getKey();
+      if (!prefixMatches(prefix, prefix.length, key)) {
+        break;
+      }
+      if (noRows) {
+        noRows = false;
+      }
+      byte[] value = iterator.peekNext().getValue();
+      if (value != null && value.length > 0) {
+        if (key[prefix.length] == DESCRIPTION_COLUMN[0]) {
+          domain.setDescription(new String(value));
+        } else if (key[prefix.length] == OWNER_COLUMN[0]) {
+          domain.setOwner(new String(value));
+        } else if (key[prefix.length] == READER_COLUMN[0]) {
+          domain.setReaders(new String(value));
+        } else if (key[prefix.length] == WRITER_COLUMN[0]) {
+          domain.setWriters(new String(value));
+        } else if (key[prefix.length] == TIMESTAMP_COLUMN[0]) {
+          domain.setCreatedTime(readReverseOrderedLong(value, 0));
+          domain.setModifiedTime(readReverseOrderedLong(value, 8));
+        } else {
+          LOG.error("Unrecognized domain column: " + key[prefix.length]);
+        }
+      }
+    }
+    if (noRows) {
+      return null;
+    } else {
+      return domain;
+    }
+  }
 }

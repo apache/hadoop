@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.records;
 import java.io.Serializable;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.util.Records;
@@ -70,12 +71,22 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   @Stable
   public static ResourceRequest newInstance(Priority priority, String hostName,
       Resource capability, int numContainers, boolean relaxLocality) {
+    return newInstance(priority, hostName, capability, numContainers,
+        relaxLocality, null);
+  }
+  
+  @Public
+  @Stable
+  public static ResourceRequest newInstance(Priority priority, String hostName,
+      Resource capability, int numContainers, boolean relaxLocality,
+      String labelExpression) {
     ResourceRequest request = Records.newRecord(ResourceRequest.class);
     request.setPriority(priority);
     request.setResourceName(hostName);
     request.setCapability(capability);
     request.setNumContainers(numContainers);
     request.setRelaxLocality(relaxLocality);
+    request.setNodeLabelExpression(labelExpression);
     return request;
   }
 
@@ -239,6 +250,32 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   @Stable
   public abstract void setRelaxLocality(boolean relaxLocality);
   
+  /**
+   * Get node-label-expression for this Resource Request. If this is set, all
+   * containers allocated to satisfy this resource-request will be only on those
+   * nodes that satisfy this node-label-expression
+   * 
+   * @return node-label-expression
+   */
+  @Public
+  @Evolving
+  public abstract String getNodeLabelExpression(); 
+  
+  /**
+   * Set node label expression of this resource request. Now only
+   * support AND(&&), in the future will provide support for OR(||), NOT(!).
+   * 
+   * Examples: 
+   * - GPU && LARGE_MEM, ask for node has label GPU and LARGE_MEM together
+   * - "" (empty) means ask for node doesn't have label on it, this is default
+   *   behavior
+   * 
+   * @param nodelabelExpression node-label-expression of this ResourceRequest
+   */
+  @Public
+  @Evolving
+  public abstract void setNodeLabelExpression(String nodelabelExpression);
+  
   @Override
   public int hashCode() {
     final int prime = 2153;
@@ -283,6 +320,20 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
         return false;
     } else if (!priority.equals(other.getPriority()))
       return false;
+    if (getNodeLabelExpression() == null) {
+      if (other.getNodeLabelExpression() != null) {
+        return false;
+      }
+    } else {
+      // do normalize on label expression before compare
+      String label1 = getNodeLabelExpression().replaceAll("[\\t ]", "");
+      String label2 =
+          other.getNodeLabelExpression() == null ? null : other
+              .getNodeLabelExpression().replaceAll("[\\t ]", "");
+      if (!label1.equals(label2)) {
+        return false;
+      }
+    }
     return true;
   }
 

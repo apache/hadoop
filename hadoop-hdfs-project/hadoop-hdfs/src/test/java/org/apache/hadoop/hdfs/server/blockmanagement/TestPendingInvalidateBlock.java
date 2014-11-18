@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.text.SimpleDateFormat;
+
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -88,6 +90,15 @@ public class TestPendingInvalidateBlock {
     Thread.sleep(6000);
     Assert.assertEquals(0, cluster.getNamesystem().getBlocksTotal());
     Assert.assertEquals(0, cluster.getNamesystem().getPendingDeletionBlocks());
+    String nnStartedStr = cluster.getNamesystem().getNNStarted();
+    long nnStarted = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")
+        .parse(nnStartedStr).getTime();
+    long blockDeletionStartTime = cluster.getNamesystem()
+        .getBlockDeletionStartTime();
+    Assert.assertTrue(String.format(
+        "Expect blockDeletionStartTime = %d > nnStarted = %d/nnStartedStr = %s.",
+        blockDeletionStartTime, nnStarted, nnStartedStr),
+        blockDeletionStartTime > nnStarted);
   }
 
   /**

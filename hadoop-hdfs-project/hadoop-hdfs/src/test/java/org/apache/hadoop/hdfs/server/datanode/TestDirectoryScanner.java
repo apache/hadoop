@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -31,22 +33,21 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 /**
@@ -60,22 +61,29 @@ public class TestDirectoryScanner {
 
   private MiniDFSCluster cluster;
   private String bpid;
+  private DFSClient client;
   private FsDatasetSpi<? extends FsVolumeSpi> fds = null;
   private DirectoryScanner scanner = null;
   private final Random rand = new Random();
   private final Random r = new Random();
+  private static final int BLOCK_LENGTH = 100;
 
   static {
-    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
+    CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_LENGTH);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
     CONF.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
   }
 
   /** create a file with a length of <code>fileLen</code> */
-  private void createFile(String fileName, long fileLen) throws IOException {
+  private List<LocatedBlock> createFile(String fileNamePrefix,
+                                        long fileLen,
+                                        boolean isLazyPersist) throws IOException {
     FileSystem fs = cluster.getFileSystem();
-    Path filePath = new Path(fileName);
-    DFSTestUtil.createFile(fs, filePath, fileLen, (short) 1, r.nextLong());
+    Path filePath = new Path("/" + fileNamePrefix + ".dat");
+    DFSTestUtil.createFile(
+        fs, filePath, isLazyPersist, 1024, fileLen,
+        BLOCK_LENGTH, (short) 1, r.nextLong(), false);
+    return client.getLocatedBlocks(filePath.toString(), 0, fileLen).getLocatedBlocks();
   }
 
   /** Truncate a block file */
@@ -132,6 +140,43 @@ public class TestDirectoryScanner {
       }
     }
     return 0;
+  }
+
+  /**
+   * Duplicate the given block on all volumes.
+   * @param blockId
+   * @throws IOException
+   */
+  private void duplicateBlock(long blockId) throws IOException {
+    synchronized (fds) {
+      ReplicaInfo b = FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, blockId);
+      for (FsVolumeSpi v : fds.getVolumes()) {
+        if (v.getStorageID().equals(b.getVolume().getStorageID())) {
+          continue;
+        }
+
+        // Volume without a copy of the block. Make a copy now.
+        File sourceBlock = b.getBlockFile();
+        File sourceMeta = b.getMetaFile();
+        String sourceRoot = b.getVolume().getBasePath();
+        String destRoot = v.getBasePath();
+
+        String relativeBlockPath = new File(sourceRoot).toURI().relativize(sourceBlock.toURI()).getPath();
+        String relativeMetaPath = new File(sourceRoot).toURI().relativize(sourceMeta.toURI()).getPath();
+
+        File destBlock = new File(destRoot, relativeBlockPath);
+        File destMeta = new File(destRoot, relativeMetaPath);
+
+        destBlock.getParentFile().mkdirs();
+        FileUtils.copyFile(sourceBlock, destBlock);
+        FileUtils.copyFile(sourceMeta, destMeta);
+
+        if (destBlock.exists() && destMeta.exists()) {
+          LOG.info("Copied " + sourceBlock + " ==> " + destBlock);
+          LOG.info("Copied " + sourceMeta + " ==> " + destMeta);
+        }
+      }
+    }
   }
 
   /** Get a random blockId that is not used already */
@@ -215,7 +260,13 @@ public class TestDirectoryScanner {
   }
 
   private void scan(long totalBlocks, int diffsize, long missingMetaFile, long missingBlockFile,
-      long missingMemoryBlocks, long mismatchBlocks) {
+      long missingMemoryBlocks, long mismatchBlocks) throws IOException {
+    scan(totalBlocks, diffsize, missingMetaFile, missingBlockFile,
+         missingMemoryBlocks, mismatchBlocks, 0);
+  }
+
+    private void scan(long totalBlocks, int diffsize, long missingMetaFile, long missingBlockFile,
+      long missingMemoryBlocks, long mismatchBlocks, long duplicateBlocks) throws IOException {
     scanner.reconcile();
     
     assertTrue(scanner.diffs.containsKey(bpid));
@@ -229,9 +280,92 @@ public class TestDirectoryScanner {
     assertEquals(missingBlockFile, stats.missingBlockFile);
     assertEquals(missingMemoryBlocks, stats.missingMemoryBlocks);
     assertEquals(mismatchBlocks, stats.mismatchBlocks);
+    assertEquals(duplicateBlocks, stats.duplicateBlocks);
   }
 
-  @Test
+  @Test (timeout=300000)
+  public void testRetainBlockOnPersistentStorage() throws Exception {
+    cluster = new MiniDFSCluster
+        .Builder(CONF)
+        .storageTypes(new StorageType[] { StorageType.RAM_DISK, StorageType.DEFAULT })
+        .numDataNodes(1)
+        .build();
+    try {
+      cluster.waitActive();
+      bpid = cluster.getNamesystem().getBlockPoolId();
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      client = cluster.getFileSystem().getClient();
+      scanner = new DirectoryScanner(fds, CONF);
+      scanner.setRetainDiffs(true);
+      FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
+
+      // Add a file with 1 block
+      List<LocatedBlock> blocks =
+          createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH, false);
+
+      // Ensure no difference between volumeMap and disk.
+      scan(1, 0, 0, 0, 0, 0);
+
+      // Make a copy of the block on RAM_DISK and ensure that it is
+      // picked up by the scanner.
+      duplicateBlock(blocks.get(0).getBlock().getBlockId());
+      scan(2, 1, 0, 0, 0, 0, 1);
+      verifyStorageType(blocks.get(0).getBlock().getBlockId(), false);
+      scan(1, 0, 0, 0, 0, 0);
+
+    } finally {
+      if (scanner != null) {
+        scanner.shutdown();
+        scanner = null;
+      }
+      cluster.shutdown();
+      cluster = null;
+    }
+  }
+
+  @Test (timeout=300000)
+  public void testDeleteBlockOnTransientStorage() throws Exception {
+    cluster = new MiniDFSCluster
+        .Builder(CONF)
+        .storageTypes(new StorageType[] { StorageType.RAM_DISK, StorageType.DEFAULT })
+        .numDataNodes(1)
+        .build();
+    try {
+      cluster.waitActive();
+      bpid = cluster.getNamesystem().getBlockPoolId();
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      client = cluster.getFileSystem().getClient();
+      scanner = new DirectoryScanner(fds, CONF);
+      scanner.setRetainDiffs(true);
+      FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
+
+      // Create a file file on RAM_DISK
+      List<LocatedBlock> blocks =
+          createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH, true);
+
+      // Ensure no difference between volumeMap and disk.
+      scan(1, 0, 0, 0, 0, 0);
+
+      // Make a copy of the block on DEFAULT storage and ensure that it is
+      // picked up by the scanner.
+      duplicateBlock(blocks.get(0).getBlock().getBlockId());
+      scan(2, 1, 0, 0, 0, 0, 1);
+
+      // Ensure that the copy on RAM_DISK was deleted.
+      verifyStorageType(blocks.get(0).getBlock().getBlockId(), false);
+      scan(1, 0, 0, 0, 0, 0);
+
+    } finally {
+      if (scanner != null) {
+        scanner.shutdown();
+        scanner = null;
+      }
+      cluster.shutdown();
+      cluster = null;
+    }
+  }
+
+  @Test (timeout=600000)
   public void testDirectoryScanner() throws Exception {
     // Run the test with and without parallel scanning
     for (int parallelism = 1; parallelism < 3; parallelism++) {
@@ -245,16 +379,17 @@ public class TestDirectoryScanner {
       cluster.waitActive();
       bpid = cluster.getNamesystem().getBlockPoolId();
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      client = cluster.getFileSystem().getClient();
       CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
                   parallelism);
       scanner = new DirectoryScanner(fds, CONF);
       scanner.setRetainDiffs(true);
 
       // Add files with 100 blocks
-      createFile("/tmp/t1", 10000);
+      createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH * 100, false);
       long totalBlocks = 100;
 
-      // Test1: No difference between in-memory and disk
+      // Test1: No difference between volumeMap and disk
       scan(100, 0, 0, 0, 0, 0);
 
       // Test2: block metafile is missing
@@ -355,7 +490,10 @@ public class TestDirectoryScanner {
       assertFalse(scanner.getRunStatus());
       
     } finally {
-      scanner.shutdown();
+      if (scanner != null) {
+        scanner.shutdown();
+        scanner = null;
+      }
       cluster.shutdown();
     }
   }
@@ -389,6 +527,13 @@ public class TestDirectoryScanner {
     assertEquals(genStamp, memBlock.getGenerationStamp());
   }
   
+  private void verifyStorageType(long blockId, boolean expectTransient) {
+    final ReplicaInfo memBlock;
+    memBlock = FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, blockId);
+    assertNotNull(memBlock);
+    assertThat(memBlock.getVolume().isTransientStorage(), is(expectTransient));
+  }
+
   private static class TestFsVolumeSpi implements FsVolumeSpi {
     @Override
     public String[] getBlockPoolList() {
@@ -423,6 +568,11 @@ public class TestDirectoryScanner {
     @Override
     public String getStorageID() {
       return "";
+    }
+
+    @Override
+    public boolean isTransientStorage() {
+      return false;
     }
 
     @Override

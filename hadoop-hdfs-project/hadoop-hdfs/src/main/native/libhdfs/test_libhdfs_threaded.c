@@ -84,7 +84,7 @@ static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs
 
 static int doTestGetDefaultBlockSize(hdfsFS fs, const char *path)
 {
-    uint64_t blockSize;
+    int64_t blockSize;
     int ret;
 
     blockSize = hdfsGetDefaultBlockSize(fs);

@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
+import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -30,7 +32,7 @@ public interface NodeHeartbeatResponse {
   NodeAction getNodeAction();
 
   List<ContainerId> getContainersToCleanup();
-  List<ContainerId> getFinishedContainersPulledByAM();
+  List<ContainerId> getContainersToBeRemovedFromNM();
 
   List<ApplicationId> getApplicationsToCleanup();
 
@@ -45,9 +47,10 @@ public interface NodeHeartbeatResponse {
 
   void addAllContainersToCleanup(List<ContainerId> containers);
 
-  // This tells NM to remove finished containers only after the AM
-  // has actually received it in a previous allocate response
-  void addFinishedContainersPulledByAM(List<ContainerId> containers);
+  // This tells NM to remove finished containers from its context. Currently, NM
+  // will remove finished containers from its context only after AM has actually
+  // received the finished containers in a previous allocate response
+  void addContainersToBeRemovedFromNM(List<ContainerId> containers);
   
   void addAllApplicationsToCleanup(List<ApplicationId> applications);
 
@@ -57,4 +60,11 @@ public interface NodeHeartbeatResponse {
   String getDiagnosticsMessage();
 
   void setDiagnosticsMessage(String diagnosticsMessage);
+
+  // Credentials (i.e. hdfs tokens) needed by NodeManagers for application
+  // localizations and logAggreations.
+  Map<ApplicationId, ByteBuffer> getSystemCredentialsForApps();
+
+  void setSystemCredentialsForApps(
+      Map<ApplicationId, ByteBuffer> systemCredentials);
 }

@@ -153,6 +153,12 @@ public interface FSNamesystemMBean {
   long getPendingDeletionBlocks();
 
   /**
+   * Time when block deletions will begin
+   * @return time when block deletions will begin
+   */
+  long getBlockDeletionStartTime();
+
+  /**
    * Number of content stale storages.
    * @return number of content stale storages
    */

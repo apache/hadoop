@@ -17,9 +17,12 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -40,7 +43,7 @@ class CSQueueUtils {
     }
     }
 
-  public static void checkAbsoluteCapacities(String queueName,
+  public static void checkAbsoluteCapacity(String queueName,
       float absCapacity, float absMaxCapacity) {
     if (absMaxCapacity < (absCapacity - EPSILON)) {
       throw new IllegalArgumentException("Illegal call to setMaxCapacity. "
@@ -49,12 +52,62 @@ class CSQueueUtils {
           + ")");
   }
   }
+  
+  public static void checkAbsoluteCapacitiesByLabel(String queueName,
+          Map<String, Float> absCapacities,
+          Map<String, Float> absMaximumCapacities) {
+    for (Entry<String, Float> entry : absCapacities.entrySet()) {
+      String label = entry.getKey();
+      float absCapacity = entry.getValue();
+      float absMaxCapacity = absMaximumCapacities.get(label);
+      if (absMaxCapacity < (absCapacity - EPSILON)) {
+        throw new IllegalArgumentException("Illegal call to setMaxCapacity. "
+            + "Queue '" + queueName + "' has " + "an absolute capacity ("
+            + absCapacity + ") greater than "
+            + "its absolute maximumCapacity (" + absMaxCapacity + ") of label="
+            + label);
+      }
+    }
+  }
 
   public static float computeAbsoluteMaximumCapacity(
       float maximumCapacity, CSQueue parent) {
     float parentAbsMaxCapacity = 
         (parent == null) ? 1.0f : parent.getAbsoluteMaximumCapacity();
     return (parentAbsMaxCapacity * maximumCapacity);
+  }
+  
+  public static Map<String, Float> computeAbsoluteCapacityByNodeLabels(
+      Map<String, Float> nodeLabelToCapacities, CSQueue parent) {
+    if (parent == null) {
+      return nodeLabelToCapacities;
+    }
+    
+    Map<String, Float> absoluteCapacityByNodeLabels =
+        new HashMap<String, Float>();
+    for (Entry<String, Float> entry : nodeLabelToCapacities.entrySet()) {
+      String label = entry.getKey();
+      float capacity = entry.getValue();
+      absoluteCapacityByNodeLabels.put(label,
+          capacity * parent.getAbsoluteCapacityByNodeLabel(label));
+    }
+    return absoluteCapacityByNodeLabels;
+  }
+  
+  public static Map<String, Float> computeAbsoluteMaxCapacityByNodeLabels(
+      Map<String, Float> maximumNodeLabelToCapacities, CSQueue parent) {
+    if (parent == null) {
+      return maximumNodeLabelToCapacities;
+    }
+    Map<String, Float> absoluteMaxCapacityByNodeLabels =
+        new HashMap<String, Float>();
+    for (Entry<String, Float> entry : maximumNodeLabelToCapacities.entrySet()) {
+      String label = entry.getKey();
+      float maxCapacity = entry.getValue();
+      absoluteMaxCapacityByNodeLabels.put(label,
+          maxCapacity * parent.getAbsoluteMaximumCapacityByNodeLabel(label));
+    }
+    return absoluteMaxCapacityByNodeLabels;
   }
 
   public static int computeMaxActiveApplications(

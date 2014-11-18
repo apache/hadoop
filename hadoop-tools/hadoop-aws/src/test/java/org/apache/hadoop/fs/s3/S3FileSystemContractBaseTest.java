@@ -21,13 +21,15 @@ package org.apache.hadoop.fs.s3;
 import java.io.IOException;
 import java.net.URI;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
-import org.apache.hadoop.fs.Path;
+import org.junit.internal.AssumptionViolatedException;
 
 public abstract class S3FileSystemContractBaseTest
   extends FileSystemContractBaseTest {
 
+  public static final String KEY_TEST_FS = "test.fs.s3.name";
   private FileSystemStore store;
   
   abstract FileSystemStore getFileSystemStore() throws IOException;
@@ -37,7 +39,12 @@ public abstract class S3FileSystemContractBaseTest
     Configuration conf = new Configuration();
     store = getFileSystemStore();
     fs = new S3FileSystem(store);
-    fs.initialize(URI.create(conf.get("test.fs.s3.name")), conf);
+    String fsname = conf.get(KEY_TEST_FS);
+    if (StringUtils.isEmpty(fsname)) {
+      throw new AssumptionViolatedException(
+          "No test FS defined in :" + KEY_TEST_FS);
+    }
+    fs.initialize(URI.create(fsname), conf);
   }
   
   @Override

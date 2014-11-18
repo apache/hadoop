@@ -41,9 +41,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -76,6 +74,7 @@ import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /** Dispatching block replica moves between datanodes. */
@@ -118,8 +117,6 @@ public class Dispatcher {
 
   /** The maximum number of concurrent blocks moves at a datanode */
   private final int maxConcurrentMovesPerNode;
-
-  private final AtomicLong bytesMoved = new AtomicLong();
 
   private static class GlobalBlockMap {
     private final Map<Block, DBlock> map = new HashMap<Block, DBlock>();
@@ -313,7 +310,7 @@ public class Dispatcher {
 
         sendRequest(out, eb, accessToken);
         receiveResponse(in);
-        bytesMoved.addAndGet(block.getNumBytes());
+        nnc.getBytesMoved().addAndGet(block.getNumBytes());
         LOG.info("Successfully moved " + this);
       } catch (IOException e) {
         LOG.warn("Failed to move " + this + ": " + e.getMessage());
@@ -785,7 +782,7 @@ public class Dispatcher {
         : Executors.newFixedThreadPool(dispatcherThreads);
     this.maxConcurrentMovesPerNode = maxConcurrentMovesPerNode;
 
-    this.saslClient = new SaslDataTransferClient(
+    this.saslClient = new SaslDataTransferClient(conf,
         DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnc.fallbackToSimpleAuth);
   }
@@ -803,7 +800,7 @@ public class Dispatcher {
   }
   
   long getBytesMoved() {
-    return bytesMoved.get();
+    return nnc.getBytesMoved().get();
   }
 
   long bytesToMove() {
@@ -889,7 +886,7 @@ public class Dispatcher {
    * @return the total number of bytes successfully moved in this iteration.
    */
   private long dispatchBlockMoves() throws InterruptedException {
-    final long bytesLastMoved = bytesMoved.get();
+    final long bytesLastMoved = getBytesMoved();
     final Future<?>[] futures = new Future<?>[sources.size()];
 
     final Iterator<Source> i = sources.iterator();
@@ -915,7 +912,7 @@ public class Dispatcher {
     // wait for all block moving to be done
     waitForMoveCompletion(targets);
 
-    return bytesMoved.get() - bytesLastMoved;
+    return getBytesMoved() - bytesLastMoved;
   }
 
   /** The sleeping period before checking if block move is completed again */

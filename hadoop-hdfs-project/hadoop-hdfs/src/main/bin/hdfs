@@ -17,7 +17,8 @@
 
 function hadoop_usage
 {
-  echo "Usage: hdfs [--config confdir] [--daemon (start|stop|status)] COMMAND"
+  echo "Usage: hdfs [--config confdir] [--daemon (start|stop|status)]"
+  echo "           [--loglevel loglevel] COMMAND"
   echo "       where COMMAND is one of:"
   echo "  balancer             run a cluster balancing utility"
   echo "  cacheadmin           configure the HDFS cache"
@@ -48,9 +49,12 @@ function hadoop_usage
   echo "  secondarynamenode    run the DFS secondary namenode"
   echo "  snapshotDiff         diff two snapshots of a directory or diff the"
   echo "                       current directory contents with a snapshot"
+  echo "  storagepolicies      get all the existing block storage policies"
+  echo "  version              print the version"
   echo "  zkfc                 run the ZK Failover Controller daemon"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
+  # There are also debug commands, but they don't show up in this listing.
 }
 
 # let's locate libexec...
@@ -81,6 +85,7 @@ shift
 
 case ${COMMAND} in
   balancer)
+    daemon="true"
     CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
     hadoop_debug "Appending HADOOP_BALANCER_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_BALANCER_OPTS}"
@@ -117,6 +122,9 @@ case ${COMMAND} in
       HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_DATANODE_OPTS}"
       CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
     fi
+  ;;
+  debug)
+    CLASS='org.apache.hadoop.hdfs.tools.DebugAdmin'
   ;;
   dfs)
     CLASS=org.apache.hadoop.fs.FsShell
@@ -162,6 +170,7 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
   ;;
   mover)
+    daemon="true"
     CLASS=org.apache.hadoop.hdfs.server.mover.Mover
     hadoop_debug "Appending HADOOP_MOVER_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_MOVER_OPTS}"
@@ -216,17 +225,23 @@ case ${COMMAND} in
   snapshotDiff)
     CLASS=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
   ;;
+  storagepolicies)
+    CLASS=org.apache.hadoop.hdfs.tools.GetStoragePolicies
+  ;;
+  version)
+    CLASS=org.apache.hadoop.util.VersionInfo
+  ;;
   zkfc)
     daemon="true"
     CLASS='org.apache.hadoop.hdfs.tools.DFSZKFailoverController'
     hadoop_debug "Appending HADOOP_ZKFC_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_ZKFC_OPTS}"
   ;;
-  -*)
-    hadoop_exit_with_usage 1
-  ;;
   *)
     CLASS="${COMMAND}"
+    if ! hadoop_validate_classname "${CLASS}"; then
+      hadoop_exit_with_usage 1
+    fi
   ;;
 esac
 

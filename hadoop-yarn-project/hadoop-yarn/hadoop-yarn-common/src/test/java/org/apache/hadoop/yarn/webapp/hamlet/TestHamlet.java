@@ -88,8 +88,8 @@ public class TestHamlet {
     assertEquals(0, h.nestLevel);
     verify(out).print("<table");
     verify(out).print("</table>");
-    verify(out, never()).print("</td>");
-    verify(out, never()).print("</tr>");
+    verify(out, atLeast(1)).print("</td>");
+    verify(out, atLeast(1)).print("</tr>");
   }
 
   @Test public void testEnumAttrs() {

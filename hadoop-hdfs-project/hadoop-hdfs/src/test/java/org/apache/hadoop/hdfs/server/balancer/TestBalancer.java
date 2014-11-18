@@ -17,6 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_RAM_DISK_LOW_WATERMARK_BYTES;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC;
+import static org.apache.hadoop.hdfs.StorageType.DEFAULT;
+import static org.apache.hadoop.hdfs.StorageType.RAM_DISK;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -28,6 +36,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -41,12 +50,15 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -55,8 +67,11 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.balancer.Balancer.Cli;
 import org.apache.hadoop.hdfs.server.balancer.Balancer.Parameters;
+import org.apache.hadoop.hdfs.server.balancer.Balancer.Result;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Level;
@@ -66,8 +81,8 @@ import org.junit.Test;
  * This class tests if a balancer schedules tasks correctly.
  */
 public class TestBalancer {
-  private static final Log LOG = LogFactory.getLog(
-  "org.apache.hadoop.hdfs.TestBalancer");
+  private static final Log LOG = LogFactory.getLog(TestBalancer.class);
+
   static {
     ((Log4JLogger)Balancer.LOG).getLogger().setLevel(Level.ALL);
   }
@@ -86,6 +101,7 @@ public class TestBalancer {
   static final double CAPACITY_ALLOWED_VARIANCE = 0.005;  // 0.5%
   static final double BALANCE_ALLOWED_VARIANCE = 0.11;    // 10%+delta
   static final int DEFAULT_BLOCK_SIZE = 100;
+  static final int DEFAULT_RAM_DISK_BLOCK_SIZE = 5 * 1024 * 1024;
   private static final Random r = new Random();
 
   static {
@@ -106,6 +122,15 @@ public class TestBalancer {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1L);
     SimulatedFSDataset.setFactory(conf);
     conf.setLong(DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 2000L);
+  }
+
+  static void initConfWithRamDisk(Configuration conf) {
+    conf.setLong(DFS_BLOCK_SIZE_KEY, DEFAULT_RAM_DISK_BLOCK_SIZE);
+    conf.setInt(DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC, 3);
+    conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
+    conf.setInt(DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC, 1);
+    conf.setInt(DFS_DATANODE_RAM_DISK_LOW_WATERMARK_BYTES, DEFAULT_RAM_DISK_BLOCK_SIZE);
   }
 
   /* create a file with a length of <code>fileLen</code> */
@@ -469,7 +494,7 @@ public class TestBalancer {
     LOG.info("racks      = " +  Arrays.asList(racks)); 
     LOG.info("newCapacity= " +  newCapacity); 
     LOG.info("newRack    = " +  newRack); 
-    LOG.info("useTool    = " +  useTool); 
+    LOG.info("useTool    = " +  useTool);
     assertEquals(capacities.length, racks.length);
     int numOfDatanodes = capacities.length;
     cluster = new MiniDFSCluster.Builder(conf)
@@ -575,7 +600,7 @@ public class TestBalancer {
 
     // start rebalancing
     Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
-    final int r = Balancer.run(namenodes, p, conf);
+    final int r = runBalancer(namenodes, p, conf);
     if (conf.getInt(DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 
         DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT) ==0) {
       assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
@@ -584,8 +609,61 @@ public class TestBalancer {
       assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
     }
     waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
-    LOG.info("Rebalancing with default ctor.");
+    LOG.info("  .");
     waitForBalancer(totalUsedSpace, totalCapacity, client, cluster, p, excludedNodes);
+  }
+
+  private static int runBalancer(Collection<URI> namenodes, final Parameters p,
+      Configuration conf) throws IOException, InterruptedException {
+    final long sleeptime =
+        conf.getLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+            DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 2000 +
+        conf.getLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY,
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000;
+    LOG.info("namenodes  = " + namenodes);
+    LOG.info("parameters = " + p);
+    LOG.info("Print stack trace", new Throwable());
+
+    System.out.println("Time Stamp               Iteration#  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved");
+
+    List<NameNodeConnector> connectors = Collections.emptyList();
+    try {
+      connectors = NameNodeConnector.newNameNodeConnectors(namenodes, 
+            Balancer.class.getSimpleName(), Balancer.BALANCER_ID_PATH, conf);
+    
+      boolean done = false;
+      for(int iteration = 0; !done; iteration++) {
+        done = true;
+        Collections.shuffle(connectors);
+        for(NameNodeConnector nnc : connectors) {
+          final Balancer b = new Balancer(nnc, p, conf);
+          final Result r = b.runOneIteration();
+          r.print(iteration, System.out);
+
+          // clean all lists
+          b.resetData(conf);
+          if (r.exitStatus == ExitStatus.IN_PROGRESS) {
+            done = false;
+          } else if (r.exitStatus != ExitStatus.SUCCESS) {
+            //must be an error statue, return.
+            return r.exitStatus.getExitCode();
+          } else {
+            if (iteration > 0) {
+              assertTrue(r.bytesAlreadyMoved > 0);
+            }
+          }
+        }
+
+        if (!done) {
+          Thread.sleep(sleeptime);
+        }
+      }
+    } finally {
+      for(NameNodeConnector nnc : connectors) {
+        IOUtils.cleanup(LOG, nnc);
+      }
+    }
+    return ExitStatus.SUCCESS.getExitCode();
   }
 
   private void runBalancerCli(Configuration conf,
@@ -1094,6 +1172,80 @@ public class TestBalancer {
     initConf(conf);
     doTest(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
         CAPACITY, RACK2, new PortNumberBasedNodes(3, 0, 1), true, true);
+  }
+
+  /*
+   * Test Balancer with Ram_Disk configured
+   * One DN has two files on RAM_DISK, other DN has no files on RAM_DISK.
+   * Then verify that the balancer does not migrate files on RAM_DISK across DN.
+   */
+  @Test(timeout=300000)
+  public void testBalancerWithRamDisk() throws Exception {
+    final int SEED = 0xFADED;
+    final short REPL_FACT = 1;
+    Configuration conf = new Configuration();
+    initConfWithRamDisk(conf);
+
+    final int defaultRamDiskCapacity = 10;
+    final long ramDiskStorageLimit =
+      ((long) defaultRamDiskCapacity * DEFAULT_RAM_DISK_BLOCK_SIZE) +
+      (DEFAULT_RAM_DISK_BLOCK_SIZE - 1);
+    final long diskStorageLimit =
+      ((long) defaultRamDiskCapacity * DEFAULT_RAM_DISK_BLOCK_SIZE) +
+      (DEFAULT_RAM_DISK_BLOCK_SIZE - 1);
+
+    cluster = new MiniDFSCluster
+      .Builder(conf)
+      .numDataNodes(1)
+      .storageCapacities(new long[] { ramDiskStorageLimit, diskStorageLimit })
+      .storageTypes(new StorageType[] { RAM_DISK, DEFAULT })
+      .build();
+
+    try {
+      cluster.waitActive();
+      // Create few files on RAM_DISK
+      final String METHOD_NAME = GenericTestUtils.getMethodName();
+      final Path path1 = new Path("/" + METHOD_NAME + ".01.dat");
+      final Path path2 = new Path("/" + METHOD_NAME + ".02.dat");
+
+      DistributedFileSystem fs = cluster.getFileSystem();
+      DFSClient client = fs.getClient();
+      DFSTestUtil.createFile(fs, path1, true,
+        DEFAULT_RAM_DISK_BLOCK_SIZE, 4 * DEFAULT_RAM_DISK_BLOCK_SIZE,
+        DEFAULT_RAM_DISK_BLOCK_SIZE, REPL_FACT, SEED, true);
+      DFSTestUtil.createFile(fs, path2, true,
+        DEFAULT_RAM_DISK_BLOCK_SIZE, 1 * DEFAULT_RAM_DISK_BLOCK_SIZE,
+        DEFAULT_RAM_DISK_BLOCK_SIZE, REPL_FACT, SEED, true);
+
+      // Sleep for a short time to allow the lazy writer thread to do its job
+      Thread.sleep(6 * 1000);
+
+      // Add another fresh DN with the same type/capacity without files on RAM_DISK
+      StorageType[][] storageTypes = new StorageType[][] {{RAM_DISK, DEFAULT}};
+      long[][] storageCapacities = new long[][]{{ramDiskStorageLimit, diskStorageLimit}};
+      cluster.startDataNodes(conf, REPL_FACT, storageTypes, true, null,
+        null, null, storageCapacities, null, false, false, false, null);
+
+      cluster.triggerHeartbeats();
+      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+
+      // Run Balancer
+      Balancer.Parameters p = new Balancer.Parameters(
+        Parameters.DEFAULT.policy,
+        Parameters.DEFAULT.threshold,
+        Parameters.DEFAULT.nodesToBeExcluded,
+        Parameters.DEFAULT.nodesToBeIncluded);
+      final int r = Balancer.run(namenodes, p, conf);
+
+      // Validate no RAM_DISK block should be moved
+      assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
+
+      // Verify files are still on RAM_DISK
+      DFSTestUtil.verifyFileReplicasOnStorageType(fs, client, path1, RAM_DISK);
+      DFSTestUtil.verifyFileReplicasOnStorageType(fs, client, path2, RAM_DISK);
+    } finally {
+      cluster.shutdown();
+    }
   }
 
   /**

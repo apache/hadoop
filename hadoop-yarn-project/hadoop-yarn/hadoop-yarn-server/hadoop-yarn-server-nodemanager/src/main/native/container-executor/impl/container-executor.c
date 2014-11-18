@@ -19,6 +19,7 @@
 #include "configuration.h"
 #include "container-executor.h"
 
+#include <libgen.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <fts.h>
@@ -450,36 +451,85 @@ char *get_tmp_directory(const char *work_dir) {
  * with the desired permissions.
  */
 int mkdirs(const char* path, mode_t perm) {
-  char *buffer = strdup(path);
-  char *token;
-  int cwd = open("/", O_RDONLY);
-  if (cwd == -1) {
-    fprintf(LOGFILE, "Can't open / in %s - %s\n", path, strerror(errno));
-    free(buffer);
+  struct stat sb;
+  char * npath;
+  char * p;
+  if (stat(path, &sb) == 0) {
+    return check_dir(path, sb.st_mode, perm, 1);
+  }
+  npath = strdup(path);
+  if (npath == NULL) {
+    fprintf(LOGFILE, "Not enough memory to copy path string");
     return -1;
   }
-  for(token = strtok(buffer, "/"); token != NULL; token = strtok(NULL, "/")) {
-    if (mkdirat(cwd, token, perm) != 0) {
-      if (errno != EEXIST) {
-        fprintf(LOGFILE, "Can't create directory %s in %s - %s\n", 
-                token, path, strerror(errno));
-        close(cwd);
-        free(buffer);
+  /* Skip leading slashes. */
+  p = npath;
+  while (*p == '/') {
+    p++;
+  }
+
+  while (NULL != (p = strchr(p, '/'))) {
+    *p = '\0';
+    if (create_validate_dir(npath, perm, path, 0) == -1) {
+      free(npath);
+      return -1;
+    }
+    *p++ = '/'; /* restore slash */
+    while (*p == '/')
+      p++;
+  }
+
+  /* Create the final directory component. */
+  if (create_validate_dir(npath, perm, path, 1) == -1) {
+    free(npath);
+    return -1;
+  }
+  free(npath);
+  return 0;
+}
+
+/*
+* Create the parent directory if they do not exist. Or check the permission if
+* the race condition happens.
+* Give 0 or 1 to represent whether this is the final component. If it is, we
+* need to check the permission.
+*/
+int create_validate_dir(char* npath, mode_t perm, char* path, int finalComponent) {
+  struct stat sb;
+  if (stat(npath, &sb) != 0) {
+    if (mkdir(npath, perm) != 0) {
+      if (errno != EEXIST || stat(npath, &sb) != 0) {
+        fprintf(LOGFILE, "Can't create directory %s - %s\n", npath,
+                strerror(errno));
+        return -1;
+      }
+      // The directory npath should exist.
+      if (check_dir(npath, sb.st_mode, perm, finalComponent) == -1) {
         return -1;
       }
     }
-    int new_dir = openat(cwd, token, O_RDONLY);
-    close(cwd);
-    cwd = new_dir;
-    if (cwd == -1) {
-      fprintf(LOGFILE, "Can't open %s in %s - %s\n", token, path, 
-              strerror(errno));
-      free(buffer);
+  } else {
+    if (check_dir(npath, sb.st_mode, perm, finalComponent) == -1) {
       return -1;
     }
   }
-  free(buffer);
-  close(cwd);
+  return 0;
+}
+
+// check whether the given path is a directory
+// also check the access permissions whether it is the same as desired permissions
+int check_dir(char* npath, mode_t st_mode, mode_t desired, int finalComponent) {
+  if (!S_ISDIR(st_mode)) {
+    fprintf(LOGFILE, "Path %s is file not dir\n", npath);
+    return -1;
+  } else if (finalComponent == 1) {
+    int filePermInt = st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
+    int desiredInt = desired & (S_IRWXU | S_IRWXG | S_IRWXO);
+    if (filePermInt != desiredInt) {
+      fprintf(LOGFILE, "Path %s does not have desired permission.\n", npath);
+      return -1;
+    }
+  }
   return 0;
 }
 
@@ -582,7 +632,7 @@ int is_whitelisted(const char *user) {
   char **users = whitelist;
   if (whitelist != NULL) {
     for(; *users; ++users) {
-      if (strncmp(*users, user, LOGIN_NAME_MAX) == 0) {
+      if (strncmp(*users, user, sysconf(_SC_LOGIN_NAME_MAX)) == 0) {
         free_values(whitelist);
         return 1;
       }
@@ -1068,7 +1118,16 @@ int launch_container_as_user(const char *user, const char *app_id,
     goto cleanup;
   }
 
+#if HAVE_FCLOSEALL
   fcloseall();
+#else
+  // only those fds are opened assuming no bug
+  fclose(LOGFILE);
+  fclose(ERRORFILE);
+  fclose(stdin);
+  fclose(stdout);
+  fclose(stderr);
+#endif
   umask(0027);
   if (chdir(work_dir) != 0) {
     fprintf(LOGFILE, "Can't change directory to %s -%s\n", work_dir,
@@ -1351,6 +1410,10 @@ void chown_dir_contents(const char *dir_path, uid_t uid, gid_t gid) {
  * hierarchy: the top directory of the hierarchy for the NM
  */
 int mount_cgroup(const char *pair, const char *hierarchy) {
+#ifndef __linux
+  fprintf(LOGFILE, "Failed to mount cgroup controller, not supported\n");
+  return -1;
+#else
   char *controller = malloc(strlen(pair));
   char *mount_path = malloc(strlen(pair));
   char hier_path[PATH_MAX];
@@ -1387,5 +1450,6 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
   free(mount_path);
 
   return result;
+#endif
 }
 

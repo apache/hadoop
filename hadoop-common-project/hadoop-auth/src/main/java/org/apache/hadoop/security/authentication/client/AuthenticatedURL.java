@@ -250,7 +250,10 @@ public class AuthenticatedURL {
    * @throws AuthenticationException if an authentication exception occurred.
    */
   public static void extractToken(HttpURLConnection conn, Token token) throws IOException, AuthenticationException {
-    if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+    int respCode = conn.getResponseCode();
+    if (respCode == HttpURLConnection.HTTP_OK
+        || respCode == HttpURLConnection.HTTP_CREATED
+        || respCode == HttpURLConnection.HTTP_ACCEPTED) {
       Map<String, List<String>> headers = conn.getHeaderFields();
       List<String> cookies = headers.get("Set-Cookie");
       if (cookies != null) {

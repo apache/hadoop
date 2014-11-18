@@ -41,9 +41,22 @@ public class READLINK3Response extends NFS3Response {
     System.arraycopy(path, 0, this.path, 0, path.length);
   }
 
+  public static READLINK3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    xdr.readBoolean();
+    Nfs3FileAttributes postOpSymlinkAttr = Nfs3FileAttributes.deserialize(xdr);
+    byte path[] = new byte[0];
+
+    if (status == Nfs3Status.NFS3_OK) {
+      path = xdr.readVariableOpaque();
+    }
+
+    return new READLINK3Response(status, postOpSymlinkAttr, path);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     out.writeBoolean(true); // Attribute follows
     postOpSymlinkAttr.serialize(out);
     if (getStatus() == Nfs3Status.NFS3_OK) {

@@ -48,7 +48,7 @@ public class TestBlockInfo {
 
   @Test
   public void testAddStorage() throws Exception {
-    BlockInfo blockInfo = new BlockInfo(3);
+    BlockInfo blockInfo = new BlockInfo((short) 3);
 
     final DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo("storageID", "127.0.0.1");
 
@@ -70,7 +70,7 @@ public class TestBlockInfo {
 
     // Create a few dummy blocks and add them to the first storage.
     for (int i = 0; i < NUM_BLOCKS; ++i) {
-      blockInfos[i] = new BlockInfo(3);
+      blockInfos[i] = new BlockInfo((short) 3);
       storage1.addBlock(blockInfos[i]);
     }
 
@@ -95,7 +95,7 @@ public class TestBlockInfo {
     LOG.info("Building block list...");
     for (int i = 0; i < MAX_BLOCKS; i++) {
       blockList.add(new Block(i, 0, GenerationStamp.LAST_RESERVED_STAMP));
-      blockInfoList.add(new BlockInfo(blockList.get(i), 3));
+      blockInfoList.add(new BlockInfo(blockList.get(i), (short) 3));
       dd.addBlock(blockInfoList.get(i));
 
       // index of the datanode should be 0

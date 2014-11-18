@@ -172,7 +172,7 @@ public class TestHeartbeatHandling {
               dd2.getStorageInfos()[0],
               dd3.getStorageInfos()[0]};
           BlockInfoUnderConstruction blockInfo = new BlockInfoUnderConstruction(
-              new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), 3,
+              new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), (short) 3,
               BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
           DatanodeCommand[] cmds =
@@ -194,7 +194,7 @@ public class TestHeartbeatHandling {
           dd2.setLastUpdate(System.currentTimeMillis() - 40 * 1000);
           dd3.setLastUpdate(System.currentTimeMillis());
           blockInfo = new BlockInfoUnderConstruction(
-              new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), 3,
+              new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), (short) 3,
               BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
           cmds = NameNodeAdapter.sendHeartBeat(nodeReg1, dd1, namesystem).getCommands();
@@ -215,7 +215,7 @@ public class TestHeartbeatHandling {
           dd2.setLastUpdate(System.currentTimeMillis() - 40 * 1000);
           dd3.setLastUpdate(System.currentTimeMillis() - 80 * 1000);
           blockInfo = new BlockInfoUnderConstruction(
-              new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), 3,
+              new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), (short) 3,
               BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
           cmds = NameNodeAdapter.sendHeartBeat(nodeReg1, dd1, namesystem).getCommands();

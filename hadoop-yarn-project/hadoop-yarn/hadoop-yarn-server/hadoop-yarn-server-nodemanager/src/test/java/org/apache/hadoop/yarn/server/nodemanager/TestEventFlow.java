@@ -139,7 +139,7 @@ public class TestEventFlow {
     ApplicationId applicationId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, 0);
-    ContainerId cID = ContainerId.newInstance(applicationAttemptId, 0);
+    ContainerId cID = ContainerId.newContainerId(applicationAttemptId, 0);
 
     String user = "testing";
     StartContainerRequest scRequest =

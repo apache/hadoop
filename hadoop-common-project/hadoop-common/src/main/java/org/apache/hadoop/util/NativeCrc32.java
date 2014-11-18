@@ -21,6 +21,8 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.fs.ChecksumException;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Wrapper around JNI support code to do checksum computation
  * natively.
@@ -86,6 +88,37 @@ class NativeCrc32 {
         data, dataOffset, dataLength,
         "", 0, false);
   }
+
+  /**
+   * Verify the given buffers of data and checksums, and throw an exception
+   * if any checksum is invalid. The buffers given to this function should
+   * have their position initially at the start of the data, and their limit
+   * set at the end of the data. The position, limit, and mark are not
+   * modified.  This method is retained only for backwards-compatibility with
+   * prior jar versions that need the corresponding JNI function.
+   *
+   * @param bytesPerSum the chunk size (eg 512 bytes)
+   * @param checksumType the DataChecksum type constant
+   * @param sums the DirectByteBuffer pointing at the beginning of the
+   *             stored checksums
+   * @param sumsOffset start offset in sums buffer
+   * @param data the DirectByteBuffer pointing at the beginning of the
+   *             data to check
+   * @param dataOffset start offset in data buffer
+   * @param dataLength length of data buffer
+   * @param fileName the name of the file being verified
+   * @param basePos the position in the file where the data buffer starts 
+   * @throws ChecksumException if there is an invalid checksum
+   * @deprecated use {@link #nativeComputeChunkedSums(int, int, ByteBuffer, int,
+   *   ByteBuffer, int, int, String, long, boolean)} instead
+   */
+  @Deprecated
+  @VisibleForTesting
+  static native void nativeVerifyChunkedSums(
+      int bytesPerSum, int checksumType,
+      ByteBuffer sums, int sumsOffset,
+      ByteBuffer data, int dataOffset, int dataLength,
+      String fileName, long basePos) throws ChecksumException;
   
     private static native void nativeComputeChunkedSums(
       int bytesPerSum, int checksumType,

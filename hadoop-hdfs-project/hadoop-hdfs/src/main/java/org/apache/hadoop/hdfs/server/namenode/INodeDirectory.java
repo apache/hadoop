@@ -28,10 +28,11 @@ import java.util.Map;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
@@ -112,22 +113,22 @@ public class INodeDirectory extends INodeWithAdditionalFields
     ImmutableList<XAttr> xattrs = f == null ? ImmutableList.<XAttr> of() : f
         .getXAttrs();
     for (XAttr xattr : xattrs) {
-      if (BlockStoragePolicy.isStoragePolicyXAttr(xattr)) {
+      if (BlockStoragePolicySuite.isStoragePolicyXAttr(xattr)) {
         return (xattr.getValue())[0];
       }
     }
-    return BlockStoragePolicy.ID_UNSPECIFIED;
+    return BlockStoragePolicySuite.ID_UNSPECIFIED;
   }
 
   @Override
   public byte getStoragePolicyID() {
     byte id = getLocalStoragePolicyID();
-    if (id != BlockStoragePolicy.ID_UNSPECIFIED) {
+    if (id != BlockStoragePolicySuite.ID_UNSPECIFIED) {
       return id;
     }
     // if it is unspecified, check its parent
     return getParent() != null ? getParent().getStoragePolicyID() :
-        BlockStoragePolicy.ID_UNSPECIFIED;
+        BlockStoragePolicySuite.ID_UNSPECIFIED;
   }
 
   void setQuota(long nsQuota, long dsQuota) {
@@ -614,13 +615,13 @@ public class INodeDirectory extends INodeWithAdditionalFields
     if (q != null) {
       return q.computeContentSummary(this, summary);
     } else {
-      return computeDirectoryContentSummary(summary);
+      return computeDirectoryContentSummary(summary, Snapshot.CURRENT_STATE_ID);
     }
   }
 
-  ContentSummaryComputationContext computeDirectoryContentSummary(
-      ContentSummaryComputationContext summary) {
-    ReadOnlyList<INode> childrenList = getChildrenList(Snapshot.CURRENT_STATE_ID);
+  protected ContentSummaryComputationContext computeDirectoryContentSummary(
+      ContentSummaryComputationContext summary, int snapshotId) {
+    ReadOnlyList<INode> childrenList = getChildrenList(snapshotId);
     // Explicit traversing is done to enable repositioning after relinquishing
     // and reacquiring locks.
     for (int i = 0;  i < childrenList.size(); i++) {
@@ -642,7 +643,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
         break;
       }
       // Obtain the children list again since it may have been modified.
-      childrenList = getChildrenList(Snapshot.CURRENT_STATE_ID);
+      childrenList = getChildrenList(snapshotId);
       // Reposition in case the children list is changed. Decrement by 1
       // since it will be incremented when loops.
       i = nextChild(childrenList, childName) - 1;

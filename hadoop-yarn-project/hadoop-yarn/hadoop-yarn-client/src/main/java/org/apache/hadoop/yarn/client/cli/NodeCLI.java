@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.client.cli;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +33,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -199,6 +202,13 @@ public class NodeCLI extends YarnCLI {
           : (nodeReport.getUsed().getVirtualCores() + " vcores"));
       nodeReportStr.print("\tCPU-Capacity : ");
       nodeReportStr.println(nodeReport.getCapability().getVirtualCores() + " vcores");
+      nodeReportStr.print("\tNode-Labels : ");
+      
+      // Create a List for node labels since we need it get sorted
+      List<String> nodeLabelsList =
+          new ArrayList<String>(report.getNodeLabels());
+      Collections.sort(nodeLabelsList);
+      nodeReportStr.println(StringUtils.join(nodeLabelsList.iterator(), ','));
     }
 
     if (nodeReport == null) {

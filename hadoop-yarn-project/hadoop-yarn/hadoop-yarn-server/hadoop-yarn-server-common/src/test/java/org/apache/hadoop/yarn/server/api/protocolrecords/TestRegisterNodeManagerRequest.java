@@ -38,7 +38,7 @@ public class TestRegisterNodeManagerRequest {
         RegisterNodeManagerRequest.newInstance(
           NodeId.newInstance("host", 1234), 1234, Resource.newInstance(0, 0),
           "version", Arrays.asList(NMContainerStatus.newInstance(
-            ContainerId.newInstance(
+            ContainerId.newContainerId(
               ApplicationAttemptId.newInstance(
                 ApplicationId.newInstance(1234L, 1), 1), 1),
             ContainerState.RUNNING, Resource.newInstance(1024, 1), "good", -1,

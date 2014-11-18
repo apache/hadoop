@@ -118,6 +118,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   private static final byte[] EMPTY_VALUE = new byte[0];
 
   private DB db;
+  private boolean isNewlyCreated;
 
   public NMLeveldbStateStoreService() {
     super(NMLeveldbStateStoreService.class.getName());
@@ -134,12 +135,19 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     }
   }
 
+  @Override
+  public boolean isNewlyCreated() {
+    return isNewlyCreated;
+  }
+
 
   @Override
   public List<RecoveredContainerState> loadContainersState()
       throws IOException {
     ArrayList<RecoveredContainerState> containers =
         new ArrayList<RecoveredContainerState>();
+    ArrayList<ContainerId> containersToRemove =
+              new ArrayList<ContainerId>();
     LeveldbIterator iter = null;
     try {
       iter = new LeveldbIterator(db);
@@ -159,13 +167,33 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         ContainerId containerId = ConverterUtils.toContainerId(
             key.substring(CONTAINERS_KEY_PREFIX.length(), idEndPos));
         String keyPrefix = key.substring(0, idEndPos+1);
-        containers.add(loadContainerState(containerId, iter, keyPrefix));
+        RecoveredContainerState rcs = loadContainerState(containerId,
+            iter, keyPrefix);
+        // Don't load container without StartContainerRequest
+        if (rcs.startRequest != null) {
+          containers.add(rcs);
+        } else {
+          containersToRemove.add(containerId);
+        }
       }
     } catch (DBException e) {
       throw new IOException(e);
     } finally {
       if (iter != null) {
         iter.close();
+      }
+    }
+
+    // remove container without StartContainerRequest
+    for (ContainerId containerId : containersToRemove) {
+      LOG.warn("Remove container " + containerId +
+          " with incomplete records");
+      try {
+        removeContainer(containerId);
+        // TODO: kill and cleanup the leaked container
+      } catch (IOException e) {
+        LOG.error("Unable to remove container " + containerId +
+            " in store", e);
       }
     }
 
@@ -837,6 +865,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     } catch (NativeDB.DBException e) {
       if (e.isNotFound() || e.getMessage().contains(" does not exist ")) {
         LOG.info("Creating state database at " + dbfile);
+        isNewlyCreated = true;
         options.createIfMissing(true);
         try {
           db = JniDBFactory.factory.open(dbfile, options);

@@ -71,6 +71,12 @@ public class ApplicationSubmissionContextInfo {
   @XmlElementWrapper(name = "application-tags")
   @XmlElement(name = "tag")
   Set<String> tags;
+  
+  @XmlElement(name = "app-node-label-expression")
+  String appNodeLabelExpression;
+  
+  @XmlElement(name = "am-container-node-label-expression")
+  String amContainerNodeLabelExpression;
 
   public ApplicationSubmissionContextInfo() {
     applicationId = "";
@@ -83,6 +89,8 @@ public class ApplicationSubmissionContextInfo {
     keepContainers = false;
     applicationType = "";
     tags = new HashSet<String>();
+    appNodeLabelExpression = "";
+    amContainerNodeLabelExpression = "";
   }
 
   public String getApplicationId() {
@@ -131,6 +139,14 @@ public class ApplicationSubmissionContextInfo {
 
   public Set<String> getApplicationTags() {
     return tags;
+  }
+  
+  public String getAppNodeLabelExpression() {
+    return appNodeLabelExpression;
+  }
+  
+  public String getAMContainerNodeLabelExpression() {
+    return amContainerNodeLabelExpression;
   }
 
   public void setApplicationId(String applicationId) {
@@ -182,5 +198,12 @@ public class ApplicationSubmissionContextInfo {
   public void setApplicationTags(Set<String> tags) {
     this.tags = tags;
   }
+  
+  public void setAppNodeLabelExpression(String appNodeLabelExpression) {
+    this.appNodeLabelExpression = appNodeLabelExpression;
+  }
 
+  public void setAMContainerNodeLabelExpression(String nodeLabelExpression) {
+    this.amContainerNodeLabelExpression = nodeLabelExpression;
+  }
 }

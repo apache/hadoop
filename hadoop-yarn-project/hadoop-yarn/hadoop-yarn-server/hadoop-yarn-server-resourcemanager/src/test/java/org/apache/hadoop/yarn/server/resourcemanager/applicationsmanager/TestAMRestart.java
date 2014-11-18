@@ -98,26 +98,23 @@ public class TestAMRestart {
       Thread.sleep(200);
     }
 
-    ContainerId amContainerId = ContainerId.newInstance(am1
-        .getApplicationAttemptId(), 1);
-
     // launch the 2nd container, for testing running container transferred.
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 2, ContainerState.RUNNING);
     ContainerId containerId2 =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     rm1.waitForState(nm1, containerId2, RMContainerState.RUNNING);
 
     // launch the 3rd container, for testing container allocated by previous
     // attempt is completed by the next new attempt/
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 3, ContainerState.RUNNING);
     ContainerId containerId3 =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 3);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     rm1.waitForState(nm1, containerId3, RMContainerState.RUNNING);
 
     // 4th container still in AQUIRED state. for testing Acquired container is
     // always killed.
     ContainerId containerId4 =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 4);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 4);
     rm1.waitForState(nm1, containerId4, RMContainerState.ACQUIRED);
 
     // 5th container is in Allocated state. for testing allocated container is
@@ -125,14 +122,14 @@ public class TestAMRestart {
     am1.allocate("127.0.0.1", 1024, 1, new ArrayList<ContainerId>());
     nm1.nodeHeartbeat(true);
     ContainerId containerId5 =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 5);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 5);
     rm1.waitForContainerAllocated(nm1, containerId5);
     rm1.waitForState(nm1, containerId5, RMContainerState.ALLOCATED);
 
     // 6th container is in Reserved state.
     am1.allocate("127.0.0.1", 6000, 1, new ArrayList<ContainerId>());
     ContainerId containerId6 =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 6);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 6);
     nm1.nodeHeartbeat(true);
     SchedulerApplicationAttempt schedulerAttempt =
         ((AbstractYarnScheduler) rm1.getResourceScheduler())
@@ -199,15 +196,11 @@ public class TestAMRestart {
     // completed containerId4 is also transferred to the new attempt.
     RMAppAttempt newAttempt =
         app1.getRMAppAttempt(am2.getApplicationAttemptId());
-    // 4 containers finished, acquired/allocated/reserved/completed + AM
-    // container.
-    waitForContainersToFinish(5, newAttempt);
+    // 4 containers finished, acquired/allocated/reserved/completed.
+    waitForContainersToFinish(4, newAttempt);
     boolean container3Exists = false, container4Exists = false, container5Exists =
-        false, container6Exists = false, amContainerExists = false;
+        false, container6Exists = false;
     for(ContainerStatus status :  newAttempt.getJustFinishedContainers()) {
-      if(status.getContainerId().equals(amContainerId)) {
-        amContainerExists = true;
-      }
       if(status.getContainerId().equals(containerId3)) {
         // containerId3 is the container ran by previous attempt but finished by the
         // new attempt.
@@ -227,11 +220,8 @@ public class TestAMRestart {
         container6Exists = true;
       }
     }
-    Assert.assertTrue(amContainerExists);
-    Assert.assertTrue(container3Exists);
-    Assert.assertTrue(container4Exists);
-    Assert.assertTrue(container5Exists);
-    Assert.assertTrue(container6Exists);
+    Assert.assertTrue(container3Exists && container4Exists && container5Exists
+        && container6Exists);
 
     // New SchedulerApplicationAttempt also has the containers info.
     rm1.waitForState(nm1, containerId2, RMContainerState.RUNNING);
@@ -250,14 +240,14 @@ public class TestAMRestart {
     // all 4 normal containers finished.
     System.out.println("New attempt's just finished containers: "
         + newAttempt.getJustFinishedContainers());
-    waitForContainersToFinish(6, newAttempt);
+    waitForContainersToFinish(5, newAttempt);
     rm1.stop();
   }
 
   private void waitForContainersToFinish(int expectedNum, RMAppAttempt attempt)
       throws InterruptedException {
     int count = 0;
-    while (attempt.getJustFinishedContainers().size() < expectedNum
+    while (attempt.getJustFinishedContainers().size() != expectedNum
         && count < 500) {
       Thread.sleep(100);
       count++;
@@ -305,12 +295,12 @@ public class TestAMRestart {
     // launch the container-2
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 2, ContainerState.RUNNING);
     ContainerId containerId2 =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
     rm1.waitForState(nm1, containerId2, RMContainerState.RUNNING);
     // launch the container-3
     nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 3, ContainerState.RUNNING);
     ContainerId containerId3 =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 3);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 3);
     rm1.waitForState(nm1, containerId3, RMContainerState.RUNNING);
     
     // fail am1
@@ -345,7 +335,7 @@ public class TestAMRestart {
     }
     nm1.nodeHeartbeat(am2.getApplicationAttemptId(), 2, ContainerState.RUNNING);
     ContainerId am2ContainerId2 =
-        ContainerId.newInstance(am2.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
     rm1.waitForState(nm1, am2ContainerId2, RMContainerState.RUNNING);
 
     // fail am2.
@@ -389,7 +379,7 @@ public class TestAMRestart {
     CapacityScheduler scheduler =
         (CapacityScheduler) rm1.getResourceScheduler();
     ContainerId amContainer =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 1);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
     // Preempt the first attempt;
     scheduler.killContainer(scheduler.getRMContainer(amContainer));
 
@@ -406,7 +396,7 @@ public class TestAMRestart {
 
     // Preempt the second attempt.
     ContainerId amContainer2 =
-        ContainerId.newInstance(am2.getApplicationAttemptId(), 1);
+        ContainerId.newContainerId(am2.getApplicationAttemptId(), 1);
     scheduler.killContainer(scheduler.getRMContainer(amContainer2));
 
     am2.waitForState(RMAppAttemptState.FAILED);
@@ -497,7 +487,7 @@ public class TestAMRestart {
     CapacityScheduler scheduler =
         (CapacityScheduler) rm1.getResourceScheduler();
     ContainerId amContainer =
-        ContainerId.newInstance(am1.getApplicationAttemptId(), 1);
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 1);
 
     // Forcibly preempt the am container;
     scheduler.killContainer(scheduler.getRMContainer(amContainer));

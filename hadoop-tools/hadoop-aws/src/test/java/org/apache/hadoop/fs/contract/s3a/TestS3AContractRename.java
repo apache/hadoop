@@ -21,10 +21,10 @@ package org.apache.hadoop.fs.contract.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRenameTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.junit.Test;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
@@ -51,14 +51,11 @@ public class TestS3AContractRename extends AbstractContractRenameTest {
 
     Path destFilePath = new Path(destDir, "dest-512.txt");
     byte[] destDateset = dataset(512, 'A', 'Z');
-    writeDataset(fs, destFilePath, destDateset, destDateset.length, 1024, false);
+    writeDataset(fs, destFilePath, destDateset, destDateset.length, 1024,
+        false);
     assertIsFile(destFilePath);
 
     boolean rename = fs.rename(srcDir, destDir);
-    Path renamedSrcFilePath = new Path(destDir, "source-256.txt");
-    assertIsFile(destFilePath);
-    assertIsFile(renamedSrcFilePath);
-    ContractTestUtils.verifyFileContents(fs, destFilePath, destDateset);
-    assertTrue("rename returned false though the contents were copied", rename);
+    assertFalse("s3a doesn't support rename to non-empty directory", rename);
   }
 }

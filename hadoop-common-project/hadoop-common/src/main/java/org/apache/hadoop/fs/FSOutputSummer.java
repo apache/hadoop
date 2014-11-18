@@ -51,7 +51,7 @@ abstract public class FSOutputSummer extends OutputStream {
   protected FSOutputSummer(DataChecksum sum) {
     this.sum = sum;
     this.buf = new byte[sum.getBytesPerChecksum() * BUFFER_NUM_CHUNKS];
-    this.checksum = new byte[sum.getChecksumSize() * BUFFER_NUM_CHUNKS];
+    this.checksum = new byte[getChecksumSize() * BUFFER_NUM_CHUNKS];
     this.count = 0;
   }
   
@@ -188,7 +188,12 @@ abstract public class FSOutputSummer extends OutputStream {
   protected synchronized int getBufferedDataSize() {
     return count;
   }
-  
+
+  /** @return the size for a checksum. */
+  protected int getChecksumSize() {
+    return sum.getChecksumSize();
+  }
+
   /** Generate checksums for the given data chunks and output chunks & checksums
    * to the underlying output stream.
    */
@@ -197,9 +202,8 @@ abstract public class FSOutputSummer extends OutputStream {
     sum.calculateChunkedSums(b, off, len, checksum, 0);
     for (int i = 0; i < len; i += sum.getBytesPerChecksum()) {
       int chunkLen = Math.min(sum.getBytesPerChecksum(), len - i);
-      int ckOffset = i / sum.getBytesPerChecksum() * sum.getChecksumSize();
-      writeChunk(b, off + i, chunkLen, checksum, ckOffset,
-          sum.getChecksumSize());
+      int ckOffset = i / sum.getBytesPerChecksum() * getChecksumSize();
+      writeChunk(b, off + i, chunkLen, checksum, ckOffset, getChecksumSize());
     }
   }
 
@@ -226,8 +230,7 @@ abstract public class FSOutputSummer extends OutputStream {
    */
   protected synchronized void setChecksumBufSize(int size) {
     this.buf = new byte[size];
-    this.checksum = new byte[((size - 1) / sum.getBytesPerChecksum() + 1) *
-        sum.getChecksumSize()];
+    this.checksum = new byte[sum.getChecksumSize(size)];
     this.count = 0;
   }
 

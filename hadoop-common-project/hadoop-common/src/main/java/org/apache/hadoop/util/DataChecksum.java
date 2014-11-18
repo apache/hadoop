@@ -37,9 +37,6 @@ import org.apache.hadoop.fs.ChecksumException;
 @InterfaceStability.Evolving
 public class DataChecksum implements Checksum {
   
-  // Misc constants
-  public static final int HEADER_LEN = 5; /// 1 byte type and 4 byte len
-  
   // checksum types
   public static final int CHECKSUM_NULL    = 0;
   public static final int CHECKSUM_CRC32   = 1;
@@ -103,7 +100,7 @@ public class DataChecksum implements Checksum {
    * @return DataChecksum of the type in the array or null in case of an error.
    */
   public static DataChecksum newDataChecksum( byte bytes[], int offset ) {
-    if ( offset < 0 || bytes.length < offset + HEADER_LEN ) {
+    if (offset < 0 || bytes.length < offset + getChecksumHeaderSize()) {
       return null;
     }
     
@@ -116,8 +113,8 @@ public class DataChecksum implements Checksum {
   }
   
   /**
-   * This constructucts a DataChecksum by reading HEADER_LEN bytes from
-   * input stream <i>in</i>
+   * This constructs a DataChecksum by reading HEADER_LEN bytes from input
+   * stream <i>in</i>
    */
   public static DataChecksum newDataChecksum( DataInputStream in )
                                  throws IOException {
@@ -141,7 +138,7 @@ public class DataChecksum implements Checksum {
   }
 
   public byte[] getHeader() {
-    byte[] header = new byte[DataChecksum.HEADER_LEN];
+    byte[] header = new byte[getChecksumHeaderSize()];
     header[0] = (byte) (type.id & 0xff);
     // Writing in buffer just like DataOutput.WriteInt()
     header[1+0] = (byte) ((bytesPerChecksum >>> 24) & 0xff);
@@ -229,12 +226,17 @@ public class DataChecksum implements Checksum {
     bytesPerChecksum = chunkSize;
   }
   
-  // Accessors
+  /** @return the checksum algorithm type. */
   public Type getChecksumType() {
     return type;
   }
+  /** @return the size for a checksum. */
   public int getChecksumSize() {
     return type.size;
+  }
+  /** @return the required checksum size given the data length. */
+  public int getChecksumSize(int dataSize) {
+    return ((dataSize - 1)/getBytesPerChecksum() + 1) * getChecksumSize(); 
   }
   public int getBytesPerChecksum() {
     return bytesPerChecksum;

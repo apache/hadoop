@@ -130,16 +130,16 @@ public class TestResourceTrackerService {
 
     rm.getNodesListManager().refreshNodes(conf);
 
+    checkDecommissionedNMCount(rm, ++metricCount);
+
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     Assert
-        .assertEquals(0, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+        .assertEquals(1, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
 
     nodeHeartbeat = nm2.nodeHeartbeat(true);
     Assert.assertTrue("Node is not decommisioned.", NodeAction.SHUTDOWN
         .equals(nodeHeartbeat.getNodeAction()));
-
-    checkDecommissionedNMCount(rm, ++metricCount);
 
     nodeHeartbeat = nm3.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
@@ -157,24 +157,34 @@ public class TestResourceTrackerService {
         .getAbsolutePath());
 
     writeToHostsFile("");
-    rm = new MockRM(conf);
+    final DrainDispatcher dispatcher = new DrainDispatcher();
+    rm = new MockRM(conf) {
+      @Override
+      protected Dispatcher createDispatcher() {
+        return dispatcher;
+      }
+    };
     rm.start();
 
     MockNM nm1 = rm.registerNode("host1:1234", 5120);
     MockNM nm2 = rm.registerNode("host2:5678", 10240);
     MockNM nm3 = rm.registerNode("localhost:4433", 1024);
 
+    dispatcher.await();
+
     int metricCount = ClusterMetrics.getMetrics().getNumDecommisionedNMs();
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    dispatcher.await();
 
     // To test that IPs also work
     String ip = NetUtils.normalizeHostName("localhost");
     writeToHostsFile("host2", ip);
 
     rm.getNodesListManager().refreshNodes(conf);
+
     checkDecommissionedNMCount(rm, metricCount + 2);
 
     nodeHeartbeat = nm1.nodeHeartbeat(true);
@@ -186,6 +196,19 @@ public class TestResourceTrackerService {
     nodeHeartbeat = nm3.nodeHeartbeat(true);
     Assert.assertTrue("The decommisioned metrics are not updated",
         NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
+    dispatcher.await();
+
+    writeToHostsFile("");
+    rm.getNodesListManager().refreshNodes(conf);
+
+    nm3 = rm.registerNode("localhost:4433", 1024);
+    dispatcher.await();
+    nodeHeartbeat = nm3.nodeHeartbeat(true);
+    dispatcher.await();
+    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    // decommissined node is 1 since 1 node is rejoined after updating exclude
+    // file
+    checkDecommissionedNMCount(rm, metricCount + 1);
   }
 
   /**
@@ -213,6 +236,7 @@ public class TestResourceTrackerService {
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, hostFile
         .getAbsolutePath());
     rm.getNodesListManager().refreshNodes(conf);
+    checkDecommissionedNMCount(rm, ++initialMetricCount);
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertEquals(
         "Node should not have been decomissioned.",
@@ -222,7 +246,6 @@ public class TestResourceTrackerService {
     Assert.assertEquals("Node should have been decomissioned but is in state" +
         nodeHeartbeat.getNodeAction(),
         NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction());
-    checkDecommissionedNMCount(rm, ++initialMetricCount);
   }
   
   /**
@@ -250,6 +273,7 @@ public class TestResourceTrackerService {
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
         .getAbsolutePath());
     rm.getNodesListManager().refreshNodes(conf);
+    checkDecommissionedNMCount(rm, ++initialMetricCount);
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertEquals(
         "Node should not have been decomissioned.",
@@ -259,7 +283,6 @@ public class TestResourceTrackerService {
     Assert.assertEquals("Node should have been decomissioned but is in state" +
         nodeHeartbeat.getNodeAction(),
         NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction());
-    checkDecommissionedNMCount(rm, ++initialMetricCount);
   }
 
   @Test
@@ -487,7 +510,7 @@ public class TestResourceTrackerService {
     // Case 1.1: AppAttemptId is null
     NMContainerStatus report =
         NMContainerStatus.newInstance(
-          ContainerId.newInstance(
+          ContainerId.newContainerId(
             ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
@@ -499,7 +522,7 @@ public class TestResourceTrackerService {
         (RMAppAttemptImpl) app.getCurrentAppAttempt();
     currentAttempt.setMasterContainer(null);
     report = NMContainerStatus.newInstance(
-          ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
+          ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0),
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
     rm.getResourceTrackerService().handleNMContainerStatus(report, null);
@@ -510,7 +533,7 @@ public class TestResourceTrackerService {
 
     // Case 2.1: AppAttemptId is null
     report = NMContainerStatus.newInstance(
-          ContainerId.newInstance(
+          ContainerId.newContainerId(
             ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
@@ -526,7 +549,7 @@ public class TestResourceTrackerService {
         (RMAppAttemptImpl) app.getCurrentAppAttempt();
     currentAttempt.setMasterContainer(null);
     report = NMContainerStatus.newInstance(
-      ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
+      ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0),
       ContainerState.COMPLETE, Resource.newInstance(1024, 1),
       "Dummy Completed", 0, Priority.newInstance(10), 1234);
     try {

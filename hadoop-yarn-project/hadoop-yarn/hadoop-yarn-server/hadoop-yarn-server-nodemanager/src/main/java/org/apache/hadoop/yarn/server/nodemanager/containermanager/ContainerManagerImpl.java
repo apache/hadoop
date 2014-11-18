@@ -72,9 +72,11 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -117,6 +119,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogAggregationService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.LogHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.NonAggregatingLogHandler;
@@ -131,6 +135,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.security.BaseNMTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -183,7 +188,7 @@ public class ContainerManagerImpl extends CompositeService implements
     this.metrics = metrics;
 
     rsrcLocalizationSrvc =
-        createResourceLocalizationService(exec, deletionContext);
+        createResourceLocalizationService(exec, deletionContext, context);
     addService(rsrcLocalizationSrvc);
 
     containersLauncher = createContainersLauncher(context, exec);
@@ -224,6 +229,13 @@ public class ContainerManagerImpl extends CompositeService implements
     addIfService(logHandler);
     dispatcher.register(LogHandlerEventType.class, logHandler);
     
+    // add the shared cache upload service (it will do nothing if the shared
+    // cache is disabled)
+    SharedCacheUploadService sharedCacheUploader =
+        createSharedCacheUploaderService();
+    addService(sharedCacheUploader);
+    dispatcher.register(SharedCacheUploadEventType.class, sharedCacheUploader);
+
     waitForContainersOnShutdownMillis =
         conf.getLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS,
             YarnConfiguration.DEFAULT_NM_SLEEP_DELAY_BEFORE_SIGKILL_MS) +
@@ -275,11 +287,17 @@ public class ContainerManagerImpl extends CompositeService implements
           aclProto.getAcl());
     }
 
+    LogAggregationContext logAggregationContext = null;
+    if (p.getLogAggregationContext() != null) {
+      logAggregationContext =
+          new LogAggregationContextPBImpl(p.getLogAggregationContext());
+    }
+
     LOG.info("Recovering application " + appId);
     ApplicationImpl app = new ApplicationImpl(dispatcher, p.getUser(), appId,
         creds, context);
     context.getApplications().put(appId, app);
-    app.handle(new ApplicationInitEvent(appId, acls));
+    app.handle(new ApplicationInitEvent(appId, acls, logAggregationContext));
   }
 
   @SuppressWarnings("unchecked")
@@ -353,9 +371,13 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   protected ResourceLocalizationService createResourceLocalizationService(
-      ContainerExecutor exec, DeletionService deletionContext) {
+      ContainerExecutor exec, DeletionService deletionContext, Context context) {
     return new ResourceLocalizationService(this.dispatcher, exec,
-        deletionContext, dirsHandler, context.getNMStateStore());
+        deletionContext, dirsHandler, context);
+  }
+
+  protected SharedCacheUploadService createSharedCacheUploaderService() {
+    return new SharedCacheUploadService();
   }
 
   protected ContainersLauncher createContainersLauncher(Context context,
@@ -642,8 +664,8 @@ public class ContainerManagerImpl extends CompositeService implements
     boolean unauthorized = false;
     StringBuilder messageBuilder =
         new StringBuilder("Unauthorized request to start container. ");
-    if (!nmTokenIdentifier.getApplicationAttemptId().getApplicationId().equals(
-        containerId.getApplicationAttemptId().getApplicationId())) {
+    if (!nmTokenIdentifier.getApplicationAttemptId().getApplicationId().
+        equals(containerId.getApplicationAttemptId().getApplicationId())) {
       unauthorized = true;
       messageBuilder.append("\nNMToken for application attempt : ")
         .append(nmTokenIdentifier.getApplicationAttemptId())
@@ -719,12 +741,18 @@ public class ContainerManagerImpl extends CompositeService implements
 
   private ContainerManagerApplicationProto buildAppProto(ApplicationId appId,
       String user, Credentials credentials,
-      Map<ApplicationAccessType, String> appAcls) {
+      Map<ApplicationAccessType, String> appAcls,
+      LogAggregationContext logAggregationContext) {
 
     ContainerManagerApplicationProto.Builder builder =
         ContainerManagerApplicationProto.newBuilder();
     builder.setId(((ApplicationIdPBImpl) appId).getProto());
     builder.setUser(user);
+
+    if (logAggregationContext != null) {
+      builder.setLogAggregationContext((
+          (LogAggregationContextPBImpl)logAggregationContext).getProto());
+    }
 
     builder.clearCredentials();
     if (credentials != null) {
@@ -770,7 +798,7 @@ public class ContainerManagerImpl extends CompositeService implements
      */
     authorizeStartRequest(nmTokenIdentifier, containerTokenIdentifier);
  
-    if (containerTokenIdentifier.getRMIdentifer() != nodeStatusUpdater
+    if (containerTokenIdentifier.getRMIdentifier() != nodeStatusUpdater
         .getRMIdentifier()) {
         // Is the container coming from unknown RM
         StringBuilder sb = new StringBuilder("\nContainer ");
@@ -826,12 +854,16 @@ public class ContainerManagerImpl extends CompositeService implements
         if (null == context.getApplications().putIfAbsent(applicationID,
           application)) {
           LOG.info("Creating a new application reference for app " + applicationID);
+          LogAggregationContext logAggregationContext =
+              containerTokenIdentifier.getLogAggregationContext();
           Map<ApplicationAccessType, String> appAcls =
               container.getLaunchContext().getApplicationACLs();
           context.getNMStateStore().storeApplication(applicationID,
-              buildAppProto(applicationID, user, credentials, appAcls));
+              buildAppProto(applicationID, user, credentials, appAcls,
+                logAggregationContext));
           dispatcher.getEventHandler().handle(
-            new ApplicationInitEvent(applicationID, appAcls));
+            new ApplicationInitEvent(applicationID, appAcls,
+              logAggregationContext));
         }
 
         this.context.getNMStateStore().storeContainer(containerId, request);
@@ -1017,9 +1049,10 @@ public class ContainerManagerImpl extends CompositeService implements
      */
     ApplicationId nmTokenAppId =
         identifier.getApplicationAttemptId().getApplicationId();
+    
     if ((!nmTokenAppId.equals(containerId.getApplicationAttemptId().getApplicationId()))
         || (container != null && !nmTokenAppId.equals(container
-          .getContainerId().getApplicationAttemptId().getApplicationId()))) {
+            .getContainerId().getApplicationAttemptId().getApplicationId()))) {
       if (stopRequest) {
         LOG.warn(identifier.getApplicationAttemptId()
             + " attempted to stop non-application container : "

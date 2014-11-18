@@ -48,6 +48,11 @@
   </property>
 
   <property>
+    <name>fs.contract.rename-remove-dest-if-empty-dir</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <name>fs.contract.supports-append</name>
     <value>false</value>
   </property>

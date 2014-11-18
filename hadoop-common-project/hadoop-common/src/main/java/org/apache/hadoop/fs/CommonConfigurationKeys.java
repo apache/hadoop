@@ -151,6 +151,9 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String
   HADOOP_SECURITY_SERVICE_AUTHORIZATION_GENERIC_REFRESH =
       "security.refresh.generic.protocol.acl";
+  public static final String
+  HADOOP_SECURITY_SERVICE_AUTHORIZATION_TRACING =
+      "security.trace.protocol.acl";
   public static final String 
   SECURITY_HA_SERVICE_PROTOCOL_ACL = "security.ha.service.protocol.acl";
   public static final String 
@@ -283,4 +286,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_SEPARATOR = ";";
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY = "nfs.exports.allowed.hosts";
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY_DEFAULT = "* rw";
+
+  public static final String  HADOOP_TRACE_SAMPLER = "hadoop.htrace.sampler";
+  public static final String  HADOOP_TRACE_SAMPLER_DEFAULT = "NeverSampler";
 }

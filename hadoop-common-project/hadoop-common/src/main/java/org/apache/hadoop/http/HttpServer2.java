@@ -53,6 +53,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.ssl.SslSocketConnectorSecure;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.metrics.MetricsServlet;
@@ -107,7 +108,7 @@ public final class HttpServer2 implements FilterContainer {
 
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
-  static final String HTTP_MAX_THREADS = "hadoop.http.max.threads";
+  public static final String HTTP_MAX_THREADS = "hadoop.http.max.threads";
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
@@ -306,7 +307,7 @@ public final class HttpServer2 implements FilterContainer {
         if ("http".equals(scheme)) {
           listener = HttpServer2.createDefaultChannelConnector();
         } else if ("https".equals(scheme)) {
-          SslSocketConnector c = new SslSocketConnector();
+          SslSocketConnector c = new SslSocketConnectorSecure();
           c.setNeedClientAuth(needsClientAuth);
           c.setKeyPassword(keyPassword);
 

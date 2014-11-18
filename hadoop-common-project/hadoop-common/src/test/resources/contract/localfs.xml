@@ -57,6 +57,10 @@ case sensitivity and permission options are determined at run time from OS type
     <value>true</value>
   </property>
 
+  <property>
+    <name>fs.contract.rename-remove-dest-if-empty-dir</name>
+    <value>true</value>
+  </property>
 
   <!--
   checksummed filesystems do not support append; see HADOOP-4292

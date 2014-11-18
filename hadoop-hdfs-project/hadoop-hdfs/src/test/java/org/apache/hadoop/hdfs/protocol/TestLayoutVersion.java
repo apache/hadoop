@@ -120,4 +120,19 @@ public class TestLayoutVersion {
           NameNodeLayoutVersion.supports(feature, lv));
     }
   }
+  
+  /**
+   * When a LayoutVersion support SNAPSHOT, it must support
+   * FSIMAGE_NAME_OPTIMIZATION.
+   */
+  @Test
+  public void testSNAPSHOT() {
+    for(Feature f : Feature.values()) {
+      final int version = f.getInfo().getLayoutVersion();
+      if (NameNodeLayoutVersion.supports(Feature.SNAPSHOT, version)) {
+        assertTrue(NameNodeLayoutVersion.supports(
+            Feature.FSIMAGE_NAME_OPTIMIZATION, version));
+      }
+    }
+  }
 }

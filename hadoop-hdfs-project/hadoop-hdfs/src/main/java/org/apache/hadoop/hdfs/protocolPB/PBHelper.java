@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.protocolPB;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos
     .EncryptionZoneProto;
+import static org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherSuiteProto;
+import static org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CryptoProtocolVersionProto;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -44,7 +46,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
-import org.apache.hadoop.hdfs.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.inotify.Event;
@@ -56,9 +58,11 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
+import org.apache.hadoop.crypto.CipherOption;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
@@ -120,10 +124,12 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterComm
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlocksWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointSignatureProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherOptionProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ContentSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CorruptFileBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DataEncryptionKeyProto;
@@ -174,6 +180,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -278,6 +285,65 @@ public class PBHelper {
       return NamenodeRoleProto.CHECKPOINT;
     }
     return null;
+  }
+
+  public static BlockStoragePolicy[] convertStoragePolicies(
+      List<BlockStoragePolicyProto> policyProtos) {
+    if (policyProtos == null || policyProtos.size() == 0) {
+      return new BlockStoragePolicy[0];
+    }
+    BlockStoragePolicy[] policies = new BlockStoragePolicy[policyProtos.size()];
+    int i = 0;
+    for (BlockStoragePolicyProto proto : policyProtos) {
+      policies[i++] = convert(proto);
+    }
+    return policies;
+  }
+
+  public static BlockStoragePolicy convert(BlockStoragePolicyProto proto) {
+    List<StorageTypeProto> cList = proto.getCreationPolicy()
+        .getStorageTypesList();
+    StorageType[] creationTypes = convertStorageTypes(cList, cList.size());
+    List<StorageTypeProto> cfList = proto.hasCreationFallbackPolicy() ? proto
+        .getCreationFallbackPolicy().getStorageTypesList() : null;
+    StorageType[] creationFallbackTypes = cfList == null ? StorageType
+        .EMPTY_ARRAY : convertStorageTypes(cfList, cfList.size());
+    List<StorageTypeProto> rfList = proto.hasReplicationFallbackPolicy() ?
+        proto.getReplicationFallbackPolicy().getStorageTypesList() : null;
+    StorageType[] replicationFallbackTypes = rfList == null ? StorageType
+        .EMPTY_ARRAY : convertStorageTypes(rfList, rfList.size());
+    return new BlockStoragePolicy((byte) proto.getPolicyId(), proto.getName(),
+        creationTypes, creationFallbackTypes, replicationFallbackTypes);
+  }
+
+  public static BlockStoragePolicyProto convert(BlockStoragePolicy policy) {
+    BlockStoragePolicyProto.Builder builder = BlockStoragePolicyProto
+        .newBuilder().setPolicyId(policy.getId()).setName(policy.getName());
+    // creation storage types
+    StorageTypesProto creationProto = convert(policy.getStorageTypes());
+    Preconditions.checkArgument(creationProto != null);
+    builder.setCreationPolicy(creationProto);
+    // creation fallback
+    StorageTypesProto creationFallbackProto = convert(
+        policy.getCreationFallbacks());
+    if (creationFallbackProto != null) {
+      builder.setCreationFallbackPolicy(creationFallbackProto);
+    }
+    // replication fallback
+    StorageTypesProto replicationFallbackProto = convert(
+        policy.getReplicationFallbacks());
+    if (replicationFallbackProto != null) {
+      builder.setReplicationFallbackPolicy(replicationFallbackProto);
+    }
+    return builder.build();
+  }
+
+  public static StorageTypesProto convert(StorageType[] types) {
+    if (types == null || types.length == 0) {
+      return null;
+    }
+    List<StorageTypeProto> list = convertStorageTypes(types);
+    return StorageTypesProto.newBuilder().addAllStorageTypes(list).build();
   }
 
   public static StorageInfoProto convert(StorageInfo info) {
@@ -1298,6 +1364,9 @@ public class PBHelper {
     if (flag.contains(CreateFlag.OVERWRITE)) {
       value |= CreateFlagProto.OVERWRITE.getNumber();
     }
+    if (flag.contains(CreateFlag.LAZY_PERSIST)) {
+      value |= CreateFlagProto.LAZY_PERSIST.getNumber();
+    }
     return value;
   }
   
@@ -1313,6 +1382,10 @@ public class PBHelper {
     if ((flag & CreateFlagProto.OVERWRITE_VALUE) 
         == CreateFlagProto.OVERWRITE_VALUE) {
       result.add(CreateFlag.OVERWRITE);
+    }
+    if ((flag & CreateFlagProto.LAZY_PERSIST_VALUE)
+        == CreateFlagProto.LAZY_PERSIST_VALUE) {
+      result.add(CreateFlag.LAZY_PERSIST);
     }
     return new EnumSetWritable<CreateFlag>(result);
   }
@@ -1349,7 +1422,7 @@ public class PBHelper {
         fs.hasChildrenNum() ? fs.getChildrenNum() : -1,
         fs.hasFileEncryptionInfo() ? convert(fs.getFileEncryptionInfo()) : null,
         fs.hasStoragePolicy() ? (byte) fs.getStoragePolicy()
-            : BlockStoragePolicy.ID_UNSPECIFIED);
+            : BlockStoragePolicySuite.ID_UNSPECIFIED);
   }
 
   public static SnapshottableDirectoryStatus convert(
@@ -1474,13 +1547,15 @@ public class PBHelper {
   }
 
   public static long[] convert(GetFsStatsResponseProto res) {
-    long[] result = new long[6];
+    long[] result = new long[7];
     result[ClientProtocol.GET_STATS_CAPACITY_IDX] = res.getCapacity();
     result[ClientProtocol.GET_STATS_USED_IDX] = res.getUsed();
     result[ClientProtocol.GET_STATS_REMAINING_IDX] = res.getRemaining();
     result[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX] = res.getUnderReplicated();
     result[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX] = res.getCorruptBlocks();
     result[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] = res.getMissingBlocks();
+    result[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX] =
+        res.getMissingReplOneBlocks();
     return result;
   }
   
@@ -1502,6 +1577,9 @@ public class PBHelper {
     if (fsStats.length >= ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX + 1)
       result.setMissingBlocks(
           fsStats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX]);
+    if (fsStats.length >= ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX + 1)
+      result.setMissingReplOneBlocks(
+          fsStats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX]);
     return result.build();
   }
   
@@ -1720,6 +1798,8 @@ public class PBHelper {
       return StorageTypeProto.SSD;
     case ARCHIVE:
       return StorageTypeProto.ARCHIVE;
+    case RAM_DISK:
+      return StorageTypeProto.RAM_DISK;
     default:
       throw new IllegalStateException(
           "BUG: StorageType not found, type=" + type);
@@ -1750,6 +1830,8 @@ public class PBHelper {
         return StorageType.SSD;
       case ARCHIVE:
         return StorageType.ARCHIVE;
+      case RAM_DISK:
+        return StorageType.RAM_DISK;
       default:
         throw new IllegalStateException(
             "BUG: StorageTypeProto not found, type=" + type);
@@ -2330,15 +2412,17 @@ public class PBHelper {
   public static EncryptionZoneProto convert(EncryptionZone zone) {
     return EncryptionZoneProto.newBuilder()
         .setId(zone.getId())
-        .setKeyName(zone.getKeyName())
         .setPath(zone.getPath())
         .setSuite(convert(zone.getSuite()))
+        .setCryptoProtocolVersion(convert(zone.getVersion()))
+        .setKeyName(zone.getKeyName())
         .build();
   }
 
   public static EncryptionZone convert(EncryptionZoneProto proto) {
     return new EncryptionZone(proto.getId(), proto.getPath(),
-        convert(proto.getSuite()), proto.getKeyName());
+        convert(proto.getSuite()), convert(proto.getCryptoProtocolVersion()),
+        proto.getKeyName());
   }
 
   public static ShortCircuitShmSlotProto convert(SlotId slotId) {
@@ -2607,19 +2691,96 @@ public class PBHelper {
     return GetEditsFromTxidResponseProto.newBuilder().setEventsList(
         builder.build()).build();
   }
+  
+  public static CipherOptionProto convert(CipherOption option) {
+    if (option != null) {
+      CipherOptionProto.Builder builder = CipherOptionProto.
+          newBuilder();
+      if (option.getCipherSuite() != null) {
+        builder.setSuite(convert(option.getCipherSuite()));
+      }
+      if (option.getInKey() != null) {
+        builder.setInKey(ByteString.copyFrom(option.getInKey()));
+      }
+      if (option.getInIv() != null) {
+        builder.setInIv(ByteString.copyFrom(option.getInIv()));
+      }
+      if (option.getOutKey() != null) {
+        builder.setOutKey(ByteString.copyFrom(option.getOutKey()));
+      }
+      if (option.getOutIv() != null) {
+        builder.setOutIv(ByteString.copyFrom(option.getOutIv()));
+      }
+      return builder.build();
+    }
+    return null;
+  }
+  
+  public static CipherOption convert(CipherOptionProto proto) {
+    if (proto != null) {
+      CipherSuite suite = null;
+      if (proto.getSuite() != null) {
+        suite = convert(proto.getSuite());
+      }
+      byte[] inKey = null;
+      if (proto.getInKey() != null) {
+        inKey = proto.getInKey().toByteArray();
+      }
+      byte[] inIv = null;
+      if (proto.getInIv() != null) {
+        inIv = proto.getInIv().toByteArray();
+      }
+      byte[] outKey = null;
+      if (proto.getOutKey() != null) {
+        outKey = proto.getOutKey().toByteArray();
+      }
+      byte[] outIv = null;
+      if (proto.getOutIv() != null) {
+        outIv = proto.getOutIv().toByteArray();
+      }
+      return new CipherOption(suite, inKey, inIv, outKey, outIv);
+    }
+    return null;
+  }
+  
+  public static List<CipherOptionProto> convertCipherOptions(
+      List<CipherOption> options) {
+    if (options != null) {
+      List<CipherOptionProto> protos = 
+          Lists.newArrayListWithCapacity(options.size());
+      for (CipherOption option : options) {
+        protos.add(convert(option));
+      }
+      return protos;
+    }
+    return null;
+  }
+  
+  public static List<CipherOption> convertCipherOptionProtos(
+      List<CipherOptionProto> protos) {
+    if (protos != null) {
+      List<CipherOption> options = 
+          Lists.newArrayListWithCapacity(protos.size());
+      for (CipherOptionProto proto : protos) {
+        options.add(convert(proto));
+      }
+      return options;
+    }
+    return null;
+  }
 
-  public static HdfsProtos.CipherSuite convert(CipherSuite suite) {
+  public static CipherSuiteProto convert(CipherSuite suite) {
     switch (suite) {
     case UNKNOWN:
-      return HdfsProtos.CipherSuite.UNKNOWN;
+      return CipherSuiteProto.UNKNOWN;
     case AES_CTR_NOPADDING:
-      return HdfsProtos.CipherSuite.AES_CTR_NOPADDING;
+      return CipherSuiteProto.AES_CTR_NOPADDING;
     default:
       return null;
     }
   }
 
-  public static CipherSuite convert(HdfsProtos.CipherSuite proto) {
+  public static CipherSuite convert(CipherSuiteProto proto) {
     switch (proto) {
     case AES_CTR_NOPADDING:
       return CipherSuite.AES_CTR_NOPADDING;
@@ -2631,26 +2792,49 @@ public class PBHelper {
     }
   }
 
-  public static List<HdfsProtos.CipherSuite> convertCipherSuites
-      (List<CipherSuite> suites) {
-    if (suites == null) {
-      return null;
-    }
-    List<HdfsProtos.CipherSuite> protos =
-        Lists.newArrayListWithCapacity(suites.size());
-    for (CipherSuite suite : suites) {
-      protos.add(convert(suite));
+  public static List<CryptoProtocolVersionProto> convert(
+      CryptoProtocolVersion[] versions) {
+    List<CryptoProtocolVersionProto> protos =
+        Lists.newArrayListWithCapacity(versions.length);
+    for (CryptoProtocolVersion v: versions) {
+      protos.add(convert(v));
     }
     return protos;
   }
 
-  public static List<CipherSuite> convertCipherSuiteProtos(
-      List<HdfsProtos.CipherSuite> protos) {
-    List<CipherSuite> suites = Lists.newArrayListWithCapacity(protos.size());
-    for (HdfsProtos.CipherSuite proto : protos) {
-      suites.add(convert(proto));
+  public static CryptoProtocolVersion[] convertCryptoProtocolVersions(
+      List<CryptoProtocolVersionProto> protos) {
+    List<CryptoProtocolVersion> versions =
+        Lists.newArrayListWithCapacity(protos.size());
+    for (CryptoProtocolVersionProto p: protos) {
+      versions.add(convert(p));
     }
-    return suites;
+    return versions.toArray(new CryptoProtocolVersion[] {});
+  }
+
+  public static CryptoProtocolVersion convert(CryptoProtocolVersionProto
+      proto) {
+    switch(proto) {
+    case ENCRYPTION_ZONES:
+      return CryptoProtocolVersion.ENCRYPTION_ZONES;
+    default:
+      // Set to UNKNOWN and stash the unknown enum value
+      CryptoProtocolVersion version = CryptoProtocolVersion.UNKNOWN;
+      version.setUnknownValue(proto.getNumber());
+      return version;
+    }
+  }
+
+  public static CryptoProtocolVersionProto convert(CryptoProtocolVersion
+      version) {
+    switch(version) {
+    case UNKNOWN:
+      return CryptoProtocolVersionProto.UNKNOWN_PROTOCOL_VERSION;
+    case ENCRYPTION_ZONES:
+      return CryptoProtocolVersionProto.ENCRYPTION_ZONES;
+    default:
+      return null;
+    }
   }
 
   public static HdfsProtos.FileEncryptionInfoProto convert(
@@ -2660,6 +2844,7 @@ public class PBHelper {
     }
     return HdfsProtos.FileEncryptionInfoProto.newBuilder()
         .setSuite(convert(info.getCipherSuite()))
+        .setCryptoProtocolVersion(convert(info.getCryptoProtocolVersion()))
         .setKey(getByteString(info.getEncryptedDataEncryptionKey()))
         .setIv(getByteString(info.getIV()))
         .setEzKeyVersionName(info.getEzKeyVersionName())
@@ -2680,12 +2865,13 @@ public class PBHelper {
   }
 
   public static HdfsProtos.ZoneEncryptionInfoProto convert(
-      CipherSuite suite, String keyName) {
-    if (suite == null || keyName == null) {
+      CipherSuite suite, CryptoProtocolVersion version, String keyName) {
+    if (suite == null || version == null || keyName == null) {
       return null;
     }
     return HdfsProtos.ZoneEncryptionInfoProto.newBuilder()
         .setSuite(convert(suite))
+        .setCryptoProtocolVersion(convert(version))
         .setKeyName(keyName)
         .build();
   }
@@ -2696,23 +2882,27 @@ public class PBHelper {
       return null;
     }
     CipherSuite suite = convert(proto.getSuite());
+    CryptoProtocolVersion version = convert(proto.getCryptoProtocolVersion());
     byte[] key = proto.getKey().toByteArray();
     byte[] iv = proto.getIv().toByteArray();
     String ezKeyVersionName = proto.getEzKeyVersionName();
     String keyName = proto.getKeyName();
-    return new FileEncryptionInfo(suite, key, iv, keyName, ezKeyVersionName);
+    return new FileEncryptionInfo(suite, version, key, iv, keyName,
+        ezKeyVersionName);
   }
 
   public static FileEncryptionInfo convert(
       HdfsProtos.PerFileEncryptionInfoProto fileProto,
-      CipherSuite suite, String keyName) {
-    if (fileProto == null || suite == null || keyName == null) {
+      CipherSuite suite, CryptoProtocolVersion version, String keyName) {
+    if (fileProto == null || suite == null || version == null ||
+        keyName == null) {
       return null;
     }
     byte[] key = fileProto.getKey().toByteArray();
     byte[] iv = fileProto.getIv().toByteArray();
     String ezKeyVersionName = fileProto.getEzKeyVersionName();
-    return new FileEncryptionInfo(suite, key, iv, keyName, ezKeyVersionName);
+    return new FileEncryptionInfo(suite, version, key, iv, keyName,
+        ezKeyVersionName);
   }
 
 }

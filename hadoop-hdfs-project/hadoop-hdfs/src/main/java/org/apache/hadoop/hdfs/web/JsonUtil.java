@@ -21,13 +21,14 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
@@ -256,6 +257,8 @@ public class JsonUtil {
     final long aTime = (Long) m.get("accessTime");
     final long mTime = (Long) m.get("modificationTime");
     final long blockSize = (Long) m.get("blockSize");
+    final boolean isLazyPersist = m.containsKey("lazyPersist")
+        ? (Boolean) m.get("lazyPersist") : false;
     final short replication = (short) (long) (Long) m.get("replication");
     final long fileId = m.containsKey("fileId") ? (Long) m.get("fileId")
         : INodeId.GRANDFATHER_INODE_ID;
@@ -264,10 +267,11 @@ public class JsonUtil {
             : childrenNumLong.intValue();
     final byte storagePolicy = m.containsKey("storagePolicy") ?
         (byte) (long) (Long) m.get("storagePolicy") :
-          BlockStoragePolicy.ID_UNSPECIFIED;
+          BlockStoragePolicySuite.ID_UNSPECIFIED;
     return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
-        blockSize, mTime, aTime, permission, owner, group, symlink,
-        DFSUtil.string2Bytes(localName), fileId, childrenNum, null, storagePolicy);
+        blockSize, mTime, aTime, permission, owner, group,
+        symlink, DFSUtil.string2Bytes(localName), fileId, childrenNum, null,
+        storagePolicy);
   }
 
   /** Convert an ExtendedBlock to a Json map. */

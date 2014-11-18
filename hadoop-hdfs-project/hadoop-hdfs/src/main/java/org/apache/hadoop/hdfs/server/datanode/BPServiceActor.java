@@ -28,6 +28,7 @@ import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -368,13 +369,17 @@ class BPServiceActor implements Runnable {
    * till namenode is informed before responding with success to the
    * client? For now we don't.
    */
-  void notifyNamenodeBlockImmediately(
-      ReceivedDeletedBlockInfo bInfo, String storageUuid) {
+  void notifyNamenodeBlock(ReceivedDeletedBlockInfo bInfo,
+      String storageUuid, boolean now) {
     synchronized (pendingIncrementalBRperStorage) {
       addPendingReplicationBlockInfo(
           bInfo, dn.getFSDataset().getStorage(storageUuid));
       sendImmediateIBR = true;
-      pendingIncrementalBRperStorage.notifyAll();
+      // If now is true, the report is sent right away.
+      // Otherwise, it will be sent out in the next heartbeat.
+      if (now) {
+        pendingIncrementalBRperStorage.notifyAll();
+      }
     }
   }
 
@@ -980,6 +985,22 @@ class BPServiceActor implements Runnable {
      */
     boolean removeBlockInfo(ReceivedDeletedBlockInfo blockInfo) {
       return (pendingIncrementalBR.remove(blockInfo.getBlock().getBlockId()) != null);
+    }
+  }
+
+  void triggerBlockReport(BlockReportOptions options) throws IOException {
+    if (options.isIncremental()) {
+      LOG.info(bpos.toString() + ": scheduling an incremental block report.");
+      synchronized(pendingIncrementalBRperStorage) {
+        sendImmediateIBR = true;
+        pendingIncrementalBRperStorage.notifyAll();
+      }
+    } else {
+      LOG.info(bpos.toString() + ": scheduling a full block report.");
+      synchronized(pendingIncrementalBRperStorage) {
+        lastBlockReport = 0;
+        pendingIncrementalBRperStorage.notifyAll();
+      }
     }
   }
 }

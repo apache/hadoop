@@ -211,6 +211,9 @@ public abstract class NMStateStoreService extends AbstractService {
     return true;
   }
 
+  public boolean isNewlyCreated() {
+    return false;
+  }
 
   /**
    * Load the state of applications

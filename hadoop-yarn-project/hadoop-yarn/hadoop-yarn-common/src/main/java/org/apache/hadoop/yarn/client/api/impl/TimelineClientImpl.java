@@ -20,14 +20,15 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.GeneralSecurityException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -43,13 +44,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
+import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
+import org.apache.hadoop.security.token.delegation.web.PseudoDelegationTokenAuthenticator;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
@@ -58,18 +62,19 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenSelector;
-import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
+import com.sun.jersey.api.client.filter.ClientFilter;
 import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
@@ -79,23 +84,163 @@ public class TimelineClientImpl extends TimelineClient {
 
   private static final Log LOG = LogFactory.getLog(TimelineClientImpl.class);
   private static final String RESOURCE_URI_STR = "/ws/v1/timeline/";
-  private static final String URL_PARAM_USER_NAME = "user.name";
   private static final Joiner JOINER = Joiner.on("");
   public final static int DEFAULT_SOCKET_TIMEOUT = 1 * 60 * 1000; // 1 minute
 
   private static Options opts;
+  private static final String ENTITY_DATA_TYPE = "entity";
+  private static final String DOMAIN_DATA_TYPE = "domain";
 
   static {
     opts = new Options();
-    opts.addOption("put", true, "Put the TimelineEntities in a JSON file");
+    opts.addOption("put", true, "Put the timeline entities/domain in a JSON file");
     opts.getOption("put").setArgName("Path to the JSON file");
+    opts.addOption(ENTITY_DATA_TYPE, false, "Specify the JSON file contains the entities");
+    opts.addOption(DOMAIN_DATA_TYPE, false, "Specify the JSON file contains the domain");
     opts.addOption("help", false, "Print usage");
   }
 
   private Client client;
+  private ConnectionConfigurator connConfigurator;
+  private DelegationTokenAuthenticator authenticator;
+  private DelegationTokenAuthenticatedURL.Token token;
   private URI resURI;
   private boolean isEnabled;
-  private KerberosAuthenticatedURLConnectionFactory urlFactory;
+
+  @Private
+  @VisibleForTesting
+  TimelineClientConnectionRetry connectionRetry;
+
+  // Abstract class for an operation that should be retried by timeline client
+  private static abstract class TimelineClientRetryOp {
+    // The operation that should be retried
+    public abstract Object run() throws IOException;
+    // The method to indicate if we should retry given the incoming exception
+    public abstract boolean shouldRetryOn(Exception e);
+  }
+
+  // Class to handle retry
+  // Outside this class, only visible to tests
+  @Private
+  @VisibleForTesting
+  static class TimelineClientConnectionRetry {
+
+    // maxRetries < 0 means keep trying
+    @Private
+    @VisibleForTesting
+    public int maxRetries;
+
+    @Private
+    @VisibleForTesting
+    public long retryInterval;
+
+    // Indicates if retries happened last time. Only tests should read it.
+    // In unit tests, retryOn() calls should _not_ be concurrent.
+    @Private
+    @VisibleForTesting
+    public boolean retried = false;
+
+    // Constructor with default retry settings
+    public TimelineClientConnectionRetry(Configuration conf) {
+      maxRetries = conf.getInt(
+        YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
+      retryInterval = conf.getLong(
+        YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
+    }
+
+    public Object retryOn(TimelineClientRetryOp op)
+        throws RuntimeException, IOException {
+      int leftRetries = maxRetries;
+      retried = false;
+
+      // keep trying
+      while (true) {
+        try {
+          // try perform the op, if fail, keep retrying
+          return op.run();
+        }  catch (IOException e) {
+          // We may only throw runtime and IO exceptions. After switching to
+          // Java 1.7, we can merge these two catch blocks into one.
+
+          // break if there's no retries left
+          if (leftRetries == 0) {
+            break;
+          }
+          if (op.shouldRetryOn(e)) {
+            logException(e, leftRetries);
+          } else {
+            throw e;
+          }
+        } catch (RuntimeException e) {
+          // break if there's no retries left
+          if (leftRetries == 0) {
+            break;
+          }
+          if (op.shouldRetryOn(e)) {
+            logException(e, leftRetries);
+          } else {
+            throw e;
+          }
+        }
+        if (leftRetries > 0) {
+          leftRetries--;
+        }
+        retried = true;
+        try {
+          // sleep for the given time interval
+          Thread.sleep(retryInterval);
+        } catch (InterruptedException ie) {
+          LOG.warn("Client retry sleep interrupted! ");
+        }
+      }
+      throw new RuntimeException("Failed to connect to timeline server. "
+          + "Connection retries limit exceeded. "
+          + "The posted timeline event may be missing");
+    };
+
+    private void logException(Exception e, int leftRetries) {
+      if (leftRetries > 0) {
+        LOG.info("Exception caught by TimelineClientConnectionRetry,"
+              + " will try " + leftRetries + " more time(s).\nMessage: "
+              + e.getMessage());
+      } else {
+        // note that maxRetries may be -1 at the very beginning
+        LOG.info("ConnectionException caught by TimelineClientConnectionRetry,"
+            + " will keep retrying.\nMessage: "
+            + e.getMessage());
+      }
+    }
+  }
+
+  private class TimelineJerseyRetryFilter extends ClientFilter {
+    @Override
+    public ClientResponse handle(final ClientRequest cr)
+        throws ClientHandlerException {
+      // Set up the retry operation
+      TimelineClientRetryOp jerseyRetryOp = new TimelineClientRetryOp() {
+        @Override
+        public Object run() {
+          // Try pass the request, if fail, keep retrying
+          return getNext().handle(cr);
+        }
+
+        @Override
+        public boolean shouldRetryOn(Exception e) {
+          // Only retry on connection exceptions
+          return (e instanceof ClientHandlerException)
+              && (e.getCause() instanceof ConnectException);
+        }
+      };
+      try {
+        return (ClientResponse) connectionRetry.retryOn(jerseyRetryOp);
+      } catch (IOException e) {
+        throw new ClientHandlerException("Jersey retry failed!\nMessage: "
+              + e.getMessage());
+      }
+    }
+  }
 
   public TimelineClientImpl() {
     super(TimelineClientImpl.class.getName());
@@ -110,15 +255,21 @@ public class TimelineClientImpl extends TimelineClient {
     } else {
       ClientConfig cc = new DefaultClientConfig();
       cc.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-      ConnectionConfigurator connConfigurator = newConnConfigurator(conf);
+      connConfigurator = newConnConfigurator(conf);
       if (UserGroupInformation.isSecurityEnabled()) {
-        TimelineAuthenticator.setStaticConnectionConfigurator(connConfigurator);
-        urlFactory = new KerberosAuthenticatedURLConnectionFactory(connConfigurator);
-        client = new Client(new URLConnectionClientHandler(urlFactory), cc);
+        authenticator = new KerberosDelegationTokenAuthenticator();
       } else {
-        client = new Client(new URLConnectionClientHandler(
-            new PseudoAuthenticatedURLConnectionFactory(connConfigurator)), cc);
+        authenticator = new PseudoDelegationTokenAuthenticator();
       }
+      authenticator.setConnectionConfigurator(connConfigurator);
+      token = new DelegationTokenAuthenticatedURL.Token();
+
+      connectionRetry = new TimelineClientConnectionRetry(conf);
+      client = new Client(new URLConnectionClientHandler(
+          new TimelineURLConnectionFactory()), cc);
+      TimelineJerseyRetryFilter retryFilter = new TimelineJerseyRetryFilter();
+      client.addFilter(retryFilter);
+
       if (YarnConfiguration.useHttps(conf)) {
         resURI = URI
             .create(JOINER.join("https://", conf.get(
@@ -130,9 +281,6 @@ public class TimelineClientImpl extends TimelineClient {
             YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS),
             RESOURCE_URI_STR));
-      }
-      if (UserGroupInformation.isSecurityEnabled()) {
-        urlFactory.setService(TimelineUtils.buildTimelineTokenService(conf));
       }
       LOG.info("Timeline service address: " + resURI);
     }
@@ -150,9 +298,27 @@ public class TimelineClientImpl extends TimelineClient {
     }
     TimelineEntities entitiesContainer = new TimelineEntities();
     entitiesContainer.addEntities(Arrays.asList(entities));
+    ClientResponse resp = doPosting(entitiesContainer, null);
+    return resp.getEntity(TimelinePutResponse.class);
+  }
+
+
+  @Override
+  public void putDomain(TimelineDomain domain) throws IOException,
+      YarnException {
+    if (!isEnabled) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Nothing will be put because timeline service is not enabled");
+      }
+      return;
+    }
+    doPosting(domain, "domain");
+  }
+
+  private ClientResponse doPosting(Object obj, String path) throws IOException, YarnException {
     ClientResponse resp;
     try {
-      resp = doPostingEntities(entitiesContainer);
+      resp = doPostingObject(obj, path);
     } catch (RuntimeException re) {
       // runtime exception is expected if the client cannot connect the server
       String msg =
@@ -172,108 +338,176 @@ public class TimelineClientImpl extends TimelineClient {
       }
       throw new YarnException(msg);
     }
-    return resp.getEntity(TimelinePutResponse.class);
+    return resp;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public Token<TimelineDelegationTokenIdentifier> getDelegationToken(
-      String renewer) throws IOException, YarnException {
-    return TimelineAuthenticator.getDelegationToken(resURI.toURL(),
-        urlFactory.token, renewer);
+      final String renewer) throws IOException, YarnException {
+    boolean isProxyAccess =
+        UserGroupInformation.getCurrentUser().getAuthenticationMethod()
+        == UserGroupInformation.AuthenticationMethod.PROXY;
+    final String doAsUser = isProxyAccess ?
+        UserGroupInformation.getCurrentUser().getShortUserName() : null;
+    PrivilegedExceptionAction<Token<TimelineDelegationTokenIdentifier>> getDTAction =
+        new PrivilegedExceptionAction<Token<TimelineDelegationTokenIdentifier>>() {
+
+          @Override
+          public Token<TimelineDelegationTokenIdentifier> run()
+              throws Exception {
+            DelegationTokenAuthenticatedURL authUrl =
+                new DelegationTokenAuthenticatedURL(authenticator,
+                    connConfigurator);
+            return (Token) authUrl.getDelegationToken(
+                resURI.toURL(), token, renewer, doAsUser);
+          }
+        };
+    return (Token<TimelineDelegationTokenIdentifier>) operateDelegationToken(getDTAction);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public long renewDelegationToken(
+      final Token<TimelineDelegationTokenIdentifier> timelineDT)
+          throws IOException, YarnException {
+    boolean isProxyAccess =
+        UserGroupInformation.getCurrentUser().getAuthenticationMethod()
+        == UserGroupInformation.AuthenticationMethod.PROXY;
+    final String doAsUser = isProxyAccess ?
+        UserGroupInformation.getCurrentUser().getShortUserName() : null;
+    PrivilegedExceptionAction<Long> renewDTAction =
+        new PrivilegedExceptionAction<Long>() {
+
+          @Override
+          public Long run()
+              throws Exception {
+            // If the timeline DT to renew is different than cached, replace it.
+            // Token to set every time for retry, because when exception happens,
+            // DelegationTokenAuthenticatedURL will reset it to null;
+            if (!timelineDT.equals(token.getDelegationToken())) {
+              token.setDelegationToken((Token) timelineDT);
+            }
+            DelegationTokenAuthenticatedURL authUrl =
+                new DelegationTokenAuthenticatedURL(authenticator,
+                    connConfigurator);
+            return authUrl
+                .renewDelegationToken(resURI.toURL(), token, doAsUser);
+          }
+        };
+    return (Long) operateDelegationToken(renewDTAction);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public void cancelDelegationToken(
+      final Token<TimelineDelegationTokenIdentifier> timelineDT)
+          throws IOException, YarnException {
+    boolean isProxyAccess =
+        UserGroupInformation.getCurrentUser().getAuthenticationMethod()
+        == UserGroupInformation.AuthenticationMethod.PROXY;
+    final String doAsUser = isProxyAccess ?
+        UserGroupInformation.getCurrentUser().getShortUserName() : null;
+    PrivilegedExceptionAction<Void> cancelDTAction =
+        new PrivilegedExceptionAction<Void>() {
+
+          @Override
+          public Void run()
+              throws Exception {
+            // If the timeline DT to cancel is different than cached, replace it.
+            // Token to set every time for retry, because when exception happens,
+            // DelegationTokenAuthenticatedURL will reset it to null;
+            if (!timelineDT.equals(token.getDelegationToken())) {
+              token.setDelegationToken((Token) timelineDT);
+            }
+            DelegationTokenAuthenticatedURL authUrl =
+                new DelegationTokenAuthenticatedURL(authenticator,
+                    connConfigurator);
+            authUrl.cancelDelegationToken(resURI.toURL(), token, doAsUser);
+            return null;
+          }
+        };
+    operateDelegationToken(cancelDTAction);
+  }
+
+  private Object operateDelegationToken(
+      final PrivilegedExceptionAction<?> action)
+      throws IOException, YarnException {
+    // Set up the retry operation
+    TimelineClientRetryOp tokenRetryOp = new TimelineClientRetryOp() {
+
+      @Override
+      public Object run() throws IOException {
+        // Try pass the request, if fail, keep retrying
+        boolean isProxyAccess =
+            UserGroupInformation.getCurrentUser().getAuthenticationMethod()
+            == UserGroupInformation.AuthenticationMethod.PROXY;
+        UserGroupInformation callerUGI = isProxyAccess ?
+            UserGroupInformation.getCurrentUser().getRealUser()
+            : UserGroupInformation.getCurrentUser();
+        try {
+          return callerUGI.doAs(action);
+        } catch (UndeclaredThrowableException e) {
+          throw new IOException(e.getCause());
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        }
+      }
+
+      @Override
+      public boolean shouldRetryOn(Exception e) {
+        // Only retry on connection exceptions
+        return (e instanceof ConnectException);
+      }
+    };
+
+    return connectionRetry.retryOn(tokenRetryOp);
   }
 
   @Private
   @VisibleForTesting
-  public ClientResponse doPostingEntities(TimelineEntities entities) {
+  public ClientResponse doPostingObject(Object object, String path) {
     WebResource webResource = client.resource(resURI);
-    return webResource.accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class, entities);
+    if (path == null) {
+      return webResource.accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .post(ClientResponse.class, object);
+    } else if (path.equals("domain")) {
+      return webResource.path(path).accept(MediaType.APPLICATION_JSON)
+          .type(MediaType.APPLICATION_JSON)
+          .put(ClientResponse.class, object);
+    } else {
+      throw new YarnRuntimeException("Unknown resource type");
+    }
   }
 
-  private static class PseudoAuthenticatedURLConnectionFactory
-    implements HttpURLConnectionFactory {
-
-    private ConnectionConfigurator connConfigurator;
-
-    public PseudoAuthenticatedURLConnectionFactory(
-        ConnectionConfigurator connConfigurator) {
-      this.connConfigurator = connConfigurator;
-    }
-
-    @Override
-    public HttpURLConnection getHttpURLConnection(URL url) throws IOException {
-      Map<String, String> params = new HashMap<String, String>();
-      params.put(URL_PARAM_USER_NAME,
-          UserGroupInformation.getCurrentUser().getShortUserName());
-      url = TimelineAuthenticator.appendParams(url, params);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("URL with delegation token: " + url);
-      }
-      return connConfigurator.configure((HttpURLConnection) url.openConnection());
-    }
-
-  }
-  private static class KerberosAuthenticatedURLConnectionFactory
+  private class TimelineURLConnectionFactory
       implements HttpURLConnectionFactory {
 
-    private AuthenticatedURL.Token token;
-    private TimelineAuthenticator authenticator;
-    private Token<TimelineDelegationTokenIdentifier> dToken;
-    private Text service;
-    private ConnectionConfigurator connConfigurator;
-
-    public KerberosAuthenticatedURLConnectionFactory(
-        ConnectionConfigurator connConfigurator) {
-      token = new AuthenticatedURL.Token();
-      authenticator = new TimelineAuthenticator();
-      this.connConfigurator = connConfigurator;
-    }
-
     @Override
-    public HttpURLConnection getHttpURLConnection(URL url) throws IOException {
+    public HttpURLConnection getHttpURLConnection(final URL url) throws IOException {
+      boolean isProxyAccess =
+          UserGroupInformation.getCurrentUser().getAuthenticationMethod()
+          == UserGroupInformation.AuthenticationMethod.PROXY;
+      UserGroupInformation callerUGI = isProxyAccess ?
+          UserGroupInformation.getCurrentUser().getRealUser()
+          : UserGroupInformation.getCurrentUser();
+      final String doAsUser = isProxyAccess ?
+          UserGroupInformation.getCurrentUser().getShortUserName() : null;
       try {
-        if (dToken == null) {
-          //TODO: need to take care of the renew case
-          dToken = selectToken();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Timeline delegation token: " + dToken.toString());
+        return callerUGI.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
+          @Override
+          public HttpURLConnection run() throws Exception {
+            return new DelegationTokenAuthenticatedURL(
+                authenticator, connConfigurator).openConnection(url, token,
+                doAsUser);
           }
-        }
-        if (dToken != null) {
-          Map<String, String> params = new HashMap<String, String>();
-          TimelineAuthenticator.injectDelegationToken(params, dToken);
-          url = TimelineAuthenticator.appendParams(url, params);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("URL with delegation token: " + url);
-          }
-        }
-        return new AuthenticatedURL(
-            authenticator, connConfigurator).openConnection(url, token);
-      } catch (AuthenticationException e) {
-        LOG.error("Authentication failed when openning connection [" + url
-            + "] with token [" + token + "].", e);
+        });
+      } catch (UndeclaredThrowableException e) {
+        throw new IOException(e.getCause());
+      } catch (InterruptedException e) {
         throw new IOException(e);
       }
-    }
-
-    private Token<TimelineDelegationTokenIdentifier> selectToken() {
-      UserGroupInformation ugi;
-      try {
-        ugi = UserGroupInformation.getCurrentUser();
-      } catch (IOException e) {
-        String msg = "Error when getting the current user";
-        LOG.error(msg, e);
-        throw new YarnRuntimeException(msg, e);
-      }
-      TimelineDelegationTokenSelector tokenSelector =
-          new TimelineDelegationTokenSelector();
-      return tokenSelector.selectToken(
-          service, ugi.getCredentials().getAllTokens());
-    }
-
-    public void setService(Text service) {
-      this.service = service;
     }
 
   }
@@ -334,8 +568,13 @@ public class TimelineClientImpl extends TimelineClient {
     if (cliParser.hasOption("put")) {
       String path = cliParser.getOptionValue("put");
       if (path != null && path.length() > 0) {
-        putTimelineEntitiesInJSONFile(path);
-        return;
+        if (cliParser.hasOption(ENTITY_DATA_TYPE)) {
+          putTimelineDataInJSONFile(path, ENTITY_DATA_TYPE);
+          return;
+        } else if (cliParser.hasOption(DOMAIN_DATA_TYPE)) {
+          putTimelineDataInJSONFile(path, DOMAIN_DATA_TYPE);
+          return;
+        }
       }
     }
     printUsage();
@@ -345,22 +584,28 @@ public class TimelineClientImpl extends TimelineClient {
    * Put timeline data in a JSON file via command line.
    * 
    * @param path
-   *          path to the {@link TimelineEntities} JSON file
+   *          path to the timeline data JSON file
+   * @param type
+   *          the type of the timeline data in the JSON file
    */
-  private static void putTimelineEntitiesInJSONFile(String path) {
+  private static void putTimelineDataInJSONFile(String path, String type) {
     File jsonFile = new File(path);
     if (!jsonFile.exists()) {
-      System.out.println("Error: File [" + jsonFile.getAbsolutePath()
-          + "] doesn't exist");
+      LOG.error("File [" + jsonFile.getAbsolutePath() + "] doesn't exist");
       return;
     }
     ObjectMapper mapper = new ObjectMapper();
     YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
     TimelineEntities entities = null;
+    TimelineDomains domains = null;
     try {
-      entities = mapper.readValue(jsonFile, TimelineEntities.class);
+      if (type.equals(ENTITY_DATA_TYPE)) {
+        entities = mapper.readValue(jsonFile, TimelineEntities.class);
+      } else if (type.equals(DOMAIN_DATA_TYPE)){
+        domains = mapper.readValue(jsonFile, TimelineDomains.class);
+      }
     } catch (Exception e) {
-      System.err.println("Error: " + e.getMessage());
+      LOG.error("Error when reading  " + e.getMessage());
       e.printStackTrace(System.err);
       return;
     }
@@ -376,21 +621,37 @@ public class TimelineClientImpl extends TimelineClient {
                 UserGroupInformation.getCurrentUser().getUserName());
         UserGroupInformation.getCurrentUser().addToken(token);
       }
-      TimelinePutResponse response = client.putEntities(
-          entities.getEntities().toArray(
-              new TimelineEntity[entities.getEntities().size()]));
-      if (response.getErrors().size() == 0) {
-        System.out.println("Timeline data is successfully put");
-      } else {
-        for (TimelinePutResponse.TimelinePutError error : response.getErrors()) {
-          System.out.println("TimelineEntity [" + error.getEntityType() + ":" +
-              error.getEntityId() + "] is not successfully put. Error code: " +
-              error.getErrorCode());
+      if (type.equals(ENTITY_DATA_TYPE)) {
+        TimelinePutResponse response = client.putEntities(
+            entities.getEntities().toArray(
+                new TimelineEntity[entities.getEntities().size()]));
+        if (response.getErrors().size() == 0) {
+          LOG.info("Timeline entities are successfully put");
+        } else {
+          for (TimelinePutResponse.TimelinePutError error : response.getErrors()) {
+            LOG.error("TimelineEntity [" + error.getEntityType() + ":" +
+                error.getEntityId() + "] is not successfully put. Error code: " +
+                error.getErrorCode());
+          }
+        }
+      } else if (type.equals(DOMAIN_DATA_TYPE)) {
+        boolean hasError = false;
+        for (TimelineDomain domain : domains.getDomains()) {
+          try {
+            client.putDomain(domain);
+          } catch (Exception e) {
+            LOG.error("Error when putting domain " + domain.getId(), e);
+            hasError = true;
+          }
+        }
+        if (!hasError) {
+          LOG.info("Timeline domains are successfully put");
         }
       }
+    } catch(RuntimeException e) {
+      LOG.error("Error when putting the timeline data", e);
     } catch (Exception e) {
-      System.err.println("Error: " + e.getMessage());
-      e.printStackTrace(System.err);
+      LOG.error("Error when putting the timeline data", e);
     } finally {
       client.stop();
     }

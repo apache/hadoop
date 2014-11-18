@@ -31,8 +31,11 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.UUID;
 
 /**
  * Utilities used across test cases
@@ -43,6 +46,13 @@ public class ContractTestUtils extends Assert {
       LoggerFactory.getLogger(ContractTestUtils.class);
 
   public static final String IO_FILE_BUFFER_SIZE = "io.file.buffer.size";
+
+  // For scale testing, we can repeatedly write small chunk data to generate
+  // a large file.
+  public static final String IO_CHUNK_BUFFER_SIZE = "io.chunk.buffer.size";
+  public static final int DEFAULT_IO_CHUNK_BUFFER_SIZE = 128;
+  public static final String IO_CHUNK_MODULUS_SIZE = "io.chunk.modulus.size";
+  public static final int DEFAULT_IO_CHUNK_MODULUS_SIZE = 128;
 
   /**
    * Assert that a property in the property set matches the expected value
@@ -755,5 +765,134 @@ public class ContractTestUtils extends Assert {
                 mismatch);
   }
 
+  /**
+   * Receives test data from the given input file and checks the size of the
+   * data as well as the pattern inside the received data.
+   *
+   * @param fs FileSystem
+   * @param path Input file to be checked
+   * @param expectedSize the expected size of the data to be read from the
+   *        input file in bytes
+   * @param bufferLen Pattern length
+   * @param modulus   Pattern modulus
+   * @throws IOException
+   *         thrown if an error occurs while reading the data
+   */
+  public static void verifyReceivedData(FileSystem fs, Path path,
+                                      final long expectedSize,
+                                      final int bufferLen,
+                                      final int modulus) throws IOException {
+    final byte[] testBuffer = new byte[bufferLen];
 
+    long totalBytesRead = 0;
+    int nextExpectedNumber = 0;
+    final InputStream inputStream = fs.open(path);
+    try {
+      while (true) {
+        final int bytesRead = inputStream.read(testBuffer);
+        if (bytesRead < 0) {
+          break;
+        }
+
+        totalBytesRead += bytesRead;
+
+        for (int i = 0; i < bytesRead; ++i) {
+          if (testBuffer[i] != nextExpectedNumber) {
+            throw new IOException("Read number " + testBuffer[i]
+                + " but expected " + nextExpectedNumber);
+          }
+
+          ++nextExpectedNumber;
+
+          if (nextExpectedNumber == modulus) {
+            nextExpectedNumber = 0;
+          }
+        }
+      }
+
+      if (totalBytesRead != expectedSize) {
+        throw new IOException("Expected to read " + expectedSize +
+            " bytes but only received " + totalBytesRead);
+      }
+    } finally {
+      inputStream.close();
+    }
+  }
+
+  /**
+   * Generates test data of the given size according to some specific pattern
+   * and writes it to the provided output file.
+   *
+   * @param fs FileSystem
+   * @param path Test file to be generated
+   * @param size The size of the test data to be generated in bytes
+   * @param bufferLen Pattern length
+   * @param modulus   Pattern modulus
+   * @throws IOException
+   *         thrown if an error occurs while writing the data
+   */
+  public static long generateTestFile(FileSystem fs, Path path,
+                                      final long size,
+                                      final int bufferLen,
+                                      final int modulus) throws IOException {
+    final byte[] testBuffer = new byte[bufferLen];
+    for (int i = 0; i < testBuffer.length; ++i) {
+      testBuffer[i] = (byte) (i % modulus);
+    }
+
+    final OutputStream outputStream = fs.create(path, false);
+    long bytesWritten = 0;
+    try {
+      while (bytesWritten < size) {
+        final long diff = size - bytesWritten;
+        if (diff < testBuffer.length) {
+          outputStream.write(testBuffer, 0, (int) diff);
+          bytesWritten += diff;
+        } else {
+          outputStream.write(testBuffer);
+          bytesWritten += testBuffer.length;
+        }
+      }
+
+      return bytesWritten;
+    } finally {
+      outputStream.close();
+    }
+  }
+
+  /**
+   * Creates and reads a file with the given size. The test file is generated
+   * according to a specific pattern so it can be easily verified even if it's
+   * a multi-GB one.
+   * During the read phase the incoming data stream is also checked against
+   * this pattern.
+   *
+   * @param fs FileSystem
+   * @param parent Test file parent dir path
+   * @throws IOException
+   *    thrown if an I/O error occurs while writing or reading the test file
+   */
+  public static void createAndVerifyFile(FileSystem fs, Path parent, final long fileSize)
+      throws IOException {
+    int testBufferSize = fs.getConf()
+        .getInt(IO_CHUNK_BUFFER_SIZE, DEFAULT_IO_CHUNK_BUFFER_SIZE);
+    int modulus = fs.getConf()
+        .getInt(IO_CHUNK_MODULUS_SIZE, DEFAULT_IO_CHUNK_MODULUS_SIZE);
+
+    final String objectName = UUID.randomUUID().toString();
+    final Path objectPath = new Path(parent, objectName);
+
+    // Write test file in a specific pattern
+    assertEquals(fileSize,
+        generateTestFile(fs, objectPath, fileSize, testBufferSize, modulus));
+    assertPathExists(fs, "not created successful", objectPath);
+
+    // Now read the same file back and verify its content
+    try {
+      verifyReceivedData(fs, objectPath, fileSize, testBufferSize, modulus);
+    } finally {
+      // Delete test file
+      fs.delete(objectPath, false);
+    }
+  }
 }

@@ -57,6 +57,12 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -69,8 +75,15 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsC
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLabelsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetClusterNodeLabelsResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetNodesToLabelsResponsePBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
@@ -348,6 +361,11 @@ public class AdminService extends CompositeService implements
         recordFactory.newRecordInstance(RefreshQueuesResponse.class);
     try {
       rmContext.getScheduler().reinitialize(getConfig(), this.rmContext);
+      // refresh the reservation system
+      ReservationSystem rSystem = rmContext.getReservationSystem();
+      if (rSystem != null) {
+        rSystem.reinitialize(getConfig(), rmContext);
+      }
       RMAuditLogger.logSuccess(user.getShortUserName(), argName,
           "AdminService");
       return response;
@@ -403,9 +421,13 @@ public class AdminService extends CompositeService implements
       throwStandbyException();
     }
 
+    // Accept hadoop common configs in core-site.xml as well as RM specific
+    // configurations in yarn-site.xml
     Configuration conf =
         getConfiguration(new Configuration(false),
-            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
+            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE,
+            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+    RMServerUtils.processRMProxyUsersConf(conf);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     RMAuditLogger.logSuccess(user.getShortUserName(),
         argName, "AdminService");
@@ -576,11 +598,13 @@ public class AdminService extends CompositeService implements
   }
 
   private synchronized Configuration getConfiguration(Configuration conf,
-      String confFileName) throws YarnException, IOException {
-    InputStream confFileInputStream = this.rmContext.getConfigurationProvider()
-        .getConfigurationInputStream(conf, confFileName);
-    if (confFileInputStream != null) {
-      conf.addResource(confFileInputStream);
+      String... confFileNames) throws YarnException, IOException {
+    for (String confFileName : confFileNames) {
+      InputStream confFileInputStream = this.rmContext.getConfigurationProvider()
+          .getConfigurationInputStream(conf, confFileName);
+      if (confFileInputStream != null) {
+        conf.addResource(confFileInputStream);
+      }
     }
     return conf;
   }
@@ -611,5 +635,91 @@ public class AdminService extends CompositeService implements
   @VisibleForTesting
   public Server getServer() {
     return this.server;
+  }
+
+  @Override
+  public AddToClusterNodeLabelsResponse addToClusterNodeLabels(AddToClusterNodeLabelsRequest request)
+      throws YarnException, IOException {
+    String argName = "addToClusterNodeLabels";
+    UserGroupInformation user = checkAcls(argName);
+
+    if (!isRMActive()) {
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
+          adminAcl.toString(), "AdminService",
+          "ResourceManager is not active. Can not add labels.");
+      throwStandbyException();
+    }
+
+    AddToClusterNodeLabelsResponse response =
+        recordFactory.newRecordInstance(AddToClusterNodeLabelsResponse.class);
+    try {
+      rmContext.getNodeLabelManager().addToCluserNodeLabels(request.getNodeLabels());
+      RMAuditLogger
+          .logSuccess(user.getShortUserName(), argName, "AdminService");
+      return response;
+    } catch (IOException ioe) {
+      LOG.info("Exception add labels", ioe);
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
+          adminAcl.toString(), "AdminService", "Exception add label");
+      throw RPCUtil.getRemoteException(ioe);
+    }
+  }
+
+  @Override
+  public RemoveFromClusterNodeLabelsResponse removeFromClusterNodeLabels(
+      RemoveFromClusterNodeLabelsRequest request) throws YarnException, IOException {
+    String argName = "removeFromClusterNodeLabels";
+    UserGroupInformation user = checkAcls(argName);
+
+    if (!isRMActive()) {
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
+          adminAcl.toString(), "AdminService",
+          "ResourceManager is not active. Can not remove labels.");
+      throwStandbyException();
+    }
+
+    RemoveFromClusterNodeLabelsResponse response =
+        recordFactory.newRecordInstance(RemoveFromClusterNodeLabelsResponse.class);
+    try {
+      rmContext.getNodeLabelManager().removeFromClusterNodeLabels(request.getNodeLabels());
+      RMAuditLogger
+          .logSuccess(user.getShortUserName(), argName, "AdminService");
+      return response;
+    } catch (IOException ioe) {
+      LOG.info("Exception remove labels", ioe);
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
+          adminAcl.toString(), "AdminService", "Exception remove label");
+      throw RPCUtil.getRemoteException(ioe);
+    }
+  }
+
+  @Override
+  public ReplaceLabelsOnNodeResponse replaceLabelsOnNode(
+      ReplaceLabelsOnNodeRequest request) throws YarnException, IOException {
+    String argName = "replaceLabelsOnNode";
+    UserGroupInformation user = checkAcls(argName);
+
+    if (!isRMActive()) {
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
+          adminAcl.toString(), "AdminService",
+          "ResourceManager is not active. Can not set node to labels.");
+      throwStandbyException();
+    }
+
+    ReplaceLabelsOnNodeResponse response =
+        recordFactory.newRecordInstance(ReplaceLabelsOnNodeResponse.class);
+    try {
+      rmContext.getNodeLabelManager().replaceLabelsOnNode(
+          request.getNodeToLabels());
+      RMAuditLogger
+          .logSuccess(user.getShortUserName(), argName, "AdminService");
+      return response;
+    } catch (IOException ioe) {
+      LOG.info("Exception set node to labels. ", ioe);
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
+          adminAcl.toString(), "AdminService",
+          "Exception set node to labels.");
+      throw RPCUtil.getRemoteException(ioe);
+    }
   }
 }

@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -43,6 +42,7 @@ import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
@@ -219,9 +219,13 @@ extends AMRMClientAsync<T> {
           if (!keepRunning) {
             return;
           }
-            
+
           try {
             response = client.allocate(progress);
+          } catch (ApplicationAttemptNotFoundException e) {
+            handler.onShutdownRequest();
+            LOG.info("Shutdown requested. Stopping callback.");
+            return;
           } catch (Throwable ex) {
             LOG.error("Exception on heartbeat", ex);
             savedException = ex;
@@ -229,21 +233,17 @@ extends AMRMClientAsync<T> {
             handlerThread.interrupt();
             return;
           }
-        }
-        if (response != null) {
-          while (true) {
-            try {
-              responseQueue.put(response);
-              if (response.getAMCommand() == AMCommand.AM_SHUTDOWN) {
-                return;
+          if (response != null) {
+            while (true) {
+              try {
+                responseQueue.put(response);
+                break;
+              } catch (InterruptedException ex) {
+                LOG.debug("Interrupted while waiting to put on response queue", ex);
               }
-              break;
-            } catch (InterruptedException ex) {
-              LOG.debug("Interrupted while waiting to put on response queue", ex);
             }
           }
         }
-        
         try {
           Thread.sleep(heartbeatIntervalMs.get());
         } catch (InterruptedException ex) {
@@ -275,20 +275,6 @@ extends AMRMClientAsync<T> {
           } catch (InterruptedException ex) {
             LOG.info("Interrupted while waiting for queue", ex);
             continue;
-          }
-
-          if (response.getAMCommand() != null) {
-            switch(response.getAMCommand()) {
-            case AM_SHUTDOWN:
-              handler.onShutdownRequest();
-              LOG.info("Shutdown requested. Stopping callback.");
-              return;
-            default:
-              String msg =
-                    "Unhandled value of RM AMCommand: " + response.getAMCommand();
-              LOG.error(msg);
-              throw new YarnRuntimeException(msg);
-            }
           }
           List<NodeReport> updatedNodes = response.getUpdatedNodes();
           if (!updatedNodes.isEmpty()) {

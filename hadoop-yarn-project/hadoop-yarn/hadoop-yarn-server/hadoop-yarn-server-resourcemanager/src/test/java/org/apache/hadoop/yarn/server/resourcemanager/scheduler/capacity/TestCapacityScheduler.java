@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -83,6 +84,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMWithAMS;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.MemoryRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -115,6 +118,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfoList;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
@@ -147,7 +151,14 @@ public class TestCapacityScheduler {
   
   @Before
   public void setUp() throws Exception {
-    resourceManager = new ResourceManager();
+    resourceManager = new ResourceManager() {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        RMNodeLabelsManager mgr = new MemoryRMNodeLabelsManager();
+        mgr.init(getConfig());
+        return mgr;
+      }
+    };
     CapacitySchedulerConfiguration csConf 
        = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);
@@ -408,7 +419,7 @@ public class TestCapacityScheduler {
     cs.stop();
   }
 
-  private void checkQueueCapacities(CapacityScheduler cs,
+  void checkQueueCapacities(CapacityScheduler cs,
       float capacityA, float capacityB) {
     CSQueue rootQueue = cs.getRootQueue();
     CSQueue queueA = findQueue(rootQueue, A);
@@ -960,10 +971,7 @@ public class TestCapacityScheduler {
     YarnConfiguration conf = new YarnConfiguration();
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(conf);
-    RMContextImpl rmContext =  new RMContextImpl(null, null, null, null, null,
-        null, new RMContainerTokenSecretManager(conf),
-        new NMTokenSecretManagerInRM(conf),
-        new ClientToAMTokenSecretManagerInRM(), null);
+    RMContext rmContext = TestUtils.getMockRMContext();
     cs.setRMContext(rmContext);
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
@@ -1077,7 +1085,7 @@ public class TestCapacityScheduler {
 
     // request a container.
     am1.allocate("127.0.0.1", 1024, 1, new ArrayList<ContainerId>());
-    ContainerId containerId1 = ContainerId.newInstance(
+    ContainerId containerId1 = ContainerId.newContainerId(
         am1.getApplicationAttemptId(), 2);
     rm1.waitForState(nm1, containerId1, RMContainerState.ALLOCATED);
 
@@ -1114,7 +1122,7 @@ public class TestCapacityScheduler {
     }
 
     // New container will be allocated and will move to ALLOCATED state
-    ContainerId containerId2 = ContainerId.newInstance(
+    ContainerId containerId2 = ContainerId.newContainerId(
         am1.getApplicationAttemptId(), 3);
     rm1.waitForState(nm1, containerId2, RMContainerState.ALLOCATED);
 
@@ -1474,8 +1482,14 @@ public class TestCapacityScheduler {
 
   @Test(expected = YarnException.class)
   public void testMoveAppViolateQueueState() throws Exception {
-
-    resourceManager = new ResourceManager();
+    resourceManager = new ResourceManager() {
+       @Override
+        protected RMNodeLabelsManager createNodeLabelManager() {
+          RMNodeLabelsManager mgr = new MemoryRMNodeLabelsManager();
+          mgr.init(getConfig());
+          return mgr;
+        }
+    };
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);
@@ -1995,4 +2009,66 @@ public class TestCapacityScheduler {
     rm.stop();
   }
 
+  // Test to ensure that we don't carry out reservation on nodes
+  // that have no CPU available when using the DominantResourceCalculator
+  @Test(timeout = 30000)
+  public void testAppReservationWithDominantResourceCalculator() throws Exception {
+    CapacitySchedulerConfiguration csconf =
+        new CapacitySchedulerConfiguration();
+    csconf.setResourceComparator(DominantResourceCalculator.class);
+
+    YarnConfiguration conf = new YarnConfiguration(csconf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+      ResourceScheduler.class);
+
+    MockRM rm = new MockRM(conf);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10 * GB, 1);
+
+    // register extra nodes to bump up cluster resource
+    MockNM nm2 = rm.registerNode("127.0.0.1:1235", 10 * GB, 4);
+    rm.registerNode("127.0.0.1:1236", 10 * GB, 4);
+
+    RMApp app1 = rm.submitApp(1024);
+    // kick the scheduling
+    nm1.nodeHeartbeat(true);
+    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+    MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+    am1.registerAppAttempt();
+    SchedulerNodeReport report_nm1 =
+        rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
+
+    // check node report
+    Assert.assertEquals(1 * GB, report_nm1.getUsedResource().getMemory());
+    Assert.assertEquals(9 * GB, report_nm1.getAvailableResource().getMemory());
+
+    // add request for containers
+    am1.addRequests(new String[] { "127.0.0.1", "127.0.0.2" }, 1 * GB, 1, 1);
+    am1.schedule(); // send the request
+
+    // kick the scheduler, container reservation should not happen
+    nm1.nodeHeartbeat(true);
+    Thread.sleep(1000);
+    AllocateResponse allocResponse = am1.schedule();
+    ApplicationResourceUsageReport report =
+        rm.getResourceScheduler().getAppResourceUsageReport(
+          attempt1.getAppAttemptId());
+    Assert.assertEquals(0, allocResponse.getAllocatedContainers().size());
+    Assert.assertEquals(0, report.getNumReservedContainers());
+
+    // container should get allocated on this node
+    nm2.nodeHeartbeat(true);
+
+    while (allocResponse.getAllocatedContainers().size() == 0) {
+      Thread.sleep(100);
+      allocResponse = am1.schedule();
+    }
+    report =
+        rm.getResourceScheduler().getAppResourceUsageReport(
+          attempt1.getAppAttemptId());
+    Assert.assertEquals(1, allocResponse.getAllocatedContainers().size());
+    Assert.assertEquals(0, report.getNumReservedContainers());
+    rm.stop();
+  }
 }

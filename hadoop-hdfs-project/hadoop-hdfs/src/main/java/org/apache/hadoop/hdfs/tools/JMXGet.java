@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import javax.management.AttributeNotFoundException;
 import javax.management.MBeanAttributeInfo;
@@ -105,6 +106,23 @@ public class JMXGet {
       for (MBeanAttributeInfo mb : mbinfos) {
         val = mbsc.getAttribute(oname, mb.getName());
         System.out.format(format, mb.getName(), (val==null)?"":val.toString());
+      }
+    }
+  }
+
+  public void printAllMatchedAttributes(String attrRegExp) throws Exception {
+    err("List of the keys matching " + attrRegExp + " :");
+    Object val = null;
+    Pattern p = Pattern.compile(attrRegExp);
+    for (ObjectName oname : hadoopObjectNames) {
+      err(">>>>>>>>jmx name: " + oname.getCanonicalKeyPropertyListString());
+      MBeanInfo mbinfo = mbsc.getMBeanInfo(oname);
+      MBeanAttributeInfo[] mbinfos = mbinfo.getAttributes();
+      for (MBeanAttributeInfo mb : mbinfos) {
+        if (p.matcher(mb.getName()).lookingAt()) {
+          val = mbsc.getAttribute(oname, mb.getName());
+          System.out.format(format, mb.getName(), (val == null) ? "" : val.toString());
+        }
       }
     }
   }

@@ -36,7 +36,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
-import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -44,6 +43,8 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -195,29 +196,33 @@ public class TestApplicationMasterLauncher {
 
     // request for containers
     int request = 2;
-    AllocateResponse ar =
-        am.allocate("h1", 1000, request, new ArrayList<ContainerId>());
-    Assert.assertTrue(ar.getAMCommand() == AMCommand.AM_RESYNC);
+    AllocateResponse ar = null;
+    try {
+      ar = am.allocate("h1", 1000, request, new ArrayList<ContainerId>());
+      Assert.fail();
+    } catch (ApplicationMasterNotRegisteredException e) {
+    }
 
     // kick the scheduler
     nm1.nodeHeartbeat(true);
-    AllocateResponse amrs =
-        am.allocate(new ArrayList<ResourceRequest>(),
+
+    AllocateResponse amrs = null;
+    try {
+        amrs = am.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>());
-    Assert.assertTrue(ar.getAMCommand() == AMCommand.AM_RESYNC);
+        Assert.fail();
+    } catch (ApplicationMasterNotRegisteredException e) {
+    }
 
     am.registerAppAttempt();
-    thrown = false;
     try {
-    am.registerAppAttempt(false);
-    }
-    catch (Exception e) {
+      am.registerAppAttempt(false);
+      Assert.fail();
+    } catch (Exception e) {
       Assert.assertEquals("Application Master is already registered : "
           + attempt.getAppAttemptId().getApplicationId(),
         e.getMessage());
-      thrown = true;
     }
-    Assert.assertTrue(thrown);
 
     // Simulate an AM that was disconnected and app attempt was removed
     // (responseMap does not contain attemptid)
@@ -226,9 +231,11 @@ public class TestApplicationMasterLauncher {
         ContainerState.COMPLETE);
     am.waitForState(RMAppAttemptState.FINISHED);
 
-    AllocateResponse amrs2 =
-        am.allocate(new ArrayList<ResourceRequest>(),
-            new ArrayList<ContainerId>());
-    Assert.assertTrue(amrs2.getAMCommand() == AMCommand.AM_SHUTDOWN);
+    try {
+      amrs = am.allocate(new ArrayList<ResourceRequest>(),
+        new ArrayList<ContainerId>());
+      Assert.fail();
+    } catch (ApplicationAttemptNotFoundException e) {
+    }
   }
 }

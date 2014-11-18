@@ -27,7 +27,12 @@ public class JobHistoryEvent extends AbstractEvent<EventType>{
   private final HistoryEvent historyEvent;
 
   public JobHistoryEvent(JobId jobID, HistoryEvent historyEvent) {
-    super(historyEvent.getEventType());
+    this(jobID, historyEvent, System.currentTimeMillis());
+  }
+
+  public JobHistoryEvent(JobId jobID, HistoryEvent historyEvent,
+          long timestamp) {
+    super(historyEvent.getEventType(), timestamp);
     this.jobID = jobID;
     this.historyEvent = historyEvent;
   }

@@ -42,7 +42,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -66,7 +66,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplicasMap.Reason;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -111,7 +110,7 @@ public class BlockManager {
   private final DatanodeManager datanodeManager;
   private final HeartbeatManager heartbeatManager;
   private final BlockTokenSecretManager blockTokenSecretManager;
-  
+
   private final PendingDataNodeMessages pendingDNMessages =
     new PendingDataNodeMessages();
 
@@ -121,6 +120,7 @@ public class BlockManager {
   private volatile long scheduledReplicationBlocksCount = 0L;
   private final AtomicLong excessBlocksCount = new AtomicLong(0L);
   private final AtomicLong postponedMisreplicatedBlocksCount = new AtomicLong(0L);
+  private final long startupDelayBlockDeletionInMs;
   
   /** Used by metrics */
   public long getPendingReplicationBlocksCount() {
@@ -141,6 +141,10 @@ public class BlockManager {
   /** Used by metrics */
   public long getPendingDeletionBlocksCount() {
     return invalidateBlocks.numBlocks();
+  }
+  /** Used by metrics */
+  public long getStartupDelayBlockDeletionInMs() {
+    return startupDelayBlockDeletionInMs;
   }
   /** Used by metrics */
   public long getExcessBlocksCount() {
@@ -255,30 +259,31 @@ public class BlockManager {
 
   /** for block replicas placement */
   private BlockPlacementPolicy blockplacement;
-  private final BlockStoragePolicy.Suite storagePolicySuite;
+  private final BlockStoragePolicySuite storagePolicySuite;
 
   /** Check whether name system is running before terminating */
   private boolean checkNSRunning = true;
-  
-  public BlockManager(final Namesystem namesystem, final FSClusterStats stats,
-      final Configuration conf) throws IOException {
+
+  public BlockManager(final Namesystem namesystem, final Configuration conf)
+    throws IOException {
     this.namesystem = namesystem;
     datanodeManager = new DatanodeManager(this, namesystem, conf);
     heartbeatManager = datanodeManager.getHeartbeatManager();
 
-    final long pendingPeriod = conf.getLong(
+    startupDelayBlockDeletionInMs = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY,
         DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_DEFAULT) * 1000L;
     invalidateBlocks = new InvalidateBlocks(
-        datanodeManager.blockInvalidateLimit, pendingPeriod);
+        datanodeManager.blockInvalidateLimit, startupDelayBlockDeletionInMs);
 
     // Compute the map capacity by allocating 2% of total memory
     blocksMap = new BlocksMap(
         LightWeightGSet.computeCapacity(2.0, "BlocksMap"));
     blockplacement = BlockPlacementPolicy.getInstance(
-        conf, stats, datanodeManager.getNetworkTopology(), 
-        datanodeManager.getHost2DatanodeMap());
-    storagePolicySuite = BlockStoragePolicy.readBlockStorageSuite(conf);
+      conf, datanodeManager.getFSClusterStats(),
+      datanodeManager.getNetworkTopology(),
+      datanodeManager.getHost2DatanodeMap());
+    storagePolicySuite = BlockStoragePolicySuite.createDefaultSuite();
     pendingReplications = new PendingReplicationBlocks(conf.getInt(
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
@@ -400,6 +405,14 @@ public class BlockManager {
 
   public BlockStoragePolicy getStoragePolicy(final String policyName) {
     return storagePolicySuite.getPolicy(policyName);
+  }
+
+  public BlockStoragePolicy getStoragePolicy(final byte policyId) {
+    return storagePolicySuite.getPolicy(policyId);
+  }
+
+  public BlockStoragePolicy[] getStoragePolicies() {
+    return storagePolicySuite.getAllPolicies();
   }
 
   public void setBlockPoolId(String blockPoolId) {
@@ -1054,6 +1067,19 @@ public class BlockManager {
     }
   }
 
+  /** Remove the blocks associated to the given DatanodeStorageInfo. */
+  void removeBlocksAssociatedTo(final DatanodeStorageInfo storageInfo) {
+    assert namesystem.hasWriteLock();
+    final Iterator<? extends Block> it = storageInfo.getBlockIterator();
+    DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
+    while(it.hasNext()) {
+      Block block = it.next();
+      removeStoredBlock(block, node);
+      invalidateBlocks.remove(node, block);
+    }
+    namesystem.checkSafeMode();
+  }
+
   /**
    * Adds block to list of blocks which will be invalidated on specified
    * datanode and log the operation
@@ -1485,7 +1511,7 @@ public class BlockManager {
   /** Choose target for getting additional datanodes for an existing pipeline. */
   public DatanodeStorageInfo[] chooseTarget4AdditionalDatanode(String src,
       int numAdditionalNodes,
-      DatanodeDescriptor clientnode,
+      Node clientnode,
       List<DatanodeStorageInfo> chosen,
       Set<Node> excludes,
       long blocksize,
@@ -1505,7 +1531,7 @@ public class BlockManager {
    *      Set, long, List, BlockStoragePolicy)
    */
   public DatanodeStorageInfo[] chooseTarget4NewBlock(final String src,
-      final int numOfReplicas, final DatanodeDescriptor client,
+      final int numOfReplicas, final Node client,
       final Set<Node> excludedNodes,
       final long blocksize,
       final List<String> favoredNodes,
@@ -1961,7 +1987,7 @@ public class BlockManager {
 
     // place a delimiter in the list which separates blocks 
     // that have been reported from those that have not
-    BlockInfo delimiter = new BlockInfo(new Block(), 1);
+    BlockInfo delimiter = new BlockInfo(new Block(), (short) 1);
     boolean added = storageInfo.addBlock(delimiter);
     assert added : "Delimiting block cannot be present in the node";
     int headIndex = 0; //currently the delimiter is in the head of the list
@@ -2099,8 +2125,8 @@ public class BlockManager {
     // Add replica if appropriate. If the replica was previously corrupt
     // but now okay, it might need to be updated.
     if (reportedState == ReplicaState.FINALIZED
-        && (!storedBlock.findDatanode(dn)
-        || corruptReplicas.isReplicaCorrupt(storedBlock, dn))) {
+        && (storedBlock.findStorageInfo(storageInfo) == -1 ||
+            corruptReplicas.isReplicaCorrupt(storedBlock, dn))) {
       toAdd.add(storedBlock);
     }
     return storedBlock;
@@ -3054,9 +3080,11 @@ public class BlockManager {
             + " is received from " + nodeID);
       }
     }
-    blockLog.debug("*BLOCK* NameNode.processIncrementalBlockReport: " + "from "
+    if (blockLog.isDebugEnabled()) {
+      blockLog.debug("*BLOCK* NameNode.processIncrementalBlockReport: " + "from "
         + nodeID + " receiving: " + receiving + ", " + " received: " + received
         + ", " + " deleted: " + deleted);
+    }
   }
 
   /**
@@ -3417,6 +3445,11 @@ public class BlockManager {
     return this.neededReplications.getCorruptBlockSize();
   }
 
+  public long getMissingReplOneBlocksCount() {
+    // not locking
+    return this.neededReplications.getCorruptReplOneBlockSize();
+  }
+
   public BlockInfo addBlockCollection(BlockInfo block, BlockCollection bc) {
     return blocksMap.addBlockCollection(block, bc);
   }
@@ -3478,6 +3511,13 @@ public class BlockManager {
   public Collection<DatanodeDescriptor> getCorruptReplicas(Block block) {
     return corruptReplicas.getNodes(block);
   }
+
+ /**
+  * Get reason for certain corrupted replicas for a given block and a given dn.
+  */
+ public String getCorruptReason(Block block, DatanodeDescriptor node) {
+   return corruptReplicas.getCorruptReason(block, node);
+ }
 
   /** @return the size of UnderReplicatedBlocks */
   public int numOfUnderReplicatedBlocks() {
@@ -3591,6 +3631,7 @@ public class BlockManager {
       this.block = block;
       this.bc = bc;
       this.srcNode = srcNode;
+      this.srcNode.incrementPendingReplicationWithoutTargets();
       this.containingNodes = containingNodes;
       this.liveReplicaStorages = liveReplicaStorages;
       this.additionalReplRequired = additionalReplRequired;
@@ -3599,12 +3640,16 @@ public class BlockManager {
     }
     
     private void chooseTargets(BlockPlacementPolicy blockplacement,
-        BlockStoragePolicy.Suite storagePolicySuite,
+        BlockStoragePolicySuite storagePolicySuite,
         Set<Node> excludedNodes) {
-      targets = blockplacement.chooseTarget(bc.getName(),
-          additionalReplRequired, srcNode, liveReplicaStorages, false,
-          excludedNodes, block.getNumBytes(),
-          storagePolicySuite.getPolicy(bc.getStoragePolicyID()));
+      try {
+        targets = blockplacement.chooseTarget(bc.getName(),
+            additionalReplRequired, srcNode, liveReplicaStorages, false,
+            excludedNodes, block.getNumBytes(),
+            storagePolicySuite.getPolicy(bc.getStoragePolicyID()));
+      } finally {
+        srcNode.decrementPendingReplicationWithoutTargets();
+      }
     }
   }
 

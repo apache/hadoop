@@ -24,6 +24,9 @@
        <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
      </Match>
      <Match>
+       <Bug pattern="SE_BAD_FIELD" />
+     </Match>
+     <Match>
        <Class name="~.*_jsp" />
        <Bug pattern="DLS_DEAD_LOCAL_STORE" />
      </Match>

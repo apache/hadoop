@@ -58,7 +58,7 @@ public class ApplicationHistoryStoreTestUtils {
       ApplicationAttemptId appAttemptId) throws IOException {
     store.applicationAttemptStarted(ApplicationAttemptStartData.newInstance(
       appAttemptId, appAttemptId.toString(), 0,
-      ContainerId.newInstance(appAttemptId, 1)));
+      ContainerId.newContainerId(appAttemptId, 1)));
   }
 
   protected void writeApplicationAttemptFinishData(
@@ -68,6 +68,7 @@ public class ApplicationHistoryStoreTestUtils {
       FinalApplicationStatus.UNDEFINED, YarnApplicationAttemptState.FINISHED));
   }
 
+  @SuppressWarnings("deprecation")
   protected void writeContainerStartData(ContainerId containerId)
       throws IOException {
     store.containerStarted(ContainerStartData.newInstance(containerId,

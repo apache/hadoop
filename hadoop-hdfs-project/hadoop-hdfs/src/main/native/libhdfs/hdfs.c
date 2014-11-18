@@ -3215,7 +3215,7 @@ static void hdfsFreeFileInfoEntry(hdfsFileInfo *hdfsFileInfo)
     free(hdfsFileInfo->mName);
     free(hdfsFileInfo->mOwner);
     free(hdfsFileInfo->mGroup);
-    memset(hdfsFileInfo, 0, sizeof(hdfsFileInfo));
+    memset(hdfsFileInfo, 0, sizeof(*hdfsFileInfo));
 }
 
 void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)

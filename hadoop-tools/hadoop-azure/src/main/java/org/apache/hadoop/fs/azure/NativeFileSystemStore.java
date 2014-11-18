@@ -53,6 +53,10 @@ interface NativeFileSystemStore {
   DataOutputStream storefile(String key, PermissionStatus permissionStatus)
       throws AzureException;
 
+  boolean isPageBlobKey(String key);
+
+  boolean isAtomicRenameKey(String key);
+
   void storeEmptyLinkFile(String key, String tempBlobKey,
       PermissionStatus permissionStatus) throws AzureException;
 
@@ -74,9 +78,12 @@ interface NativeFileSystemStore {
 
   void rename(String srcKey, String dstKey) throws IOException;
 
+  void rename(String srcKey, String dstKey, boolean acquireLease, SelfRenewingLease existingLease)
+      throws IOException;
+
   /**
    * Delete all keys with the given prefix. Used for testing.
-   * 
+   *
    * @throws IOException
    */
   @VisibleForTesting
@@ -84,15 +91,20 @@ interface NativeFileSystemStore {
 
   /**
    * Diagnostic method to dump state to the console.
-   * 
+   *
    * @throws IOException
    */
   void dump() throws IOException;
 
   void close();
 
-  void updateFolderLastModifiedTime(String key) throws AzureException;
-
-  void updateFolderLastModifiedTime(String key, Date lastModified)
+  void updateFolderLastModifiedTime(String key, SelfRenewingLease folderLease)
       throws AzureException;
+
+  void updateFolderLastModifiedTime(String key, Date lastModified,
+      SelfRenewingLease folderLease) throws AzureException;
+
+  void delete(String key, SelfRenewingLease lease) throws IOException;
+      
+  SelfRenewingLease acquireLease(String key) throws AzureException;
 }

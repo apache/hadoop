@@ -22,8 +22,9 @@ import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.Quota.Counts;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
@@ -125,12 +126,12 @@ public class INodeMap {
 
       @Override
       public byte getStoragePolicyID(){
-        return BlockStoragePolicy.ID_UNSPECIFIED;
+        return BlockStoragePolicySuite.ID_UNSPECIFIED;
       }
 
       @Override
       public byte getLocalStoragePolicyID() {
-        return BlockStoragePolicy.ID_UNSPECIFIED;
+        return BlockStoragePolicySuite.ID_UNSPECIFIED;
       }
     };
       

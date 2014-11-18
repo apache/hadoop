@@ -78,11 +78,36 @@ function renderHadoopDate(data, type, full) {
     if(data === '0'|| data === '-1') {
       return "N/A";
     }
-    return new Date(parseInt(data)).toUTCString();
+    var date = new Date(parseInt(data));
+    var monthList = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var weekdayList = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    var offsetMinutes = date.getTimezoneOffset();
+    var offset
+    if (offsetMinutes <= 0) {
+      offset = "+" + zeroPad(-offsetMinutes / 60 * 100, 4);
+    } else {
+      offset = "-" + zeroPad(offsetMinutes / 60 * 100, 4);
+    }
+
+    // EEE MMM dd HH:mm:ss Z yyyy
+    return weekdayList[date.getDay()] + " " +
+        monthList[date.getMonth()] + " " +
+        date.getDate() + " " +
+        zeroPad(date.getHours(), 2) + ":" +
+        zeroPad(date.getMinutes(), 2) + ":" +
+        zeroPad(date.getSeconds(), 2) + " " +
+        offset + " " +
+        date.getFullYear();
   }
   // 'sort', 'type' and undefined all just use the number
   // If date is 0, then for purposes of sorting it should be consider max_int
   return data === '0' ? '9007199254740992' : data;  
+}
+
+function zeroPad(n, width) {
+  n = n + '';
+  return n.length >= width ? n : new Array(width - n.length + 1).join('0') + n;
 }
 
 function renderHadoopElapsedTime(data, type, full) {

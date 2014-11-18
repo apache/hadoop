@@ -42,6 +42,7 @@ message DataTransferEncryptorMessageProto {
   required DataTransferEncryptorStatus status = 1;
   optional bytes payload = 2;
   optional string message = 3;
+  repeated CipherOptionProto cipherOption = 4;
 }
 
 message BaseHeaderProto {
@@ -115,6 +116,13 @@ message OpWriteBlockProto {
   optional CachingStrategyProto cachingStrategy = 10;
   optional StorageTypeProto storageType = 11 [default = DISK];
   repeated StorageTypeProto targetStorageTypes = 12;
+
+  /**
+   * Hint to the DataNode that the block can be allocated on transient
+   * storage i.e. memory and written to disk lazily. The DataNode is free
+   * to ignore this hint.
+   */
+  optional bool allowLazyPersist = 13 [default = false];
 }
   
 message OpTransferBlockProto {
@@ -212,7 +220,7 @@ enum Status {
   CHECKSUM_OK = 6;
   ERROR_UNSUPPORTED = 7;
   OOB_RESTART = 8;            // Quick restart
-  OOB_RESERVED1 = 9;          // Reserved
+  OOB_INTERRUPTED = 9;        // Interrupted
   OOB_RESERVED2 = 10;         // Reserved
   OOB_RESERVED3 = 11;         // Reserved
   IN_PROGRESS = 12;

@@ -83,6 +83,13 @@
           <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
@@ -96,7 +103,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <scope>compile</scope>
+      <scope>test</scope>
       <type>test-jar</type>
     </dependency>
 

@@ -53,9 +53,9 @@ public class TestStreamXmlMultipleRecords extends TestStreaming
   private Configuration conf = null;
 
   private String myPerlMapper =
-      "perl -n -a -e 'print join(\"\\n\", map { \"$_\\t1\" } @F), \"\\n\";'";
+      "perl -n -a -e 'print join(qq(\\n), map { qq($_\\t1) } @F), qq(\\n);'";
   private String myPerlReducer =
-      "perl -n -a -e '$freq{$F[0]}++; END { print \"is\\t$freq{is}\\n\"; }'";
+      "perl -n -a -e '$freq{$F[0]}++; END { print qq(is\\t$freq{is}\\n); }'";
 
   public TestStreamXmlMultipleRecords() throws IOException {
     super();

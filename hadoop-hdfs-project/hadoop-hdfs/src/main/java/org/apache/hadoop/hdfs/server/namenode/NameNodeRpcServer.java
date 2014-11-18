@@ -38,7 +38,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -72,6 +72,7 @@ import org.apache.hadoop.hdfs.inotify.EventsList;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
@@ -164,6 +165,11 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetUserMappingsProtocolService;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
+import org.apache.hadoop.tracing.SpanReceiverInfo;
+import org.apache.hadoop.tracing.TraceAdminPB;
+import org.apache.hadoop.tracing.TraceAdminPB.TraceAdminService;
+import org.apache.hadoop.tracing.TraceAdminProtocolPB;
+import org.apache.hadoop.tracing.TraceAdminProtocolServerSideTranslatorPB;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 
@@ -255,6 +261,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
         new HAServiceProtocolServerSideTranslatorPB(this);
     BlockingService haPbService = HAServiceProtocolService
         .newReflectiveBlockingService(haServiceProtocolXlator);
+
+    TraceAdminProtocolServerSideTranslatorPB traceAdminXlator =
+        new TraceAdminProtocolServerSideTranslatorPB(this);
+    BlockingService traceAdminService = TraceAdminService
+        .newReflectiveBlockingService(traceAdminXlator);
     
     WritableRpcEngine.ensureInitialized();
 
@@ -299,7 +310,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
           genericRefreshService, serviceRpcServer);
       DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class, 
           getUserMappingService, serviceRpcServer);
-  
+      DFSUtil.addPBProtocol(conf, TraceAdminProtocolPB.class,
+          traceAdminService, serviceRpcServer);
+
       // Update the address with the correct port
       InetSocketAddress listenAddr = serviceRpcServer.getListenerAddress();
       serviceRPCAddress = new InetSocketAddress(
@@ -345,6 +358,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         genericRefreshService, clientRpcServer);
     DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class, 
         getUserMappingService, clientRpcServer);
+    DFSUtil.addPBProtocol(conf, TraceAdminProtocolPB.class,
+        traceAdminService, clientRpcServer);
 
     // set service-level authorization security policy
     if (serviceAuthEnabled =
@@ -384,7 +399,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         DSQuotaExceededException.class,
         AclException.class,
         FSLimitException.PathComponentTooLongException.class,
-        FSLimitException.MaxDirectoryItemsExceededException.class);
+        FSLimitException.MaxDirectoryItemsExceededException.class,
+        UnresolvedPathException.class);
  }
 
   /** Allow access to the client RPC server for testing */
@@ -541,7 +557,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize, 
-      List<CipherSuite> cipherSuites)
+      CryptoProtocolVersion[] supportedVersions)
       throws IOException {
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
@@ -555,7 +571,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     HdfsFileStatus fileStatus = namesystem.startFile(src, new PermissionStatus(
         getRemoteUser().getShortUserName(), null, masked),
         clientName, clientMachine, flag.get(), createParent, replication,
-        blockSize, cipherSuites);
+        blockSize, supportedVersions);
     metrics.incrFilesCreated();
     metrics.incrCreateFileOps();
     return fileStatus;
@@ -590,6 +606,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void setStoragePolicy(String src, String policyName)
       throws IOException {
     namesystem.setStoragePolicy(src, policyName);
+  }
+
+  @Override
+  public BlockStoragePolicy[] getStoragePolicies() throws IOException {
+    return namesystem.getStoragePolicies();
   }
 
   @Override // ClientProtocol
@@ -939,7 +960,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
     case PREPARE:
       return namesystem.startRollingUpgrade();
     case FINALIZE:
-      return namesystem.finalizeRollingUpgrade();
+      namesystem.finalizeRollingUpgrade();
+      return null;
     default:
       throw new UnsupportedActionException(action + " is not yet supported.");
     }
@@ -1591,5 +1613,22 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
     return new EventsList(events, firstSeenTxid, maxSeenTxid, syncTxid);
   }
-}
 
+  @Override
+  public SpanReceiverInfo[] listSpanReceivers() throws IOException {
+    namesystem.checkSuperuserPrivilege();
+    return nn.spanReceiverHost.listSpanReceivers();
+  }
+
+  @Override
+  public long addSpanReceiver(SpanReceiverInfo info) throws IOException {
+    namesystem.checkSuperuserPrivilege();
+    return nn.spanReceiverHost.addSpanReceiver(info);
+  }
+
+  @Override
+  public void removeSpanReceiver(long id) throws IOException {
+    namesystem.checkSuperuserPrivilege();
+    nn.spanReceiverHost.removeSpanReceiver(id);
+  }
+}

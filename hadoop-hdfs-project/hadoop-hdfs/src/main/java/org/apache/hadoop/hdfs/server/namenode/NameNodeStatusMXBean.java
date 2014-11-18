@@ -54,4 +54,11 @@ public interface NameNodeStatusMXBean {
    * @return true, if security is enabled.
    */
   public boolean isSecurityEnabled();
+
+  /**
+   * Gets the most recent HA transition time in milliseconds from the epoch.
+   *
+   * @return the most recent HA transition time in milliseconds from the epoch.
+   */
+  public long getLastHATransitionTime();
 }

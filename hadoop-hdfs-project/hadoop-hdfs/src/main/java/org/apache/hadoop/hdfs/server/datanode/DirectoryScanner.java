@@ -83,6 +83,7 @@ public class DirectoryScanner implements Runnable {
     long missingBlockFile = 0;
     long missingMemoryBlocks = 0;
     long mismatchBlocks = 0;
+    long duplicateBlocks = 0;
     
     public Stats(String bpid) {
       this.bpid = bpid;
@@ -399,7 +400,7 @@ public class DirectoryScanner implements Runnable {
   /**
    * Reconcile differences between disk and in-memory blocks
    */
-  void reconcile() {
+  void reconcile() throws IOException {
     scan();
     for (Entry<String, LinkedList<ScanInfo>> entry : diffs.entrySet()) {
       String bpid = entry.getKey();
@@ -440,7 +441,7 @@ public class DirectoryScanner implements Runnable {
         int d = 0; // index for blockpoolReport
         int m = 0; // index for memReprot
         while (m < memReport.length && d < blockpoolReport.length) {
-          Block memBlock = memReport[Math.min(m, memReport.length - 1)];
+          FinalizedReplica memBlock = memReport[Math.min(m, memReport.length - 1)];
           ScanInfo info = blockpoolReport[Math.min(
               d, blockpoolReport.length - 1)];
           if (info.getBlockId() < memBlock.getBlockId()) {
@@ -468,9 +469,23 @@ public class DirectoryScanner implements Runnable {
             // or block file length is different than expected
             statsRecord.mismatchBlocks++;
             addDifference(diffRecord, statsRecord, info);
+          } else if (info.getBlockFile().compareTo(memBlock.getBlockFile()) != 0) {
+            // volumeMap record and on-disk files don't match.
+            statsRecord.duplicateBlocks++;
+            addDifference(diffRecord, statsRecord, info);
           }
           d++;
-          m++;
+
+          if (d < blockpoolReport.length) {
+            // There may be multiple on-disk records for the same block, don't increment
+            // the memory record pointer if so.
+            ScanInfo nextInfo = blockpoolReport[Math.min(d, blockpoolReport.length - 1)];
+            if (nextInfo.getBlockId() != info.blockId) {
+              ++m;
+            }
+          } else {
+            ++m;
+          }
         }
         while (m < memReport.length) {
           FinalizedReplica current = memReport[m++];

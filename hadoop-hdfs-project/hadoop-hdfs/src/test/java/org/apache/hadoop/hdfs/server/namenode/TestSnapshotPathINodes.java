@@ -215,7 +215,7 @@ public class TestSnapshotPathINodes {
     // snapshotRootIndex should be -1.
     assertSnapshot(nodesInPath, true, snapshot, -1);
     // Check the INode for file1 (snapshot file)
-    assertINodeFile(nodesInPath.getLastINode(), file1);
+    assertINodeFile(inodes[inodes.length - 1], file1);
     
     // Call getExistingPathINodes and request 2 INodes.
     nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, 2, false);
@@ -224,7 +224,7 @@ public class TestSnapshotPathINodes {
     // There should be two INodes in inodes: s1 and snapshot of file1. Thus the
     // SnapshotRootIndex should be 0.
     assertSnapshot(nodesInPath, true, snapshot, 0);
-    assertINodeFile(nodesInPath.getLastINode(), file1);
+    assertINodeFile(inodes[inodes.length - 1], file1);
     
     // Resolve the path "/TestSnapshot/sub1/.snapshot"  
     String dotSnapshotPath = sub1.toString() + "/.snapshot";
@@ -239,7 +239,7 @@ public class TestSnapshotPathINodes {
     // No SnapshotRoot dir is included in the resolved inodes  
     assertSnapshot(nodesInPath, true, snapshot, -1);
     // The last INode should be the INode for sub1
-    final INode last = nodesInPath.getLastINode();
+    final INode last = inodes[inodes.length - 1];
     assertEquals(last.getFullPathName(), sub1.toString());
     assertFalse(last instanceof INodeFile);
     

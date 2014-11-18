@@ -40,9 +40,16 @@ public class GETATTR3Response extends NFS3Response {
     this.postOpAttr = postOpAttr;
   }
   
+  public static GETATTR3Response deserialize(XDR xdr) {
+    int status = xdr.readInt();
+    Nfs3FileAttributes attr = (status == Nfs3Status.NFS3_OK) ? Nfs3FileAttributes
+        .deserialize(xdr) : new Nfs3FileAttributes();
+    return new GETATTR3Response(status, attr);
+  }
+
   @Override
-  public XDR writeHeaderAndResponse(XDR out, int xid, Verifier verifier) {
-    super.writeHeaderAndResponse(out, xid, verifier);
+  public XDR serialize(XDR out, int xid, Verifier verifier) {
+    super.serialize(out, xid, verifier);
     if (getStatus() == Nfs3Status.NFS3_OK) {
       postOpAttr.serialize(out);
     }

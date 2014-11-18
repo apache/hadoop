@@ -148,14 +148,16 @@ public class FSImageSerialization {
     int numLocs = in.readInt();
     assert numLocs == 0 : "Unexpected block locations";
 
+    // Images in the pre-protobuf format will not have the lazyPersist flag,
+    // so it is safe to pass false always.
     INodeFile file = new INodeFile(inodeId, name, perm, modificationTime,
-        modificationTime, blocks, blockReplication, preferredBlockSize, (byte)0);
+        modificationTime, blocks, blockReplication, preferredBlockSize);
     file.toUnderConstruction(clientName, clientMachine);
     return file;
   }
 
   // Helper function that writes an INodeUnderConstruction
-  // into the input stream
+  // into the output stream
   //
   static void writeINodeUnderConstruction(DataOutputStream out, INodeFile cons,
       String path) throws IOException {
@@ -383,6 +385,12 @@ public class FSImageSerialization {
     uBoolean.write(out);
   }
   
+  /** write the byte value */
+  static void writeByte(byte value, DataOutputStream out)
+      throws IOException {
+    out.write(value);
+  }
+
   /** read the int value */
   static int readInt(DataInput in) throws IOException {
     IntWritable uInt = TL_DATA.get().U_INT;
@@ -420,6 +428,10 @@ public class FSImageSerialization {
     byte[] bytes = new byte[len];
     System.arraycopy(ustr.getBytes(), 0, bytes, 0, len);
     return bytes;
+  }
+
+  public static byte readByte(DataInput in) throws IOException {
+    return in.readByte();
   }
 
   /**

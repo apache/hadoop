@@ -122,11 +122,11 @@ int main(int argc, char **argv) {
         currentPos = -1;
         if ((currentPos = hdfsTell(fs, writeFile)) == -1) {
             fprintf(stderr, 
-                    "Failed to get current file position correctly! Got %ld!\n",
+                    "Failed to get current file position correctly! Got %" PRId64 "!\n",
                     currentPos);
             exit(-1);
         }
-        fprintf(stderr, "Current position: %ld\n", currentPos);
+        fprintf(stderr, "Current position: %" PRId64 "\n", currentPos);
 
         if (hdfsFlush(fs, writeFile)) {
             fprintf(stderr, "Failed to 'flush' %s\n", writePath); 
@@ -177,11 +177,11 @@ int main(int argc, char **argv) {
         currentPos = -1;
         if((currentPos = hdfsTell(fs, readFile)) != seekPos) {
             fprintf(stderr, 
-                    "Failed to get current file position correctly! Got %ld!\n", 
+                    "Failed to get current file position correctly! Got %" PRId64 "!\n",
                     currentPos);
             exit(-1);
         }
-        fprintf(stderr, "Current position: %ld\n", currentPos);
+        fprintf(stderr, "Current position: %" PRId64 "\n", currentPos);
 
         if (!hdfsFileUsesDirectRead(readFile)) {
           fprintf(stderr, "Direct read support incorrectly not detected "
@@ -283,9 +283,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "hdfsGetWorkingDirectory: %s\n", ((resp = hdfsGetWorkingDirectory(fs, buffer2, sizeof(buffer2))) != 0 ? buffer2 : "Failed!"));
         totalResult += (resp ? 0 : 1);
 
-        fprintf(stderr, "hdfsGetDefaultBlockSize: %ld\n", hdfsGetDefaultBlockSize(fs));
-        fprintf(stderr, "hdfsGetCapacity: %ld\n", hdfsGetCapacity(fs));
-        fprintf(stderr, "hdfsGetUsed: %ld\n", hdfsGetUsed(fs));
+        fprintf(stderr, "hdfsGetDefaultBlockSize: %" PRId64 "\n", hdfsGetDefaultBlockSize(fs));
+        fprintf(stderr, "hdfsGetCapacity: %" PRId64 "\n", hdfsGetCapacity(fs));
+        fprintf(stderr, "hdfsGetUsed: %" PRId64 "\n", hdfsGetUsed(fs));
 
         fileInfo = NULL;
         if((fileInfo = hdfsGetPathInfo(fs, slashTmp)) != NULL) {
@@ -293,8 +293,8 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Name: %s, ", fileInfo->mName);
             fprintf(stderr, "Type: %c, ", (char)(fileInfo->mKind));
             fprintf(stderr, "Replication: %d, ", fileInfo->mReplication);
-            fprintf(stderr, "BlockSize: %ld, ", fileInfo->mBlockSize);
-            fprintf(stderr, "Size: %ld, ", fileInfo->mSize);
+            fprintf(stderr, "BlockSize: %" PRId64 ", ", fileInfo->mBlockSize);
+            fprintf(stderr, "Size: %" PRId64 ", ", fileInfo->mSize);
             fprintf(stderr, "LastMod: %s", ctime(&fileInfo->mLastMod)); 
             fprintf(stderr, "Owner: %s, ", fileInfo->mOwner);
             fprintf(stderr, "Group: %s, ", fileInfo->mGroup);
@@ -312,8 +312,8 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "Name: %s, ", fileList[i].mName);
                 fprintf(stderr, "Type: %c, ", (char)fileList[i].mKind);
                 fprintf(stderr, "Replication: %d, ", fileList[i].mReplication);
-                fprintf(stderr, "BlockSize: %ld, ", fileList[i].mBlockSize);
-                fprintf(stderr, "Size: %ld, ", fileList[i].mSize);
+                fprintf(stderr, "BlockSize: %" PRId64 ", ", fileList[i].mBlockSize);
+                fprintf(stderr, "Size: %" PRId64 ", ", fileList[i].mSize);
                 fprintf(stderr, "LastMod: %s", ctime(&fileList[i].mLastMod));
                 fprintf(stderr, "Owner: %s, ", fileList[i].mOwner);
                 fprintf(stderr, "Group: %s, ", fileList[i].mGroup);

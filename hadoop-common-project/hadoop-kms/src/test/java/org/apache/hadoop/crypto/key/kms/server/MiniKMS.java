@@ -22,6 +22,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSRESTConstants;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.ssl.SslSocketConnectorSecure;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.security.SslSocketConnector;
@@ -43,12 +44,12 @@ import java.util.UUID;
 
 public class MiniKMS {
 
-  private static Server createJettyServer(String keyStore, String password) {
+  private static Server createJettyServer(String keyStore, String password, int inPort) {
     try {
       boolean ssl = keyStore != null;
       InetAddress localhost = InetAddress.getByName("localhost");
       String host = "localhost";
-      ServerSocket ss = new ServerSocket(0, 50, localhost);
+      ServerSocket ss = new ServerSocket((inPort < 0) ? 0 : inPort, 50, localhost);
       int port = ss.getLocalPort();
       ss.close();
       Server server = new Server(0);
@@ -56,7 +57,7 @@ public class MiniKMS {
         server.getConnectors()[0].setHost(host);
         server.getConnectors()[0].setPort(port);
       } else {
-        SslSocketConnector c = new SslSocketConnector();
+        SslSocketConnector c = new SslSocketConnectorSecure();
         c.setHost(host);
         c.setPort(port);
         c.setNeedClientAuth(false);
@@ -74,7 +75,7 @@ public class MiniKMS {
 
   private static URL getJettyURL(Server server) {
     boolean ssl = server.getConnectors()[0].getClass()
-        == SslSocketConnector.class;
+        == SslSocketConnectorSecure.class;
     try {
       String scheme = (ssl) ? "https" : "http";
       return new URL(scheme + "://" +
@@ -91,6 +92,7 @@ public class MiniKMS {
     private String log4jConfFile;
     private File keyStoreFile;
     private String keyStorePassword;
+    private int inPort = -1;
 
     public Builder() {
       kmsConfDir = new File("target/test-classes").getAbsoluteFile();
@@ -111,6 +113,12 @@ public class MiniKMS {
       return this;
     }
 
+    public Builder setPort(int port) {
+      Preconditions.checkArgument(port > 0, "input port must be greater than 0");
+      this.inPort = port;
+      return this;
+    }
+
     public Builder setSslConf(File keyStoreFile, String keyStorePassword) {
       Preconditions.checkNotNull(keyStoreFile, "keystore file is NULL");
       Preconditions.checkNotNull(keyStorePassword, "keystore password is NULL");
@@ -126,7 +134,7 @@ public class MiniKMS {
           "KMS conf dir does not exist");
       return new MiniKMS(kmsConfDir.getAbsolutePath(), log4jConfFile,
           (keyStoreFile != null) ? keyStoreFile.getAbsolutePath() : null,
-          keyStorePassword);
+          keyStorePassword, inPort);
     }
   }
 
@@ -135,14 +143,16 @@ public class MiniKMS {
   private String keyStore;
   private String keyStorePassword;
   private Server jetty;
+  private int inPort;
   private URL kmsURL;
 
   public MiniKMS(String kmsConfDir, String log4ConfFile, String keyStore,
-      String password) {
+      String password, int inPort) {
     this.kmsConfDir = kmsConfDir;
     this.log4jConfFile = log4ConfFile;
     this.keyStore = keyStore;
     this.keyStorePassword = password;
+    this.inPort = inPort;
   }
 
   public void start() throws Exception {
@@ -174,7 +184,7 @@ public class MiniKMS {
       writer.close();
     }
     System.setProperty("log4j.configuration", log4jConfFile);
-    jetty = createJettyServer(keyStore, keyStorePassword);
+    jetty = createJettyServer(keyStore, keyStorePassword, inPort);
 
     // we need to do a special handling for MiniKMS to work when in a dir and
     // when in a JAR in the classpath thanks to Jetty way of handling of webapps

@@ -283,6 +283,8 @@ public class TestAuthenticationFilter {
     filter = new AuthenticationFilter();
     try {
       FilterConfig config = Mockito.mock(FilterConfig.class);
+      ServletContext sc = Mockito.mock(ServletContext.class);
+      Mockito.when(config.getServletContext()).thenReturn(sc);
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn("kerberos");
       Mockito.when(config.getInitParameterNames()).thenReturn(
         new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
@@ -535,11 +537,11 @@ public class TestAuthenticationFilter {
         }
       ).when(chain).doFilter(Mockito.<ServletRequest>anyObject(), Mockito.<ServletResponse>anyObject());
 
+      Mockito.when(response.containsHeader("WWW-Authenticate")).thenReturn(true);
       filter.doFilter(request, response, chain);
 
       Mockito.verify(response).sendError(
           HttpServletResponse.SC_UNAUTHORIZED, "Authentication required");
-      Mockito.verify(response).setHeader("WWW-Authenticate", "dummyauth");
     } finally {
       filter.destroy();
     }
@@ -850,6 +852,7 @@ public class TestAuthenticationFilter {
       Mockito.when(request.getCookies()).thenReturn(new Cookie[]{cookie});
 
       HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+      Mockito.when(response.containsHeader("WWW-Authenticate")).thenReturn(true);
       FilterChain chain = Mockito.mock(FilterChain.class);
 
       verifyUnauthorized(filter, request, response, chain);
@@ -928,6 +931,7 @@ public class TestAuthenticationFilter {
       Mockito.when(request.getCookies()).thenReturn(new Cookie[]{cookie});
 
       HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+      Mockito.when(response.containsHeader("WWW-Authenticate")).thenReturn(true);
       FilterChain chain = Mockito.mock(FilterChain.class);
 
       verifyUnauthorized(filter, request, response, chain);

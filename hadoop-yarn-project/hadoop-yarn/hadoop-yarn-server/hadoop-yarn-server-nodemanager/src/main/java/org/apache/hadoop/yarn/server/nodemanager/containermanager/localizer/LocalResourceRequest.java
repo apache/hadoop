@@ -152,6 +152,17 @@ public class LocalResourceRequest
   }
   
   @Override
+  public boolean getShouldBeUploadedToSharedCache() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void setShouldBeUploadedToSharedCache(
+      boolean shouldBeUploadedToSharedCache) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void setResource(URL resource) {
     throw new UnsupportedOperationException();
   }

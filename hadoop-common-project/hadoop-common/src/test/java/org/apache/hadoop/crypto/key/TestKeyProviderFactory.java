@@ -21,18 +21,19 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
-import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,23 +41,25 @@ import org.junit.Test;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
 public class TestKeyProviderFactory {
 
-  private static File tmpDir;
+  private FileSystemTestHelper fsHelper;
+  private File testRootDir;
 
   @Before
   public void setup() {
-    tmpDir = new File(System.getProperty("test.build.data", "target"),
-        UUID.randomUUID().toString());
-    tmpDir.mkdirs();
+    fsHelper = new FileSystemTestHelper();
+    String testRoot = fsHelper.getTestRootDir();
+    testRootDir = new File(testRoot).getAbsoluteFile();
   }
 
   @Test
   public void testFactory() throws Exception {
     Configuration conf = new Configuration();
     final String userUri = UserProvider.SCHEME_NAME + ":///";
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     final String jksUri = JavaKeyStoreProvider.SCHEME_NAME +
         "://file" + jksPath.toUri().toString();
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH,
@@ -171,6 +174,7 @@ public class TestKeyProviderFactory {
       assertEquals("Key no-such-key not found", e.getMessage());
     }
     provider.flush();
+
     // get a new instance of the provider to ensure it was saved correctly
     provider = KeyProviderFactory.getProviders(conf).get(0);
     assertArrayEquals(new byte[]{2},
@@ -207,14 +211,58 @@ public class TestKeyProviderFactory {
   @Test
   public void testJksProvider() throws Exception {
     Configuration conf = new Configuration();
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     final String ourUrl =
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
 
-    File file = new File(tmpDir, "test.jks");
+    File file = new File(testRootDir, "test.jks");
     file.delete();
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl);
     checkSpecificProvider(conf, ourUrl);
+
+    // START : Test flush error by failure injection
+    conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl.replace(
+        JavaKeyStoreProvider.SCHEME_NAME,
+        FailureInjectingJavaKeyStoreProvider.SCHEME_NAME));
+    // get a new instance of the provider to ensure it was saved correctly
+    KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+    // inject failure during keystore write
+    FailureInjectingJavaKeyStoreProvider fProvider =
+        (FailureInjectingJavaKeyStoreProvider) provider;
+    fProvider.setWriteFail(true);
+    provider.createKey("key5", new byte[]{1},
+        KeyProvider.options(conf).setBitLength(8));
+    assertNotNull(provider.getCurrentKey("key5"));
+    try {
+      provider.flush();
+      Assert.fail("Should not succeed");
+    } catch (Exception e) {
+      // Ignore
+    }
+    // SHould be reset to pre-flush state
+    Assert.assertNull(provider.getCurrentKey("key5"));
+    
+    // Un-inject last failure and
+    // inject failure during keystore backup
+    fProvider.setWriteFail(false);
+    fProvider.setBackupFail(true);
+    provider.createKey("key6", new byte[]{1},
+        KeyProvider.options(conf).setBitLength(8));
+    assertNotNull(provider.getCurrentKey("key6"));
+    try {
+      provider.flush();
+      Assert.fail("Should not succeed");
+    } catch (Exception e) {
+      // Ignore
+    }
+    // SHould be reset to pre-flush state
+    Assert.assertNull(provider.getCurrentKey("key6"));
+    // END : Test flush error by failure injection
+
+    conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl.replace(
+        FailureInjectingJavaKeyStoreProvider.SCHEME_NAME,
+        JavaKeyStoreProvider.SCHEME_NAME));
+
     Path path = ProviderUtils.unnestUri(new URI(ourUrl));
     FileSystem fs = path.getFileSystem(conf);
     FileStatus s = fs.getFileStatus(path);
@@ -227,7 +275,7 @@ public class TestKeyProviderFactory {
     file.delete();
     file.createNewFile();
     assertTrue(oldFile.exists());
-    KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+    provider = KeyProviderFactory.getProviders(conf).get(0);
     assertTrue(file.exists());
     assertTrue(oldFile + "should be deleted", !oldFile.exists());
     verifyAfterReload(file, provider);
@@ -281,6 +329,16 @@ public class TestKeyProviderFactory {
     // check permission retention after explicit change
     fs.setPermission(path, new FsPermission("777"));
     checkPermissionRetention(conf, ourUrl, path);
+
+    // Check that an uppercase keyname results in an error
+    provider = KeyProviderFactory.getProviders(conf).get(0);
+    try {
+      provider.createKey("UPPERCASE", KeyProvider.options(conf));
+      Assert.fail("Expected failure on creating key name with uppercase " +
+          "characters");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("Uppercase key names", e);
+    }
   }
 
   private void verifyAfterReload(File file, KeyProvider provider)
@@ -318,10 +376,10 @@ public class TestKeyProviderFactory {
   @Test
   public void testJksProviderPasswordViaConfig() throws Exception {
     Configuration conf = new Configuration();
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     final String ourUrl =
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri();
-    File file = new File(tmpDir, "test.jks");
+    File file = new File(testRootDir, "test.jks");
     file.delete();
     try {
       conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl);
@@ -362,7 +420,7 @@ public class TestKeyProviderFactory {
   @Test
   public void testGetProviderViaURI() throws Exception {
     Configuration conf = new Configuration(false);
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    final Path jksPath = new Path(testRootDir.toString(), "test.jks");
     URI uri = new URI(JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
     KeyProvider kp = KeyProviderFactory.get(uri, conf);
     Assert.assertNotNull(kp);

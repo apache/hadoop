@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,19 +27,20 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
-import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.*;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.log4j.Level;
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
@@ -80,6 +80,7 @@ public class TestRbwSpaceReservation {
 
   static {
     ((Log4JLogger) FsDatasetImpl.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger) DataNode.LOG).getLogger().setLevel(Level.ALL);
   }
 
   private void startCluster(int blockSize, long perVolumeCapacity) throws IOException {
@@ -186,6 +187,44 @@ public class TestRbwSpaceReservation {
       throws IOException, InterruptedException {
     // Same test as previous one, but with a non-default block size.
     createFileAndTestSpaceReservation(GenericTestUtils.getMethodName(), BLOCK_SIZE * 2);
+  }
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
+
+  @Test (timeout=300000)
+  public void testWithLimitedSpace() throws IOException {
+    // Cluster with just enough space for a full block + meta.
+    startCluster(BLOCK_SIZE, 2 * BLOCK_SIZE - 1);
+    final String methodName = GenericTestUtils.getMethodName();
+    Path file1 = new Path("/" + methodName + ".01.dat");
+    Path file2 = new Path("/" + methodName + ".02.dat");
+
+    // Create two files.
+    FSDataOutputStream os1 = null, os2 = null;
+
+    try {
+      os1 = fs.create(file1);
+      os2 = fs.create(file2);
+
+      // Write one byte to the first file.
+      LOG.info("arpit: writing first file");
+      byte[] data = new byte[1];
+      os1.write(data);
+      os1.hsync();
+
+      // Try to write one byte to the second file.
+      // The block allocation must fail.
+      thrown.expect(RemoteException.class);
+      os2.write(data);
+      os2.hsync();
+    } finally {
+      if (os1 != null) {
+        os1.close();
+      }
+
+      // os2.close() will fail as no block was allocated.
+    }
   }
 
   /**

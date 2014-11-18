@@ -243,7 +243,7 @@ public class ZlibCompressor implements Compressor {
    * @param conf Configuration storing new settings
    */
   @Override
-  public synchronized void reinit(Configuration conf) {
+  public void reinit(Configuration conf) {
     reset();
     if (conf == null) {
       return;
@@ -260,7 +260,7 @@ public class ZlibCompressor implements Compressor {
   }
 
   @Override
-  public synchronized void setInput(byte[] b, int off, int len) {
+  public void setInput(byte[] b, int off, int len) {
     if (b== null) {
       throw new NullPointerException();
     }
@@ -280,7 +280,7 @@ public class ZlibCompressor implements Compressor {
   }
   
   //copy enough data from userBuf to uncompressedDirectBuf
-  synchronized void setInputFromSavedData() {
+  void setInputFromSavedData() {
     int len = Math.min(userBufLen, uncompressedDirectBuf.remaining());
     ((ByteBuffer)uncompressedDirectBuf).put(userBuf, userBufOff, len);
     userBufLen -= len;
@@ -289,7 +289,7 @@ public class ZlibCompressor implements Compressor {
   }
 
   @Override
-  public synchronized void setDictionary(byte[] b, int off, int len) {
+  public void setDictionary(byte[] b, int off, int len) {
     if (stream == 0 || b == null) {
       throw new NullPointerException();
     }
@@ -300,7 +300,7 @@ public class ZlibCompressor implements Compressor {
   }
 
   @Override
-  public synchronized boolean needsInput() {
+  public boolean needsInput() {
     // Consume remaining compressed data?
     if (compressedDirectBuf.remaining() > 0) {
       return false;
@@ -329,19 +329,19 @@ public class ZlibCompressor implements Compressor {
   }
   
   @Override
-  public synchronized void finish() {
+  public void finish() {
     finish = true;
   }
   
   @Override
-  public synchronized boolean finished() {
+  public boolean finished() {
     // Check if 'zlib' says its 'finished' and
     // all compressed data has been consumed
     return (finished && compressedDirectBuf.remaining() == 0);
   }
 
   @Override
-  public synchronized int compress(byte[] b, int off, int len) 
+  public int compress(byte[] b, int off, int len) 
     throws IOException {
     if (b == null) {
       throw new NullPointerException();
@@ -392,7 +392,7 @@ public class ZlibCompressor implements Compressor {
    * @return the total (non-negative) number of compressed bytes output so far
    */
   @Override
-  public synchronized long getBytesWritten() {
+  public long getBytesWritten() {
     checkStream();
     return getBytesWritten(stream);
   }
@@ -403,13 +403,13 @@ public class ZlibCompressor implements Compressor {
    * @return the total (non-negative) number of uncompressed bytes input so far
    */
   @Override
-  public synchronized long getBytesRead() {
+  public long getBytesRead() {
     checkStream();
     return getBytesRead(stream);
   }
 
   @Override
-  public synchronized void reset() {
+  public void reset() {
     checkStream();
     reset(stream);
     finish = false;
@@ -423,7 +423,7 @@ public class ZlibCompressor implements Compressor {
   }
   
   @Override
-  public synchronized void end() {
+  public void end() {
     if (stream != 0) {
       end(stream);
       stream = 0;

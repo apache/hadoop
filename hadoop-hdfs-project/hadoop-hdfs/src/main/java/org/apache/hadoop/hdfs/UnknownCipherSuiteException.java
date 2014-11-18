@@ -23,15 +23,12 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * Thrown when an unknown cipher suite is encountered.
+ */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Stable
 public class UnknownCipherSuiteException extends IOException {
-  private static final long serialVersionUID = 8957192l;
-
-  public UnknownCipherSuiteException() {
-    super();
-  }
-
   public UnknownCipherSuiteException(String msg) {
     super(msg);
   }

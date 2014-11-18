@@ -18,7 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.StringTokenizer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,11 +39,16 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-public class CapacitySchedulerConfiguration extends Configuration {
+import com.google.common.collect.ImmutableSet;
+
+public class CapacitySchedulerConfiguration extends ReservationSchedulerConfiguration {
 
   private static final Log LOG = 
     LogFactory.getLog(CapacitySchedulerConfiguration.class);
@@ -81,6 +94,19 @@ public class CapacitySchedulerConfiguration extends Configuration {
 
   @Private
   public static final String STATE = "state";
+  
+  @Private
+  public static final String ACCESSIBLE_NODE_LABELS = "accessible-node-labels";
+  
+  @Private
+  public static final String DEFAULT_NODE_LABEL_EXPRESSION =
+      "default-node-label-expression";
+
+  public static final String RESERVE_CONT_LOOK_ALL_NODES = PREFIX
+      + "reservations-continue-look-all-nodes";
+  
+  @Private
+  public static final boolean DEFAULT_RESERVE_CONT_LOOK_ALL_NODES = true;
 
   @Private
   public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
@@ -183,6 +209,41 @@ public class CapacitySchedulerConfiguration extends Configuration {
     }
   }
   
+  @Private
+  public static final String AVERAGE_CAPACITY = "average-capacity";
+
+  @Private
+  public static final String IS_RESERVABLE = "reservable";
+
+  @Private
+  public static final String RESERVATION_WINDOW = "reservation-window";
+
+  @Private
+  public static final String INSTANTANEOUS_MAX_CAPACITY =
+      "instantaneous-max-capacity";
+
+  @Private
+  public static final String RESERVATION_ADMISSION_POLICY =
+      "reservation-policy";
+
+  @Private
+  public static final String RESERVATION_AGENT_NAME = "reservation-agent";
+
+  @Private
+  public static final String RESERVATION_SHOW_RESERVATION_AS_QUEUE =
+      "show-reservations-as-queues";
+
+  @Private
+  public static final String RESERVATION_PLANNER_NAME = "reservation-planner";
+
+  @Private
+  public static final String RESERVATION_MOVE_ON_EXPIRY =
+      "reservation-move-on-expiry";
+
+  @Private
+  public static final String RESERVATION_ENFORCEMENT_WINDOW =
+      "reservation-enforcement-window";
+
   public CapacitySchedulerConfiguration() {
     this(new Configuration());
   }
@@ -202,6 +263,10 @@ public class CapacitySchedulerConfiguration extends Configuration {
   private String getQueuePrefix(String queue) {
     String queueName = PREFIX + queue + DOT;
     return queueName;
+  }
+  
+  private String getNodeLabelPrefix(String queue, String label) {
+    return getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label + DOT;
   }
   
   public int getMaximumSystemApplications() {
@@ -279,6 +344,15 @@ public class CapacitySchedulerConfiguration extends Configuration {
         ", maxCapacity=" + maxCapacity);
   }
   
+  public void setCapacityByLabel(String queue, String label, float capacity) {
+    setFloat(getNodeLabelPrefix(queue, label) + CAPACITY, capacity);
+  }
+  
+  public void setMaximumCapacityByLabel(String queue, String label,
+      float capacity) {
+    setFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY, capacity);
+  }
+  
   public int getUserLimit(String queue) {
     int userLimit = getInt(getQueuePrefix(queue) + USER_LIMIT,
         DEFAULT_USER_LIMIT);
@@ -306,6 +380,126 @@ public class CapacitySchedulerConfiguration extends Configuration {
     String state = get(getQueuePrefix(queue) + STATE);
     return (state != null) ? 
         QueueState.valueOf(state.toUpperCase()) : QueueState.RUNNING;
+  }
+  
+  public void setAccessibleNodeLabels(String queue, Set<String> labels) {
+    if (labels == null) {
+      return;
+    }
+    String str = StringUtils.join(",", labels);
+    set(getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS, str);
+  }
+  
+  public Set<String> getAccessibleNodeLabels(String queue) {
+    String accessibleLabelStr =
+        get(getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS);
+
+    // When accessible-label is null, 
+    if (accessibleLabelStr == null) {
+      // Only return null when queue is not ROOT
+      if (!queue.equals(ROOT)) {
+        return null;
+      }
+    } else {
+      // print a warning when accessibleNodeLabel specified in config and queue
+      // is ROOT
+      if (queue.equals(ROOT)) {
+        LOG.warn("Accessible node labels for root queue will be ignored,"
+            + " it will be automatically set to \"*\".");
+      }
+    }
+
+    // always return ANY for queue root
+    if (queue.equals(ROOT)) {
+      return ImmutableSet.of(RMNodeLabelsManager.ANY);
+    }
+
+    // In other cases, split the accessibleLabelStr by ","
+    Set<String> set = new HashSet<String>();
+    for (String str : accessibleLabelStr.split(",")) {
+      if (!str.trim().isEmpty()) {
+        set.add(str.trim());
+      }
+    }
+    
+    // if labels contains "*", only keep ANY behind
+    if (set.contains(RMNodeLabelsManager.ANY)) {
+      set.clear();
+      set.add(RMNodeLabelsManager.ANY);
+    }
+    return Collections.unmodifiableSet(set);
+  }
+  
+  public Map<String, Float> getNodeLabelCapacities(String queue,
+      Set<String> labels, RMNodeLabelsManager mgr) {
+    Map<String, Float> nodeLabelCapacities = new HashMap<String, Float>();
+    
+    if (labels == null) {
+      return nodeLabelCapacities;
+    }
+
+    for (String label : labels.contains(CommonNodeLabelsManager.ANY) ? mgr
+        .getClusterNodeLabels() : labels) {
+      String capacityPropertyName = getNodeLabelPrefix(queue, label) + CAPACITY;
+      float capacity = getFloat(capacityPropertyName, 0f);
+      if (capacity < MINIMUM_CAPACITY_VALUE
+          || capacity > MAXIMUM_CAPACITY_VALUE) {
+        throw new IllegalArgumentException("Illegal capacity of " + capacity
+            + " for node-label=" + label + " in queue=" + queue
+            + ", valid capacity should in range of [0, 100].");
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("CSConf - getCapacityOfLabel: prefix="
+            + getNodeLabelPrefix(queue, label) + ", capacity=" + capacity);
+      }
+      
+      nodeLabelCapacities.put(label, capacity / 100f);
+    }
+    return nodeLabelCapacities;
+  }
+  
+  public Map<String, Float> getMaximumNodeLabelCapacities(String queue,
+      Set<String> labels, RMNodeLabelsManager mgr) {
+    Map<String, Float> maximumNodeLabelCapacities = new HashMap<String, Float>();
+    if (labels == null) {
+      return maximumNodeLabelCapacities;
+    }
+
+    for (String label : labels.contains(CommonNodeLabelsManager.ANY) ? mgr
+        .getClusterNodeLabels() : labels) {
+      float maxCapacity =
+          getFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY,
+              100f);
+      if (maxCapacity < MINIMUM_CAPACITY_VALUE
+          || maxCapacity > MAXIMUM_CAPACITY_VALUE) {
+        throw new IllegalArgumentException("Illegal " + "capacity of "
+            + maxCapacity + " for label=" + label + " in queue=" + queue);
+      }
+      LOG.debug("CSConf - getCapacityOfLabel: prefix="
+          + getNodeLabelPrefix(queue, label) + ", capacity=" + maxCapacity);
+      
+      maximumNodeLabelCapacities.put(label, maxCapacity / 100f);
+    }
+    return maximumNodeLabelCapacities;
+  }
+  
+  public String getDefaultNodeLabelExpression(String queue) {
+    return get(getQueuePrefix(queue) + DEFAULT_NODE_LABEL_EXPRESSION);
+  }
+  
+  public void setDefaultNodeLabelExpression(String queue, String exp) {
+    set(getQueuePrefix(queue) + DEFAULT_NODE_LABEL_EXPRESSION, exp);
+  }
+
+  /*
+   * Returns whether we should continue to look at all heart beating nodes even
+   * after the reservation limit was hit. The node heart beating in could
+   * satisfy the request thus could be a better pick then waiting for the
+   * reservation to be fullfilled.  This config is refreshable.
+   */
+  public boolean getReservationContinueLook() {
+    return getBoolean(RESERVE_CONT_LOOK_ALL_NODES,
+        DEFAULT_RESERVE_CONT_LOOK_ALL_NODES);
   }
   
   private static String getAclKey(QueueACL acl) {
@@ -492,5 +686,112 @@ public class CapacitySchedulerConfiguration extends Configuration {
     }
 
     return mappings;
+  }
+
+  public boolean isReservable(String queue) {
+    boolean isReservable =
+        getBoolean(getQueuePrefix(queue) + IS_RESERVABLE, false);
+    return isReservable;
+  }
+
+  public void setReservable(String queue, boolean isReservable) {
+    setBoolean(getQueuePrefix(queue) + IS_RESERVABLE, isReservable);
+    LOG.debug("here setReservableQueue: queuePrefix=" + getQueuePrefix(queue)
+        + ", isReservableQueue=" + isReservable(queue));
+  }
+
+  @Override
+  public long getReservationWindow(String queue) {
+    long reservationWindow =
+        getLong(getQueuePrefix(queue) + RESERVATION_WINDOW,
+            DEFAULT_RESERVATION_WINDOW);
+    return reservationWindow;
+  }
+
+  @Override
+  public float getAverageCapacity(String queue) {
+    float avgCapacity =
+        getFloat(getQueuePrefix(queue) + AVERAGE_CAPACITY,
+            MAXIMUM_CAPACITY_VALUE);
+    return avgCapacity;
+  }
+
+  @Override
+  public float getInstantaneousMaxCapacity(String queue) {
+    float instMaxCapacity =
+        getFloat(getQueuePrefix(queue) + INSTANTANEOUS_MAX_CAPACITY,
+            MAXIMUM_CAPACITY_VALUE);
+    return instMaxCapacity;
+  }
+
+  public void setInstantaneousMaxCapacity(String queue, float instMaxCapacity) {
+    setFloat(getQueuePrefix(queue) + INSTANTANEOUS_MAX_CAPACITY,
+        instMaxCapacity);
+  }
+
+  public void setReservationWindow(String queue, long reservationWindow) {
+    setLong(getQueuePrefix(queue) + RESERVATION_WINDOW, reservationWindow);
+  }
+
+  public void setAverageCapacity(String queue, float avgCapacity) {
+    setFloat(getQueuePrefix(queue) + AVERAGE_CAPACITY, avgCapacity);
+  }
+
+  @Override
+  public String getReservationAdmissionPolicy(String queue) {
+    String reservationPolicy =
+        get(getQueuePrefix(queue) + RESERVATION_ADMISSION_POLICY,
+            DEFAULT_RESERVATION_ADMISSION_POLICY);
+    return reservationPolicy;
+  }
+
+  public void setReservationAdmissionPolicy(String queue,
+      String reservationPolicy) {
+    set(getQueuePrefix(queue) + RESERVATION_ADMISSION_POLICY, reservationPolicy);
+  }
+
+  @Override
+  public String getReservationAgent(String queue) {
+    String reservationAgent =
+        get(getQueuePrefix(queue) + RESERVATION_AGENT_NAME,
+            DEFAULT_RESERVATION_AGENT_NAME);
+    return reservationAgent;
+  }
+
+  public void setReservationAgent(String queue, String reservationPolicy) {
+    set(getQueuePrefix(queue) + RESERVATION_AGENT_NAME, reservationPolicy);
+  }
+
+  @Override
+  public boolean getShowReservationAsQueues(String queuePath) {
+    boolean showReservationAsQueues =
+        getBoolean(getQueuePrefix(queuePath)
+            + RESERVATION_SHOW_RESERVATION_AS_QUEUE,
+            DEFAULT_SHOW_RESERVATIONS_AS_QUEUES);
+    return showReservationAsQueues;
+  }
+
+  @Override
+  public String getReplanner(String queue) {
+    String replanner =
+        get(getQueuePrefix(queue) + RESERVATION_PLANNER_NAME,
+            DEFAULT_RESERVATION_PLANNER_NAME);
+    return replanner;
+  }
+
+  @Override
+  public boolean getMoveOnExpiry(String queue) {
+    boolean killOnExpiry =
+        getBoolean(getQueuePrefix(queue) + RESERVATION_MOVE_ON_EXPIRY,
+            DEFAULT_RESERVATION_MOVE_ON_EXPIRY);
+    return killOnExpiry;
+  }
+
+  @Override
+  public long getEnforcementWindow(String queue) {
+    long enforcementWindow =
+        getLong(getQueuePrefix(queue) + RESERVATION_ENFORCEMENT_WINDOW,
+            DEFAULT_RESERVATION_ENFORCEMENT_WINDOW);
+    return enforcementWindow;
   }
 }

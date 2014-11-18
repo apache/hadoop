@@ -42,9 +42,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.CacheManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
@@ -59,11 +61,11 @@ import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressorStream;
+import org.apache.hadoop.util.LimitInputStream;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.io.LimitInputStream;
 import com.google.protobuf.CodedOutputStream;
 
 /**
@@ -139,11 +141,19 @@ public final class FSImageFormatProtobuf {
     private MD5Hash imgDigest;
     /** The transaction ID of the last edit represented by the loaded file */
     private long imgTxId;
+    /**
+     * Whether the image's layout version must be the same with
+     * {@link HdfsConstants#NAMENODE_LAYOUT_VERSION}. This is only set to true
+     * when we're doing (rollingUpgrade rollback).
+     */
+    private final boolean requireSameLayoutVersion;
 
-    Loader(Configuration conf, FSNamesystem fsn) {
+    Loader(Configuration conf, FSNamesystem fsn,
+        boolean requireSameLayoutVersion) {
       this.conf = conf;
       this.fsn = fsn;
       this.ctx = new LoaderContext();
+      this.requireSameLayoutVersion = requireSameLayoutVersion;
     }
 
     @Override
@@ -181,6 +191,12 @@ public final class FSImageFormatProtobuf {
         throw new IOException("Unrecognized file format");
       }
       FileSummary summary = FSImageUtil.loadSummary(raFile);
+      if (requireSameLayoutVersion && summary.getLayoutVersion() !=
+          HdfsConstants.NAMENODE_LAYOUT_VERSION) {
+        throw new IOException("Image version " + summary.getLayoutVersion() +
+            " is not equal to the software version " +
+            HdfsConstants.NAMENODE_LAYOUT_VERSION);
+      }
 
       FileChannel channel = fin.getChannel();
 
@@ -276,10 +292,11 @@ public final class FSImageFormatProtobuf {
 
     private void loadNameSystemSection(InputStream in) throws IOException {
       NameSystemSection s = NameSystemSection.parseDelimitedFrom(in);
-      fsn.setGenerationStampV1(s.getGenstampV1());
-      fsn.setGenerationStampV2(s.getGenstampV2());
-      fsn.setGenerationStampV1Limit(s.getGenstampV1Limit());
-      fsn.setLastAllocatedBlockId(s.getLastAllocatedBlockId());
+      BlockIdManager blockIdManager = fsn.getBlockIdManager();
+      blockIdManager.setGenerationStampV1(s.getGenstampV1());
+      blockIdManager.setGenerationStampV2(s.getGenstampV2());
+      blockIdManager.setGenerationStampV1Limit(s.getGenstampV1Limit());
+      blockIdManager.setLastAllocatedBlockId(s.getLastAllocatedBlockId());
       imgTxId = s.getTransactionId();
       if (s.hasRollingUpgradeStartTime()
           && fsn.getFSImage().hasRollbackFSImage()) {
@@ -390,7 +407,7 @@ public final class FSImageFormatProtobuf {
       FileOutputStream fout = new FileOutputStream(file);
       fileChannel = fout.getChannel();
       try {
-        saveInternal(fout, compression, file.getAbsolutePath().toString());
+        saveInternal(fout, compression, file.getAbsolutePath());
       } finally {
         fout.close();
       }
@@ -514,11 +531,12 @@ public final class FSImageFormatProtobuf {
         throws IOException {
       final FSNamesystem fsn = context.getSourceNamesystem();
       OutputStream out = sectionOutputStream;
+      BlockIdManager blockIdManager = fsn.getBlockIdManager();
       NameSystemSection.Builder b = NameSystemSection.newBuilder()
-          .setGenstampV1(fsn.getGenerationStampV1())
-          .setGenstampV1Limit(fsn.getGenerationStampV1Limit())
-          .setGenstampV2(fsn.getGenerationStampV2())
-          .setLastAllocatedBlockId(fsn.getLastAllocatedBlockId())
+          .setGenstampV1(blockIdManager.getGenerationStampV1())
+          .setGenstampV1Limit(blockIdManager.getGenerationStampV1Limit())
+          .setGenstampV2(blockIdManager.getGenerationStampV2())
+          .setLastAllocatedBlockId(blockIdManager.getLastAllocatedBlockId())
           .setTransactionId(context.getTxId());
 
       // We use the non-locked version of getNamespaceInfo here since

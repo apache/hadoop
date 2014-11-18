@@ -42,6 +42,7 @@ public final class AzureMetricsTestUtil {
   }
 
 
+
   /**
    * Gets the current value of the wasb_bytes_written_last_second counter.
    */

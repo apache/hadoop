@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -54,6 +55,8 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * The state machine for the representation of an Application
  * within the NodeManager.
@@ -71,6 +74,8 @@ public class ApplicationImpl implements Application {
   private final Context context;
 
   private static final Log LOG = LogFactory.getLog(Application.class);
+
+  private LogAggregationContext logAggregationContext;
 
   Map<ContainerId, Container> containers =
       new HashMap<ContainerId, Container>();
@@ -234,10 +239,11 @@ public class ApplicationImpl implements Application {
       app.applicationACLs = initEvent.getApplicationACLs();
       app.aclsManager.addApplication(app.getAppId(), app.applicationACLs);
       // Inform the logAggregator
+      app.logAggregationContext = initEvent.getLogAggregationContext();
       app.dispatcher.getEventHandler().handle(
           new LogHandlerAppStartedEvent(app.appId, app.user,
               app.credentials, ContainerLogsRetentionPolicy.ALL_CONTAINERS,
-              app.applicationACLs)); 
+              app.applicationACLs, app.logAggregationContext)); 
     }
   }
 
@@ -466,5 +472,15 @@ public class ApplicationImpl implements Application {
   @Override
   public String toString() {
     return appId.toString();
+  }
+
+  @VisibleForTesting
+  public LogAggregationContext getLogAggregationContext() {
+    try {
+      this.readLock.lock();
+      return this.logAggregationContext;
+    } finally {
+      this.readLock.unlock();
+    }
   }
 }

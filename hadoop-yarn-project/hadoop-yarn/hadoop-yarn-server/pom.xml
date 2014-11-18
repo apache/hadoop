@@ -39,6 +39,7 @@
     <module>hadoop-yarn-server-nodemanager</module>
     <module>hadoop-yarn-server-web-proxy</module>
     <module>hadoop-yarn-server-resourcemanager</module>
+    <module>hadoop-yarn-server-sharedcachemanager</module>
     <module>hadoop-yarn-server-tests</module>
     <module>hadoop-yarn-server-applicationhistoryservice</module>
   </modules>

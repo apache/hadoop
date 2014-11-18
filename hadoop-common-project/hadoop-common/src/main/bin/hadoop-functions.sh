@@ -155,11 +155,12 @@ function hadoop_basic_init
   HADOOP_IDENT_STRING=${HADOP_IDENT_STRING:-$USER}
   HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-"${HADOOP_PREFIX}/logs"}
   HADOOP_LOGFILE=${HADOOP_LOGFILE:-hadoop.log}
+  HADOOP_LOGLEVEL=${HADOOP_LOGLEVEL:-INFO}
   HADOOP_NICENESS=${HADOOP_NICENESS:-0}
   HADOOP_STOP_TIMEOUT=${HADOOP_STOP_TIMEOUT:-5}
   HADOOP_PID_DIR=${HADOOP_PID_DIR:-/tmp}
-  HADOOP_ROOT_LOGGER=${HADOOP_ROOT_LOGGER:-INFO,console}
-  HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_DAEMON_ROOT_LOGGER:-INFO,RFA}
+  HADOOP_ROOT_LOGGER=${HADOOP_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}
+  HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_DAEMON_ROOT_LOGGER:-${HADOOP_LOGLEVEL},RFA}
   HADOOP_SECURITY_LOGGER=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}
   HADOOP_HEAPSIZE=${HADOOP_HEAPSIZE:-1024}
   HADOOP_SSH_OPTS=${HADOOP_SSH_OPTS:-"-o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=10s"}
@@ -277,6 +278,20 @@ function hadoop_connect_to_hosts
     -I {} bash -c --  "hadoop_actual_ssh {} ${params}"
     wait
   fi
+}
+
+function hadoop_validate_classname
+{
+  local class=$1
+  shift 1
+
+  if [[ ! ${class} =~ \. ]]; then
+    # assuming the arg is typo of command if it does not conatain ".".
+    # class belonging to no package is not allowed as a result.
+    hadoop_error "ERROR: ${class} is not COMMAND nor fully qualified CLASSNAME."
+    return 1
+  fi
+  return 0
 }
 
 function hadoop_add_param
@@ -826,13 +841,13 @@ function hadoop_start_daemon_wrapper
   # shellcheck disable=SC2086
   renice "${HADOOP_NICENESS}" $! >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR: Cannot set priority of ${daemoname} process $!"
+    hadoop_error "ERROR: Cannot set priority of ${daemonname} process $!"
   fi
   
   # shellcheck disable=SC2086
   disown %+ >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR: Cannot disconnect ${daemoname} process $!"
+    hadoop_error "ERROR: Cannot disconnect ${daemonname} process $!"
   fi
   sleep 1
   
@@ -887,7 +902,7 @@ function hadoop_start_secure_daemon
   #shellcheck disable=SC2086
   echo $$ > "${privpidfile}" 2>/dev/null
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR:  Cannot write ${daemoname} pid ${privpidfile}."
+    hadoop_error "ERROR:  Cannot write ${daemonname} pid ${privpidfile}."
   fi
   
   exec "${jsvc}" \
@@ -943,7 +958,7 @@ function hadoop_start_secure_daemon_wrapper
   # so let's wait for the fork to finish 
   # before overriding with the daemonized pid
   (( counter=0 ))
-  while [[ ! -f ${pidfile} && ${counter} -le 5 ]]; do
+  while [[ ! -f ${daemonpidfile} && ${counter} -le 5 ]]; do
     sleep 1
     (( counter++ ))
   done
@@ -952,7 +967,7 @@ function hadoop_start_secure_daemon_wrapper
   #shellcheck disable=SC2086
   echo $! > "${jsvcpidfile}" 2>/dev/null
   if [[ $? -gt 0 ]]; then
-    hadoop_error "ERROR:  Cannot write ${daemonname} pid ${pidfile}."
+    hadoop_error "ERROR:  Cannot write ${daemonname} pid ${daemonpidfile}."
   fi
   
   sleep 1
@@ -1026,8 +1041,8 @@ function hadoop_daemon_handler
   local daemonmode=$1
   local daemonname=$2
   local class=$3
-  local pidfile=$4
-  local outfile=$5
+  local daemon_pidfile=$4
+  local daemon_outfile=$5
   shift 5
   
   case ${daemonmode} in

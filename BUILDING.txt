@@ -8,7 +8,7 @@ Requirements:
 * Maven 3.0 or later
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.5.0
-* CMake 2.6 or newer (if compiling native code)
+* CMake 2.6 or newer (if compiling native code), must be 3.0 or newer on Mac
 * Zlib devel (if compiling native code)
 * openssl devel ( if compiling native hadoop-pipes )
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
@@ -171,6 +171,17 @@ Create a local staging version of the website (in /tmp/hadoop-site)
   $ mvn clean site; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
 
 ----------------------------------------------------------------------------------
+Installing Hadoop
+
+Look for these HTML files after you build the document by the above commands.
+
+  * Single Node Setup:
+    hadoop-project-dist/hadoop-common/SingleCluster.html
+
+  * Cluster Setup:
+    hadoop-project-dist/hadoop-common/ClusterSetup.html
+
+----------------------------------------------------------------------------------
 
 Handling out of memory errors in builds
 
@@ -184,19 +195,6 @@ Here is an example setting to allocate between 256 and 512 MB of heap space to
 Maven
 
 export MAVEN_OPTS="-Xms256m -Xmx512m"
-
-----------------------------------------------------------------------------------
-
-Building on OS/X
-
-----------------------------------------------------------------------------------
-
-A one-time manual step is required to enable building Hadoop OS X with Java 7
-every time the JDK is updated.
-see: https://issues.apache.org/jira/browse/HADOOP-9350
-
-$ sudo mkdir `/usr/libexec/java_home`/Classes
-$ sudo ln -s `/usr/libexec/java_home`/lib/tools.jar `/usr/libexec/java_home`/Classes/classes.jar
 
 ----------------------------------------------------------------------------------
 

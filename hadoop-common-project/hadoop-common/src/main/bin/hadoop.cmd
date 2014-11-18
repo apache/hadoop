@@ -88,6 +88,10 @@ call :updatepath %HADOOP_BIN_PATH%
     shift
     shift
   )
+  if "%1" == "--loglevel" (
+    shift
+    shift
+  )
 
   set hadoop-command=%1
   if not defined hadoop-command (
@@ -142,7 +146,7 @@ call :updatepath %HADOOP_BIN_PATH%
     )
   )
   
-  set corecommands=fs version jar checknative distcp daemonlog archive classpath
+  set corecommands=fs version jar checknative distcp daemonlog archive classpath credential key
   for %%i in ( %corecommands% ) do (
     if %hadoop-command% == %%i set corecommand=true  
   )
@@ -202,6 +206,14 @@ call :updatepath %HADOOP_BIN_PATH%
   set CLASS=org.apache.hadoop.util.Classpath
   goto :eof
 
+:credential
+  set CLASS=org.apache.hadoop.security.alias.CredentialShell
+  goto :eof
+
+:key
+  set CLASS=org.apache.hadoop.crypto.key.KeyShell
+  goto :eof
+
 :updatepath
   set path_to_add=%*
   set current_path_comparable=%path%
@@ -230,6 +242,10 @@ call :updatepath %HADOOP_BIN_PATH%
     shift
     shift
   )
+  if "%1" == "--loglevel" (
+    shift
+    shift
+  )
   if [%2] == [] goto :eof
   shift
   set _arguments=
@@ -248,7 +264,7 @@ call :updatepath %HADOOP_BIN_PATH%
   goto :eof
 
 :print_usage
-  @echo Usage: hadoop [--config confdir] COMMAND
+  @echo Usage: hadoop [--config confdir] [--loglevel loglevel] COMMAND
   @echo where COMMAND is one of:
   @echo   fs                   run a generic filesystem user client
   @echo   version              print the version
@@ -258,6 +274,8 @@ call :updatepath %HADOOP_BIN_PATH%
   @echo   archive -archiveName NAME -p ^<parent path^> ^<src^>* ^<dest^> create a hadoop archive
   @echo   classpath            prints the class path needed to get the
   @echo                        Hadoop jar and the required libraries
+  @echo   credential           interact with credential providers
+  @echo   key                  manage keys via the KeyProvider
   @echo   daemonlog            get/set the log level for each daemon
   @echo  or
   @echo   CLASSNAME            run the class named CLASSNAME

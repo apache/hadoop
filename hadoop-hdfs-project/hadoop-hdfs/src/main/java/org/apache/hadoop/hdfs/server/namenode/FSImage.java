@@ -322,7 +322,7 @@ public class FSImage implements Closeable {
         if (curState != StorageState.NOT_FORMATTED 
             && startOpt != StartupOption.ROLLBACK) {
           // read and verify consistency with other directories
-          storage.readProperties(sd);
+          storage.readProperties(sd, startOpt);
           isFormatted = true;
         }
         if (startOpt == StartupOption.IMPORT && isFormatted)
@@ -563,7 +563,7 @@ public class FSImage implements Closeable {
     assert editLog != null : "editLog must be initialized";
     editLog.openForWrite();
     storage.writeTransactionIdFileToStorage(editLog.getCurSegmentTxId());
-  };
+  }
   
   /**
    * Toss the current image and namesystem, reloading from the specified
@@ -572,7 +572,7 @@ public class FSImage implements Closeable {
   void reloadFromImageFile(File file, FSNamesystem target) throws IOException {
     target.clear();
     LOG.debug("Reloading namespace from " + file);
-    loadFSImage(file, target, null);
+    loadFSImage(file, target, null, false);
   }
 
   /**
@@ -603,7 +603,8 @@ public class FSImage implements Closeable {
       // otherwise we can load from both IMAGE and IMAGE_ROLLBACK
       nnfs = EnumSet.of(NameNodeFile.IMAGE, NameNodeFile.IMAGE_ROLLBACK);
     }
-    final FSImageStorageInspector inspector = storage.readAndInspectDirs(nnfs);
+    final FSImageStorageInspector inspector = storage
+        .readAndInspectDirs(nnfs, startOpt);
 
     isUpgradeFinalized = inspector.isUpgradeFinalized();
     List<FSImageFile> imageFiles = inspector.getLatestImages();
@@ -659,7 +660,7 @@ public class FSImage implements Closeable {
     for (int i = 0; i < imageFiles.size(); i++) {
       try {
         imageFile = imageFiles.get(i);
-        loadFSImageFile(target, recovery, imageFile);
+        loadFSImageFile(target, recovery, imageFile, startOpt);
         break;
       } catch (IOException ioe) {
         LOG.error("Failed to load image from " + imageFile, ioe);
@@ -712,16 +713,18 @@ public class FSImage implements Closeable {
   }
 
   void loadFSImageFile(FSNamesystem target, MetaRecoveryContext recovery,
-      FSImageFile imageFile) throws IOException {
+      FSImageFile imageFile, StartupOption startupOption) throws IOException {
     LOG.debug("Planning to load image :\n" + imageFile);
     StorageDirectory sdForProperties = imageFile.sd;
-    storage.readProperties(sdForProperties);
+    storage.readProperties(sdForProperties, startupOption);
 
     if (NameNodeLayoutVersion.supports(
         LayoutVersion.Feature.TXID_BASED_LAYOUT, getLayoutVersion())) {
       // For txid-based layout, we should have a .md5 file
       // next to the image file
-      loadFSImage(imageFile.getFile(), target, recovery);
+      boolean isRollingRollback = RollingUpgradeStartupOption.ROLLBACK
+          .matches(startupOption);
+      loadFSImage(imageFile.getFile(), target, recovery, isRollingRollback);
     } else if (NameNodeLayoutVersion.supports(
         LayoutVersion.Feature.FSIMAGE_CHECKSUM, getLayoutVersion())) {
       // In 0.22, we have the checksum stored in the VERSION file.
@@ -733,10 +736,11 @@ public class FSImage implements Closeable {
             NNStorage.DEPRECATED_MESSAGE_DIGEST_PROPERTY +
             " not set for storage directory " + sdForProperties.getRoot());
       }
-      loadFSImage(imageFile.getFile(), new MD5Hash(md5), target, recovery);
+      loadFSImage(imageFile.getFile(), new MD5Hash(md5), target, recovery,
+          false);
     } else {
       // We don't have any record of the md5sum
-      loadFSImage(imageFile.getFile(), null, target, recovery);
+      loadFSImage(imageFile.getFile(), null, target, recovery, false);
     }
   }
 
@@ -894,13 +898,15 @@ public class FSImage implements Closeable {
    * it against the MD5 sum stored in its associated .md5 file.
    */
   private void loadFSImage(File imageFile, FSNamesystem target,
-      MetaRecoveryContext recovery) throws IOException {
+      MetaRecoveryContext recovery, boolean requireSameLayoutVersion)
+      throws IOException {
     MD5Hash expectedMD5 = MD5FileUtils.readStoredMd5ForFile(imageFile);
     if (expectedMD5 == null) {
       throw new IOException("No MD5 file found corresponding to image file "
           + imageFile);
     }
-    loadFSImage(imageFile, expectedMD5, target, recovery);
+    loadFSImage(imageFile, expectedMD5, target, recovery,
+        requireSameLayoutVersion);
   }
   
   /**
@@ -908,13 +914,14 @@ public class FSImage implements Closeable {
    * filenames and blocks.
    */
   private void loadFSImage(File curFile, MD5Hash expectedMd5,
-      FSNamesystem target, MetaRecoveryContext recovery) throws IOException {
+      FSNamesystem target, MetaRecoveryContext recovery,
+      boolean requireSameLayoutVersion) throws IOException {
     // BlockPoolId is required when the FsImageLoader loads the rolling upgrade
     // information. Make sure the ID is properly set.
     target.setBlockPoolId(this.getBlockPoolID());
 
     FSImageFormat.LoaderDelegator loader = FSImageFormat.newLoader(conf, target);
-    loader.load(curFile);
+    loader.load(curFile, requireSameLayoutVersion);
 
     // Check that the image digest we loaded matches up with what
     // we expected
@@ -1033,7 +1040,7 @@ public class FSImage implements Closeable {
   }
 
   /**
-   * @see #saveNamespace(FSNamesystem, Canceler)
+   * @see #saveNamespace(FSNamesystem, NameNodeFile, Canceler)
    */
   public synchronized void saveNamespace(FSNamesystem source)
       throws IOException {
@@ -1072,7 +1079,7 @@ public class FSImage implements Closeable {
   }
 
   /**
-   * @see #saveFSImageInAllDirs(FSNamesystem, long, Canceler)
+   * @see #saveFSImageInAllDirs(FSNamesystem, NameNodeFile, long, Canceler)
    */
   protected synchronized void saveFSImageInAllDirs(FSNamesystem source, long txid)
       throws IOException {

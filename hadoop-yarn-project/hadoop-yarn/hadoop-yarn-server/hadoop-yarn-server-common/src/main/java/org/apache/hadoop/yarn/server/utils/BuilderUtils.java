@@ -70,6 +70,7 @@ import com.google.common.annotations.VisibleForTesting;
  * Builder utilities to construct various objects.
  *
  */
+@Private
 public class BuilderUtils {
 
   private static final RecordFactory recordFactory = RecordFactoryProvider
@@ -94,7 +95,8 @@ public class BuilderUtils {
   }
 
   public static LocalResource newLocalResource(URL url, LocalResourceType type,
-      LocalResourceVisibility visibility, long size, long timestamp) {
+      LocalResourceVisibility visibility, long size, long timestamp,
+      boolean shouldBeUploadedToSharedCache) {
     LocalResource resource =
       recordFactory.newRecordInstance(LocalResource.class);
     resource.setResource(url);
@@ -102,14 +104,15 @@ public class BuilderUtils {
     resource.setVisibility(visibility);
     resource.setSize(size);
     resource.setTimestamp(timestamp);
+    resource.setShouldBeUploadedToSharedCache(shouldBeUploadedToSharedCache);
     return resource;
   }
 
   public static LocalResource newLocalResource(URI uri,
       LocalResourceType type, LocalResourceVisibility visibility, long size,
-      long timestamp) {
+      long timestamp, boolean shouldBeUploadedToSharedCache) {
     return newLocalResource(ConverterUtils.getYarnUrlFromURI(uri), type,
-        visibility, size, timestamp);
+        visibility, size, timestamp, shouldBeUploadedToSharedCache);
   }
 
   public static ApplicationId newApplicationId(RecordFactory recordFactory,
@@ -139,7 +142,7 @@ public class BuilderUtils {
 
   public static ContainerId newContainerId(ApplicationAttemptId appAttemptId,
       long containerId) {
-    return ContainerId.newInstance(appAttemptId, containerId);
+    return ContainerId.newContainerId(appAttemptId, containerId);
   }
 
   public static ContainerId newContainerId(int appId, int appAttemptId,
@@ -164,16 +167,24 @@ public class BuilderUtils {
   public static ContainerId newContainerId(RecordFactory recordFactory,
       ApplicationId appId, ApplicationAttemptId appAttemptId,
       int containerId) {
-    return ContainerId.newInstance(appAttemptId, containerId);
+    return ContainerId.newContainerId(appAttemptId, containerId);
   }
 
   public static NodeId newNodeId(String host, int port) {
     return NodeId.newInstance(host, port);
   }
   
-  public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState, 
+  public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
       String httpAddress, String rackName, Resource used, Resource capability,
       int numContainers, String healthReport, long lastHealthReportTime) {
+    return newNodeReport(nodeId, nodeState, httpAddress, rackName, used,
+        capability, numContainers, healthReport, lastHealthReportTime, null);
+  }
+  
+  public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
+      String httpAddress, String rackName, Resource used, Resource capability,
+      int numContainers, String healthReport, long lastHealthReportTime,
+      Set<String> nodeLabels) {
     NodeReport nodeReport = recordFactory.newRecordInstance(NodeReport.class);
     nodeReport.setNodeId(nodeId);
     nodeReport.setNodeState(nodeState);
@@ -184,6 +195,7 @@ public class BuilderUtils {
     nodeReport.setNumContainers(numContainers);
     nodeReport.setHealthReport(healthReport);
     nodeReport.setLastHealthReportTime(lastHealthReportTime);
+    nodeReport.setNodeLabels(nodeLabels);
     return nodeReport;
   }
 
@@ -236,7 +248,6 @@ public class BuilderUtils {
     return newToken(Token.class, identifier, kind, password, service);
   }
 
-  @Private
   @VisibleForTesting
   public static Token newContainerToken(NodeId nodeId,
       byte[] password, ContainerTokenIdentifier tokenIdentifier) {
@@ -399,7 +410,7 @@ public class BuilderUtils {
     url.setFile(file);
     return url;
   }
-  
+
   public static AllocateResponse newAllocateResponse(int responseId,
       List<ContainerStatus> completedContainers,
       List<Container> allocatedContainers, List<NodeReport> updatedNodes,

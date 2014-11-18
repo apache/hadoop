@@ -707,7 +707,7 @@ public class FileUtil {
       TarArchiveEntry entry, File outputDir) throws IOException {
     if (entry.isDirectory()) {
       File subDir = new File(outputDir, entry.getName());
-      if (!subDir.mkdir() && !subDir.isDirectory()) {
+      if (!subDir.mkdirs() && !subDir.isDirectory()) {
         throw new IOException("Mkdirs failed to create tar internal dir "
             + outputDir);
       }
@@ -720,8 +720,8 @@ public class FileUtil {
     }
 
     File outputFile = new File(outputDir, entry.getName());
-    if (!outputDir.exists()) {
-      if (!outputDir.mkdirs()) {
+    if (!outputFile.getParentFile().exists()) {
+      if (!outputFile.getParentFile().mkdirs()) {
         throw new IOException("Mkdirs failed to create tar internal dir "
             + outputDir);
       }
@@ -1186,6 +1186,11 @@ public class FileUtil {
     return fileNames;
   }  
   
+  public static String[] createJarWithClassPath(String inputClassPath, Path pwd,
+      Map<String, String> callerEnv) throws IOException {
+    return createJarWithClassPath(inputClassPath, pwd, pwd, callerEnv);
+  }
+  
   /**
    * Create a jar file at the given path, containing a manifest with a classpath
    * that references all specified entries.
@@ -1210,12 +1215,15 @@ public class FileUtil {
    * 
    * @param inputClassPath String input classpath to bundle into the jar manifest
    * @param pwd Path to working directory to save jar
+   * @param targetDir path to where the jar execution will have its working dir
    * @param callerEnv Map<String, String> caller's environment variables to use
    *   for expansion
-   * @return String absolute path to new jar
+   * @return String[] with absolute path to new jar in position 0 and
+   *   unexpanded wild card entry path in position 1
    * @throws IOException if there is an I/O error while writing the jar file
    */
-  public static String createJarWithClassPath(String inputClassPath, Path pwd,
+  public static String[] createJarWithClassPath(String inputClassPath, Path pwd,
+      Path targetDir,
       Map<String, String> callerEnv) throws IOException {
     // Replace environment variables, case-insensitive on Windows
     @SuppressWarnings("unchecked")
@@ -1235,6 +1243,7 @@ public class FileUtil {
       LOG.debug("mkdirs false for " + workingDir + ", execution will continue");
     }
 
+    StringBuilder unexpandedWildcardClasspath = new StringBuilder();
     // Append all entries
     List<String> classPathEntryList = new ArrayList<String>(
       classPathEntries.length);
@@ -1243,21 +1252,27 @@ public class FileUtil {
         continue;
       }
       if (classPathEntry.endsWith("*")) {
+        boolean foundWildCardJar = false;
         // Append all jars that match the wildcard
         Path globPath = new Path(classPathEntry).suffix("{.jar,.JAR}");
         FileStatus[] wildcardJars = FileContext.getLocalFSFileContext().util()
           .globStatus(globPath);
         if (wildcardJars != null) {
           for (FileStatus wildcardJar: wildcardJars) {
+            foundWildCardJar = true;
             classPathEntryList.add(wildcardJar.getPath().toUri().toURL()
               .toExternalForm());
           }
+        }
+        if (!foundWildCardJar) {
+          unexpandedWildcardClasspath.append(File.pathSeparator);
+          unexpandedWildcardClasspath.append(classPathEntry);
         }
       } else {
         // Append just this entry
         File fileCpEntry = null;
         if(!new Path(classPathEntry).isAbsolute()) {
-          fileCpEntry = new File(workingDir, classPathEntry);
+          fileCpEntry = new File(targetDir.toString(), classPathEntry);
         }
         else {
           fileCpEntry = new File(classPathEntry);
@@ -1300,7 +1315,8 @@ public class FileUtil {
     } finally {
       IOUtils.cleanup(LOG, jos, bos, fos);
     }
-
-    return classPathJar.getCanonicalPath();
+    String[] jarCp = {classPathJar.getCanonicalPath(),
+                        unexpandedWildcardClasspath.toString()};
+    return jarCp;
   }
 }

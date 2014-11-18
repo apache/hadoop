@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
@@ -58,6 +59,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEvent;
@@ -109,7 +111,7 @@ public class TestContainerManagerRecovery {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId attemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId cid = ContainerId.newInstance(attemptId, 1);
+    ContainerId cid = ContainerId.newContainerId(attemptId, 1);
     Map<String, LocalResource> localResources = Collections.emptyMap();
     Map<String, String> containerEnv = Collections.emptyMap();
     List<String> containerCmds = Collections.emptyList();
@@ -126,8 +128,11 @@ public class TestContainerManagerRecovery {
     ContainerLaunchContext clc = ContainerLaunchContext.newInstance(
         localResources, containerEnv, containerCmds, serviceData,
         containerTokens, acls);
+    // create the logAggregationContext
+    LogAggregationContext logAggregationContext =
+        LogAggregationContext.newInstance("includePattern", "excludePattern");
     StartContainersResponse startResponse = startContainer(context, cm, cid,
-        clc);
+        clc, logAggregationContext);
     assertTrue(startResponse.getFailedRequests().isEmpty());
     assertEquals(1, context.getApplications().size());
     Application app = context.getApplications().get(appId);
@@ -157,6 +162,16 @@ public class TestContainerManagerRecovery {
     assertEquals(1, context.getApplications().size());
     app = context.getApplications().get(appId);
     assertNotNull(app);
+
+    // check whether LogAggregationContext is recovered correctly
+    LogAggregationContext recovered =
+        ((ApplicationImpl) app).getLogAggregationContext();
+    assertNotNull(recovered);
+    assertEquals(logAggregationContext.getIncludePattern(),
+      recovered.getIncludePattern());
+    assertEquals(logAggregationContext.getExcludePattern(),
+      recovered.getExcludePattern());
+
     waitForAppState(app, ApplicationState.INITING);
     assertTrue(context.getApplicationACLsManager().checkAccess(
         UserGroupInformation.createRemoteUser(modUser),
@@ -224,13 +239,14 @@ public class TestContainerManagerRecovery {
 
   private StartContainersResponse startContainer(Context context,
       final ContainerManagerImpl cm, ContainerId cid,
-      ContainerLaunchContext clc) throws Exception {
+      ContainerLaunchContext clc, LogAggregationContext logAggregationContext)
+          throws Exception {
     UserGroupInformation user = UserGroupInformation.createRemoteUser(
         cid.getApplicationAttemptId().toString());
     StartContainerRequest scReq = StartContainerRequest.newInstance(
         clc, TestContainerManager.createContainerToken(cid, 0,
             context.getNodeId(), user.getShortUserName(),
-            context.getContainerTokenSecretManager()));
+            context.getContainerTokenSecretManager(), logAggregationContext));
     final List<StartContainerRequest> scReqList =
         new ArrayList<StartContainerRequest>();
     scReqList.add(scReq);
@@ -262,8 +278,7 @@ public class TestContainerManagerRecovery {
   private ContainerManagerImpl createContainerManager(Context context) {
     final LogHandler logHandler = mock(LogHandler.class);
     final ResourceLocalizationService rsrcSrv =
-        new ResourceLocalizationService(null, null, null, null,
-            context.getNMStateStore()) {
+        new ResourceLocalizationService(null, null, null, null, context) {
           @Override
           public void serviceInit(Configuration conf) throws Exception {
           }
@@ -304,7 +319,7 @@ public class TestContainerManagerRecovery {
 
           @Override
           protected ResourceLocalizationService createResourceLocalizationService(
-              ContainerExecutor exec, DeletionService deletionContext) {
+              ContainerExecutor exec, DeletionService deletionContext, Context context) {
             return rsrcSrv;
           }
 

@@ -49,5 +49,9 @@ service ApplicationClientProtocolService {
   rpc getApplicationAttempts (GetApplicationAttemptsRequestProto) returns (GetApplicationAttemptsResponseProto);
   rpc getContainerReport (GetContainerReportRequestProto) returns (GetContainerReportResponseProto);
   rpc getContainers (GetContainersRequestProto) returns (GetContainersResponseProto);
+  rpc submitReservation (ReservationSubmissionRequestProto) returns (ReservationSubmissionResponseProto);
+  rpc updateReservation (ReservationUpdateRequestProto) returns (ReservationUpdateResponseProto);
+  rpc deleteReservation (ReservationDeleteRequestProto) returns (ReservationDeleteResponseProto);
+  rpc getNodeToLabels (GetNodesToLabelsRequestProto) returns (GetNodesToLabelsResponseProto);
+  rpc getClusterNodeLabels (GetClusterNodeLabelsRequestProto) returns (GetClusterNodeLabelsResponseProto);
 }
-

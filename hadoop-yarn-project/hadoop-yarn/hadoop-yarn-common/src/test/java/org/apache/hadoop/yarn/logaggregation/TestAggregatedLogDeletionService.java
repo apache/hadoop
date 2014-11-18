@@ -20,6 +20,9 @@ package org.apache.hadoop.yarn.logaggregation;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -27,6 +30,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,7 +60,7 @@ public class TestAggregatedLogDeletionService {
     String root = "mockfs://foo/";
     String remoteRootLogDir = root+"tmp/logs";
     String suffix = "logs";
-    Configuration conf = new Configuration();
+    final Configuration conf = new Configuration();
     conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
     conf.set(YarnConfiguration.LOG_AGGREGATION_ENABLED, "true");
     conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, "1800");
@@ -69,22 +78,37 @@ public class TestAggregatedLogDeletionService {
     
     when(mockFs.listStatus(remoteRootLogPath)).thenReturn(
         new FileStatus[]{userDirStatus});
-    
+
+    ApplicationId appId1 =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
     Path userLogDir = new Path(userDir, suffix);
-    Path app1Dir = new Path(userLogDir, "application_1_1");
+    Path app1Dir = new Path(userLogDir, appId1.toString());
     FileStatus app1DirStatus = new FileStatus(0, true, 0, 0, toDeleteTime, app1Dir);
     
-    Path app2Dir = new Path(userLogDir, "application_1_2");
+    ApplicationId appId2 =
+        ApplicationId.newInstance(System.currentTimeMillis(), 2);
+    Path app2Dir = new Path(userLogDir, appId2.toString());
     FileStatus app2DirStatus = new FileStatus(0, true, 0, 0, toDeleteTime, app2Dir);
     
-    Path app3Dir = new Path(userLogDir, "application_1_3");
+    ApplicationId appId3 =
+        ApplicationId.newInstance(System.currentTimeMillis(), 3);
+    Path app3Dir = new Path(userLogDir, appId3.toString());
     FileStatus app3DirStatus = new FileStatus(0, true, 0, 0, toDeleteTime, app3Dir);
     
-    Path app4Dir = new Path(userLogDir, "application_1_4");
+    ApplicationId appId4 =
+        ApplicationId.newInstance(System.currentTimeMillis(), 4);
+    Path app4Dir = new Path(userLogDir, appId4.toString());
     FileStatus app4DirStatus = new FileStatus(0, true, 0, 0, toDeleteTime, app4Dir);
     
+    ApplicationId appId5 =
+        ApplicationId.newInstance(System.currentTimeMillis(), 5);
+    Path app5Dir = new Path(userLogDir, appId5.toString());
+    FileStatus app5DirStatus =
+        new FileStatus(0, true, 0, 0, toDeleteTime, app5Dir);
+
     when(mockFs.listStatus(userLogDir)).thenReturn(
-        new FileStatus[]{app1DirStatus, app2DirStatus, app3DirStatus, app4DirStatus});
+      new FileStatus[] { app1DirStatus, app2DirStatus, app3DirStatus,
+          app4DirStatus, app5DirStatus });
     
     when(mockFs.listStatus(app1Dir)).thenReturn(
         new FileStatus[]{});
@@ -117,20 +141,55 @@ public class TestAggregatedLogDeletionService {
     
     when(mockFs.listStatus(app4Dir)).thenReturn(
         new FileStatus[]{app4Log1Status, app4Log2Status});
+
+    Path app5Log1 = new Path(app5Dir, "host1");
+    FileStatus app5Log1Status = new FileStatus(10, false, 1, 1, toDeleteTime, app5Log1);
     
-    AggregatedLogDeletionService.LogDeletionTask task = 
-      new AggregatedLogDeletionService.LogDeletionTask(conf, 1800);
-    
-    task.run();
-    
-    verify(mockFs).delete(app1Dir, true);
-    verify(mockFs, times(0)).delete(app2Dir, true);
-    verify(mockFs).delete(app3Dir, true);
-    verify(mockFs).delete(app4Dir, true);
+    Path app5Log2 = new Path(app5Dir, "host2");
+    FileStatus app5Log2Status = new FileStatus(10, false, 1, 1, toKeepTime, app5Log2);
+
+    when(mockFs.listStatus(app5Dir)).thenReturn(
+        new FileStatus[]{app5Log1Status, app5Log2Status});
+
+    final List<ApplicationId> finishedApplications =
+        Collections.unmodifiableList(Arrays.asList(appId1, appId2, appId3,
+          appId4));
+    final List<ApplicationId> runningApplications =
+        Collections.unmodifiableList(Arrays.asList(appId5));
+
+    AggregatedLogDeletionService deletionService =
+        new AggregatedLogDeletionService() {
+          @Override
+          protected ApplicationClientProtocol creatRMClient()
+              throws IOException {
+            try {
+              return createMockRMClient(finishedApplications,
+                runningApplications);
+            } catch (Exception e) {
+              throw new IOException(e);
+            }
+          }
+          @Override
+          protected void stopRMClient() {
+            // DO NOTHING
+          }
+        };
+    deletionService.init(conf);
+    deletionService.start();
+
+    verify(mockFs, timeout(2000)).delete(app1Dir, true);
+    verify(mockFs, timeout(2000).times(0)).delete(app2Dir, true);
+    verify(mockFs, timeout(2000)).delete(app3Dir, true);
+    verify(mockFs, timeout(2000)).delete(app4Dir, true);
+    verify(mockFs, timeout(2000).times(0)).delete(app5Dir, true);
+    verify(mockFs, timeout(2000)).delete(app5Log1, true);
+    verify(mockFs, timeout(2000).times(0)).delete(app5Log2, true);
+
+    deletionService.stop();
   }
 
   @Test
-  public void testRefreshLogRetentionSettings() throws IOException {
+  public void testRefreshLogRetentionSettings() throws Exception {
     long now = System.currentTimeMillis();
     //time before 2000 sec
     long before2000Secs = now - (2000 * 1000);
@@ -163,13 +222,17 @@ public class TestAggregatedLogDeletionService {
 
     Path userLogDir = new Path(userDir, suffix);
 
+    ApplicationId appId1 =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
     //Set time last modified of app1Dir directory and its files to before2000Secs 
-    Path app1Dir = new Path(userLogDir, "application_1_1");
+    Path app1Dir = new Path(userLogDir, appId1.toString());
     FileStatus app1DirStatus = new FileStatus(0, true, 0, 0, before2000Secs,
         app1Dir);
     
+    ApplicationId appId2 =
+        ApplicationId.newInstance(System.currentTimeMillis(), 2);
     //Set time last modified of app1Dir directory and its files to before50Secs 
-    Path app2Dir = new Path(userLogDir, "application_1_2");
+    Path app2Dir = new Path(userLogDir, appId2.toString());
     FileStatus app2DirStatus = new FileStatus(0, true, 0, 0, before50Secs,
         app2Dir);
 
@@ -190,10 +253,26 @@ public class TestAggregatedLogDeletionService {
     when(mockFs.listStatus(app2Dir)).thenReturn(
         new FileStatus[] { app2Log1Status });
 
+    final List<ApplicationId> finishedApplications =
+        Collections.unmodifiableList(Arrays.asList(appId1, appId2));
+
     AggregatedLogDeletionService deletionSvc = new AggregatedLogDeletionService() {
       @Override
       protected Configuration createConf() {
         return conf;
+      }
+      @Override
+      protected ApplicationClientProtocol creatRMClient()
+          throws IOException {
+        try {
+          return createMockRMClient(finishedApplications, null);
+        } catch (Exception e) {
+          throw new IOException(e);
+        }
+      }
+      @Override
+      protected void stopRMClient() {
+        // DO NOTHING
       }
     };
     
@@ -253,8 +332,10 @@ public class TestAggregatedLogDeletionService {
     when(mockFs.listStatus(remoteRootLogPath)).thenReturn(
         new FileStatus[]{userDirStatus});
 
+    ApplicationId appId1 =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
     Path userLogDir = new Path(userDir, suffix);
-    Path app1Dir = new Path(userLogDir, "application_1_1");
+    Path app1Dir = new Path(userLogDir, appId1.toString());
     FileStatus app1DirStatus = new FileStatus(0, true, 0, 0, now, app1Dir);
 
     when(mockFs.listStatus(userLogDir)).thenReturn(
@@ -266,8 +347,25 @@ public class TestAggregatedLogDeletionService {
     when(mockFs.listStatus(app1Dir)).thenReturn(
         new FileStatus[]{app1Log1Status});
 
+    final List<ApplicationId> finishedApplications =
+        Collections.unmodifiableList(Arrays.asList(appId1));
+
     AggregatedLogDeletionService deletionSvc =
-        new AggregatedLogDeletionService();
+        new AggregatedLogDeletionService() {
+      @Override
+      protected ApplicationClientProtocol creatRMClient()
+          throws IOException {
+        try {
+          return createMockRMClient(finishedApplications, null);
+        } catch (Exception e) {
+          throw new IOException(e);
+        }
+      }
+      @Override
+      protected void stopRMClient() {
+        // DO NOTHING
+      }
+    };
     deletionSvc.init(conf);
     deletionSvc.start();
  
@@ -286,11 +384,61 @@ public class TestAggregatedLogDeletionService {
 
     deletionSvc.stop();
   }
-  
+
   static class MockFileSystem extends FilterFileSystem {
     MockFileSystem() {
       super(mock(FileSystem.class));
     }
     public void initialize(URI name, Configuration conf) throws IOException {}
+  }
+
+  private static ApplicationClientProtocol createMockRMClient(
+      List<ApplicationId> finishedApplicaitons,
+      List<ApplicationId> runningApplications) throws Exception {
+    final ApplicationClientProtocol mockProtocol =
+        mock(ApplicationClientProtocol.class);
+    if (finishedApplicaitons != null && !finishedApplicaitons.isEmpty()) {
+      for (ApplicationId appId : finishedApplicaitons) {
+        GetApplicationReportRequest request =
+            GetApplicationReportRequest.newInstance(appId);
+        GetApplicationReportResponse response =
+            createApplicationReportWithFinishedApplication();
+        when(mockProtocol.getApplicationReport(request))
+          .thenReturn(response);
+      }
+    }
+    if (runningApplications != null && !runningApplications.isEmpty()) {
+      for (ApplicationId appId : runningApplications) {
+        GetApplicationReportRequest request =
+            GetApplicationReportRequest.newInstance(appId);
+        GetApplicationReportResponse response =
+            createApplicationReportWithRunningApplication();
+        when(mockProtocol.getApplicationReport(request))
+          .thenReturn(response);
+      }
+    }
+    return mockProtocol;
+  }
+
+  private static GetApplicationReportResponse
+      createApplicationReportWithRunningApplication() {
+    ApplicationReport report = mock(ApplicationReport.class);
+    when(report.getYarnApplicationState()).thenReturn(
+      YarnApplicationState.RUNNING);
+    GetApplicationReportResponse response =
+        mock(GetApplicationReportResponse.class);
+    when(response.getApplicationReport()).thenReturn(report);
+    return response;
+  }
+
+  private static GetApplicationReportResponse
+      createApplicationReportWithFinishedApplication() {
+    ApplicationReport report = mock(ApplicationReport.class);
+    when(report.getYarnApplicationState()).thenReturn(
+      YarnApplicationState.FINISHED);
+    GetApplicationReportResponse response =
+        mock(GetApplicationReportResponse.class);
+    when(response.getApplicationReport()).thenReturn(report);
+    return response;
   }
 }

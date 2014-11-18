@@ -91,7 +91,7 @@ class Stat extends FsCommand {
             break;
           case 'F':
             buf.append(stat.isDirectory()
-                ? "directory" 
+                ? "directory"
                 : (stat.isFile() ? "regular file" : "symlink"));
             break;
           case 'g':

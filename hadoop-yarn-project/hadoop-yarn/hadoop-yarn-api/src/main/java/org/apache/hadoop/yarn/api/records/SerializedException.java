@@ -90,4 +90,22 @@ public abstract class SerializedException {
   @Private
   @Unstable
   public abstract Throwable deSerialize();
+
+  private void stringify(StringBuilder sb) {
+    sb.append(getMessage())
+        .append("\n")
+        .append(getRemoteTrace());
+    final SerializedException cause = getCause();
+    if (cause != null) {
+      sb.append("Caused by: ");
+      cause.stringify(sb);
+    }
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(128);
+    stringify(sb);
+    return sb.toString();
+  }
 }

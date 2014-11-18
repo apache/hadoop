@@ -49,7 +49,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -251,7 +250,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
           // RPC layer is using it to send info across
           askList.add(ResourceRequest.newInstance(r.getPriority(),
               r.getResourceName(), r.getCapability(), r.getNumContainers(),
-              r.getRelaxLocality()));
+              r.getRelaxLocality(), r.getNodeLabelExpression()));
         }
         releaseList = new ArrayList<ContainerId>(release);
         // optimistically clear this collection assuming no RPC failure
@@ -275,15 +274,16 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         blacklistRemovals.clear();
       }
 
-      allocateResponse = rmClient.allocate(allocateRequest);
-      if (isResyncCommand(allocateResponse)) {
+      try {
+        allocateResponse = rmClient.allocate(allocateRequest);
+      } catch (ApplicationMasterNotRegisteredException e) {
         LOG.warn("ApplicationMaster is out of sync with ResourceManager,"
             + " hence resyncing.");
         synchronized (this) {
           release.addAll(this.pendingRelease);
           blacklistAdditions.addAll(this.blacklistedNodes);
           for (Map<String, TreeMap<Resource, ResourceRequestInfo>> rr : remoteRequestsTable
-              .values()) {
+            .values()) {
             for (Map<Resource, ResourceRequestInfo> capabalities : rr.values()) {
               for (ResourceRequestInfo request : capabalities.values()) {
                 addResourceRequestToAsk(request.remoteRequest);
@@ -293,7 +293,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         }
         // re register with RM
         registerApplicationMaster();
-        return allocate(progressIndicator);
+        allocateResponse = allocate(progressIndicator);
+        return allocateResponse;
       }
 
       synchronized (this) {
@@ -347,11 +348,6 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     for (ContainerStatus containerStatus : completedContainersStatuses) {
       pendingRelease.remove(containerStatus.getContainerId());
     }
-  }
-
-  private boolean isResyncCommand(AllocateResponse allocateResponse) {
-    return allocateResponse.getAMCommand() != null
-        && allocateResponse.getAMCommand() == AMCommand.AM_RESYNC;
   }
 
   @Private
@@ -436,25 +432,25 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
       }
       for (String node : dedupedNodes) {
         addResourceRequest(req.getPriority(), node, req.getCapability(), req,
-            true);
+            true, req.getNodeLabelExpression());
       }
     }
 
     for (String rack : dedupedRacks) {
       addResourceRequest(req.getPriority(), rack, req.getCapability(), req,
-          true);
+          true, req.getNodeLabelExpression());
     }
 
     // Ensure node requests are accompanied by requests for
     // corresponding rack
     for (String rack : inferredRacks) {
       addResourceRequest(req.getPriority(), rack, req.getCapability(), req,
-          req.getRelaxLocality());
+          req.getRelaxLocality(), req.getNodeLabelExpression());
     }
 
     // Off-switch
     addResourceRequest(req.getPriority(), ResourceRequest.ANY, 
-                    req.getCapability(), req, req.getRelaxLocality());
+        req.getCapability(), req, req.getRelaxLocality(), req.getNodeLabelExpression());
   }
 
   @Override
@@ -608,8 +604,10 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     ask.add(remoteRequest);
   }
 
-  private void addResourceRequest(Priority priority, String resourceName,
-      Resource capability, T req, boolean relaxLocality) {
+  private void
+      addResourceRequest(Priority priority, String resourceName,
+          Resource capability, T req, boolean relaxLocality,
+          String labelExpression) {
     Map<String, TreeMap<Resource, ResourceRequestInfo>> remoteRequests =
       this.remoteRequestsTable.get(priority);
     if (remoteRequests == null) {
@@ -642,6 +640,8 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
     if (relaxLocality) {
       resourceRequestInfo.containerRequests.add(req);
     }
+    
+    resourceRequestInfo.remoteRequest.setNodeLabelExpression(labelExpression);
 
     // Note this down for next interaction with ResourceManager
     addResourceRequestToAsk(resourceRequestInfo.remoteRequest);

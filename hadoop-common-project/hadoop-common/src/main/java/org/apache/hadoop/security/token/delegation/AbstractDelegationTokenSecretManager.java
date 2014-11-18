@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.security.token.delegation;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Text;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -36,10 +32,13 @@ import javax.crypto.SecretKey;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.HadoopKerberosName;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 
@@ -125,7 +124,7 @@ extends AbstractDelegationTokenIdentifier>
    * Reset all data structures and mutable state.
    */
   public synchronized void reset() {
-    currentId = 0;
+    setCurrentKeyId(0);
     allKeys.clear();
     setDelegationTokenSeqNum(0);
     currentTokens.clear();
@@ -133,15 +132,15 @@ extends AbstractDelegationTokenIdentifier>
   
   /** 
    * Add a previously used master key to cache (when NN restarts), 
-   * should be called before activate().
+   * should be called before activate(). 
    * */
   public synchronized void addKey(DelegationKey key) throws IOException {
     if (running) // a safety check
       throw new IOException("Can't add delegation key to a running SecretManager.");
-    if (key.getKeyId() > currentId) {
-      currentId = key.getKeyId();
+    if (key.getKeyId() > getCurrentKeyId()) {
+      setCurrentKeyId(key.getKeyId());
     }
-    storeDelegationKey(key);
+    allKeys.put(key.getKeyId(), key);
   }
 
   public synchronized DelegationKey[] getAllKeys() {
@@ -160,11 +159,6 @@ extends AbstractDelegationTokenIdentifier>
 
   // RM
   protected void storeNewMasterKey(DelegationKey key) throws IOException {
-    return;
-  }
-
-  // for ZK based secretManager
-  protected void updateMasterKey(DelegationKey key) throws IOException{
     return;
   }
 
@@ -191,7 +185,31 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations
    */
-  protected int getDelegationTokenSeqNum() {
+  protected synchronized int getCurrentKeyId() {
+    return currentId;
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected synchronized int incrementCurrentKeyId() {
+    return ++currentId;
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected synchronized void setCurrentKeyId(int keyId) {
+    currentId = keyId;
+  }
+
+  /**
+   * For subclasses externalizing the storage, for example Zookeeper
+   * based implementations
+   */
+  protected synchronized int getDelegationTokenSeqNum() {
     return delegationTokenSequenceNumber;
   }
 
@@ -199,7 +217,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations
    */
-  protected int incrementDelegationTokenSeqNum() {
+  protected synchronized int incrementDelegationTokenSeqNum() {
     return ++delegationTokenSequenceNumber;
   }
 
@@ -207,7 +225,7 @@ extends AbstractDelegationTokenIdentifier>
    * For subclasses externalizing the storage, for example Zookeeper
    * based implementations
    */
-  protected void setDelegationTokenSeqNum(int seqNum) {
+  protected synchronized void setDelegationTokenSeqNum(int seqNum) {
     delegationTokenSequenceNumber = seqNum;
   }
 
@@ -234,7 +252,6 @@ extends AbstractDelegationTokenIdentifier>
    */
   protected void updateDelegationKey(DelegationKey key) throws IOException {
     allKeys.put(key.getKeyId(), key);
-    updateMasterKey(key);
   }
 
   /**
@@ -268,6 +285,8 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * This method is intended to be used for recovering persisted delegation
    * tokens
+   * This method must be called before this secret manager is activated (before
+   * startThreads() is called)
    * @param identifier identifier read from persistent storage
    * @param renewDate token renew time
    * @throws IOException
@@ -280,18 +299,17 @@ extends AbstractDelegationTokenIdentifier>
           "Can't add persisted delegation token to a running SecretManager.");
     }
     int keyId = identifier.getMasterKeyId();
-    DelegationKey dKey = getDelegationKey(keyId);
+    DelegationKey dKey = allKeys.get(keyId);
     if (dKey == null) {
       LOG.warn("No KEY found for persisted identifier " + identifier.toString());
       return;
     }
     byte[] password = createPassword(identifier.getBytes(), dKey.getKey());
-    int delegationTokenSeqNum = getDelegationTokenSeqNum();
-    if (identifier.getSequenceNumber() > delegationTokenSeqNum) {
+    if (identifier.getSequenceNumber() > getDelegationTokenSeqNum()) {
       setDelegationTokenSeqNum(identifier.getSequenceNumber());
     }
     if (getTokenInfo(identifier) == null) {
-      storeToken(identifier, new DelegationTokenInformation(renewDate,
+      currentTokens.put(identifier, new DelegationTokenInformation(renewDate,
           password, getTrackingIdIfEnabled(identifier)));
     } else {
       throw new IOException("Same delegation token being added twice.");
@@ -308,16 +326,14 @@ extends AbstractDelegationTokenIdentifier>
     /* Create a new currentKey with an estimated expiry date. */
     int newCurrentId;
     synchronized (this) {
-      newCurrentId = currentId+1;
+      newCurrentId = incrementCurrentKeyId();
     }
     DelegationKey newKey = new DelegationKey(newCurrentId, System
         .currentTimeMillis()
         + keyUpdateInterval + tokenMaxLifetime, generateSecret());
     //Log must be invoked outside the lock on 'this'
     logUpdateMasterKey(newKey);
-    storeNewMasterKey(newKey);
     synchronized (this) {
-      currentId = newKey.getKeyId();
       currentKey = newKey;
       storeDelegationKey(currentKey);
     }
@@ -364,9 +380,10 @@ extends AbstractDelegationTokenIdentifier>
     sequenceNum = incrementDelegationTokenSeqNum();
     identifier.setIssueDate(now);
     identifier.setMaxDate(now + tokenMaxLifetime);
-    identifier.setMasterKeyId(currentId);
+    identifier.setMasterKeyId(currentKey.getKeyId());
     identifier.setSequenceNumber(sequenceNum);
-    LOG.info("Creating password for identifier: " + identifier);
+    LOG.info("Creating password for identifier: " + identifier
+        + ", currentKey: " + currentKey.getKeyId());
     byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
     DelegationTokenInformation tokenInfo = new DelegationTokenInformation(now
         + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
@@ -648,4 +665,17 @@ extends AbstractDelegationTokenIdentifier>
       }
     }
   }
+
+  /**
+   * Decode the token identifier. The subclass can customize the way to decode
+   * the token identifier.
+   * 
+   * @param token the token where to extract the identifier
+   * @return the delegation token identifier
+   * @throws IOException
+   */
+  public TokenIdent decodeTokenIdentifier(Token<TokenIdent> token) throws IOException {
+    return token.decodeIdentifier();
+  }
+
 }

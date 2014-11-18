@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -40,7 +41,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -74,6 +74,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.IdentityHashStore;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.htrace.Span;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 
 /****************************************************************
  * DFSInputStream provides bytes from a named file.  It handles 
@@ -211,19 +214,17 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * parallel accesses to DFSInputStream (through ptreads) properly */
   private final ConcurrentHashMap<DatanodeInfo, DatanodeInfo> deadNodes =
              new ConcurrentHashMap<DatanodeInfo, DatanodeInfo>();
-  private int buffersize = 1;
-  
+
   private final byte[] oneByteBuf = new byte[1]; // used for 'int read()'
 
   void addToDeadNodes(DatanodeInfo dnInfo) {
     deadNodes.put(dnInfo, dnInfo);
   }
   
-  DFSInputStream(DFSClient dfsClient, String src, int buffersize, boolean verifyChecksum
+  DFSInputStream(DFSClient dfsClient, String src, boolean verifyChecksum
                  ) throws IOException, UnresolvedLinkException {
     this.dfsClient = dfsClient;
     this.verifyChecksum = verifyChecksum;
-    this.buffersize = buffersize;
     this.src = src;
     this.cachingStrategy =
         dfsClient.getDefaultReadCachingStrategy();
@@ -567,6 +568,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       DNAddrPair retval = chooseDataNode(targetBlock, null);
       chosenNode = retval.info;
       InetSocketAddress targetAddr = retval.addr;
+      StorageType storageType = retval.storageType;
 
       try {
         ExtendedBlock blk = targetBlock.getBlock();
@@ -575,6 +577,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
             setInetSocketAddress(targetAddr).
             setRemotePeerFactory(dfsClient).
             setDatanodeInfo(chosenNode).
+            setStorageType(storageType).
             setFileName(src).
             setBlock(blk).
             setBlockToken(accessToken).
@@ -798,7 +801,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           }
           int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
           if (locatedBlocks.isLastBlockComplete()) {
-            realLen = (int) Math.min(realLen, locatedBlocks.getFileLength());
+            realLen = (int) Math.min(realLen,
+                locatedBlocks.getFileLength() - pos);
           }
           int result = readBuffer(strategy, off, realLen, corruptedBlockMap);
           
@@ -840,15 +844,25 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   @Override
   public synchronized int read(final byte buf[], int off, int len) throws IOException {
     ReaderStrategy byteArrayReader = new ByteArrayStrategy(buf);
-
-    return readWithStrategy(byteArrayReader, off, len);
+    TraceScope scope =
+        dfsClient.getPathTraceScope("DFSInputStream#byteArrayRead", src);
+    try {
+      return readWithStrategy(byteArrayReader, off, len);
+    } finally {
+      scope.close();
+    }
   }
 
   @Override
   public synchronized int read(final ByteBuffer buf) throws IOException {
     ReaderStrategy byteBufferReader = new ByteBufferStrategy(buf);
-
-    return readWithStrategy(byteBufferReader, 0, buf.remaining());
+    TraceScope scope =
+        dfsClient.getPathTraceScope("DFSInputStream#byteBufferRead", src);
+    try {
+      return readWithStrategy(byteBufferReader, 0, buf.remaining());
+    } finally {
+      scope.close();
+    }
   }
 
 
@@ -872,12 +886,11 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   private DNAddrPair chooseDataNode(LocatedBlock block,
       Collection<DatanodeInfo> ignoredNodes) throws IOException {
     while (true) {
-      DatanodeInfo[] nodes = block.getLocations();
       try {
-        return getBestNodeDNAddrPair(nodes, ignoredNodes);
+        return getBestNodeDNAddrPair(block, ignoredNodes);
       } catch (IOException ie) {
-        String errMsg =
-          getBestNodeDNAddrPairErrorString(nodes, deadNodes, ignoredNodes);
+        String errMsg = getBestNodeDNAddrPairErrorString(block.getLocations(),
+          deadNodes, ignoredNodes);
         String blockInfo = block.getBlock() + " file=" + src;
         if (failures >= dfsClient.getMaxBlockAcquireFailures()) {
           String description = "Could not obtain block: " + blockInfo;
@@ -886,7 +899,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           throw new BlockMissingException(src, description,
               block.getStartOffset());
         }
-        
+
+        DatanodeInfo[] nodes = block.getLocations();
         if (nodes == null || nodes.length == 0) {
           DFSClient.LOG.info("No node available for " + blockInfo);
         }
@@ -920,22 +934,44 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   }
 
   /**
-   * Get the best node.
-   * @param nodes Nodes to choose from.
-   * @param ignoredNodes Do not chose nodes in this array (may be null)
+   * Get the best node from which to stream the data.
+   * @param block LocatedBlock, containing nodes in priority order.
+   * @param ignoredNodes Do not choose nodes in this array (may be null)
    * @return The DNAddrPair of the best node.
    * @throws IOException
    */
-  private DNAddrPair getBestNodeDNAddrPair(final DatanodeInfo[] nodes,
+  private DNAddrPair getBestNodeDNAddrPair(LocatedBlock block,
       Collection<DatanodeInfo> ignoredNodes) throws IOException {
-    DatanodeInfo chosenNode = bestNode(nodes, deadNodes, ignoredNodes);
+    DatanodeInfo[] nodes = block.getLocations();
+    StorageType[] storageTypes = block.getStorageTypes();
+    DatanodeInfo chosenNode = null;
+    StorageType storageType = null;
+    if (nodes != null) {
+      for (int i = 0; i < nodes.length; i++) {
+        if (!deadNodes.containsKey(nodes[i])
+            && (ignoredNodes == null || !ignoredNodes.contains(nodes[i]))) {
+          chosenNode = nodes[i];
+          // Storage types are ordered to correspond with nodes, so use the same
+          // index to get storage type.
+          if (storageTypes != null && i < storageTypes.length) {
+            storageType = storageTypes[i];
+          }
+          break;
+        }
+      }
+    }
+    if (chosenNode == null) {
+      throw new IOException("No live nodes contain block " + block.getBlock() +
+          " after checking nodes = " + Arrays.toString(nodes) +
+          ", ignoredNodes = " + ignoredNodes);
+    }
     final String dnAddr =
         chosenNode.getXferAddr(dfsClient.getConf().connectToDnViaHostname);
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("Connecting to datanode " + dnAddr);
     }
     InetSocketAddress targetAddr = NetUtils.createSocketAddr(dnAddr);
-    return new DNAddrPair(chosenNode, targetAddr);
+    return new DNAddrPair(chosenNode, targetAddr, storageType);
   }
 
   private static String getBestNodeDNAddrPairErrorString(
@@ -984,15 +1020,23 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   private Callable<ByteBuffer> getFromOneDataNode(final DNAddrPair datanode,
       final LocatedBlock block, final long start, final long end,
       final ByteBuffer bb,
-      final Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap) {
+      final Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap,
+      final int hedgedReadId) {
+    final Span parentSpan = Trace.currentSpan();
     return new Callable<ByteBuffer>() {
       @Override
       public ByteBuffer call() throws Exception {
         byte[] buf = bb.array();
         int offset = bb.position();
-        actualGetFromOneDataNode(datanode, block, start, end, buf, offset,
-            corruptedBlockMap);
-        return bb;
+        TraceScope scope =
+            Trace.startSpan("hedgedRead" + hedgedReadId, parentSpan);
+        try {
+          actualGetFromOneDataNode(datanode, block, start, end, buf, offset,
+              corruptedBlockMap);
+          return bb;
+        } finally {
+          scope.close();
+        }
       }
     };
   }
@@ -1018,6 +1062,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       }
       DatanodeInfo chosenNode = datanode.info;
       InetSocketAddress targetAddr = datanode.addr;
+      StorageType storageType = datanode.storageType;
       BlockReader reader = null;
 
       try {
@@ -1028,6 +1073,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
             setInetSocketAddress(targetAddr).
             setRemotePeerFactory(dfsClient).
             setDatanodeInfo(chosenNode).
+            setStorageType(storageType).
             setFileName(src).
             setBlock(block.getBlock()).
             setBlockToken(blockToken).
@@ -1108,6 +1154,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     ArrayList<DatanodeInfo> ignored = new ArrayList<DatanodeInfo>();
     ByteBuffer bb = null;
     int len = (int) (end - start + 1);
+    int hedgedReadId = 0;
     block = getBlockAt(block.getStartOffset(), false);
     while (true) {
       // see HDFS-6591, this metric is used to verify/catch unnecessary loops
@@ -1120,7 +1167,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
         chosenNode = chooseDataNode(block, ignored);
         bb = ByteBuffer.wrap(buf, offset, len);
         Callable<ByteBuffer> getFromDataNodeCallable = getFromOneDataNode(
-            chosenNode, block, start, end, bb, corruptedBlockMap);
+            chosenNode, block, start, end, bb, corruptedBlockMap,
+            hedgedReadId++);
         Future<ByteBuffer> firstRequest = hedgedService
             .submit(getFromDataNodeCallable);
         futures.add(firstRequest);
@@ -1151,13 +1199,14 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
         // If no nodes to do hedged reads against, pass.
         try {
           try {
-            chosenNode = getBestNodeDNAddrPair(block.getLocations(), ignored);
+            chosenNode = getBestNodeDNAddrPair(block, ignored);
           } catch (IOException ioe) {
             chosenNode = chooseDataNode(block, ignored);
           }
           bb = ByteBuffer.allocate(len);
           Callable<ByteBuffer> getFromDataNodeCallable = getFromOneDataNode(
-              chosenNode, block, start, end, bb, corruptedBlockMap);
+              chosenNode, block, start, end, bb, corruptedBlockMap,
+              hedgedReadId++);
           Future<ByteBuffer> oneMoreRequest = hedgedService
               .submit(getFromDataNodeCallable);
           futures.add(oneMoreRequest);
@@ -1272,7 +1321,18 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    */
   @Override
   public int read(long position, byte[] buffer, int offset, int length)
-    throws IOException {
+      throws IOException {
+    TraceScope scope =
+        dfsClient.getPathTraceScope("DFSInputStream#byteArrayPread", src);
+    try {
+      return pread(position, buffer, offset, length);
+    } finally {
+      scope.close();
+    }
+  }
+
+  private int pread(long position, byte[] buffer, int offset, int length)
+      throws IOException {
     // sanity checks
     dfsClient.checkOpen();
     if (closed) {
@@ -1494,31 +1554,17 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     throw new IOException("Mark/reset not supported");
   }
 
-  /**
-   * Pick the best node from which to stream the data.
-   * Entries in <i>nodes</i> are already in the priority order
-   */
-  static DatanodeInfo bestNode(DatanodeInfo nodes[],
-      AbstractMap<DatanodeInfo, DatanodeInfo> deadNodes,
-      Collection<DatanodeInfo> ignoredNodes) throws IOException {
-    if (nodes != null) {
-      for (int i = 0; i < nodes.length; i++) {
-        if (!deadNodes.containsKey(nodes[i])
-            && (ignoredNodes == null || !ignoredNodes.contains(nodes[i]))) {
-          return nodes[i];
-        }
-      }
-    }
-    throw new IOException("No live nodes contain current block");
-  }
-
   /** Utility class to encapsulate data node info and its address. */
-  static class DNAddrPair {
+  private static final class DNAddrPair {
     final DatanodeInfo info;
     final InetSocketAddress addr;
-    DNAddrPair(DatanodeInfo info, InetSocketAddress addr) {
+    final StorageType storageType;
+
+    DNAddrPair(DatanodeInfo info, InetSocketAddress addr,
+        StorageType storageType) {
       this.info = info;
       this.addr = addr;
+      this.storageType = storageType;
     }
   }
 

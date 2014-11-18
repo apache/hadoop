@@ -173,7 +173,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty</artifactId>
+      <artifactId>netty-all</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -196,6 +196,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-kms</artifactId>
       <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk16</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -346,6 +352,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>CHANGES.txt</exclude>
             <exclude>CHANGES.HDFS-1623.txt</exclude>
             <exclude>CHANGES.HDFS-347.txt</exclude>
+            <exclude>.gitattributes</exclude>
             <exclude>.idea/**</exclude>
             <exclude>src/main/conf/*</exclude>
             <exclude>src/main/docs/**</exclude>

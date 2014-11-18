@@ -47,6 +47,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -154,6 +156,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         trackingUrl = attempt.getTrackingUrl();
         host = attempt.getHost();
       }
+      RMAppMetrics metrics = app.getRMAppMetrics();
       SummaryBuilder summary = new SummaryBuilder()
           .add("appId", app.getApplicationId())
           .add("name", app.getName())
@@ -164,7 +167,12 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           .add("appMasterHost", host)
           .add("startTime", app.getStartTime())
           .add("finishTime", app.getFinishTime())
-          .add("finalStatus", app.getFinalApplicationStatus());
+          .add("finalStatus", app.getFinalApplicationStatus())
+          .add("memorySeconds", metrics.getMemorySeconds())
+          .add("vcoreSeconds", metrics.getVcoreSeconds())
+          .add("preemptedAMContainers", metrics.getNumAMContainersPreempted())
+          .add("preemptedNonAMContainers", metrics.getNumNonAMContainersPreempted())
+          .add("preemptedResources", metrics.getResourcePreempted());
       return summary;
     }
 
@@ -274,11 +282,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     ApplicationId appId = submissionContext.getApplicationId();
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      Credentials credentials = null;
       try {
-        credentials = parseCredentials(submissionContext);
         this.rmContext.getDelegationTokenRenewer().addApplicationAsync(appId,
-          credentials, submissionContext.getCancelTokensWhenComplete());
+            parseCredentials(submissionContext),
+            submissionContext.getCancelTokensWhenComplete(),
+            application.getUser());
       } catch (Exception e) {
         LOG.warn("Unable to parse credentials.", e);
         // Sending APP_REJECTED is fine, since we assume that the
@@ -298,10 +306,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
   }
 
-  @SuppressWarnings("unchecked")
-  protected void
-      recoverApplication(ApplicationState appState, RMState rmState)
-          throws Exception {
+  protected void recoverApplication(ApplicationState appState, RMState rmState)
+      throws Exception {
     ApplicationSubmissionContext appContext =
         appState.getApplicationSubmissionContext();
     ApplicationId appId = appState.getAppId();
@@ -310,32 +316,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
           appState.getUser());
-    application.recover(rmState);
-    if (isApplicationInFinalState(appState.getState())) {
-      // We are synchronously moving the application into final state so that
-      // momentarily client will not see this application in NEW state. Also
-      // for finished applications we will avoid renewing tokens.
-      application.handle(new RMAppEvent(appId, RMAppEventType.RECOVER));
-      return;
-    }
-
-    if (UserGroupInformation.isSecurityEnabled()) {
-      Credentials credentials = null;
-      try {
-        credentials = parseCredentials(appContext);
-        // synchronously renew delegation token on recovery.
-        rmContext.getDelegationTokenRenewer().addApplicationSync(appId,
-          credentials, appContext.getCancelTokensWhenComplete());
-        application.handle(new RMAppEvent(appId, RMAppEventType.RECOVER));
-      } catch (Exception e) {
-        LOG.warn("Unable to parse and renew delegation tokens.", e);
-        this.rmContext.getDispatcher().getEventHandler()
-          .handle(new RMAppRejectedEvent(appId, e.getMessage()));
-        throw e;
-      }
-    } else {
-      application.handle(new RMAppEvent(appId, RMAppEventType.RECOVER));
-    }
+    application.handle(new RMAppRecoverEvent(appId, rmState));
   }
 
   private RMAppImpl createAndPopulateNewRMApp(
@@ -343,7 +324,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       long submitTime, String user)
       throws YarnException {
     ApplicationId applicationId = submissionContext.getApplicationId();
-    validateResourceRequest(submissionContext);
+    ResourceRequest amReq = validateAndCreateResourceRequest(submissionContext);
     // Create RMApp
     RMAppImpl application =
         new RMAppImpl(applicationId, rmContext, this.conf,
@@ -351,7 +332,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             submissionContext.getQueue(),
             submissionContext, this.scheduler, this.masterService,
             submitTime, submissionContext.getApplicationType(),
-            submissionContext.getApplicationTags());
+            submissionContext.getApplicationTags(), amReq);
 
     // Concurrent app submissions with same applicationId will fail here
     // Concurrent app submissions with different applicationIds will not
@@ -373,7 +354,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     return application;
   }
 
-  private void validateResourceRequest(
+  private ResourceRequest validateAndCreateResourceRequest(
       ApplicationSubmissionContext submissionContext)
       throws InvalidResourceRequestException {
     // Validation of the ApplicationSubmissionContext needs to be completed
@@ -383,31 +364,40 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
     // Check whether AM resource requirements are within required limits
     if (!submissionContext.getUnmanagedAM()) {
-      ResourceRequest amReq = BuilderUtils.newResourceRequest(
-          RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-          submissionContext.getResource(), 1);
+      ResourceRequest amReq;
+      if (submissionContext.getAMContainerResourceRequest() != null) {
+        amReq = submissionContext.getAMContainerResourceRequest();
+      } else {
+        amReq =
+            BuilderUtils.newResourceRequest(
+                RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
+                submissionContext.getResource(), 1);
+      }
+      
+      // set label expression for AM container
+      if (null == amReq.getNodeLabelExpression()) {
+        amReq.setNodeLabelExpression(submissionContext
+            .getNodeLabelExpression());
+      }
+
       try {
         SchedulerUtils.validateResourceRequest(amReq,
-            scheduler.getMaximumResourceCapability());
+            scheduler.getMaximumResourceCapability(),
+            submissionContext.getQueue(), scheduler);
       } catch (InvalidResourceRequestException e) {
         LOG.warn("RM app submission failed in validating AM resource request"
             + " for application " + submissionContext.getApplicationId(), e);
         throw e;
       }
+      
+      return amReq;
     }
-  }
-
-  private boolean isApplicationInFinalState(RMAppState rmAppState) {
-    if (rmAppState == RMAppState.FINISHED || rmAppState == RMAppState.FAILED
-        || rmAppState == RMAppState.KILLED) {
-      return true;
-    } else {
-      return false;
-    }
+    
+    return null;
   }
   
-  protected Credentials parseCredentials(ApplicationSubmissionContext application)
-      throws IOException {
+  protected Credentials parseCredentials(
+      ApplicationSubmissionContext application) throws IOException {
     Credentials credentials = new Credentials();
     DataInputByteBuffer dibb = new DataInputByteBuffer();
     ByteBuffer tokens = application.getAMContainerSpec().getTokens();

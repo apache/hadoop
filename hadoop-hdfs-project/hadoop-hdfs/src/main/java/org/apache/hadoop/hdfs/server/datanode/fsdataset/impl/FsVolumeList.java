@@ -68,7 +68,25 @@ class FsVolumeList {
     }
     return blockChooser.chooseVolume(list, blockSize);
   }
-    
+
+  /**
+   * Get next volume. Synchronized to ensure {@link #curVolume} is updated
+   * by a single thread and next volume is chosen with no concurrent
+   * update to {@link #volumes}.
+   * @param blockSize free space needed on the volume
+   * @return next volume to store the block in.
+   */
+  synchronized FsVolumeImpl getNextTransientVolume(
+      long blockSize) throws IOException {
+    final List<FsVolumeImpl> list = new ArrayList<FsVolumeImpl>(volumes.size());
+    for(FsVolumeImpl v : volumes) {
+      if (v.isTransientStorage()) {
+        list.add(v);
+      }
+    }
+    return blockChooser.chooseVolume(list, blockSize);
+  }
+
   long getDfsUsed() throws IOException {
     long dfsUsed = 0L;
     for (FsVolumeImpl v : volumes) {
@@ -101,7 +119,10 @@ class FsVolumeList {
     return remaining;
   }
   
-  void getAllVolumesMap(final String bpid, final ReplicaMap volumeMap) throws IOException {
+  void getAllVolumesMap(final String bpid,
+                        final ReplicaMap volumeMap,
+                        final RamDiskReplicaTracker ramDiskReplicaMap)
+      throws IOException {
     long totalStartTime = Time.monotonicNow();
     final List<IOException> exceptions = Collections.synchronizedList(
         new ArrayList<IOException>());
@@ -113,7 +134,7 @@ class FsVolumeList {
             FsDatasetImpl.LOG.info("Adding replicas to map for block pool " +
                 bpid + " on volume " + v + "...");
             long startTime = Time.monotonicNow();
-            v.getVolumeMap(bpid, volumeMap);
+            v.getVolumeMap(bpid, volumeMap, ramDiskReplicaMap);
             long timeTaken = Time.monotonicNow() - startTime;
             FsDatasetImpl.LOG.info("Time to add replicas to map for block pool"
                 + " " + bpid + " on volume " + v + ": " + timeTaken + "ms");
@@ -142,17 +163,6 @@ class FsVolumeList {
         + totalTimeTaken + "ms");
   }
 
-  void getVolumeMap(String bpid, FsVolumeImpl volume, ReplicaMap volumeMap)
-      throws IOException {
-    FsDatasetImpl.LOG.info("Adding replicas to map for block pool " + bpid +
-                               " on volume " + volume + "...");
-    long startTime = Time.monotonicNow();
-    volume.getVolumeMap(bpid, volumeMap);
-    long timeTaken = Time.monotonicNow() - startTime;
-    FsDatasetImpl.LOG.info("Time to add replicas to map for block pool " + bpid +
-                               " on volume " + volume + ": " + timeTaken + "ms");
-  }
-    
   /**
    * Calls {@link FsVolumeImpl#checkDirs()} on each volume, removing any
    * volumes from the active list that result in a DiskErrorException.

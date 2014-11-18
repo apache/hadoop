@@ -230,14 +230,13 @@ class BPOfferService {
   void notifyNamenodeReceivedBlock(
       ExtendedBlock block, String delHint, String storageUuid) {
     checkBlock(block);
-    checkDelHint(delHint);
     ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(
         block.getLocalBlock(),
         ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
         delHint);
 
     for (BPServiceActor actor : bpServices) {
-      actor.notifyNamenodeBlockImmediately(bInfo, storageUuid);
+      actor.notifyNamenodeBlock(bInfo, storageUuid, true);
     }
   }
 
@@ -249,11 +248,6 @@ class BPOfferService {
         block.getBlockPoolId(), getBlockPoolId());
   }
   
-  private void checkDelHint(String delHint) {
-    Preconditions.checkArgument(delHint != null,
-        "delHint is null");
-  }
-
   void notifyNamenodeDeletedBlock(ExtendedBlock block, String storageUuid) {
     checkBlock(block);
     ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(
@@ -270,7 +264,7 @@ class BPOfferService {
        block.getLocalBlock(), BlockStatus.RECEIVING_BLOCK, null);
     
     for (BPServiceActor actor : bpServices) {
-      actor.notifyNamenodeBlockImmediately(bInfo, storageUuid);
+      actor.notifyNamenodeBlock(bInfo, storageUuid, false);
     }
   }
 

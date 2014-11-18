@@ -73,6 +73,7 @@
          Define a non-SSL HTTP/1.1 Connector on port ${kms.http.port}
     -->
     <Connector port="${kms.http.port}" protocol="HTTP/1.1"
+               maxThreads="${kms.max.threads}"
                connectionTimeout="20000"
                redirectPort="8443"/>
     <!-- A "Connector" using the shared thread pool-->

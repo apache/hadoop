@@ -1373,6 +1373,14 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>hadoop.ssl.enabled.protocols</name>
+  <value>TLSv1</value>
+  <description>
+    Protocols supported by the ssl.
+  </description>
+</property>
+
+<property>
   <name>hadoop.jetty.logs.serve.aliases</name>
   <value>true</value>
   <description>
@@ -1607,6 +1615,13 @@ for ldap providers in the same way as above does.
 
 <!--- KMSClientProvider configurations -->
 <property>
+  <name>hadoop.security.kms.client.authentication.retry-count</name>
+  <value>1</value>
+  <description>
+    Number of time to retry connecting to KMS on authentication failure
+  </description>
+</property>
+<property>
   <name>hadoop.security.kms.client.encrypted.key.cache.size</name>
   <value>500</value>
   <description>
@@ -1630,7 +1645,7 @@ for ldap providers in the same way as above does.
   </description>
 </property>
 <property>
-  <name>"hadoop.security.kms.client.encrypted.key.cache.expiry</name>
+  <name>hadoop.security.kms.client.encrypted.key.cache.expiry</name>
   <value>43200000</value>
   <description>
     Cache expiry time for a Key, after which the cache Queue for this

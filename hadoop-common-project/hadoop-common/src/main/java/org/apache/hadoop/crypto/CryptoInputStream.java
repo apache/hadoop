@@ -23,6 +23,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.security.GeneralSecurityException;
 import java.util.EnumSet;
 import java.util.Queue;
@@ -57,7 +58,8 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Evolving
 public class CryptoInputStream extends FilterInputStream implements 
     Seekable, PositionedReadable, ByteBufferReadable, HasFileDescriptor, 
-    CanSetDropBehind, CanSetReadahead, HasEnhancedByteBufferAccess {
+    CanSetDropBehind, CanSetReadahead, HasEnhancedByteBufferAccess, 
+    ReadableByteChannel {
   private static final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Decryptor decryptor;
@@ -92,6 +94,8 @@ public class CryptoInputStream extends FilterInputStream implements
   private final byte[] key;
   private final byte[] initIV;
   private byte[] iv;
+  private final boolean isByteBufferReadable;
+  private final boolean isReadableByteChannel;
   
   /** DirectBuffer pool */
   private final Queue<ByteBuffer> bufferPool = 
@@ -115,6 +119,8 @@ public class CryptoInputStream extends FilterInputStream implements
     this.initIV = iv.clone();
     this.iv = iv.clone();
     this.streamOffset = streamOffset;
+    isByteBufferReadable = in instanceof ByteBufferReadable;
+    isReadableByteChannel = in instanceof ReadableByteChannel;
     inBuffer = ByteBuffer.allocateDirect(this.bufferSize);
     outBuffer = ByteBuffer.allocateDirect(this.bufferSize);
     decryptor = getDecryptor();
@@ -165,9 +171,11 @@ public class CryptoInputStream extends FilterInputStream implements
        * it can avoid bytes copy.
        */
       if (usingByteBufferRead == null) {
-        if (in instanceof ByteBufferReadable) {
+        if (isByteBufferReadable || isReadableByteChannel) {
           try {
-            n = ((ByteBufferReadable) in).read(inBuffer);
+            n = isByteBufferReadable ? 
+                ((ByteBufferReadable) in).read(inBuffer) : 
+                  ((ReadableByteChannel) in).read(inBuffer);
             usingByteBufferRead = Boolean.TRUE;
           } catch (UnsupportedOperationException e) {
             usingByteBufferRead = Boolean.FALSE;
@@ -180,7 +188,8 @@ public class CryptoInputStream extends FilterInputStream implements
         }
       } else {
         if (usingByteBufferRead) {
-          n = ((ByteBufferReadable) in).read(inBuffer);
+          n = isByteBufferReadable ? ((ByteBufferReadable) in).read(inBuffer) : 
+                ((ReadableByteChannel) in).read(inBuffer);
         } else {
           n = readFromUnderlyingStream(inBuffer);
         }
@@ -450,7 +459,7 @@ public class CryptoInputStream extends FilterInputStream implements
   @Override
   public int read(ByteBuffer buf) throws IOException {
     checkStream();
-    if (in instanceof ByteBufferReadable) {
+    if (isByteBufferReadable || isReadableByteChannel) {
       final int unread = outBuffer.remaining();
       if (unread > 0) { // Have unread decrypted data in buffer.
         int toRead = buf.remaining();
@@ -466,7 +475,8 @@ public class CryptoInputStream extends FilterInputStream implements
       }
       
       final int pos = buf.position();
-      final int n = ((ByteBufferReadable) in).read(buf);
+      final int n = isByteBufferReadable ? ((ByteBufferReadable) in).read(buf) : 
+            ((ReadableByteChannel) in).read(buf);
       if (n > 0) {
         streamOffset += n; // Read n bytes
         decrypt(buf, n, pos);
@@ -481,10 +491,22 @@ public class CryptoInputStream extends FilterInputStream implements
           return unread;
         }
       }
+    } else {
+      int n = 0;
+      if (buf.hasArray()) {
+        n = read(buf.array(), buf.position(), buf.remaining());
+        if (n > 0) {
+          buf.position(buf.position() + n);
+        }
+      } else {
+        byte[] tmp = new byte[buf.remaining()];
+        n = read(tmp);
+        if (n > 0) {
+          buf.put(tmp, 0, n);
+        }
+      }
+      return n;
     }
-
-    throw new UnsupportedOperationException("ByteBuffer read unsupported " +
-        "by input stream.");
   }
   
   /**
@@ -685,5 +707,10 @@ public class CryptoInputStream extends FilterInputStream implements
     if (decryptor != null) {
       decryptorPool.add(decryptor);
     }
+  }
+
+  @Override
+  public boolean isOpen() {
+    return !closed;
   }
 }

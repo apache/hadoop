@@ -65,6 +65,9 @@ public class TestApplicationLimits {
   LeafQueue queue;
   
   private final ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
+
+  RMContext rmContext = null;
+
   
   @Before
   public void setUp() throws IOException {
@@ -73,7 +76,9 @@ public class TestApplicationLimits {
     YarnConfiguration conf = new YarnConfiguration();
     setupQueueConfiguration(csConf);
     
-    
+    rmContext = TestUtils.getMockRMContext();
+
+
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
@@ -89,6 +94,8 @@ public class TestApplicationLimits {
         thenReturn(CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).
         thenReturn(resourceCalculator);
+    when(csContext.getRMContext()).thenReturn(rmContext);
+    
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
     containerTokenSecretManager.rollMasterKey();
@@ -162,6 +169,7 @@ public class TestApplicationLimits {
     when(csContext.getQueueComparator()).
         thenReturn(CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    when(csContext.getRMContext()).thenReturn(rmContext);
     
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB, 100 * 16);
@@ -475,6 +483,7 @@ public class TestApplicationLimits {
     when(csContext.getQueueComparator()).
         thenReturn(CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    when(csContext.getRMContext()).thenReturn(rmContext);
     
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB);
@@ -516,9 +525,9 @@ public class TestApplicationLimits {
     app_0_0.updateResourceRequests(app_0_0_requests);
 
     // Schedule to compute 
-    queue.assignContainers(clusterResource, node_0);
+    queue.assignContainers(clusterResource, node_0, false);
     Resource expectedHeadroom = Resources.createResource(10*16*GB, 1);
-    verify(app_0_0).setHeadroom(eq(expectedHeadroom));
+    assertEquals(expectedHeadroom, app_0_0.getHeadroom());
 
     // Submit second application from user_0, check headroom
     final ApplicationAttemptId appAttemptId_0_1 = 
@@ -535,9 +544,9 @@ public class TestApplicationLimits {
     app_0_1.updateResourceRequests(app_0_1_requests);
 
     // Schedule to compute 
-    queue.assignContainers(clusterResource, node_0); // Schedule to compute
-    verify(app_0_0, times(2)).setHeadroom(eq(expectedHeadroom));
-    verify(app_0_1).setHeadroom(eq(expectedHeadroom));// no change
+    queue.assignContainers(clusterResource, node_0, false); // Schedule to compute
+    assertEquals(expectedHeadroom, app_0_0.getHeadroom());
+    assertEquals(expectedHeadroom, app_0_1.getHeadroom());// no change
     
     // Submit first application from user_1, check  for new headroom
     final ApplicationAttemptId appAttemptId_1_0 = 
@@ -554,19 +563,19 @@ public class TestApplicationLimits {
     app_1_0.updateResourceRequests(app_1_0_requests);
     
     // Schedule to compute 
-    queue.assignContainers(clusterResource, node_0); // Schedule to compute
+    queue.assignContainers(clusterResource, node_0, false); // Schedule to compute
     expectedHeadroom = Resources.createResource(10*16*GB / 2, 1); // changes
-    verify(app_0_0).setHeadroom(eq(expectedHeadroom));
-    verify(app_0_1).setHeadroom(eq(expectedHeadroom));
-    verify(app_1_0).setHeadroom(eq(expectedHeadroom));
+    assertEquals(expectedHeadroom, app_0_0.getHeadroom());
+    assertEquals(expectedHeadroom, app_0_1.getHeadroom());
+    assertEquals(expectedHeadroom, app_1_0.getHeadroom());
 
     // Now reduce cluster size and check for the smaller headroom
     clusterResource = Resources.createResource(90*16*GB);
-    queue.assignContainers(clusterResource, node_0); // Schedule to compute
+    queue.assignContainers(clusterResource, node_0, false); // Schedule to compute
     expectedHeadroom = Resources.createResource(9*16*GB / 2, 1); // changes
-    verify(app_0_0).setHeadroom(eq(expectedHeadroom));
-    verify(app_0_1).setHeadroom(eq(expectedHeadroom));
-    verify(app_1_0).setHeadroom(eq(expectedHeadroom));
+    assertEquals(expectedHeadroom, app_0_0.getHeadroom());
+    assertEquals(expectedHeadroom, app_0_1.getHeadroom());
+    assertEquals(expectedHeadroom, app_1_0.getHeadroom());
   }
   
 

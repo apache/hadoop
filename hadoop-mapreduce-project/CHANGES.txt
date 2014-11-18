@@ -160,6 +160,9 @@ Trunk (Unreleased)
     MAPREDUCE-5972. Fix typo 'programatically' in job.xml (and a few other
     places) (Akira AJISAKA via aw)
 
+    MAPREDUCE-6161. mapred hsadmin command missing from trunk (Allen Wittenauer
+    via jlowe)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
@@ -222,11 +225,33 @@ Trunk (Unreleased)
 
     MAPREDUCE-6077. native-task: Remove CustomModule examples in nativetask (seanzhong)
 
-Release 2.6.0 - UNRELEASED
+    MAPREDUCE-6078. native-task: fix gtest build on macosx (Binglin Chang)
+
+Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-5918. LineRecordReader can return the same decompressor to
+    CodecPool multiple times (Sergey Murylev via raviprak)
+
+    MAPREDUCE-6162. mapred hsadmin fails on a secure cluster (jlowe)
+ 
+Release 2.6.0 - 2014-11-18
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    MAPREDUCE-5933. Enabled MR AM to post history events to the timeline server.
+    (Robert Kanter via zjshen)
 
   IMPROVEMENTS
 
@@ -257,6 +282,17 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-5279. Made MR headroom calculation honor cpu dimension when YARN
     scheduler resource type is memory plus cpu. (Peng Zhang and Varun Vasudev
     via zjshen)
+
+    MAPREDUCE-6072. Remove INSTALL document (Akira AJISAKA via aw)
+
+    MAPREDUCE-5970. Provide a boolean switch to enable MR-AM profiling (Gera
+    Shegalov via jlowe)
+
+    MAPREDUCE-6018. Added an MR specific config to enable emitting job history
+    data to the timeline server. (Robert Kanter via zjshen)
+
+    MAPREDUCE-6052. Supported overriding the default container-log4j.properties
+    file per job. (Junping Du via zjshen)
 
   OPTIMIZATIONS
 
@@ -366,6 +402,92 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6095. Enable DistributedCache for uber-mode Jobs (Gera Shegalov
     via jlowe)
+
+    MAPREDUCE-6104. TestJobHistoryParsing.testPartialJob fails in branch-2
+    (Mit Desai via jlowe)
+
+    MAPREDUCE-6109. Fix minor typo in distcp -p usage text (Charles Lamb 
+    via aw)
+
+    MAPREDUCE-6093. minor distcp doc edits (Charles Lamb via aw)
+
+    MAPREDUCE-5831. Make MR client ignore unknown counters received from AM.
+    (Junping Du via zjshen)
+
+    MAPREDUCE-6073. Description of mapreduce.job.speculative.slowtaskthreshold 
+    in mapred-default should be moved into description tags (Tsuyoshi OZAWA 
+    via aw)
+
+    MAPREDUCE-5796. Use current version of the archive name in 
+    DistributedCacheDeploy document (Akira AJISAKA via aw)
+
+    MAPREDUCE-5945. Update the description of GenericOptionsParser -jt 
+    option (Akira AJISAKA via aw)
+
+    MAPREDUCE-6087. Fixed wrong config name of
+    MRJobConfig#MR_CLIENT_TO_AM_IPC_MAX_RETRIES_ON_TIMEOUTS. Contributed by
+    Akira AJISAKA. (Akira AJISAKA via jianhe)
+
+    MAPREDUCE-6094. TestMRCJCFileInputFormat.testAddInputPath() fails on trunk
+    (Akira AJISAKA via jlowe)
+
+    MAPREDUCE-6029. TestCommitterEventHandler fails in trunk (Mit Desai via
+    jlowe)
+
+    MAPREDUCE-6122. TestLineRecordReader may fail due to test data files checked
+    out of git with incorrect line endings. (cnauroth)
+
+    MAPREDUCE-6123. TestCombineFileInputFormat incorrectly starts 2
+    MiniDFSCluster instances. (cnauroth)
+
+    MAPREDUCE-5875. Make Counter limits consistent across JobClient, 
+    MRAppMaster, and YarnChild. (Gera Shegalov via kasha)
+
+    MAPREDUCE-6125. TestContainerLauncherImpl sometimes fails (Mit Desai via
+    jlowe)
+
+    MAPREDUCE-6115. TestPipeApplication#testSubmitter fails in trunk (Binglin
+    Chang via jlowe)
+
+    MAPREDUCE-5873. Shuffle bandwidth computation includes time spent waiting
+    for maps (Siqi Li via jlowe)
+
+    MAPREDUCE-5542. Killing a job just as it finishes can generate an NPE in
+    client (Rohith via jlowe)
+
+    MAPREDUCE-6126. Fixed Rumen JobBuilder to ignore NormalizedResourceEvent.
+    (Junping Du via jianhe)
+
+    MAPREDUCE-6142. Fixed test failures in TestJobHistoryEventHandler and
+    TestMRTimelineEventHandling. (Zhijie Shen via vinodkv)
+
+    MAPREDUCE-6022. map_input_file is missing from streaming job environment.
+    (jlowe via kihwal)
+
+    MAPREDUCE-6048. Fixed TestJavaSerialization failure. (Varun Vasudev via
+    jianhe)
+
+    MAPREDUCE-5960. JobSubmitter's check whether job.jar is local is incorrect
+    with no authority in job jar path. (Gera Shegalov via jlowe)
+
+    MAPREDUCE-5958. Wrong reduce task progress if map output is compressed
+    (Emilio Coppa and jlowe via kihwal)
+
+    MAPREDUCE-6156. Fetcher - connect() doesn't handle connection refused
+    correctly (Junping Du via jlowe)
+
+Release 2.5.2 - 2014-11-10
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 
 Release 2.5.1 - 2014-09-05
 

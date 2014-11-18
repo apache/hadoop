@@ -23,18 +23,19 @@ import java.util.Collection;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 
 public class FsDatasetTestUtil {
 
   public static File getFile(FsDatasetSpi<?> fsd, String bpid, long bid) {
-    return ((FsDatasetImpl)fsd).getFile(bpid, bid);
+    return ((FsDatasetImpl)fsd).getFile(bpid, bid, false);
   }
 
   public static File getBlockFile(FsDatasetSpi<?> fsd, String bpid, Block b
       ) throws IOException {
-    return ((FsDatasetImpl)fsd).getBlockFile(bpid, b);
+    return ((FsDatasetImpl)fsd).getBlockFile(bpid, b.getBlockId());
   }
 
   public static File getMetaFile(FsDatasetSpi<?> fsd, String bpid, Block b)
@@ -61,5 +62,14 @@ public class FsDatasetTestUtil {
   public static Collection<ReplicaInfo> getReplicas(FsDatasetSpi<?> fsd,
       String bpid) {
     return ((FsDatasetImpl)fsd).volumeMap.replicas(bpid);
+  }
+
+  /**
+   * Stop the lazy writer daemon that saves RAM disk files to persistent storage.
+   * @param dn
+   */
+  public static void stopLazyWriter(DataNode dn) {
+    FsDatasetImpl fsDataset = ((FsDatasetImpl) dn.getFSDataset());
+    ((FsDatasetImpl.LazyWriter) fsDataset.lazyWriter.getRunnable()).stop();
   }
 }

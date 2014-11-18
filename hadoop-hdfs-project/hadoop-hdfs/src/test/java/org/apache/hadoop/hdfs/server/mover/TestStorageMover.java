@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.mover;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -27,16 +26,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.ReconfigurationException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -56,6 +53,7 @@ import org.apache.hadoop.hdfs.server.balancer.Dispatcher;
 import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -87,7 +85,7 @@ public class TestStorageMover {
   private static final short REPL = 3;
   private static final int NUM_DATANODES = 6;
   private static final Configuration DEFAULT_CONF = new HdfsConfiguration();
-  private static final BlockStoragePolicy.Suite DEFAULT_POLICIES;
+  private static final BlockStoragePolicySuite DEFAULT_POLICIES;
   private static final BlockStoragePolicy HOT;
   private static final BlockStoragePolicy WARM;
   private static final BlockStoragePolicy COLD;
@@ -99,10 +97,10 @@ public class TestStorageMover {
         2L);
     DEFAULT_CONF.setLong(DFSConfigKeys.DFS_MOVER_MOVEDWINWIDTH_KEY, 2000L);
 
-    DEFAULT_POLICIES = BlockStoragePolicy.readBlockStorageSuite(DEFAULT_CONF);
-    HOT = DEFAULT_POLICIES.getPolicy("HOT");
-    WARM = DEFAULT_POLICIES.getPolicy("WARM");
-    COLD = DEFAULT_POLICIES.getPolicy("COLD");
+    DEFAULT_POLICIES = BlockStoragePolicySuite.createDefaultSuite();
+    HOT = DEFAULT_POLICIES.getPolicy(HdfsConstants.HOT_STORAGE_POLICY_NAME);
+    WARM = DEFAULT_POLICIES.getPolicy(HdfsConstants.WARM_STORAGE_POLICY_NAME);
+    COLD = DEFAULT_POLICIES.getPolicy(HdfsConstants.COLD_STORAGE_POLICY_NAME);
     TestBalancer.initTestSetup();
     Dispatcher.setDelayAfterErrors(1000L);
   }
@@ -192,13 +190,13 @@ public class TestStorageMover {
 
     private MiniDFSCluster cluster;
     private DistributedFileSystem dfs;
-    private final BlockStoragePolicy.Suite policies;
+    private final BlockStoragePolicySuite policies;
 
     MigrationTest(ClusterScheme cScheme, NamespaceScheme nsScheme) {
       this.clusterScheme = cScheme;
       this.nsScheme = nsScheme;
       this.conf = clusterScheme.conf;
-      this.policies = BlockStoragePolicy.readBlockStorageSuite(conf);
+      this.policies = DEFAULT_POLICIES;
     }
 
     /**
@@ -265,9 +263,6 @@ public class TestStorageMover {
       }
       if (verifyAll) {
         verifyNamespace();
-      } else {
-        // TODO verify according to the given path list
-
       }
     }
 
@@ -331,10 +326,10 @@ public class TestStorageMover {
         Assert.assertTrue(fileStatus.getFullName(parent.toString())
             + " with policy " + policy + " has non-empty overlap: " + diff
             + ", the corresponding block is " + lb.getBlock().getLocalBlock(),
-            diff.removeOverlap());
+            diff.removeOverlap(true));
       }
     }
-    
+
     Replication getReplication(Path file) throws IOException {
       return getOrVerifyReplication(file, null);
     }
@@ -402,39 +397,30 @@ public class TestStorageMover {
   }
 
   private static StorageType[][] genStorageTypes(int numDataNodes) {
-    return genStorageTypes(numDataNodes, 0, 0);
+    return genStorageTypes(numDataNodes, 0, 0, 0);
   }
 
   private static StorageType[][] genStorageTypes(int numDataNodes,
-      int numAllDisk, int numAllArchive) {
+      int numAllDisk, int numAllArchive, int numRamDisk) {
+    Preconditions.checkArgument(
+      (numAllDisk + numAllArchive + numRamDisk) <= numDataNodes);
+
     StorageType[][] types = new StorageType[numDataNodes][];
     int i = 0;
-    for (; i < numAllDisk; i++) {
+    for (; i < numRamDisk; i++)
+    {
+      types[i] = new StorageType[]{StorageType.RAM_DISK, StorageType.DISK};
+    }
+    for (; i < numRamDisk + numAllDisk; i++) {
       types[i] = new StorageType[]{StorageType.DISK, StorageType.DISK};
     }
-    for (; i < numAllDisk + numAllArchive; i++) {
+    for (; i < numRamDisk + numAllDisk + numAllArchive; i++) {
       types[i] = new StorageType[]{StorageType.ARCHIVE, StorageType.ARCHIVE};
     }
     for (; i < types.length; i++) {
       types[i] = new StorageType[]{StorageType.DISK, StorageType.ARCHIVE};
     }
     return types;
-  }
-  
-  private static long[][] genCapacities(int nDatanodes, int numAllDisk,
-      int numAllArchive, long diskCapacity, long archiveCapacity) {
-    final long[][] capacities = new long[nDatanodes][];
-    int i = 0;
-    for (; i < numAllDisk; i++) {
-      capacities[i] = new long[]{diskCapacity, diskCapacity};
-    }
-    for (; i < numAllDisk + numAllArchive; i++) {
-      capacities[i] = new long[]{archiveCapacity, archiveCapacity};
-    }
-    for(; i < capacities.length; i++) {
-      capacities[i] = new long[]{diskCapacity, archiveCapacity};
-    }
-    return capacities;
   }
 
   private static class PathPolicyMap {
@@ -503,6 +489,42 @@ public class TestStorageMover {
     LOG.info("\n\n\n\n================================================\n" +
         string + "\n" +
         "==================================================\n\n");
+  }
+
+  /**
+   * Run Mover with arguments specifying files and directories
+   */
+  @Test
+  public void testMoveSpecificPaths() throws Exception {
+    LOG.info("testMoveSpecificPaths");
+    final Path foo = new Path("/foo");
+    final Path barFile = new Path(foo, "bar");
+    final Path foo2 = new Path("/foo2");
+    final Path bar2File = new Path(foo2, "bar2");
+    Map<Path, BlockStoragePolicy> policyMap = Maps.newHashMap();
+    policyMap.put(foo, COLD);
+    policyMap.put(foo2, WARM);
+    NamespaceScheme nsScheme = new NamespaceScheme(Arrays.asList(foo, foo2),
+        Arrays.asList(barFile, bar2File), BLOCK_SIZE, null, policyMap);
+    ClusterScheme clusterScheme = new ClusterScheme(DEFAULT_CONF,
+        NUM_DATANODES, REPL, genStorageTypes(NUM_DATANODES), null);
+    MigrationTest test = new MigrationTest(clusterScheme, nsScheme);
+    test.setupCluster();
+
+    try {
+      test.prepareNamespace();
+      test.setStoragePolicy();
+
+      Map<URI, List<Path>> map = Mover.Cli.getNameNodePathsToMove(test.conf,
+          "-p", "/foo/bar", "/foo2");
+      int result = Mover.run(map, test.conf);
+      Assert.assertEquals(ExitStatus.SUCCESS.getExitCode(), result);
+
+      Thread.sleep(5000);
+      test.verify(true);
+    } finally {
+      test.shutdownCluster();
+    }
   }
 
   /**
@@ -606,8 +628,8 @@ public class TestStorageMover {
 
   private void setVolumeFull(DataNode dn, StorageType type) {
     List<? extends FsVolumeSpi> volumes = dn.getFSDataset().getVolumes();
-    for (int j = 0; j < volumes.size(); ++j) {
-      FsVolumeImpl volume = (FsVolumeImpl) volumes.get(j);
+    for (FsVolumeSpi v : volumes) {
+      FsVolumeImpl volume = (FsVolumeImpl) v;
       if (volume.getStorageType() == type) {
         LOG.info("setCapacity to 0 for [" + volume.getStorageType() + "]"
             + volume.getStorageID());

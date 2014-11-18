@@ -18,9 +18,18 @@
 
 package org.apache.hadoop.conf;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import org.apache.commons.logging.*;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 
+import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Utility base class for implementing the Reconfigurable interface.
@@ -34,6 +43,30 @@ public abstract class ReconfigurableBase
   
   private static final Log LOG =
     LogFactory.getLog(ReconfigurableBase.class);
+  // Use for testing purpose.
+  private ReconfigurationUtil reconfigurationUtil = new ReconfigurationUtil();
+
+  /** Background thread to reload configuration. */
+  private Thread reconfigThread = null;
+  private volatile boolean shouldRun = true;
+  private Object reconfigLock = new Object();
+
+  /**
+   * The timestamp when the <code>reconfigThread</code> starts.
+   */
+  private long startTime = 0;
+
+  /**
+   * The timestamp when the <code>reconfigThread</code> finishes.
+   */
+  private long endTime = 0;
+
+  /**
+   * A map of <changed property, error message>. If error message is present,
+   * it contains the messages about the error occurred when applies the particular
+   * change. Otherwise, it indicates that the change has been successfully applied.
+   */
+  private Map<PropertyChange, Optional<String>> status = null;
 
   /**
    * Construct a ReconfigurableBase.
@@ -48,6 +81,113 @@ public abstract class ReconfigurableBase
    */
   public ReconfigurableBase(Configuration conf) {
     super((conf == null) ? new Configuration() : conf);
+  }
+
+  @VisibleForTesting
+  public void setReconfigurationUtil(ReconfigurationUtil ru) {
+    reconfigurationUtil = Preconditions.checkNotNull(ru);
+  }
+
+  @VisibleForTesting
+  public Collection<PropertyChange> getChangedProperties(
+      Configuration newConf, Configuration oldConf) {
+    return reconfigurationUtil.parseChangedProperties(newConf, oldConf);
+  }
+
+  /**
+   * A background thread to apply configuration changes.
+   */
+  private static class ReconfigurationThread extends Thread {
+    private ReconfigurableBase parent;
+
+    ReconfigurationThread(ReconfigurableBase base) {
+      this.parent = base;
+    }
+
+    // See {@link ReconfigurationServlet#applyChanges}
+    public void run() {
+      LOG.info("Starting reconfiguration task.");
+      Configuration oldConf = this.parent.getConf();
+      Configuration newConf = new Configuration();
+      Collection<PropertyChange> changes =
+          this.parent.getChangedProperties(newConf, oldConf);
+      Map<PropertyChange, Optional<String>> results = Maps.newHashMap();
+      for (PropertyChange change : changes) {
+        String errorMessage = null;
+        if (!this.parent.isPropertyReconfigurable(change.prop)) {
+          errorMessage = "Property " + change.prop +
+              " is not reconfigurable";
+          LOG.info(errorMessage);
+          results.put(change, Optional.of(errorMessage));
+          continue;
+        }
+        LOG.info("Change property: " + change.prop + " from \""
+            + ((change.oldVal == null) ? "<default>" : change.oldVal)
+            + "\" to \"" + ((change.newVal == null) ? "<default>" : change.newVal)
+            + "\".");
+        try {
+          this.parent.reconfigurePropertyImpl(change.prop, change.newVal);
+        } catch (ReconfigurationException e) {
+          errorMessage = e.toString();
+        }
+        results.put(change, Optional.fromNullable(errorMessage));
+      }
+
+      synchronized (this.parent.reconfigLock) {
+        this.parent.endTime = Time.now();
+        this.parent.status = Collections.unmodifiableMap(results);
+        this.parent.reconfigThread = null;
+      }
+    }
+  }
+
+  /**
+   * Start a reconfiguration task to reload configuration in background.
+   */
+  public void startReconfigurationTask() throws IOException {
+    synchronized (reconfigLock) {
+      if (!shouldRun) {
+        String errorMessage = "The server is stopped.";
+        LOG.warn(errorMessage);
+        throw new IOException(errorMessage);
+      }
+      if (reconfigThread != null) {
+        String errorMessage = "Another reconfiguration task is running.";
+        LOG.warn(errorMessage);
+        throw new IOException(errorMessage);
+      }
+      reconfigThread = new ReconfigurationThread(this);
+      reconfigThread.setDaemon(true);
+      reconfigThread.setName("Reconfiguration Task");
+      reconfigThread.start();
+      startTime = Time.now();
+    }
+  }
+
+  public ReconfigurationTaskStatus getReconfigurationTaskStatus() {
+    synchronized (reconfigLock) {
+      if (reconfigThread != null) {
+        return new ReconfigurationTaskStatus(startTime, 0, null);
+      }
+      return new ReconfigurationTaskStatus(startTime, endTime, status);
+    }
+  }
+
+  public void shutdownReconfigurationTask() {
+    Thread tempThread;
+    synchronized (reconfigLock) {
+      shouldRun = false;
+      if (reconfigThread == null) {
+        return;
+      }
+      tempThread = reconfigThread;
+      reconfigThread = null;
+    }
+
+    try {
+      tempThread.join();
+    } catch (InterruptedException e) {
+    }
   }
 
   /**

@@ -22,8 +22,7 @@
 <!-- wish to modify from this file into hdfs-site.xml and change them -->
 <!-- there.  If hdfs-site.xml does not already exist, create it.      -->
 
-<configuration xmlns:xi="http://www.w3.org/2001/XInclude"> 
-  <xi:include href="blockStoragePolicy-default.xml" />
+<configuration>
 
 <property>
   <name>hadoop.hdfs.configuration.version</name>
@@ -399,6 +398,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.lazypersist.file.scrub.interval.sec</name>
+  <value>300</value>
+  <description>
+    The NameNode periodically scans the namespace for LazyPersist files with
+    missing blocks and unlinks them from the namespace. This configuration key
+    controls the interval between successive scans. Set it to a negative value
+    to disable this behavior.
+  </description>
+</property>
+<property>
   <name>dfs.block.access.token.enable</name>
   <value>false</value>
   <description>
@@ -635,6 +644,44 @@
 </property>
 
 <property>
+  <name>dfs.namenode.resource.check.interval</name>
+  <value>5000</value>
+  <description>
+    The interval in milliseconds at which the NameNode resource checker runs.
+    The checker calculates the number of the NameNode storage volumes whose
+    available spaces are more than dfs.namenode.resource.du.reserved, and
+    enters safemode if the number becomes lower than the minimum value
+    specified by dfs.namenode.resource.checked.volumes.minimum.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.resource.du.reserved</name>
+  <value>104857600</value>
+  <description>
+    The amount of space to reserve/require for a NameNode storage directory
+    in bytes. The default is 100MB.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.resource.checked.volumes</name>
+  <value></value>
+  <description>
+    A list of local directories for the NameNode resource checker to check in
+    addition to the local edits directories.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.resource.checked.volumes.minimum</name>
+  <value>1</value>
+  <description>
+    The minimum number of redundant NameNode storage volumes required.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.balance.bandwidthPerSec</name>
   <value>1048576</value>
   <description>
@@ -705,7 +752,7 @@
   <name>dfs.namenode.replication.interval</name>
   <value>3</value>
   <description>The periodicity in seconds with which the namenode computes 
-  repliaction work for datanodes. </description>
+  replication work for datanodes. </description>
 </property>
 
 <property>
@@ -779,8 +826,8 @@
   <value>${dfs.namenode.checkpoint.dir}</value>
   <description>Determines where on the local filesystem the DFS secondary
       name node should store the temporary edits to merge.
-      If this is a comma-delimited list of directoires then teh edits is
-      replicated in all of the directoires for redundancy.
+      If this is a comma-delimited list of directories then the edits is
+      replicated in all of the directories for redundancy.
       Default value is same as dfs.namenode.checkpoint.dir
   </description>
 </property>
@@ -911,7 +958,7 @@
         dfs.image.transfer.bandwidthPerSec parameter should be configured such
         that normal image transfer can complete successfully.
         This timeout prevents client hangs when the sender fails during
-        image transfer. This is socket timeout during image tranfer.
+        image transfer. This is socket timeout during image transfer.
   </description>
 </property>
 
@@ -988,7 +1035,7 @@
         (e.g HBase random-IO workloads).
 
         This may improve performance for some workloads by freeing buffer
-        cache spage usage for more cacheable data.
+        cache space usage for more cacheable data.
 
         If the Hadoop native libraries are not available, this configuration
         has no effect.
@@ -1006,7 +1053,7 @@
         after it is written to disk.
 
         This may improve performance for some workloads by freeing buffer
-        cache spage usage for more cacheable data.
+        cache space usage for more cacheable data.
 
         If the Hadoop native libraries are not available, this configuration
         has no effect.
@@ -1467,6 +1514,31 @@
     the configured JCE default on the system is used (usually 3DES.) It is
     widely believed that 3DES is more cryptographically secure, but RC4 is
     substantially faster.
+    
+    Note that if AES is supported by both the client and server then this 
+    encryption algorithm will only be used to initially transfer keys for AES.
+    (See dfs.encrypt.data.transfer.cipher.suites.)
+  </description>
+</property>
+
+<property>
+  <name>dfs.encrypt.data.transfer.cipher.suites</name>
+  <value></value>
+  <description>
+    This value may be either undefined or AES/CTR/NoPadding.  If defined, then
+    dfs.encrypt.data.transfer uses the specified cipher suite for data
+    encryption.  If not defined, then only the algorithm specified in
+    dfs.encrypt.data.transfer.algorithm is used.  By default, the property is
+    not defined.
+  </description>
+</property>
+
+<property>
+  <name>dfs.encrypt.data.transfer.cipher.key.bitlength</name>
+  <value>128</value>
+  <description>
+    The key bitlength negotiated by dfsclient and datanode for encryption.
+    This value may be set to either 128, 192 or 256.
   </description>
 </property>
 
@@ -2130,6 +2202,53 @@
   <description>
     The KeyProvider to use when interacting with encryption keys used
     when reading and writing to an encryption zone.
+  </description>
+</property>
+
+<property>
+  <name>dfs.storage.policy.enabled</name>
+  <value>true</value>
+  <description>
+    Allow users to change the storage policy on files and directories.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.legacy-oiv-image.dir</name>
+  <value></value>
+  <description>Determines where to save the namespace in the old fsimage format
+    during checkpointing by standby NameNode or SecondaryNameNode. Users can
+    dump the contents of the old format fsimage by oiv_legacy command. If
+    the value is not specified, old format fsimage will not be saved in
+    checkpoint.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.top.enabled</name>
+  <value>true</value>
+  <description>Enable nntop: reporting top users on namenode
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.top.window.num.buckets</name>
+  <value>10</value>
+  <description>Number of buckets in the rolling window implementation of nntop
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.top.num.users</name>
+  <value>10</value>
+  <description>Number of top users returned by the top tool
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.top.windows.minutes</name>
+  <value>1,5,25</value>
+  <description>comma separated list of nntop reporting periods in minutes
   </description>
 </property>
 

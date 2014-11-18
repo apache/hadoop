@@ -27,11 +27,13 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TestContainerExecutor {
+  
+  private ContainerExecutor containerExecutor = new DefaultContainerExecutor();
 
   @Test (timeout = 5000)
   public void testRunCommandNoPriority() throws Exception {
     Configuration conf = new Configuration();
-    String[] command = ContainerExecutor.getRunCommand("echo", "group1", conf);
+    String[] command = containerExecutor.getRunCommand("echo", "group1", "user", null, conf);
     assertTrue("first command should be the run command for the platform", 
                command[0].equals(Shell.WINUTILS) || command[0].equals("bash"));  
   }
@@ -40,7 +42,7 @@ public class TestContainerExecutor {
   public void testRunCommandwithPriority() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 2);
-    String[] command = ContainerExecutor.getRunCommand("echo", "group1", conf);
+    String[] command = containerExecutor.getRunCommand("echo", "group1", "user", null, conf);
     if (Shell.WINDOWS) {
       // windows doesn't currently support
       assertEquals("first command should be the run command for the platform", 
@@ -54,7 +56,7 @@ public class TestContainerExecutor {
 
     // test with negative number
     conf.setInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, -5);
-    command = ContainerExecutor.getRunCommand("echo", "group1", conf);
+    command = containerExecutor.getRunCommand("echo", "group1", "user", null, conf);
     if (Shell.WINDOWS) {
       // windows doesn't currently support
       assertEquals("first command should be the run command for the platform", 

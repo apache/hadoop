@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -34,8 +35,10 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
@@ -65,6 +68,9 @@ public class RMContextImpl implements RMContext {
   private final ConcurrentMap<String, RMNode> inactiveNodes
     = new ConcurrentHashMap<String, RMNode>();
 
+  private final ConcurrentMap<ApplicationId, ByteBuffer> systemCredentials =
+      new ConcurrentHashMap<ApplicationId, ByteBuffer>();
+
   private boolean isHAEnabled;
   private boolean isWorkPreservingRecoveryEnabled;
   private HAServiceState haServiceState =
@@ -83,12 +89,14 @@ public class RMContextImpl implements RMContext {
   private ClientRMService clientRMService;
   private RMDelegationTokenSecretManager rmDelegationTokenSecretManager;
   private ResourceScheduler scheduler;
+  private ReservationSystem reservationSystem;
   private NodesListManager nodesListManager;
   private ResourceTrackerService resourceTrackerService;
   private ApplicationMasterService applicationMasterService;
   private RMApplicationHistoryWriter rmApplicationHistoryWriter;
   private SystemMetricsPublisher systemMetricsPublisher;
   private ConfigurationProvider configurationProvider;
+  private RMNodeLabelsManager nodeLabelManager;
   private long epoch;
   private Clock systemClock = new SystemClock();
   private long schedulerRecoveryStartTime = 0;
@@ -209,6 +217,11 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
+  public ReservationSystem getReservationSystem() {
+    return this.reservationSystem;
+  }
+  
+  @Override
   public NodesListManager getNodesListManager() {
     return this.nodesListManager;
   }
@@ -303,6 +316,10 @@ public class RMContextImpl implements RMContext {
   void setScheduler(ResourceScheduler scheduler) {
     this.scheduler = scheduler;
   }
+  
+  void setReservationSystem(ReservationSystem reservationSystem) {
+    this.reservationSystem = reservationSystem;
+  }
 
   void setDelegationTokenRenewer(
       DelegationTokenRenewer delegationTokenRenewer) {
@@ -395,6 +412,16 @@ public class RMContextImpl implements RMContext {
     this.epoch = epoch;
   }
 
+  @Override
+  public RMNodeLabelsManager getNodeLabelManager() {
+    return nodeLabelManager;
+  }
+  
+  @Override
+  public void setNodeLabelManager(RMNodeLabelsManager mgr) {
+    nodeLabelManager = mgr;
+  }
+
   public void setSchedulerRecoveryStartAndWaitTime(long waitTime) {
     this.schedulerRecoveryStartTime = systemClock.getTime();
     this.schedulerRecoveryWaitTime = waitTime;
@@ -420,5 +447,9 @@ public class RMContextImpl implements RMContext {
   @VisibleForTesting
   public void setSystemClock(Clock clock) {
     this.systemClock = clock;
+  }
+
+  public ConcurrentMap<ApplicationId, ByteBuffer> getSystemCredentialsForApps() {
+    return systemCredentials;
   }
 }

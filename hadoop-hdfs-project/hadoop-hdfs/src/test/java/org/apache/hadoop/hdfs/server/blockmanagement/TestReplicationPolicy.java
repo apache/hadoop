@@ -56,7 +56,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -430,6 +429,55 @@ public class TestReplicationPolicy {
     assertTrue(isOnSameRack(targets[1], targets[2]));
     assertFalse(isOnSameRack(targets[0], targets[1]));
   }
+
+  /**
+   * In this testcase, there are enough total number of nodes, but only
+   * one rack is actually available.
+   * @throws Exception
+   */
+  @Test
+  public void testChooseTarget6() throws Exception {
+    DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
+        "DS-xxxx", "7.7.7.7", "/d2/r3", "host7");
+    DatanodeDescriptor newDn = storage.getDatanodeDescriptor();
+    Set<Node> excludedNodes;
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+
+    excludedNodes = new HashSet<Node>();
+    excludedNodes.add(dataNodes[0]);
+    excludedNodes.add(dataNodes[1]);
+    excludedNodes.add(dataNodes[2]);
+    excludedNodes.add(dataNodes[3]);
+
+    DatanodeStorageInfo[] targets;
+    // Only two nodes available in a rack. Try picking two nodes. Only one
+    // should return.
+    targets = chooseTarget(2, chosenNodes, excludedNodes);
+    assertEquals(1, targets.length);
+
+    // Make three nodes available in a rack.
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    bm.getDatanodeManager().getNetworkTopology().add(newDn);
+    bm.getDatanodeManager().getHeartbeatManager().addDatanode(newDn);
+    updateHeartbeatWithUsage(newDn,
+        2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+
+    // Try picking three nodes. Only two should return.
+    excludedNodes.clear();
+    excludedNodes.add(dataNodes[0]);
+    excludedNodes.add(dataNodes[1]);
+    excludedNodes.add(dataNodes[2]);
+    excludedNodes.add(dataNodes[3]);
+    chosenNodes.clear();
+    try {
+      targets = chooseTarget(3, chosenNodes, excludedNodes);
+      assertEquals(2, targets.length);
+    } finally {
+      bm.getDatanodeManager().getNetworkTopology().remove(newDn);
+    }
+  }
+
 
   /**
    * In this testcase, it tries to choose more targets than available nodes and
@@ -1096,9 +1144,7 @@ public class TestReplicationPolicy {
     Namesystem mockNS = mock(Namesystem.class);
     when(mockNS.isPopulatingReplQueues()).thenReturn(true);
     when(mockNS.hasWriteLock()).thenReturn(true);
-    FSClusterStats mockStats = mock(FSClusterStats.class);
-    BlockManager bm =
-        new BlockManager(mockNS, mockStats, new HdfsConfiguration());
+    BlockManager bm = new BlockManager(mockNS, new HdfsConfiguration());
     UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
 
     Block block1 = new Block(random.nextLong());
@@ -1121,7 +1167,7 @@ public class TestReplicationPolicy {
     // block under construction, the BlockManager will realize the expected
     // replication has been achieved and remove it from the under-replicated
     // queue.
-    BlockInfoUnderConstruction info = new BlockInfoUnderConstruction(block1, 1);
+    BlockInfoUnderConstruction info = new BlockInfoUnderConstruction(block1, (short) 1);
     BlockCollection bc = mock(BlockCollection.class);
     when(bc.getBlockReplication()).thenReturn((short)1);
     bm.addBlockCollection(info, bc);
@@ -1144,9 +1190,7 @@ public class TestReplicationPolicy {
           throws IOException {
     Namesystem mockNS = mock(Namesystem.class);
     when(mockNS.isPopulatingReplQueues()).thenReturn(true);
-    FSClusterStats mockStats = mock(FSClusterStats.class);
-    BlockManager bm =
-        new BlockManager(mockNS, mockStats, new HdfsConfiguration());
+    BlockManager bm = new BlockManager(mockNS, new HdfsConfiguration());
     UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
 
     Block block1 = new Block(random.nextLong());
@@ -1165,7 +1209,7 @@ public class TestReplicationPolicy {
     chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
 
-    final BlockInfo info = new BlockInfo(block1, 1);
+    final BlockInfo info = new BlockInfo(block1, (short) 1);
     final BlockCollection mbc = mock(BlockCollection.class);
     when(mbc.getLastBlock()).thenReturn(info);
     when(mbc.getPreferredBlockSize()).thenReturn(block1.getNumBytes() + 1);
@@ -1199,9 +1243,7 @@ public class TestReplicationPolicy {
       throws IOException {
     Namesystem mockNS = mock(Namesystem.class);
     when(mockNS.isPopulatingReplQueues()).thenReturn(true);
-    FSClusterStats mockStats = mock(FSClusterStats.class);
-    BlockManager bm =
-        new BlockManager(mockNS, mockStats, new HdfsConfiguration());
+    BlockManager bm = new BlockManager(mockNS, new HdfsConfiguration());
     UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
 
     Block block1 = new Block(random.nextLong());

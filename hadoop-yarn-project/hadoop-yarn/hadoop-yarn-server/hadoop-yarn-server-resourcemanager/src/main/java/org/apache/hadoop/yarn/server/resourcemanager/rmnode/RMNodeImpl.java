@@ -33,7 +33,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -47,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
@@ -112,8 +112,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final Set<ContainerId> containersToClean = new TreeSet<ContainerId>(
       new ContainerIdComparator());
 
-  /* set of containers that were notified to AM about their completion */
-  private final Set<ContainerId> finishedContainersPulledByAM =
+  /*
+   * set of containers to notify NM to remove them from its context. Currently,
+   * this includes containers that were notified to AM about their completion
+   */
+  private final Set<ContainerId> containersToBeRemovedFromNM =
       new HashSet<ContainerId>();
 
   /* the list of applications that have finished and need to be purged */
@@ -157,7 +160,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
-         new FinishedContainersPulledByAMTransition())
+         new AddContainersToBeRemovedFromNMTransition())
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
@@ -174,7 +177,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          new UpdateNodeResourceWhenUnusableTransition())
      .addTransition(NodeState.DECOMMISSIONED, NodeState.DECOMMISSIONED,
          RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
-         new FinishedContainersPulledByAMTransition())
+         new AddContainersToBeRemovedFromNMTransition())
 
      //Transitions from LOST state
      .addTransition(NodeState.LOST, NodeState.LOST,
@@ -182,7 +185,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          new UpdateNodeResourceWhenUnusableTransition())
      .addTransition(NodeState.LOST, NodeState.LOST,
          RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
-         new FinishedContainersPulledByAMTransition())
+         new AddContainersToBeRemovedFromNMTransition())
 
      //Transitions from UNHEALTHY state
      .addTransition(NodeState.UNHEALTHY,
@@ -208,7 +211,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.RESOURCE_UPDATE, new UpdateNodeResourceWhenUnusableTransition())
      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
          RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
-         new FinishedContainersPulledByAMTransition())
+         new AddContainersToBeRemovedFromNMTransition())
 
      // create the topology tables
      .installTopology(); 
@@ -382,11 +385,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       response.addAllContainersToCleanup(
           new ArrayList<ContainerId>(this.containersToClean));
       response.addAllApplicationsToCleanup(this.finishedApplications);
-      response.addFinishedContainersPulledByAM(
-          new ArrayList<ContainerId>(this.finishedContainersPulledByAM));
+      response.addContainersToBeRemovedFromNM(
+          new ArrayList<ContainerId>(this.containersToBeRemovedFromNM));
       this.containersToClean.clear();
       this.finishedApplications.clear();
-      this.finishedContainersPulledByAM.clear();
+      this.containersToBeRemovedFromNM.clear();
     } finally {
       this.writeLock.unlock();
     }
@@ -460,22 +463,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         break;
     }
 
-    // Decomissioned NMs equals to the nodes missing in include list (if
-    // include list not empty) or the nodes listed in excluded list.
-    // DecomissionedNMs as per exclude list is set upfront when the
-    // exclude list is read so that RM restart can also reflect the
-    // decomissionedNMs. Note that RM is still not able to know decomissionedNMs
-    // as per include list after it restarts as they are known when those nodes
-    // come for registration.
-    // DecomissionedNMs as per include list is incremented in this transition.
     switch (finalState) {
     case DECOMMISSIONED:
-      Set<String> ecludedHosts =
-          context.getNodesListManager().getHostsReader().getExcludedHosts();
-      if (!ecludedHosts.contains(hostName)
-          && !ecludedHosts.contains(NetUtils.normalizeHostName(hostName))) {
         metrics.incrDecommisionedNMs();
-      }
       break;
     case LOST:
       metrics.incrNumLostNMs();
@@ -672,12 +662,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
-  public static class FinishedContainersPulledByAMTransition implements
+  public static class AddContainersToBeRemovedFromNMTransition implements
       SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
-      rmNode.finishedContainersPulledByAM.addAll(((
+      rmNode.containersToBeRemovedFromNM.addAll(((
           RMNodeFinishedContainersPulledByAMEvent) event).getContainers());
     }
   }
@@ -864,5 +854,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   @VisibleForTesting
   public Set<ContainerId> getLaunchedContainers() {
     return this.launchedContainers;
+  }
+
+  @Override
+  public Set<String> getNodeLabels() {
+    if (context.getNodeLabelManager() == null) {
+      return CommonNodeLabelsManager.EMPTY_STRING_SET;
+    }
+    return context.getNodeLabelManager().getLabelsOnNode(nodeId);
   }
  }

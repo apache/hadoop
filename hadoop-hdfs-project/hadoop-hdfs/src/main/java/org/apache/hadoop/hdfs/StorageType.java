@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -31,17 +32,40 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public enum StorageType {
-  DISK,
-  SSD,
-  ARCHIVE;
+  DISK(false),
+  SSD(false),
+  ARCHIVE(false),
+  RAM_DISK(true);
+
+  private final boolean isTransient;
 
   public static final StorageType DEFAULT = DISK;
-  
+
   public static final StorageType[] EMPTY_ARRAY = {};
-  
+
   private static final StorageType[] VALUES = values();
-  
+
+  StorageType(boolean isTransient) { this.isTransient = isTransient; }
+
+  public boolean isTransient() {
+    return isTransient;
+  }
+
+  public boolean isMovable() {
+    return !isTransient;
+  }
+
   public static List<StorageType> asList() {
     return Arrays.asList(VALUES);
+  }
+
+  public static List<StorageType> getMovableTypes() {
+    List<StorageType> movableTypes = new ArrayList<StorageType>();
+    for (StorageType t : VALUES) {
+      if ( t.isTransient == false ) {
+        movableTypes.add(t);
+      }
+    }
+    return movableTypes;
   }
 }

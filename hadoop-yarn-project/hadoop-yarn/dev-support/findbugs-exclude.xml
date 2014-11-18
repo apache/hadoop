@@ -188,6 +188,24 @@
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue" />
+    <Or>
+      <Field name="absoluteCapacity" />
+      <Field name="absoluteMaxCapacity" />
+      <Field name="acls" />
+      <Field name="capacity" />
+      <Field name="maximumCapacity" />
+      <Field name="state" />
+      <Field name="labelManager" />
+      <Field name="defaultLabelExpression" />
+      <Field name="accessibleLabels" />
+      <Field name="absoluteNodeLabelCapacities" />
+      <Field name="reservationsContinueLooking" />
+      <Field name="absoluteCapacityByNodeLabels" />
+    </Or>
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
   <!-- Inconsistent sync warning - scheduleAsynchronously is only initialized once and never changed -->
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler" />
@@ -351,4 +369,26 @@
     <Class name="org.apache.hadoop.yarn.util.ApplicationClassLoader"/>
     <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS"/>
   </Match>
+
+   <!-- It is only changed on re-initialization the warnings are for access from a test function. -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue" />
+    <Field name="reservationsContinueLooking" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue" />
+    <Field name="reservationsContinueLooking" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+
+  <!--
+  This code is meant to deserialize this way...subclasses of will need to
+  instantiate their own JsonSerDeser instances if they want to deserialize.
+  -->
+  <Match>
+    <Class name="org.apache.hadoop.registry.client.binding.JsonSerDeser"/>
+    <Bug pattern="UI_INHERITANCE_UNSAFE_GETRESOURCE"/>
+  </Match>
+
 </FindBugsFilter>

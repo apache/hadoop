@@ -33,7 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.XAttrSetFlag;
-import org.apache.hadoop.hdfs.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -329,8 +329,8 @@ public class FSEditLogLoader {
       AddCloseOp addCloseOp = (AddCloseOp)op;
       final String path =
           renameReservedPathsOnUpgrade(addCloseOp.path, logVersion);
-      if (FSNamesystem.LOG.isDebugEnabled()) {
-        FSNamesystem.LOG.debug(op.opCode + ": " + path +
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(op.opCode + ": " + path +
             " numblocks : " + addCloseOp.blocks.length +
             " clientHolder " + addCloseOp.clientName +
             " clientMachine " + addCloseOp.clientMachine);
@@ -366,14 +366,14 @@ public class FSEditLogLoader {
             addCloseOp.xAttrs,
             replication, addCloseOp.mtime, addCloseOp.atime,
             addCloseOp.blockSize, true, addCloseOp.clientName,
-            addCloseOp.clientMachine);
+            addCloseOp.clientMachine, addCloseOp.storagePolicyId);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, path);
 
         // add the op into retry cache if necessary
         if (toAddRetryCache) {
           HdfsFileStatus stat = fsNamesys.dir.createFileStatus(
               HdfsFileStatus.EMPTY_NAME, newFile,
-              BlockStoragePolicy.ID_UNSPECIFIED, Snapshot.CURRENT_STATE_ID,
+              BlockStoragePolicySuite.ID_UNSPECIFIED, Snapshot.CURRENT_STATE_ID,
               false, iip);
           fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
               addCloseOp.rpcCallId, stat);
@@ -532,7 +532,7 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V1: {
       SetGenstampV1Op setGenstampV1Op = (SetGenstampV1Op)op;
-      fsNamesys.setGenerationStampV1(setGenstampV1Op.genStampV1);
+      fsNamesys.getBlockIdManager().setGenerationStampV1(setGenstampV1Op.genStampV1);
       break;
     }
     case OP_SET_PERMISSIONS: {
@@ -722,12 +722,12 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V2: {
       SetGenstampV2Op setGenstampV2Op = (SetGenstampV2Op) op;
-      fsNamesys.setGenerationStampV2(setGenstampV2Op.genStampV2);
+      fsNamesys.getBlockIdManager().setGenerationStampV2(setGenstampV2Op.genStampV2);
       break;
     }
     case OP_ALLOCATE_BLOCK_ID: {
       AllocateBlockIdOp allocateBlockIdOp = (AllocateBlockIdOp) op;
-      fsNamesys.setLastAllocatedBlockId(allocateBlockIdOp.blockId);
+      fsNamesys.getBlockIdManager().setLastAllocatedBlockId(allocateBlockIdOp.blockId);
       break;
     }
     case OP_ROLLING_UPGRADE_START: {

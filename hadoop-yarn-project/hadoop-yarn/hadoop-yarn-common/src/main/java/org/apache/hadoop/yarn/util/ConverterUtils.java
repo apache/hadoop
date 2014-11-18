@@ -151,6 +151,13 @@ public class ConverterUtils {
   public static String toString(ContainerId cId) {
     return cId == null ? null : cId.toString();
   }
+  
+  public static NodeId toNodeIdWithDefaultPort(String nodeIdStr) {
+    if (nodeIdStr.indexOf(":") < 0) {
+      return toNodeId(nodeIdStr + ":0");
+    }
+    return toNodeId(nodeIdStr);
+  }
 
   public static NodeId toNodeId(String nodeIdStr) {
     String[] parts = nodeIdStr.split(":");
@@ -160,7 +167,7 @@ public class ConverterUtils {
     }
     try {
       NodeId nodeId =
-          NodeId.newInstance(parts[0], Integer.parseInt(parts[1]));
+          NodeId.newInstance(parts[0].trim(), Integer.parseInt(parts[1]));
       return nodeId;
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Invalid port: " + parts[1], e);

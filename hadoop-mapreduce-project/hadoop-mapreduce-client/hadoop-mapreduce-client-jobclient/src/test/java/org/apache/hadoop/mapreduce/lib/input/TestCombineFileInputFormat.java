@@ -1286,10 +1286,6 @@ public class TestCombineFileInputFormat extends TestCase {
           .build();
       dfs.waitActive();
 
-      dfs = new MiniDFSCluster.Builder(conf).racks(rack1).hosts(hosts1)
-          .build();
-      dfs.waitActive();
-
       FileSystem fileSys = dfs.getFileSystem();
 
       // Set up the following directory structure:

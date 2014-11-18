@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.hdfs.BlockStoragePolicy.ID_UNSPECIFIED;
+import static org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite.ID_UNSPECIFIED;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.*;
 
 import com.google.common.collect.Lists;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
@@ -44,7 +46,7 @@ import org.junit.Test;
 
 /** Test {@link BlockStoragePolicy} */
 public class TestBlockStoragePolicy {
-  public static final BlockStoragePolicy.Suite POLICY_SUITE;
+  public static final BlockStoragePolicySuite POLICY_SUITE;
   public static final BlockStoragePolicy DEFAULT_STORAGE_POLICY;
   public static final Configuration conf;
 
@@ -52,7 +54,7 @@ public class TestBlockStoragePolicy {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
-    POLICY_SUITE = BlockStoragePolicy.readBlockStorageSuite(conf);
+    POLICY_SUITE = BlockStoragePolicySuite.createDefaultSuite();
     DEFAULT_STORAGE_POLICY = POLICY_SUITE.getDefaultPolicy();
   }
 
@@ -64,19 +66,71 @@ public class TestBlockStoragePolicy {
   static final long FILE_LEN = 1024;
   static final short REPLICATION = 3;
 
-  static final byte COLD = (byte) 4;
-  static final byte WARM = (byte) 8;
-  static final byte HOT  = (byte) 12;
+  static final byte COLD = HdfsConstants.COLD_STORAGE_POLICY_ID;
+  static final byte WARM = HdfsConstants.WARM_STORAGE_POLICY_ID;
+  static final byte HOT  = HdfsConstants.HOT_STORAGE_POLICY_ID;
+  static final byte ONESSD  = HdfsConstants.ONESSD_STORAGE_POLICY_ID;
+  static final byte ALLSSD  = HdfsConstants.ALLSSD_STORAGE_POLICY_ID;
+  static final byte LAZY_PERSIST  = HdfsConstants.MEMORY_STORAGE_POLICY_ID;
+
+  @Test (timeout=300000)
+  public void testConfigKeyEnabled() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, true);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      cluster.getFileSystem().setStoragePolicy(new Path("/"),
+          HdfsConstants.COLD_STORAGE_POLICY_NAME);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Ensure that setStoragePolicy throws IOException when
+   * dfs.storage.policy.enabled is set to false.
+   * @throws IOException
+   */
+  @Test (timeout=300000, expected=IOException.class)
+  public void testConfigKeyDisabled() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY, false);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      cluster.getFileSystem().setStoragePolicy(new Path("/"),
+          HdfsConstants.COLD_STORAGE_POLICY_NAME);
+    } finally {
+      cluster.shutdown();
+    }
+  }
 
   @Test
   public void testDefaultPolicies() {
     final Map<Byte, String> expectedPolicyStrings = new HashMap<Byte, String>();
     expectedPolicyStrings.put(COLD,
-        "BlockStoragePolicy{COLD:4, storageTypes=[ARCHIVE], creationFallbacks=[], replicationFallbacks=[]");
+        "BlockStoragePolicy{COLD:" + COLD + ", storageTypes=[ARCHIVE], " +
+            "creationFallbacks=[], replicationFallbacks=[]}");
     expectedPolicyStrings.put(WARM,
-        "BlockStoragePolicy{WARM:8, storageTypes=[DISK, ARCHIVE], creationFallbacks=[DISK, ARCHIVE], replicationFallbacks=[DISK, ARCHIVE]");
+        "BlockStoragePolicy{WARM:" + WARM + ", storageTypes=[DISK, ARCHIVE], " +
+            "creationFallbacks=[DISK, ARCHIVE], " +
+            "replicationFallbacks=[DISK, ARCHIVE]}");
     expectedPolicyStrings.put(HOT,
-        "BlockStoragePolicy{HOT:12, storageTypes=[DISK], creationFallbacks=[], replicationFallbacks=[ARCHIVE]");
+        "BlockStoragePolicy{HOT:" + HOT + ", storageTypes=[DISK], " +
+            "creationFallbacks=[], replicationFallbacks=[ARCHIVE]}");
+    expectedPolicyStrings.put(LAZY_PERSIST,
+        "BlockStoragePolicy{LAZY_PERSIST:" + LAZY_PERSIST +
+            ", storageTypes=[RAM_DISK, DISK], " +
+            "creationFallbacks=[DISK], replicationFallbacks=[DISK]}");
+    expectedPolicyStrings.put(ONESSD, "BlockStoragePolicy{ONE_SSD:" + ONESSD +
+        ", storageTypes=[SSD, DISK], creationFallbacks=[SSD, DISK], " +
+        "replicationFallbacks=[SSD, DISK]}");
+    expectedPolicyStrings.put(ALLSSD, "BlockStoragePolicy{ALL_SSD:" + ALLSSD +
+        ", storageTypes=[SSD], creationFallbacks=[DISK], " +
+        "replicationFallbacks=[DISK]}");
 
     for(byte i = 1; i < 16; i++) {
       final BlockStoragePolicy policy = POLICY_SUITE.getPolicy(i); 
@@ -803,15 +857,15 @@ public class TestBlockStoragePolicy {
 
       final Path invalidPath = new Path("/invalidPath");
       try {
-        fs.setStoragePolicy(invalidPath, "WARM");
+        fs.setStoragePolicy(invalidPath, HdfsConstants.WARM_STORAGE_POLICY_NAME);
         Assert.fail("Should throw a FileNotFoundException");
       } catch (FileNotFoundException e) {
         GenericTestUtils.assertExceptionContains(invalidPath.toString(), e);
       }
 
-      fs.setStoragePolicy(fooFile, "COLD");
-      fs.setStoragePolicy(barDir, "WARM");
-      fs.setStoragePolicy(barFile2, "HOT");
+      fs.setStoragePolicy(fooFile, HdfsConstants.COLD_STORAGE_POLICY_NAME);
+      fs.setStoragePolicy(barDir, HdfsConstants.WARM_STORAGE_POLICY_NAME);
+      fs.setStoragePolicy(barFile2, HdfsConstants.HOT_STORAGE_POLICY_NAME);
 
       dirList = fs.getClient().listPaths(dir.toString(),
           HdfsFileStatus.EMPTY_NAME).getPartialListing();
@@ -859,7 +913,7 @@ public class TestBlockStoragePolicy {
       DFSTestUtil.createFile(fs, fooFile1, FILE_LEN, REPLICATION, 0L);
       DFSTestUtil.createFile(fs, fooFile2, FILE_LEN, REPLICATION, 0L);
 
-      fs.setStoragePolicy(fooDir, "WARM");
+      fs.setStoragePolicy(fooDir, HdfsConstants.WARM_STORAGE_POLICY_NAME);
 
       HdfsFileStatus[] dirList = fs.getClient().listPaths(dir.toString(),
           HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
@@ -871,7 +925,7 @@ public class TestBlockStoragePolicy {
       // take snapshot
       SnapshotTestHelper.createSnapshot(fs, dir, "s1");
       // change the storage policy of fooFile1
-      fs.setStoragePolicy(fooFile1, "COLD");
+      fs.setStoragePolicy(fooFile1, HdfsConstants.COLD_STORAGE_POLICY_NAME);
 
       fooList = fs.getClient().listPaths(fooDir.toString(),
           HdfsFileStatus.EMPTY_NAME).getPartialListing();
@@ -894,7 +948,7 @@ public class TestBlockStoragePolicy {
           HdfsFileStatus.EMPTY_NAME).getPartialListing(), COLD);
 
       // change the storage policy of foo dir
-      fs.setStoragePolicy(fooDir, "HOT");
+      fs.setStoragePolicy(fooDir, HdfsConstants.HOT_STORAGE_POLICY_NAME);
       // /dir/foo is now hot
       dirList = fs.getClient().listPaths(dir.toString(),
           HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
@@ -948,7 +1002,7 @@ public class TestBlockStoragePolicy {
     Assert.assertTrue(typeList.isEmpty());
   }
 
-  private void testIncreaseFileRep(String policyName, byte policyId,
+  private void testChangeFileRep(String policyName, byte policyId,
                                    StorageType[] before,
                                    StorageType[] after) throws Exception {
     final int numDataNodes = 5;
@@ -965,8 +1019,6 @@ public class TestBlockStoragePolicy {
       final Path foo = new Path(dir, "foo");
       DFSTestUtil.createFile(fs, foo, FILE_LEN, REPLICATION, 0L);
 
-      // the storage policy of foo should be WARM, and the replicas
-      // should be stored in DISK and ARCHIE
       HdfsFileStatus[] status = fs.getClient().listPaths(foo.toString(),
           HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
       checkDirectoryListing(status, policyId);
@@ -984,7 +1036,24 @@ public class TestBlockStoragePolicy {
           HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
       checkDirectoryListing(status, policyId);
       fooStatus = (HdfsLocatedFileStatus) status[0];
-      checkLocatedBlocks(fooStatus, 1, 5, after);
+      checkLocatedBlocks(fooStatus, 1, numDataNodes, after);
+
+      // change the replication factor back to 3
+      fs.setReplication(foo, REPLICATION);
+      Thread.sleep(1000);
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.triggerHeartbeat(dn);
+      }
+      Thread.sleep(1000);
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.triggerBlockReport(dn);
+      }
+      Thread.sleep(1000);
+      status = fs.getClient().listPaths(foo.toString(),
+          HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
+      checkDirectoryListing(status, policyId);
+      fooStatus = (HdfsLocatedFileStatus) status[0];
+      checkLocatedBlocks(fooStatus, 1, REPLICATION, before);
     } finally {
       cluster.shutdown();
     }
@@ -995,11 +1064,12 @@ public class TestBlockStoragePolicy {
    * that file from 3 to 5. Make sure all replications are created in DISKS.
    */
   @Test
-  public void testIncreaseHotFileRep() throws Exception {
-    testIncreaseFileRep("HOT", HOT, new StorageType[]{StorageType.DISK,
-            StorageType.DISK, StorageType.DISK},
+  public void testChangeHotFileRep() throws Exception {
+    testChangeFileRep(HdfsConstants.HOT_STORAGE_POLICY_NAME, HOT,
         new StorageType[]{StorageType.DISK, StorageType.DISK,
-            StorageType.DISK, StorageType.DISK, StorageType.DISK});
+            StorageType.DISK},
+        new StorageType[]{StorageType.DISK, StorageType.DISK, StorageType.DISK,
+            StorageType.DISK, StorageType.DISK});
   }
 
   /**
@@ -1008,9 +1078,10 @@ public class TestBlockStoragePolicy {
    * and ARCHIVE.
    */
   @Test
-  public void testIncreaseWarmRep() throws Exception {
-    testIncreaseFileRep("WARM", WARM, new StorageType[]{StorageType.DISK,
-        StorageType.ARCHIVE, StorageType.ARCHIVE},
+  public void testChangeWarmRep() throws Exception {
+    testChangeFileRep(HdfsConstants.WARM_STORAGE_POLICY_NAME, WARM,
+        new StorageType[]{StorageType.DISK, StorageType.ARCHIVE,
+            StorageType.ARCHIVE},
         new StorageType[]{StorageType.DISK, StorageType.ARCHIVE,
             StorageType.ARCHIVE, StorageType.ARCHIVE, StorageType.ARCHIVE});
   }
@@ -1020,9 +1091,10 @@ public class TestBlockStoragePolicy {
    * that file from 3 to 5. Make sure all replicas are created in ARCHIVE.
    */
   @Test
-  public void testIncreaseColdRep() throws Exception {
-    testIncreaseFileRep("COLD", COLD, new StorageType[]{StorageType.ARCHIVE,
-            StorageType.ARCHIVE, StorageType.ARCHIVE},
+  public void testChangeColdRep() throws Exception {
+    testChangeFileRep(HdfsConstants.COLD_STORAGE_POLICY_NAME, COLD,
+        new StorageType[]{StorageType.ARCHIVE, StorageType.ARCHIVE,
+            StorageType.ARCHIVE},
         new StorageType[]{StorageType.ARCHIVE, StorageType.ARCHIVE,
             StorageType.ARCHIVE, StorageType.ARCHIVE, StorageType.ARCHIVE});
   }
@@ -1071,5 +1143,29 @@ public class TestBlockStoragePolicy {
         new HashSet<Node>(), 0, policy2);
     System.out.println(Arrays.asList(targets));
     Assert.assertEquals(3, targets.length);
+  }
+
+  /**
+   * Test getting all the storage policies from the namenode
+   */
+  @Test
+  public void testGetAllStoragePolicies() throws Exception {
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(0).build();
+    cluster.waitActive();
+    final DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      BlockStoragePolicy[] policies = fs.getStoragePolicies();
+      Assert.assertEquals(6, policies.length);
+      Assert.assertEquals(POLICY_SUITE.getPolicy(COLD).toString(),
+          policies[0].toString());
+      Assert.assertEquals(POLICY_SUITE.getPolicy(WARM).toString(),
+          policies[1].toString());
+      Assert.assertEquals(POLICY_SUITE.getPolicy(HOT).toString(),
+          policies[2].toString());
+    } finally {
+      IOUtils.cleanup(null, fs);
+      cluster.shutdown();
+    }
   }
 }

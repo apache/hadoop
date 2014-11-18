@@ -56,11 +56,7 @@ public class TestSecurityUtil {
     assertFalse(SecurityUtil.isTGSPrincipal
         (new KerberosPrincipal("blah")));
     assertFalse(SecurityUtil.isTGSPrincipal
-        (new KerberosPrincipal("")));
-    assertFalse(SecurityUtil.isTGSPrincipal
         (new KerberosPrincipal("krbtgt/hello")));
-    assertFalse(SecurityUtil.isTGSPrincipal
-        (new KerberosPrincipal("/@")));
     assertFalse(SecurityUtil.isTGSPrincipal
         (new KerberosPrincipal("krbtgt/foo@FOO")));
   }

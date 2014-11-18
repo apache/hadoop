@@ -18,6 +18,8 @@
 package org.apache.hadoop.security.token.delegation.web;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -25,11 +27,26 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 public class TestDelegationTokenManager {
 
   private static final long DAY_IN_SECS = 86400;
 
+  @Parameterized.Parameters
+  public static Collection<Object[]> headers() {
+    return Arrays.asList(new Object[][] { { false }, { true } });
+  }
+
+  private boolean enableZKKey;
+
+  public TestDelegationTokenManager(boolean enableZKKey) {
+    this.enableZKKey = enableZKKey;
+  }
+
+  @SuppressWarnings("unchecked")
   @Test
   public void testDTManager() throws Exception {
     Configuration conf = new Configuration(false);
@@ -37,11 +54,13 @@ public class TestDelegationTokenManager {
     conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
     conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
     conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, DAY_IN_SECS);
+    conf.getBoolean(DelegationTokenManager.ENABLE_ZK_KEY, enableZKKey);
     DelegationTokenManager tm =
         new DelegationTokenManager(conf, new Text("foo"));
     tm.init();
     Token<DelegationTokenIdentifier> token =
-        tm.createToken(UserGroupInformation.getCurrentUser(), "foo");
+        (Token<DelegationTokenIdentifier>) tm.createToken(
+            UserGroupInformation.getCurrentUser(), "foo");
     Assert.assertNotNull(token);
     tm.verifyToken(token);
     Assert.assertTrue(tm.renewToken(token, "foo") > System.currentTimeMillis());

@@ -343,6 +343,7 @@ public class TestBlockReaderFactory {
       }
     });
     cluster.shutdown();
+    sockDir.close();
   }
  
   /**
@@ -378,6 +379,7 @@ public class TestBlockReaderFactory {
         fs.dfs.getClientContext().getShortCircuitCache();
     Assert.assertEquals(null, cache.getDfsClientShmManager());
     cluster.shutdown();
+    sockDir.close();
   }
   
   /**
@@ -411,6 +413,7 @@ public class TestBlockReaderFactory {
     Assert.assertTrue(cache.getDfsClientShmManager().
         getDomainSocketWatcher().isClosed());
     cluster.shutdown();
+    sockDir.close();
   }
 
   /**

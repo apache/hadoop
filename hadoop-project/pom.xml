@@ -222,6 +222,11 @@
 
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-registry</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-nodemanager</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -295,6 +300,11 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-extras</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ant</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -524,6 +534,12 @@
         <groupId>io.netty</groupId>
         <artifactId>netty</artifactId>
         <version>3.6.2.Final</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-all</artifactId>
+        <version>4.0.23.Final</version>
       </dependency>
 
       <dependency>
@@ -883,6 +899,12 @@
        <groupId>org.apache.curator</groupId>
        <artifactId>curator-test</artifactId>
        <version>2.6.0</version>
+     </dependency>
+     <dependency>
+       <groupId>org.bouncycastle</groupId>
+       <artifactId>bcprov-jdk16</artifactId>
+       <version>1.46</version>
+       <scope>test</scope>
      </dependency>
       
     </dependencies>

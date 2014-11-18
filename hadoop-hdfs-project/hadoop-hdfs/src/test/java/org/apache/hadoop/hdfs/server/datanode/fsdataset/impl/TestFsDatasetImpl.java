@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataBlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
@@ -40,7 +42,6 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -48,7 +49,9 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,6 +67,7 @@ public class TestFsDatasetImpl {
       new StorageInfo(HdfsServerConstants.NodeType.DATA_NODE));
 
   private Configuration conf;
+  private DataNode datanode;
   private DataStorage storage;
   private DataBlockScanner scanner;
   private FsDatasetImpl dataset;
@@ -94,7 +98,7 @@ public class TestFsDatasetImpl {
 
   @Before
   public void setUp() throws IOException {
-    final DataNode datanode = Mockito.mock(DataNode.class);
+    datanode = Mockito.mock(DataNode.class);
     storage = Mockito.mock(DataStorage.class);
     scanner = Mockito.mock(DataBlockScanner.class);
     this.conf = new Configuration();
@@ -119,17 +123,24 @@ public class TestFsDatasetImpl {
     final int numNewVolumes = 3;
     final int numExistingVolumes = dataset.getVolumes().size();
     final int totalVolumes = numNewVolumes + numExistingVolumes;
-    List<StorageLocation> newLocations = new ArrayList<StorageLocation>();
     Set<String> expectedVolumes = new HashSet<String>();
+    List<NamespaceInfo> nsInfos = Lists.newArrayList();
+    for (String bpid : BLOCK_POOL_IDS) {
+      nsInfos.add(new NamespaceInfo(0, "cluster-id", bpid, 1));
+    }
     for (int i = 0; i < numNewVolumes; i++) {
       String path = BASE_DIR + "/newData" + i;
-      newLocations.add(StorageLocation.parse(path));
-      when(storage.getStorageDir(numExistingVolumes + i))
-          .thenReturn(createStorageDirectory(new File(path)));
-    }
-    when(storage.getNumStorageDirs()).thenReturn(totalVolumes);
+      StorageLocation loc = StorageLocation.parse(path);
+      Storage.StorageDirectory sd = createStorageDirectory(new File(path));
+      DataStorage.VolumeBuilder builder =
+          new DataStorage.VolumeBuilder(storage, sd);
+      when(storage.prepareVolume(eq(datanode), eq(loc.getFile()),
+          anyListOf(NamespaceInfo.class)))
+          .thenReturn(builder);
 
-    dataset.addVolumes(newLocations, Arrays.asList(BLOCK_POOL_IDS));
+      dataset.addVolume(loc, nsInfos);
+    }
+
     assertEquals(totalVolumes, dataset.getVolumes().size());
     assertEquals(totalVolumes, dataset.storageMap.size());
 
@@ -147,7 +158,7 @@ public class TestFsDatasetImpl {
     for (int i = 0; i < NUM_BLOCKS; i++) {
       String bpid = BLOCK_POOL_IDS[NUM_BLOCKS % BLOCK_POOL_IDS.length];
       ExtendedBlock eb = new ExtendedBlock(bpid, i);
-      dataset.createRbw(StorageType.DEFAULT, eb);
+      dataset.createRbw(StorageType.DEFAULT, eb, false);
     }
     final String[] dataDirs =
         conf.get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY).split(",");

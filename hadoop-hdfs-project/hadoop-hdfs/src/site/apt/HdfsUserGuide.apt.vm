@@ -486,6 +486,26 @@ HDFS Users Guide
     This is because data inconsistency can result if an edit log operation
     refers to the destination of an automatically renamed file.
 
+* DataNode Hot Swap Drive
+
+   Datanode supports hot swappable drives. The user can add or replace HDFS data
+   volumes without shutting down the DataNode. The following briefly describes
+   the typical hot swapping drive procedure:
+
+     * If there are new storage directories, the user should format them and mount them
+       appropriately.
+
+     * The user updates the DataNode configuration <<<dfs.datanode.data.dir>>>
+       to reflect the data volume directories that will be actively in use.
+
+     * The user runs <<<dfsadmin -reconfig datanode HOST:PORT start>>> to start
+       the reconfiguration process. The user can use <<<dfsadmin -reconfig
+       datanode HOST:PORT status>>> to query the running status of the reconfiguration
+       task.
+
+     * Once the reconfiguration task has completed, the user can safely <<<umount>>>
+       the removed data volume directories and physically remove the disks.
+
 * File Permissions and Security
 
    The file permissions are designed to be similar to file permissions on

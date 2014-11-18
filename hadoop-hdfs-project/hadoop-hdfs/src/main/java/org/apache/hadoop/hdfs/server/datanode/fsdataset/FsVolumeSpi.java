@@ -46,6 +46,9 @@ public interface FsVolumeSpi {
   
   public StorageType getStorageType();
 
+  /** Returns true if the volume is NOT backed by persistent storage. */
+  public boolean isTransientStorage();
+
   /**
    * Reserve disk space for an RBW block so a writer does not run out of
    * space before the block is full.

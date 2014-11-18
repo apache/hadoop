@@ -101,7 +101,7 @@ public final class CopyListingFileStatus extends FileStatus {
    * @return Map<String, byte[]> containing all xAttrs
    */
   public Map<String, byte[]> getXAttrs() {
-    return xAttrs;
+    return xAttrs != null ? xAttrs : Collections.<String, byte[]>emptyMap();
   }
   
   /**

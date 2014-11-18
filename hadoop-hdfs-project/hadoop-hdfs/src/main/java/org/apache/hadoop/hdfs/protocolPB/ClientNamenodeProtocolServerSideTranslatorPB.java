@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
@@ -119,6 +120,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSna
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
@@ -391,8 +394,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       HdfsFileStatus result = server.create(req.getSrc(),
           PBHelper.convert(req.getMasked()), req.getClientName(),
           PBHelper.convertCreateFlag(req.getCreateFlag()), req.getCreateParent(),
-          (short) req.getReplication(), req.getBlockSize(), 
-          PBHelper.convertCipherSuiteProtos(req.getCipherSuitesList()));
+          (short) req.getReplication(), req.getBlockSize(),
+          PBHelper.convertCryptoProtocolVersions(
+              req.getCryptoProtocolVersionList()));
 
       if (result != null) {
         return CreateResponseProto.newBuilder().setFs(PBHelper.convert(result))
@@ -1336,7 +1340,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       GetEZForPathResponseProto.Builder builder =
           GetEZForPathResponseProto.newBuilder();
       final EncryptionZone ret = server.getEZForPath(req.getSrc());
-      builder.setZone(PBHelper.convert(ret));
+      if (ret != null) {
+        builder.setZone(PBHelper.convert(ret));
+      }
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1427,6 +1433,26 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
     return VOID_SET_STORAGE_POLICY_RESPONSE;
+  }
+
+  @Override
+  public GetStoragePoliciesResponseProto getStoragePolicies(
+      RpcController controller, GetStoragePoliciesRequestProto request)
+      throws ServiceException {
+    try {
+      BlockStoragePolicy[] policies = server.getStoragePolicies();
+      GetStoragePoliciesResponseProto.Builder builder =
+          GetStoragePoliciesResponseProto.newBuilder();
+      if (policies == null) {
+        return builder.build();
+      }
+      for (BlockStoragePolicy policy : policies) {
+        builder.addPolicies(PBHelper.convert(policy));
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   public GetCurrentEditLogTxidResponseProto getCurrentEditLogTxid(RpcController controller,

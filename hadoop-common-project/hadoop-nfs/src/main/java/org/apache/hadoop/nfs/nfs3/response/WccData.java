@@ -49,6 +49,14 @@ public class WccData {
         : postOpAttr;
   }
 
+  public static WccData deserialize(XDR xdr) {
+    xdr.readBoolean();
+    WccAttr preOpAttr = WccAttr.deserialize(xdr);
+    xdr.readBoolean();
+    Nfs3FileAttributes postOpAttr = Nfs3FileAttributes.deserialize(xdr);
+    return new WccData(preOpAttr, postOpAttr);
+  }
+
   public void serialize(XDR out) {
     out.writeBoolean(true); // attributes follow
     preOpAttr.serialize(out);

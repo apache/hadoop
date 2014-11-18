@@ -81,19 +81,17 @@ public class TestBlockManager {
   private static final int NUM_TEST_ITERS = 30;
   
   private static final int BLOCK_SIZE = 64*1024;
-  
-  private Configuration conf;
+
   private FSNamesystem fsn;
   private BlockManager bm;
 
   @Before
   public void setupMockCluster() throws IOException {
-    conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
-        "need to set a dummy value here so it assumes a multi-rack cluster");
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY, "need to set a dummy value here so it assumes a multi-rack cluster");
     fsn = Mockito.mock(FSNamesystem.class);
     Mockito.doReturn(true).when(fsn).hasWriteLock();
-    bm = new BlockManager(fsn, fsn, conf);
+    bm = new BlockManager(fsn, conf);
     final String[] racks = {
         "/rackA",
         "/rackA",
@@ -281,7 +279,8 @@ public class TestBlockManager {
     assertTrue("Source of replication should be one of the nodes the block " +
         "was on. Was: " + pipeline[0],
         origStorages.contains(pipeline[0]));
-    assertEquals("Should have three targets", 3, pipeline.length);
+    // Only up to two nodes can be picked per rack when there are two racks.
+    assertEquals("Should have two targets", 2, pipeline.length);
     
     boolean foundOneOnRackB = false;
     for (int i = 1; i < pipeline.length; i++) {
@@ -384,7 +383,7 @@ public class TestBlockManager {
 
   private BlockInfo blockOnNodes(long blkId, List<DatanodeDescriptor> nodes) {
     Block block = new Block(blkId);
-    BlockInfo blockInfo = new BlockInfo(block, 3);
+    BlockInfo blockInfo = new BlockInfo(block, (short) 3);
 
     for (DatanodeDescriptor dn : nodes) {
       for (DatanodeStorageInfo storage : dn.getStorageInfos()) {

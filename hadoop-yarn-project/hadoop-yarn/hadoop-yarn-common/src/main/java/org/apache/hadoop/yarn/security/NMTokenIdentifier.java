@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.security;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -30,8 +31,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
+import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.NMTokenIdentifierProto;
+
+import com.google.protobuf.TextFormat;
 
 @Public
 @Evolving
@@ -41,17 +46,21 @@ public class NMTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND = new Text("NMToken");
   
-  private ApplicationAttemptId appAttemptId;
-  private NodeId nodeId;
-  private String appSubmitter;
-  private int keyId;
+  private NMTokenIdentifierProto proto;
 
-  public NMTokenIdentifier(ApplicationAttemptId appAttemptId, NodeId nodeId,
-      String applicationSubmitter, int masterKeyId) {
-    this.appAttemptId = appAttemptId;
-    this.nodeId = nodeId;
-    this.appSubmitter = applicationSubmitter;
-    this.keyId = masterKeyId;
+  public NMTokenIdentifier(ApplicationAttemptId appAttemptId, 
+      NodeId nodeId, String applicationSubmitter, int masterKeyId) {
+    NMTokenIdentifierProto.Builder builder = NMTokenIdentifierProto.newBuilder();
+    if (appAttemptId != null) {
+      builder.setAppAttemptId(
+          ((ApplicationAttemptIdPBImpl)appAttemptId).getProto());
+    }
+    if (nodeId != null) {
+      builder.setNodeId(((NodeIdPBImpl)nodeId).getProto());
+    }
+    builder.setAppSubmitter(applicationSubmitter);
+    builder.setKeyId(masterKeyId);
+    proto = builder.build();
   }
   
   /**
@@ -61,43 +70,36 @@ public class NMTokenIdentifier extends TokenIdentifier {
   }
 
   public ApplicationAttemptId getApplicationAttemptId() {
-    return appAttemptId;
+    if (!proto.hasAppAttemptId()) {
+      return null;
+    }
+    return new ApplicationAttemptIdPBImpl(proto.getAppAttemptId());
   }
   
   public NodeId getNodeId() {
-    return nodeId;
+    if (!proto.hasNodeId()) {
+      return null;
+    }
+    return new NodeIdPBImpl(proto.getNodeId());
   }
   
   public String getApplicationSubmitter() {
-    return appSubmitter;
+    return proto.getAppSubmitter();
   }
   
   public int getKeyId() {
-    return keyId;
+    return proto.getKeyId();
   }
   
   @Override
   public void write(DataOutput out) throws IOException {
     LOG.debug("Writing NMTokenIdentifier to RPC layer: " + this);
-    ApplicationId applicationId = appAttemptId.getApplicationId();
-    out.writeLong(applicationId.getClusterTimestamp());
-    out.writeInt(applicationId.getId());
-    out.writeInt(appAttemptId.getAttemptId());
-    out.writeUTF(this.nodeId.toString());
-    out.writeUTF(this.appSubmitter);
-    out.writeInt(this.keyId);
+    out.write(proto.toByteArray());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    appAttemptId =
-        ApplicationAttemptId.newInstance(
-            ApplicationId.newInstance(in.readLong(), in.readInt()),
-            in.readInt());
-    String[] hostAddr = in.readUTF().split(":");
-    nodeId = NodeId.newInstance(hostAddr[0], Integer.parseInt(hostAddr[1]));
-    appSubmitter = in.readUTF();
-    keyId = in.readInt();
+    proto = NMTokenIdentifierProto.parseFrom((DataInputStream)in);
   }
 
   @Override
@@ -107,6 +109,35 @@ public class NMTokenIdentifier extends TokenIdentifier {
 
   @Override
   public UserGroupInformation getUser() {
-    return UserGroupInformation.createRemoteUser(appAttemptId.toString());
+    String appAttemptId = null;
+    if (proto.hasAppAttemptId()) {
+      appAttemptId = new ApplicationAttemptIdPBImpl(
+          proto.getAppAttemptId()).toString();
+    }
+    return UserGroupInformation.createRemoteUser(appAttemptId);
+  }
+  
+  public NMTokenIdentifierProto getProto() {
+    return proto;
+  }
+  
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    return TextFormat.shortDebugString(getProto());
   }
 }

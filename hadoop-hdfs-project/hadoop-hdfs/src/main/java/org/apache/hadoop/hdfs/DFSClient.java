@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
-import static org.apache.hadoop.crypto.key.KeyProviderCryptoExtension
-    .EncryptedKeyVersion;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
@@ -79,6 +75,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -88,23 +85,28 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.SocketFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CacheFlag;
@@ -132,13 +134,14 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.AclException;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveIterator;
@@ -189,6 +192,7 @@ import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
+import org.apache.hadoop.hdfs.util.ByteArrayManager;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -205,11 +209,17 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
+import org.apache.hadoop.tracing.SpanReceiverHost;
+import org.apache.hadoop.tracing.TraceSamplerFactory;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
+import org.htrace.Sampler;
+import org.htrace.Span;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -262,11 +272,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static final DFSHedgedReadMetrics HEDGED_READ_METRIC =
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
-  private final CryptoCodec codec;
   @VisibleForTesting
-  List<CipherSuite> cipherSuites;
-  @VisibleForTesting
-  KeyProviderCryptoExtension provider;
+  KeyProvider provider;
+  private final SpanReceiverHost spanReceiverHost;
+  private final Sampler<?> traceSampler;
+
   /**
    * DFSClient configuration 
    */
@@ -282,6 +292,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     final int ioBufferSize;
     final ChecksumOpt defaultChecksumOpt;
     final int writePacketSize;
+    final int writeMaxPackets;
+    final ByteArrayManager.Conf writeByteArrayManagerConf;
     final int socketTimeout;
     final int socketCacheCapacity;
     final long socketCacheExpiry;
@@ -352,6 +364,30 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       /** dfs.write.packet.size is an internal config variable */
       writePacketSize = conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
           DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
+      writeMaxPackets = conf.getInt(
+          DFSConfigKeys.DFS_CLIENT_WRITE_MAX_PACKETS_IN_FLIGHT_KEY,
+          DFSConfigKeys.DFS_CLIENT_WRITE_MAX_PACKETS_IN_FLIGHT_DEFAULT);
+      
+      final boolean byteArrayManagerEnabled = conf.getBoolean(
+          DFSConfigKeys.DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_ENABLED_KEY,
+          DFSConfigKeys.DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_ENABLED_DEFAULT);
+      if (!byteArrayManagerEnabled) {
+        writeByteArrayManagerConf = null;
+      } else {
+        final int countThreshold = conf.getInt(
+            DFSConfigKeys.DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_COUNT_THRESHOLD_KEY,
+            DFSConfigKeys.DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_COUNT_THRESHOLD_DEFAULT);
+        final int countLimit = conf.getInt(
+            DFSConfigKeys.DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_COUNT_LIMIT_KEY,
+            DFSConfigKeys.DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_COUNT_LIMIT_DEFAULT);
+        final long countResetTimePeriodMs = conf.getLong(
+            DFSConfigKeys.DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_COUNT_RESET_TIME_PERIOD_MS_KEY,
+            DFSConfigKeys.DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_COUNT_RESET_TIME_PERIOD_MS_DEFAULT);
+        writeByteArrayManagerConf = new ByteArrayManager.Conf(
+            countThreshold, countLimit, countResetTimePeriodMs); 
+      }
+      
+      
       defaultBlockSize = conf.getLongBytes(DFS_BLOCK_SIZE_KEY,
           DFS_BLOCK_SIZE_DEFAULT);
       defaultReplication = (short) conf.getInt(
@@ -506,8 +542,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       return createChecksum(null);
     }
 
-    private DataChecksum createChecksum(ChecksumOpt userOpt) 
-        throws IOException {
+    private DataChecksum createChecksum(ChecksumOpt userOpt) {
       // Fill in any missing field with the default.
       ChecksumOpt myOpt = ChecksumOpt.processChecksumOpt(
           defaultChecksumOpt, userOpt);
@@ -515,8 +550,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           myOpt.getChecksumType(),
           myOpt.getBytesPerChecksum());
       if (dataChecksum == null) {
-        throw new IOException("Invalid checksum type specified: "
-            + myOpt.getChecksumType().name());
+        throw new HadoopIllegalArgumentException("Invalid checksum type: userOpt="
+            + userOpt + ", default=" + defaultChecksumOpt
+            + ", effective=null");
       }
       return dataChecksum;
     }
@@ -583,6 +619,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
       Configuration conf, FileSystem.Statistics stats)
     throws IOException {
+    spanReceiverHost = SpanReceiverHost.getInstance(conf);
+    traceSampler = TraceSamplerFactory.createSampler(conf);
     // Copy only the required DFSClient configuration
     this.dfsClientConf = new Conf(conf);
     if (this.dfsClientConf.useLegacyBlockReaderLocal) {
@@ -598,12 +636,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
     this.clientName = "DFSClient_" + dfsClientConf.taskId + "_" + 
         DFSUtil.getRandom().nextInt()  + "_" + Thread.currentThread().getId();
-    this.codec = CryptoCodec.getInstance(conf);
-    this.cipherSuites = Lists.newArrayListWithCapacity(1);
-    if (codec != null) {
-      cipherSuites.add(codec.getCipherSuite());
-    }
-    provider = DFSUtil.createKeyProviderCryptoExtension(conf);
+    provider = DFSUtil.createKeyProvider(conf);
     if (LOG.isDebugEnabled()) {
       if (provider == null) {
         LOG.debug("No KeyProvider found.");
@@ -675,7 +708,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       this.initThreadsNumForHedgedReads(numThreads);
     }
     this.saslClient = new SaslDataTransferClient(
-      DataTransferSaslUtil.getSaslPropertiesResolver(conf),
+      conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
       TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
   }
   
@@ -926,12 +959,18 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   @Override
   public synchronized void close() throws IOException {
-    if(clientRunning) {
-      closeAllFilesBeingWritten(false);
-      clientRunning = false;
-      getLeaseRenewer().closeClient(this);
-      // close connections to the namenode
-      closeConnectionToNamenode();
+    try {
+      if(clientRunning) {
+        closeAllFilesBeingWritten(false);
+        clientRunning = false;
+        getLeaseRenewer().closeClient(this);
+        // close connections to the namenode
+        closeConnectionToNamenode();
+      }
+    } finally {
+      if (provider != null) {
+        provider.close();
+      }
     }
   }
 
@@ -1322,10 +1361,61 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         feInfo.getKeyName(), feInfo.getEzKeyVersionName(), feInfo.getIV(),
         feInfo.getEncryptedDataEncryptionKey());
     try {
-      return provider.decryptEncryptedKey(ekv);
+      KeyProviderCryptoExtension cryptoProvider = KeyProviderCryptoExtension
+          .createKeyProviderCryptoExtension(provider);
+      return cryptoProvider.decryptEncryptedKey(ekv);
     } catch (GeneralSecurityException e) {
       throw new IOException(e);
     }
+  }
+
+  /**
+   * Obtain the crypto protocol version from the provided FileEncryptionInfo,
+   * checking to see if this version is supported by.
+   *
+   * @param feInfo FileEncryptionInfo
+   * @return CryptoProtocolVersion from the feInfo
+   * @throws IOException if the protocol version is unsupported.
+   */
+  private static CryptoProtocolVersion getCryptoProtocolVersion
+      (FileEncryptionInfo feInfo) throws IOException {
+    final CryptoProtocolVersion version = feInfo.getCryptoProtocolVersion();
+    if (!CryptoProtocolVersion.supports(version)) {
+      throw new IOException("Client does not support specified " +
+          "CryptoProtocolVersion " + version.getDescription() + " version " +
+          "number" + version.getVersion());
+    }
+    return version;
+  }
+
+  /**
+   * Obtain a CryptoCodec based on the CipherSuite set in a FileEncryptionInfo
+   * and the available CryptoCodecs configured in the Configuration.
+   *
+   * @param conf   Configuration
+   * @param feInfo FileEncryptionInfo
+   * @return CryptoCodec
+   * @throws IOException if no suitable CryptoCodec for the CipherSuite is
+   *                     available.
+   */
+  private static CryptoCodec getCryptoCodec(Configuration conf,
+      FileEncryptionInfo feInfo) throws IOException {
+    final CipherSuite suite = feInfo.getCipherSuite();
+    if (suite.equals(CipherSuite.UNKNOWN)) {
+      throw new IOException("NameNode specified unknown CipherSuite with ID "
+          + suite.getUnknownValue() + ", cannot instantiate CryptoCodec.");
+    }
+    final CryptoCodec codec = CryptoCodec.getInstance(conf, suite);
+    if (codec == null) {
+      throw new UnknownCipherSuiteException(
+          "No configuration found for the cipher suite "
+          + suite.getConfigSuffix() + " prefixed with "
+          + HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
+          + ". Please see the example configuration "
+          + "hadoop.security.crypto.codec.classes.EXAMPLECIPHERSUITE "
+          + "at core-default.xml for details.");
+    }
+    return codec;
   }
 
   /**
@@ -1337,17 +1427,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     final FileEncryptionInfo feInfo = dfsis.getFileEncryptionInfo();
     if (feInfo != null) {
       // File is encrypted, wrap the stream in a crypto stream.
-      KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
-      CryptoCodec codec = CryptoCodec
-          .getInstance(conf, feInfo.getCipherSuite());
-      if (codec == null) {
-        throw new IOException("No configuration found for the cipher suite "
-            + feInfo.getCipherSuite().getConfigSuffix() + " prefixed with "
-            + HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
-            + ". Please see the example configuration "
-            + "hadoop.security.crypto.codec.classes.EXAMPLECIPHERSUITE "
-            + "at core-default.xml for details.");
-      }
+      // Currently only one version, so no special logic based on the version #
+      getCryptoProtocolVersion(feInfo);
+      final CryptoCodec codec = getCryptoCodec(conf, feInfo);
+      final KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
       final CryptoInputStream cryptoIn =
           new CryptoInputStream(dfsis, codec, decrypted.getMaterial(),
               feInfo.getIV());
@@ -1375,15 +1458,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       FileSystem.Statistics statistics, long startPos) throws IOException {
     final FileEncryptionInfo feInfo = dfsos.getFileEncryptionInfo();
     if (feInfo != null) {
-      if (codec == null) {
-        throw new IOException("No configuration found for the cipher suite "
-            + HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY + " value prefixed with "
-            + HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
-            + ". Please see the example configuration "
-            + "hadoop.security.crypto.codec.classes.EXAMPLECIPHERSUITE "
-            + "at core-default.xml for details.");
-      }
       // File is encrypted, wrap the stream in a crypto stream.
+      // Currently only one version, so no special logic based on the version #
+      getCryptoProtocolVersion(feInfo);
+      final CryptoCodec codec = getCryptoCodec(conf, feInfo);
       KeyVersion decrypted = decryptEncryptedDataEncryptionKey(feInfo);
       final CryptoOutputStream cryptoOut =
           new CryptoOutputStream(dfsos, codec,
@@ -1425,7 +1503,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throws IOException, UnresolvedLinkException {
     checkOpen();
     //    Get block info from namenode
-    return new DFSInputStream(this, src, buffersize, verifyChecksum);
+    return new DFSInputStream(this, src, verifyChecksum);
   }
 
   /**
@@ -1598,7 +1676,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
         src, masked, flag, createParent, replication, blockSize, progress,
         buffersize, dfsClientConf.createChecksum(checksumOpt),
-        favoredNodeStrs, cipherSuites);
+        favoredNodeStrs);
     beginFileLease(result.getFileId(), result);
     return result;
   }
@@ -1618,7 +1696,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         }
         return null;
       }
-      return callAppend(stat, src, buffersize, progress);
+      return callAppend(src, buffersize, progress);
     }
     return null;
   }
@@ -1645,7 +1723,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       DataChecksum checksum = dfsClientConf.createChecksum(checksumOpt);
       result = DFSOutputStream.newStreamForCreate(this, src, absPermission,
           flag, createParent, replication, blockSize, progress, buffersize,
-          checksum, null, cipherSuites);
+          checksum, null);
     }
     beginFileLease(result.getFileId(), result);
     return result;
@@ -1690,7 +1768,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /** Method to get stream returned by append call */
-  private DFSOutputStream callAppend(HdfsFileStatus stat, String src,
+  private DFSOutputStream callAppend(String src,
       int buffersize, Progressable progress) throws IOException {
     LocatedBlock lastBlock = null;
     try {
@@ -1704,8 +1782,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     }
+    HdfsFileStatus newStat = getFileInfo(src);
     return DFSOutputStream.newStreamForAppend(this, src, buffersize, progress,
-        lastBlock, stat, dfsClientConf.createChecksum());
+        lastBlock, newStat, dfsClientConf.createChecksum());
   }
   
   /**
@@ -1729,12 +1808,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private DFSOutputStream append(String src, int buffersize, Progressable progress) 
       throws IOException {
     checkOpen();
-    HdfsFileStatus stat = getFileInfo(src);
-    if (stat == null) { // No file found
-      throw new FileNotFoundException("failed to append to non-existent file "
-          + src + " on client " + clientName);
-    }
-    final DFSOutputStream result = callAppend(stat, src, buffersize, progress);
+    final DFSOutputStream result = callAppend(src, buffersize, progress);
     beginFileLease(result.getFileId(), result);
     return result;
   }
@@ -1777,6 +1851,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                     UnresolvedPathException.class,
                                     SnapshotAccessControlException.class);
     }
+  }
+
+  /**
+   * @return All the existing storage policies
+   */
+  public BlockStoragePolicy[] getStoragePolicies() throws IOException {
+    return namenode.getStoragePolicies();
   }
 
   /**
@@ -2297,6 +2378,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return namenode.getStats()[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX];
   }
   
+  /**
+   * Returns count of blocks with replication factor 1 and have
+   * lost the only replica.
+   * @throws IOException
+   */
+  public long getMissingReplOneBlocksCount() throws IOException {
+    return namenode.getStats()[ClientProtocol.
+        GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX];
+  }
+
   /**
    * Returns count of blocks with one of more replica missing.
    * @throws IOException
@@ -2903,8 +2994,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           throws IOException {
     checkOpen();
     try {
-      final EncryptionZone ez = namenode.getEZForPath(src);
-      return (ez.getId() < 0) ? null : ez;
+      return namenode.getEZForPath(src);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      UnresolvedPathException.class);
@@ -3102,7 +3192,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return HEDGED_READ_METRIC;
   }
 
-  public KeyProviderCryptoExtension getKeyProvider() {
+  public KeyProvider getKeyProvider() {
     return provider;
   }
 
@@ -3118,5 +3208,19 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public SaslDataTransferClient getSaslDataTransferClient() {
     return saslClient;
+  }
+
+  private static final byte[] PATH = "path".getBytes(Charset.forName("UTF-8"));
+
+  TraceScope getPathTraceScope(String description, String path) {
+    TraceScope scope = Trace.startSpan(description, traceSampler);
+    Span span = scope.getSpan();
+    if (span != null) {
+      if (path != null) {
+        span.addKVAnnotation(PATH,
+            path.getBytes(Charset.forName("UTF-8")));
+      }
+    }
+    return scope;
   }
 }

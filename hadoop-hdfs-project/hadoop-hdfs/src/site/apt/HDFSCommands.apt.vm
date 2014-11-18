@@ -26,8 +26,8 @@ HDFS Commands Guide
    hdfs script without any arguments prints the description for all
    commands.
 
-   Usage: <<<hdfs [--config confdir] [COMMAND] [GENERIC_OPTIONS]
-          [COMMAND_OPTIONS]>>>
+   Usage: <<<hdfs [--config confdir] [--loglevel loglevel] [COMMAND]
+          [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
 
    Hadoop has an option parsing framework that employs parsing generic options
    as well as running classes.
@@ -37,6 +37,10 @@ HDFS Commands Guide
 *-----------------------+---------------+
 | <<<--config confdir>>>| Overwrites the default Configuration directory.
 |                       | Default is <<<${HADOOP_HOME}/conf>>>.
+*-----------------------+---------------+
+| <<<--loglevel loglevel>>>| Overwrites the log level. Valid log levels are
+|                       | FATAL, ERROR, WARN, INFO, DEBUG, and TRACE.
+|                       | Default is INFO.
 *-----------------------+---------------+
 | GENERIC_OPTIONS       | The common set of options supported by multiple
 |                       | commands. Full list is
@@ -82,32 +86,46 @@ HDFS Commands Guide
    See {{{./HdfsUserGuide.html#fsck}fsck}} for more info.
 
    Usage: <<<hdfs fsck [GENERIC_OPTIONS] <path>
+          [-list-corruptfileblocks | 
           [-move | -delete | -openforwrite]
           [-files [-blocks [-locations | -racks]]]
-          [-showprogress]>>>
+          [-includeSnapshots] [-showprogress]>>>
 
-*------------------+---------------------------------------------+
-||  COMMAND_OPTION || Description
-*------------------+---------------------------------------------+
-|   <path>         | Start checking from this path.
-*------------------+---------------------------------------------+
-|   -move          | Move corrupted files to /lost+found
-*------------------+---------------------------------------------+
-|   -delete        | Delete corrupted files.
-*------------------+---------------------------------------------+
-|   -openforwrite  | Print out files opened for write.
-*------------------+---------------------------------------------+
-|   -files         | Print out files being checked.
-*------------------+---------------------------------------------+
-|   -blocks        | Print out block report.
-*------------------+---------------------------------------------+
-|   -locations     | Print out locations for every block.
-*------------------+---------------------------------------------+
-|   -racks         | Print out network topology for data-node locations.
-*------------------+---------------------------------------------+
-|   -showprogress  | Print out dots for progress in output. Default is OFF
-|                  | (no progress).
-*------------------+---------------------------------------------+
+*------------------------+---------------------------------------------+
+||  COMMAND_OPTION       || Description
+*------------------------+---------------------------------------------+
+|   <path>               | Start checking from this path.
+*------------------------+---------------------------------------------+
+| -move                  | Move corrupted files to /lost+found.
+*------------------------+---------------------------------------------+
+| -delete                | Delete corrupted files.
+*------------------------+---------------------------------------------+
+| -files                 | Print out files being checked.
+*------------------------+---------------------------------------------+
+| -openforwrite          | Print out files opened for write.
+*------------------------+---------------------------------------------+
+|                        | Include snapshot data if the given path 
+| -includeSnapshots      | indicates a snapshottable directory or 
+|                        | there are snapshottable directories under it.
+*------------------------+---------------------------------------------+
+| -list-corruptfileblocks| Print out list of missing blocks and 
+|                        | files they belong to.
+*------------------------+---------------------------------------------+
+| -blocks                | Print out block report.
+*------------------------+---------------------------------------------+
+| -locations             | Print out locations for every block.
+*------------------------+---------------------------------------------+
+| -racks                 | Print out network topology for data-node locations.
+*------------------------+---------------------------------------------+
+| -showprogress          | Print out dots for progress in output. Default is OFF
+|                        | (no progress).
+*------------------------+---------------------------------------------+
+
+** <<<version>>>
+
+   Prints the version.
+
+   Usage: <<<hdfs version>>>
 
 * Administration Commands
 
@@ -180,6 +198,7 @@ HDFS Commands Guide
           [-refreshSuperUserGroupsConfiguration]
           [-refreshCallQueue]
           [-refresh <host:ipc_port> <key> [arg1..argn]]
+          [-reconfig <datanode|...> <host:ipc_port> <start|status>]
           [-printTopology]
           [-refreshNamenodes datanodehost:port]
           [-deleteBlockPool datanode-host:port blockpoolId [force]]
@@ -189,6 +208,7 @@ HDFS Commands Guide
           [-fetchImage <local directory>]
           [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
           [-getDatanodeInfo <datanode_host:ipc_port>]
+          [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
           [-help [cmd]]
 +------------------------------------------+
 
@@ -273,6 +293,12 @@ HDFS Commands Guide
                   | of the resource specified by \<key\> on \<host:ipc_port\>.
                   | All other args after are sent to the host.
 *-----------------+-----------------------------------------------------------+
+| -reconfig \<datanode\|...\> \<host:ipc_port\> \<start\|status\> | Start
+                  | reconfiguration or get the status of an ongoing
+                  | reconfiguration. The second parameter specifies the node
+                  | type. Currently, only reloading DataNode's configuration is
+                  | supported.
+*-----------------+-----------------------------------------------------------+
 | -printTopology  | Print a tree of the racks and their nodes as reported by
                   | the Namenode
 *-----------------+-----------------------------------------------------------+
@@ -315,6 +341,11 @@ HDFS Commands Guide
                   | given datanode. See
                   | {{{./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo}Rolling Upgrade document}}
                   | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -triggerBlockReport [-incremental] \<datanode_host:ipc_port\> | Trigger a
+                  | block report for the given datanode.  If 'incremental' is
+                  | specified, it will be | an incremental block report;
+                  | otherwise, it will be a full block report.
 *-----------------+-----------------------------------------------------------+
 | -help [cmd]     | Displays help for the given command or all commands if none
                   | is specified.

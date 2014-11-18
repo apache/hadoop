@@ -43,6 +43,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import com.sun.jersey.api.client.config.ClientConfig;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -65,6 +67,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
@@ -115,6 +119,11 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
 
   private boolean setAuthFilter = false;
 
+  private static final String TEST_DIR = new File(System.getProperty(
+      "test.build.data", "/tmp")).getAbsolutePath();
+  private static final String FS_ALLOC_FILE = new File(TEST_DIR,
+      "test-fs-queues.xml").getAbsolutePath();
+
   public static class GuiceServletConfig extends GuiceServletContextListener {
 
     @Override
@@ -151,11 +160,14 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
 
   }
 
-  private class TestServletModule extends ServletModule {
+  private abstract class TestServletModule extends ServletModule {
     public Configuration conf = new Configuration();
+
+    public abstract void configureScheduler();
 
     @Override
     protected void configureServlets() {
+      configureScheduler();
       bind(JAXBContextResolver.class);
       bind(RMWebServices.class);
       bind(GenericExceptionHandler.class);
@@ -174,8 +186,39 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     }
   }
 
-  private Injector getNoAuthInjector() {
-    return Guice.createInjector(new TestServletModule() {
+  private class CapTestServletModule extends TestServletModule {
+    @Override
+    public void configureScheduler() {
+      conf.set("yarn.resourcemanager.scheduler.class",
+          CapacityScheduler.class.getName());
+    }
+  }
+
+  private class FairTestServletModule extends TestServletModule {
+    @Override
+    public void configureScheduler() {
+      try {
+        PrintWriter out = new PrintWriter(new FileWriter(FS_ALLOC_FILE));
+        out.println("<?xml version=\"1.0\"?>");
+        out.println("<allocations>");
+        out.println("<queue name=\"root\">");
+        out.println("  <aclAdministerApps>someuser </aclAdministerApps>");
+        out.println("  <queue name=\"default\">");
+        out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
+        out.println("  </queue>");
+        out.println("</queue>");
+        out.println("</allocations>");
+        out.close();
+      } catch(IOException e) {
+      }
+      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
+      conf.set("yarn.resourcemanager.scheduler.class",
+          FairScheduler.class.getName());
+    }
+  }
+
+  private Injector getNoAuthInjectorCap() {
+    return Guice.createInjector(new CapTestServletModule() {
       @Override
       protected void configureServlets() {
         setAuthFilter = false;
@@ -184,8 +227,32 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     });
   }
 
-  private Injector getSimpleAuthInjector() {
-    return Guice.createInjector(new TestServletModule() {
+  private Injector getSimpleAuthInjectorCap() {
+    return Guice.createInjector(new CapTestServletModule() {
+      @Override
+      protected void configureServlets() {
+        setAuthFilter = true;
+        conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+        // set the admin acls otherwise all users are considered admins
+        // and we can't test authorization
+        conf.setStrings(YarnConfiguration.YARN_ADMIN_ACL, "testuser1");
+        super.configureServlets();
+      }
+    });
+  }
+
+  private Injector getNoAuthInjectorFair() {
+    return Guice.createInjector(new FairTestServletModule() {
+      @Override
+      protected void configureServlets() {
+        setAuthFilter = false;
+        super.configureServlets();
+      }
+    });
+  }
+
+  private Injector getSimpleAuthInjectorFair() {
+    return Guice.createInjector(new FairTestServletModule() {
       @Override
       protected void configureServlets() {
         setAuthFilter = true;
@@ -200,7 +267,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
 
   @Parameters
   public static Collection<Object[]> guiceConfigs() {
-    return Arrays.asList(new Object[][] { { 0 }, { 1 } });
+    return Arrays.asList(new Object[][] { { 0 }, { 1 }, { 2 }, { 3 } });
   }
 
   @Before
@@ -214,14 +281,25 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
       "org.apache.hadoop.yarn.server.resourcemanager.webapp")
       .contextListenerClass(GuiceServletConfig.class)
       .filterClass(com.google.inject.servlet.GuiceFilter.class)
+      .clientConfig(new DefaultClientConfig(JAXBContextResolver.class))
       .contextPath("jersey-guice-filter").servletPath("/").build());
     switch (run) {
     case 0:
     default:
-      injector = getNoAuthInjector();
+      // No Auth Capacity Scheduler
+      injector = getNoAuthInjectorCap();
       break;
     case 1:
-      injector = getSimpleAuthInjector();
+      // Simple Auth Capacity Scheduler
+      injector = getSimpleAuthInjectorCap();
+      break;
+    case 2:
+      // No Auth Fair Scheduler
+      injector = getNoAuthInjectorFair();
+      break;
+    case 3:
+      // Simple Auth Fair Scheduler
+      injector = getSimpleAuthInjectorFair();
       break;
     }
   }
@@ -270,7 +348,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     rm.stop();
   }
 
-  @Test(timeout = 90000)
+  @Test(timeout = 120000)
   public void testSingleAppKill() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
@@ -442,20 +520,25 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     assertTrue(msg, valid);
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testSingleAppKillUnauthorized() throws Exception {
 
     boolean isCapacityScheduler =
         rm.getResourceScheduler() instanceof CapacityScheduler;
-    assumeTrue("Currently this test is only supported on CapacityScheduler",
-      isCapacityScheduler);
+    boolean isFairScheduler =
+        rm.getResourceScheduler() instanceof FairScheduler;
+    assumeTrue("This test is only supported on Capacity and Fair Scheduler",
+        isCapacityScheduler || isFairScheduler);
+    // FairScheduler use ALLOCATION_FILE to configure ACL
+    if (isCapacityScheduler) {
+      // default root queue allows anyone to have admin acl
+      CapacitySchedulerConfiguration csconf =
+          new CapacitySchedulerConfiguration();
+      csconf.setAcl("root", QueueACL.ADMINISTER_QUEUE, "someuser");
+      csconf.setAcl("root.default", QueueACL.ADMINISTER_QUEUE, "someuser");
+      rm.getResourceScheduler().reinitialize(csconf, rm.getRMContext());
+    }
 
-    // default root queue allows anyone to have admin acl
-    CapacitySchedulerConfiguration csconf =
-        new CapacitySchedulerConfiguration();
-    csconf.setAcl("root", QueueACL.ADMINISTER_QUEUE, "someuser");
-    csconf.setAcl("root.default", QueueACL.ADMINISTER_QUEUE, "someuser");
-    rm.getResourceScheduler().reinitialize(csconf, rm.getRMContext());
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
 
@@ -550,10 +633,10 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     }
   }
 
-  // Simple test - just post to /apps/id and validate the response
+  // Simple test - just post to /apps/new-application and validate the response
   @Test
   public void testGetNewApplication() throws Exception {
-    // client().addFilter(new LoggingFilter(System.out));
+    client().addFilter(new LoggingFilter(System.out));
     rm.start();
     String mediaTypes[] =
         { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
@@ -653,7 +736,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     // create a test app and submit it via rest(after getting an app-id) then
     // get the app details from the rmcontext and check that everything matches
 
-    // client().addFilter(new LoggingFilter(System.out));
+    client().addFilter(new LoggingFilter(System.out));
     String lrKey = "example";
     String queueName = "testqueue";
     String appName = "test";
@@ -730,6 +813,9 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     assertEquals(appName, app.getName());
     assertEquals(webserviceUserName, app.getUser());
     assertEquals(2, app.getMaxAppAttempts());
+    if (app.getQueue().contains("root.")) {
+      queueName = "root." + queueName;
+    }
     assertEquals(queueName, app.getQueue());
     assertEquals(appType, app.getApplicationType());
     assertEquals(tags, app.getApplicationTags());

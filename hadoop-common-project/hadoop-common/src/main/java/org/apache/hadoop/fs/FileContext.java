@@ -161,7 +161,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
-public final class FileContext {
+public class FileContext {
   
   public static final Log LOG = LogFactory.getLog(FileContext.class);
   /**
@@ -430,6 +430,9 @@ public final class FileContext {
       final Configuration aConf) throws UnsupportedFileSystemException {
     UserGroupInformation currentUser = null;
     AbstractFileSystem defaultAfs = null;
+    if (defaultFsUri.getScheme() == null) {
+      return getFileContext(aConf);
+    }
     try {
       currentUser = UserGroupInformation.getCurrentUser();
       defaultAfs = getAbstractFileSystem(currentUser, defaultFsUri, aConf);
@@ -2021,10 +2024,9 @@ public final class FileContext {
                 EnumSet.of(CreateFlag.CREATE);
           out = create(qDst, createFlag);
           IOUtils.copyBytes(in, out, conf, true);
-        } catch (IOException e) {
+        } finally {
           IOUtils.closeStream(out);
           IOUtils.closeStream(in);
-          throw e;
         }
       }
       if (deleteSource) {

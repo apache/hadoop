@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.common;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.management.ManagementFactory;
@@ -36,6 +37,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -713,12 +716,13 @@ public abstract class Storage extends StorageInfo {
       } catch(OverlappingFileLockException oe) {
         // Cannot read from the locked file on Windows.
         String lockingJvmName = Path.WINDOWS ? "" : (" " + file.readLine());
-        LOG.error("It appears that another namenode" + lockingJvmName
-            + " has already locked the storage directory");
+        LOG.error("It appears that another node " + lockingJvmName
+            + " has already locked the storage directory: " + root, oe);
         file.close();
         return null;
       } catch(IOException e) {
-        LOG.error("Failed to acquire lock on " + lockF + ". If this storage directory is mounted via NFS, " 
+        LOG.error("Failed to acquire lock on " + lockF
+            + ". If this storage directory is mounted via NFS, " 
             + "ensure that the appropriate nfs lock services are running.", e);
         file.close();
         throw e;
@@ -815,6 +819,21 @@ public abstract class Storage extends StorageInfo {
   
   protected void addStorageDir(StorageDirectory sd) {
     storageDirs.add(sd);
+  }
+
+  /**
+   * Returns true if the storage directory on the given directory is already
+   * loaded.
+   * @param root the root directory of a {@link StorageDirectory}
+   * @throws IOException if failed to get canonical path.
+   */
+  protected boolean containsStorageDir(File root) throws IOException {
+    for (StorageDirectory sd : storageDirs) {
+      if (sd.getRoot().getCanonicalPath().equals(root.getCanonicalPath())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -986,9 +1005,101 @@ public abstract class Storage extends StorageInfo {
   }
 
   public static void rename(File from, File to) throws IOException {
-    if (!from.renameTo(to))
-      throw new IOException("Failed to rename " 
-                            + from.getCanonicalPath() + " to " + to.getCanonicalPath());
+    try {
+      NativeIO.renameTo(from, to);
+    } catch (NativeIOException e) {
+      throw new IOException("Failed to rename " + from.getCanonicalPath()
+        + " to " + to.getCanonicalPath() + " due to failure in native rename. "
+        + e.toString());
+    }
+  }
+
+  /**
+   * Copies a file (usually large) to a new location using native unbuffered IO.
+   * <p>
+   * This method copies the contents of the specified source file
+   * to the specified destination file using OS specific unbuffered IO.
+   * The goal is to avoid churning the file system buffer cache when copying
+   * large files.
+   *
+   * We can't use FileUtils#copyFile from apache-commons-io because it
+   * is a buffered IO based on FileChannel#transferFrom, which uses MmapByteBuffer
+   * internally.
+   *
+   * The directory holding the destination file is created if it does not exist.
+   * If the destination file exists, then this method will delete it first.
+   * <p>
+   * <strong>Note:</strong> Setting <code>preserveFileDate</code> to
+   * {@code true} tries to preserve the file's last modified
+   * date/times using {@link File#setLastModified(long)}, however it is
+   * not guaranteed that the operation will succeed.
+   * If the modification operation fails, no indication is provided.
+   *
+   * @param srcFile  an existing file to copy, must not be {@code null}
+   * @param destFile  the new file, must not be {@code null}
+   * @param preserveFileDate  true if the file date of the copy
+   *  should be the same as the original
+   *
+   * @throws NullPointerException if source or destination is {@code null}
+   * @throws IOException if source or destination is invalid
+   * @throws IOException if an IO error occurs during copying
+   */
+  public static void nativeCopyFileUnbuffered(File srcFile, File destFile,
+      boolean preserveFileDate) throws IOException {
+    if (srcFile == null) {
+      throw new NullPointerException("Source must not be null");
+    }
+    if (destFile == null) {
+      throw new NullPointerException("Destination must not be null");
+    }
+    if (srcFile.exists() == false) {
+      throw new FileNotFoundException("Source '" + srcFile + "' does not exist");
+    }
+    if (srcFile.isDirectory()) {
+      throw new IOException("Source '" + srcFile + "' exists but is a directory");
+    }
+    if (srcFile.getCanonicalPath().equals(destFile.getCanonicalPath())) {
+      throw new IOException("Source '" + srcFile + "' and destination '" +
+          destFile + "' are the same");
+    }
+    File parentFile = destFile.getParentFile();
+    if (parentFile != null) {
+      if (!parentFile.mkdirs() && !parentFile.isDirectory()) {
+        throw new IOException("Destination '" + parentFile
+            + "' directory cannot be created");
+      }
+    }
+    if (destFile.exists()) {
+      if (FileUtil.canWrite(destFile) == false) {
+        throw new IOException("Destination '" + destFile
+            + "' exists but is read-only");
+      } else {
+        if (destFile.delete() == false) {
+          throw new IOException("Destination '" + destFile
+              + "' exists but cannot be deleted");
+        }
+      }
+    }
+    try {
+      NativeIO.copyFileUnbuffered(srcFile, destFile);
+    } catch (NativeIOException e) {
+      throw new IOException("Failed to copy " + srcFile.getCanonicalPath()
+          + " to " + destFile.getCanonicalPath()
+          + " due to failure in NativeIO#copyFileUnbuffered(). "
+          + e.toString());
+    }
+    if (srcFile.length() != destFile.length()) {
+      throw new IOException("Failed to copy full contents from '" + srcFile
+          + "' to '" + destFile + "'");
+    }
+    if (preserveFileDate) {
+      if (destFile.setLastModified(srcFile.lastModified()) == false) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to preserve last modified date from'" + srcFile
+            + "' to '" + destFile + "'");
+        }
+      }
+    }
   }
 
   /**

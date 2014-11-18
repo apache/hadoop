@@ -408,6 +408,13 @@ public class KeyProviderCryptoExtension extends
                          ? (CryptoExtension) keyProvider
                          : new DefaultCryptoExtension(keyProvider);
     return new KeyProviderCryptoExtension(keyProvider, cryptoExtension);
-  }  
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (getKeyProvider() != null) {
+      getKeyProvider().close();
+    }
+  }
 
 }

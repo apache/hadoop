@@ -36,10 +36,10 @@ fi
 HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
 # shellcheck disable=SC2034
 HADOOP_NEW_CONFIG=true
-if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
-  . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
+if [[ -f "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/hdfs-config.sh"
 else
-  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hdfs-config.sh." 2>&1
   exit 1
 fi
 
@@ -47,5 +47,14 @@ if [[ $# = 0 ]]; then
   hadoop_exit_with_usage 1
 fi
 
-hadoop_connect_to_hosts "${bin}/hadoop-daemon.sh" \
---config "${HADOOP_CONF_DIR}" "$@"
+daemonmode=$1
+shift
+
+if [[ -z "${HADOOP_HDFS_HOME}" ]]; then
+  hdfsscript="${HADOOP_PREFIX}/bin/hdfs"
+else
+  hdfsscript="${HADOOP_HDFS_HOME}/bin/hdfs"
+fi
+
+hadoop_connect_to_hosts "$hdfsscript" \
+    --config "${HADOOP_CONF_DIR}" --daemon "${daemonmode}" "$@"

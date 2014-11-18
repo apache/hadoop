@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.nodemanager.WindowsSecureContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
@@ -212,7 +213,9 @@ public class ContainerLaunch implements Callable<Integer> {
                   + Path.SEPARATOR
                   + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
                       containerIdStr));
-
+      Path nmPrivateClasspathJarDir = 
+          dirsHandler.getLocalPathForWrite(
+              getContainerPrivateDir(appIdStr, containerIdStr));
       DataOutputStream containerScriptOutStream = null;
       DataOutputStream tokensOutStream = null;
 
@@ -240,7 +243,7 @@ public class ContainerLaunch implements Callable<Integer> {
       if (!dirsHandler.areDisksHealthy()) {
         ret = ContainerExitStatus.DISKS_FAILED;
         throw new IOException("Most of the disks failed. "
-            + dirsHandler.getDisksHealthReport());
+            + dirsHandler.getDisksHealthReport(false));
       }
 
       try {
@@ -263,10 +266,10 @@ public class ContainerLaunch implements Callable<Integer> {
                 FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
         // Sanitize the container's environment
         sanitizeEnv(environment, containerWorkDir, appDirs, containerLogDirs,
-          localResources);
+          localResources, nmPrivateClasspathJarDir);
         
         // Write out the environment
-        writeLaunchEnv(containerScriptOutStream, environment, localResources,
+        exec.writeLaunchEnv(containerScriptOutStream, environment, localResources,
             launchContext.getCommands());
         
         // /////////// End of writing out container-script
@@ -459,9 +462,8 @@ public class ContainerLaunch implements Callable<Integer> {
     final int sleepInterval = 100;
 
     // loop waiting for pid file to show up 
-    // until either the completed flag is set which means something bad 
-    // happened or our timer expires in which case we admit defeat
-    while (!completed.get()) {
+    // until our timer expires in which case we admit defeat
+    while (true) {
       processId = ProcessIdFileReader.getProcessId(pidFilePath);
       if (processId != null) {
         LOG.debug("Got pid " + processId + " for container "
@@ -500,8 +502,7 @@ public class ContainerLaunch implements Callable<Integer> {
     return context;
   }
 
-  @VisibleForTesting
-  static abstract class ShellScriptBuilder {
+  public static abstract class ShellScriptBuilder {
     public static ShellScriptBuilder create() {
       return Shell.WINDOWS ? new WindowsShellScriptBuilder() :
         new UnixShellScriptBuilder();
@@ -658,7 +659,8 @@ public class ContainerLaunch implements Callable<Integer> {
   
   public void sanitizeEnv(Map<String, String> environment, Path pwd,
       List<Path> appDirs, List<String> containerLogDirs,
-      Map<Path, List<String>> resources) throws IOException {
+      Map<Path, List<String>> resources,
+      Path nmPrivateClasspathJarDir) throws IOException {
     /**
      * Non-modifiable environment variables
      */
@@ -722,6 +724,7 @@ public class ContainerLaunch implements Callable<Integer> {
     // TODO: Remove Windows check and use this approach on all platforms after
     // additional testing.  See YARN-358.
     if (Shell.WINDOWS) {
+      
       String inputClassPath = environment.get(Environment.CLASSPATH.name());
       if (inputClassPath != null && !inputClassPath.isEmpty()) {
         StringBuilder newClassPath = new StringBuilder(inputClassPath);
@@ -763,10 +766,23 @@ public class ContainerLaunch implements Callable<Integer> {
         Map<String, String> mergedEnv = new HashMap<String, String>(
           System.getenv());
         mergedEnv.putAll(environment);
-
-        String classPathJar = FileUtil.createJarWithClassPath(
-          newClassPath.toString(), pwd, mergedEnv);
-        environment.put(Environment.CLASSPATH.name(), classPathJar);
+        
+        // this is hacky and temporary - it's to preserve the windows secure
+        // behavior but enable non-secure windows to properly build the class
+        // path for access to job.jar/lib/xyz and friends (see YARN-2803)
+        Path jarDir;
+        if (exec instanceof WindowsSecureContainerExecutor) {
+          jarDir = nmPrivateClasspathJarDir;
+        } else {
+          jarDir = pwd; 
+        }
+        String[] jarCp = FileUtil.createJarWithClassPath(
+          newClassPath.toString(), jarDir, pwd, mergedEnv);
+        // In a secure cluster the classpath jar must be localized to grant access
+        Path localizedClassPathJar = exec.localizeClasspathJar(
+            new Path(jarCp[0]), pwd, container.getUser());
+        String replacementClassPath = localizedClassPathJar.toString() + jarCp[1];
+        environment.put(Environment.CLASSPATH.name(), replacementClassPath);
       }
     }
     // put AuxiliaryService data to environment
@@ -774,37 +790,6 @@ public class ContainerLaunch implements Callable<Integer> {
         .getAuxServiceMetaData().entrySet()) {
       AuxiliaryServiceHelper.setServiceDataIntoEnv(
           meta.getKey(), meta.getValue(), environment);
-    }
-  }
-    
-  static void writeLaunchEnv(OutputStream out,
-      Map<String,String> environment, Map<Path,List<String>> resources,
-      List<String> command)
-      throws IOException {
-    ShellScriptBuilder sb = ShellScriptBuilder.create();
-    if (environment != null) {
-      for (Map.Entry<String,String> env : environment.entrySet()) {
-        sb.env(env.getKey().toString(), env.getValue().toString());
-      }
-    }
-    if (resources != null) {
-      for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
-        for (String linkName : entry.getValue()) {
-          sb.symlink(entry.getKey(), new Path(linkName));
-        }
-      }
-    }
-
-    sb.command(command);
-
-    PrintStream pout = null;
-    try {
-      pout = new PrintStream(out);
-      sb.write(pout);
-    } finally {
-      if (out != null) {
-        out.close();
-      }
     }
   }
 

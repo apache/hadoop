@@ -378,7 +378,7 @@ public class TestApplicationCleanup {
     // nm1/nm2 register to rm2, and do a heartbeat
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());
     nm1.registerNode(Arrays.asList(NMContainerStatus.newInstance(
-      ContainerId.newInstance(am0.getApplicationAttemptId(), 1),
+      ContainerId.newContainerId(am0.getApplicationAttemptId(), 1),
       ContainerState.COMPLETE, Resource.newInstance(1024, 1), "", 0,
       Priority.newInstance(0), 1234)), Arrays.asList(app0.getApplicationId()));
     nm2.setResourceTrackerService(rm2.getResourceTrackerService());

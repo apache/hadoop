@@ -17,7 +17,7 @@
 
 function hadoop_usage()
 {
-  echo "Usage: hadoop [--config confdir] COMMAND"
+  echo "Usage: hadoop [--config confdir] [--loglevel loglevel] COMMAND"
   echo "       where COMMAND is one of:"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest>"
   echo "                       create a Hadoop archive"
@@ -35,6 +35,7 @@ function hadoop_usage()
   echo "  jar <jar>            run a jar file"
   echo "  jnipath              prints the java.library.path"
   echo "  key                  manage keys via the KeyProvider"
+  echo "  trace                view and modify Hadoop tracing settings"
   echo "  version              print the version"
   echo " or"
   echo "  CLASSNAME            run the class named CLASSNAME"
@@ -159,14 +160,17 @@ case ${COMMAND} in
   key)
     CLASS=org.apache.hadoop.crypto.key.KeyShell
   ;;
+  trace)
+    CLASS=org.apache.hadoop.tracing.TraceAdmin
+  ;;
   version)
     CLASS=org.apache.hadoop.util.VersionInfo
   ;;
-  -*|hdfs)
-    hadoop_exit_with_usage 1
-  ;;
   *)
     CLASS="${COMMAND}"
+    if ! hadoop_validate_classname "${CLASS}"; then
+      hadoop_exit_with_usage 1
+    fi
   ;;
 esac
 

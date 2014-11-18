@@ -71,7 +71,8 @@ abstract class LongParam extends Param<Long, LongParam.Domain> {
     @Override
     Long parse(final String str) {
       try {
-        return NULL.equals(str)? null: Long.parseLong(str, radix);
+        return NULL.equals(str) || str == null ? null: Long.parseLong(str,
+          radix);
       } catch(NumberFormatException e) {
         throw new IllegalArgumentException("Failed to parse \"" + str
             + "\" as a radix-" + radix + " long integer.", e);

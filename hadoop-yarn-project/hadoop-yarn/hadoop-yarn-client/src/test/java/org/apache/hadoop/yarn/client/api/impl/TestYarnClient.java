@@ -31,6 +31,7 @@ import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -63,6 +64,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
@@ -76,6 +83,11 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -89,8 +101,14 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -330,9 +348,9 @@ public class TestYarnClient {
     List<ContainerReport> reports = client.getContainers(appAttemptId);
     Assert.assertNotNull(reports);
     Assert.assertEquals(reports.get(0).getContainerId(),
-        (ContainerId.newInstance(appAttemptId, 1)));
+        (ContainerId.newContainerId(appAttemptId, 1)));
     Assert.assertEquals(reports.get(1).getContainerId(),
-        (ContainerId.newInstance(appAttemptId, 2)));
+        (ContainerId.newContainerId(appAttemptId, 2)));
     client.stop();
   }
 
@@ -349,11 +367,11 @@ public class TestYarnClient {
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     ContainerReport report = client.getContainerReport(containerId);
     Assert.assertNotNull(report);
     Assert.assertEquals(report.getContainerId().toString(),
-        (ContainerId.newInstance(expectedReports.get(0)
+        (ContainerId.newContainerId(expectedReports.get(0)
             .getCurrentApplicationAttemptId(), 1)).toString());
     client.stop();
   }
@@ -463,7 +481,7 @@ public class TestYarnClient {
           "oUrl",
           "diagnostics",
           YarnApplicationAttemptState.FINISHED,
-          ContainerId.newInstance(
+          ContainerId.newContainerId(
               newApplicationReport.getCurrentApplicationAttemptId(), 1));
       appAttempts.add(attempt);
       ApplicationAttemptReport attempt1 = ApplicationAttemptReport.newInstance(
@@ -474,20 +492,20 @@ public class TestYarnClient {
           "oUrl",
           "diagnostics",
           YarnApplicationAttemptState.FINISHED,
-          ContainerId.newInstance(
+          ContainerId.newContainerId(
               newApplicationReport.getCurrentApplicationAttemptId(), 2));
       appAttempts.add(attempt1);
       attempts.put(applicationId, appAttempts);
 
       List<ContainerReport> containerReports = new ArrayList<ContainerReport>();
       ContainerReport container = ContainerReport.newInstance(
-          ContainerId.newInstance(attempt.getApplicationAttemptId(), 1), null,
+          ContainerId.newContainerId(attempt.getApplicationAttemptId(), 1), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
           "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
       containerReports.add(container);
 
       ContainerReport container1 = ContainerReport.newInstance(
-          ContainerId.newInstance(attempt.getApplicationAttemptId(), 2), null,
+          ContainerId.newContainerId(attempt.getApplicationAttemptId(), 2), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
           "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
       containerReports.add(container1);
@@ -833,5 +851,120 @@ public class TestYarnClient {
     } finally {
       client.stop();
     }
+  }
+
+  @Test
+  public void testParseTimelineDelegationTokenRenewer() throws Exception {
+    // Client side
+    YarnClientImpl client = (YarnClientImpl) YarnClient.createYarnClient();
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.set(YarnConfiguration.RM_PRINCIPAL, "rm/_HOST@EXAMPLE.COM");
+    conf.set(
+        YarnConfiguration.RM_ADDRESS, "localhost:8188");
+    try {
+      client.init(conf);
+      client.start();
+      Assert.assertEquals("rm/localhost@EXAMPLE.COM", client.timelineDTRenewer);
+    } finally {
+      client.stop();
+    }
+  }
+
+  @Test
+  public void testReservationAPIs() {
+    // initialize
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    ReservationSystemTestUtil.setupQueueConfiguration(conf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
+    MiniYARNCluster cluster =
+        new MiniYARNCluster("testReservationAPIs", 2, 1, 1);
+    YarnClient client = null;
+    try {
+      cluster.init(conf);
+      cluster.start();
+      final Configuration yarnConf = cluster.getConfig();
+      client = YarnClient.createYarnClient();
+      client.init(yarnConf);
+      client.start();
+
+      // create a reservation
+      Clock clock = new UTCClock();
+      long arrival = clock.getTime();
+      long duration = 60000;
+      long deadline = (long) (arrival + 1.05 * duration);
+      ReservationSubmissionRequest sRequest =
+          createSimpleReservationRequest(4, arrival, deadline, duration);
+      ReservationSubmissionResponse sResponse = null;
+      try {
+        sResponse = client.submitReservation(sRequest);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+      Assert.assertNotNull(sResponse);
+      ReservationId reservationID = sResponse.getReservationId();
+      Assert.assertNotNull(reservationID);
+      System.out.println("Submit reservation response: " + reservationID);
+
+      // Update the reservation
+      ReservationDefinition rDef = sRequest.getReservationDefinition();
+      ReservationRequest rr =
+          rDef.getReservationRequests().getReservationResources().get(0);
+      rr.setNumContainers(5);
+      arrival = clock.getTime();
+      duration = 30000;
+      deadline = (long) (arrival + 1.05 * duration);
+      rr.setDuration(duration);
+      rDef.setArrival(arrival);
+      rDef.setDeadline(deadline);
+      ReservationUpdateRequest uRequest =
+          ReservationUpdateRequest.newInstance(rDef, reservationID);
+      ReservationUpdateResponse uResponse = null;
+      try {
+        uResponse = client.updateReservation(uRequest);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+      Assert.assertNotNull(sResponse);
+      System.out.println("Update reservation response: " + uResponse);
+
+      // Delete the reservation
+      ReservationDeleteRequest dRequest =
+          ReservationDeleteRequest.newInstance(reservationID);
+      ReservationDeleteResponse dResponse = null;
+      try {
+        dResponse = client.deleteReservation(dRequest);
+      } catch (Exception e) {
+        Assert.fail(e.getMessage());
+      }
+      Assert.assertNotNull(sResponse);
+      System.out.println("Delete reservation response: " + dResponse);
+    } finally {
+      // clean-up
+      if (client != null) {
+        client.stop();
+      }
+      cluster.stop();
+    }
+  }
+
+  private ReservationSubmissionRequest createSimpleReservationRequest(
+      int numContainers, long arrival, long deadline, long duration) {
+    // create a request with a single atomic ask
+    ReservationRequest r =
+        ReservationRequest.newInstance(Resource.newInstance(1024, 1),
+            numContainers, 1, duration);
+    ReservationRequests reqs =
+        ReservationRequests.newInstance(Collections.singletonList(r),
+            ReservationRequestInterpreter.R_ALL);
+    ReservationDefinition rDef =
+        ReservationDefinition.newInstance(arrival, deadline, reqs,
+            "testYarnClient#reservation");
+    ReservationSubmissionRequest request =
+        ReservationSubmissionRequest.newInstance(rDef,
+            ReservationSystemTestUtil.reservationQ);
+    return request;
   }
 }

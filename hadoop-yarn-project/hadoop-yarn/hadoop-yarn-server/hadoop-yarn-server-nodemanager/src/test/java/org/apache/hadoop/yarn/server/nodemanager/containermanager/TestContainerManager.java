@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -103,7 +104,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ApplicationId appId = ApplicationId.newInstance(0, 0);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, id);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
     return containerId;
   }
   
@@ -664,13 +665,13 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Assert.assertEquals(5, response.getSuccessfullyStartedContainers().size());
     for (ContainerId id : response.getSuccessfullyStartedContainers()) {
       // Containers with odd id should succeed.
-      Assert.assertEquals(1, id.getId() & 1);
+      Assert.assertEquals(1, id.getContainerId() & 1);
     }
     Assert.assertEquals(5, response.getFailedRequests().size());
     for (Map.Entry<ContainerId, SerializedException> entry : response
       .getFailedRequests().entrySet()) {
       // Containers with even id should fail.
-      Assert.assertEquals(0, entry.getKey().getId() & 1);
+      Assert.assertEquals(0, entry.getKey().getContainerId() & 1);
       Assert.assertTrue(entry.getValue().getMessage()
         .contains(
           "Container " + entry.getKey() + " rejected as it is allocated by a previous RM"));
@@ -717,13 +718,13 @@ public class TestContainerManager extends BaseContainerManagerTest {
     Assert.assertEquals(5, statusResponse.getContainerStatuses().size());
     for (ContainerStatus status : statusResponse.getContainerStatuses()) {
       // Containers with odd id should succeed
-      Assert.assertEquals(1, status.getContainerId().getId() & 1);
+      Assert.assertEquals(1, status.getContainerId().getContainerId() & 1);
     }
     Assert.assertEquals(5, statusResponse.getFailedRequests().size());
     for (Map.Entry<ContainerId, SerializedException> entry : statusResponse
       .getFailedRequests().entrySet()) {
       // Containers with even id should fail.
-      Assert.assertEquals(0, entry.getKey().getId() & 1);
+      Assert.assertEquals(0, entry.getKey().getContainerId() & 1);
       Assert.assertTrue(entry.getValue().getMessage()
         .contains("Reject this container"));
     }
@@ -737,13 +738,13 @@ public class TestContainerManager extends BaseContainerManagerTest {
       .size());
     for (ContainerId id : stopResponse.getSuccessfullyStoppedContainers()) {
       // Containers with odd id should succeed.
-      Assert.assertEquals(1, id.getId() & 1);
+      Assert.assertEquals(1, id.getContainerId() & 1);
     }
     Assert.assertEquals(5, stopResponse.getFailedRequests().size());
     for (Map.Entry<ContainerId, SerializedException> entry : stopResponse
       .getFailedRequests().entrySet()) {
       // Containers with even id should fail.
-      Assert.assertEquals(0, entry.getKey().getId() & 1);
+      Assert.assertEquals(0, entry.getKey().getContainerId() & 1);
       Assert.assertTrue(entry.getValue().getMessage()
         .contains("Reject this container"));
     }
@@ -795,11 +796,20 @@ public class TestContainerManager extends BaseContainerManagerTest {
       NodeId nodeId, String user,
       NMContainerTokenSecretManager containerTokenSecretManager)
       throws IOException {
+    return createContainerToken(cId, rmIdentifier, nodeId, user,
+      containerTokenSecretManager, null);
+  }
+
+  public static Token createContainerToken(ContainerId cId, long rmIdentifier,
+      NodeId nodeId, String user,
+      NMContainerTokenSecretManager containerTokenSecretManager,
+      LogAggregationContext logAggregationContext)
+      throws IOException {
     Resource r = BuilderUtils.newResource(1024, 1);
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(cId, nodeId.toString(), user, r,
           System.currentTimeMillis() + 100000L, 123, rmIdentifier,
-          Priority.newInstance(0), 0);
+          Priority.newInstance(0), 0, logAggregationContext);
     Token containerToken =
         BuilderUtils
           .newContainerToken(nodeId, containerTokenSecretManager

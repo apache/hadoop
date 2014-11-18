@@ -198,7 +198,9 @@ class FSPermissionChecker {
     if (inode != null && user.equals(inode.getUserName(snapshotId))) {
       return;
     }
-    throw new AccessControlException("Permission denied");
+    throw new AccessControlException(
+            "Permission denied. user="
+            + user + " is not the owner of inode=" + inode);
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
@@ -325,6 +327,7 @@ class FSPermissionChecker {
               return;
             }
             foundMatch = true;
+            break;
           }
         } else if (type == AclEntryType.GROUP) {
           // Use group entry (unnamed or named) with mask from permission bits

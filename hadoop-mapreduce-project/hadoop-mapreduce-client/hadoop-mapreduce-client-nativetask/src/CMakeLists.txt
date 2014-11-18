@@ -249,11 +249,6 @@ add_executable(nttest
     ${D}/test/test_commons.cc)
 
 
-IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    # macos clang with libc++ does not have tr1/tuple, just tuple
-    SET_TARGET_PROPERTIES(nttest PROPERTIES COMPILE_FLAGS "-DGTEST_USE_OWN_TR1_TUPLE=1")
-ENDIF()
-
 target_link_libraries(nttest
      nativetask_static
      gtest

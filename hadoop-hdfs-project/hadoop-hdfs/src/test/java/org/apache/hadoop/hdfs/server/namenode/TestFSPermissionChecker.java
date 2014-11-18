@@ -33,6 +33,7 @@ import static org.apache.hadoop.fs.permission.FsAction.WRITE;
 import static org.apache.hadoop.fs.permission.FsAction.WRITE_EXECUTE;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -41,6 +42,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -412,7 +414,11 @@ public class TestFSPermissionChecker {
       fail("expected AccessControlException for user + " + user + ", path = " +
         path + ", access = " + access);
     } catch (AccessControlException e) {
-      // expected
+      assertTrue("Permission denied messages must carry the username",
+              e.getMessage().contains(user.getUserName().toString()));
+      assertTrue("Permission denied messages must carry the path parent",
+              e.getMessage().contains(
+                  new Path(path).getParent().toUri().getPath()));
     }
   }
 
@@ -432,7 +438,7 @@ public class TestFSPermissionChecker {
       FsPermission.createImmutable(perm));
     INodeFile inodeFile = new INodeFile(INodeId.GRANDFATHER_INODE_ID,
       name.getBytes("UTF-8"), permStatus, 0L, 0L, null, REPLICATION,
-      PREFERRED_BLOCK_SIZE, (byte)0);
+      PREFERRED_BLOCK_SIZE);
     parent.addChild(inodeFile);
     return inodeFile;
   }

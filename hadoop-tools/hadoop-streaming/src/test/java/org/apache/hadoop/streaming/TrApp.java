@@ -57,6 +57,9 @@ public class TrApp
     // the FileSplit context properties are not available in local hadoop..
     // so can't check them in this test.
 
+    // verify some deprecated properties appear for older stream jobs
+    expect("map_input_file", env.getProperty("mapreduce_map_input_file"));
+    expect("map_input_length", env.getProperty("mapreduce_map_input_length"));
   }
 
   // this runs in a subprocess; won't use JUnit's assertTrue()    

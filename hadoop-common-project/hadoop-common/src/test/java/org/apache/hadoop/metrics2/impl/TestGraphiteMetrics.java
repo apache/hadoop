@@ -19,11 +19,16 @@
 package org.apache.hadoop.metrics2.impl;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,8 +39,6 @@ import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.sink.GraphiteSink;
 import org.junit.Test;
-
-import static org.mockito.Mockito.*;
 import org.mockito.ArgumentCaptor;
 import org.mockito.internal.util.reflection.Whitebox;
 
@@ -108,6 +111,43 @@ public class TestGraphiteMetrics {
             result.equals("null.all.Context.Context=all.foo2 2 10\n" + 
             "null.all.Context.Context=all.foo1 1 10\n"));
     }
+
+    /**
+     * Assert that timestamps are converted correctly, ticket HADOOP-11182
+     */
+    @Test
+    public void testPutMetrics3() {
+
+      // setup GraphiteSink
+      GraphiteSink sink = new GraphiteSink();
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      Whitebox.setInternalState(sink, "writer", new OutputStreamWriter(out));
+
+      // given two metrics records with timestamps 1000 milliseconds apart.
+      List<MetricsTag> tags = Collections.emptyList();
+      Set<AbstractMetric> metrics = new HashSet<AbstractMetric>();
+      metrics.add(makeMetric("foo1", 1));
+      MetricsRecord record1 = new MetricsRecordImpl(MsInfo.Context, 1000000000000L, tags, metrics);
+      MetricsRecord record2 = new MetricsRecordImpl(MsInfo.Context, 1000000001000L, tags, metrics);
+
+      sink.putMetrics(record1);
+      sink.putMetrics(record2);
+
+      sink.flush();
+      try {
+        sink.close();
+      } catch(IOException e) {
+        e.printStackTrace();
+      }
+
+      // then the timestamps in the graphite stream should differ by one second.
+      String expectedOutput
+        = "null.default.Context.foo1 1 1000000000\n"
+        + "null.default.Context.foo1 1 1000000001\n";
+      assertEquals(expectedOutput, out.toString());
+    }
+
+
     @Test(expected=MetricsException.class)
     public void testCloseAndWrite() throws IOException {
       GraphiteSink sink = new GraphiteSink();

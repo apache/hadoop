@@ -22,114 +22,123 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
+
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import static io.netty.handler.codec.http.HttpVersion.*;
+import io.netty.handler.codec.http.QueryStringDecoder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.codec.http.QueryStringDecoder;
+import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
+
 
 /**
  * Implement the read-only WebHDFS API for fsimage.
  */
-public class FSImageHandler extends SimpleChannelUpstreamHandler {
+class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
   public static final Log LOG = LogFactory.getLog(FSImageHandler.class);
-  private final FSImageLoader loader;
+  private final FSImageLoader image;
+  private final ChannelGroup activeChannels;
 
-  public FSImageHandler(FSImageLoader loader) throws IOException {
-    this.loader = loader;
+  @Override
+  public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    activeChannels.add(ctx.channel());
+  }
+
+  FSImageHandler(FSImageLoader image, ChannelGroup activeChannels) throws IOException {
+    this.image = image;
+    this.activeChannels = activeChannels;
   }
 
   @Override
-  public void messageReceived(
-      ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-    String op = getOp(e);
-    try {
-      String path = getPath(e);
-      handleOperation(op, path, e);
-    } catch (Exception ex) {
-      notFoundResponse(e);
-      LOG.warn(ex.getMessage());
-    } finally {
-      e.getFuture().addListener(ChannelFutureListener.CLOSE);
+  public void channelRead0(ChannelHandlerContext ctx, HttpRequest request)
+          throws Exception {
+    if (request.getMethod() != HttpMethod.GET) {
+      DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1,
+        METHOD_NOT_ALLOWED);
+      resp.headers().set("Connection", "close");
+      ctx.write(resp).addListener(ChannelFutureListener.CLOSE);
+      return;
     }
-  }
 
-  /** return the op parameter in upper case */
-  private String getOp(MessageEvent e) {
-    Map<String, List<String>> parameters = getDecoder(e).getParameters();
-    if (parameters.containsKey("op")) {
-      return parameters.get("op").get(0).toUpperCase();
+    QueryStringDecoder decoder = new QueryStringDecoder(request.getUri());
+    final String op = getOp(decoder);
+
+    final String content;
+    String path = getPath(decoder);
+    if ("GETFILESTATUS".equals(op)) {
+      content = image.getFileStatus(path);
+    } else if ("LISTSTATUS".equals(op)) {
+      content = image.listStatus(path);
+    } else if ("GETACLSTATUS".equals(op)) {
+      content = image.getAclStatus(path);
     } else {
-      // return "" to avoid NPE
-      return "";
+      throw new IllegalArgumentException("Invalid value for webhdfs parameter" + " \"op\"");
     }
+
+    LOG.info("op=" + op + " target=" + path);
+
+    DefaultFullHttpResponse resp = new DefaultFullHttpResponse(
+            HTTP_1_1, HttpResponseStatus.OK,
+            Unpooled.wrappedBuffer(content.getBytes()));
+    resp.headers().set("Content-Type", "application/json");
+    resp.headers().set("Content-Length", resp.content().readableBytes());
+    resp.headers().set("Connection", "close");
+    ctx.write(resp).addListener(ChannelFutureListener.CLOSE);
   }
 
-  private String getPath(MessageEvent e) throws FileNotFoundException {
-    String path = getDecoder(e).getPath();
-    // trim "/webhdfs/v1" to keep compatibility with WebHDFS API
+  @Override
+  public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    ctx.flush();
+  }
+
+  @Override
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+          throws Exception {
+    Exception e = cause instanceof Exception ? (Exception) cause : new
+      Exception(cause);
+    final String output = JsonUtil.toJsonString(e);
+    ByteBuf content = Unpooled.wrappedBuffer(output.getBytes());
+    final DefaultFullHttpResponse resp = new DefaultFullHttpResponse(
+            HTTP_1_1, INTERNAL_SERVER_ERROR, content);
+
+    resp.headers().set("Content-Type", "application/json");
+    if (e instanceof IllegalArgumentException) {
+      resp.setStatus(BAD_REQUEST);
+    } else if (e instanceof FileNotFoundException) {
+      resp.setStatus(NOT_FOUND);
+    }
+
+    resp.headers().set("Content-Length", resp.content().readableBytes());
+    resp.headers().set("Connection", "close");
+    ctx.write(resp).addListener(ChannelFutureListener.CLOSE);
+  }
+
+  private static String getOp(QueryStringDecoder decoder) {
+    Map<String, List<String>> parameters = decoder.parameters();
+    return parameters.containsKey("op")
+            ? parameters.get("op").get(0).toUpperCase() : null;
+  }
+
+  private static String getPath(QueryStringDecoder decoder)
+          throws FileNotFoundException {
+    String path = decoder.path();
     if (path.startsWith("/webhdfs/v1/")) {
-      return path.replaceFirst("/webhdfs/v1", "");
+      return path.substring(11);
     } else {
       throw new FileNotFoundException("Path: " + path + " should " +
-          "start with \"/webhdfs/v1/\"");
+              "start with \"/webhdfs/v1/\"");
     }
-  }
-
-  private QueryStringDecoder getDecoder(MessageEvent e) {
-    HttpRequest request = (HttpRequest) e.getMessage();
-    return new QueryStringDecoder(request.getUri());
-  }
-
-  private void handleOperation(String op, String path, MessageEvent e)
-      throws IOException {
-    HttpRequest request = (HttpRequest) e.getMessage();
-    HttpResponse response = new DefaultHttpResponse(
-        HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    response.setHeader(HttpHeaders.Names.CONTENT_TYPE,
-        "application/json");
-    String content = null;
-
-    if (request.getMethod() == HttpMethod.GET){
-      if (op.equals("GETFILESTATUS")) {
-        content = loader.getFileStatus(path);
-      } else if (op.equals("LISTSTATUS")) {
-        content = loader.listStatus(path);
-      } else if (op.equals("GETACLSTATUS")) {
-        content = loader.getAclStatus(path);
-      } else {
-        response.setStatus(HttpResponseStatus.BAD_REQUEST);
-      }
-    } else {
-      // only HTTP GET is allowed since fsimage is read-only.
-      response.setStatus(HttpResponseStatus.METHOD_NOT_ALLOWED);
-    }
-
-    if (content != null) {
-      HttpHeaders.setContentLength(response, content.length());
-    }
-    e.getChannel().write(response);
-
-    if (content != null) {
-      e.getChannel().write(content);
-    }
-
-    LOG.info(response.getStatus().getCode() + " method="
-        + request.getMethod().getName() + " op=" + op + " target=" + path);
-  }
-
-  private void notFoundResponse(MessageEvent e) {
-    HttpResponse response = new DefaultHttpResponse(
-        HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
-    e.getChannel().write(response);
   }
 }

@@ -151,13 +151,21 @@ public abstract class FrameworkCounterGroup<T extends Enum<T>,
   @Override
   public void addCounter(C counter) {
     C ours = findCounter(counter.getName());
-    ours.setValue(counter.getValue());
+    if (ours != null) {
+      ours.setValue(counter.getValue());
+    } else {
+      LOG.warn(counter.getName() + "is not a known counter.");
+    }
   }
 
   @Override
   public C addCounter(String name, String displayName, long value) {
     C counter = findCounter(name);
-    counter.setValue(value);
+    if (counter != null) {
+      counter.setValue(value);
+    } else {
+      LOG.warn(name + "is not a known counter.");
+    }
     return counter;
   }
 
@@ -179,7 +187,13 @@ public abstract class FrameworkCounterGroup<T extends Enum<T>,
 
   @Override
   public C findCounter(String counterName) {
-    return findCounter(valueOf(counterName));
+    try {
+      T enumValue = valueOf(counterName);
+      return findCounter(enumValue);
+    } catch (IllegalArgumentException e) {
+      LOG.warn(counterName + " is not a recognized counter.");
+      return null;
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -208,13 +222,15 @@ public abstract class FrameworkCounterGroup<T extends Enum<T>,
   }
 
   @Override
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   public void incrAllCounters(CounterGroupBase<C> other) {
     if (checkNotNull(other, "other counter group")
         instanceof FrameworkCounterGroup<?, ?>) {
       for (Counter counter : other) {
-        findCounter(((FrameworkCounter) counter).key.name())
-            .increment(counter.getValue());
+        C c = findCounter(((FrameworkCounter) counter).key.name());
+        if (c != null) {
+          c.increment(counter.getValue());
+        }
       }
     }
   }

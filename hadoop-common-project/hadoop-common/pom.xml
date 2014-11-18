@@ -34,6 +34,8 @@
     <kdc.resource.dir>src/test/resources/kdc</kdc.resource.dir>
     <hadoop.component>common</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
+    <wsce.config.dir>../etc/hadoop</wsce.config.dir>
+    <wsce.config.file>wsce-site.xml</wsce.config.file>
   </properties>
 
 
@@ -278,6 +280,11 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk16</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -348,6 +355,7 @@
                   <include>ProtobufRpcEngine.proto</include>
                   <include>Security.proto</include>
                   <include>GetUserMappingsProtocol.proto</include>
+                  <include>TraceAdmin.proto</include>
                   <include>RefreshAuthorizationPolicyProtocol.proto</include>
                   <include>RefreshUserMappingsProtocol.proto</include>
                   <include>RefreshCallQueueProtocol.proto</include>
@@ -489,7 +497,6 @@
             <exclude>src/test/resources/kdc/ldif/users.ldif</exclude>
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.h</exclude>
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.c</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4_encoder.h</exclude>
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.h</exclude>
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.c</exclude>
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc_encoder.h</exclude>
@@ -522,6 +529,7 @@
         <openssl.include></openssl.include>
         <require.openssl>false</require.openssl>
         <runningWithNative>true</runningWithNative>
+        <bundle.openssl.in.bin>false</bundle.openssl.in.bin>
       </properties>
       <build>
         <plugins>
@@ -642,7 +650,7 @@
         <openssl.include></openssl.include>
         <require.openssl>false</require.openssl>
         <runningWithNative>true</runningWithNative>
-        <bundle.openssl.in.bin>true</bundle.openssl.in.bin>
+        <bundle.openssl.in.bin>false</bundle.openssl.in.bin>
       </properties>
       <build>
         <plugins>
@@ -714,6 +722,9 @@
                     <argument>/nologo</argument>
                     <argument>/p:Configuration=Release</argument>
                     <argument>/p:OutDir=${project.build.directory}/bin/</argument>
+                    <argument>/p:IntermediateOutputPath=${project.build.directory}/winutils/</argument>
+                    <argument>/p:WsceConfigDir=${wsce.config.dir}</argument>
+                    <argument>/p:WsceConfigFile=${wsce.config.file}</argument>
                   </arguments>
                 </configuration>
               </execution>

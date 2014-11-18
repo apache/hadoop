@@ -21,8 +21,13 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -57,10 +62,11 @@ public class TestLocalDirsHandlerService {
     LocalDirsHandlerService dirSvc = new LocalDirsHandlerService();
     dirSvc.init(conf);
     Assert.assertEquals(1, dirSvc.getLocalDirs().size());
+    dirSvc.close();
   }
 
   @Test
-  public void testValidPathsDirHandlerService() {
+  public void testValidPathsDirHandlerService() throws Exception {
     Configuration conf = new YarnConfiguration();
     String localDir1 = new File("file:///" + testDir, "localDir1").getPath();
     String localDir2 = new File("hdfs:///" + testDir, "localDir2").getPath();
@@ -76,5 +82,40 @@ public class TestLocalDirsHandlerService {
     Assert.assertEquals("Service should not be inited",
                         STATE.STOPPED,
                         dirSvc.getServiceState());
+    dirSvc.close();
+  }
+  
+  @Test
+  public void testGetFullDirs() throws Exception {
+    Configuration conf = new YarnConfiguration();
+
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
+    FileContext localFs = FileContext.getLocalFSFileContext(conf);
+
+    String localDir1 = new File(testDir, "localDir1").getPath();
+    String localDir2 = new File(testDir, "localDir2").getPath();
+    String logDir1 = new File(testDir, "logDir1").getPath();
+    String logDir2 = new File(testDir, "logDir2").getPath();
+    Path localDir1Path = new Path(localDir1);
+    Path logDir1Path = new Path(logDir1);
+    FsPermission dirPermissions = new FsPermission((short) 0410);
+    localFs.mkdir(localDir1Path, dirPermissions, true);
+    localFs.mkdir(logDir1Path, dirPermissions, true);
+
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir1 + "," + localDir2);
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir1 + "," + logDir2);
+    conf.setFloat(YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE,
+      0.0f);
+    LocalDirsHandlerService dirSvc = new LocalDirsHandlerService();
+    dirSvc.init(conf);
+    Assert.assertEquals(0, dirSvc.getLocalDirs().size());
+    Assert.assertEquals(0, dirSvc.getLogDirs().size());
+    Assert.assertEquals(1, dirSvc.getDiskFullLocalDirs().size());
+    Assert.assertEquals(1, dirSvc.getDiskFullLogDirs().size());
+    FileUtils.deleteDirectory(new File(localDir1));
+    FileUtils.deleteDirectory(new File(localDir2));
+    FileUtils.deleteDirectory(new File(logDir1));
+    FileUtils.deleteDirectory(new File(logDir1));
+    dirSvc.close();
   }
 }

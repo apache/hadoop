@@ -506,10 +506,10 @@
  
 <property>
   <name>mapreduce.job.speculative.slowtaskthreshold</name>
-  <value>1.0</value>The number of standard deviations by which a task's 
+  <value>1.0</value>
+  <description>The number of standard deviations by which a task's
   ave progress-rates must be lower than the average of all running tasks'
   for the task to be considered too slow.
-  <description>
   </description>
 </property>
 
@@ -566,6 +566,14 @@
   default value in mapred-site.xml if the underlying filesystem is not HDFS.
   Users may override this value, but only downward.
   </description>
+</property>
+
+<property>
+    <name>mapreduce.job.emit-timeline-data</name>
+    <value>false</value>
+    <description>Specifies if the Application Master should emit timeline data
+    to the timeline server. Individual jobs can override this value.
+    </description>
 </property>
 
 <property>

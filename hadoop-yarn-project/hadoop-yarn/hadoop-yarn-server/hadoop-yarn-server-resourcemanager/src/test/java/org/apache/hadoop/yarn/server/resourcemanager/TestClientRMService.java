@@ -33,6 +33,7 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,13 +44,12 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 
-import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -63,23 +63,32 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -87,11 +96,18 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -105,8 +121,10 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
@@ -117,16 +135,22 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 public class TestClientRMService {
@@ -172,13 +196,18 @@ public class TestClientRMService {
       };
     };
     rm.start();
+    RMNodeLabelsManager labelsMgr = rm.getRMContext().getNodeLabelManager();
+    labelsMgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
 
-    // Add a healthy node
+    // Add a healthy node with label = x
     MockNM node = rm.registerNode("host1:1234", 1024);
+    Map<NodeId, Set<String>> map = new HashMap<NodeId, Set<String>>();
+    map.put(node.getNodeId(), ImmutableSet.of("x"));
+    labelsMgr.replaceLabelsOnNode(map);
     rm.sendNodeStarted(node);
     node.nodeHeartbeat(true);
     
-    // Add and lose a node
+    // Add and lose a node with label = y
     MockNM lostNode = rm.registerNode("host2:1235", 1024);
     rm.sendNodeStarted(lostNode);
     lostNode.nodeHeartbeat(true);
@@ -202,6 +231,9 @@ public class TestClientRMService {
     Assert.assertEquals(1, nodeReports.size());
     Assert.assertNotSame("Node is expected to be healthy!", NodeState.UNHEALTHY,
         nodeReports.get(0).getNodeState());
+    
+    // Check node's label = x
+    Assert.assertTrue(nodeReports.get(0).getNodeLabels().contains("x"));
 
     // Now make the node unhealthy.
     node.nodeHeartbeat(false);
@@ -211,6 +243,11 @@ public class TestClientRMService {
     Assert.assertEquals("Unhealthy nodes should not show up by default", 0,
         nodeReports.size());
     
+    // Change label of host1 to y
+    map = new HashMap<NodeId, Set<String>>();
+    map.put(node.getNodeId(), ImmutableSet.of("y"));
+    labelsMgr.replaceLabelsOnNode(map);
+    
     // Now query for UNHEALTHY nodes
     request = GetClusterNodesRequest.newInstance(EnumSet.of(NodeState.UNHEALTHY));
     nodeReports = client.getClusterNodes(request).getNodeReports();
@@ -218,11 +255,27 @@ public class TestClientRMService {
     Assert.assertEquals("Node is expected to be unhealthy!", NodeState.UNHEALTHY,
         nodeReports.get(0).getNodeState());
     
+    Assert.assertTrue(nodeReports.get(0).getNodeLabels().contains("y"));
+    
+    // Remove labels of host1
+    map = new HashMap<NodeId, Set<String>>();
+    map.put(node.getNodeId(), ImmutableSet.of("y"));
+    labelsMgr.removeLabelsFromNode(map);
+    
     // Query all states should return all nodes
     rm.registerNode("host3:1236", 1024);
     request = GetClusterNodesRequest.newInstance(EnumSet.allOf(NodeState.class));
     nodeReports = client.getClusterNodes(request).getNodeReports();
     Assert.assertEquals(3, nodeReports.size());
+    
+    // All host1-3's label should be empty (instead of null)
+    for (NodeReport report : nodeReports) {
+      Assert.assertTrue(report.getNodeLabels() != null
+          && report.getNodeLabels().isEmpty());
+    }
+    
+    rpc.stopProxy(client, conf);
+    rm.close();
   }
   
   @Test
@@ -315,7 +368,7 @@ public class TestClientRMService {
         mock(ApplicationSubmissionContext.class);
     YarnConfiguration config = new YarnConfiguration();
     RMAppAttemptImpl rmAppAttemptImpl = new RMAppAttemptImpl(attemptId,
-        rmContext, yarnScheduler, null, asContext, config, false);
+        rmContext, yarnScheduler, null, asContext, config, false, null);
     ApplicationResourceUsageReport report = rmAppAttemptImpl
         .getApplicationResourceUsageReport();
     assertEquals(report, RMServerUtils.DUMMY_APPLICATION_RESOURCE_USAGE_REPORT);
@@ -351,7 +404,7 @@ public class TestClientRMService {
         .newRecordInstance(GetContainerReportRequest.class);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
     request.setContainerId(containerId);
 
     try {
@@ -372,7 +425,7 @@ public class TestClientRMService {
         .newRecordInstance(GetContainersRequest.class);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
-    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
     request.setApplicationAttemptId(attemptId);
     try {
       GetContainersResponse response = rmService.getContainers(request);
@@ -1043,6 +1096,7 @@ public class TestClientRMService {
     return mockSubmitAppRequest(appId, name, queue, tags, false);
   }
 
+  @SuppressWarnings("deprecation")
   private SubmitApplicationRequest mockSubmitAppRequest(ApplicationId appId,
         String name, String queue, Set<String> tags, boolean unmanaged) {
 
@@ -1132,28 +1186,34 @@ public class TestClientRMService {
       final long memorySeconds, final long vcoreSeconds) {
     ApplicationSubmissionContext asContext = mock(ApplicationSubmissionContext.class);
     when(asContext.getMaxAppAttempts()).thenReturn(1);
-    RMAppImpl app = spy(new RMAppImpl(applicationId3, rmContext, config, null,
-        null, queueName, asContext, yarnScheduler, null,
-        System.currentTimeMillis(), "YARN", null) {
-              @Override
-              public ApplicationReport createAndGetApplicationReport(
-                  String clientUserName, boolean allowAccess) {
-                ApplicationReport report = super.createAndGetApplicationReport(
-                    clientUserName, allowAccess);
-                ApplicationResourceUsageReport usageReport = 
-                    report.getApplicationResourceUsageReport();
-                usageReport.setMemorySeconds(memorySeconds);
-                usageReport.setVcoreSeconds(vcoreSeconds);
-                report.setApplicationResourceUsageReport(usageReport);
-                return report;
-              }
-          });
+
+    RMAppImpl app =
+        spy(new RMAppImpl(applicationId3, rmContext, config, null, null,
+            queueName, asContext, yarnScheduler, null,
+            System.currentTimeMillis(), "YARN", null,
+            BuilderUtils.newResourceRequest(
+                RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
+                Resource.newInstance(1024, 1), 1)){
+                  @Override
+                  public ApplicationReport createAndGetApplicationReport(
+                      String clientUserName, boolean allowAccess) {
+                    ApplicationReport report = super.createAndGetApplicationReport(
+                        clientUserName, allowAccess);
+                    ApplicationResourceUsageReport usageReport = 
+                        report.getApplicationResourceUsageReport();
+                    usageReport.setMemorySeconds(memorySeconds);
+                    usageReport.setVcoreSeconds(vcoreSeconds);
+                    report.setApplicationResourceUsageReport(usageReport);
+                    return report;
+                  }
+              });
+
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         ApplicationId.newInstance(123456, 1), 1);
     RMAppAttemptImpl rmAppAttemptImpl = spy(new RMAppAttemptImpl(attemptId,
-        rmContext, yarnScheduler, null, asContext, config, false));
+        rmContext, yarnScheduler, null, asContext, config, false, null));
     Container container = Container.newInstance(
-        ContainerId.newInstance(attemptId, 1), null, "", null, null, null);
+        ContainerId.newContainerId(attemptId, 1), null, "", null, null, null);
     RMContainerImpl containerimpl = spy(new RMContainerImpl(container,
         attemptId, null, "", rmContext));
     Map<ApplicationAttemptId, RMAppAttempt> attempts = 
@@ -1198,5 +1258,153 @@ public class TestClientRMService {
     ApplicationAttemptId attemptId = getApplicationAttemptId(1);
     when(yarnScheduler.getAppResourceUsageReport(attemptId)).thenReturn(null);
     return yarnScheduler;
+  }
+
+  @Test
+  public void testReservationAPIs() {
+    // initialize
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    ReservationSystemTestUtil.setupQueueConfiguration(conf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    MockNM nm;
+    try {
+      nm = rm.registerNode("127.0.0.1:1", 102400, 100);
+      // allow plan follower to synchronize
+      Thread.sleep(1050);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+
+    // Create a client.
+    ClientRMService clientService = rm.getClientRMService();
+
+    // create a reservation
+    Clock clock = new UTCClock();
+    long arrival = clock.getTime();
+    long duration = 60000;
+    long deadline = (long) (arrival + 1.05 * duration);
+    ReservationSubmissionRequest sRequest =
+        createSimpleReservationRequest(4, arrival, deadline, duration);
+    ReservationSubmissionResponse sResponse = null;
+    try {
+      sResponse = clientService.submitReservation(sRequest);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(sResponse);
+    ReservationId reservationID = sResponse.getReservationId();
+    Assert.assertNotNull(reservationID);
+    LOG.info("Submit reservation response: " + reservationID);
+
+    // Update the reservation
+    ReservationDefinition rDef = sRequest.getReservationDefinition();
+    ReservationRequest rr =
+        rDef.getReservationRequests().getReservationResources().get(0);
+    rr.setNumContainers(5);
+    arrival = clock.getTime();
+    duration = 30000;
+    deadline = (long) (arrival + 1.05 * duration);
+    rr.setDuration(duration);
+    rDef.setArrival(arrival);
+    rDef.setDeadline(deadline);
+    ReservationUpdateRequest uRequest =
+        ReservationUpdateRequest.newInstance(rDef, reservationID);
+    ReservationUpdateResponse uResponse = null;
+    try {
+      uResponse = clientService.updateReservation(uRequest);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(sResponse);
+    LOG.info("Update reservation response: " + uResponse);
+
+    // Delete the reservation
+    ReservationDeleteRequest dRequest =
+        ReservationDeleteRequest.newInstance(reservationID);
+    ReservationDeleteResponse dResponse = null;
+    try {
+      dResponse = clientService.deleteReservation(dRequest);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    Assert.assertNotNull(sResponse);
+    LOG.info("Delete reservation response: " + dResponse);
+
+    // clean-up
+    rm.stop();
+    nm = null;
+    rm = null;
+  }
+
+  private ReservationSubmissionRequest createSimpleReservationRequest(
+      int numContainers, long arrival, long deadline, long duration) {
+    // create a request with a single atomic ask
+    ReservationRequest r =
+        ReservationRequest.newInstance(Resource.newInstance(1024, 1),
+            numContainers, 1, duration);
+    ReservationRequests reqs =
+        ReservationRequests.newInstance(Collections.singletonList(r),
+            ReservationRequestInterpreter.R_ALL);
+    ReservationDefinition rDef =
+        ReservationDefinition.newInstance(arrival, deadline, reqs,
+            "testClientRMService#reservation");
+    ReservationSubmissionRequest request =
+        ReservationSubmissionRequest.newInstance(rDef,
+            ReservationSystemTestUtil.reservationQ);
+    return request;
+  }
+  
+  @Test
+  public void testGetNodeLabels() throws Exception {
+    MockRM rm = new MockRM() {
+      protected ClientRMService createClientRMService() {
+        return new ClientRMService(this.rmContext, scheduler,
+            this.rmAppManager, this.applicationACLsManager,
+            this.queueACLsManager, this.getRMContext()
+                .getRMDelegationTokenSecretManager());
+      };
+    };
+    rm.start();
+    RMNodeLabelsManager labelsMgr = rm.getRMContext().getNodeLabelManager();
+    labelsMgr.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+
+    Map<NodeId, Set<String>> map = new HashMap<NodeId, Set<String>>();
+    map.put(NodeId.newInstance("host1", 0), ImmutableSet.of("x"));
+    map.put(NodeId.newInstance("host2", 0), ImmutableSet.of("y"));
+    labelsMgr.replaceLabelsOnNode(map);
+
+    // Create a client.
+    Configuration conf = new Configuration();
+    YarnRPC rpc = YarnRPC.create(conf);
+    InetSocketAddress rmAddress = rm.getClientRMService().getBindAddress();
+    LOG.info("Connecting to ResourceManager at " + rmAddress);
+    ApplicationClientProtocol client =
+        (ApplicationClientProtocol) rpc.getProxy(
+            ApplicationClientProtocol.class, rmAddress, conf);
+
+    // Get node labels collection
+    GetClusterNodeLabelsResponse response =
+        client.getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
+    Assert.assertTrue(response.getNodeLabels().containsAll(
+        Arrays.asList("x", "y")));
+
+    // Get node labels mapping
+    GetNodesToLabelsResponse response1 =
+        client.getNodeToLabels(GetNodesToLabelsRequest.newInstance());
+    Map<NodeId, Set<String>> nodeToLabels = response1.getNodeToLabels();
+    Assert.assertTrue(nodeToLabels.keySet().containsAll(
+        Arrays.asList(NodeId.newInstance("host1", 0),
+            NodeId.newInstance("host2", 0))));
+    Assert.assertTrue(nodeToLabels.get(NodeId.newInstance("host1", 0))
+        .containsAll(Arrays.asList("x")));
+    Assert.assertTrue(nodeToLabels.get(NodeId.newInstance("host2", 0))
+        .containsAll(Arrays.asList("y")));
+    
+    rpc.stopProxy(client, conf);
+    rm.close();
   }
 }

@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Formatter;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -162,7 +161,7 @@ import com.google.common.base.Preconditions;
 public class Balancer {
   static final Log LOG = LogFactory.getLog(Balancer.class);
 
-  private static final Path BALANCER_ID_PATH = new Path("/system/balancer.id");
+  static final Path BALANCER_ID_PATH = new Path("/system/balancer.id");
 
   private static final long GB = 1L << 30; //1GB
   private static final long MAX_SIZE_TO_MOVE = 10*GB;
@@ -271,7 +270,7 @@ public class Balancer {
     long overLoadedBytes = 0L, underLoadedBytes = 0L;
     for(DatanodeStorageReport r : reports) {
       final DDatanode dn = dispatcher.newDatanode(r.getDatanodeInfo());
-      for(StorageType t : StorageType.asList()) {
+      for(StorageType t : StorageType.getMovableTypes()) {
         final Double utilization = policy.getUtilization(r, t);
         if (utilization == null) { // datanode does not have such storage type 
           continue;
@@ -459,7 +458,7 @@ public class Balancer {
   }
 
   /* reset all fields in a balancer preparing for the next iteration */
-  private void resetData(Configuration conf) {
+  void resetData(Configuration conf) {
     this.overUtilized.clear();
     this.aboveAvgUtilized.clear();
     this.belowAvgUtilized.clear();
@@ -467,16 +466,47 @@ public class Balancer {
     this.policy.reset();
     dispatcher.reset(conf);;
   }
-  
+
+  static class Result {
+    final ExitStatus exitStatus;
+    final long bytesLeftToMove;
+    final long bytesBeingMoved;
+    final long bytesAlreadyMoved;
+
+    Result(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved,
+        long bytesAlreadyMoved) {
+      this.exitStatus = exitStatus;
+      this.bytesLeftToMove = bytesLeftToMove;
+      this.bytesBeingMoved = bytesBeingMoved;
+      this.bytesAlreadyMoved = bytesAlreadyMoved;
+    }
+
+    void print(int iteration, PrintStream out) {
+      out.printf("%-24s %10d  %19s  %18s  %17s%n",
+          DateFormat.getDateTimeInstance().format(new Date()), iteration,
+          StringUtils.byteDesc(bytesAlreadyMoved),
+          StringUtils.byteDesc(bytesLeftToMove),
+          StringUtils.byteDesc(bytesBeingMoved));
+    }
+  }
+
+  Result newResult(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved) {
+    return new Result(exitStatus, bytesLeftToMove, bytesBeingMoved,
+        dispatcher.getBytesMoved());
+  }
+
+  Result newResult(ExitStatus exitStatus) {
+    return new Result(exitStatus, -1, -1, dispatcher.getBytesMoved());
+  }
+
   /** Run an iteration for all datanodes. */
-  private ExitStatus run(int iteration, Formatter formatter,
-      Configuration conf) {
+  Result runOneIteration() {
     try {
       final List<DatanodeStorageReport> reports = dispatcher.init();
       final long bytesLeftToMove = init(reports);
       if (bytesLeftToMove == 0) {
         System.out.println("The cluster is balanced. Exiting...");
-        return ExitStatus.SUCCESS;
+        return newResult(ExitStatus.SUCCESS, bytesLeftToMove, -1);
       } else {
         LOG.info( "Need to move "+ StringUtils.byteDesc(bytesLeftToMove)
             + " to make the cluster balanced." );
@@ -487,22 +517,14 @@ public class Balancer {
        * in this iteration. Maximum bytes to be moved per node is
        * Min(1 Band worth of bytes,  MAX_SIZE_TO_MOVE).
        */
-      final long bytesToMove = chooseStorageGroups();
-      if (bytesToMove == 0) {
+      final long bytesBeingMoved = chooseStorageGroups();
+      if (bytesBeingMoved == 0) {
         System.out.println("No block can be moved. Exiting...");
-        return ExitStatus.NO_MOVE_BLOCK;
+        return newResult(ExitStatus.NO_MOVE_BLOCK, bytesLeftToMove, bytesBeingMoved);
       } else {
-        LOG.info( "Will move " + StringUtils.byteDesc(bytesToMove) +
+        LOG.info( "Will move " + StringUtils.byteDesc(bytesBeingMoved) +
             " in this iteration");
       }
-
-      formatter.format("%-24s %10d  %19s  %18s  %17s%n",
-          DateFormat.getDateTimeInstance().format(new Date()),
-          iteration,
-          StringUtils.byteDesc(dispatcher.getBytesMoved()),
-          StringUtils.byteDesc(bytesLeftToMove),
-          StringUtils.byteDesc(bytesToMove)
-          );
       
       /* For each pair of <source, target>, start a thread that repeatedly 
        * decide a block to be moved and its proxy source, 
@@ -511,19 +533,19 @@ public class Balancer {
        * Exit no byte has been moved for 5 consecutive iterations.
        */
       if (!dispatcher.dispatchAndCheckContinue()) {
-        return ExitStatus.NO_MOVE_PROGRESS;
+        return newResult(ExitStatus.NO_MOVE_PROGRESS, bytesLeftToMove, bytesBeingMoved);
       }
 
-      return ExitStatus.IN_PROGRESS;
+      return newResult(ExitStatus.IN_PROGRESS, bytesLeftToMove, bytesBeingMoved);
     } catch (IllegalArgumentException e) {
       System.out.println(e + ".  Exiting ...");
-      return ExitStatus.ILLEGAL_ARGUMENTS;
+      return newResult(ExitStatus.ILLEGAL_ARGUMENTS);
     } catch (IOException e) {
       System.out.println(e + ".  Exiting ...");
-      return ExitStatus.IO_EXCEPTION;
+      return newResult(ExitStatus.IO_EXCEPTION);
     } catch (InterruptedException e) {
       System.out.println(e + ".  Exiting ...");
-      return ExitStatus.INTERRUPTED;
+      return newResult(ExitStatus.INTERRUPTED);
     } finally {
       dispatcher.shutdownNow();
     }
@@ -545,7 +567,6 @@ public class Balancer {
     LOG.info("namenodes  = " + namenodes);
     LOG.info("parameters = " + p);
     
-    final Formatter formatter = new Formatter(System.out);
     System.out.println("Time Stamp               Iteration#  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved");
     
     List<NameNodeConnector> connectors = Collections.emptyList();
@@ -559,14 +580,16 @@ public class Balancer {
         Collections.shuffle(connectors);
         for(NameNodeConnector nnc : connectors) {
           final Balancer b = new Balancer(nnc, p, conf);
-          final ExitStatus r = b.run(iteration, formatter, conf);
+          final Result r = b.runOneIteration();
+          r.print(iteration, System.out);
+
           // clean all lists
           b.resetData(conf);
-          if (r == ExitStatus.IN_PROGRESS) {
+          if (r.exitStatus == ExitStatus.IN_PROGRESS) {
             done = false;
-          } else if (r != ExitStatus.SUCCESS) {
+          } else if (r.exitStatus != ExitStatus.SUCCESS) {
             //must be an error statue, return.
-            return r.getExitCode();
+            return r.exitStatus.getExitCode();
           }
         }
 

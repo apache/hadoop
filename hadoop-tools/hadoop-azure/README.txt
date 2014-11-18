@@ -77,6 +77,54 @@ src\test\resources\azure-test.xml. These settings augment the hadoop configurati
 For live tests, set the following in azure-test.xml:
  1. "fs.azure.test.account.name -> {azureStorageAccountName} 
  2. "fs.azure.account.key.{AccountName} -> {fullStorageKey}"
+ 
+===================================
+Page Blob Support and Configuration
+===================================
+
+The Azure Blob Storage interface for Hadoop supports two kinds of blobs, block blobs
+and page blobs. Block blobs are the default kind of blob and are good for most 
+big-data use cases, like input data for Hive, Pig, analytical map-reduce jobs etc. 
+Page blob handling in hadoop-azure was introduced to support HBase log files. 
+Page blobs can be written any number of times, whereas block blobs can only be 
+appended to 50,000 times before you run out of blocks and your writes will fail.
+That won't work for HBase logs, so page blob support was introduced to overcome
+this limitation.
+
+Page blobs can be used for other purposes beyond just HBase log files though.
+They support the Hadoop FileSystem interface. Page blobs can be up to 1TB in
+size, larger than the maximum 200GB size for block blobs.
+
+In order to have the files you create be page blobs, you must set the configuration
+variable fs.azure.page.blob.dir to a comma-separated list of folder names.
+E.g. 
+
+    /hbase/WALs,/hbase/oldWALs,/data/mypageblobfiles
+    
+You can set this to simply / to make all files page blobs.
+
+The configuration option fs.azure.page.blob.size is the default initial 
+size for a page blob. It must be 128MB or greater, and no more than 1TB,
+specified as an integer number of bytes.
+
+====================
+Atomic Folder Rename
+====================
+
+Azure storage stores files as a flat key/value store without formal support
+for folders. The hadoop-azure file system layer simulates folders on top
+of Azure storage. By default, folder rename in the hadoop-azure file system
+layer is not atomic. That means that a failure during a folder rename 
+could, for example, leave some folders in the original directory and
+some in the new one.
+
+HBase depends on atomic folder rename. Hence, a configuration setting was
+introduced called fs.azure.atomic.rename.dir that allows you to specify a 
+comma-separated list of directories to receive special treatment so that 
+folder rename is made atomic. The default value of this setting is just /hbase.
+Redo will be applied to finish a folder rename that fails. A file  
+<folderName>-renamePending.json may appear temporarily and is the record of 
+the intention of the rename operation, to allow redo in event of a failure. 
 
 =============
 Findbugs
