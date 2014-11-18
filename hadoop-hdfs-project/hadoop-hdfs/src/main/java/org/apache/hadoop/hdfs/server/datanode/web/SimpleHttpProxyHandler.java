@@ -39,6 +39,7 @@ import org.apache.commons.logging.Log;
 import java.net.InetSocketAddress;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaders.Values;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
@@ -119,12 +120,12 @@ class SimpleHttpProxyHandler extends SimpleChannelInboundHandler<HttpRequest> {
           HttpRequest newReq = new DefaultFullHttpRequest(HTTP_1_1,
             req.getMethod(), req.getUri());
           newReq.headers().add(req.headers());
-          newReq.headers().set(CONNECTION, CLOSE);
+          newReq.headers().set(CONNECTION, Values.CLOSE);
           future.channel().writeAndFlush(newReq);
         } else {
           DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1,
             INTERNAL_SERVER_ERROR);
-          resp.headers().set(CONNECTION, CLOSE);
+          resp.headers().set(CONNECTION, Values.CLOSE);
           LOG.info("Proxy " + uri + " failed. Cause: ", future.cause());
           ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);
           client.close();
