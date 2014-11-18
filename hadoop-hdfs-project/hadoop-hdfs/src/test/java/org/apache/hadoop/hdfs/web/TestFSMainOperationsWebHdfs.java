@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.web.resources.DatanodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -43,6 +44,7 @@ import org.junit.Test;
 public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
   {
     ((Log4JLogger)ExceptionHandler.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DatanodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
   }
 
   private static MiniDFSCluster cluster = null;
