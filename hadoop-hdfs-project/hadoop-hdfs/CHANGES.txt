@@ -12,6 +12,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-6663. Admin command to track file and locations from block id.
     (Chen He via kihwal)
 
+    HDFS-6982. nntop: top­-like tool for name node users.
+    (Maysam Yabandeh via wang)
+
   IMPROVEMENTS
 
     HDFS-7055. Add tracing to DFSInputStream (cmccabe)

@@ -20,10 +20,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.NNTOP_ENABLED_KEY;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyString;
 
@@ -43,6 +42,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -89,6 +89,29 @@ public class TestAuditLogger {
       long time = System.currentTimeMillis();
       fs.setTimes(new Path("/"), time, time);
       assertEquals(1, DummyAuditLogger.logCount);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Tests that TopAuditLogger can be disabled
+   */
+  @Test
+  public void testDisableTopAuditLogger() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(NNTOP_ENABLED_KEY, false);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+
+    try {
+      cluster.waitClusterUp();
+      List<AuditLogger> auditLoggers =
+          cluster.getNameNode().getNamesystem().getAuditLoggers();
+      for (AuditLogger auditLogger : auditLoggers) {
+        assertFalse(
+            "top audit logger is still hooked in after it is disabled",
+            auditLogger instanceof TopAuditLogger);
+      }
     } finally {
       cluster.shutdown();
     }
