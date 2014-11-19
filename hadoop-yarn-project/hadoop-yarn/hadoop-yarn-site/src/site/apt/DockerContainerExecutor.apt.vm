@@ -133,15 +133,18 @@ as at present the DockerContainerExecutor does not support per-job docker login.
    Currently you cannot configure any of the Docker settings with the job configuration.
 You can provide Mapper, Reducer, and ApplicationMaster environment overrides for the
 docker images, using the following 3 JVM properties respectively(only for MR jobs):
-  * mapreduce.map.env: You can override the mapper's image by passing 
-yarn.nodemanager.docker-container-executor.image-name=<your_image_name>
-to this JVM property.
+
+  * mapreduce.map.env: You can override the mapper's image by passing
+    yarn.nodemanager.docker-container-executor.image-name=<your_image_name>
+    to this JVM property.
+
   * mapreduce.reduce.env: You can override the reducer's image by passing
-yarn.nodemanager.docker-container-executor.image-name=<your_image_name>
-to this JVM property.
+    yarn.nodemanager.docker-container-executor.image-name=<your_image_name>
+    to this JVM property.
+
   * yarn.app.mapreduce.am.env: You can override the ApplicationMaster's image
-by passing yarn.nodemanager.docker-container-executor.image-name=<your_image_name>
-to this JVM property.
+    by passing yarn.nodemanager.docker-container-executor.image-name=<your_image_name>
+    to this JVM property.
 
 * {Docker Image requirements}
 
@@ -185,6 +188,7 @@ jobs are started with the DockerContainerExecutor.
 
   * Pick a custom Docker image if you want. In this example, we'll use sequenceiq/hadoop-docker:2.4.1 from the
 docker hub repository. It has jdk, hadoop, and all the previously mentioned environment variables configured.
+
   * Run:
 
 ----
