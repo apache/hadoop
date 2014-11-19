@@ -75,6 +75,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2690. [YARN-2574] Make ReservationSystem and its dependent classes 
     independent of Scheduler type. (Anubhav Dhoot via kasha)
 
+    YARN-2157. Added YARN metrics in the documentaion. (Akira AJISAKA via
+    jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
