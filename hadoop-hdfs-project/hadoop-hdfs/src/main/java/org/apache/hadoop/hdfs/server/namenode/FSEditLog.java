@@ -422,6 +422,8 @@ public class FSEditLog implements LogsPurgeable {
         editLogStream.write(op);
       } catch (IOException ex) {
         // All journals failed, it is handled in logSync.
+      } finally {
+        op.reset();
       }
 
       endTransaction(start);
@@ -708,7 +710,6 @@ public class FSEditLog implements LogsPurgeable {
     Preconditions.checkArgument(newNode.isUnderConstruction());
     PermissionStatus permissions = newNode.getPermissionStatus();
     AddOp op = AddOp.getInstance(cache.get())
-      .reset()
       .setInodeId(newNode.getId())
       .setPath(path)
       .setReplication(newNode.getFileReplication())
@@ -779,7 +780,6 @@ public class FSEditLog implements LogsPurgeable {
   public void logMkDir(String path, INode newNode) {
     PermissionStatus permissions = newNode.getPermissionStatus();
     MkdirOp op = MkdirOp.getInstance(cache.get())
-      .reset()
       .setInodeId(newNode.getId())
       .setPath(path)
       .setTimestamp(newNode.getModificationTime())

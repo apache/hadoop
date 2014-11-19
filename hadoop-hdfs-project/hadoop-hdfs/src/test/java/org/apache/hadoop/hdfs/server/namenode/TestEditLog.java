@@ -110,6 +110,11 @@ public class TestEditLog {
     }
 
     @Override
+    void resetSubFields() {
+      // nop
+    }
+
+    @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       throw new IOException("cannot decode GarbageMkdirOp");
     }
