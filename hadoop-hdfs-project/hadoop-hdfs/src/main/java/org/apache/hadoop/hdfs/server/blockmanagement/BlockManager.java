@@ -1112,6 +1112,18 @@ public class BlockManager {
   }
 
   /**
+   * Remove all block invalidation tasks under this datanode UUID;
+   * used when a datanode registers with a new UUID and the old one
+   * is wiped.
+   */
+  void removeFromInvalidates(final DatanodeInfo datanode) {
+    if (!namesystem.isPopulatingReplQueues()) {
+      return;
+    }
+    invalidateBlocks.remove(datanode);
+  }
+
+  /**
    * Mark the block belonging to datanode as corrupt
    * @param blk Block to be marked as corrupt
    * @param dn Datanode which holds the corrupt replica
@@ -3382,7 +3394,14 @@ public class BlockManager {
         return 0;
       }
       try {
-        toInvalidate = invalidateBlocks.invalidateWork(datanodeManager.getDatanode(dn));
+        DatanodeDescriptor dnDescriptor = datanodeManager.getDatanode(dn);
+        if (dnDescriptor == null) {
+          LOG.warn("DataNode " + dn + " cannot be found with UUID " +
+              dn.getDatanodeUuid() + ", removing block invalidation work.");
+          invalidateBlocks.remove(dn);
+          return 0;
+        }
+        toInvalidate = invalidateBlocks.invalidateWork(dnDescriptor);
         
         if (toInvalidate == null) {
           return 0;
