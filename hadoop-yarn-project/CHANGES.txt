@@ -82,6 +82,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2414. RM web UI: app page will crash if app is failed before any
     attempt has been created (Wangda Tan via jlowe)
 
+    YARN-2870. Updated the command to run the timeline server in the document.
+    (Masatake Iwasaki via zjshen)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
