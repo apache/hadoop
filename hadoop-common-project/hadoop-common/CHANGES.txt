@@ -141,6 +141,8 @@ Trunk (Unreleased)
     HADOOP-11150. hadoop command should show the reason on failure by 
     invalid COMMAND or CLASSNAME (Masatake Iwasaki via aw)
 
+    HADOOP-11208. Replace "daemon" with better name in script subcommands (aw)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

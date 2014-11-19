@@ -85,7 +85,7 @@ shift
 
 case ${COMMAND} in
   balancer)
-    daemon="true"
+    supportdaemonization="true"
     CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
     hadoop_debug "Appending HADOOP_BALANCER_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_BALANCER_OPTS}"
@@ -102,7 +102,7 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.hdfs.tools.CryptoAdmin
   ;;
   datanode)
-    daemon="true"
+    supportdaemonization="true"
     # Determine if we're starting a secure datanode, and
     # if so, redefine appropriate variables
     if [[ -n "${HADOOP_SECURE_DN_USER}" ]]; then
@@ -158,7 +158,7 @@ case ${COMMAND} in
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   journalnode)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
     hadoop_debug "Appending HADOOP_JOURNALNODE_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOURNALNODE_OPTS}"
@@ -170,19 +170,19 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
   ;;
   mover)
-    daemon="true"
+    supportdaemonization="true"
     CLASS=org.apache.hadoop.hdfs.server.mover.Mover
     hadoop_debug "Appending HADOOP_MOVER_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_MOVER_OPTS}"
   ;;
   namenode)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
     hadoop_debug "Appending HADOOP_NAMENODE_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NAMENODE_OPTS}"
   ;;
   nfs3)
-    daemon="true"
+    supportdaemonization="true"
     if [[ -n "${HADOOP_PRIVILEGED_NFS_USER}" ]]; then
       secure_service="true"
       secure_user="${HADOOP_PRIVILEGED_NFS_USER}"
@@ -211,13 +211,13 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
   ;;
   portmap)
-    daemon="true"
+    supportdaemonization="true"
     CLASS=org.apache.hadoop.portmap.Portmap
     hadoop_debug "Appending HADOOP_PORTMAP_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_PORTMAP_OPTS}"
   ;;
   secondarynamenode)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
     hadoop_debug "Appending HADOOP_SECONDARYNAMENODE_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_SECONDARYNAMENODE_OPTS}"
@@ -232,7 +232,7 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.util.VersionInfo
   ;;
   zkfc)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.hdfs.tools.DFSZKFailoverController'
     hadoop_debug "Appending HADOOP_ZKFC_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_ZKFC_OPTS}"
@@ -274,7 +274,7 @@ fi
 hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 hadoop_finalize
 
-if [[ -n "${daemon}" ]]; then
+if [[ -n "${supportdaemonization}" ]]; then
   if [[ -n "${secure_service}" ]]; then
     hadoop_secure_daemon_handler \
     "${HADOOP_DAEMON_MODE}" "${COMMAND}" "${CLASS}"\
