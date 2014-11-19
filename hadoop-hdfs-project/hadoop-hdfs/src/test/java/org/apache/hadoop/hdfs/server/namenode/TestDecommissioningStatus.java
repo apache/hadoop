@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.hadoop.conf.Configuration;
@@ -371,5 +372,36 @@ public class TestDecommissioningStatus {
     writeConfigFile(localFileSys, excludeFile, null);
     dm.refreshNodes(conf);
     cleanupFile(fileSys, f);
+  }
+
+  /**
+   * Verify the support for decommissioning a datanode that is already dead.
+   * Under this scenario the datanode should immediately be marked as
+   * DECOMMISSIONED
+   */
+  @Test(timeout=120000)
+  public void testDecommissionDeadDN()
+      throws IOException, InterruptedException, TimeoutException {
+    DatanodeID dnID = cluster.getDataNodes().get(0).getDatanodeId();
+    String dnName = dnID.getXferAddr();
+    DataNodeProperties stoppedDN = cluster.stopDataNode(0);
+    DFSTestUtil.waitForDatanodeState(cluster, dnID.getDatanodeUuid(),
+        false, 30000);
+    FSNamesystem fsn = cluster.getNamesystem();
+    final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
+    DatanodeDescriptor dnDescriptor = dm.getDatanode(dnID);
+    decommissionNode(fsn, localFileSys, dnName);
+    dm.refreshNodes(conf);
+    BlockManagerTestUtil.checkDecommissionState(dm, dnDescriptor);
+    assertTrue(dnDescriptor.isDecommissioned());
+
+    // Add the node back
+    cluster.restartDataNode(stoppedDN, true);
+    cluster.waitActive();
+
+    // Call refreshNodes on FSNamesystem with empty exclude file to remove the
+    // datanode from decommissioning list and make it available again.
+    writeConfigFile(localFileSys, excludeFile, null);
+    dm.refreshNodes(conf);
   }
 }

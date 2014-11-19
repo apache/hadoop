@@ -201,6 +201,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7225. Remove stale block invalidation work when DN re-registers with
     different UUID. (Zhe Zhang and Andrew Wang)
 
+    HDFS-7374. Allow decommissioning of dead DataNodes. (Zhe Zhang)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
