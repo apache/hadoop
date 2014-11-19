@@ -203,9 +203,58 @@ public class TestHadoopArchives {
     Assert.assertEquals(originalPaths, harPaths);
   }
 
-  private static List<String> lsr(final FsShell shell, String dir)
-      throws Exception {
-    System.out.println("lsr root=" + dir);
+  @Test
+  public void testSingleFile() throws Exception {
+    final Path sub1 = new Path(inputPath, "dir1");
+    fs.mkdirs(sub1);
+    String singleFileName = "a";
+    createFile(inputPath, fs, sub1.getName(), singleFileName);
+    final FsShell shell = new FsShell(conf);
+
+    final List<String> originalPaths = lsr(shell, sub1.toString());
+    System.out.println("originalPaths: " + originalPaths);
+
+    // make the archive:
+    final String fullHarPathStr = makeArchive(sub1, singleFileName);
+
+    // compare results:
+    final List<String> harPaths = lsr(shell, fullHarPathStr);
+    Assert.assertEquals(originalPaths, harPaths);
+  }
+
+  @Test
+  public void testGlobFiles() throws Exception {
+    final Path sub1 = new Path(inputPath, "dir1");
+    final Path sub2 = new Path(inputPath, "dir2");
+    fs.mkdirs(sub1);
+    String fileName = "a";
+    createFile(inputPath, fs, sub1.getName(), fileName);
+    createFile(inputPath, fs, sub2.getName(), fileName);
+    createFile(inputPath, fs, sub1.getName(), "b"); // not part of result
+
+    final String glob =  "dir{1,2}/a";
+    final FsShell shell = new FsShell(conf);
+    final List<String> originalPaths = lsr(shell, inputPath.toString(),
+        inputPath + "/" + glob);
+    System.out.println("originalPaths: " + originalPaths);
+
+    // make the archive:
+    final String fullHarPathStr = makeArchive(inputPath, glob);
+
+    // compare results:
+    final List<String> harPaths = lsr(shell, fullHarPathStr,
+        fullHarPathStr + "/" + glob);
+    Assert.assertEquals(originalPaths, harPaths);
+  }
+
+  private static List<String> lsr(final FsShell shell, String rootDir) throws Exception {
+    return lsr(shell, rootDir, null);
+  }
+
+  private static List<String> lsr(final FsShell shell, String rootDir,
+      String glob) throws Exception {
+    final String dir = glob == null ? rootDir : glob;
+    System.out.println("lsr root=" + rootDir);
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
     final PrintStream out = new PrintStream(bytes);
     final PrintStream oldOut = System.out;
@@ -222,9 +271,9 @@ public class TestHadoopArchives {
       System.setErr(oldErr);
     }
     System.out.println("lsr results:\n" + results);
-    String dirname = dir;
-    if (dir.lastIndexOf(Path.SEPARATOR) != -1) {
-      dirname = dir.substring(dir.lastIndexOf(Path.SEPARATOR));
+    String dirname = rootDir;
+    if (rootDir.lastIndexOf(Path.SEPARATOR) != -1) {
+      dirname = rootDir.substring(rootDir.lastIndexOf(Path.SEPARATOR));
     }
 
     final List<String> paths = new ArrayList<String>();
@@ -621,13 +670,19 @@ public class TestHadoopArchives {
     return bb;
   }
 
+
+  private String makeArchive() throws Exception {
+    return makeArchive(inputPath, null);
+  }
+
   /*
    * Run the HadoopArchives tool to create an archive on the 
    * given file system.
    */
-  private String makeArchive() throws Exception {
-    final String inputPathStr = inputPath.toUri().getPath();
-    System.out.println("inputPathStr = " + inputPathStr);
+  private String makeArchive(Path parentPath, String relGlob) throws Exception {
+    final String parentPathStr = parentPath.toUri().getPath();
+    final String relPathGlob = relGlob == null ? "*" : relGlob;
+    System.out.println("parentPathStr = " + parentPathStr);
 
     final URI uri = fs.getUri();
     final String prefix = "har://hdfs-" + uri.getHost() + ":" + uri.getPort()
@@ -635,8 +690,8 @@ public class TestHadoopArchives {
 
     final String harName = "foo.har";
     final String fullHarPathStr = prefix + harName;
-    final String[] args = { "-archiveName", harName, "-p", inputPathStr, "*",
-        archivePath.toString() };
+    final String[] args = { "-archiveName", harName, "-p", parentPathStr,
+        relPathGlob, archivePath.toString() };
     System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH,
         HADOOP_ARCHIVES_JAR);
     final HadoopArchives har = new HadoopArchives(conf);
