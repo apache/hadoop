@@ -249,9 +249,9 @@ if [[ -n "${secure_service}" ]]; then
   HADOOP_SECURE_USER="${secure_user}"
   hadoop_verify_secure_prereq
   hadoop_setup_secure_service
-  priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND-$HOSTNAME}.out"
-  priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND-$HOSTNAME}.err"
-  priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND-$HOSTNAME}.pid"
+  priv_outfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
+  priv_errfile="${HADOOP_LOG_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.err"
+  priv_pidfile="${HADOOP_PID_DIR}/privileged-${HADOOP_IDENT_STRING}-${COMMAND}.pid"
   daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
   daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_SECURE_USER}-${HADOOP_IDENT_STRING}-${COMMAND}.pid"
 else

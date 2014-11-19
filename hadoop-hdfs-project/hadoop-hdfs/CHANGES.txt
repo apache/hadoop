@@ -255,6 +255,8 @@ Trunk (Unreleased)
     HDFS-7319. Remove dead link to HFTP documentation from index.xml.
     (Masatake Iwasaki via wheat9)
 
+    HDFS-7407. Minor typo in privileged pid/out/log names (aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
