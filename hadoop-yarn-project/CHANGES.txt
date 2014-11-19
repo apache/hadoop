@@ -85,6 +85,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2870. Updated the command to run the timeline server in the document.
     (Masatake Iwasaki via zjshen)
 
+    YARN-2878. Fix DockerContainerExecutor.apt.vm formatting. (Abin Shahab via
+    jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
