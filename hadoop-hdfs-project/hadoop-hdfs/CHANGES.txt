@@ -370,6 +370,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7404. Remove o.a.h.hdfs.server.datanode.web.resources.
     (Li Lu via wheat9)
 
+    HDFS-7398. Reset cached thread-local FSEditLogOp's on every
+    FSEditLog#logEdit. (Gera Shegalov via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
