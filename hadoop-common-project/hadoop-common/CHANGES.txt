@@ -394,6 +394,9 @@ Release 2.7.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-11323. WritableComparator#compare keeps reference to byte array.
+    (Wilfred Spiegelenburg via wang)
+
   BUG FIXES
 
     HADOOP-11236. NFS: Fix javadoc warning in RpcProgram.java (Abhiraj Butala via harsh)
