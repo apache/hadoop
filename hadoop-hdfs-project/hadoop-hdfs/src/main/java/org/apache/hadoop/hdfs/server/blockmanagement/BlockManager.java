@@ -3272,11 +3272,19 @@ public class BlockManager {
     }
 
     if (!status && !srcNode.isAlive) {
-      LOG.warn("srcNode " + srcNode + " is dead " +
-          "when decommission is in progress. Continue to mark " +
-          "it as decommission in progress. In that way, when it rejoins the " +
-          "cluster it can continue the decommission process.");
-      status = true;
+      updateState();
+      if (pendingReplicationBlocksCount == 0 &&
+          underReplicatedBlocksCount == 0) {
+        LOG.info("srcNode {} is dead and there are no under-replicated" +
+            " blocks or blocks pending replication. Marking as " +
+            "decommissioned.");
+      } else {
+        LOG.warn("srcNode " + srcNode + " is dead " +
+            "while decommission is in progress. Continuing to mark " +
+            "it as decommission in progress so when it rejoins the " +
+            "cluster it can continue the decommission process.");
+        status = true;
+      }
     }
 
     srcNode.decommissioningStatus.set(underReplicatedBlocks,

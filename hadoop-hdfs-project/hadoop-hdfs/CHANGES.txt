@@ -375,6 +375,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7398. Reset cached thread-local FSEditLogOp's on every
     FSEditLog#logEdit. (Gera Shegalov via cnauroth)
 
+    HDFS-7409. Allow dead nodes to finish decommissioning if all files are
+    fully replicated. (wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
