@@ -400,6 +400,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     private ContainerAllocationExpirer containerAllocationExpirer;
     private ResourceManager rm;
     private boolean recoveryEnabled;
+    private RMActiveServiceContext activeServiceContext;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -408,6 +409,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     protected void serviceInit(Configuration configuration) throws Exception {
+      activeServiceContext = new RMActiveServiceContext();
+      rmContext.setActiveServiceContext(activeServiceContext);
+
       conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
 
       rmSecretManagerService = createRMSecretManagerService();
@@ -1008,11 +1012,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
     if (activeServices != null) {
       activeServices.stop();
       activeServices = null;
-      rmContext.getRMNodes().clear();
-      rmContext.getInactiveRMNodes().clear();
-      rmContext.getRMApps().clear();
-      ClusterMetrics.destroy();
-      QueueMetrics.clearQueueMetrics();
+    }
+  }
+
+  void reinitialize(boolean initialize) throws Exception {
+    ClusterMetrics.destroy();
+    QueueMetrics.clearQueueMetrics();
+    if (initialize) {
+      resetDispatcher();
+      createAndInitActiveServices();
     }
   }
 
@@ -1036,8 +1044,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
           startActiveServices();
           return null;
         } catch (Exception e) {
-          resetDispatcher();
-          createAndInitActiveServices();
+          reinitialize(true);
           throw e;
         }
       }
@@ -1059,10 +1066,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     if (rmContext.getHAServiceState() ==
         HAServiceProtocol.HAServiceState.ACTIVE) {
       stopActiveServices();
-      if (initialize) {
-        resetDispatcher();
-        createAndInitActiveServices();
-      }
+      reinitialize(initialize);
     }
     rmContext.setHAServiceState(HAServiceProtocol.HAServiceState.STANDBY);
     LOG.info("Transitioned to standby state");
