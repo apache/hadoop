@@ -160,6 +160,7 @@ public class WritableComparator implements RawComparator, Configurable {
       buffer.reset(b2, s2, l2);                   // parse key2
       key2.readFields(buffer);
       
+      buffer.reset(null, 0, 0);                   // clean up reference
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
