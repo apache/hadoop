@@ -378,6 +378,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7409. Allow dead nodes to finish decommissioning if all files are
     fully replicated. (wang)
 
+    HDFS-7413. Some unit tests should use NameNodeProtocols instead of
+    FSNameSystem. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

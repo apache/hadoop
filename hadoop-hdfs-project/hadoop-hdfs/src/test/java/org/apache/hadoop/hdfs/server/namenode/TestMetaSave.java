@@ -30,6 +30,7 @@ import java.io.InputStreamReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -49,7 +50,7 @@ public class TestMetaSave {
   static final int blockSize = 8192;
   private static MiniDFSCluster cluster = null;
   private static FileSystem fileSys = null;
-  private static FSNamesystem namesystem = null;
+  private static NamenodeProtocols nnRpc = null;
 
   @BeforeClass
   public static void setUp() throws IOException {
@@ -64,7 +65,7 @@ public class TestMetaSave {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
-    namesystem = cluster.getNamesystem();
+    nnRpc = cluster.getNameNodeRpc();
   }
 
   /**
@@ -81,9 +82,9 @@ public class TestMetaSave {
     cluster.stopDataNode(1);
     // wait for namenode to discover that a datanode is dead
     Thread.sleep(15000);
-    namesystem.setReplication("/filestatus0", (short) 4);
+    nnRpc.setReplication("/filestatus0", (short) 4);
 
-    namesystem.metaSave("metasave.out.txt");
+    nnRpc.metaSave("metasave.out.txt");
 
     // Verification
     FileInputStream fstream = new FileInputStream(getLogFile(
@@ -100,7 +101,7 @@ public class TestMetaSave {
       assertTrue(line.equals("Live Datanodes: 1"));
       line = reader.readLine();
       assertTrue(line.equals("Dead Datanodes: 1"));
-      line = reader.readLine();
+      reader.readLine();
       line = reader.readLine();
       assertTrue(line.matches("^/filestatus[01]:.*"));
     } finally {
@@ -124,11 +125,11 @@ public class TestMetaSave {
     cluster.stopDataNode(1);
     // wait for namenode to discover that a datanode is dead
     Thread.sleep(15000);
-    namesystem.setReplication("/filestatus0", (short) 4);
-    namesystem.delete("/filestatus0", true);
-    namesystem.delete("/filestatus1", true);
+    nnRpc.setReplication("/filestatus0", (short) 4);
+    nnRpc.delete("/filestatus0", true);
+    nnRpc.delete("/filestatus1", true);
 
-    namesystem.metaSave("metasaveAfterDelete.out.txt");
+    nnRpc.metaSave("metasaveAfterDelete.out.txt");
 
     // Verification
     BufferedReader reader = null;
@@ -160,8 +161,8 @@ public class TestMetaSave {
   @Test
   public void testMetaSaveOverwrite() throws Exception {
     // metaSave twice.
-    namesystem.metaSave("metaSaveOverwrite.out.txt");
-    namesystem.metaSave("metaSaveOverwrite.out.txt");
+    nnRpc.metaSave("metaSaveOverwrite.out.txt");
+    nnRpc.metaSave("metaSaveOverwrite.out.txt");
 
     // Read output file.
     FileInputStream fis = null;
