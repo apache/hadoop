@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
@@ -503,6 +504,66 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     queue = scheduler.getQueueManager().getLeafQueue(
         "queueB", false);
     assertEquals(4096, queue.getFairShare().getMemory());
+  }
+
+  @Test
+  public void testQueueInfo() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queueA\">");
+    out.println("<weight>.25</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("<weight>.75</weight>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add one big node (only care about aggregate capacity)
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Queue A wants 1 * 1024.
+    createSchedulingRequest(1 * 1024, "queueA", "user1");
+    // Queue B wants 6 * 1024
+    createSchedulingRequest(6 * 1024, "queueB", "user1");
+
+    scheduler.update();
+
+    // Capacity should be the same as weight of Queue,
+    // because the sum of all active Queues' weight are 1.
+    // Before NodeUpdate Event, CurrentCapacity should be 0
+    QueueInfo queueInfo = scheduler.getQueueInfo("queueA", false, false);
+    Assert.assertEquals(0.25f, queueInfo.getCapacity(), 0.0f);
+    Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity(), 0.0f);
+    queueInfo = scheduler.getQueueInfo("queueB", false, false);
+    Assert.assertEquals(0.75f, queueInfo.getCapacity(), 0.0f);
+    Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity(), 0.0f);
+
+    // Each NodeUpdate Event will only assign one container.
+    // To assign two containers, call handle NodeUpdate Event twice.
+    NodeUpdateSchedulerEvent nodeEvent2 = new NodeUpdateSchedulerEvent(node1);
+    scheduler.handle(nodeEvent2);
+    scheduler.handle(nodeEvent2);
+
+    // After NodeUpdate Event, CurrentCapacity for queueA should be 1/2=0.5
+    // and CurrentCapacity for queueB should be 6/6=1.
+    queueInfo = scheduler.getQueueInfo("queueA", false, false);
+    Assert.assertEquals(0.25f, queueInfo.getCapacity(), 0.0f);
+    Assert.assertEquals(0.5f, queueInfo.getCurrentCapacity(), 0.0f);
+    queueInfo = scheduler.getQueueInfo("queueB", false, false);
+    Assert.assertEquals(0.75f, queueInfo.getCapacity(), 0.0f);
+    Assert.assertEquals(1.0f, queueInfo.getCurrentCapacity(), 0.0f);
   }
 
   @Test
