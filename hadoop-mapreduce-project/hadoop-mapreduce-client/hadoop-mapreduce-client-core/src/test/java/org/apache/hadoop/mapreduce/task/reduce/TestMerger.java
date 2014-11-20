@@ -294,6 +294,8 @@ public class TestMerger {
     // Now there should be no more input
     Assert.assertFalse(mergeQueue.next());
     Assert.assertEquals(1.0f, mergeQueue.getProgress().get(), epsilon);
+    Assert.assertTrue(mergeQueue.getKey() == null);
+    Assert.assertEquals(0, mergeQueue.getValue().getData().length);
   }
 
   private Progressable getReporter() {
