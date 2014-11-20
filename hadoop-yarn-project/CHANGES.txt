@@ -51,6 +51,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2157. Added YARN metrics in the documentaion. (Akira AJISAKA via
     jianhe)
 
+    YARN-2802. ClusterMetrics to include AM launch and register delays.
+    (Zhihai Xu via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
