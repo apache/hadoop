@@ -46,7 +46,7 @@ public class TestUlimit extends TestCase {
   MiniDFSCluster dfs = null;
   MiniMRCluster mr = null;
   FileSystem fs = null;
-  private static String SET_MEMORY_LIMIT = "1786432"; // 1768MB
+  private static String SET_MEMORY_LIMIT = "3145728"; // 3GB
 
   String[] genArgs(String memLimit) {
     return new String[] {
