@@ -528,9 +528,17 @@ public class Merger {
       }
     }
 
+    private void resetKeyValue() {
+      key = null;
+      value.reset(new byte[] {}, 0);
+      diskIFileValue.reset(new byte[] {}, 0);
+    }
+
     public boolean next() throws IOException {
-      if (size() == 0)
+      if (size() == 0) {
+        resetKeyValue();
         return false;
+      }
 
       if (minSegment != null) {
         //minSegment is non-null for all invocations of next except the first
@@ -539,6 +547,7 @@ public class Merger {
         adjustPriorityQueue(minSegment);
         if (size() == 0) {
           minSegment = null;
+          resetKeyValue();
           return false;
         }
       }

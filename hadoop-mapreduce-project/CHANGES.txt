@@ -10,6 +10,10 @@ Release 2.7.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-6169. MergeQueue should release reference to the current item 
+    from key and value at the end of the iteration to save memory. 
+    (Zhihai Xu via kasha)
+
   BUG FIXES
 
     MAPREDUCE-5918. LineRecordReader can return the same decompressor to
