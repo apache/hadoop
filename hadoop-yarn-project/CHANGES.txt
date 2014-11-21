@@ -87,6 +87,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2604. Scheduler should consider max-allocation-* in conjunction
     with the largest node. (Robert Kanter via kasha)
 
+    YARN-2679. Add metric for container launch duration. (Zhihai Xu via kasha)
+
+
   OPTIMIZATIONS
 
   BUG FIXES
