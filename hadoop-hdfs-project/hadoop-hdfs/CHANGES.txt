@@ -124,6 +124,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7413. Some unit tests should use NameNodeProtocols instead of
     FSNameSystem. (wheat9)
 
+    HDFS-7415. Move FSNameSystem.resolvePath() to FSDirectory. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
