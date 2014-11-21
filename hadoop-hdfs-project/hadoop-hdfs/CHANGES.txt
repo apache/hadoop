@@ -1,6 +1,6 @@
 Hadoop HDFS Change Log
 
-Release 2.5.2 - UNRELEASED
+Release 2.5.2 - 2014-11-19
 
   INCOMPATIBLE CHANGES
 
