@@ -75,7 +75,7 @@ public class TestFSPermissionChecker {
   private INodeDirectory inodeRoot;
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     Configuration conf = new Configuration();
     FSNamesystem fsn = mock(FSNamesystem.class);
     doAnswer(new Answer() {

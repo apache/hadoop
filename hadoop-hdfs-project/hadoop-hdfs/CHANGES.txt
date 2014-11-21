@@ -126,6 +126,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7415. Move FSNameSystem.resolvePath() to FSDirectory. (wheat9)
 
+    HDFS-7420. Delegate permission checks to FSDirectory. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
