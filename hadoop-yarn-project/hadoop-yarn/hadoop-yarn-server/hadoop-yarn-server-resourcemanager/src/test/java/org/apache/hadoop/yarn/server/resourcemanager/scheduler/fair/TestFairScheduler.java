@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
@@ -2590,37 +2591,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     }
     assertEquals(FinalApplicationStatus.FAILED, application.getFinalApplicationStatus());
   }
-  
-  @Test
-  public void testReservationThatDoesntFit() throws IOException {
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
-    RMNode node1 =
-        MockNodes
-            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
-    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
-    scheduler.handle(nodeEvent1);
-    
-    ApplicationAttemptId attId = createSchedulingRequest(2048, "queue1",
-        "user1", 1);
-    scheduler.update();
-    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
-    scheduler.handle(updateEvent);
-    
-    FSAppAttempt app = scheduler.getSchedulerApp(attId);
-    assertEquals(0, app.getLiveContainers().size());
-    assertEquals(0, app.getReservedContainers().size());
-    
-    createSchedulingRequestExistingApplication(1024, 2, attId);
-    scheduler.update();
-    scheduler.handle(updateEvent);
-    
-    assertEquals(1, app.getLiveContainers().size());
-    assertEquals(0, app.getReservedContainers().size());
-  }
-  
   @Test
   public void testRemoveNodeUpdatesRootQueueMetrics() throws IOException {
     scheduler.init(conf);

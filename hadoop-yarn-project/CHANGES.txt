@@ -84,6 +84,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2375. Allow enabling/disabling timeline server per framework.
     (Mit Desai via jeagles)
 
+    YARN-2604. Scheduler should consider max-allocation-* in conjunction
+    with the largest node. (Robert Kanter via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
