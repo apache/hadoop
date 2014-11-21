@@ -151,6 +151,8 @@ public class FSDirectory implements Closeable {
   // lock to protect the directory and BlockMap
   private final ReentrantReadWriteLock dirLock;
 
+  private final boolean isPermissionEnabled;
+
   // utility methods to acquire and release read lock and write lock
   void readLock() {
     this.dirLock.readLock().lock();
@@ -197,6 +199,9 @@ public class FSDirectory implements Closeable {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir);
+    this.isPermissionEnabled = conf.getBoolean(
+      DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
+      DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT);
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
     this.lsLimit = configuredLimit>0 ?
@@ -836,6 +841,29 @@ public class FSDirectory implements Closeable {
     // srcInode and its subtree cannot contain snapshottable directories with
     // snapshots
     checkSnapshot(srcInode, null);
+  }
+
+  /**
+   * This is a wrapper for resolvePath(). If the path passed
+   * is prefixed with /.reserved/raw, then it checks to ensure that the caller
+   * has super user has super user privileges.
+   *
+   * @param pc The permission checker used when resolving path.
+   * @param path The path to resolve.
+   * @param pathComponents path components corresponding to the path
+   * @return if the path indicates an inode, return path after replacing up to
+   *         <inodeid> with the corresponding path of the inode, else the path
+   *         in {@code src} as is. If the path refers to a path in the "raw"
+   *         directory, return the non-raw pathname.
+   * @throws FileNotFoundException
+   * @throws AccessControlException
+   */
+  String resolvePath(FSPermissionChecker pc, String path, byte[][] pathComponents)
+      throws FileNotFoundException, AccessControlException {
+    if (isReservedRawName(path) && isPermissionEnabled) {
+      pc.checkSuperuserPrivilege();
+    }
+    return resolvePath(path, pathComponents, this);
   }
 
   private class RenameOperation {
