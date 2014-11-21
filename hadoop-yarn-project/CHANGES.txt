@@ -54,6 +54,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2802. ClusterMetrics to include AM launch and register delays.
     (Zhihai Xu via kasha)
 
+    YARN-2375. Allow enabling/disabling timeline server per framework.
+    (Mit Desai via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
