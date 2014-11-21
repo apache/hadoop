@@ -59,6 +59,7 @@ public class TestNodeManagerMetrics {
 
     metrics.initingContainer();
     metrics.runningContainer();
+    metrics.addContainerLaunchDuration(1);
 
     checkMetrics(5, 1, 1, 1, 1, 1, 2, 2, 6, 4, 12);
   }
