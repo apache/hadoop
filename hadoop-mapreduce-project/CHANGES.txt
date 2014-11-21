@@ -235,6 +235,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5785. Derive heap size or mapreduce.*.memory.mb automatically. 
+    (Gera Shegalov and Karthik Kambatla via kasha)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
