@@ -3423,8 +3423,8 @@ public class BlockManager {
     } finally {
       namesystem.writeUnlock();
     }
-    if (NameNode.stateChangeLog.isInfoEnabled()) {
-      NameNode.stateChangeLog.info("BLOCK* " + getClass().getSimpleName()
+    if (blockLog.isInfoEnabled()) {
+      blockLog.info("BLOCK* " + getClass().getSimpleName()
           + ": ask " + dn + " to delete " + toInvalidate);
     }
     return toInvalidate.size();
