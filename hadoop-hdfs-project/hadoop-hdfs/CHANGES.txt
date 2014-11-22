@@ -385,6 +385,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7420. Delegate permission checks to FSDirectory. (wheat9)
 
+    HDFS-7331. Add Datanode network counts to datanode jmx page. (Charles Lamb
+    via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
