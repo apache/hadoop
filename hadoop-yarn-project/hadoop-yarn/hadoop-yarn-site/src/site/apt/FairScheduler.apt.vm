@@ -321,17 +321,25 @@ Allocation file format
    continue.  Valid rules are:
 
      * specified: the app is placed into the queue it requested.  If the app
-       requested no queue, i.e. it specified "default", we continue.
+       requested no queue, i.e. it specified "default", we continue. If the app
+       requested a queue name starting or ending with period, i.e. names like
+       ".q1" or "q1." will be rejected.
 
      * user: the app is placed into a queue with the name of the user who
-       submitted it.
+       submitted it. Periods in the username will be replace with "_dot_",
+       i.e. the queue name for user "first.last" is "first_dot_last".
 
      * primaryGroup: the app is placed into a queue with the name of the
-       primary group of the user who submitted it.
+       primary group of the user who submitted it. Periods in the group name
+       will be replaced with "_dot_", i.e. the queue name for group "one.two"
+       is "one_dot_two".
 
      * secondaryGroupExistingQueue: the app is placed into a queue with a name
        that matches a secondary group of the user who submitted it. The first
        secondary group that matches a configured queue will be selected.
+       Periods in group names will be replaced with "_dot_", i.e. a user with
+       "one.two" as one of their secondary groups would be placed into the
+       "one_dot_two" queue, if such a queue exists.
 
      * nestedUserQueue : the app is placed into a queue with the name of the user
        under the queue suggested by the nested rule. This is similar to ‘user’

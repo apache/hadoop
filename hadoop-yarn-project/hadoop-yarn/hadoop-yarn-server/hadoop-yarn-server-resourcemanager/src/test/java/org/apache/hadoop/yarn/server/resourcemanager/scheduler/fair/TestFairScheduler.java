@@ -917,6 +917,46 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
+  public void testQueueuNameWithPeriods() throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // only default queue
+    assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
+
+    // submit app with queue name (.A)
+    ApplicationAttemptId appAttemptId1 = createAppAttemptId(1, 1);
+    AppAddedSchedulerEvent appAddedEvent1 =
+        new AppAddedSchedulerEvent(appAttemptId1.getApplicationId(), ".A", "user1");
+    scheduler.handle(appAddedEvent1);
+    // submission rejected
+    assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
+    assertNull(scheduler.getSchedulerApp(appAttemptId1));
+    assertEquals(0, resourceManager.getRMContext().getRMApps().size());
+
+    // submit app with queue name (A.)
+    ApplicationAttemptId appAttemptId2 = createAppAttemptId(2, 1);
+    AppAddedSchedulerEvent appAddedEvent2 =
+        new AppAddedSchedulerEvent(appAttemptId2.getApplicationId(), "A.", "user1");
+    scheduler.handle(appAddedEvent2);
+    // submission rejected
+    assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
+    assertNull(scheduler.getSchedulerApp(appAttemptId2));
+    assertEquals(0, resourceManager.getRMContext().getRMApps().size());
+
+    // submit app with queue name (A.B)
+    ApplicationAttemptId appAttemptId3 = createAppAttemptId(3, 1);
+    AppAddedSchedulerEvent appAddedEvent3 =
+        new AppAddedSchedulerEvent(appAttemptId3.getApplicationId(), "A.B", "user1");
+    scheduler.handle(appAddedEvent3);
+    // submission accepted
+    assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
+    assertNull(scheduler.getSchedulerApp(appAttemptId3));
+    assertEquals(0, resourceManager.getRMContext().getRMApps().size());
+  }
+
+  @Test
   public void testAssignToQueue() throws Exception {
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
     scheduler.init(conf);

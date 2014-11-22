@@ -62,6 +62,8 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2679. Add metric for container launch duration. (Zhihai Xu via kasha)
 
+    YARN-2669. FairScheduler: queue names shouldn't allow periods
+    (Wei Yan via Sandy Ryza)
 
   OPTIMIZATIONS
 
