@@ -473,6 +473,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7374. Allow decommissioning of dead DataNodes. (Zhe Zhang)
 
+    HDFS-7403. Inaccurate javadoc of  BlockUCState#COMPLETE state. (
+    Yongjun Zhang via yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
