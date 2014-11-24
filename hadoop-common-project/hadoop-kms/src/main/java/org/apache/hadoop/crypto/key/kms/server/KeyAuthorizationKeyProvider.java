@@ -132,7 +132,7 @@ public class KeyAuthorizationKeyProvider extends KeyProviderCryptoExtension {
       KeyOpType opType) throws AuthorizationException {
     Preconditions.checkNotNull(aclName, "Key ACL name cannot be null");
     Preconditions.checkNotNull(ugi, "UserGroupInformation cannot be null");
-    if (acls.isACLPresent(aclName, KeyOpType.MANAGEMENT) &&
+    if (acls.isACLPresent(aclName, opType) &&
         (acls.hasAccessToKey(aclName, ugi, opType)
             || acls.hasAccessToKey(aclName, ugi, KeyOpType.ALL))) {
       return;

@@ -33,11 +33,9 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -53,8 +51,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -789,6 +785,40 @@ public class TestKMS {
               KeyProviderCryptoExtension kpce =
                   KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp);
               kpce.decryptEncryptedKey(ekv);
+            } catch (Exception ex) {
+              Assert.fail(ex.getMessage());
+            }
+            return null;
+          }
+        });
+        return null;
+      }
+    });
+
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "MANAGEMENT", "");
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "GENERATE_EEK", "*");
+    writeConf(testDir, conf);
+
+    runServer(null, null, testDir, new KMSCallable<Void>() {
+
+      @Override
+      public Void call() throws Exception {
+        final Configuration conf = new Configuration();
+        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
+        final URI uri = createKMSUri(getKMSUrl());
+
+        doAs("GENERATE_EEK", new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
+            try {
+              KeyProviderCryptoExtension kpce =
+                  KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp);
+              try {
+                kpce.generateEncryptedKey("k1");
+              } catch (Exception e) {
+                Assert.fail("User [GENERATE_EEK] should be allowed to generate_eek on k1");
+              }
             } catch (Exception ex) {
               Assert.fail(ex.getMessage());
             }
