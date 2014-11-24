@@ -388,6 +388,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7331. Add Datanode network counts to datanode jmx page. (Charles Lamb
     via atm)
 
+    HDFS-7412. Move RetryCache to NameNodeRpcServer. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

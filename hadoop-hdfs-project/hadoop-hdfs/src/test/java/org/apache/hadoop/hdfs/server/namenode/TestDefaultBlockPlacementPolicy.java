@@ -19,15 +19,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.*;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -37,16 +33,14 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.net.StaticMapping;
-import org.apache.hadoop.security.AccessControlException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestDefaultBlockPlacementPolicy {
 
-  private Configuration conf;
-  private final short REPLICATION_FACTOR = (short) 3;
-  private final int DEFAULT_BLOCK_SIZE = 1024;
+  private static final short REPLICATION_FACTOR = (short) 3;
+  private static final int DEFAULT_BLOCK_SIZE = 1024;
   private MiniDFSCluster cluster = null;
   private NamenodeProtocols nameNodeRpc = null;
   private FSNamesystem namesystem = null;
@@ -55,13 +49,12 @@ public class TestDefaultBlockPlacementPolicy {
   @Before
   public void setup() throws IOException {
     StaticMapping.resetMap();
-    conf = new HdfsConfiguration();
+    Configuration conf = new HdfsConfiguration();
     final String[] racks = { "/RACK0", "/RACK0", "/RACK2", "/RACK3", "/RACK2" };
     final String[] hosts = { "/host0", "/host1", "/host2", "/host3", "/host4" };
 
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
-    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY,
-        DEFAULT_BLOCK_SIZE / 2);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE / 2);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).racks(racks)
         .hosts(hosts).build();
     cluster.waitActive();
@@ -104,17 +97,14 @@ public class TestDefaultBlockPlacementPolicy {
   }
 
   private void testPlacement(String clientMachine,
-      String clientRack) throws AccessControlException,
-      SafeModeException, FileAlreadyExistsException, UnresolvedLinkException,
-      FileNotFoundException, ParentNotDirectoryException, IOException,
-      NotReplicatedYetException {
+      String clientRack) throws IOException {
     // write 5 files and check whether all times block placed
     for (int i = 0; i < 5; i++) {
       String src = "/test-" + i;
       // Create the file with client machine
       HdfsFileStatus fileStatus = namesystem.startFile(src, perm,
           clientMachine, clientMachine, EnumSet.of(CreateFlag.CREATE), true,
-          REPLICATION_FACTOR, DEFAULT_BLOCK_SIZE, null);
+          REPLICATION_FACTOR, DEFAULT_BLOCK_SIZE, null, false);
       LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine,
           null, null, fileStatus.getFileId(), null);
 

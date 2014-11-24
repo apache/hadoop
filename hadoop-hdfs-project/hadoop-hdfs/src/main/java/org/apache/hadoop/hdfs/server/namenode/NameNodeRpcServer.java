@@ -138,6 +138,9 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RetryCache;
+import org.apache.hadoop.ipc.RetryCache.CacheEntry;
+import org.apache.hadoop.ipc.RetryCache.CacheEntryWithPayload;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.WritableRpcEngine;
 import org.apache.hadoop.ipc.RefreshRegistry;
@@ -166,7 +169,6 @@ import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetUserMappin
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.tracing.SpanReceiverInfo;
-import org.apache.hadoop.tracing.TraceAdminPB;
 import org.apache.hadoop.tracing.TraceAdminPB.TraceAdminService;
 import org.apache.hadoop.tracing.TraceAdminProtocolPB;
 import org.apache.hadoop.tracing.TraceAdminProtocolServerSideTranslatorPB;
@@ -190,7 +192,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   protected final FSNamesystem namesystem;
   protected final NameNode nn;
   private final NameNodeMetrics metrics;
-  
+
+  private final RetryCache retryCache;
+
   private final boolean serviceAuthEnabled;
 
   /** The RPC server that listens to requests from DataNodes */
@@ -207,6 +211,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     this.nn = nn;
     this.namesystem = nn.getNamesystem();
+    this.retryCache = namesystem.getRetryCache();
     this.metrics = NameNode.getNameNodeMetrics();
     
     int handlerCount = 
@@ -510,14 +515,36 @@ class NameNodeRpcServer implements NamenodeProtocols {
     verifyRequest(registration);
     if(!nn.isRole(NamenodeRole.NAMENODE))
       throw new IOException("Only an ACTIVE node can invoke startCheckpoint.");
-    return namesystem.startCheckpoint(registration, nn.setRegistration());
+
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
+      null);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return (NamenodeCommand) cacheEntry.getPayload();
+    }
+    NamenodeCommand ret = null;
+    try {
+      ret = namesystem.startCheckpoint(registration, nn.setRegistration());
+    } finally {
+      RetryCache.setState(cacheEntry, ret != null, ret);
+    }
+    return ret;
   }
 
   @Override // NamenodeProtocol
   public void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
     namesystem.checkSuperuserPrivilege();
-    namesystem.endCheckpoint(registration, sig);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      namesystem.endCheckpoint(registration, sig);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override // ClientProtocol
@@ -562,19 +589,32 @@ class NameNodeRpcServer implements NamenodeProtocols {
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.create: file "
-                         +src+" for "+clientName+" at "+clientMachine);
+          +src+" for "+clientName+" at "+clientMachine);
     }
     if (!checkPathLength(src)) {
       throw new IOException("create: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    HdfsFileStatus fileStatus = namesystem.startFile(src, new PermissionStatus(
-        getRemoteUser().getShortUserName(), null, masked),
-        clientName, clientMachine, flag.get(), createParent, replication,
-        blockSize, supportedVersions);
+
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache, null);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return (HdfsFileStatus) cacheEntry.getPayload();
+    }
+
+    HdfsFileStatus status = null;
+    try {
+      PermissionStatus perm = new PermissionStatus(getRemoteUser()
+          .getShortUserName(), null, masked);
+      status = namesystem.startFile(src, perm, clientName, clientMachine,
+          flag.get(), createParent, replication, blockSize, supportedVersions,
+          cacheEntry != null);
+    } finally {
+      RetryCache.setState(cacheEntry, status != null, status);
+    }
+
     metrics.incrFilesCreated();
     metrics.incrCreateFileOps();
-    return fileStatus;
+    return status;
   }
 
   @Override // ClientProtocol
@@ -585,7 +625,20 @@ class NameNodeRpcServer implements NamenodeProtocols {
       stateChangeLog.debug("*DIR* NameNode.append: file "
           +src+" for "+clientName+" at "+clientMachine);
     }
-    LocatedBlock info = namesystem.appendFile(src, clientName, clientMachine);
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache, null);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return (LocatedBlock) cacheEntry.getPayload();
+    }
+
+    LocatedBlock info = null;
+    boolean success = false;
+    try {
+      info = namesystem.appendFile(src, clientName, clientMachine,
+          cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success, info);
+    }
     metrics.incrFilesAppended();
     return info;
   }
@@ -727,7 +780,19 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void updatePipeline(String clientName, ExtendedBlock oldBlock,
       ExtendedBlock newBlock, DatanodeID[] newNodes, String[] newStorageIDs)
       throws IOException {
-    namesystem.updatePipeline(clientName, oldBlock, newBlock, newNodes, newStorageIDs);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+
+    boolean success = false;
+    try {
+      namesystem.updatePipeline(clientName, oldBlock, newBlock, newNodes,
+          newStorageIDs, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
   
   @Override // DatanodeProtocol
@@ -756,7 +821,18 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("rename: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    boolean ret = namesystem.renameTo(src, dst);
+
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return true; // Return previous response
+    }
+
+    boolean ret = false;
+    try {
+      ret = namesystem.renameTo(src, dst, cacheEntry != null);
+    } finally {
+      RetryCache.setState(cacheEntry, ret);
+    }
     if (ret) {
       metrics.incrFilesRenamed();
     }
@@ -765,7 +841,18 @@ class NameNodeRpcServer implements NamenodeProtocols {
   
   @Override // ClientProtocol
   public void concat(String trg, String[] src) throws IOException {
-    namesystem.concat(trg, src);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+
+    try {
+      namesystem.concat(trg, src, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
   
   @Override // ClientProtocol
@@ -778,7 +865,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("rename: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    namesystem.renameTo(src, dst, options);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      namesystem.renameTo(src, dst, cacheEntry != null, options);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
     metrics.incrFilesRenamed();
   }
 
@@ -788,7 +885,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
       stateChangeLog.debug("*DIR* Namenode.delete: src=" + src
           + ", recursive=" + recursive);
     }
-    boolean ret = namesystem.delete(src, recursive);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return true; // Return previous response
+    }
+
+    boolean ret = false;
+    try {
+      ret = namesystem.delete(src, recursive, cacheEntry != null);
+    } finally {
+      RetryCache.setState(cacheEntry, ret);
+    }
     if (ret) 
       metrics.incrDeleteFileOps();
     return ret;
@@ -904,7 +1011,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public void saveNamespace() throws IOException {
-    namesystem.saveNamespace();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      namesystem.saveNamespace();
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
   
   @Override // ClientProtocol
@@ -1025,6 +1142,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void createSymlink(String target, String link, FsPermission dirPerms,
       boolean createParent) throws IOException {
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+
     metrics.incrCreateSymlinkOps();
     /* We enforce the MAX_PATH_LENGTH limit even though a symlink target 
      * URI may refer to a non-HDFS file system. 
@@ -1038,8 +1160,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("Invalid symlink target");
     }
     final UserGroupInformation ugi = getRemoteUser();
-    namesystem.createSymlink(target, link,
-      new PermissionStatus(ugi.getShortUserName(), null, dirPerms), createParent);
+
+    boolean success = false;
+    try {
+      PermissionStatus perm = new PermissionStatus(ugi.getShortUserName(),
+          null, dirPerms);
+      namesystem.createSymlink(target, link, perm, createParent,
+          cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override // ClientProtocol
@@ -1326,15 +1457,38 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("createSnapshot: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
+      null);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return (String) cacheEntry.getPayload();
+    }
+
     metrics.incrCreateSnapshotOps();
-    return namesystem.createSnapshot(snapshotRoot, snapshotName);
+    String ret = null;
+    try {
+      ret = namesystem.createSnapshot(snapshotRoot, snapshotName,
+          cacheEntry != null);
+    } finally {
+      RetryCache.setState(cacheEntry, ret != null, ret);
+    }
+    return ret;
   }
   
   @Override
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     metrics.incrDeleteSnapshotOps();
-    namesystem.deleteSnapshot(snapshotRoot, snapshotName);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      namesystem.deleteSnapshot(snapshotRoot, snapshotName, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override
@@ -1358,7 +1512,18 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("The new snapshot name is null or empty.");
     }
     metrics.incrRenameSnapshotOps();
-    namesystem.renameSnapshot(snapshotRoot, snapshotOldName, snapshotNewName);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      namesystem.renameSnapshot(snapshotRoot, snapshotOldName,
+          snapshotNewName, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override // Client Protocol
@@ -1382,18 +1547,53 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public long addCacheDirective(
       CacheDirectiveInfo path, EnumSet<CacheFlag> flags) throws IOException {
-    return namesystem.addCacheDirective(path, flags);
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion
+      (retryCache, null);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return (Long) cacheEntry.getPayload();
+    }
+
+    boolean success = false;
+    long ret = 0;
+    try {
+      ret = namesystem.addCacheDirective(path, flags, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success, ret);
+    }
+    return ret;
   }
 
   @Override
   public void modifyCacheDirective(
       CacheDirectiveInfo directive, EnumSet<CacheFlag> flags) throws IOException {
-    namesystem.modifyCacheDirective(directive, flags);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return;
+    }
+
+    boolean success = false;
+    try {
+      namesystem.modifyCacheDirective(directive, flags, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override
   public void removeCacheDirective(long id) throws IOException {
-    namesystem.removeCacheDirective(id);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return;
+    }
+    boolean success = false;
+    try {
+      namesystem.removeCacheDirective(id, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override
@@ -1407,17 +1607,47 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override
   public void addCachePool(CachePoolInfo info) throws IOException {
-    namesystem.addCachePool(info);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      namesystem.addCachePool(info, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override
   public void modifyCachePool(CachePoolInfo info) throws IOException {
-    namesystem.modifyCachePool(info);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      namesystem.modifyCachePool(info, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override
   public void removeCachePool(String cachePoolName) throws IOException {
-    namesystem.removeCachePool(cachePoolName);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return;
+    }
+    boolean success = false;
+    try {
+      namesystem.removeCachePool(cachePoolName, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override
@@ -1461,7 +1691,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public void createEncryptionZone(String src, String keyName)
     throws IOException {
-    namesystem.createEncryptionZone(src, keyName);
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return;
+    }
+    boolean success = false;
+    try {
+      namesystem.createEncryptionZone(src, keyName, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override
@@ -1479,7 +1719,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
       throws IOException {
-    namesystem.setXAttr(src, xAttr, flag);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      namesystem.setXAttr(src, xAttr, flag, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
   
   @Override
@@ -1495,7 +1745,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
   
   @Override
   public void removeXAttr(String src, XAttr xAttr) throws IOException {
-    namesystem.removeXAttr(src, xAttr);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    boolean success = false;
+    try {
+      namesystem.removeXAttr(src, xAttr, cacheEntry != null);
+      success = true;
+    } finally {
+      RetryCache.setState(cacheEntry, success);
+    }
   }
 
   @Override
