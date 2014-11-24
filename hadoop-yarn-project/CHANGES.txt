@@ -138,6 +138,8 @@ Release 2.7.0 - UNRELEASED
     YARN-1984. LeveldbTimelineStore does not handle db exceptions properly
     (Varun Saxena via jlowe)
 
+    YARN-2697. Remove useless RMAuthenticationHandler. (Haosong Huang via zjshen)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
