@@ -13,6 +13,40 @@
 
 set -e
 
+#
+# Determine if the patch file is a git diff file with prefixes.
+# These files are generated via "git diff" *without* the --no-prefix option.
+#
+# We can apply these patches more easily because we know that the a/ and b/
+# prefixes in the "diff" lines stands for the project root directory.
+# So we don't have to hunt for the project root.
+# And of course, we know that the patch file was generated using git, so we
+# know git apply can handle it properly.
+#
+# Arguments: file name.
+# Return: 0 if it is a git diff; 1 otherwise.
+#
+is_git_diff_with_prefix() {
+  DIFF_TYPE="unknown"
+  while read -r line; do
+    if [[ "$line" =~ ^diff\  ]]; then
+      if [[ "$line" =~ ^diff\ \-\-git ]]; then
+        DIFF_TYPE="git"
+      else
+        return 1 # All diff lines must be diff --git lines.
+      fi
+    fi
+    if [[ "$line" =~ ^\+\+\+\  ]] ||
+       [[ "$line" =~ ^\-\-\-\  ]]; then
+      if ! [[ "$line" =~ ^....[ab]/ ]]; then
+        return 1 # All +++ and --- lines must start with a/ or b/.
+      fi
+    fi
+  done < $1
+  [ x$DIFF_TYPE == x"git" ] || return 1
+  return 0 # return true (= 0 in bash)
+}
+
 PATCH_FILE=$1
 DRY_RUN=$2
 if [ -z "$PATCH_FILE" ]; then
@@ -35,6 +69,19 @@ if [ "$PATCH_FILE" == "-" ]; then
   PATCH_FILE=/tmp/tmp.in.$$
   cat /dev/fd/0 > $PATCH_FILE
   TOCLEAN="$TOCLEAN $PATCH_FILE"
+fi
+
+# Special case for git-diff patches without --no-prefix
+if is_git_diff_with_prefix "$PATCH_FILE"; then
+  GIT_FLAGS="--binary -p1 -v"
+  if [[ -z $DRY_RUN ]]; then
+      GIT_FLAGS="$GIT_FLAGS --stat --apply "
+      echo Going to apply git patch with: git apply "${GIT_FLAGS}"
+  else
+      GIT_FLAGS="$GIT_FLAGS --check "
+  fi
+  git apply ${GIT_FLAGS} "${PATCH_FILE}"
+  exit $?
 fi
 
 # Come up with a list of changed files into $TMP
