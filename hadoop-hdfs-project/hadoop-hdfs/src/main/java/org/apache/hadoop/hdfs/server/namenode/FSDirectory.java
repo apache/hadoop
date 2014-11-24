@@ -98,6 +98,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Both FSDirectory and FSNamesystem manage the state of the namespace.
@@ -108,6 +110,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  **/
 @InterfaceAudience.Private
 public class FSDirectory implements Closeable {
+  static final Logger LOG = LoggerFactory.getLogger(FSDirectory.class);
   private static INodeDirectory createRoot(FSNamesystem namesystem) {
     final INodeDirectory r = new INodeDirectory(
         INodeId.ROOT_INODE_ID,
@@ -156,6 +159,8 @@ public class FSDirectory implements Closeable {
   private final boolean isPermissionEnabled;
   private final String fsOwnerShortUserName;
   private final String supergroup;
+
+  private final FSEditLog editLog;
 
   // utility methods to acquire and release read lock and write lock
   void readLock() {
@@ -250,7 +255,7 @@ public class FSDirectory implements Closeable {
         + " times");
     nameCache = new NameCache<ByteArray>(threshold);
     namesystem = ns;
-
+    this.editLog = ns.getEditLog();
     ezManager = new EncryptionZoneManager(this, conf);
   }
     
@@ -265,6 +270,14 @@ public class FSDirectory implements Closeable {
   /** @return the root directory inode. */
   public INodeDirectory getRoot() {
     return rootDir;
+  }
+
+  boolean isPermissionEnabled() {
+    return isPermissionEnabled;
+  }
+
+  FSEditLog getEditLog() {
+    return editLog;
   }
 
   /**
@@ -1174,81 +1187,6 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Concat all the blocks from srcs to trg and delete the srcs files
-   */
-  void concat(String target, String[] srcs, long timestamp)
-      throws UnresolvedLinkException, QuotaExceededException,
-      SnapshotAccessControlException, SnapshotException {
-    writeLock();
-    try {
-      // actual move
-      unprotectedConcat(target, srcs, timestamp);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  /**
-   * Concat all the blocks from srcs to trg and delete the srcs files
-   * @param target target file to move the blocks to
-   * @param srcs list of file to move the blocks from
-   */
-  void unprotectedConcat(String target, String [] srcs, long timestamp) 
-      throws UnresolvedLinkException, QuotaExceededException,
-      SnapshotAccessControlException, SnapshotException {
-    assert hasWriteLock();
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSNamesystem.concat to "+target);
-    }
-    // do the move
-    
-    final INodesInPath trgIIP = getINodesInPath4Write(target, true);
-    final INode[] trgINodes = trgIIP.getINodes();
-    final INodeFile trgInode = trgIIP.getLastINode().asFile();
-    INodeDirectory trgParent = trgINodes[trgINodes.length-2].asDirectory();
-    final int trgLatestSnapshot = trgIIP.getLatestSnapshotId();
-    
-    final INodeFile [] allSrcInodes = new INodeFile[srcs.length];
-    for(int i = 0; i < srcs.length; i++) {
-      final INodesInPath iip = getINodesInPath4Write(srcs[i]);
-      final int latest = iip.getLatestSnapshotId();
-      final INode inode = iip.getLastINode();
-
-      // check if the file in the latest snapshot
-      if (inode.isInLatestSnapshot(latest)) {
-        throw new SnapshotException("Concat: the source file " + srcs[i]
-            + " is in snapshot " + latest);
-      }
-
-      // check if the file has other references.
-      if (inode.isReference() && ((INodeReference.WithCount)
-          inode.asReference().getReferredINode()).getReferenceCount() > 1) {
-        throw new SnapshotException("Concat: the source file " + srcs[i]
-            + " is referred by some other reference in some snapshot.");
-      }
-
-      allSrcInodes[i] = inode.asFile();
-    }
-    trgInode.concatBlocks(allSrcInodes);
-    
-    // since we are in the same dir - we can use same parent to remove files
-    int count = 0;
-    for(INodeFile nodeToRemove: allSrcInodes) {
-      if(nodeToRemove == null) continue;
-      
-      nodeToRemove.setBlocks(null);
-      trgParent.removeChild(nodeToRemove, trgLatestSnapshot);
-      inodeMap.remove(nodeToRemove);
-      count++;
-    }
-    
-    trgInode.setModificationTime(timestamp, trgLatestSnapshot);
-    trgParent.updateModificationTime(timestamp, trgLatestSnapshot);
-    // update quota on the parent directory ('count' files removed, 0 space)
-    unprotectedUpdateCount(trgIIP, trgINodes.length-1, -count, 0);
-  }
-
-  /**
    * Delete the target directory and collect the blocks under it
    * 
    * @param src Path of a directory to delete
@@ -1790,8 +1728,7 @@ public class FSDirectory implements Closeable {
    * updates quota without verification
    * callers responsibility is to make sure quota is not exceeded
    */
-  private static void unprotectedUpdateCount(INodesInPath inodesInPath,
-      int numOfINodes, long nsDelta, long dsDelta) {
+  static void unprotectedUpdateCount(INodesInPath inodesInPath, int numOfINodes, long nsDelta, long dsDelta) {
     final INode[] inodes = inodesInPath.getINodes();
     for(int i=0; i < numOfINodes; i++) {
       if (inodes[i].isQuotaSet()) { // a directory with quota
@@ -3414,5 +3351,11 @@ public class FSDirectory implements Closeable {
         readUnlock();
       }
     }
+  }
+
+  HdfsFileStatus getAuditFileInfo(String path, boolean resolveSymlink)
+    throws IOException {
+    return (namesystem.isAuditEnabled() && namesystem.isExternalInvocation())
+      ? getFileInfo(path, resolveSymlink, false, false) : null;
   }
 }

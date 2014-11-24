@@ -136,6 +136,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7419. Improve error messages for DataNode hot swap drive feature (Lei
     Xu via Colin P. Mccabe)
 
+    HDFS-7436. Consolidate implementation of concat(). (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
