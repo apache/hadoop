@@ -389,7 +389,8 @@ public class TestReconfiguration {
         .reconfigurePropertyImpl(eq("name1"), anyString());
     doNothing().when(dummy)
         .reconfigurePropertyImpl(eq("name2"), anyString());
-    doThrow(new ReconfigurationException("NAME3", "NEW3", "OLD3"))
+    doThrow(new ReconfigurationException("NAME3", "NEW3", "OLD3",
+        new IOException("io exception")))
         .when(dummy).reconfigurePropertyImpl(eq("name3"), anyString());
 
     dummy.startReconfigurationTask();
@@ -406,7 +407,7 @@ public class TestReconfiguration {
         assertThat(result.getValue().get(),
             containsString("Property name2 is not reconfigurable"));
       } else if (change.prop.equals("name3")) {
-        assertThat(result.getValue().get(), containsString("NAME3"));
+        assertThat(result.getValue().get(), containsString("io exception"));
       } else {
         fail("Unknown property: " + change.prop);
       }

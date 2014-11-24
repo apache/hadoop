@@ -128,7 +128,7 @@ public abstract class ReconfigurableBase
         try {
           this.parent.reconfigurePropertyImpl(change.prop, change.newVal);
         } catch (ReconfigurationException e) {
-          errorMessage = e.toString();
+          errorMessage = e.getCause().getMessage();
         }
         results.put(change, Optional.fromNullable(errorMessage));
       }
