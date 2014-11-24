@@ -6231,26 +6231,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // Calculate number of blocks under construction
     long numUCBlocks = 0;
     readLock();
+    numUCBlocks = leaseManager.getNumUnderConstructionBlocks();
     try {
-      for (Lease lease : leaseManager.getSortedLeases()) {
-        for (String path : lease.getPaths()) {
-          final INodeFile cons;
-          try {
-            cons = dir.getINode(path).asFile();
-            Preconditions.checkState(cons.isUnderConstruction());
-          } catch (UnresolvedLinkException e) {
-            throw new AssertionError("Lease files should reside on this FS");
-          }
-          BlockInfo[] blocks = cons.getBlocks();
-          if(blocks == null)
-            continue;
-          for(BlockInfo b : blocks) {
-            if(!b.isComplete())
-              numUCBlocks++;
-          }
-        }
-      }
-      LOG.info("Number of blocks under construction: " + numUCBlocks);
       return getBlocksTotal() - numUCBlocks;
     } finally {
       readUnlock();
