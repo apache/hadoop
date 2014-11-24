@@ -45,7 +45,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
-import org.iq80.leveldb.DBIterator;
+import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
+import org.iq80.leveldb.DBException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -146,13 +147,15 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
 
   private boolean deleteNextEntity(String entityType, byte[] ts)
       throws IOException, InterruptedException {
-    DBIterator iterator = null;
-    DBIterator pfIterator = null;
+    LeveldbIterator iterator = null;
+    LeveldbIterator pfIterator = null;
     try {
       iterator = ((LeveldbTimelineStore)store).getDbIterator(false);
       pfIterator = ((LeveldbTimelineStore)store).getDbIterator(false);
       return ((LeveldbTimelineStore)store).deleteNextEntity(entityType, ts,
           iterator, pfIterator, false);
+    } catch(DBException e) {
+      throw new IOException(e);   	
     } finally {
       IOUtils.cleanup(null, iterator, pfIterator);
     }
