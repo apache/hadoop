@@ -449,7 +449,7 @@ public class DataNode extends ReconfigurableBase
       try {
         LOG.info("Reconfiguring " + property + " to " + newVal);
         this.refreshVolumes(newVal);
-      } catch (Exception e) {
+      } catch (IOException e) {
         throw new ReconfigurationException(property, newVal,
             getConf().get(property), e);
       }
@@ -584,14 +584,15 @@ public class DataNode extends ReconfigurableBase
             IOException ioe = ioExceptionFuture.get();
             if (ioe != null) {
               errorMessageBuilder.append(String.format("FAILED TO ADD: %s: %s\n",
-                  volume.toString(), ioe.getMessage()));
+                  volume, ioe.getMessage()));
+              LOG.error("Failed to add volume: " + volume, ioe);
             } else {
               effectiveVolumes.add(volume.toString());
+              LOG.info("Successfully added volume: " + volume);
             }
-            LOG.info("Storage directory is loaded: " + volume.toString());
           } catch (Exception e) {
             errorMessageBuilder.append(String.format("FAILED to ADD: %s: %s\n",
-                volume.toString(), e.getMessage()));
+                volume, e.getMessage()));
           }
         }
       }
