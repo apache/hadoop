@@ -141,8 +141,18 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     report.setFinishTime(jobInfo.getFinishTime());
     report.setJobName(jobInfo.getJobname());
     report.setUser(jobInfo.getUsername());
-    report.setMapProgress((float) getCompletedMaps() / getTotalMaps());
-    report.setReduceProgress((float) getCompletedReduces() / getTotalReduces());
+
+    if ( getTotalMaps() == 0 ) {
+      report.setMapProgress(1.0f);
+    } else {
+      report.setMapProgress((float) getCompletedMaps() / getTotalMaps());
+    }
+    if ( getTotalReduces() == 0 ) {
+      report.setReduceProgress(1.0f);
+    } else {
+      report.setReduceProgress((float) getCompletedReduces() / getTotalReduces());
+    }
+
     report.setJobFile(getConfFile().toString());
     String historyUrl = "N/A";
     try {

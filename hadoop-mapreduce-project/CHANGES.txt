@@ -253,6 +253,10 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6049. AM JVM does not exit if MRClientService graceful shutdown
     fails (Rohith via devaraj)
+
+    MAPREDUCE-5568. Fixed CompletedJob in JHS to show progress percentage
+    correctly in case the number of mappers or reducers is zero. (MinJi Kim via
+    jianhe)
  
 Release 2.6.0 - 2014-11-18
 
