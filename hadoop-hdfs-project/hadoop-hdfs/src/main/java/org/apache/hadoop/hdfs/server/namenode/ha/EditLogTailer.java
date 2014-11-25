@@ -183,6 +183,8 @@ public class EditLogTailer {
       @Override
       public Void run() throws Exception {
         try {
+          // It is already under the full name system lock and the checkpointer
+          // thread is already stopped. No need to acqure any other lock.
           doTailEdits();
         } catch (InterruptedException e) {
           throw new IOException(e);
@@ -321,7 +323,15 @@ public class EditLogTailer {
           if (!shouldRun) {
             break;
           }
-          doTailEdits();
+          // Prevent reading of name system while being modified. The full
+          // name system lock will be acquired to further block even the block
+          // state updates.
+          namesystem.cpLockInterruptibly();
+          try {
+            doTailEdits();
+          } finally {
+            namesystem.cpUnlock();
+          }
         } catch (EditLogInputException elie) {
           LOG.warn("Error while reading edits from disk. Will try again.", elie);
         } catch (InterruptedException ie) {
