@@ -92,6 +92,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2669. FairScheduler: queue names shouldn't allow periods
     (Wei Yan via Sandy Ryza)
 
+    YARN-2404. Removed ApplicationAttemptState and ApplicationState class in
+    RMStateStore. (Tsuyoshi OZAWA via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

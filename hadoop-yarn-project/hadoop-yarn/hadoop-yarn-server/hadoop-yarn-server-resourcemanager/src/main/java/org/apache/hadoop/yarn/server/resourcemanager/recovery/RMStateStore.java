@@ -38,9 +38,6 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -56,12 +53,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Applicatio
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
@@ -129,13 +124,13 @@ public abstract class RMStateStore extends AbstractService {
         LOG.error("Illegal event type: " + event.getClass());
         return;
       }
-      ApplicationState appState = ((RMStateStoreAppEvent) event).getAppState();
-      ApplicationId appId = appState.getAppId();
-      ApplicationStateData appStateData = ApplicationStateData
-          .newInstance(appState);
+      ApplicationStateData appState =
+          ((RMStateStoreAppEvent) event).getAppState();
+      ApplicationId appId =
+          appState.getApplicationSubmissionContext().getApplicationId();
       LOG.info("Storing info for app: " + appId);
       try {
-        store.storeApplicationStateInternal(appId, appStateData);
+        store.storeApplicationStateInternal(appId, appState);
         store.notifyApplication(new RMAppEvent(appId,
                RMAppEventType.APP_NEW_SAVED));
       } catch (Exception e) {
@@ -154,13 +149,13 @@ public abstract class RMStateStore extends AbstractService {
         LOG.error("Illegal event type: " + event.getClass());
         return;
       }
-      ApplicationState appState = ((RMStateUpdateAppEvent) event).getAppState();
-      ApplicationId appId = appState.getAppId();
-      ApplicationStateData appStateData = ApplicationStateData
-          .newInstance(appState);
+      ApplicationStateData appState =
+          ((RMStateUpdateAppEvent) event).getAppState();
+      ApplicationId appId =
+          appState.getApplicationSubmissionContext().getApplicationId();
       LOG.info("Updating info for app: " + appId);
       try {
-        store.updateApplicationStateInternal(appId, appStateData);
+        store.updateApplicationStateInternal(appId, appState);
         store.notifyApplication(new RMAppEvent(appId,
                RMAppEventType.APP_UPDATE_SAVED));
       } catch (Exception e) {
@@ -179,9 +174,10 @@ public abstract class RMStateStore extends AbstractService {
         LOG.error("Illegal event type: " + event.getClass());
         return;
       }
-      ApplicationState appState = ((RMStateStoreRemoveAppEvent) event)
-          .getAppState();
-      ApplicationId appId = appState.getAppId();
+      ApplicationStateData appState =
+          ((RMStateStoreRemoveAppEvent) event).getAppState();
+      ApplicationId appId =
+          appState.getApplicationSubmissionContext().getApplicationId();
       LOG.info("Removing info for app: " + appId);
       try {
         store.removeApplicationStateInternal(appState);
@@ -201,16 +197,14 @@ public abstract class RMStateStore extends AbstractService {
         LOG.error("Illegal event type: " + event.getClass());
         return;
       }
-      ApplicationAttemptState attemptState =
+      ApplicationAttemptStateData attemptState =
           ((RMStateStoreAppAttemptEvent) event).getAppAttemptState();
       try {
-        ApplicationAttemptStateData attemptStateData = 
-            ApplicationAttemptStateData.newInstance(attemptState);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Storing info for attempt: " + attemptState.getAttemptId());
         }
         store.storeApplicationAttemptStateInternal(attemptState.getAttemptId(),
-            attemptStateData);
+            attemptState);
         store.notifyApplicationAttempt(new RMAppAttemptEvent
                (attemptState.getAttemptId(),
                RMAppAttemptEventType.ATTEMPT_NEW_SAVED));
@@ -230,16 +224,14 @@ public abstract class RMStateStore extends AbstractService {
         LOG.error("Illegal event type: " + event.getClass());
         return;
       }
-      ApplicationAttemptState attemptState =
+      ApplicationAttemptStateData attemptState =
           ((RMStateUpdateAppAttemptEvent) event).getAppAttemptState();
       try {
-        ApplicationAttemptStateData attemptStateData = ApplicationAttemptStateData
-            .newInstance(attemptState);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Updating info for attempt: " + attemptState.getAttemptId());
         }
         store.updateApplicationAttemptStateInternal(attemptState.getAttemptId(),
-            attemptStateData);
+            attemptState);
         store.notifyApplicationAttempt(new RMAppAttemptEvent
                (attemptState.getAttemptId(),
                RMAppAttemptEventType.ATTEMPT_UPDATE_SAVED));
@@ -253,153 +245,6 @@ public abstract class RMStateStore extends AbstractService {
   public RMStateStore() {
     super(RMStateStore.class.getName());
     stateMachine = stateMachineFactory.make(this);
-  }
-
-  /**
-   * State of an application attempt
-   */
-  public static class ApplicationAttemptState {
-    final ApplicationAttemptId attemptId;
-    final Container masterContainer;
-    final Credentials appAttemptCredentials;
-    long startTime = 0;
-    long finishTime = 0;
-    // fields set when attempt completes
-    RMAppAttemptState state;
-    String finalTrackingUrl = "N/A";
-    String diagnostics;
-    int exitStatus = ContainerExitStatus.INVALID;
-    FinalApplicationStatus amUnregisteredFinalStatus;
-    long memorySeconds;
-    long vcoreSeconds;
-
-    public ApplicationAttemptState(ApplicationAttemptId attemptId,
-        Container masterContainer, Credentials appAttemptCredentials,
-        long startTime, long memorySeconds, long vcoreSeconds) {
-      this(attemptId, masterContainer, appAttemptCredentials, startTime, null,
-        null, "", null, ContainerExitStatus.INVALID, 0, memorySeconds, vcoreSeconds);
-    }
-
-    public ApplicationAttemptState(ApplicationAttemptId attemptId,
-        Container masterContainer, Credentials appAttemptCredentials,
-        long startTime, RMAppAttemptState state, String finalTrackingUrl,
-        String diagnostics, FinalApplicationStatus amUnregisteredFinalStatus,
-        int exitStatus, long finishTime, long memorySeconds,
-        long vcoreSeconds) {
-      this.attemptId = attemptId;
-      this.masterContainer = masterContainer;
-      this.appAttemptCredentials = appAttemptCredentials;
-      this.startTime = startTime;
-      this.state = state;
-      this.finalTrackingUrl = finalTrackingUrl;
-      this.diagnostics = diagnostics == null ? "" : diagnostics;
-      this.amUnregisteredFinalStatus = amUnregisteredFinalStatus;
-      this.exitStatus = exitStatus;
-      this.finishTime = finishTime;
-      this.memorySeconds = memorySeconds;
-      this.vcoreSeconds = vcoreSeconds;
-    }
-
-    public Container getMasterContainer() {
-      return masterContainer;
-    }
-    public ApplicationAttemptId getAttemptId() {
-      return attemptId;
-    }
-    public Credentials getAppAttemptCredentials() {
-      return appAttemptCredentials;
-    }
-    public RMAppAttemptState getState(){
-      return state;
-    }
-    public String getFinalTrackingUrl() {
-      return finalTrackingUrl;
-    }
-    public String getDiagnostics() {
-      return diagnostics;
-    }
-    public long getStartTime() {
-      return startTime;
-    }
-    public FinalApplicationStatus getFinalApplicationStatus() {
-      return amUnregisteredFinalStatus;
-    }
-    public int getAMContainerExitStatus(){
-      return this.exitStatus;
-    }
-    public long getMemorySeconds() {
-      return memorySeconds;
-    }
-    public long getVcoreSeconds() {
-      return vcoreSeconds;
-    }
-    public long getFinishTime() {
-      return this.finishTime;
-    }
-  }
-  
-  /**
-   * State of an application application
-   */
-  public static class ApplicationState {
-    final ApplicationSubmissionContext context;
-    final long submitTime;
-    final long startTime;
-    final String user;
-    Map<ApplicationAttemptId, ApplicationAttemptState> attempts =
-                  new HashMap<ApplicationAttemptId, ApplicationAttemptState>();
-    // fields set when application completes.
-    RMAppState state;
-    String diagnostics;
-    long finishTime;
-
-    public ApplicationState(long submitTime,
-        long startTime, ApplicationSubmissionContext context, String user) {
-      this(submitTime, startTime, context, user, null, "", 0);
-    }
-
-    public ApplicationState(long submitTime,
-        long startTime,ApplicationSubmissionContext context,
-        String user, RMAppState state, String diagnostics, long finishTime) {
-      this.submitTime = submitTime;
-      this.startTime = startTime;
-      this.context = context;
-      this.user = user;
-      this.state = state;
-      this.diagnostics = diagnostics == null ? "" : diagnostics;
-      this.finishTime = finishTime;
-    }
-
-    public ApplicationId getAppId() {
-      return context.getApplicationId();
-    }
-    public long getSubmitTime() {
-      return submitTime;
-    }
-    public long getStartTime() {
-      return startTime;
-    }
-    public int getAttemptCount() {
-      return attempts.size();
-    }
-    public ApplicationSubmissionContext getApplicationSubmissionContext() {
-      return context;
-    }
-    public ApplicationAttemptState getAttempt(ApplicationAttemptId attemptId) {
-      return attempts.get(attemptId);
-    }
-    public String getUser() {
-      return user;
-    }
-    public RMAppState getState() {
-      return state;
-    }
-    public String getDiagnostics() {
-      return diagnostics;
-    }
-    public long getFinishTime() {
-      return finishTime;
-    }
   }
 
   public static class RMDTSecretManagerState {
@@ -429,14 +274,14 @@ public abstract class RMStateStore extends AbstractService {
    * State of the ResourceManager
    */
   public static class RMState {
-    Map<ApplicationId, ApplicationState> appState =
-        new TreeMap<ApplicationId, ApplicationState>();
+    Map<ApplicationId, ApplicationStateData> appState =
+        new TreeMap<ApplicationId, ApplicationStateData>();
 
     RMDTSecretManagerState rmSecretManagerState = new RMDTSecretManagerState();
 
     AMRMTokenSecretManagerState amrmTokenSecretManagerState = null;
 
-    public Map<ApplicationId, ApplicationState> getApplicationState() {
+    public Map<ApplicationId, ApplicationStateData> getApplicationState() {
       return appState;
     }
 
@@ -575,14 +420,15 @@ public abstract class RMStateStore extends AbstractService {
     ApplicationSubmissionContext context = app
                                             .getApplicationSubmissionContext();
     assert context instanceof ApplicationSubmissionContextPBImpl;
-    ApplicationState appState =
-        new ApplicationState(app.getSubmitTime(), app.getStartTime(), context,
-          app.getUser());
+    ApplicationStateData appState =
+        ApplicationStateData.newInstance(
+            app.getSubmitTime(), app.getStartTime(), context, app.getUser());
     dispatcher.getEventHandler().handle(new RMStateStoreAppEvent(appState));
   }
 
   @SuppressWarnings("unchecked")
-  public synchronized void updateApplicationState(ApplicationState appState) {
+  public synchronized void updateApplicationState(
+      ApplicationStateData appState) {
     dispatcher.getEventHandler().handle(new RMStateUpdateAppEvent(appState));
   }
 
@@ -609,11 +455,13 @@ public abstract class RMStateStore extends AbstractService {
 
     AggregateAppResourceUsage resUsage =
         appAttempt.getRMAppAttemptMetrics().getAggregateAppResourceUsage();
-    ApplicationAttemptState attemptState =
-        new ApplicationAttemptState(appAttempt.getAppAttemptId(),
-          appAttempt.getMasterContainer(), credentials,
-          appAttempt.getStartTime(), resUsage.getMemorySeconds(),
-          resUsage.getVcoreSeconds());
+    ApplicationAttemptStateData attemptState =
+        ApplicationAttemptStateData.newInstance(
+            appAttempt.getAppAttemptId(),
+            appAttempt.getMasterContainer(),
+            credentials, appAttempt.getStartTime(),
+            resUsage.getMemorySeconds(),
+            resUsage.getVcoreSeconds());
 
     dispatcher.getEventHandler().handle(
       new RMStateStoreAppAttemptEvent(attemptState));
@@ -621,7 +469,7 @@ public abstract class RMStateStore extends AbstractService {
 
   @SuppressWarnings("unchecked")
   public synchronized void updateApplicationAttemptState(
-      ApplicationAttemptState attemptState) {
+      ApplicationAttemptStateData attemptState) {
     dispatcher.getEventHandler().handle(
       new RMStateUpdateAppAttemptEvent(attemptState));
   }
@@ -761,16 +609,12 @@ public abstract class RMStateStore extends AbstractService {
    */
   @SuppressWarnings("unchecked")
   public synchronized void removeApplication(RMApp app) {
-    ApplicationState appState = new ApplicationState(
+    ApplicationStateData appState =
+        ApplicationStateData.newInstance(
             app.getSubmitTime(), app.getStartTime(),
             app.getApplicationSubmissionContext(), app.getUser());
     for(RMAppAttempt appAttempt : app.getAppAttempts().values()) {
-      Credentials credentials = getCredentialsFromAppAttempt(appAttempt);
-      ApplicationAttemptState attemptState =
-          new ApplicationAttemptState(appAttempt.getAppAttemptId(),
-            appAttempt.getMasterContainer(), credentials,
-            appAttempt.getStartTime(), 0, 0);
-      appState.attempts.put(attemptState.getAttemptId(), attemptState);
+      appState.attempts.put(appAttempt.getAppAttemptId(), null);
     }
     
     dispatcher.getEventHandler().handle(new RMStateStoreRemoveAppEvent(appState));
@@ -782,7 +626,7 @@ public abstract class RMStateStore extends AbstractService {
    * application and its attempts
    */
   protected abstract void removeApplicationStateInternal(
-      ApplicationState appState) throws Exception;
+      ApplicationStateData appState) throws Exception;
 
   // TODO: This should eventually become cluster-Id + "AM_RM_TOKEN_SERVICE". See
   // YARN-1779

@@ -25,8 +25,6 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataInputByteBuffer;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -93,57 +91,30 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  public void storeApplicationStateInternal(ApplicationId appId,
-                                     ApplicationStateData appStateData)
+  public void storeApplicationStateInternal(
+      ApplicationId appId, ApplicationStateData appState)
       throws Exception {
-    ApplicationState appState =
-        new ApplicationState(appStateData.getSubmitTime(),
-          appStateData.getStartTime(),
-          appStateData.getApplicationSubmissionContext(),
-          appStateData.getUser());
     state.appState.put(appId, appState);
   }
 
   @Override
   public void updateApplicationStateInternal(ApplicationId appId,
-      ApplicationStateData appStateData) throws Exception {
-    ApplicationState updatedAppState =
-        new ApplicationState(appStateData.getSubmitTime(),
-          appStateData.getStartTime(),
-          appStateData.getApplicationSubmissionContext(),
-          appStateData.getUser(), appStateData.getState(),
-          appStateData.getDiagnostics(), appStateData.getFinishTime());
-    LOG.info("Updating final state " + appStateData.getState() + " for app: "
+      ApplicationStateData appState) throws Exception {
+    LOG.info("Updating final state " + appState.getState() + " for app: "
         + appId);
     if (state.appState.get(appId) != null) {
       // add the earlier attempts back
-      updatedAppState.attempts
-        .putAll(state.appState.get(appId).attempts);
+      appState.attempts.putAll(state.appState.get(appId).attempts);
     }
-    state.appState.put(appId, updatedAppState);
+    state.appState.put(appId, appState);
   }
 
   @Override
   public synchronized void storeApplicationAttemptStateInternal(
       ApplicationAttemptId appAttemptId,
-      ApplicationAttemptStateData attemptStateData)
+      ApplicationAttemptStateData attemptState)
       throws Exception {
-    Credentials credentials = null;
-    if(attemptStateData.getAppAttemptTokens() != null){
-      DataInputByteBuffer dibb = new DataInputByteBuffer();
-      credentials = new Credentials();
-      dibb.reset(attemptStateData.getAppAttemptTokens());
-      credentials.readTokenStorageStream(dibb);
-    }
-    ApplicationAttemptState attemptState =
-        new ApplicationAttemptState(appAttemptId,
-          attemptStateData.getMasterContainer(), credentials,
-          attemptStateData.getStartTime(),
-          attemptStateData.getMemorySeconds(),
-          attemptStateData.getVcoreSeconds());
-
-
-    ApplicationState appState = state.getApplicationState().get(
+    ApplicationStateData appState = state.getApplicationState().get(
         attemptState.getAttemptId().getApplicationId());
     if (appState == null) {
       throw new YarnRuntimeException("Application doesn't exist");
@@ -154,44 +125,25 @@ public class MemoryRMStateStore extends RMStateStore {
   @Override
   public synchronized void updateApplicationAttemptStateInternal(
       ApplicationAttemptId appAttemptId,
-      ApplicationAttemptStateData attemptStateData)
+      ApplicationAttemptStateData attemptState)
       throws Exception {
-    Credentials credentials = null;
-    if (attemptStateData.getAppAttemptTokens() != null) {
-      DataInputByteBuffer dibb = new DataInputByteBuffer();
-      credentials = new Credentials();
-      dibb.reset(attemptStateData.getAppAttemptTokens());
-      credentials.readTokenStorageStream(dibb);
-    }
-    ApplicationAttemptState updatedAttemptState =
-        new ApplicationAttemptState(appAttemptId,
-          attemptStateData.getMasterContainer(), credentials,
-          attemptStateData.getStartTime(), attemptStateData.getState(),
-          attemptStateData.getFinalTrackingUrl(),
-          attemptStateData.getDiagnostics(),
-          attemptStateData.getFinalApplicationStatus(),
-          attemptStateData.getAMContainerExitStatus(),
-          attemptStateData.getFinishTime(),
-          attemptStateData.getMemorySeconds(),
-          attemptStateData.getVcoreSeconds());
-
-    ApplicationState appState =
-        state.getApplicationState().get(
-          updatedAttemptState.getAttemptId().getApplicationId());
+    ApplicationStateData appState =
+        state.getApplicationState().get(appAttemptId.getApplicationId());
     if (appState == null) {
       throw new YarnRuntimeException("Application doesn't exist");
     }
-    LOG.info("Updating final state " + updatedAttemptState.getState()
-        + " for attempt: " + updatedAttemptState.getAttemptId());
-    appState.attempts.put(updatedAttemptState.getAttemptId(),
-      updatedAttemptState);
+    LOG.info("Updating final state " + attemptState.getState()
+        + " for attempt: " + attemptState.getAttemptId());
+    appState.attempts.put(attemptState.getAttemptId(), attemptState);
   }
 
   @Override
   public synchronized void removeApplicationStateInternal(
-      ApplicationState appState) throws Exception {
-    ApplicationId appId = appState.getAppId();
-    ApplicationState removed = state.appState.remove(appId);
+      ApplicationStateData appState) throws Exception {
+    ApplicationId appId =
+        appState.getApplicationSubmissionContext().getApplicationId();
+    ApplicationStateData removed = state.appState.remove(appId);
+
     if (removed == null) {
       throw new YarnRuntimeException("Removing non-exsisting application state");
     }

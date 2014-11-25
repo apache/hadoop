@@ -18,14 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery.records;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationStateDataProto;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -36,6 +38,9 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Unstable
 public abstract class ApplicationStateData {
+  public Map<ApplicationAttemptId, ApplicationAttemptStateData> attempts =
+      new HashMap<ApplicationAttemptId, ApplicationAttemptStateData>();
+  
   public static ApplicationStateData newInstance(long submitTime,
       long startTime, String user,
       ApplicationSubmissionContext submissionContext,
@@ -51,12 +56,18 @@ public abstract class ApplicationStateData {
     return appState;
   }
 
-  public static ApplicationStateData newInstance(
-      ApplicationState appState) {
-    return newInstance(appState.getSubmitTime(), appState.getStartTime(),
-        appState.getUser(), appState.getApplicationSubmissionContext(),
-        appState.getState(), appState.getDiagnostics(),
-        appState.getFinishTime());
+  public static ApplicationStateData newInstance(long submitTime,
+      long startTime, ApplicationSubmissionContext context, String user) {
+    return newInstance(submitTime, startTime, user, context, null, "", 0);
+  }
+  
+  public int getAttemptCount() {
+    return attempts.size();
+  }
+
+  public ApplicationAttemptStateData getAttempt(
+      ApplicationAttemptId  attemptId) {
+    return attempts.get(attemptId);
   }
 
   public abstract ApplicationStateDataProto getProto();

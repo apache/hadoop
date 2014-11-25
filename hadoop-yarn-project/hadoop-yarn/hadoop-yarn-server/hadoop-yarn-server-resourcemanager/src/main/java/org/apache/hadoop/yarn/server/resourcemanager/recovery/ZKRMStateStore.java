@@ -34,8 +34,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataInputByteBuffer;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil;
@@ -562,17 +560,11 @@ public class ZKRMStateStore extends RMStateStore {
           LOG.debug("Loading application from znode: " + childNodeName);
         }
         ApplicationId appId = ConverterUtils.toApplicationId(childNodeName);
-        ApplicationStateDataPBImpl appStateData =
+        ApplicationStateDataPBImpl appState =
             new ApplicationStateDataPBImpl(
                 ApplicationStateDataProto.parseFrom(childData));
-        ApplicationState appState =
-            new ApplicationState(appStateData.getSubmitTime(),
-              appStateData.getStartTime(),
-              appStateData.getApplicationSubmissionContext(),
-              appStateData.getUser(),
-              appStateData.getState(),
-              appStateData.getDiagnostics(), appStateData.getFinishTime());
-        if (!appId.equals(appState.context.getApplicationId())) {
+        if (!appId.equals(
+            appState.getApplicationSubmissionContext().getApplicationId())) {
           throw new YarnRuntimeException("The child node name is different " +
               "from the application id");
         }
@@ -584,7 +576,7 @@ public class ZKRMStateStore extends RMStateStore {
     }
   }
 
-  private void loadApplicationAttemptState(ApplicationState appState,
+  private void loadApplicationAttemptState(ApplicationStateData appState,
       ApplicationId appId)
       throws Exception {
     String appPath = getNodePath(rmAppRoot, appId.toString());
@@ -594,31 +586,9 @@ public class ZKRMStateStore extends RMStateStore {
         String attemptPath = getNodePath(appPath, attemptIDStr);
         byte[] attemptData = getDataWithRetries(attemptPath, true);
 
-        ApplicationAttemptId attemptId =
-            ConverterUtils.toApplicationAttemptId(attemptIDStr);
-        ApplicationAttemptStateDataPBImpl attemptStateData =
+        ApplicationAttemptStateDataPBImpl attemptState =
             new ApplicationAttemptStateDataPBImpl(
                 ApplicationAttemptStateDataProto.parseFrom(attemptData));
-        Credentials credentials = null;
-        if (attemptStateData.getAppAttemptTokens() != null) {
-          credentials = new Credentials();
-          DataInputByteBuffer dibb = new DataInputByteBuffer();
-          dibb.reset(attemptStateData.getAppAttemptTokens());
-          credentials.readTokenStorageStream(dibb);
-        }
-
-        ApplicationAttemptState attemptState =
-            new ApplicationAttemptState(attemptId,
-              attemptStateData.getMasterContainer(), credentials,
-              attemptStateData.getStartTime(), attemptStateData.getState(),
-              attemptStateData.getFinalTrackingUrl(),
-              attemptStateData.getDiagnostics(),
-              attemptStateData.getFinalApplicationStatus(),
-              attemptStateData.getAMContainerExitStatus(),
-              attemptStateData.getFinishTime(),
-              attemptStateData.getMemorySeconds(),
-              attemptStateData.getVcoreSeconds());
-
 
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
@@ -705,9 +675,11 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void removeApplicationStateInternal(ApplicationState appState)
+  public synchronized void removeApplicationStateInternal(
+      ApplicationStateData  appState)
       throws Exception {
-    String appId = appState.getAppId().toString();
+    String appId = appState.getApplicationSubmissionContext().getApplicationId()
+        .toString();
     String appIdRemovePath = getNodePath(rmAppRoot, appId);
     ArrayList<Op> opList = new ArrayList<Op>();
 
