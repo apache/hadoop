@@ -105,6 +105,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11322. key based ACL check in KMS always check KeyOpType.MANAGEMENT
     even actual KeyOpType is not MANAGEMENT. (Dian Fu via yliu)
 
+    HADOOP-11300. KMS startup scripts must not display the keystore /
+    truststore passwords. (Arun Suresh via wang)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

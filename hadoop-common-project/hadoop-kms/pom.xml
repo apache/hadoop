@@ -397,8 +397,8 @@
                     <delete file="${kms.tomcat.dist.dir}/conf/server.xml"/>
                     <copy file="${basedir}/src/main/tomcat/server.xml"
                           toDir="${kms.tomcat.dist.dir}/conf"/>
-                    <delete file="${kms.tomcat.dist.dir}/conf/ssl-server.xml"/>
-                    <copy file="${basedir}/src/main/tomcat/ssl-server.xml"
+                    <delete file="${kms.tomcat.dist.dir}/conf/ssl-server.xml.conf"/>
+                    <copy file="${basedir}/src/main/tomcat/ssl-server.xml.conf"
                           toDir="${kms.tomcat.dist.dir}/conf"/>
                     <delete
                       file="${kms.tomcat.dist.dir}/conf/logging.properties"/>

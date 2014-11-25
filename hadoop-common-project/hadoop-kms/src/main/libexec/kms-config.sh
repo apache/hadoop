@@ -152,9 +152,10 @@ fi
 
 if [ "${KMS_SSL_KEYSTORE_PASS}" = "" ]; then
   export KMS_SSL_KEYSTORE_PASS=password
-  print "Setting KMS_SSL_KEYSTORE_PASS:     ${KMS_SSL_KEYSTORE_PASS}"
+  print "Setting KMS_SSL_KEYSTORE_PASS:     ********"
 else
-  print "Using   KMS_SSL_KEYSTORE_PASS:     ${KMS_SSL_KEYSTORE_PASS}"
+  KMS_SSL_KEYSTORE_PASS_DISP=`echo ${KMS_SSL_KEYSTORE_PASS} | sed 's/./*/g'`
+  print "Using   KMS_SSL_KEYSTORE_PASS:     ${KMS_SSL_KEYSTORE_PASS_DISP}"
 fi
 
 if [ "${CATALINA_BASE}" = "" ]; then
