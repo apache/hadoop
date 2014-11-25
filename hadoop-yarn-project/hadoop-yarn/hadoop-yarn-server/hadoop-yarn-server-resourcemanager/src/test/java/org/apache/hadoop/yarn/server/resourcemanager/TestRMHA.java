@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFencedException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -459,7 +460,8 @@ public class TestRMHA {
 
     MemoryRMStateStore memStore = new MemoryRMStateStore() {
       @Override
-      public synchronized void updateApplicationState(ApplicationState appState) {
+      public synchronized void updateApplicationState(
+          ApplicationStateData appState) {
         notifyStoreOperationFailed(new StoreFencedException());
       }
     };

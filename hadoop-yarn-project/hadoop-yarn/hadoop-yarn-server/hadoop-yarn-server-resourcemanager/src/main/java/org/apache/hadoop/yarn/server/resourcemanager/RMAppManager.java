@@ -40,9 +40,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -306,11 +306,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
   }
 
-  protected void recoverApplication(ApplicationState appState, RMState rmState)
-      throws Exception {
+  protected void recoverApplication(ApplicationStateData appState,
+      RMState rmState) throws Exception {
     ApplicationSubmissionContext appContext =
         appState.getApplicationSubmissionContext();
-    ApplicationId appId = appState.getAppId();
+    ApplicationId appId = appContext.getApplicationId();
 
     // create and recover app.
     RMAppImpl application =
@@ -414,9 +414,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     RMStateStore store = rmContext.getStateStore();
     assert store != null;
     // recover applications
-    Map<ApplicationId, ApplicationState> appStates = state.getApplicationState();
+    Map<ApplicationId, ApplicationStateData> appStates =
+        state.getApplicationState();
     LOG.info("Recovering " + appStates.size() + " applications");
-    for (ApplicationState appState : appStates.values()) {
+    for (ApplicationStateData appState : appStates.values()) {
       recoverApplication(appState, state);
     }
   }

@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -70,9 +69,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -793,9 +792,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   @Override
   public void recover(RMState state) {
-    ApplicationState appState =
+    ApplicationStateData appState =
         state.getApplicationState().get(getAppAttemptId().getApplicationId());
-    ApplicationAttemptState attemptState =
+    ApplicationAttemptStateData attemptState =
         appState.getAttempt(getAppAttemptId());
     assert attemptState != null;
     LOG.info("Recovering attempt: " + getAppAttemptId() + " with final state: "
@@ -806,9 +805,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     if (amContainerExitStatus == ContainerExitStatus.PREEMPTED) {
       this.attemptMetrics.setIsPreempted();
     }
+
+    Credentials credentials = attemptState.getAppAttemptTokens();
     setMasterContainer(attemptState.getMasterContainer());
-    recoverAppAttemptCredentials(attemptState.getAppAttemptCredentials(),
-        attemptState.getState());
+    recoverAppAttemptCredentials(credentials, attemptState.getState());
     this.recoveredFinalState = attemptState.getState();
     this.originalTrackingUrl = attemptState.getFinalTrackingUrl();
     this.proxiedTrackingUrl = generateProxyUriWithScheme(originalTrackingUrl);
@@ -1123,10 +1123,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         this.attemptMetrics.getAggregateAppResourceUsage();
     RMStateStore rmStore = rmContext.getStateStore();
     setFinishTime(System.currentTimeMillis());
-    ApplicationAttemptState attemptState =
-        new ApplicationAttemptState(applicationAttemptId, getMasterContainer(),
-          rmStore.getCredentialsFromAppAttempt(this), startTime,
-          stateToBeStored, finalTrackingUrl, diags, finalStatus, exitStatus,
+
+    ApplicationAttemptStateData attemptState =
+        ApplicationAttemptStateData.newInstance(
+            applicationAttemptId,  getMasterContainer(),
+            rmStore.getCredentialsFromAppAttempt(this),
+            startTime, stateToBeStored, finalTrackingUrl, diags,
+            finalStatus, exitStatus,
           getFinishTime(), resUsage.getMemorySeconds(),
           resUsage.getVcoreSeconds());
     LOG.info("Updating application attempt " + applicationAttemptId

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.doReturn;
@@ -62,7 +63,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -326,11 +326,13 @@ public class TestRMAppTransitions {
   }
 
   private void assertAppFinalStateSaved(RMApp application){
-    verify(store, times(1)).updateApplicationState(any(ApplicationState.class));
+    verify(store, times(1)).updateApplicationState(
+        any(ApplicationStateData.class));
   }
 
   private void assertAppFinalStateNotSaved(RMApp application){
-    verify(store, times(0)).updateApplicationState(any(ApplicationState.class));
+    verify(store, times(0)).updateApplicationState(
+        any(ApplicationStateData.class));
   }
 
   private void assertKilled(RMApp application) {
@@ -395,10 +397,12 @@ public class TestRMAppTransitions {
     RMApp application = createNewTestApp(submissionContext);
     // NEW => SUBMITTED event RMAppEventType.RECOVER
     RMState state = new RMState();
-    ApplicationState appState = new ApplicationState(123, 123, null, "user");
+    ApplicationStateData appState =
+        ApplicationStateData.newInstance(123, 123, null, "user");
     state.getApplicationState().put(application.getApplicationId(), appState);
     RMAppEvent event =
         new RMAppRecoverEvent(application.getApplicationId(), state);
+
 
     application.handle(event);
     assertStartTimeSet(application);
@@ -946,22 +950,25 @@ public class TestRMAppTransitions {
   @Test(timeout = 30000)
   public void testAppsRecoveringStates() throws Exception {
     RMState state = new RMState();
-    Map<ApplicationId, ApplicationState> applicationState =
+    Map<ApplicationId, ApplicationStateData> applicationState =
         state.getApplicationState();
     createRMStateForApplications(applicationState, RMAppState.FINISHED);
     createRMStateForApplications(applicationState, RMAppState.KILLED);
     createRMStateForApplications(applicationState, RMAppState.FAILED);
-    for (ApplicationState appState : applicationState.values()) {
+    for (ApplicationStateData appState : applicationState.values()) {
       testRecoverApplication(appState, state);
     }
   }
   
-  public void testRecoverApplication(ApplicationState appState, RMState rmState)
+  public void testRecoverApplication(ApplicationStateData appState,
+      RMState rmState)
       throws Exception {
     ApplicationSubmissionContext submissionContext =
         appState.getApplicationSubmissionContext();
     RMAppImpl application =
-        new RMAppImpl(appState.getAppId(), rmContext, conf,
+        new RMAppImpl(
+            appState.getApplicationSubmissionContext().getApplicationId(),
+            rmContext, conf,
             submissionContext.getApplicationName(), null,
             submissionContext.getQueue(), submissionContext, null, null,
             appState.getSubmitTime(), submissionContext.getApplicationType(),
@@ -986,12 +993,12 @@ public class TestRMAppTransitions {
   }
   
   public void createRMStateForApplications(
-      Map<ApplicationId, ApplicationState> applicationState,
+      Map<ApplicationId, ApplicationStateData> applicationState,
       RMAppState rmAppState) {
     RMApp app = createNewTestApp(null);
-    ApplicationState appState =
-        new ApplicationState(app.getSubmitTime(), app.getStartTime(),
-            app.getApplicationSubmissionContext(), app.getUser(), rmAppState,
+    ApplicationStateData appState =
+        ApplicationStateData.newInstance(app.getSubmitTime(), app.getStartTime(),
+            app.getUser(), app.getApplicationSubmissionContext(), rmAppState,
             null, app.getFinishTime());
     applicationState.put(app.getApplicationId(), appState);
   }
