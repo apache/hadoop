@@ -258,8 +258,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RetryCache;
-import org.apache.hadoop.ipc.RetryCache.CacheEntry;
-import org.apache.hadoop.ipc.RetryCache.CacheEntryWithPayload;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -342,8 +340,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private HdfsFileStatus getAuditFileInfo(String path, boolean resolveSymlink)
       throws IOException {
-    return (isAuditEnabled() && isExternalInvocation())
-        ? dir.getFileInfo(path, resolveSymlink, false, false) : null;
+    return dir.getAuditFileInfo(path, resolveSymlink);
   }
   
   private void logAuditEvent(boolean succeeded, String cmd, String src)
@@ -404,7 +401,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   static int BLOCK_DELETION_INCREMENT = 1000;
   private final boolean isPermissionEnabled;
   private final UserGroupInformation fsOwner;
-  private final String fsOwnerShortUserName;
   private final String supergroup;
   private final boolean standbyShouldCheckpoint;
   
@@ -527,7 +523,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private volatile boolean startingActiveService = false;
     
   private INodeId inodeId;
-  
+
   private final RetryCache retryCache;
 
   private final NNConf nnConf;
@@ -777,7 +773,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                           DFS_STORAGE_POLICY_ENABLED_DEFAULT);
 
       this.fsOwner = UserGroupInformation.getCurrentUser();
-      this.fsOwnerShortUserName = fsOwner.getShortUserName();
       this.supergroup = conf.get(DFS_PERMISSIONS_SUPERUSERGROUP_KEY, 
                                  DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
       this.isPermissionEnabled = conf.getBoolean(DFS_PERMISSIONS_ENABLED_KEY,
@@ -1706,7 +1701,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set permission for " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkOwner(pc, src);
       dir.setPermission(src, permission);
       getEditLog().logSetPermissions(src, permission);
@@ -1745,7 +1740,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set owner for " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkOwner(pc, src);
       if (!pc.isSuperUser()) {
         if (username != null && !pc.getUser().equals(username)) {
@@ -1862,7 +1857,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         writeLock(); // writelock is needed to set accesstime
       }
       try {
-        src = resolvePath(src, pathComponents);
+        src = dir.resolvePath(pc, src, pathComponents);
         if (isReadOp) {
           checkOperation(OperationCategory.READ);
         } else {
@@ -1945,186 +1940,27 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param srcs file that will be concatenated
    * @throws IOException on error
    */
-  void concat(String target, String [] srcs) 
-      throws IOException, UnresolvedLinkException {
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
-    
-    // Either there is no previous request in progress or it has failed
-    if(FSNamesystem.LOG.isDebugEnabled()) {
-      FSNamesystem.LOG.debug("concat " + Arrays.toString(srcs) +
-          " to " + target);
-    }
-    
-    boolean success = false;
-    try {
-      concatInt(target, srcs, cacheEntry != null);
-      success = true;
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "concat", Arrays.toString(srcs), target, null);
-      throw e;
-    } finally {
-      RetryCache.setState(cacheEntry, success);
-    }
-  }
-
-  private void concatInt(String target, String [] srcs, 
-      boolean logRetryCache) throws IOException, UnresolvedLinkException {
-    // verify args
-    if(target.isEmpty()) {
-      throw new IllegalArgumentException("Target file name is empty");
-    }
-    if(srcs == null || srcs.length == 0) {
-      throw new IllegalArgumentException("No sources given");
-    }
-    
-    // We require all files be in the same directory
-    String trgParent = 
-      target.substring(0, target.lastIndexOf(Path.SEPARATOR_CHAR));
-    for (String s : srcs) {
-      String srcParent = s.substring(0, s.lastIndexOf(Path.SEPARATOR_CHAR));
-      if (!srcParent.equals(trgParent)) {
-        throw new IllegalArgumentException(
-           "Sources and target are not in the same directory");
-      }
-    }
-
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+  void concat(String target, String [] srcs, boolean logRetryCache)
+      throws IOException {
     checkOperation(OperationCategory.WRITE);
     waitForLoadingFSImage();
+    HdfsFileStatus stat = null;
+    boolean success = false;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot concat " + target);
-      concatInternal(pc, target, srcs, logRetryCache);
-      resultingStat = getAuditFileInfo(target, false);
+      stat = FSDirConcatOp.concat(dir, target, srcs, logRetryCache);
+      success = true;
     } finally {
       writeUnlock();
+      if (success) {
+        getEditLog().logSync();
+      }
+      logAuditEvent(success, "concat", Arrays.toString(srcs), target, stat);
     }
-    getEditLog().logSync();
-    logAuditEvent(true, "concat", Arrays.toString(srcs), target, resultingStat);
   }
 
-  /** See {@link #concat(String, String[])} */
-  private void concatInternal(FSPermissionChecker pc, String target,
-      String[] srcs, boolean logRetryCache) throws IOException,
-      UnresolvedLinkException {
-    assert hasWriteLock();
-
-    // write permission for the target
-    if (isPermissionEnabled) {
-      checkPathAccess(pc, target, FsAction.WRITE);
-
-      // and srcs
-      for(String aSrc: srcs) {
-        checkPathAccess(pc, aSrc, FsAction.READ); // read the file
-        checkParentAccess(pc, aSrc, FsAction.WRITE); // for delete 
-      }
-    }
-
-    // to make sure no two files are the same
-    Set<INode> si = new HashSet<INode>();
-
-    // we put the following prerequisite for the operation
-    // replication and blocks sizes should be the same for ALL the blocks
-
-    // check the target
-    final INodesInPath trgIip = dir.getINodesInPath4Write(target);
-    if (dir.getEZForPath(trgIip) != null) {
-      throw new HadoopIllegalArgumentException(
-          "concat can not be called for files in an encryption zone.");
-    }
-    final INodeFile trgInode = INodeFile.valueOf(trgIip.getLastINode(),
-        target);
-    if(trgInode.isUnderConstruction()) {
-      throw new HadoopIllegalArgumentException("concat: target file "
-          + target + " is under construction");
-    }
-    // per design target shouldn't be empty and all the blocks same size
-    if(trgInode.numBlocks() == 0) {
-      throw new HadoopIllegalArgumentException("concat: target file "
-          + target + " is empty");
-    }
-    if (trgInode.isWithSnapshot()) {
-      throw new HadoopIllegalArgumentException("concat: target file "
-          + target + " is in a snapshot");
-    }
-
-    long blockSize = trgInode.getPreferredBlockSize();
-
-    // check the end block to be full
-    final BlockInfo last = trgInode.getLastBlock();
-    if(blockSize != last.getNumBytes()) {
-      throw new HadoopIllegalArgumentException("The last block in " + target
-          + " is not full; last block size = " + last.getNumBytes()
-          + " but file block size = " + blockSize);
-    }
-
-    si.add(trgInode);
-    final short repl = trgInode.getFileReplication();
-
-    // now check the srcs
-    boolean endSrc = false; // final src file doesn't have to have full end block
-    for(int i=0; i<srcs.length; i++) {
-      String src = srcs[i];
-      if(i==srcs.length-1)
-        endSrc=true;
-
-      final INodeFile srcInode = INodeFile.valueOf(dir.getINode4Write(src), src);
-      if(src.isEmpty() 
-          || srcInode.isUnderConstruction()
-          || srcInode.numBlocks() == 0) {
-        throw new HadoopIllegalArgumentException("concat: source file " + src
-            + " is invalid or empty or underConstruction");
-      }
-
-      // check replication and blocks size
-      if(repl != srcInode.getBlockReplication()) {
-        throw new HadoopIllegalArgumentException("concat: the source file "
-            + src + " and the target file " + target
-            + " should have the same replication: source replication is "
-            + srcInode.getBlockReplication()
-            + " but target replication is " + repl);
-      }
-
-      //boolean endBlock=false;
-      // verify that all the blocks are of the same length as target
-      // should be enough to check the end blocks
-      final BlockInfo[] srcBlocks = srcInode.getBlocks();
-      int idx = srcBlocks.length-1;
-      if(endSrc)
-        idx = srcBlocks.length-2; // end block of endSrc is OK not to be full
-      if(idx >= 0 && srcBlocks[idx].getNumBytes() != blockSize) {
-        throw new HadoopIllegalArgumentException("concat: the source file "
-            + src + " and the target file " + target
-            + " should have the same blocks sizes: target block size is "
-            + blockSize + " but the size of source block " + idx + " is "
-            + srcBlocks[idx].getNumBytes());
-      }
-
-      si.add(srcInode);
-    }
-
-    // make sure no two files are the same
-    if(si.size() < srcs.length+1) { // trg + srcs
-      // it means at least two files are the same
-      throw new HadoopIllegalArgumentException(
-          "concat: at least two of the source files are the same");
-    }
-
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.concat: " + 
-          Arrays.toString(srcs) + " to " + target);
-    }
-
-    long timestamp = now();
-    dir.concat(target, srcs, timestamp);
-    getEditLog().logConcat(target, srcs, timestamp, logRetryCache);
-  }
-  
   /**
    * stores the modification and access time for this inode. 
    * The access time is precise up to an hour. The transaction, if needed, is
@@ -2155,7 +1991,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set times " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
 
       // Write access is required to set access and modification times
       if (isPermissionEnabled) {
@@ -2183,7 +2019,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Create a symbolic link.
    */
   void createSymlink(String target, String link,
-      PermissionStatus dirPerms, boolean createParent) 
+      PermissionStatus dirPerms, boolean createParent, boolean logRetryCache)
       throws IOException, UnresolvedLinkException {
     if (!DFSUtil.isValidName(link)) {
       throw new InvalidPathException("Invalid link name: " + link);
@@ -2191,19 +2027,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (FSDirectory.isReservedName(target)) {
       throw new InvalidPathException("Invalid target name: " + target);
     }
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
+
     boolean success = false;
     try {
-      createSymlinkInt(target, link, dirPerms, createParent, cacheEntry != null);
+      createSymlinkInt(target, link, dirPerms, createParent, logRetryCache);
       success = true;
     } catch (AccessControlException e) {
       logAuditEvent(false, "createSymlink", link, target, null);
       throw e;
-    } finally {
-      RetryCache.setState(cacheEntry, success);
     }
   }
 
@@ -2223,7 +2054,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create symlink " + link);
-      link = resolvePath(link, pathComponents);
+      link = dir.resolvePath(pc, link, pathComponents);
       if (!createParent) {
         verifyParentDir(link);
       }
@@ -2283,7 +2114,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set replication for " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       if (isPermissionEnabled) {
         checkPathAccess(pc, src, FsAction.WRITE);
       }
@@ -2390,7 +2221,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      filename = resolvePath(filename, pathComponents);
+      filename = dir.resolvePath(pc, filename, pathComponents);
       if (isPermissionEnabled) {
         checkTraverse(pc, filename);
       }
@@ -2491,26 +2322,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   HdfsFileStatus startFile(String src, PermissionStatus permissions,
       String holder, String clientMachine, EnumSet<CreateFlag> flag,
       boolean createParent, short replication, long blockSize, 
-      CryptoProtocolVersion[] supportedVersions)
+      CryptoProtocolVersion[] supportedVersions, boolean logRetryCache)
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, UnresolvedLinkException,
       FileNotFoundException, ParentNotDirectoryException, IOException {
+
     HdfsFileStatus status = null;
-    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
-        null);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (HdfsFileStatus) cacheEntry.getPayload();
-    }
-    
     try {
       status = startFileInt(src, permissions, holder, clientMachine, flag,
           createParent, replication, blockSize, supportedVersions,
-          cacheEntry != null);
+          logRetryCache);
     } catch (AccessControlException e) {
       logAuditEvent(false, "create", src);
       throw e;
-    } finally {
-      RetryCache.setState(cacheEntry, status != null, status);
     }
     return status;
   }
@@ -2582,7 +2406,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (provider != null) {
       readLock();
       try {
-        src = resolvePath(src, pathComponents);
+        src = dir.resolvePath(pc, src, pathComponents);
         INodesInPath iip = dir.getINodesInPath4Write(src);
         // Nothing to do if the path is not within an EZ
         final EncryptionZone zone = dir.getEZForPath(iip);
@@ -2618,7 +2442,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create file" + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       toRemoveBlocks = startFileInternal(pc, src, permissions, holder, 
           clientMachine, create, overwrite, createParent, replication, 
           blockSize, isLazyPersist, suite, protocolVersion, edek, logRetryCache);
@@ -2934,7 +2758,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot recover the lease of " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       final INodeFile inode = INodeFile.valueOf(dir.getINode(src), src);
       if (!inode.isUnderConstruction()) {
         return true;
@@ -3037,27 +2861,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Append to an existing file in the namespace.
    */
-  LocatedBlock appendFile(String src, String holder, String clientMachine)
-      throws AccessControlException, SafeModeException,
-      FileAlreadyExistsException, FileNotFoundException,
-      ParentNotDirectoryException, IOException {
-    LocatedBlock lb = null;
-    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
-        null);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (LocatedBlock) cacheEntry.getPayload();
-    }
-      
-    boolean success = false;
+  LocatedBlock appendFile(
+      String src, String holder, String clientMachine, boolean logRetryCache)
+      throws IOException {
     try {
-      lb = appendFileInt(src, holder, clientMachine, cacheEntry != null);
-      success = true;
-      return lb;
+      return appendFileInt(src, holder, clientMachine, logRetryCache);
     } catch (AccessControlException e) {
       logAuditEvent(false, "append", src);
       throw e;
-    } finally {
-      RetryCache.setState(cacheEntry, success, lb);
     }
   }
 
@@ -3081,7 +2892,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot append to file" + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       lb = appendFileInternal(pc, src, holder, clientMachine, logRetryCache);
     } catch (StandbyException se) {
       skipSync = true;
@@ -3146,10 +2957,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // Part I. Analyze the state of the file with respect to the input data.
     checkOperation(OperationCategory.READ);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       LocatedBlock[] onRetryBlock = new LocatedBlock[1];
       FileState fileState = analyzeFileState(
           src, fileId, clientName, previous, onRetryBlock);
@@ -3394,12 +3206,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final List<DatanodeStorageInfo> chosen;
     checkOperation(OperationCategory.READ);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
       //check safe mode
       checkNameNodeSafeMode("Cannot add datanode; src=" + src + ", blk=" + blk);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
 
       //check lease
       final INode inode;
@@ -3450,12 +3263,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    FSPermissionChecker pc = getPermissionChecker();
     waitForLoadingFSImage();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot abandon block " + b + " for file" + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
 
       final INode inode;
       if (fileId == INodeId.GRANDFATHER_INODE_ID) {
@@ -3549,12 +3363,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = false;
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    FSPermissionChecker pc = getPermissionChecker();
     waitForLoadingFSImage();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot complete file " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       success = completeFileInternal(src, holder,
         ExtendedBlock.getLocalBlock(last), fileId);
     } finally {
@@ -3715,20 +3530,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @deprecated Use {@link #renameTo(String, String, Options.Rename...)} instead.
    */
   @Deprecated
-  boolean renameTo(String src, String dst) 
+  boolean renameTo(String src, String dst, boolean logRetryCache)
       throws IOException, UnresolvedLinkException {
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return true; // Return previous response
-    }
     boolean ret = false;
     try {
-      ret = renameToInt(src, dst, cacheEntry != null);
+      ret = renameToInt(src, dst, logRetryCache);
     } catch (AccessControlException e) {
       logAuditEvent(false, "rename", src, dst, null);
       throw e;
-    } finally {
-      RetryCache.setState(cacheEntry, ret);
     }
     return ret;
   }
@@ -3756,8 +3565,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot rename " + src);
       waitForLoadingFSImage();
-      src = resolvePath(src, srcComponents);
-      dst = resolvePath(dst, dstComponents);
+      src = dir.resolvePath(pc, src, srcComponents);
+      dst = dir.resolvePath(pc, dst, dstComponents);
       checkOperation(OperationCategory.WRITE);
       status = renameToInternal(pc, src, dst, logRetryCache);
       if (status) {
@@ -3773,7 +3582,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return status;
   }
 
-  /** @deprecated See {@link #renameTo(String, String)} */
+  /** @deprecated See {@link #renameTo(String, String, boolean)} */
   @Deprecated
   private boolean renameToInternal(FSPermissionChecker pc, String src,
       String dst, boolean logRetryCache) throws IOException,
@@ -3806,7 +3615,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   
 
   /** Rename src to dst */
-  void renameTo(final String srcArg, final String dstArg,
+  void renameTo(final String srcArg, final String dstArg, boolean logRetryCache,
       Options.Rename... options) throws IOException, UnresolvedLinkException {
     String src = srcArg;
     String dst = dstArg;
@@ -3820,28 +3629,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final FSPermissionChecker pc = getPermissionChecker();
     
     checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
+
     byte[][] srcComponents = FSDirectory.getPathComponentsForReservedPath(src);
     byte[][] dstComponents = FSDirectory.getPathComponentsForReservedPath(dst);
     HdfsFileStatus resultingStat = null;
-    boolean success = false;
     writeLock();
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot rename " + src);
-      src = resolvePath(src, srcComponents);
-      dst = resolvePath(dst, dstComponents);
-      renameToInternal(pc, src, dst, cacheEntry != null, 
-          collectedBlocks, options);
+      src = dir.resolvePath(pc, src, srcComponents);
+      dst = dir.resolvePath(pc, dst, dstComponents);
+      renameToInternal(pc, src, dst, logRetryCache, collectedBlocks, options);
       resultingStat = getAuditFileInfo(dst, false);
-      success = true;
     } finally {
       writeUnlock();
-      RetryCache.setState(cacheEntry, success);
     }
     getEditLog().logSync();
     if (!collectedBlocks.getToDeleteList().isEmpty()) {
@@ -3884,21 +3686,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @see ClientProtocol#delete(String, boolean) for detailed description and 
    * description of exceptions
    */
-  boolean delete(String src, boolean recursive)
+  boolean delete(String src, boolean recursive, boolean logRetryCache)
       throws AccessControlException, SafeModeException,
       UnresolvedLinkException, IOException {
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return true; // Return previous response
-    }
+
     boolean ret = false;
     try {
-      ret = deleteInt(src, recursive, cacheEntry != null);
+      ret = deleteInt(src, recursive, logRetryCache);
     } catch (AccessControlException e) {
       logAuditEvent(false, "delete", src);
       throw e;
-    } finally {
-      RetryCache.setState(cacheEntry, ret);
     }
     return ret;
   }
@@ -3918,11 +3715,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     
   private FSPermissionChecker getPermissionChecker()
       throws AccessControlException {
-    try {
-      return new FSPermissionChecker(fsOwnerShortUserName, supergroup, getRemoteUser());
-    } catch (IOException ioe) {
-      throw new AccessControlException(ioe);
-    }
+    return dir.getPermissionChecker();
   }
   
   /**
@@ -3952,7 +3745,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot delete " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       if (!recursive && dir.isNonEmptyDirectory(src)) {
         throw new PathIsNotEmptyDirectoryException(src + " is non empty");
       }
@@ -4121,7 +3914,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       boolean isSuperUser = true;
       if (isPermissionEnabled) {
         checkPermission(pc, src, false, null, null, null, null, false,
@@ -4152,7 +3945,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkOperation(OperationCategory.READ);
       if (isPermissionEnabled) {
         checkTraverse(pc, src);
@@ -4201,7 +3994,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);   
       checkNameNodeSafeMode("Cannot create directory " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       status = mkdirsInternal(pc, src, permissions, createParent);
       if (status) {
         resultingStat = getAuditFileInfo(src, false);
@@ -4378,7 +4171,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = true;
     try {
       checkOperation(OperationCategory.READ);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       if (isPermissionEnabled) {
         checkPermission(pc, src, false, null, null, null, FsAction.READ_EXECUTE);
       }
@@ -4435,12 +4228,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
 
+    FSPermissionChecker pc = getPermissionChecker();
     waitForLoadingFSImage();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot fsync file " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       final INode inode;
       if (fileId == INodeId.GRANDFATHER_INODE_ID) {
         // Older clients may not have given us an inode ID to work with.
@@ -4918,7 +4712,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
 
       // Get file name when startAfter is an INodePath
       if (FSDirectory.isReservedName(startAfterString)) {
@@ -5479,12 +5273,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void saveNamespace() throws AccessControlException, IOException {
     checkOperation(OperationCategory.UNCHECKED);
     checkSuperuserPrivilege();
-    
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
-    boolean success = false;
+
+
     readLock();
     try {
       checkOperation(OperationCategory.UNCHECKED);
@@ -5494,10 +5284,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             + "in order to create namespace image.");
       }
       getFSImage().saveNamespace(this);
-      success = true;
     } finally {
       readUnlock();
-      RetryCache.setState(cacheEntry, success);
     }
     LOG.info("New namespace image has been created");
   }
@@ -6227,26 +6015,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // Calculate number of blocks under construction
     long numUCBlocks = 0;
     readLock();
+    numUCBlocks = leaseManager.getNumUnderConstructionBlocks();
     try {
-      for (Lease lease : leaseManager.getSortedLeases()) {
-        for (String path : lease.getPaths()) {
-          final INodeFile cons;
-          try {
-            cons = dir.getINode(path).asFile();
-            Preconditions.checkState(cons.isUnderConstruction());
-          } catch (UnresolvedLinkException e) {
-            throw new AssertionError("Lease files should reside on this FS");
-          }
-          BlockInfo[] blocks = cons.getBlocks();
-          if(blocks == null)
-            continue;
-          for(BlockInfo b : blocks) {
-            if(!b.isComplete())
-              numUCBlocks++;
-          }
-        }
-      }
-      LOG.info("Number of blocks under construction: " + numUCBlocks);
       return getBlocksTotal() - numUCBlocks;
     } finally {
       readUnlock();
@@ -6346,24 +6116,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   NamenodeCommand startCheckpoint(NamenodeRegistration backupNode,
       NamenodeRegistration activeNamenode) throws IOException {
     checkOperation(OperationCategory.CHECKPOINT);
-    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
-        null);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (NamenodeCommand) cacheEntry.getPayload();
-    }
     writeLock();
-    NamenodeCommand cmd = null;
     try {
       checkOperation(OperationCategory.CHECKPOINT);
       checkNameNodeSafeMode("Checkpoint not started");
       
       LOG.info("Start checkpoint for " + backupNode.getAddress());
-      cmd = getFSImage().startCheckpoint(backupNode, activeNamenode);
+      NamenodeCommand cmd = getFSImage().startCheckpoint(backupNode,
+          activeNamenode);
       getEditLog().logSync();
       return cmd;
     } finally {
       writeUnlock();
-      RetryCache.setState(cacheEntry, cmd != null, cmd);
     }
   }
 
@@ -6381,22 +6145,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
     checkOperation(OperationCategory.CHECKPOINT);
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
-    boolean success = false;
     readLock();
     try {
       checkOperation(OperationCategory.CHECKPOINT);
-
       checkNameNodeSafeMode("Checkpoint not ended");
       LOG.info("End checkpoint for " + registration.getAddress());
       getFSImage().endCheckpoint(sig);
-      success = true;
     } finally {
       readUnlock();
-      RetryCache.setState(cacheEntry, success);
     }
   }
 
@@ -6406,13 +6162,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private void checkOwner(FSPermissionChecker pc, String path)
       throws AccessControlException, UnresolvedLinkException {
-    checkPermission(pc, path, true, null, null, null, null);
+    dir.checkOwner(pc, path);
   }
 
   private void checkPathAccess(FSPermissionChecker pc,
       String path, FsAction access) throws AccessControlException,
       UnresolvedLinkException {
-    checkPermission(pc, path, false, null, null, access, null);
+    dir.checkPathAccess(pc, path, access);
   }
 
   private void checkUnreadableBySuperuser(FSPermissionChecker pc,
@@ -6433,40 +6189,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private void checkParentAccess(FSPermissionChecker pc,
       String path, FsAction access) throws AccessControlException,
       UnresolvedLinkException {
-    checkPermission(pc, path, false, null, access, null, null);
+    dir.checkParentAccess(pc, path, access);
   }
 
   private void checkAncestorAccess(FSPermissionChecker pc,
       String path, FsAction access) throws AccessControlException,
       UnresolvedLinkException {
-    checkPermission(pc, path, false, access, null, null, null);
+    dir.checkAncestorAccess(pc, path, access);
   }
 
   private void checkTraverse(FSPermissionChecker pc, String path)
       throws AccessControlException, UnresolvedLinkException {
-    checkPermission(pc, path, false, null, null, null, null);
-  }
-
-  /**
-   * This is a wrapper for FSDirectory.resolvePath(). If the path passed
-   * is prefixed with /.reserved/raw, then it checks to ensure that the caller
-   * has super user privs.
-   *
-   * @param path The path to resolve.
-   * @param pathComponents path components corresponding to the path
-   * @return if the path indicates an inode, return path after replacing up to
-   *         <inodeid> with the corresponding path of the inode, else the path
-   *         in {@code src} as is. If the path refers to a path in the "raw"
-   *         directory, return the non-raw pathname.
-   * @throws FileNotFoundException
-   * @throws AccessControlException
-   */
-  private String resolvePath(String path, byte[][] pathComponents)
-      throws FileNotFoundException, AccessControlException {
-    if (FSDirectory.isReservedRawName(path)) {
-      checkSuperuserPrivilege();
-    }
-    return FSDirectory.resolvePath(path, pathComponents, dir);
+    dir.checkTraverse(pc, path);
   }
 
   @Override
@@ -6487,30 +6221,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       String path, boolean doCheckOwner, FsAction ancestorAccess,
       FsAction parentAccess, FsAction access, FsAction subAccess)
       throws AccessControlException, UnresolvedLinkException {
-        checkPermission(pc, path, doCheckOwner, ancestorAccess,
+    checkPermission(pc, path, doCheckOwner, ancestorAccess,
             parentAccess, access, subAccess, false, true);
   }
 
-  /**
-   * Check whether current user have permissions to access the path. For more
-   * details of the parameters, see
-   * {@link FSPermissionChecker#checkPermission}.
-   */
   private void checkPermission(FSPermissionChecker pc,
       String path, boolean doCheckOwner, FsAction ancestorAccess,
       FsAction parentAccess, FsAction access, FsAction subAccess,
       boolean ignoreEmptyDir, boolean resolveLink)
       throws AccessControlException, UnresolvedLinkException {
-    if (!pc.isSuperUser()) {
-      waitForLoadingFSImage();
-      readLock();
-      try {
-        pc.checkPermission(path, dir, doCheckOwner, ancestorAccess,
-            parentAccess, access, subAccess, ignoreEmptyDir, resolveLink);
-      } finally {
-        readUnlock();
-      }
-    }
+    dir.checkPermission(pc, path, doCheckOwner, ancestorAccess, parentAccess,
+        access, subAccess, ignoreEmptyDir, resolveLink);
   }
   
   /**
@@ -6875,14 +6596,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param newNodes datanodes in the pipeline
    * @throws IOException if any error occurs
    */
-  void updatePipeline(String clientName, ExtendedBlock oldBlock, 
-      ExtendedBlock newBlock, DatanodeID[] newNodes, String[] newStorageIDs)
+  void updatePipeline(
+      String clientName, ExtendedBlock oldBlock, ExtendedBlock newBlock,
+      DatanodeID[] newNodes, String[] newStorageIDs, boolean logRetryCache)
       throws IOException {
     checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
+
     LOG.info("updatePipeline(" + oldBlock.getLocalBlock()
              + ", newGS=" + newBlock.getGenerationStamp()
              + ", newLength=" + newBlock.getNumBytes()
@@ -6891,18 +6610,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
              + ")");
     waitForLoadingFSImage();
     writeLock();
-    boolean success = false;
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Pipeline not updated");
       assert newBlock.getBlockId()==oldBlock.getBlockId() : newBlock + " and "
         + oldBlock + " has different block identifier";
       updatePipelineInternal(clientName, oldBlock, newBlock, newNodes,
-          newStorageIDs, cacheEntry != null);
-      success = true;
+          newStorageIDs, logRetryCache);
     } finally {
       writeUnlock();
-      RetryCache.setState(cacheEntry, success);
     }
     getEditLog().logSync();
     LOG.info("updatePipeline(" + oldBlock.getLocalBlock() + " => "
@@ -7372,7 +7088,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Client invoked methods are invoked over RPC and will be in 
    * RPC call context even if the client exits.
    */
-  private boolean isExternalInvocation() {
+  boolean isExternalInvocation() {
     return Server.isRpcInvocation() || NamenodeWebHdfsMethods.isWebHdfsInvocation();
   }
 
@@ -7532,8 +7248,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("blockPoolUsedPercent", node.getBlockPoolUsedPercent())
           .put("volfails", node.getVolumeFailures())
           .build();
-
-      info.put(node.getHostName(), innerinfo);
+      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
     }
     return JSON.toString(info);
   }
@@ -7554,7 +7269,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("decommissioned", node.isDecommissioned())
           .put("xferaddr", node.getXferAddr())
           .build();
-      info.put(node.getHostName(), innerinfo);
+      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
     }
     return JSON.toString(info);
   }
@@ -7581,7 +7296,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("underReplicateInOpenFiles",
               node.decommissioningStatus.getUnderReplicatedInOpenFiles())
           .build();
-      info.put(node.getHostName(), innerinfo);
+      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
     }
     return JSON.toString(info);
   }
@@ -7898,15 +7613,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param snapshotRoot The directory path where the snapshot is taken
    * @param snapshotName The name of the snapshot
    */
-  String createSnapshot(String snapshotRoot, String snapshotName)
+  String createSnapshot(String snapshotRoot, String snapshotName,
+                        boolean logRetryCache)
       throws SafeModeException, IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
-        null);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (String) cacheEntry.getPayload();
-    }
+
     String snapshotPath = null;
     writeLock();
     try {
@@ -7932,11 +7644,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       } finally {
         dir.writeUnlock();
       }
-      getEditLog().logCreateSnapshot(snapshotRoot, snapshotName,
-          cacheEntry != null);
+      getEditLog().logCreateSnapshot(snapshotRoot, snapshotName, logRetryCache);
     } finally {
       writeUnlock();
-      RetryCache.setState(cacheEntry, snapshotPath != null, snapshotPath);
     }
     getEditLog().logSync();
     
@@ -7954,16 +7664,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws SafeModeException
    * @throws IOException 
    */
-  void renameSnapshot(String path, String snapshotOldName,
-      String snapshotNewName) throws SafeModeException, IOException {
+  void renameSnapshot(
+      String path, String snapshotOldName, String snapshotNewName,
+      boolean logRetryCache) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
+
     writeLock();
-    boolean success = false;
+
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot rename snapshot for " + path);
@@ -7974,11 +7682,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       
       snapshotManager.renameSnapshot(path, snapshotOldName, snapshotNewName);
       getEditLog().logRenameSnapshot(path, snapshotOldName, snapshotNewName,
-          cacheEntry != null);
-      success = true;
+          logRetryCache);
     } finally {
       writeUnlock();
-      RetryCache.setState(cacheEntry, success);
+
     }
     getEditLog().logSync();
     
@@ -8068,16 +7775,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws SafeModeException
    * @throws IOException
    */
-  void deleteSnapshot(String snapshotRoot, String snapshotName)
+  void deleteSnapshot(String snapshotRoot, String snapshotName,
+                      boolean logRetryCache)
       throws SafeModeException, IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
-    boolean success = false;
+
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     writeLock();
     try {
@@ -8097,12 +7800,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         dir.writeUnlock();
       }
       removedINodes.clear();
-      getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
-          cacheEntry != null);
-      success = true;
+      getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName, logRetryCache);
     } finally {
       writeUnlock();
-      RetryCache.setState(cacheEntry, success);
+
     }
     getEditLog().logSync();
 
@@ -8300,20 +8001,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return new RollingUpgradeInfo(blockPoolId, false, startTime, finalizeTime);
   }
 
-  long addCacheDirective(CacheDirectiveInfo directive, EnumSet<CacheFlag> flags)
+  long addCacheDirective(CacheDirectiveInfo directive,
+                         EnumSet<CacheFlag> flags, boolean logRetryCache)
       throws IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
-    CacheEntryWithPayload cacheEntry =
-        RetryCache.waitForCompletion(retryCache, null);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (Long) cacheEntry.getPayload();
-    }
-    boolean success = false;
+
     if (!flags.contains(CacheFlag.FORCE)) {
       cacheManager.waitForRescanIfNeeded();
     }
+    boolean success = false;
     writeLock();
     String effectiveDirectiveStr = null;
     Long result = null;
@@ -8329,8 +8027,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       CacheDirectiveInfo effectiveDirective =
           cacheManager.addDirective(directive, pc, flags);
-      getEditLog().logAddCacheDirectiveInfo(effectiveDirective,
-          cacheEntry != null);
+      getEditLog().logAddCacheDirectiveInfo(effectiveDirective, logRetryCache);
       result = effectiveDirective.getId();
       effectiveDirectiveStr = effectiveDirective.toString();
       success = true;
@@ -8342,21 +8039,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (isAuditEnabled() && isExternalInvocation()) {
         logAuditEvent(success, "addCacheDirective", effectiveDirectiveStr, null, null);
       }
-      RetryCache.setState(cacheEntry, success, result);
+
     }
     return result;
   }
 
   void modifyCacheDirective(CacheDirectiveInfo directive,
-      EnumSet<CacheFlag> flags) throws IOException {
+      EnumSet<CacheFlag> flags, boolean logRetryCache) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     boolean success = false;
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return;
-    }
+
     if (!flags.contains(CacheFlag.FORCE)) {
       cacheManager.waitForRescanIfNeeded();
     }
@@ -8368,8 +8062,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             "Cannot add cache directive", safeMode);
       }
       cacheManager.modifyDirective(directive, pc, flags);
-      getEditLog().logModifyCacheDirectiveInfo(directive,
-          cacheEntry != null);
+      getEditLog().logModifyCacheDirectiveInfo(directive, logRetryCache);
       success = true;
     } finally {
       writeUnlock();
@@ -8380,18 +8073,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         String idStr = "{id: " + directive.getId().toString() + "}";
         logAuditEvent(success, "modifyCacheDirective", idStr, directive.toString(), null);
       }
-      RetryCache.setState(cacheEntry, success);
     }
   }
 
-  void removeCacheDirective(Long id) throws IOException {
+  void removeCacheDirective(long id, boolean logRetryCache) throws IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return;
-    }
+
     boolean success = false;
     writeLock();
     try {
@@ -8401,16 +8090,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             "Cannot remove cache directives", safeMode);
       }
       cacheManager.removeDirective(id, pc);
-      getEditLog().logRemoveCacheDirectiveInfo(id, cacheEntry != null);
+      getEditLog().logRemoveCacheDirectiveInfo(id, logRetryCache);
       success = true;
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        String idStr = "{id: " + id.toString() + "}";
+        String idStr = "{id: " + Long.toString(id) + "}";
         logAuditEvent(success, "removeCacheDirective", idStr, null,
             null);
       }
-      RetryCache.setState(cacheEntry, success);
     }
     getEditLog().logSync();
   }
@@ -8439,14 +8127,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return results;
   }
 
-  public void addCachePool(CachePoolInfo req) throws IOException {
+  public void addCachePool(CachePoolInfo req, boolean logRetryCache)
+      throws IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
+
     writeLock();
     boolean success = false;
     String poolInfoStr = null;
@@ -8461,27 +8147,24 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       CachePoolInfo info = cacheManager.addCachePool(req);
       poolInfoStr = info.toString();
-      getEditLog().logAddCachePool(info, cacheEntry != null);
+      getEditLog().logAddCachePool(info, logRetryCache);
       success = true;
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
         logAuditEvent(success, "addCachePool", poolInfoStr, null, null);
       }
-      RetryCache.setState(cacheEntry, success);
     }
     
     getEditLog().logSync();
   }
 
-  public void modifyCachePool(CachePoolInfo req) throws IOException {
+  public void modifyCachePool(CachePoolInfo req, boolean logRetryCache)
+      throws IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc =
         isPermissionEnabled ? getPermissionChecker() : null;
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
+
     writeLock();
     boolean success = false;
     try {
@@ -8494,7 +8177,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         pc.checkSuperuserPrivilege();
       }
       cacheManager.modifyCachePool(req);
-      getEditLog().logModifyCachePool(req, cacheEntry != null);
+      getEditLog().logModifyCachePool(req, logRetryCache);
       success = true;
     } finally {
       writeUnlock();
@@ -8502,20 +8185,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         String poolNameStr = "{poolName: " + req.getPoolName() + "}";
         logAuditEvent(success, "modifyCachePool", poolNameStr, req.toString(), null);
       }
-      RetryCache.setState(cacheEntry, success);
     }
 
     getEditLog().logSync();
   }
 
-  public void removeCachePool(String cachePoolName) throws IOException {
+  public void removeCachePool(String cachePoolName, boolean logRetryCache)
+      throws IOException {
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc =
         isPermissionEnabled ? getPermissionChecker() : null;
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
+
     writeLock();
     boolean success = false;
     try {
@@ -8528,7 +8208,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         pc.checkSuperuserPrivilege();
       }
       cacheManager.removeCachePool(cachePoolName);
-      getEditLog().logRemoveCachePool(cachePoolName, cacheEntry != null);
+      getEditLog().logRemoveCachePool(cachePoolName, logRetryCache);
       success = true;
     } finally {
       writeUnlock();
@@ -8536,7 +8216,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         String poolNameStr = "{poolName: " + cachePoolName + "}";
         logAuditEvent(success, "removeCachePool", poolNameStr, null, null);
       }
-      RetryCache.setState(cacheEntry, success);
     }
     
     getEditLog().logSync();
@@ -8576,7 +8255,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot modify ACL entries on " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkOwner(pc, src);
       List<AclEntry> newAcl = dir.modifyAclEntries(src, aclSpec);
       getEditLog().logSetAcl(src, newAcl);
@@ -8603,7 +8282,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot remove ACL entries on " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkOwner(pc, src);
       List<AclEntry> newAcl = dir.removeAclEntries(src, aclSpec);
       getEditLog().logSetAcl(src, newAcl);
@@ -8629,7 +8308,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot remove default ACL entries on " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkOwner(pc, src);
       List<AclEntry> newAcl = dir.removeDefaultAcl(src);
       getEditLog().logSetAcl(src, newAcl);
@@ -8655,7 +8334,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot remove ACL on " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkOwner(pc, src);
       dir.removeAcl(src);
       getEditLog().logSetAcl(src, AclFeature.EMPTY_ENTRY_LIST);
@@ -8681,7 +8360,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set ACL on " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkOwner(pc, src);
       List<AclEntry> newAcl = dir.setAcl(src, aclSpec);
       getEditLog().logSetAcl(src, newAcl);
@@ -8705,7 +8384,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       if (isPermissionEnabled) {
         checkPermission(pc, src, false, null, null, null, null);
       }
@@ -8729,15 +8408,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws UnresolvedLinkException if the path can't be resolved.
    * @throws SafeModeException       if the Namenode is in safe mode.
    */
-  void createEncryptionZone(final String src, final String keyName)
+  void createEncryptionZone(final String src, final String keyName,
+                            boolean logRetryCache)
     throws IOException, UnresolvedLinkException,
       SafeModeException, AccessControlException {
-    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
-
-    boolean success = false;
     try {
       if (provider == null) {
         throw new IOException(
@@ -8763,13 +8437,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // If the provider supports pool for EDEKs, this will fill in the pool
       generateEncryptedDataEncryptionKey(keyName);
       createEncryptionZoneInt(src, metadata.getCipher(),
-          keyName, cacheEntry != null);
-      success = true;
+          keyName, logRetryCache);
     } catch (AccessControlException e) {
       logAuditEvent(false, "createEncryptionZone", src);
       throw e;
-    } finally {
-      RetryCache.setState(cacheEntry, success);
     }
   }
 
@@ -8781,12 +8452,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkOperation(OperationCategory.WRITE);
     final byte[][] pathComponents =
       FSDirectory.getPathComponentsForReservedPath(src);
+    FSPermissionChecker pc = getPermissionChecker();
     writeLock();
     try {
       checkSuperuserPrivilege();
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create encryption zone on " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
 
       final CipherSuite suite = CipherSuite.convert(cipher);
       // For now this is hardcoded, as we only support one method.
@@ -8828,7 +8500,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         checkPathAccess(pc, src, FsAction.READ);
       }
       checkOperation(OperationCategory.READ);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       final INodesInPath iip = dir.getINodesInPath(src, true);
       final EncryptionZone ret = dir.getEZForPath(iip);
       resultingStat = getAuditFileInfo(src, false);
@@ -8873,22 +8545,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws UnresolvedLinkException
    * @throws IOException
    */
-  void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
+  void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
+                boolean logRetryCache)
       throws AccessControlException, SafeModeException,
       UnresolvedLinkException, IOException {
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
-    boolean success = false;
     try {
-      setXAttrInt(src, xAttr, flag, cacheEntry != null);
-      success = true;
+      setXAttrInt(src, xAttr, flag, logRetryCache);
     } catch (AccessControlException e) {
       logAuditEvent(false, "setXAttr", src);
       throw e;
-    } finally {
-      RetryCache.setState(cacheEntry, success);
     }
   }
   
@@ -8907,7 +8572,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set XAttr on " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkXAttrChangeAccess(src, xAttr, pc);
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
       xAttrs.add(xAttr);
@@ -8960,7 +8625,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkOperation(OperationCategory.READ);
       if (isPermissionEnabled) {
         checkPathAccess(pc, src, FsAction.READ);
@@ -9008,7 +8673,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkOperation(OperationCategory.READ);
       if (isPermissionEnabled) {
         /* To access xattr names, you need EXECUTE in the owning directory. */
@@ -9038,20 +8703,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws UnresolvedLinkException
    * @throws IOException
    */
-  void removeXAttr(String src, XAttr xAttr) throws IOException {
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
-    }
-    boolean success = false;
+  void removeXAttr(String src, XAttr xAttr, boolean logRetryCache)
+      throws IOException {
     try {
-      removeXAttrInt(src, xAttr, cacheEntry != null);
-      success = true;
+      removeXAttrInt(src, xAttr, logRetryCache);
     } catch (AccessControlException e) {
       logAuditEvent(false, "removeXAttr", src);
       throw e;
-    } finally {
-      RetryCache.setState(cacheEntry, success);
     }
   }
 
@@ -9069,7 +8727,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot remove XAttr entry on " + src);
-      src = resolvePath(src, pathComponents);
+      src = dir.resolvePath(pc, src, pathComponents);
       checkXAttrChangeAccess(src, xAttr, pc);
 
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);

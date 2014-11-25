@@ -141,6 +141,10 @@ Trunk (Unreleased)
     HADOOP-11150. hadoop command should show the reason on failure by 
     invalid COMMAND or CLASSNAME (Masatake Iwasaki via aw)
 
+    HADOOP-11208. Replace "daemon" with better name in script subcommands (aw)
+
+    HADOOP-10926. Improve smart-apply-patch.sh to apply binary diffs (cmccabe)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -392,6 +396,9 @@ Release 2.7.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-11323. WritableComparator#compare keeps reference to byte array.
+    (Wilfred Spiegelenburg via wang)
+
   BUG FIXES
 
     HADOOP-11236. NFS: Fix javadoc warning in RpcProgram.java (Abhiraj Butala via harsh)
@@ -446,6 +453,17 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11311. Restrict uppercase key names from being created with JCEKS.
     (wang)
+
+    HADOOP-11309. System class pattern package.Foo should match
+    package.Foo$Bar, too (Gera Shegalov via jlowe)
+
+    HADOOP-11312. Fix unit tests to not use uppercase key names. (wang)
+
+    HADOOP-11201. Hadoop Archives should support globs resolving to files.
+    (Gera Shegalov via cnauroth)
+
+    HADOOP-11322. key based ACL check in KMS always check KeyOpType.MANAGEMENT
+    even actual KeyOpType is not MANAGEMENT. (Dian Fu via yliu)
 
 Release 2.6.0 - 2014-11-18
 
@@ -1129,7 +1147,7 @@ Release 2.6.0 - 2014-11-18
     of wrapping it as IOException. (Steve Loughran via jianhe)
 
 
-Release 2.5.2 - 2014-11-10
+Release 2.5.2 - 2014-11-19
 
   INCOMPATIBLE CHANGES
 

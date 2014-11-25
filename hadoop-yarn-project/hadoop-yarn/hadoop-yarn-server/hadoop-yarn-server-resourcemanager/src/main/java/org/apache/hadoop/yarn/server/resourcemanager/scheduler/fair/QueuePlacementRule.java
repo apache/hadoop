@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.Groups;
@@ -38,7 +40,9 @@ import com.google.common.annotations.VisibleForTesting;
 @Unstable
 public abstract class QueuePlacementRule {
   protected boolean create;
-  
+  public static final Log LOG =
+      LogFactory.getLog(QueuePlacementRule.class.getName());
+
   /**
    * Initializes the rule with any arguments.
    * 
@@ -125,7 +129,7 @@ public abstract class QueuePlacementRule {
     @Override
     protected String getQueueForApp(String requestedQueue, String user,
         Groups groups, Map<FSQueueType, Set<String>> configuredQueues) {
-      return "root." + user;
+      return "root." + cleanName(user);
     }
     
     @Override
@@ -142,7 +146,7 @@ public abstract class QueuePlacementRule {
     protected String getQueueForApp(String requestedQueue, String user,
         Groups groups, Map<FSQueueType, Set<String>> configuredQueues)
         throws IOException {
-      return "root." + groups.getGroups(user).get(0);
+      return "root." + cleanName(groups.getGroups(user).get(0));
     }
     
     @Override
@@ -164,11 +168,11 @@ public abstract class QueuePlacementRule {
         throws IOException {
       List<String> groupNames = groups.getGroups(user);
       for (int i = 1; i < groupNames.size(); i++) {
-        String group = groupNames.get(i);
+        String group = cleanName(groupNames.get(i));
         if (configuredQueues.get(FSQueueType.LEAF).contains("root." + group)
             || configuredQueues.get(FSQueueType.PARENT).contains(
                 "root." + group)) {
-          return "root." + groupNames.get(i);
+          return "root." + group;
         }
       }
       
@@ -241,7 +245,7 @@ public abstract class QueuePlacementRule {
         if (configuredQueues.get(FSQueueType.LEAF).contains(queueName)) {
           return "";
         }
-        return queueName + "." + user;
+        return queueName + "." + cleanName(user);
       }
       return queueName;
     }
@@ -337,6 +341,20 @@ public abstract class QueuePlacementRule {
     @Override
     public boolean isTerminal() {
       return true;
+    }
+  }
+
+  /**
+   * Replace the periods in the username or groupname with "_dot_".
+   */
+  protected String cleanName(String name) {
+    if (name.contains(".")) {
+      String converted = name.replaceAll("\\.", "_dot_");
+      LOG.warn("Name " + name + " is converted to " + converted
+          + " when it is used as a queue name.");
+      return converted;
+    } else {
+      return name;
     }
   }
 }

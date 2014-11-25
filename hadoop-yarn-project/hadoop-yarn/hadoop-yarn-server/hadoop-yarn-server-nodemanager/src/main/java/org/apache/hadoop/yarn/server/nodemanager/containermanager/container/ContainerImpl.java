@@ -74,7 +74,9 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.SystemClock;
 
 public class ContainerImpl implements Container {
 
@@ -92,6 +94,8 @@ public class ContainerImpl implements Container {
   private int exitCode = ContainerExitStatus.INVALID;
   private final StringBuilder diagnostics;
   private boolean wasLaunched;
+  private long containerLaunchStartTime;
+  private static Clock clock = new SystemClock();
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
@@ -521,6 +525,7 @@ public class ContainerImpl implements Container {
       // try to recover a container that was previously launched
       launcherEvent = ContainersLauncherEventType.RECOVER_CONTAINER;
     }
+    containerLaunchStartTime = clock.getTime();
     dispatcher.getEventHandler().handle(
         new ContainersLauncherEvent(this, launcherEvent));
   }
@@ -781,6 +786,8 @@ public class ContainerImpl implements Container {
       container.sendContainerMonitorStartEvent();
       container.metrics.runningContainer();
       container.wasLaunched  = true;
+      long duration = clock.getTime() - container.containerLaunchStartTime;
+      container.metrics.addContainerLaunchDuration(duration);
 
       if (container.recoveredAsKilled) {
         LOG.info("Killing " + container.containerId

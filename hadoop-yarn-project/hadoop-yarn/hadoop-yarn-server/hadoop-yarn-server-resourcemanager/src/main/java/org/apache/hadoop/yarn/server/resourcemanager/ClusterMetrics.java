@@ -30,6 +30,7 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableRate;
 import com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.Private
@@ -43,7 +44,9 @@ public class ClusterMetrics {
   @Metric("# of lost NMs") MutableGaugeInt numLostNMs;
   @Metric("# of unhealthy NMs") MutableGaugeInt numUnhealthyNMs;
   @Metric("# of Rebooted NMs") MutableGaugeInt numRebootedNMs;
-  
+  @Metric("AM container launch delay") MutableRate aMLaunchDelay;
+  @Metric("AM register delay") MutableRate aMRegisterDelay;
+
   private static final MetricsInfo RECORD_INFO = info("ClusterMetrics",
   "Metrics for the Yarn Cluster");
   
@@ -145,6 +148,14 @@ public class ClusterMetrics {
 
   public void decrNumActiveNodes() {
     numActiveNMs.decr();
+  }
+
+  public void addAMLaunchDelay(long delay) {
+    aMLaunchDelay.add(delay);
+  }
+
+  public void addAMRegisterDelay(long delay) {
+    aMRegisterDelay.add(delay);
   }
 
 }

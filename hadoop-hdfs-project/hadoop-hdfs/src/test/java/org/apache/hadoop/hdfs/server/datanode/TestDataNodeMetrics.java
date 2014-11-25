@@ -27,7 +27,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
@@ -47,6 +49,9 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 public class TestDataNodeMetrics {
   private static final Log LOG = LogFactory.getLog(TestDataNodeMetrics.class);
@@ -217,9 +222,22 @@ public class TestDataNodeMetrics {
       out.writeBytes("old gs data\n");
       out.hflush();
 
+      /* Test the metric. */
       final MetricsRecordBuilder dnMetrics =
           getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
       assertCounter("DatanodeNetworkErrors", 1L, dnMetrics);
+
+      /* Test JMX datanode network counts. */
+      final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      final ObjectName mxbeanName =
+          new ObjectName("Hadoop:service=DataNode,name=DataNodeInfo");
+      final Object dnc =
+          mbs.getAttribute(mxbeanName, "DatanodeNetworkCounts");
+      final String allDnc = dnc.toString();
+      assertTrue("expected to see loopback address",
+          allDnc.indexOf("127.0.0.1") >= 0);
+      assertTrue("expected to see networkErrors",
+          allDnc.indexOf("networkErrors") >= 0);
     } finally {
       IOUtils.cleanup(LOG, streams.toArray(new Closeable[0]));
       if (cluster != null) {

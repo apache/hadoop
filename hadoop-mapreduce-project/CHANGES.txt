@@ -235,7 +235,14 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5785. Derive heap size or mapreduce.*.memory.mb automatically. 
+    (Gera Shegalov and Karthik Kambatla via kasha)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-6169. MergeQueue should release reference to the current item 
+    from key and value at the end of the iteration to save memory. 
+    (Zhihai Xu via kasha)
 
   BUG FIXES
 
@@ -243,6 +250,9 @@ Release 2.7.0 - UNRELEASED
     CodecPool multiple times (Sergey Murylev via raviprak)
 
     MAPREDUCE-6162. mapred hsadmin fails on a secure cluster (jlowe)
+
+    MAPREDUCE-6049. AM JVM does not exit if MRClientService graceful shutdown
+    fails (Rohith via devaraj)
  
 Release 2.6.0 - 2014-11-18
 
@@ -476,7 +486,7 @@ Release 2.6.0 - 2014-11-18
     MAPREDUCE-6156. Fetcher - connect() doesn't handle connection refused
     correctly (Junping Du via jlowe)
 
-Release 2.5.2 - 2014-11-10
+Release 2.5.2 - 2014-11-19
 
   INCOMPATIBLE CHANGES
 

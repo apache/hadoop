@@ -38,6 +38,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PLUGINS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
@@ -77,6 +79,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -84,6 +87,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -299,6 +305,9 @@ public class DataNode extends ReconfigurableBase
   DataNodeMetrics metrics;
   private InetSocketAddress streamingAddr;
   
+  // See the note below in incrDatanodeNetworkErrors re: concurrency.
+  private LoadingCache<String, Map<String, Long>> datanodeNetworkCounts;
+
   private String hostName;
   private DatanodeID id;
   
@@ -414,6 +423,20 @@ public class DataNode extends ReconfigurableBase
       shutdown();
       throw ie;
     }
+    final int dncCacheMaxSize =
+        conf.getInt(DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_KEY,
+            DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_DEFAULT) ;
+    datanodeNetworkCounts =
+        CacheBuilder.newBuilder()
+            .maximumSize(dncCacheMaxSize)
+            .build(new CacheLoader<String, Map<String, Long>>() {
+              @Override
+              public Map<String, Long> load(String key) throws Exception {
+                final Map<String, Long> ret = new HashMap<String, Long>();
+                ret.put("networkErrors", 0L);
+                return ret;
+              }
+            });
   }
 
   @Override
@@ -423,7 +446,7 @@ public class DataNode extends ReconfigurableBase
       try {
         LOG.info("Reconfiguring " + property + " to " + newVal);
         this.refreshVolumes(newVal);
-      } catch (Exception e) {
+      } catch (IOException e) {
         throw new ReconfigurationException(property, newVal,
             getConf().get(property), e);
       }
@@ -558,14 +581,15 @@ public class DataNode extends ReconfigurableBase
             IOException ioe = ioExceptionFuture.get();
             if (ioe != null) {
               errorMessageBuilder.append(String.format("FAILED TO ADD: %s: %s\n",
-                  volume.toString(), ioe.getMessage()));
+                  volume, ioe.getMessage()));
+              LOG.error("Failed to add volume: " + volume, ioe);
             } else {
               effectiveVolumes.add(volume.toString());
+              LOG.info("Successfully added volume: " + volume);
             }
-            LOG.info("Storage directory is loaded: " + volume.toString());
           } catch (Exception e) {
             errorMessageBuilder.append(String.format("FAILED to ADD: %s: %s\n",
-                volume.toString(), e.getMessage()));
+                volume, e.getMessage()));
           }
         }
       }
@@ -1766,6 +1790,30 @@ public class DataNode extends ReconfigurableBase
   @Override // DataNodeMXBean
   public int getXceiverCount() {
     return threadGroup == null ? 0 : threadGroup.activeCount();
+  }
+
+  @Override // DataNodeMXBean
+  public Map<String, Map<String, Long>> getDatanodeNetworkCounts() {
+    return datanodeNetworkCounts.asMap();
+  }
+
+  void incrDatanodeNetworkErrors(String host) {
+    metrics.incrDatanodeNetworkErrors();
+
+    /*
+     * Synchronizing on the whole cache is a big hammer, but since it's only
+     * accumulating errors, it should be ok. If this is ever expanded to include
+     * non-error stats, then finer-grained concurrency should be applied.
+     */
+    synchronized (datanodeNetworkCounts) {
+      try {
+        final Map<String, Long> curCount = datanodeNetworkCounts.get(host);
+        curCount.put("networkErrors", curCount.get("networkErrors") + 1L);
+        datanodeNetworkCounts.put(host, curCount);
+      } catch (ExecutionException e) {
+        LOG.warn("failed to increment network error counts for " + host);
+      }
+    }
   }
   
   int getXmitsInProgress() {

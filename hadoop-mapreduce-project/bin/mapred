@@ -90,7 +90,7 @@ case ${COMMAND} in
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   historyserver)
-    daemon="true"
+    supportdaemonization="true"
     CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
     hadoop_debug "Appending HADOOP_JOB_HISTORYSERVER_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOB_HISTORYSERVER_OPTS}"
@@ -150,7 +150,7 @@ fi
 hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 hadoop_finalize
 
-if [[ -n "${daemon}" ]]; then
+if [[ -n "${supportdaemonization}" ]]; then
   if [[ -n "${secure_service}" ]]; then
     hadoop_secure_daemon_handler "${HADOOP_DAEMON_MODE}" "${COMMAND}"\
     "${CLASS}" "${daemon_pidfile}" "${daemon_outfile}" \

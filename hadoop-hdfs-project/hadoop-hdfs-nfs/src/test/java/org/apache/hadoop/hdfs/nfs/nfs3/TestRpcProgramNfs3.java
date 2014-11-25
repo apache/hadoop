@@ -115,7 +115,7 @@ public class TestRpcProgramNfs3 {
   static SecurityHandler securityHandler;
   static SecurityHandler securityHandlerUnpriviledged;
   static String testdir = "/tmp";
-  private static final String TEST_KEY = "testKey";
+  private static final String TEST_KEY = "test_key";
   private static FileSystemTestHelper fsHelper;
   private static File testRootDir;
 

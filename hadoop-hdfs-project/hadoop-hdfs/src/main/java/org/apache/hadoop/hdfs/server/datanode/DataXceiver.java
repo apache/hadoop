@@ -97,6 +97,7 @@ class DataXceiver extends Receiver implements Runnable {
   
   private Peer peer;
   private final String remoteAddress; // address of remote side
+  private final String remoteAddressWithoutPort; // only the address, no port
   private final String localAddress;  // local address of this daemon
   private final DataNode datanode;
   private final DNConf dnConf;
@@ -129,6 +130,9 @@ class DataXceiver extends Receiver implements Runnable {
     this.dataXceiverServer = dataXceiverServer;
     this.connectToDnViaHostname = datanode.getDnConf().connectToDnViaHostname;
     remoteAddress = peer.getRemoteAddressString();
+    final int colonIdx = remoteAddress.indexOf(':');
+    remoteAddressWithoutPort =
+        (colonIdx < 0) ? remoteAddress : remoteAddress.substring(0, colonIdx);
     localAddress = peer.getLocalAddressString();
 
     if (LOG.isDebugEnabled()) {
@@ -222,7 +226,7 @@ class DataXceiver extends Receiver implements Runnable {
               LOG.debug("Cached " + peer + " closing after " + opsProcessed + " ops");
             }
           } else {
-            datanode.metrics.incrDatanodeNetworkErrors();
+            incrDatanodeNetworkErrors();
             throw err;
           }
           break;
@@ -521,7 +525,7 @@ class DataXceiver extends Receiver implements Runnable {
         } catch (IOException ioe) {
           LOG.debug("Error reading client status response. Will close connection.", ioe);
           IOUtils.closeStream(out);
-          datanode.metrics.incrDatanodeNetworkErrors();
+          incrDatanodeNetworkErrors();
         }
       } else {
         IOUtils.closeStream(out);
@@ -543,7 +547,7 @@ class DataXceiver extends Receiver implements Runnable {
       if (!(ioe instanceof SocketTimeoutException)) {
         LOG.warn(dnR + ":Got exception while serving " + block + " to "
           + remoteAddress, ioe);
-        datanode.metrics.incrDatanodeNetworkErrors();
+        incrDatanodeNetworkErrors();
       }
       throw ioe;
     } finally {
@@ -722,7 +726,7 @@ class DataXceiver extends Receiver implements Runnable {
             LOG.info(datanode + ":Exception transfering " +
                      block + " to mirror " + mirrorNode +
                      "- continuing without the mirror", e);
-            datanode.metrics.incrDatanodeNetworkErrors();
+            incrDatanodeNetworkErrors();
           }
         }
       }
@@ -777,7 +781,7 @@ class DataXceiver extends Receiver implements Runnable {
       
     } catch (IOException ioe) {
       LOG.info("opWriteBlock " + block + " received exception " + ioe);
-      datanode.metrics.incrDatanodeNetworkErrors();
+      incrDatanodeNetworkErrors();
       throw ioe;
     } finally {
       // close all opened streams
@@ -813,7 +817,7 @@ class DataXceiver extends Receiver implements Runnable {
       writeResponse(Status.SUCCESS, null, out);
     } catch (IOException ioe) {
       LOG.info("transferBlock " + blk + " received exception " + ioe);
-      datanode.metrics.incrDatanodeNetworkErrors();
+      incrDatanodeNetworkErrors();
       throw ioe;
     } finally {
       IOUtils.closeStream(out);
@@ -908,7 +912,7 @@ class DataXceiver extends Receiver implements Runnable {
       out.flush();
     } catch (IOException ioe) {
       LOG.info("blockChecksum " + block + " received exception " + ioe);
-      datanode.metrics.incrDatanodeNetworkErrors();
+      incrDatanodeNetworkErrors();
       throw ioe;
     } finally {
       IOUtils.closeStream(out);
@@ -975,7 +979,7 @@ class DataXceiver extends Receiver implements Runnable {
     } catch (IOException ioe) {
       isOpSuccess = false;
       LOG.info("opCopyBlock " + block + " received exception " + ioe);
-      datanode.metrics.incrDatanodeNetworkErrors();
+      incrDatanodeNetworkErrors();
       throw ioe;
     } finally {
       dataXceiverServer.balanceThrottler.release();
@@ -1108,7 +1112,7 @@ class DataXceiver extends Receiver implements Runnable {
       LOG.info(errMsg);
       if (!IoeDuringCopyBlockOperation) {
         // Don't double count IO errors
-        datanode.metrics.incrDatanodeNetworkErrors();
+        incrDatanodeNetworkErrors();
       }
       throw ioe;
     } finally {
@@ -1128,7 +1132,7 @@ class DataXceiver extends Receiver implements Runnable {
         sendResponse(opStatus, errMsg);
       } catch (IOException ioe) {
         LOG.warn("Error writing reply back to " + peer.getRemoteAddressString());
-        datanode.metrics.incrDatanodeNetworkErrors();
+        incrDatanodeNetworkErrors();
       }
       IOUtils.closeStream(proxyOut);
       IOUtils.closeStream(blockReceiver);
@@ -1182,6 +1186,9 @@ class DataXceiver extends Receiver implements Runnable {
     out.flush();
   }
   
+  private void incrDatanodeNetworkErrors() {
+    datanode.incrDatanodeNetworkErrors(remoteAddressWithoutPort);
+  }
 
   private void checkAccess(OutputStream out, final boolean reply, 
       final ExtendedBlock blk,

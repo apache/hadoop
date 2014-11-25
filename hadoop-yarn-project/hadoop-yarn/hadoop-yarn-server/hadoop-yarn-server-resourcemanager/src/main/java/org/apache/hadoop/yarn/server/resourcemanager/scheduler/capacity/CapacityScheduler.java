@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.HashSet;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -284,7 +283,7 @@ public class CapacityScheduler extends
     this.conf = loadCapacitySchedulerConfiguration(configuration);
     validateConf(this.conf);
     this.minimumAllocation = this.conf.getMinimumAllocation();
-    this.maximumAllocation = this.conf.getMaximumAllocation();
+    initMaximumResourceCapability(this.conf.getMaximumAllocation());
     this.calculator = this.conf.getResourceCalculator();
     this.usePortForNodeName = this.conf.getUsePortForNodeName();
     this.applications =
@@ -321,8 +320,8 @@ public class CapacityScheduler extends
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     Configuration configuration = new Configuration(conf);
-    initScheduler(configuration);
     super.serviceInit(conf);
+    initScheduler(configuration);
   }
 
   @Override
@@ -849,7 +848,7 @@ public class CapacityScheduler extends
     // Sanity check
     SchedulerUtils.normalizeRequests(
         ask, getResourceCalculator(), getClusterResource(),
-        getMinimumResourceCapability(), maximumAllocation);
+        getMinimumResourceCapability(), getMaximumResourceCapability());
 
     // Release containers
     releaseContainers(release, application);
@@ -1123,12 +1122,13 @@ public class CapacityScheduler extends
       labelManager.activateNode(nodeManager.getNodeID(),
           nodeManager.getTotalCapability());
     }
-    
-    this.nodes.put(nodeManager.getNodeID(), new FiCaSchedulerNode(nodeManager,
-        usePortForNodeName));
+    FiCaSchedulerNode schedulerNode = new FiCaSchedulerNode(nodeManager,
+        usePortForNodeName);
+    this.nodes.put(nodeManager.getNodeID(), schedulerNode);
     Resources.addTo(clusterResource, nodeManager.getTotalCapability());
     root.updateClusterResource(clusterResource);
     int numNodes = numNodeManagers.incrementAndGet();
+    updateMaximumAllocation(schedulerNode, true);
     
     LOG.info("Added node " + nodeManager.getNodeAddress() + 
         " clusterResource: " + clusterResource);
@@ -1177,6 +1177,7 @@ public class CapacityScheduler extends
     }
 
     this.nodes.remove(nodeInfo.getNodeID());
+    updateMaximumAllocation(node, false);
 
     LOG.info("Removed node " + nodeInfo.getNodeAddress() + 
         " clusterResource: " + clusterResource);
