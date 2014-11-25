@@ -1183,9 +1183,11 @@ public class FSImageFormat {
   @Deprecated
   static class Saver {
     private static final int LAYOUT_VERSION = -51;
+    public static final int CHECK_CANCEL_INTERVAL = 4096;
     private final SaveNamespaceContext context;
     /** Set to true once an image has been written */
     private boolean saved = false;
+    private long checkCancelCounter = 0;
 
     /** The MD5 checksum of the file that was written */
     private MD5Hash savedDigest;
@@ -1322,7 +1324,6 @@ public class FSImageFormat {
       // Write normal children INode.
       out.writeInt(children.size());
       int dirNum = 0;
-      int i = 0;
       for(INode child : children) {
         // print all children first
         // TODO: for HDFS-5428, we cannot change the format/content of fsimage
@@ -1335,7 +1336,7 @@ public class FSImageFormat {
             && child.asFile().isUnderConstruction()) {
           this.snapshotUCMap.put(child.getId(), child.asFile());
         }
-        if (i++ % 50 == 0) {
+        if (checkCancelCounter++ % CHECK_CANCEL_INTERVAL == 0) {
           context.checkCancelled();
         }
       }

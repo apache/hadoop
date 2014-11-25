@@ -486,6 +486,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7303. NN UI fails to distinguish datanodes on the same host.
     (Benoy Antony via wheat9)
 
+    HDFS-7097. Allow block reports to be processed during checkpointing on
+    standby name node. (kihwal via wang)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
