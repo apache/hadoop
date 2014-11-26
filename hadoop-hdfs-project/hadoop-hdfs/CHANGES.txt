@@ -241,6 +241,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7097. Allow block reports to be processed during checkpointing on
     standby name node. (kihwal via wang)
 
+    HDFS-7444. convertToBlockUnderConstruction should preserve BlockCollection.
+    (wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
