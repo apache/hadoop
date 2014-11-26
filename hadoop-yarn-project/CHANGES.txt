@@ -71,6 +71,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2404. Removed ApplicationAttemptState and ApplicationState class in
     RMStateStore. (Tsuyoshi OZAWA via jianhe)
 
+    YARN-2165. Added the sanity check for the numeric configuration values of
+    the timeline service. (Vasanth kumar RJ via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
