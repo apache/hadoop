@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.inotify.EventsList;
+import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -1408,9 +1408,9 @@ public interface ClientProtocol {
   public long getCurrentEditLogTxid() throws IOException;
 
   /**
-   * Get an ordered list of events corresponding to the edit log transactions
-   * from txid onwards.
+   * Get an ordered list of batches of events corresponding to the edit log
+   * transactions for txids equal to or greater than txid.
    */
   @Idempotent
-  public EventsList getEditsFromTxid(long txid) throws IOException;
+  public EventBatchList getEditsFromTxid(long txid) throws IOException;
 }

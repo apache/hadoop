@@ -159,6 +159,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7462. Consolidate implementation of mkdirs() into a single class.
     (wheat9)
 
+    HDFS-7446. HDFS inotify should have the ability to determine what txid it
+    has read up to (cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
