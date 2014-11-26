@@ -67,6 +67,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
@@ -141,6 +142,18 @@ public class TimelineClientImpl extends TimelineClient {
 
     // Constructor with default retry settings
     public TimelineClientConnectionRetry(Configuration conf) {
+      Preconditions.checkArgument(conf.getInt(
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES) >= -1,
+          "%s property value should be greater than or equal to -1",
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
+      Preconditions
+          .checkArgument(
+              conf.getLong(
+                  YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+                  YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS) > 0,
+              "%s property value should be greater than zero",
+              YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
       maxRetries = conf.getInt(
         YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
