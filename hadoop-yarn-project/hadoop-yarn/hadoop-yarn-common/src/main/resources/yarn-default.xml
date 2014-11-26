@@ -1458,19 +1458,36 @@
   </property>
 
   <property>
-    <description>The algorithm used to compute checksums of files (SHA-256 by default)</description>
+    <description>The address of the client interface in the SCM
+    (shared cache manager)</description>
+    <name>yarn.sharedcache.client-server.address</name>
+    <value>0.0.0.0:8045</value>
+  </property>
+
+  <property>
+    <description>The number of threads used to handle shared cache manager
+    requests from clients (50 by default)</description>
+    <name>yarn.sharedcache.client-server.thread-count</name>
+    <value>50</value>
+  </property>
+
+  <property>
+    <description>The algorithm used to compute checksums of files (SHA-256 by
+    default)</description>
     <name>yarn.sharedcache.checksum.algo.impl</name>
     <value>org.apache.hadoop.yarn.sharedcache.ChecksumSHA256Impl</value>
   </property>
 
   <property>
-    <description>The replication factor for the node manager uploader for the shared cache (10 by default)</description>
+    <description>The replication factor for the node manager uploader for the
+    shared cache (10 by default)</description>
     <name>yarn.sharedcache.nm.uploader.replication.factor</name>
     <value>10</value>
   </property>
 
   <property>
-    <description>The number of threads used to upload files from a node manager instance (20 by default)</description>
+    <description>The number of threads used to upload files from a node manager
+    instance (20 by default)</description>
     <name>yarn.sharedcache.nm.uploader.thread-count</name>
     <value>20</value>
   </property>
