@@ -116,6 +116,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2697. Remove useless RMAuthenticationHandler. (Haosong Huang via zjshen)
 
+    YARN-2906. CapacitySchedulerPage shows HTML tags for a queue's Active Users.
+    (Jason Lowe via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
