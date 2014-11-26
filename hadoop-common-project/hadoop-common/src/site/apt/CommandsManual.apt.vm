@@ -177,6 +177,9 @@ User Commands
    Word count example is also run using jar command. It can be referred from
    Wordcount example
 
+   Use {{{../../hadoop-yarn/hadoop-yarn-site/YarnCommands.html#jar}<<<yarn jar>>>}}
+   to launch YARN applications instead.
+
 * <<<job>>>
 
    Deprecated. Use
