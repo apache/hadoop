@@ -401,6 +401,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-6803 Document DFSClient#DFSInputStream expectations reading and preading
     in concurrent context. (stack via stevel)
 
+    HDFS-7310. Mover can give first priority to local DN if it has target storage type 
+    available in local DN. (Vinayakumar B via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

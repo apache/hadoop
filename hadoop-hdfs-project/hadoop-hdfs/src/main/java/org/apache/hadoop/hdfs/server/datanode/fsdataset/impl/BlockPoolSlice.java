@@ -157,6 +157,10 @@ class BlockPoolSlice {
     return rbwDir;
   }
 
+  File getTmpDir() {
+    return tmpDir;
+  }
+
   /** Run DU on local drives.  It must be synchronized from caller. */
   void decDfsUsed(long value) {
     dfsUsage.decDfsUsed(value);
