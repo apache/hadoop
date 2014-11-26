@@ -232,7 +232,7 @@ class RamDiskAsyncLazyPersistService {
       try {
         // No FsDatasetImpl lock for the file copy
         File targetFiles[] = FsDatasetImpl.copyBlockFiles(
-            blockId, genStamp, metaFile, blockFile, lazyPersistDir);
+            blockId, genStamp, metaFile, blockFile, lazyPersistDir, true);
 
         // Lock FsDataSetImpl during onCompleteLazyPersist callback
         datanode.getFSDataset().onCompleteLazyPersist(bpId, blockId,

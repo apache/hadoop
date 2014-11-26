@@ -215,10 +215,10 @@ public class DatanodeStorageInfo {
     return blockPoolUsed;
   }
 
-  public boolean addBlock(BlockInfo b) {
+  public AddBlockResult addBlock(BlockInfo b) {
     // First check whether the block belongs to a different storage
     // on the same DN.
-    boolean replaced = false;
+    AddBlockResult result = AddBlockResult.ADDED;
     DatanodeStorageInfo otherStorage =
         b.findStorageInfo(getDatanodeDescriptor());
 
@@ -226,10 +226,10 @@ public class DatanodeStorageInfo {
       if (otherStorage != this) {
         // The block belongs to a different storage. Remove it first.
         otherStorage.removeBlock(b);
-        replaced = true;
+        result = AddBlockResult.REPLACED;
       } else {
         // The block is already associated with this storage.
-        return false;
+        return AddBlockResult.ALREADY_EXIST;
       }
     }
 
@@ -237,7 +237,7 @@ public class DatanodeStorageInfo {
     b.addStorage(this);
     blockList = b.listInsert(blockList, this);
     numBlocks++;
-    return !replaced;
+    return result;
   }
 
   boolean removeBlock(BlockInfo b) {
@@ -357,5 +357,9 @@ public class DatanodeStorageInfo {
       }
     }
     return null;
+  }
+
+  static enum AddBlockResult {
+    ADDED, REPLACED, ALREADY_EXIST;
   }
 }
