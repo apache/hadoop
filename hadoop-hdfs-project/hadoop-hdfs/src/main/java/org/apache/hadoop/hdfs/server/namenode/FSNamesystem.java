@@ -7594,55 +7594,39 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /** Allow snapshot on a directory. */
-  void allowSnapshot(String path) throws SafeModeException, IOException {
+  void allowSnapshot(String path) throws IOException {
     checkOperation(OperationCategory.WRITE);
+    boolean success = false;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot allow snapshot for " + path);
       checkSuperuserPrivilege();
-
-      dir.writeLock();
-      try {
-        snapshotManager.setSnapshottable(path, true);
-      } finally {
-        dir.writeUnlock();
-      }
-      getEditLog().logAllowSnapshot(path);
+      FSDirSnapshotOp.allowSnapshot(dir, snapshotManager, path);
+      success = true;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(true, "allowSnapshot", path, null, null);
-    }
+    logAuditEvent(success, "allowSnapshot", path, null, null);
   }
   
   /** Disallow snapshot on a directory. */
-  void disallowSnapshot(String path) throws SafeModeException, IOException {
+  void disallowSnapshot(String path) throws IOException {
     checkOperation(OperationCategory.WRITE);
+    boolean success = false;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot disallow snapshot for " + path);
       checkSuperuserPrivilege();
-
-      dir.writeLock();
-      try {
-        snapshotManager.resetSnapshottable(path);
-      } finally {
-        dir.writeUnlock();
-      }
-      getEditLog().logDisallowSnapshot(path);
+      FSDirSnapshotOp.disallowSnapshot(dir, snapshotManager, path);
+      success = true;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(true, "disallowSnapshot", path, null, null);
-    }
+    logAuditEvent(success, "disallowSnapshot", path, null, null);
   }
   
   /**
@@ -7651,45 +7635,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param snapshotName The name of the snapshot
    */
   String createSnapshot(String snapshotRoot, String snapshotName,
-                        boolean logRetryCache)
-      throws SafeModeException, IOException {
-    checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc = getPermissionChecker();
-
+                        boolean logRetryCache) throws IOException {
     String snapshotPath = null;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create snapshot for " + snapshotRoot);
-      if (isPermissionEnabled) {
-        checkOwner(pc, snapshotRoot);
-      }
-
-      if (snapshotName == null || snapshotName.isEmpty()) {
-        snapshotName = Snapshot.generateDefaultSnapshotName();
-      }
-      if(snapshotName != null){
-        if (!DFSUtil.isValidNameForComponent(snapshotName)) {
-            throw new InvalidPathException("Invalid snapshot name: "
-                + snapshotName);
-        }
-      }
-      dir.verifySnapshotName(snapshotName, snapshotRoot);
-      dir.writeLock();
-      try {
-        snapshotPath = snapshotManager.createSnapshot(snapshotRoot, snapshotName);
-      } finally {
-        dir.writeUnlock();
-      }
-      getEditLog().logCreateSnapshot(snapshotRoot, snapshotName, logRetryCache);
+      snapshotPath = FSDirSnapshotOp.createSnapshot(dir,
+          snapshotManager, snapshotRoot, snapshotName, logRetryCache);
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(true, "createSnapshot", snapshotRoot, snapshotPath, null);
-    }
+    logAuditEvent(snapshotPath != null, "createSnapshot", snapshotRoot,
+        snapshotPath, null);
     return snapshotPath;
   }
   
@@ -7705,32 +7664,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       String path, String snapshotOldName, String snapshotNewName,
       boolean logRetryCache) throws IOException {
     checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc = getPermissionChecker();
-
+    boolean success = false;
     writeLock();
-
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot rename snapshot for " + path);
-      if (isPermissionEnabled) {
-        checkOwner(pc, path);
-      }
-      dir.verifySnapshotName(snapshotNewName, path);
-      
-      snapshotManager.renameSnapshot(path, snapshotOldName, snapshotNewName);
-      getEditLog().logRenameSnapshot(path, snapshotOldName, snapshotNewName,
-          logRetryCache);
+      FSDirSnapshotOp.renameSnapshot(dir, snapshotManager, path,
+          snapshotOldName, snapshotNewName, logRetryCache);
+      success = true;
     } finally {
       writeUnlock();
-
     }
     getEditLog().logSync();
-    
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      String oldSnapshotRoot = Snapshot.getSnapshotPath(path, snapshotOldName);
-      String newSnapshotRoot = Snapshot.getSnapshotPath(path, snapshotNewName);
-      logAuditEvent(true, "renameSnapshot", oldSnapshotRoot, newSnapshotRoot, null);
-    }
+    String oldSnapshotRoot = Snapshot.getSnapshotPath(path, snapshotOldName);
+    String newSnapshotRoot = Snapshot.getSnapshotPath(path, snapshotNewName);
+    logAuditEvent(success, "renameSnapshot", oldSnapshotRoot,
+        newSnapshotRoot, null);
   }
   
   /**
@@ -7744,18 +7693,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     SnapshottableDirectoryStatus[] status = null;
     checkOperation(OperationCategory.READ);
-    final FSPermissionChecker checker = getPermissionChecker();
+    boolean success = false;
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      final String user = checker.isSuperUser()? null : checker.getUser();
-      status = snapshotManager.getSnapshottableDirListing(user);
+      status = FSDirSnapshotOp.getSnapshottableDirListing(dir, snapshotManager);
+      success = true;
     } finally {
       readUnlock();
     }
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(true, "listSnapshottableDirectory", null, null, null);
-    }
+    logAuditEvent(success, "listSnapshottableDirectory", null, null, null);
     return status;
   }
   
@@ -7776,33 +7723,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   SnapshotDiffReport getSnapshotDiffReport(String path,
       String fromSnapshot, String toSnapshot) throws IOException {
-    SnapshotDiffReport diffs;
+    SnapshotDiffReport diffs = null;
     checkOperation(OperationCategory.READ);
-    final FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      if (isPermissionEnabled) {
-        checkSubtreeReadPermission(pc, path, fromSnapshot);
-        checkSubtreeReadPermission(pc, path, toSnapshot);
-      }
-      diffs = snapshotManager.diff(path, fromSnapshot, toSnapshot);
+      diffs = FSDirSnapshotOp.getSnapshotDiffReport(dir, snapshotManager,
+          path, fromSnapshot, toSnapshot);
     } finally {
       readUnlock();
     }
 
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(true, "computeSnapshotDiff", null, null, null);
-    }
+    logAuditEvent(diffs != null, "computeSnapshotDiff", null, null, null);
     return diffs;
-  }
-  
-  private void checkSubtreeReadPermission(final FSPermissionChecker pc,
-      final String snapshottablePath, final String snapshot)
-          throws AccessControlException, UnresolvedLinkException {
-    final String fromPath = snapshot == null?
-        snapshottablePath: Snapshot.getSnapshotPath(snapshottablePath, snapshot);
-    checkPermission(pc, fromPath, false, null, null, FsAction.READ, FsAction.READ);
   }
   
   /**
@@ -7812,45 +7745,32 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws SafeModeException
    * @throws IOException
    */
-  void deleteSnapshot(String snapshotRoot, String snapshotName,
-                      boolean logRetryCache)
-      throws SafeModeException, IOException {
+  void deleteSnapshot(
+      String snapshotRoot, String snapshotName, boolean logRetryCache)
+      throws IOException {
     checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc = getPermissionChecker();
-
-    BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
+    boolean success = false;
     writeLock();
+    BlocksMapUpdateInfo blocksToBeDeleted = null;
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot delete snapshot for " + snapshotRoot);
-      if (isPermissionEnabled) {
-        checkOwner(pc, snapshotRoot);
-      }
-
-      List<INode> removedINodes = new ChunkedArrayList<INode>();
-      dir.writeLock();
-      try {
-        snapshotManager.deleteSnapshot(snapshotRoot, snapshotName,
-            collectedBlocks, removedINodes);
-        dir.removeFromInodeMap(removedINodes);
-      } finally {
-        dir.writeUnlock();
-      }
-      removedINodes.clear();
-      getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName, logRetryCache);
+      blocksToBeDeleted = FSDirSnapshotOp.deleteSnapshot(dir, snapshotManager,
+          snapshotRoot, snapshotName, logRetryCache);
+      success = true;
     } finally {
       writeUnlock();
-
     }
     getEditLog().logSync();
 
-    removeBlocks(collectedBlocks);
-    collectedBlocks.clear();
-
-    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      String rootPath = Snapshot.getSnapshotPath(snapshotRoot, snapshotName);
-      logAuditEvent(true, "deleteSnapshot", rootPath, null, null);
+    // Breaking the pattern as removing blocks have to happen outside of the
+    // global lock
+    if (blocksToBeDeleted != null) {
+      removeBlocks(blocksToBeDeleted);
     }
+
+    String rootPath = Snapshot.getSnapshotPath(snapshotRoot, snapshotName);
+    logAuditEvent(success, "deleteSnapshot", rootPath, null, null);
   }
 
   /**
