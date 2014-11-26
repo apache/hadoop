@@ -23,30 +23,30 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import java.util.List;
 
 /**
- * Contains a set of events, the transaction ID in the edit log up to which we
- * read to produce these events, and the first txid we observed when producing
- * these events (the last of which is for the purpose of determining whether we
- * have missed events due to edit deletion). Also contains the most recent txid
- * that the NameNode has sync'ed, so the client can determine how far behind in
- * the edit log it is.
+ * Contains a list of event batches, the transaction ID in the edit log up to
+ * which we read to produce these events, and the first txid we observed when
+ * producing these events (the last of which is for the purpose of determining
+ * whether we have missed events due to edit deletion). Also contains the most
+ * recent txid that the NameNode has sync'ed, so the client can determine how
+ * far behind in the edit log it is.
  */
 @InterfaceAudience.Private
-public class EventsList {
-  private List<Event> events;
+public class EventBatchList {
+  private List<EventBatch> batches;
   private long firstTxid;
   private long lastTxid;
   private long syncTxid;
 
-  public EventsList(List<Event> events, long firstTxid, long lastTxid,
-      long syncTxid) {
-    this.events = events;
+  public EventBatchList(List<EventBatch> batches, long firstTxid,
+                         long lastTxid, long syncTxid) {
+    this.batches = batches;
     this.firstTxid = firstTxid;
     this.lastTxid = lastTxid;
     this.syncTxid = syncTxid;
   }
 
-  public List<Event> getEvents() {
-    return events;
+  public List<EventBatch> getBatches() {
+    return batches;
   }
 
   public long getFirstTxid() {

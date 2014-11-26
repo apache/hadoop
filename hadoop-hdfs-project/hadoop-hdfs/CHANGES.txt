@@ -156,6 +156,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7980. Incremental BlockReport will dramatically slow down namenode
     startup.  (Walter Su via szetszwo)
 
+    HDFS-7446. HDFS inotify should have the ability to determine what txid it
+    has read up to (cmccabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

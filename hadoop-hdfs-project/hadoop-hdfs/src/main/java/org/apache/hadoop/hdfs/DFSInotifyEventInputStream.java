@@ -19,11 +19,10 @@
 package org.apache.hadoop.hdfs;
 
 import com.google.common.collect.Iterators;
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.inotify.Event;
-import org.apache.hadoop.hdfs.inotify.EventsList;
+import org.apache.hadoop.hdfs.inotify.EventBatch;
+import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.inotify.MissingEventsException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.util.Time;
@@ -33,13 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Random;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Stream for reading inotify events. DFSInotifyEventInputStreams should not
@@ -52,7 +45,7 @@ public class DFSInotifyEventInputStream {
       .class);
 
   private final ClientProtocol namenode;
-  private Iterator<Event> it;
+  private Iterator<EventBatch> it;
   private long lastReadTxid;
   /**
    * The most recent txid the NameNode told us it has sync'ed -- helps us
@@ -78,22 +71,22 @@ public class DFSInotifyEventInputStream {
   }
 
   /**
-   * Returns the next event in the stream or null if no new events are currently
-   * available.
+   * Returns the next batch of events in the stream or null if no new
+   * batches are currently available.
    *
    * @throws IOException because of network error or edit log
    * corruption. Also possible if JournalNodes are unresponsive in the
    * QJM setting (even one unresponsive JournalNode is enough in rare cases),
    * so catching this exception and retrying at least a few times is
    * recommended.
-   * @throws MissingEventsException if we cannot return the next event in the
-   * stream because the data for the event (and possibly some subsequent events)
-   * has been deleted (generally because this stream is a very large number of
-   * events behind the current state of the NameNode). It is safe to continue
-   * reading from the stream after this exception is thrown -- the next
-   * available event will be returned.
+   * @throws MissingEventsException if we cannot return the next batch in the
+   * stream because the data for the events (and possibly some subsequent
+   * events) has been deleted (generally because this stream is a very large
+   * number of transactions behind the current state of the NameNode). It is
+   * safe to continue reading from the stream after this exception is thrown
+   * The next available batch of events will be returned.
    */
-  public Event poll() throws IOException, MissingEventsException {
+  public EventBatch poll() throws IOException, MissingEventsException {
     // need to keep retrying until the NN sends us the latest committed txid
     if (lastReadTxid == -1) {
       LOG.debug("poll(): lastReadTxid is -1, reading current txid from NN");
@@ -101,14 +94,14 @@ public class DFSInotifyEventInputStream {
       return null;
     }
     if (!it.hasNext()) {
-      EventsList el = namenode.getEditsFromTxid(lastReadTxid + 1);
+      EventBatchList el = namenode.getEditsFromTxid(lastReadTxid + 1);
       if (el.getLastTxid() != -1) {
         // we only want to set syncTxid when we were actually able to read some
         // edits on the NN -- otherwise it will seem like edits are being
         // generated faster than we can read them when the problem is really
         // that we are temporarily unable to read edits
         syncTxid = el.getSyncTxid();
-        it = el.getEvents().iterator();
+        it = el.getBatches().iterator();
         long formerLastReadTxid = lastReadTxid;
         lastReadTxid = el.getLastTxid();
         if (el.getFirstTxid() != formerLastReadTxid + 1) {
@@ -131,18 +124,18 @@ public class DFSInotifyEventInputStream {
   }
 
   /**
-   * Return a estimate of how many events behind the NameNode's current state
-   * this stream is. Clients should periodically call this method and check if
-   * its result is steadily increasing, which indicates that they are falling
-   * behind (i.e. events are being generated faster than the client is reading
-   * them). If a client falls too far behind events may be deleted before the
-   * client can read them.
+   * Return a estimate of how many transaction IDs behind the NameNode's
+   * current state this stream is. Clients should periodically call this method
+   * and check if its result is steadily increasing, which indicates that they
+   * are falling behind (i.e. transaction are being generated faster than the
+   * client is reading them). If a client falls too far behind events may be
+   * deleted before the client can read them.
    * <p/>
    * A return value of -1 indicates that an estimate could not be produced, and
    * should be ignored. The value returned by this method is really only useful
    * when compared to previous or subsequent returned values.
    */
-  public long getEventsBehindEstimate() {
+  public long getTxidsBehindEstimate() {
     if (syncTxid == 0) {
       return -1;
     } else {
@@ -155,8 +148,8 @@ public class DFSInotifyEventInputStream {
   }
 
   /**
-   * Returns the next event in the stream, waiting up to the specified amount of
-   * time for a new event. Returns null if a new event is not available at the
+   * Returns the next event batch in the stream, waiting up to the specified
+   * amount of time for a new batch. Returns null if one is not available at the
    * end of the specified amount of time. The time before the method returns may
    * exceed the specified amount of time by up to the time required for an RPC
    * to the NameNode.
@@ -168,12 +161,12 @@ public class DFSInotifyEventInputStream {
    * see {@link DFSInotifyEventInputStream#poll()}
    * @throws InterruptedException if the calling thread is interrupted
    */
-  public Event poll(long time, TimeUnit tu) throws IOException,
+  public EventBatch poll(long time, TimeUnit tu) throws IOException,
       InterruptedException, MissingEventsException {
     long initialTime = Time.monotonicNow();
     long totalWait = TimeUnit.MILLISECONDS.convert(time, tu);
     long nextWait = INITIAL_WAIT_MS;
-    Event next = null;
+    EventBatch next = null;
     while ((next = poll()) == null) {
       long timeLeft = totalWait - (Time.monotonicNow() - initialTime);
       if (timeLeft <= 0) {
@@ -193,17 +186,17 @@ public class DFSInotifyEventInputStream {
   }
 
   /**
-   * Returns the next event in the stream, waiting indefinitely if a new event
-   * is not immediately available.
+   * Returns the next batch of events in the stream, waiting indefinitely if
+   * a new batch  is not immediately available.
    *
    * @throws IOException see {@link DFSInotifyEventInputStream#poll()}
    * @throws MissingEventsException see
    * {@link DFSInotifyEventInputStream#poll()}
    * @throws InterruptedException if the calling thread is interrupted
    */
-  public Event take() throws IOException, InterruptedException,
+  public EventBatch take() throws IOException, InterruptedException,
       MissingEventsException {
-    Event next = null;
+    EventBatch next = null;
     int nextWaitMin = INITIAL_WAIT_MS;
     while ((next = poll()) == null) {
       // sleep for a random period between nextWaitMin and nextWaitMin * 2
