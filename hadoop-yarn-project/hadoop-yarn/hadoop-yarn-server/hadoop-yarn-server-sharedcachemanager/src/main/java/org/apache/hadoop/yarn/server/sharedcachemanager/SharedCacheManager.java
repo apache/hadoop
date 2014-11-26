@@ -71,6 +71,9 @@ public class SharedCacheManager extends CompositeService {
         createNMCacheUploaderSCMProtocolService(store);
     addService(nms);
 
+    ClientProtocolService cps = createClientProtocolService(store);
+    addService(cps);
+
     // init metrics
     DefaultMetricsSystem.initialize("SharedCacheManager");
     JvmMetrics.initSingleton("SharedCacheManager", null);
@@ -104,6 +107,10 @@ public class SharedCacheManager extends CompositeService {
   private SharedCacheUploaderService
       createNMCacheUploaderSCMProtocolService(SCMStore store) {
     return new SharedCacheUploaderService(store);
+  }
+
+  private ClientProtocolService createClientProtocolService(SCMStore store) {
+    return new ClientProtocolService(store);
   }
 
   @Override

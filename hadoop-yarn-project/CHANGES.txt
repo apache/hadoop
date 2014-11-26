@@ -46,7 +46,10 @@ Release 2.7.0 - UNRELEASED
     (Chris Trezzo and Sangjin Lee via kasha)
 
     YARN-2236. [YARN-1492] Shared Cache uploader service on the Node 
-    Manager. (Chris Trezzo and Sanjin Lee via kasha)
+    Manager. (Chris Trezzo and Sangjin Lee via kasha)
+
+    YARN-2188. [YARN-1492] Client service for cache manager. 
+    (Chris Trezzo and Sangjin Lee via kasha)
 
 
   IMPROVEMENTS
