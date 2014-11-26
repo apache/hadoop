@@ -141,6 +141,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7440. Consolidate snapshot related operations in a single class.
     (wheat9)
 
+    HDFS-6803 Document DFSClient#DFSInputStream expectations reading and preading
+    in concurrent context. (stack via stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES

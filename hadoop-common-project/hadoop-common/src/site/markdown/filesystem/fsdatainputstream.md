@@ -31,8 +31,8 @@ with extensions that add key assumptions to the system.
 reads starting at this offset.
 1. The cost of forward and backward seeks is low.
 1. There is no requirement for the stream implementation to be thread-safe.
- Callers MUST assume that instances are not thread-safe.
-
+1. BUT, if a stream implements [PositionedReadable](#PositionedReadable),
+ "positioned reads" MUST be thread-safe.
 
 Files are opened via `FileSystem.open(p)`, which, if successful, returns:
 
@@ -84,7 +84,7 @@ unexpectedly.
     FSDIS' = ((undefined), (undefined), False)
 
 
-### `Seekable.getPos()`
+### <a name="Seekable.getPos"></a>`Seekable.getPos()`
 
 Return the current position. The outcome when a stream is closed is undefined.
 
@@ -97,7 +97,7 @@ Return the current position. The outcome when a stream is closed is undefined.
     result = pos(FSDIS)
 
 
-### `InputStream.read()`
+### <a name="InputStream.read"></a> `InputStream.read()`
 
 Return the data at the current position.
 
@@ -117,7 +117,7 @@ Return the data at the current position.
         result = -1
 
 
-### `InputStream.read(buffer[], offset, length)`
+### <a name="InputStream.read.buffer[]"></a> `InputStream.read(buffer[], offset, length)`
 
 Read `length` bytes of data into the destination buffer, starting at offset
 `offset`
@@ -151,7 +151,7 @@ Exceptions that may be raised on precondition failure are
           FSDIS' = (pos+l, data, true)
           result = l
 
-### `Seekable.seek(s)`
+### <a name="Seekable.seek"></a>`Seekable.seek(s)`
 
 
 #### Preconditions
@@ -237,14 +237,47 @@ class, which can react to a checksum error in a read by attempting to source
 the data elsewhere. It a new source can be found it attempts to reread and
 recheck that portion of the file.
 
-## interface `PositionedReadable`
+## <a name="PositionedReadable"></a> interface `PositionedReadable`
 
-The `PositionedReadable` operations provide the ability to
-read data into a buffer from a specific position in
-the data stream.
+The `PositionedReadable` operations supply "positioned reads" ("pread").
+They provide the ability to read data into a buffer from a specific
+position in the data stream. Positioned reads equate to a
+[`Seekable.seek`](#Seekable.seek) at a particular offset followed by a
+[`InputStream.read(buffer[], offset, length)`](#InputStream.read.buffer[]),
+only there is a single method invocation, rather than `seek` then
+`read`, and two positioned reads can *optionally* run concurrently
+over a single instance of a `FSDataInputStream` stream.
 
-Although the interface declares that it must be thread safe,
-some of the implementations do not follow this guarantee.
+The interface declares positioned reads thread-safe (some of the
+implementations do not follow this guarantee).
+
+Any positional read run concurrent with a stream operation &mdash; e.g.
+[`Seekable.seek`](#Seekable.seek), [`Seekable.getPos()`](#Seekable.getPos),
+and [`InputStream.read()`](#InputStream.read) &mdash; MUST run in
+isolation; there must not be  mutual interference.
+
+Concurrent positional reads and stream operations MUST be serializable;
+one may block the other so they run in series but, for better throughput
+and 'liveness', they SHOULD run concurrently.
+
+Given two parallel positional reads, one at `pos1` for `len1` into buffer
+`dest1`, and another at `pos2` for `len2` into buffer `dest2`, AND given
+a concurrent, stream read run after a seek to `pos3`, the resultant
+buffers MUST be filled as follows, even if the reads happen to overlap
+on the underlying stream:
+
+    // Positioned read #1
+    read(pos1, dest1, ... len1) -> dest1[0..len1 - 1] =
+      [data(FS, path, pos1), data(FS, path, pos1 + 1) ... data(FS, path, pos1 + len1 - 1]
+
+    // Positioned read #2
+    read(pos2, dest2, ... len2) -> dest2[0..len2 - 1] =
+      [data(FS, path, pos2), data(FS, path, pos2 + 1) ... data(FS, path, pos2 + len2 - 1]
+
+    // Stream read
+    seek(pos3);
+    read(dest3, ... len3) -> dest3[0..len3 - 1] =
+      [data(FS, path, pos3), data(FS, path, pos3 + 1) ... data(FS, path, pos3 + len3 - 1]
 
 #### Implementation preconditions
 
@@ -263,9 +296,6 @@ base class implementation, which uses `Seekable.seek()`.
 of `pos` is unchanged at the end of the operation
 
     pos(FSDIS') == pos(FSDIS)
-
-
-There are no guarantees that this holds *during* the operation.
 
 
 #### Failure states
@@ -326,7 +356,7 @@ The semantics of this are exactly equivalent to
 are expected to receive access to the data of `FS.Files[p]` at the time of opening.
 * If the underlying data is changed during the read process, these changes MAY or
 MAY NOT be visible.
-* Such changes are visible MAY be partially visible.
+* Such changes that are visible MAY be partially visible.
 
 
 At time t0
