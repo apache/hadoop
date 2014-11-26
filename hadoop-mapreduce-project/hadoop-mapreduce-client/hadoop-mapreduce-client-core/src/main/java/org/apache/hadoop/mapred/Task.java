@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.crypto.SecretKey;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -625,9 +624,8 @@ abstract public class Task implements Writable, Configurable {
      * Using AtomicBoolean since we need an atomic read & reset method. 
      */  
     private AtomicBoolean progressFlag = new AtomicBoolean(false);
-
-    @VisibleForTesting
-    public TaskReporter(Progress taskProgress,
+    
+    TaskReporter(Progress taskProgress,
                  TaskUmbilicalProtocol umbilical) {
       this.umbilical = umbilical;
       this.taskProgress = taskProgress;

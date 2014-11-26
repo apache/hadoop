@@ -564,14 +564,18 @@ public abstract class TaskAttemptImpl implements
   }
 
   private int getMemoryRequired(Configuration conf, TaskType taskType) {
-    JobConf jobConf = conf instanceof JobConf
-        ? (JobConf) conf
-        : new JobConf(conf);
-
-    return jobConf.getMemoryRequired(
-        taskType == TaskType.MAP
-            ? org.apache.hadoop.mapreduce.TaskType.MAP
-            : org.apache.hadoop.mapreduce.TaskType.REDUCE);
+    int memory = 1024;
+    if (taskType == TaskType.MAP)  {
+      memory =
+          conf.getInt(MRJobConfig.MAP_MEMORY_MB,
+              MRJobConfig.DEFAULT_MAP_MEMORY_MB);
+    } else if (taskType == TaskType.REDUCE) {
+      memory =
+          conf.getInt(MRJobConfig.REDUCE_MEMORY_MB,
+              MRJobConfig.DEFAULT_REDUCE_MEMORY_MB);
+    }
+    
+    return memory;
   }
 
   private int getCpuRequired(Configuration conf, TaskType taskType) {
