@@ -686,7 +686,7 @@ public class FSDirectory implements Closeable {
     List<INodeDirectory> snapshottableDirs = new ArrayList<INodeDirectory>();
     if (dstInode != null) { // Destination exists
       validateRenameOverwrite(src, dst, overwrite, srcInode, dstInode);
-      checkSnapshot(dstInode, snapshottableDirs);
+      FSDirSnapshotOp.checkSnapshot(dstInode, snapshottableDirs);
     }
 
     INode dstParent = dstIIP.getINode(-2);
@@ -863,7 +863,7 @@ public class FSDirectory implements Closeable {
     }
     // srcInode and its subtree cannot contain snapshottable directories with
     // snapshots
-    checkSnapshot(srcInode, null);
+    FSDirSnapshotOp.checkSnapshot(srcInode, null);
   }
 
   /**
@@ -1208,7 +1208,7 @@ public class FSDirectory implements Closeable {
         filesRemoved = -1;
       } else {
         List<INodeDirectory> snapshottableDirs = new ArrayList<INodeDirectory>();
-        checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
+        FSDirSnapshotOp.checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
         filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks,
             removedINodes, mtime);
         namesystem.removeSnapshottableDirs(snapshottableDirs);
@@ -1278,7 +1278,7 @@ public class FSDirectory implements Closeable {
     long filesRemoved = -1;
     if (deleteAllowed(inodesInPath, src)) {
       List<INodeDirectory> snapshottableDirs = new ArrayList<INodeDirectory>();
-      checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
+      FSDirSnapshotOp.checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
       filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks,
           removedINodes, mtime);
       namesystem.removeSnapshottableDirs(snapshottableDirs); 
@@ -1341,38 +1341,6 @@ public class FSDirectory implements Closeable {
           + targetNode.getFullPathName() + " is removed");
     }
     return removed;
-  }
-  
-  /**
-   * Check if the given INode (or one of its descendants) is snapshottable and
-   * already has snapshots.
-   * 
-   * @param target The given INode
-   * @param snapshottableDirs The list of directories that are snapshottable 
-   *                          but do not have snapshots yet
-   */
-  private static void checkSnapshot(INode target,
-      List<INodeDirectory> snapshottableDirs) throws SnapshotException {
-    if (target.isDirectory()) {
-      INodeDirectory targetDir = target.asDirectory();
-      DirectorySnapshottableFeature sf = targetDir
-          .getDirectorySnapshottableFeature();
-      if (sf != null) {
-        if (sf.getNumSnapshots() > 0) {
-          String fullPath = targetDir.getFullPathName();
-          throw new SnapshotException("The directory " + fullPath
-              + " cannot be deleted since " + fullPath
-              + " is snapshottable and already has snapshots");
-        } else {
-          if (snapshottableDirs != null) {
-            snapshottableDirs.add(targetDir);
-          }
-        }
-      } 
-      for (INode child : targetDir.getChildrenList(Snapshot.CURRENT_STATE_ID)) {
-        checkSnapshot(child, snapshottableDirs);
-      }
-    }
   }
 
   private byte getStoragePolicyID(byte inodePolicy, byte parentPolicy) {
@@ -3321,10 +3289,10 @@ public class FSDirectory implements Closeable {
    * details of the parameters, see
    * {@link FSPermissionChecker#checkPermission}.
    */
-  private void checkPermission(
-    FSPermissionChecker pc, String path, boolean doCheckOwner,
-    FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-    FsAction subAccess)
+  void checkPermission(
+      FSPermissionChecker pc, String path, boolean doCheckOwner,
+      FsAction ancestorAccess, FsAction parentAccess, FsAction access,
+      FsAction subAccess)
     throws AccessControlException, UnresolvedLinkException {
     checkPermission(pc, path, doCheckOwner, ancestorAccess,
         parentAccess, access, subAccess, false, true);
