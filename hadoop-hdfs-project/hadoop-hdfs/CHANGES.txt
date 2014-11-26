@@ -138,6 +138,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7436. Consolidate implementation of concat(). (wheat9)
 
+    HDFS-7440. Consolidate snapshot related operations in a single class.
+    (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
