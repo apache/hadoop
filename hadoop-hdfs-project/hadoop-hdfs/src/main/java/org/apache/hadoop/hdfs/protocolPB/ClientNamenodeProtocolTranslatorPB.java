@@ -25,6 +25,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.crypto.CipherSuite;
@@ -63,6 +64,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
@@ -188,7 +190,6 @@ import org.apache.hadoop.security.token.Token;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
-
 import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import static org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos
     .EncryptionZoneProto;
@@ -301,7 +302,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public LocatedBlock append(String src, String clientName)
+  public LastBlockWithStatus append(String src, String clientName)
       throws AccessControlException, DSQuotaExceededException,
       FileNotFoundException, SafeModeException, UnresolvedLinkException,
       IOException {
@@ -311,7 +312,11 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .build();
     try {
       AppendResponseProto res = rpcProxy.append(null, req);
-      return res.hasBlock() ? PBHelper.convert(res.getBlock()) : null;
+      LocatedBlock lastBlock = res.hasBlock() ? PBHelper
+          .convert(res.getBlock()) : null;
+      HdfsFileStatus stat = (res.hasStat()) ? PBHelper.convert(res.getStat())
+          : null;
+      return new LastBlockWithStatus(lastBlock, stat);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

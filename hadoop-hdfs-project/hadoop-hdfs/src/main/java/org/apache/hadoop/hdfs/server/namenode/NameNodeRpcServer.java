@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
+
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -86,6 +87,7 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -618,7 +620,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public LocatedBlock append(String src, String clientName) 
+  public LastBlockWithStatus append(String src, String clientName) 
       throws IOException {
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
@@ -627,10 +629,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
     CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache, null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (LocatedBlock) cacheEntry.getPayload();
+      return (LastBlockWithStatus) cacheEntry.getPayload();
     }
 
-    LocatedBlock info = null;
+    LastBlockWithStatus info = null;
     boolean success = false;
     try {
       info = namesystem.appendFile(src, clientName, clientMachine,
