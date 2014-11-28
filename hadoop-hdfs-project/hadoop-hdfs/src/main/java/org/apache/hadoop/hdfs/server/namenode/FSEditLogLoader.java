@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -393,8 +394,12 @@ public class FSEditLogLoader {
           
           // add the op into retry cache is necessary
           if (toAddRetryCache) {
+            HdfsFileStatus stat = fsNamesys.dir.createFileStatus(
+                HdfsFileStatus.EMPTY_NAME, newFile,
+                BlockStoragePolicySuite.ID_UNSPECIFIED,
+                Snapshot.CURRENT_STATE_ID, false, iip);
             fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
-                addCloseOp.rpcCallId, lb);
+                addCloseOp.rpcCallId, new LastBlockWithStatus(lb, stat));
           }
         }
       }

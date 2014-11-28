@@ -164,6 +164,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
@@ -1777,9 +1778,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /** Method to get stream returned by append call */
   private DFSOutputStream callAppend(String src,
       int buffersize, Progressable progress) throws IOException {
-    LocatedBlock lastBlock = null;
+    LastBlockWithStatus lastBlockWithStatus = null;
     try {
-      lastBlock = namenode.append(src, clientName);
+      lastBlockWithStatus = namenode.append(src, clientName);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
@@ -1789,9 +1790,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     }
-    HdfsFileStatus newStat = getFileInfo(src);
+    HdfsFileStatus newStat = lastBlockWithStatus.getFileStatus();
     return DFSOutputStream.newStreamForAppend(this, src, buffersize, progress,
-        lastBlock, newStat, dfsClientConf.createChecksum());
+        lastBlockWithStatus.getLastBlock(), newStat,
+        dfsClientConf.createChecksum());
   }
   
   /**
