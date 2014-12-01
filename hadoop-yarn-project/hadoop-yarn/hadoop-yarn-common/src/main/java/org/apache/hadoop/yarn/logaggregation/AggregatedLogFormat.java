@@ -801,6 +801,10 @@ public class AggregatedLogFormat {
       return currentLogData.skip(n);
     }
 
+    public int read() throws IOException {
+      return currentLogData.read();
+    }
+
     public int read(byte[] buf, int off, int len) throws IOException {
       return currentLogData.read(buf, off, len);
     }

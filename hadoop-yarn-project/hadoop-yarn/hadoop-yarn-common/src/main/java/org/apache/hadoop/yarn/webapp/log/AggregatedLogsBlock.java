@@ -231,8 +231,14 @@ public class AggregatedLogsBlock extends HtmlBlock {
         long totalSkipped = 0;
         while (totalSkipped < start) {
           long ret = logReader.skip(start - totalSkipped);
-          if (ret < 0) {
-            throw new IOException( "Premature EOF from container log");
+          if (ret == 0) {
+            //Read one byte
+            int nextByte = logReader.read();
+            // Check if we have reached EOF
+            if (nextByte == -1) {
+              throw new IOException( "Premature EOF from container log");
+            }
+            ret = 1;
           }
           totalSkipped += ret;
         }
