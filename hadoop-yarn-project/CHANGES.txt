@@ -101,6 +101,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2165. Added the sanity check for the numeric configuration values of
     the timeline service. (Vasanth kumar RJ via zjshen)
 
+    YARN-2907. SchedulerNode#toString should print all resource detail instead 
+    of only memory. (Rohith via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
