@@ -28,6 +28,9 @@ Release 2.7.0 - UNRELEASED
     correctly in case the number of mappers or reducers is zero. (MinJi Kim via
     jianhe)
  
+    MAPREDUCE-6172. TestDbClasses timeouts are too aggressive (Varun Saxena
+    via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
