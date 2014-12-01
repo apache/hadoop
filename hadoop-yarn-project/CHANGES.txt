@@ -155,6 +155,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2906. CapacitySchedulerPage shows HTML tags for a queue's Active Users.
     (Jason Lowe via jianhe)
 
+    YARN-2905. AggregatedLogsBlock page can infinitely loop if the aggregated
+    log file is corrupted (Varun Saxena via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
