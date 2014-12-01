@@ -19,11 +19,14 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 
+import java.io.IOException;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsResponse;
@@ -33,11 +36,13 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptReportRe
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptReportResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportsRequest;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
@@ -159,6 +164,20 @@ public class TestJobHistoryServer {
     // Task state should be SUCCEEDED
     assertEquals(TaskState.SUCCEEDED, reportResponse.getTaskReport()
             .getTaskState());
+
+    // For invalid jobid, throw IOException
+    GetTaskReportsRequest gtreportsRequest =
+        recordFactory.newRecordInstance(GetTaskReportsRequest.class);
+    gtreportsRequest.setJobId(TypeConverter.toYarn(JobID
+        .forName("job_1415730144495_0001")));
+    gtreportsRequest.setTaskType(TaskType.REDUCE);
+    try {
+      protocol.getTaskReports(gtreportsRequest);
+      fail("IOException not thrown for invalid job id");
+    } catch (IOException e) {
+      // Expected
+    }
+
     // test getTaskAttemptCompletionEvents
     GetTaskAttemptCompletionEventsRequest taskAttemptRequest = recordFactory
             .newRecordInstance(GetTaskAttemptCompletionEventsRequest.class);

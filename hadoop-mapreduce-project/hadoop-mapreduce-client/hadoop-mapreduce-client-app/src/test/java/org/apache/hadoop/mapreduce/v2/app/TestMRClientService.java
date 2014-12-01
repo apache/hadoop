@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app;
 
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Iterator;
 import java.util.List;
@@ -28,8 +29,10 @@ import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
@@ -179,6 +182,19 @@ public class TestMRClientService {
             TaskAttemptEventType.TA_DONE));
 
     app.waitForState(job, JobState.SUCCEEDED);
+
+    // For invalid jobid, throw IOException
+    gtreportsRequest =
+        recordFactory.newRecordInstance(GetTaskReportsRequest.class);
+    gtreportsRequest.setJobId(TypeConverter.toYarn(JobID
+        .forName("job_1415730144495_0001")));
+    gtreportsRequest.setTaskType(TaskType.REDUCE);
+    try {
+      proxy.getTaskReports(gtreportsRequest);
+      fail("IOException not thrown for invalid job id");
+    } catch (IOException e) {
+      // Expected
+    }
   }
 
   @Test
