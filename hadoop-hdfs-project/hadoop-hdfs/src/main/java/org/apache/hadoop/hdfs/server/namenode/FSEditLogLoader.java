@@ -372,8 +372,8 @@ public class FSEditLogLoader {
 
         // add the op into retry cache if necessary
         if (toAddRetryCache) {
-          HdfsFileStatus stat = fsNamesys.dir.createFileStatus(
-              HdfsFileStatus.EMPTY_NAME, newFile,
+          HdfsFileStatus stat = FSDirStatAndListingOp.createFileStatus(
+              fsNamesys.dir, HdfsFileStatus.EMPTY_NAME, newFile,
               BlockStoragePolicySuite.ID_UNSPECIFIED, Snapshot.CURRENT_STATE_ID,
               false, iip);
           fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
@@ -393,7 +393,8 @@ public class FSEditLogLoader {
           
           // add the op into retry cache is necessary
           if (toAddRetryCache) {
-            HdfsFileStatus stat = fsNamesys.dir.createFileStatus(
+            HdfsFileStatus stat = FSDirStatAndListingOp.createFileStatus(
+                fsNamesys.dir,
                 HdfsFileStatus.EMPTY_NAME, newFile,
                 BlockStoragePolicySuite.ID_UNSPECIFIED,
                 Snapshot.CURRENT_STATE_ID, false, iip);
