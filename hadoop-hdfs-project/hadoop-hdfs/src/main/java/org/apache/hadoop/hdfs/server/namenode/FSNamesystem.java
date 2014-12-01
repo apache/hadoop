@@ -146,7 +146,6 @@ import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
@@ -2468,7 +2467,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       toRemoveBlocks = startFileInternal(pc, src, permissions, holder, 
           clientMachine, create, overwrite, createParent, replication, 
           blockSize, isLazyPersist, suite, protocolVersion, edek, logRetryCache);
-      stat = dir.getFileInfo(src, false,
+      stat = FSDirStatAndListingOp.getFileInfo(dir, src, false,
           FSDirectory.isReservedRawName(srcArg), true);
     } catch (StandbyException se) {
       skipSync = true;
@@ -2923,8 +2922,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkNameNodeSafeMode("Cannot append to file" + src);
       src = dir.resolvePath(pc, src, pathComponents);
       lb = appendFileInternal(pc, src, holder, clientMachine, logRetryCache);
-      stat = dir.getFileInfo(src, false, FSDirectory.isReservedRawName(srcArg),
-          true);
+      stat = FSDirStatAndListingOp.getFileInfo(dir, src, false,
+          FSDirectory.isReservedRawName(srcArg), true);
     } catch (StandbyException se) {
       skipSync = true;
       throw se;
@@ -3921,7 +3920,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Get the file info for a specific file.
    *
    * @param srcArg The string representation of the path to the file
-   * @param resolveLink whether to throw UnresolvedLinkException 
+   * @param resolveLink whether to throw UnresolvedLinkException
    *        if src refers to a symlink
    *
    * @throws AccessControlException if access is denied
@@ -3929,63 +3928,37 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *
    * @return object containing information regarding the file
    *         or null if file not found
-   * @throws StandbyException 
+   * @throws StandbyException
    */
-  HdfsFileStatus getFileInfo(final String srcArg, boolean resolveLink)
-    throws AccessControlException, UnresolvedLinkException,
-           StandbyException, IOException {
-    String src = srcArg;
-    if (!DFSUtil.isValidName(src)) {
-      throw new InvalidPathException("Invalid file name: " + src);
-    }
-    HdfsFileStatus stat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+  HdfsFileStatus getFileInfo(final String src, boolean resolveLink)
+    throws IOException {
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    HdfsFileStatus stat = null;
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
-      boolean isSuperUser = true;
-      if (isPermissionEnabled) {
-        checkPermission(pc, src, false, null, null, null, null, false,
-            resolveLink);
-        isSuperUser = pc.isSuperUser();
-      }
-      stat = dir.getFileInfo(src, resolveLink,
-          FSDirectory.isReservedRawName(srcArg), isSuperUser);
+      stat = FSDirStatAndListingOp.getFileInfo(dir, src, resolveLink);
     } catch (AccessControlException e) {
-      logAuditEvent(false, "getfileinfo", srcArg);
+      logAuditEvent(false, "getfileinfo", src);
       throw e;
     } finally {
       readUnlock();
     }
-    logAuditEvent(true, "getfileinfo", srcArg);
+    logAuditEvent(true, "getfileinfo", src);
     return stat;
   }
-  
+
   /**
    * Returns true if the file is closed
    */
-  boolean isFileClosed(final String srcArg)
-      throws AccessControlException, UnresolvedLinkException,
-      StandbyException, IOException {
-    String src = srcArg;
-    FSPermissionChecker pc = getPermissionChecker();  
+  boolean isFileClosed(final String src) throws IOException {
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
-      src = dir.resolvePath(pc, src, pathComponents);
       checkOperation(OperationCategory.READ);
-      if (isPermissionEnabled) {
-        checkTraverse(pc, src);
-      }
-      return !INodeFile.valueOf(dir.getINode(src), src).isUnderConstruction();
+      return FSDirStatAndListingOp.isFileClosed(dir, src);
     } catch (AccessControlException e) {
-      if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(false, "isFileClosed", srcArg);
-      }
+      logAuditEvent(false, "isFileClosed", src);
       throw e;
     } finally {
       readUnlock();
@@ -4182,7 +4155,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get the content summary for a specific file/dir.
    *
-   * @param srcArg The string representation of the path to the file
+   * @param src The string representation of the path to the file
    *
    * @throws AccessControlException if access is denied
    * @throws UnresolvedLinkException if a symlink is encountered.
@@ -4193,27 +4166,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  ContentSummary getContentSummary(final String srcArg) throws IOException {
-    String src = srcArg;
-    FSPermissionChecker pc = getPermissionChecker();
-    checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+  ContentSummary getContentSummary(final String src) throws IOException {
     readLock();
     boolean success = true;
     try {
-      checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
-      if (isPermissionEnabled) {
-        checkPermission(pc, src, false, null, null, null, FsAction.READ_EXECUTE);
-      }
-      return dir.getContentSummary(src);
-
+      return FSDirStatAndListingOp.getContentSummary(dir, src);
     } catch (AccessControlException ace) {
       success = false;
       throw ace;
     } finally {
       readUnlock();
-      logAuditEvent(success, "contentSummary", srcArg);
+      logAuditEvent(success, "contentSummary", src);
     }
   }
 
@@ -4722,58 +4685,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation) 
-      throws AccessControlException, UnresolvedLinkException, IOException {
+      throws IOException {
+    checkOperation(OperationCategory.READ);
+    DirectoryListing dl = null;
+    readLock();
     try {
-      return getListingInt(src, startAfter, needLocation);
+      checkOperation(NameNode.OperationCategory.READ);
+      dl = FSDirStatAndListingOp.getListingInt(dir, src, startAfter,
+          needLocation);
     } catch (AccessControlException e) {
       logAuditEvent(false, "listStatus", src);
       throw e;
-    }
-  }
-
-  private DirectoryListing getListingInt(final String srcArg, byte[] startAfter,
-      boolean needLocation)
-    throws AccessControlException, UnresolvedLinkException, IOException {
-    String src = srcArg;
-    DirectoryListing dl;
-    FSPermissionChecker pc = getPermissionChecker();
-    checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    String startAfterString = new String(startAfter);
-    readLock();
-    try {
-      checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
-
-      // Get file name when startAfter is an INodePath
-      if (FSDirectory.isReservedName(startAfterString)) {
-        byte[][] startAfterComponents = FSDirectory
-            .getPathComponentsForReservedPath(startAfterString);
-        try {
-          String tmp = FSDirectory.resolvePath(src, startAfterComponents, dir);
-          byte[][] regularPath = INode.getPathComponents(tmp);
-          startAfter = regularPath[regularPath.length - 1];
-        } catch (IOException e) {
-          // Possibly the inode is deleted
-          throw new DirectoryListingStartAfterNotFoundException(
-              "Can't find startAfter " + startAfterString);
-        }
-      }
-
-      boolean isSuperUser = true;
-      if (isPermissionEnabled) {
-        if (dir.isDir(src)) {
-          checkPathAccess(pc, src, FsAction.READ_EXECUTE);
-        } else {
-          checkTraverse(pc, src);
-        }
-        isSuperUser = pc.isSuperUser();
-      }
-      logAuditEvent(true, "listStatus", srcArg);
-      dl = dir.getListing(src, startAfter, needLocation, isSuperUser);
     } finally {
       readUnlock();
     }
+    logAuditEvent(true, "listStatus", src);
     return dl;
   }
 
