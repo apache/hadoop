@@ -23,6 +23,8 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -31,9 +33,58 @@ import org.apache.hadoop.metrics2.lib.MetricsAnnotations;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricsSourceBuilder;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import static org.apache.hadoop.metrics2.lib.Interns.info;
+import static org.junit.Assert.assertEquals;
+
 import org.junit.Test;
 
+import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanInfo;
+
 public class TestMetricsSourceAdapter {
+
+
+  @Test
+  public void testPurgeOldMetrics() throws Exception {
+    // create test source with a single metric counter of value 1
+    PurgableSource source = new PurgableSource();
+    MetricsSourceBuilder sb = MetricsAnnotations.newSourceBuilder(source);
+    final MetricsSource s = sb.build();
+
+    List<MetricsTag> injectedTags = new ArrayList<MetricsTag>();
+    MetricsSourceAdapter sa = new MetricsSourceAdapter(
+        "tst", "tst", "testdesc", s, injectedTags, null, null, 1, false);
+
+    MBeanInfo info = sa.getMBeanInfo();
+    boolean sawIt = false;
+    for (MBeanAttributeInfo mBeanAttributeInfo : info.getAttributes()) {
+      sawIt |= mBeanAttributeInfo.getName().equals(source.lastKeyName);
+    };
+    assertTrue("The last generated metric is not exported to jmx", sawIt);
+
+    Thread.sleep(1000); // skip JMX cache TTL
+
+    info = sa.getMBeanInfo();
+    sawIt = false;
+    for (MBeanAttributeInfo mBeanAttributeInfo : info.getAttributes()) {
+      sawIt |= mBeanAttributeInfo.getName().equals(source.lastKeyName);
+    };
+    assertTrue("The last generated metric is not exported to jmx", sawIt);
+  }
+
+  //generate a new key per each call
+  class PurgableSource implements MetricsSource {
+    int nextKey = 0;
+    String lastKeyName = null;
+    @Override
+    public void getMetrics(MetricsCollector collector, boolean all) {
+      MetricsRecordBuilder rb =
+          collector.addRecord("purgablesource")
+              .setContext("test");
+      lastKeyName = "key" + nextKey++;
+      rb.addGauge(info(lastKeyName, "desc"), 1);
+    }
+  }
 
   @Test
   public void testGetMetricsAndJmx() throws Exception {

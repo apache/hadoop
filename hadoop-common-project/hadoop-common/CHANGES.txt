@@ -20,6 +20,9 @@ Release 2.6.5 - UNRELEASED
     HADOOP-13298. Fix the leftover L&N files in
     hadoop-build-tools/src/main/resources/META-INF/. (ozawa)
 
+    HADOOP-11301. [optionally] update jmx cache to drop old metrics
+    (Maysam Yabandeh via stack)
+
   OPTIMIZATIONS
 
     HADOOP-12810. FileSystem#listLocatedStatus causes unnecessary RPC calls
