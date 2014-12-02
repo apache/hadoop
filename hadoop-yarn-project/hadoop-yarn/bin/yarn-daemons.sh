@@ -41,6 +41,8 @@ else
   exit 1
 fi
 
-hadoop_connect_to_hosts "${bin}/yarn-daemon.sh" \
---config "${HADOOP_CONF_DIR}" "$@"
+daemonmode=$1
+shift
 
+hadoop_connect_to_hosts "${HADOOP_YARN_HOME}/bin/yarn" \
+    --config "${HADOOP_CONF_DIR}" --daemon "${daemonmode}" "$@"

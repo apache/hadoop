@@ -10,6 +10,9 @@ Trunk - Unreleased
 
     YARN-2438. yarn-env.sh cleanup (aw)
 
+    YARN-2472. yarn-daemons.sh should jsut call yarn directly (Masatake Iwasaki
+    via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
