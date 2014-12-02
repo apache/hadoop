@@ -72,11 +72,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   }
 
   public MiniMRYarnCluster(String testName, int noOfNMs) {
-    this(testName, noOfNMs, false);
-  }
-
-  public MiniMRYarnCluster(String testName, int noOfNMs, boolean enableAHS) {
-    super(testName, 1, noOfNMs, 4, 4, enableAHS);
+    super(testName, 1, noOfNMs, 4, 4);
     historyServerWrapper = new JobHistoryServerWrapper();
     addService(historyServerWrapper);
   }
