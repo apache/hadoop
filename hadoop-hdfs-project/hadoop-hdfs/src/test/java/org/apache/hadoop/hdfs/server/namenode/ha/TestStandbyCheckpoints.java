@@ -251,7 +251,7 @@ public class TestStandbyCheckpoints {
         "testCheckpointCancellation-tmp");
     FSNamesystem fsn = cluster.getNamesystem(0);
     FSImageTestUtil.createAbortedLogWithMkdirs(tmpDir, NUM_DIRS_IN_LOG, 3,
-        fsn.getLastInodeId() + 1);
+        fsn.getFSDirectory().getLastInodeId() + 1);
     String fname = NNStorage.getInProgressEditsFileName(3); 
     new File(tmpDir, fname).renameTo(new File(sharedDir, fname));
 

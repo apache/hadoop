@@ -156,6 +156,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7438. Consolidate the implementation of rename() into a single class.
     (wheat9)
 
+    HDFS-7462. Consolidate implementation of mkdirs() into a single class.
+    (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -39,9 +39,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
-import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -66,7 +66,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
-import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -83,7 +82,6 @@ import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
@@ -147,6 +145,7 @@ public class FSDirectory implements Closeable {
   private final boolean isPermissionEnabled;
   private final String fsOwnerShortUserName;
   private final String supergroup;
+  private final INodeId inodeId;
 
   private final FSEditLog editLog;
 
@@ -194,6 +193,7 @@ public class FSDirectory implements Closeable {
 
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
+    this.inodeId = new INodeId();
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir);
     this.isPermissionEnabled = conf.getBoolean(
@@ -329,8 +329,7 @@ public class FSDirectory implements Closeable {
       UnresolvedLinkException, SnapshotAccessControlException, AclException {
 
     long modTime = now();
-    INodeFile newNode = newINodeFile(namesystem.allocateNewInodeId(),
-        permissions, modTime, modTime, replication, preferredBlockSize);
+    INodeFile newNode = newINodeFile(allocateNewInodeId(), permissions, modTime, modTime, replication, preferredBlockSize);
     newNode.toUnderConstruction(clientName, clientMachine);
 
     boolean added = false;
@@ -929,22 +928,6 @@ public class FSDirectory implements Closeable {
       readUnlock();
     }
   }
-  
-  /**
-   * Check whether the path specifies a directory
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   */
-  boolean isDirMutable(String src) throws UnresolvedLinkException,
-      SnapshotAccessControlException {
-    src = normalizePath(src);
-    readLock();
-    try {
-      INode node = getINode4Write(src, false);
-      return node != null && node.isDirectory();
-    } finally {
-      readUnlock();
-    }
-  }
 
   /** Updates namespace and diskspace consumed for all
    * directories until the parent directory of file represented by path.
@@ -1081,38 +1064,6 @@ public class FSDirectory implements Closeable {
     return inodes == null ? "" : getFullPathName(inodes, inodes.length - 1);
   }
 
-  INode unprotectedMkdir(long inodeId, String src, PermissionStatus permissions,
-                          List<AclEntry> aclEntries, long timestamp)
-      throws QuotaExceededException, UnresolvedLinkException, AclException {
-    assert hasWriteLock();
-    byte[][] components = INode.getPathComponents(src);
-    INodesInPath iip = getExistingPathINodes(components);
-    INode[] inodes = iip.getINodes();
-    final int pos = inodes.length - 1;
-    unprotectedMkdir(inodeId, iip, pos, components[pos], permissions, aclEntries,
-        timestamp);
-    return inodes[pos];
-  }
-
-  /** create a directory at index pos.
-   * The parent path to the directory is at [0, pos-1].
-   * All ancestors exist. Newly created one stored at index pos.
-   */
-  void unprotectedMkdir(long inodeId, INodesInPath inodesInPath,
-      int pos, byte[] name, PermissionStatus permission,
-      List<AclEntry> aclEntries, long timestamp)
-      throws QuotaExceededException, AclException {
-    assert hasWriteLock();
-    final INodeDirectory dir = new INodeDirectory(inodeId, name, permission,
-        timestamp);
-    if (addChild(inodesInPath, pos, dir, true)) {
-      if (aclEntries != null) {
-        AclStorage.updateINodeAcl(dir, aclEntries, Snapshot.CURRENT_STATE_ID);
-      }
-      inodesInPath.setINode(pos, dir);
-    }
-  }
-  
   /**
    * Add the given child to the namespace.
    * @param src The full path name of the child node.
@@ -1314,8 +1265,8 @@ public class FSDirectory implements Closeable {
    *         otherwise return true;
    * @throws QuotaExceededException is thrown if it violates quota limit
    */
-  private boolean addChild(INodesInPath iip, int pos,
-      INode child, boolean checkQuota) throws QuotaExceededException {
+  boolean addChild(INodesInPath iip, int pos, INode child, boolean checkQuota)
+      throws QuotaExceededException {
     final INode[] inodes = iip.getINodes();
     // Disallow creation of /.reserved. This may be created when loading
     // editlog/fsimage during upgrade since /.reserved was a valid name in older
@@ -1626,6 +1577,7 @@ public class FSDirectory implements Closeable {
       inodeMap.clear();
       addToInodeMap(rootDir);
       nameCache.reset();
+      inodeId.setCurrentValue(INodeId.LAST_RESERVED_ID);
     } finally {
       writeUnlock();
     }
@@ -2381,7 +2333,7 @@ public class FSDirectory implements Closeable {
    * @throws UnresolvedLinkException if symlink can't be resolved
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */
-  private INode getINode4Write(String src, boolean resolveLink)
+  INode getINode4Write(String src, boolean resolveLink)
           throws UnresolvedLinkException, SnapshotAccessControlException {
     return getINodesInPath4Write(src, resolveLink).getLastINode();
   }
@@ -2480,5 +2432,52 @@ public class FSDirectory implements Closeable {
     return (namesystem.isAuditEnabled() && namesystem.isExternalInvocation())
       ? FSDirStatAndListingOp.getFileInfo(this, path, resolveSymlink, false,
         false) : null;
+  }
+
+  /**
+   * Verify that parent directory of src exists.
+   */
+  void verifyParentDir(String src)
+      throws FileNotFoundException, ParentNotDirectoryException,
+             UnresolvedLinkException {
+    Path parent = new Path(src).getParent();
+    if (parent != null) {
+      final INode parentNode = getINode(parent.toString());
+      if (parentNode == null) {
+        throw new FileNotFoundException("Parent directory doesn't exist: "
+            + parent);
+      } else if (!parentNode.isDirectory() && !parentNode.isSymlink()) {
+        throw new ParentNotDirectoryException("Parent path is not a directory: "
+            + parent);
+      }
+    }
+  }
+
+  /** Allocate a new inode ID. */
+  long allocateNewInodeId() {
+    return inodeId.nextValue();
+  }
+
+  /** @return the last inode ID. */
+  public long getLastInodeId() {
+    return inodeId.getCurrentValue();
+  }
+
+  /**
+   * Set the last allocated inode id when fsimage or editlog is loaded.
+   * @param newValue
+   */
+  void resetLastInodeId(long newValue) throws IOException {
+    try {
+      inodeId.skipTo(newValue);
+    } catch(IllegalStateException ise) {
+      throw new IOException(ise);
+    }
+  }
+
+  /** Should only be used for tests to reset to any value
+   * @param newValue*/
+  void resetLastInodeIdWithoutChecking(long newValue) {
+    inodeId.setCurrentValue(newValue);
   }
 }

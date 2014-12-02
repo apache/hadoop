@@ -177,7 +177,7 @@ public class FSEditLogLoader {
     prog.setTotal(Phase.LOADING_EDITS, step, numTxns);
     Counter counter = prog.getCounter(Phase.LOADING_EDITS, step);
     long lastLogTime = now();
-    long lastInodeId = fsNamesys.getLastInodeId();
+    long lastInodeId = fsNamesys.dir.getLastInodeId();
     
     try {
       while (true) {
@@ -277,7 +277,7 @@ public class FSEditLogLoader {
         }
       }
     } finally {
-      fsNamesys.resetLastInodeId(lastInodeId);
+      fsNamesys.dir.resetLastInodeId(lastInodeId);
       if(closeOnExit) {
         in.close();
       }
@@ -306,12 +306,12 @@ public class FSEditLogLoader {
         throw new IOException("The layout version " + logVersion
             + " supports inodeId but gave bogus inodeId");
       }
-      inodeId = fsNamesys.allocateNewInodeId();
+      inodeId = fsNamesys.dir.allocateNewInodeId();
     } else {
       // need to reset lastInodeId. fsnamesys gets lastInodeId firstly from
       // fsimage but editlog captures more recent inodeId allocations
       if (inodeId > lastInodeId) {
-        fsNamesys.resetLastInodeId(inodeId);
+        fsNamesys.dir.resetLastInodeId(inodeId);
       }
     }
     return inodeId;
@@ -531,7 +531,7 @@ public class FSEditLogLoader {
       MkdirOp mkdirOp = (MkdirOp)op;
       inodeId = getAndUpdateLastInodeId(mkdirOp.inodeId, logVersion,
           lastInodeId);
-      fsDir.unprotectedMkdir(inodeId,
+      FSDirMkdirOp.unprotectedMkdir(fsDir, inodeId,
           renameReservedPathsOnUpgrade(mkdirOp.path, logVersion),
           mkdirOp.permissions, mkdirOp.aclEntries, mkdirOp.timestamp);
       break;

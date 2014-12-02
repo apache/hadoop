@@ -188,7 +188,7 @@ public class NameNodeAdapter {
   
   public static FSEditLog spyOnEditLog(NameNode nn) {
     FSEditLog spyEditLog = spy(nn.getNamesystem().getFSImage().getEditLog());
-    DFSTestUtil.setEditLogForTesting(nn, spyEditLog);
+    DFSTestUtil.setEditLogForTesting(nn.getNamesystem(), spyEditLog);
     EditLogTailer tailer = nn.getNamesystem().getEditLogTailer();
     if (tailer != null) {
       tailer.setEditLog(spyEditLog);
