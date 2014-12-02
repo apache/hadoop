@@ -621,6 +621,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
 
     // load state
     store = stateStoreHelper.getRMStateStore();
+    when(rmContext.getStateStore()).thenReturn(store);
     store.setRMDispatcher(dispatcher);
     RMState state = store.loadState();
     Assert.assertNotNull(state.getAMRMTokenSecretManagerState());
@@ -640,6 +641,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
 
     // load state
     store = stateStoreHelper.getRMStateStore();
+    when(rmContext.getStateStore()).thenReturn(store);
     store.setRMDispatcher(dispatcher);
     RMState state_2 = store.loadState();
     Assert.assertNotNull(state_2.getAMRMTokenSecretManagerState());

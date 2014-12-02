@@ -24,6 +24,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2188. [YARN-1492] Client service for cache manager. 
     (Chris Trezzo and Sangjin Lee via kasha)
 
+    YARN-2765. Added leveldb-based implementation for RMStateStore. (Jason Lowe
+    via jianhe)
 
   IMPROVEMENTS
 
