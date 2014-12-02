@@ -41,6 +41,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11341. KMS support for whitelist key ACLs. (Arun Suresh via wang)
 
+    HADOOP-11301. [optionally] update jmx cache to drop old metrics
+    (Maysam Yabandeh via stack)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
