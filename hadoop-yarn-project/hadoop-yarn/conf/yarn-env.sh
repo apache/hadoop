@@ -31,15 +31,18 @@
 
 # By default, YARN will use HADOOP_LOG_DIR for YARN logging.  Specify a custom
 # log directory for YARN things here:
+# Java properties: hadoop.log.dir, yarn.log.dir
 # export YARN_LOG_DIR="${HADOOP_LOG_DIR}"
 
 # By default, YARN will use the value of HADOOP_LOGFILE as the 'fallback' log
 # file # when log4j settings are not defined.  Specify a custom YARN log file
 # here:
+# Java properties: hadoop.log.file, yarn.log.file
 # export YARN_LOGFILE=${HADOOP_LOGFILE}
 
 #Override the log4j settings for all YARN apps By default, YARN will use
 # HADOOP_ROOT_LOGGER.
+# Java properties: hadoop.root.logger, yarn.root.logger
 # export YARN_ROOT_LOGGER=${HADOOP_ROOT_LOGGER}
 
 ###
@@ -51,8 +54,8 @@
 # the value to 1000.
 # This value will be overridden by an Xmx setting specified in either YARN_OPTS,
 # HADOOP_OPTS, and/or YARN_RESOURCEMANAGER_OPTS.
-# If not specified, the default value will be picked from either YARN_HEAPMAX
-# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+# If not specified, the default value will be picked from either HADOOP_HEAPSIZE
+# or the built-in default.
 #
 #export YARN_RESOURCEMANAGER_HEAPSIZE=1000
 
@@ -85,8 +88,8 @@
 # the value to 1000.
 # This value will be overridden by an Xmx setting specified in either YARN_OPTS,
 # HADOOP_OPTS, and/or YARN_NODEMANAGER_OPTS.
-# If not specified, the default value will be picked from either YARN_HEAPMAX
-# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+# If not specified, the default value will be picked from either HADOOP_HEAPSIZE
+# or the built-in default.
 #
 #export YARN_NODEMANAGER_HEAPSIZE=1000
 
@@ -107,8 +110,8 @@
 # the value to 1000.
 # This value will be overridden by an Xmx setting specified in either YARN_OPTS,
 # HADOOP_OPTS, and/or YARN_TIMELINESERVER_OPTS.
-# If not specified, the default value will be picked from either YARN_HEAPMAX
-# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+# If not specified, the default value will be picked from either HADOOP_HEAPSIZE
+# or the built-in default.
 #
 #export YARN_TIMELINESERVER_HEAPSIZE=1000
 
@@ -129,8 +132,8 @@
 # the value to 1000.
 # This value will be overridden by an Xmx setting specified in either YARN_OPTS,
 # HADOOP_OPTS, and/or YARN_PROXYSERVER_OPTS.
-# If not specified, the default value will be picked from either YARN_HEAPMAX
-# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+# If not specified, the default value will be picked from either HADOOP_HEAPSIZE
+# or the built-in default.
 #
 #export YARN_PROXYSERVER_HEAPSIZE=1000
 

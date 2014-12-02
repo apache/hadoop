@@ -180,6 +180,7 @@ case ${COMMAND} in
     CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
     hadoop_debug "Appending HADOOP_NAMENODE_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_NAMENODE_OPTS}"
+    hadoop_add_param HADOOP_OPTS hdfs.audit.logger "-Dhdfs.audit.logger=${HDFS_AUDIT_LOGGER}"
   ;;
   nfs3)
     supportdaemonization="true"
@@ -221,6 +222,7 @@ case ${COMMAND} in
     CLASS='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
     hadoop_debug "Appending HADOOP_SECONDARYNAMENODE_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_SECONDARYNAMENODE_OPTS}"
+    hadoop_add_param HADOOP_OPTS hdfs.audit.logger "-Dhdfs.audit.logger=${HDFS_AUDIT_LOGGER}"
   ;;
   snapshotDiff)
     CLASS=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff

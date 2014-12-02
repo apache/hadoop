@@ -145,6 +145,9 @@ Trunk (Unreleased)
 
     HADOOP-10926. Improve smart-apply-patch.sh to apply binary diffs (cmccabe)
 
+    HADOOP-11081. Document hadoop properties expected to be set by the shell 
+    code in *-env.sh (aw)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
