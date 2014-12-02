@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -534,7 +535,7 @@ public class TestNameNodeRecovery {
         FSEditLog spyLog =
             spy(cluster.getNameNode().getFSImage().getEditLog());
         doNothing().when(spyLog).endCurrentLogSegment(true);
-        cluster.getNameNode().getFSImage().setEditLogForTesting(spyLog);
+        DFSTestUtil.setEditLogForTesting(cluster.getNameNode(), spyLog);
       }
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();

@@ -153,7 +153,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
-import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
@@ -3561,155 +3560,62 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   @Deprecated
   boolean renameTo(String src, String dst, boolean logRetryCache)
-      throws IOException, UnresolvedLinkException {
-    boolean ret = false;
+      throws IOException {
+    waitForLoadingFSImage();
+    checkOperation(OperationCategory.WRITE);
+    FSDirRenameOp.RenameOldResult ret = null;
+    writeLock();
     try {
-      ret = renameToInt(src, dst, logRetryCache);
-    } catch (AccessControlException e) {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot rename " + src);
+      ret = FSDirRenameOp.renameToInt(dir, src, dst, logRetryCache);
+    } catch (AccessControlException e)  {
       logAuditEvent(false, "rename", src, dst, null);
       throw e;
+    } finally {
+      writeUnlock();
     }
-    return ret;
+    boolean success = ret != null && ret.success;
+    if (success) {
+      getEditLog().logSync();
+    }
+    logAuditEvent(success, "rename", src, dst,
+        ret == null ? null : ret.auditStat);
+    return success;
   }
 
-  private boolean renameToInt(final String srcArg, final String dstArg,
-    boolean logRetryCache)
-    throws IOException, UnresolvedLinkException {
-    String src = srcArg;
-    String dst = dstArg;
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src +
-          " to " + dst);
-    }
-    if (!DFSUtil.isValidName(dst)) {
-      throw new IOException("Invalid name: " + dst);
-    }
-    FSPermissionChecker pc = getPermissionChecker();
+  void renameTo(final String src, final String dst,
+                boolean logRetryCache, Options.Rename... options)
+      throws IOException {
+    waitForLoadingFSImage();
     checkOperation(OperationCategory.WRITE);
-    byte[][] srcComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    byte[][] dstComponents = FSDirectory.getPathComponentsForReservedPath(dst);
-    boolean status = false;
-    HdfsFileStatus resultingStat = null;
+    Map.Entry<BlocksMapUpdateInfo, HdfsFileStatus> res = null;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot rename " + src);
-      waitForLoadingFSImage();
-      src = dir.resolvePath(pc, src, srcComponents);
-      dst = dir.resolvePath(pc, dst, dstComponents);
-      checkOperation(OperationCategory.WRITE);
-      status = renameToInternal(pc, src, dst, logRetryCache);
-      if (status) {
-        resultingStat = getAuditFileInfo(dst, false);
-      }
+      res = FSDirRenameOp.renameToInt(dir, src, dst, logRetryCache, options);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "rename (options=" + Arrays.toString(options) +
+          ")", src, dst, null);
+      throw e;
     } finally {
       writeUnlock();
     }
+
     getEditLog().logSync();
-    if (status) {
-      logAuditEvent(true, "rename", srcArg, dstArg, resultingStat);
-    }
-    return status;
-  }
 
-  /** @deprecated See {@link #renameTo(String, String, boolean)} */
-  @Deprecated
-  private boolean renameToInternal(FSPermissionChecker pc, String src,
-      String dst, boolean logRetryCache) throws IOException,
-      UnresolvedLinkException {
-    assert hasWriteLock();
-    if (isPermissionEnabled) {
-      //We should not be doing this.  This is move() not renameTo().
-      //but for now,
-      //NOTE: yes, this is bad!  it's assuming much lower level behavior
-      //      of rewriting the dst
-      String actualdst = dir.isDir(dst)?
-          dst + Path.SEPARATOR + new Path(src).getName(): dst;
-      // Rename does not operates on link targets
-      // Do not resolveLink when checking permissions of src and dst
-      // Check write access to parent of src
-      checkPermission(pc, src, false, null, FsAction.WRITE, null, null,
-          false, false);
-      // Check write access to ancestor of dst
-      checkPermission(pc, actualdst, false, FsAction.WRITE, null, null, null,
-          false, false);
-    }
-
-    long mtime = now();
-    if (dir.renameTo(src, dst, mtime)) {
-      getEditLog().logRename(src, dst, mtime, logRetryCache);
-      return true;
-    }
-    return false;
-  }
-  
-
-  /** Rename src to dst */
-  void renameTo(final String srcArg, final String dstArg, boolean logRetryCache,
-      Options.Rename... options) throws IOException, UnresolvedLinkException {
-    String src = srcArg;
-    String dst = dstArg;
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options - "
-          + src + " to " + dst);
-    }
-    if (!DFSUtil.isValidName(dst)) {
-      throw new InvalidPathException("Invalid name: " + dst);
-    }
-    final FSPermissionChecker pc = getPermissionChecker();
-    
-    checkOperation(OperationCategory.WRITE);
-
-    byte[][] srcComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    byte[][] dstComponents = FSDirectory.getPathComponentsForReservedPath(dst);
-    HdfsFileStatus resultingStat = null;
-    writeLock();
-    BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-    try {
-      checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode("Cannot rename " + src);
-      src = dir.resolvePath(pc, src, srcComponents);
-      dst = dir.resolvePath(pc, dst, dstComponents);
-      renameToInternal(pc, src, dst, logRetryCache, collectedBlocks, options);
-      resultingStat = getAuditFileInfo(dst, false);
-    } finally {
-      writeUnlock();
-    }
-    getEditLog().logSync();
+    BlocksMapUpdateInfo collectedBlocks = res.getKey();
+    HdfsFileStatus auditStat = res.getValue();
     if (!collectedBlocks.getToDeleteList().isEmpty()) {
       removeBlocks(collectedBlocks);
       collectedBlocks.clear();
     }
-    if (resultingStat != null) {
-      StringBuilder cmd = new StringBuilder("rename options=");
-      for (Rename option : options) {
-        cmd.append(option.value()).append(" ");
-      }
-      logAuditEvent(true, cmd.toString(), srcArg, dstArg, resultingStat);
-    }
+
+    logAuditEvent(true, "rename (options=" + Arrays.toString(options) +
+        ")", src, dst, auditStat);
   }
 
-  private void renameToInternal(FSPermissionChecker pc, String src, 
-      String dst, boolean logRetryCache, BlocksMapUpdateInfo collectedBlocks, 
-      Options.Rename... options) throws IOException {
-    assert hasWriteLock();
-    if (isPermissionEnabled) {
-      // Rename does not operates on link targets
-      // Do not resolveLink when checking permissions of src and dst
-      // Check write access to parent of src
-      checkPermission(pc, src, false, null, FsAction.WRITE, null, null, false,
-          false);
-      // Check write access to ancestor of dst
-      checkPermission(pc, dst, false, FsAction.WRITE, null, null, null, false,
-          false);
-    }
-
-    waitForLoadingFSImage();
-    long mtime = now();
-    dir.renameTo(src, dst, mtime, collectedBlocks, options);
-    getEditLog().logRename(src, dst, mtime, logRetryCache, options);
-  }
-  
   /**
    * Remove the indicated file from namespace.
    * 
