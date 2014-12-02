@@ -541,7 +541,7 @@ public class TestNameNodeRecovery {
         FSEditLog spyLog =
             spy(cluster.getNameNode().getFSImage().getEditLog());
         doNothing().when(spyLog).endCurrentLogSegment(true);
-        DFSTestUtil.setEditLogForTesting(cluster.getNameNode(), spyLog);
+        DFSTestUtil.setEditLogForTesting(cluster.getNamesystem(), spyLog);
       }
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();

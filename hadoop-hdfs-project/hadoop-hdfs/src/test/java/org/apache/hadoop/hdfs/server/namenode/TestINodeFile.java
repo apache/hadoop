@@ -389,7 +389,7 @@ public class TestINodeFile {
       cluster.waitActive();
 
       FSNamesystem fsn = cluster.getNamesystem();
-      long lastId = fsn.getLastInodeId();
+      long lastId = fsn.dir.getLastInodeId();
 
       // Ensure root has the correct inode ID
       // Last inode ID should be root inode ID and inode map size should be 1
@@ -404,14 +404,14 @@ public class TestINodeFile {
       FileSystem fs = cluster.getFileSystem();
       Path path = new Path("/test1");
       assertTrue(fs.mkdirs(path));
-      assertEquals(++expectedLastInodeId, fsn.getLastInodeId());
+      assertEquals(++expectedLastInodeId, fsn.dir.getLastInodeId());
       assertEquals(++inodeCount, fsn.dir.getInodeMapSize());
 
       // Create a file
       // Last inode ID and inode map size should increase by 1
       NamenodeProtocols nnrpc = cluster.getNameNodeRpc();
       DFSTestUtil.createFile(fs, new Path("/test1/file"), 1024, (short) 1, 0);
-      assertEquals(++expectedLastInodeId, fsn.getLastInodeId());
+      assertEquals(++expectedLastInodeId, fsn.dir.getLastInodeId());
       assertEquals(++inodeCount, fsn.dir.getInodeMapSize());
       
       // Ensure right inode ID is returned in file status
@@ -422,7 +422,7 @@ public class TestINodeFile {
       // Last inode ID and inode map size should not change
       Path renamedPath = new Path("/test2");
       assertTrue(fs.rename(path, renamedPath));
-      assertEquals(expectedLastInodeId, fsn.getLastInodeId());
+      assertEquals(expectedLastInodeId, fsn.dir.getLastInodeId());
       assertEquals(inodeCount, fsn.dir.getInodeMapSize());
       
       // Delete test2/file and test2 and ensure inode map size decreases
@@ -439,12 +439,12 @@ public class TestINodeFile {
       inodeCount += 3; // test1, file1 and file2 are created
       expectedLastInodeId += 3;
       assertEquals(inodeCount, fsn.dir.getInodeMapSize());
-      assertEquals(expectedLastInodeId, fsn.getLastInodeId());
+      assertEquals(expectedLastInodeId, fsn.dir.getLastInodeId());
       // Concat the /test1/file1 /test1/file2 into /test1/file2
       nnrpc.concat(file2, new String[] {file1});
       inodeCount--; // file1 and file2 are concatenated to file2
       assertEquals(inodeCount, fsn.dir.getInodeMapSize());
-      assertEquals(expectedLastInodeId, fsn.getLastInodeId());
+      assertEquals(expectedLastInodeId, fsn.dir.getLastInodeId());
       assertTrue(fs.delete(new Path("/test1"), true));
       inodeCount -= 2; // test1 and file2 is deleted
       assertEquals(inodeCount, fsn.dir.getInodeMapSize());
@@ -453,14 +453,14 @@ public class TestINodeFile {
       cluster.restartNameNode();
       cluster.waitActive();
       fsn = cluster.getNamesystem();
-      assertEquals(expectedLastInodeId, fsn.getLastInodeId());
+      assertEquals(expectedLastInodeId, fsn.dir.getLastInodeId());
       assertEquals(inodeCount, fsn.dir.getInodeMapSize());
 
       // Create two inodes test2 and test2/file2
       DFSTestUtil.createFile(fs, new Path("/test2/file2"), 1024, (short) 1, 0);
       expectedLastInodeId += 2;
       inodeCount += 2;
-      assertEquals(expectedLastInodeId, fsn.getLastInodeId());
+      assertEquals(expectedLastInodeId, fsn.dir.getLastInodeId());
       assertEquals(inodeCount, fsn.dir.getInodeMapSize());
 
       // create /test3, and /test3/file.
@@ -469,7 +469,7 @@ public class TestINodeFile {
       assertTrue(outStream != null);
       expectedLastInodeId += 2;
       inodeCount += 2;
-      assertEquals(expectedLastInodeId, fsn.getLastInodeId());
+      assertEquals(expectedLastInodeId, fsn.dir.getLastInodeId());
       assertEquals(inodeCount, fsn.dir.getInodeMapSize());
 
       // Apply editlogs to fsimage, ensure inodeUnderConstruction is handled
@@ -483,7 +483,7 @@ public class TestINodeFile {
       cluster.restartNameNode();
       cluster.waitActive();
       fsn = cluster.getNamesystem();
-      assertEquals(expectedLastInodeId, fsn.getLastInodeId());
+      assertEquals(expectedLastInodeId, fsn.dir.getLastInodeId());
       assertEquals(inodeCount, fsn.dir.getInodeMapSize());
     } finally {
       if (cluster != null) {

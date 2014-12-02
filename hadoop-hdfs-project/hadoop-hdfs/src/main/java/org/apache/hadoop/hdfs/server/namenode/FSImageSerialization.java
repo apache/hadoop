@@ -120,7 +120,7 @@ public class FSImageSerialization {
     byte[] name = readBytes(in);
     long inodeId = NameNodeLayoutVersion.supports(
         LayoutVersion.Feature.ADD_INODE_ID, imgVersion) ? in.readLong()
-        : fsNamesys.allocateNewInodeId();
+        : fsNamesys.dir.allocateNewInodeId();
     short blockReplication = in.readShort();
     long modificationTime = in.readLong();
     long preferredBlockSize = in.readLong();

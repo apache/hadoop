@@ -197,12 +197,10 @@ public class DFSTestUtil {
         logicalName, "nn2"), "127.0.0.1:12346");
   }
 
-  public static void setEditLogForTesting(NameNode nn, FSEditLog newLog) {
-    Whitebox.setInternalState(nn.getFSImage(), "editLog", newLog);
-    Whitebox.setInternalState(nn.getNamesystem().getFSDirectory(), "editLog",
-        newLog);
+  public static void setEditLogForTesting(FSNamesystem fsn, FSEditLog newLog) {
+    Whitebox.setInternalState(fsn.getFSImage(), "editLog", newLog);
+    Whitebox.setInternalState(fsn.getFSDirectory(), "editLog", newLog);
   }
-
 
   /** class MyFile contains enough information to recreate the contents of
    * a single file.

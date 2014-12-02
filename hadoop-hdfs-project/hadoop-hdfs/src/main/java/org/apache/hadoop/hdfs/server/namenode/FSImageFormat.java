@@ -379,7 +379,7 @@ public class FSImageFormat {
         if (NameNodeLayoutVersion.supports(
             LayoutVersion.Feature.ADD_INODE_ID, imgVersion)) {
           long lastInodeId = in.readLong();
-          namesystem.resetLastInodeId(lastInodeId);
+          namesystem.dir.resetLastInodeId(lastInodeId);
           if (LOG.isDebugEnabled()) {
             LOG.debug("load last allocated InodeId from fsimage:" + lastInodeId);
           }
@@ -732,7 +732,7 @@ public class FSImageFormat {
 
     long inodeId = NameNodeLayoutVersion.supports(
         LayoutVersion.Feature.ADD_INODE_ID, imgVersion) ? in.readLong()
-        : namesystem.allocateNewInodeId();
+        : namesystem.dir.allocateNewInodeId();
     
     final short replication = namesystem.getBlockManager().adjustReplication(
         in.readShort());
@@ -1260,7 +1260,7 @@ public class FSImageFormat {
         out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampAtblockIdSwitch());
         out.writeLong(sourceNamesystem.getBlockIdManager().getLastAllocatedBlockId());
         out.writeLong(context.getTxId());
-        out.writeLong(sourceNamesystem.getLastInodeId());
+        out.writeLong(sourceNamesystem.dir.getLastInodeId());
 
 
         sourceNamesystem.getSnapshotManager().write(out);

@@ -458,8 +458,8 @@ public class TestEditLogRace {
     try {
       FSImage fsimage = namesystem.getFSImage();
       FSEditLog editLog = spy(fsimage.getEditLog());
-      fsimage.editLog = editLog;
-      
+      DFSTestUtil.setEditLogForTesting(namesystem, editLog);
+
       final AtomicReference<Throwable> deferredException =
           new AtomicReference<Throwable>();
       final CountDownLatch waitToEnterSync = new CountDownLatch(1);
