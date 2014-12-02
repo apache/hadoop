@@ -262,6 +262,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7444. convertToBlockUnderConstruction should preserve BlockCollection.
     (wheat9)
 
+    HDFS-7448 TestBookKeeperHACheckpoints fails in trunk build
+    (Akira Ajisaka via stevel)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
