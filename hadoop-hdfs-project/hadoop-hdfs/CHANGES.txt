@@ -410,6 +410,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7450. Consolidate the implementation of GetFileInfo(), GetListings() and
     GetContentSummary() into a single class. (wheat9)
 
+    HDFS-7438. Consolidate the implementation of rename() into a single class.
+    (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

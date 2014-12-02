@@ -508,8 +508,7 @@ public class FSEditLogLoader {
       RenameOldOp renameOp = (RenameOldOp)op;
       final String src = renameReservedPathsOnUpgrade(renameOp.src, logVersion);
       final String dst = renameReservedPathsOnUpgrade(renameOp.dst, logVersion);
-      fsDir.unprotectedRenameTo(src, dst,
-                                renameOp.timestamp);
+      FSDirRenameOp.unprotectedRenameTo(fsDir, src, dst, renameOp.timestamp);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(renameOp.rpcClientId, renameOp.rpcCallId);
@@ -601,7 +600,7 @@ public class FSEditLogLoader {
     }
     case OP_RENAME: {
       RenameOp renameOp = (RenameOp)op;
-      fsDir.unprotectedRenameTo(
+      FSDirRenameOp.unprotectedRenameTo(fsDir,
           renameReservedPathsOnUpgrade(renameOp.src, logVersion),
           renameReservedPathsOnUpgrade(renameOp.dst, logVersion),
           renameOp.timestamp, renameOp.options);

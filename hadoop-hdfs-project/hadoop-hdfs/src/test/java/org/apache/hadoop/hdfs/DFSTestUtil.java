@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha
@@ -81,6 +82,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.Assume;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -193,6 +195,12 @@ public class DFSTestUtil {
     conf.set(DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
         logicalName, "nn2"), "127.0.0.1:12346");
+  }
+
+  public static void setEditLogForTesting(NameNode nn, FSEditLog newLog) {
+    Whitebox.setInternalState(nn.getFSImage(), "editLog", newLog);
+    Whitebox.setInternalState(nn.getNamesystem().getFSDirectory(), "editLog",
+        newLog);
   }
 
 
