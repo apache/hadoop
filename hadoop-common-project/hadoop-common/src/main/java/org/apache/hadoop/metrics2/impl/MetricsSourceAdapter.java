@@ -173,8 +173,9 @@ class MetricsSourceAdapter implements DynamicMBean {
     }
 
     synchronized(this) {
-      updateAttrCache();
-      if (getAllMetrics) {
+      int oldCacheSize = attrCache.size();
+      int newCacheSize = updateAttrCache();
+      if (oldCacheSize < newCacheSize) {
         updateInfoCache();
       }
       jmxCacheTS = Time.now();
