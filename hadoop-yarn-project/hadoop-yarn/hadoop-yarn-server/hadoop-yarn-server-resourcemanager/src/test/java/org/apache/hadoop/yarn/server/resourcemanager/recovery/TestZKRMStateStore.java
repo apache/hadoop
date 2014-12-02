@@ -20,9 +20,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.List;
+
+import javax.crypto.SecretKey;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,12 +34,26 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.junit.Test;
@@ -190,5 +208,81 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     assertEquals("RM should be Active",
         HAServiceProtocol.HAServiceState.ACTIVE,
         rm2.getRMContext().getRMAdminService().getServiceStatus().getState());
+  }
+  
+  @Test
+  public void testFencedState() throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+	RMStateStore store = zkTester.getRMStateStore();
+   
+    // Move state to FENCED from ACTIVE
+    store.updateFencedState();
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());    
+
+    long submitTime = System.currentTimeMillis();
+    long startTime = submitTime + 1000;
+
+    // Add a new app
+    RMApp mockApp = mock(RMApp.class);
+    ApplicationSubmissionContext context =
+      new ApplicationSubmissionContextPBImpl();
+    when(mockApp.getSubmitTime()).thenReturn(submitTime);
+    when(mockApp.getStartTime()).thenReturn(startTime);
+    when(mockApp.getApplicationSubmissionContext()).thenReturn(context);
+    when(mockApp.getUser()).thenReturn("test");
+    store.storeNewApplication(mockApp);
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());
+
+    // Add a new attempt
+    ClientToAMTokenSecretManagerInRM clientToAMTokenMgr =
+            new ClientToAMTokenSecretManagerInRM();
+    ApplicationAttemptId attemptId = ConverterUtils
+            .toApplicationAttemptId("appattempt_1234567894321_0001_000001");
+    SecretKey clientTokenMasterKey =
+                clientToAMTokenMgr.createMasterKey(attemptId);
+    RMAppAttemptMetrics mockRmAppAttemptMetrics = 
+         mock(RMAppAttemptMetrics.class);
+    Container container = new ContainerPBImpl();
+    container.setId(ConverterUtils.toContainerId("container_1234567891234_0001_01_000001"));
+    RMAppAttempt mockAttempt = mock(RMAppAttempt.class);
+    when(mockAttempt.getAppAttemptId()).thenReturn(attemptId);
+    when(mockAttempt.getMasterContainer()).thenReturn(container);
+    when(mockAttempt.getClientTokenMasterKey())
+        .thenReturn(clientTokenMasterKey);
+    when(mockAttempt.getRMAppAttemptMetrics())
+        .thenReturn(mockRmAppAttemptMetrics);
+    when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
+        .thenReturn(new AggregateAppResourceUsage(0,0));
+    store.storeNewApplicationAttempt(mockAttempt);
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());
+
+    long finishTime = submitTime + 1000;
+    // Update attempt
+    ApplicationAttemptStateData newAttemptState =
+      ApplicationAttemptStateData.newInstance(attemptId, container,
+            store.getCredentialsFromAppAttempt(mockAttempt),
+            startTime, RMAppAttemptState.FINISHED, "testUrl", 
+            "test", FinalApplicationStatus.SUCCEEDED, 100, 
+            finishTime, 0, 0);
+    store.updateApplicationAttemptState(newAttemptState);
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());
+
+    // Update app
+    ApplicationStateData appState = ApplicationStateData.newInstance(submitTime, 
+            startTime, context, "test");
+    store.updateApplicationState(appState);
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());
+
+    // Remove app
+    store.removeApplication(mockApp);
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());
+ 
+    store.close();
   }
 }

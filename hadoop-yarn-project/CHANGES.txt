@@ -109,6 +109,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2907. SchedulerNode#toString should print all resource detail instead 
     of only memory. (Rohith via junping_du)
 
+    YARN-2136. Changed RMStateStore to ignore store opearations when fenced.
+    (Varun Saxena via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
