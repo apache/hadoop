@@ -257,6 +257,9 @@ Trunk (Unreleased)
 
     HDFS-7407. Minor typo in privileged pid/out/log names (aw)
 
+    HDFS-7448 TestBookKeeperHACheckpoints fails in trunk build
+    (Akira Ajisaka via stevel)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
