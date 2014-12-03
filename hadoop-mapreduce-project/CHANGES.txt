@@ -235,6 +235,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5932. Provide an option to use a dedicated reduce-side shuffle
+    log (Gera Shegalov via jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 

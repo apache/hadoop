@@ -20,16 +20,14 @@ package org.apache.hadoop.mapred;
 
 import java.net.InetSocketAddress;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskLog.LogName;
-import org.apache.hadoop.mapreduce.ID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -52,20 +50,6 @@ public class MapReduceChildJVM {
         jobConf.get(JobConf.MAPRED_TASK_ENV));
   }
 
-  private static String getChildLogLevel(JobConf conf, boolean isMap) {
-    if (isMap) {
-      return conf.get(
-          MRJobConfig.MAP_LOG_LEVEL, 
-          JobConf.DEFAULT_LOG_LEVEL.toString()
-          );
-    } else {
-      return conf.get(
-          MRJobConfig.REDUCE_LOG_LEVEL, 
-          JobConf.DEFAULT_LOG_LEVEL.toString()
-          );
-    }
-  }
-  
   public static void setVMEnv(Map<String, String> environment,
       Task task) {
 
@@ -79,7 +63,7 @@ public class MapReduceChildJVM {
     // streaming) it will have the correct loglevel.
     environment.put(
         "HADOOP_ROOT_LOGGER", 
-        getChildLogLevel(conf, task.isMapTask()) + ",console");
+        MRApps.getChildLogLevel(conf, task.isMapTask()) + ",console");
 
     // TODO: The following is useful for instance in streaming tasks. Should be
     // set in ApplicationMaster's env by the RM.
@@ -147,15 +131,6 @@ public class MapReduceChildJVM {
     return adminClasspath + " " + userClasspath;
   }
 
-  private static void setupLog4jProperties(Task task,
-      Vector<String> vargs,
-      long logSize, Configuration conf) {
-    String logLevel = getChildLogLevel(task.conf, task.isMapTask());
-    int numBackups = task.conf.getInt(MRJobConfig.TASK_LOG_BACKUPS,
-        MRJobConfig.DEFAULT_TASK_LOG_BACKUPS);
-    MRApps.addLog4jSystemProperties(logLevel, logSize, numBackups, vargs, conf);
-  }
-
   public static List<String> getVMCommand(
       InetSocketAddress taskAttemptListenerAddr, Task task, 
       JVMId jvmID) {
@@ -206,10 +181,7 @@ public class MapReduceChildJVM {
     Path childTmpDir = new Path(MRApps.crossPlatformifyMREnv(conf, Environment.PWD),
         YarnConfiguration.DEFAULT_CONTAINER_TEMP_DIR);
     vargs.add("-Djava.io.tmpdir=" + childTmpDir);
-
-    // Setup the log4j prop
-    long logSize = TaskLog.getTaskLogLength(conf);
-    setupLog4jProperties(task, vargs, logSize, conf);
+    MRApps.addLog4jSystemProperties(task, vargs, conf);
 
     if (conf.getProfileEnabled()) {
       if (conf.getProfileTaskRange(task.isMapTask()

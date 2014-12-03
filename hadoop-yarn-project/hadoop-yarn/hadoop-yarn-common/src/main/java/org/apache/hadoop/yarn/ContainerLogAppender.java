@@ -38,6 +38,7 @@ public class ContainerLogAppender extends FileAppender
   implements Flushable
 {
   private String containerLogDir;
+  private String containerLogFile;
   //so that log4j can configure it from the configuration(log4j.properties). 
   private int maxEvents;
   private Queue<LoggingEvent> tail = null;
@@ -49,7 +50,7 @@ public class ContainerLogAppender extends FileAppender
       if (maxEvents > 0) {
         tail = new LinkedList<LoggingEvent>();
       }
-      setFile(new File(this.containerLogDir, "syslog").toString());
+      setFile(new File(this.containerLogDir, containerLogFile).toString());
       setAppend(true);
       super.activateOptions();
     }
@@ -100,6 +101,14 @@ public class ContainerLogAppender extends FileAppender
 
   public void setContainerLogDir(String containerLogDir) {
     this.containerLogDir = containerLogDir;
+  }
+
+  public String getContainerLogFile() {
+    return containerLogFile;
+  }
+
+  public void setContainerLogFile(String containerLogFile) {
+    this.containerLogFile = containerLogFile;
   }
 
   private static final int EVENT_SIZE = 100;
