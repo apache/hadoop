@@ -59,6 +59,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-2891. Failed Container Executor does not provide a clear error
+    message. (Dustin Cote via harsh)
+
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.
     (Vinod Kumar Vavilapalli and Tsuyoshi OZAWA via junping_du)
 
