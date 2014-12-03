@@ -139,6 +139,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2890. MiniYARNCluster should start the timeline server based on the
     configuration. (Mit Desai via zjshen)
 
+    YARN-2894. Fixed a bug regarding application view acl when RM fails over.
+    (Rohith Sharmaks via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

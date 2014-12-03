@@ -34,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -58,13 +57,15 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
   final FairSchedulerInfo fsinfo;
   final Configuration conf;
   
-  @Inject public FairSchedulerAppsBlock(RMContext rmContext, 
-      ResourceManager rm, ViewContext ctx, Configuration conf) {
+  @Inject
+  public FairSchedulerAppsBlock(ResourceManager rm, ViewContext ctx,
+      Configuration conf) {
     super(ctx);
     FairScheduler scheduler = (FairScheduler) rm.getResourceScheduler();
     fsinfo = new FairSchedulerInfo(scheduler);
     apps = new ConcurrentHashMap<ApplicationId, RMApp>();
-    for (Map.Entry<ApplicationId, RMApp> entry : rmContext.getRMApps().entrySet()) {
+    for (Map.Entry<ApplicationId, RMApp> entry : rm.getRMContext().getRMApps()
+        .entrySet()) {
       if (!(RMAppState.NEW.equals(entry.getValue().getState())
           || RMAppState.NEW_SAVING.equals(entry.getValue().getState())
           || RMAppState.SUBMITTED.equals(entry.getValue().getState()))) {
