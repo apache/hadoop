@@ -164,6 +164,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-6735. A minor optimization to avoid pread() be blocked by read()
     inside the same DFSInputStream (Lars Hofhansl via stack)
+    
+    HDFS-7458. Add description to the nfs ports in core-site.xml used by nfs
+    test to avoid confusion (Yongjun Zhang via brandonli)
 
   OPTIMIZATIONS
 
