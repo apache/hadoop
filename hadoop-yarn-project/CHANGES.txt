@@ -112,6 +112,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2136. Changed RMStateStore to ignore store opearations when fenced.
     (Varun Saxena via jianhe)
 
+    YARN-1156. Enhance NodeManager AllocatedGB and AvailableGB metrics 
+    for aggregation of decimal values. (Tsuyoshi OZAWA via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
