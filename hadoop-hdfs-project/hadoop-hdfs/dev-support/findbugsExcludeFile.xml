@@ -207,4 +207,13 @@
       <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE" />
     </Match>
 
+    <!--
+     We use a separate lock to guard cachingStrategy in order to separate
+     locks for p-reads from seek + read invocations.
+    -->
+    <Match>
+        <Class name="org.apache.hadoop.hdfs.DFSInputStream" />
+        <Field name="cachingStrategy" />
+        <Bug pattern="IS2_INCONSISTENT_SYNC" />
+    </Match>
  </FindBugsFilter>

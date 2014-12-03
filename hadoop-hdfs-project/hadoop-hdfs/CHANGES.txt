@@ -162,6 +162,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7446. HDFS inotify should have the ability to determine what txid it
     has read up to (cmccabe)
 
+    HDFS-6735. A minor optimization to avoid pread() be blocked by read()
+    inside the same DFSInputStream (Lars Hofhansl via stack)
+
   OPTIMIZATIONS
 
   BUG FIXES
