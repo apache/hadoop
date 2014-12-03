@@ -61,7 +61,7 @@ public class TestMapReduceChildJVM {
       " -Dlog4j.configuration=container-log4j.properties" +
       " -Dyarn.app.container.log.dir=<LOG_DIR>" +
       " -Dyarn.app.container.log.filesize=0" +
-      " -Dhadoop.root.logger=INFO,CLA" +
+      " -Dhadoop.root.logger=INFO,CLA -Dhadoop.root.logfile=syslog" +
       " org.apache.hadoop.mapred.YarnChild 127.0.0.1" +
       " 54321" +
       " attempt_0_0000_m_000000_0" +
@@ -75,6 +75,73 @@ public class TestMapReduceChildJVM {
       app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
     Assert.assertTrue("HADOOP_CLIENT_OPTS not set for job",
       app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"));
+    Assert.assertEquals("", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
+  }
+
+  @Test (timeout = 30000)
+  public void testReduceCommandLineWithSeparateShuffle() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.REDUCE_SEPARATE_SHUFFLE_LOG, true);
+    testReduceCommandLine(conf);
+  }
+
+  @Test (timeout = 30000)
+  public void testReduceCommandLineWithSeparateCRLAShuffle() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.REDUCE_SEPARATE_SHUFFLE_LOG, true);
+    conf.setLong(MRJobConfig.SHUFFLE_LOG_KB, 1L);
+    conf.setInt(MRJobConfig.SHUFFLE_LOG_BACKUPS, 3);
+    testReduceCommandLine(conf);
+  }
+
+  @Test (timeout = 30000)
+  public void testReduceCommandLine() throws Exception {
+    final Configuration conf = new Configuration();
+    testReduceCommandLine(conf);
+  }
+
+  private void testReduceCommandLine(Configuration conf)
+      throws Exception {
+
+    MyMRApp app = new MyMRApp(0, 1, true, this.getClass().getName(), true);
+    conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
+    Job job = app.submit(conf);
+    app.waitForState(job, JobState.SUCCEEDED);
+    app.verifyCompleted();
+
+    final long shuffleLogSize =
+        conf.getLong(MRJobConfig.SHUFFLE_LOG_KB, 0L) * 1024L;
+    final int shuffleBackups = conf.getInt(MRJobConfig.SHUFFLE_LOG_BACKUPS, 0);
+    final String appenderName = shuffleLogSize > 0L && shuffleBackups > 0
+        ? "shuffleCRLA"
+        : "shuffleCLA";
+
+    Assert.assertEquals(
+        "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
+            " -Djava.net.preferIPv4Stack=true" +
+            " -Dhadoop.metrics.log.level=WARN" +
+            "  -Xmx200m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
+            " -Dlog4j.configuration=container-log4j.properties" +
+            " -Dyarn.app.container.log.dir=<LOG_DIR>" +
+            " -Dyarn.app.container.log.filesize=0" +
+            " -Dhadoop.root.logger=INFO,CLA -Dhadoop.root.logfile=syslog" +
+            " -Dyarn.app.mapreduce.shuffle.logger=INFO," + appenderName +
+            " -Dyarn.app.mapreduce.shuffle.logfile=syslog.shuffle" +
+            " -Dyarn.app.mapreduce.shuffle.log.filesize=" + shuffleLogSize +
+            " -Dyarn.app.mapreduce.shuffle.log.backups=" + shuffleBackups +
+            " org.apache.hadoop.mapred.YarnChild 127.0.0.1" +
+            " 54321" +
+            " attempt_0_0000_r_000000_0" +
+            " 0" +
+            " 1><LOG_DIR>/stdout" +
+            " 2><LOG_DIR>/stderr ]", app.myCommandLine);
+
+    Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
+        app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
+    Assert.assertEquals("INFO,console",
+        app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+    Assert.assertTrue("HADOOP_CLIENT_OPTS not set for job",
+        app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"));
     Assert.assertEquals("", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
   }
   
@@ -99,7 +166,7 @@ public class TestMapReduceChildJVM {
       " -Dlog4j.configuration=" + testLogPropertieFile +
       " -Dyarn.app.container.log.dir=<LOG_DIR>" +
       " -Dyarn.app.container.log.filesize=0" +
-      " -Dhadoop.root.logger=INFO,CLA" +
+      " -Dhadoop.root.logger=INFO,CLA -Dhadoop.root.logfile=syslog" +
       " org.apache.hadoop.mapred.YarnChild 127.0.0.1" +
       " 54321" +
       " attempt_0_0000_m_000000_0" +
