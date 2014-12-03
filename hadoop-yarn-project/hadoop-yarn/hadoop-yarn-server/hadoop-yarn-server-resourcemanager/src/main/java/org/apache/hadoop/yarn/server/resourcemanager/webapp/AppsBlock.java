@@ -31,7 +31,7 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -46,9 +46,10 @@ class AppsBlock extends HtmlBlock {
   final ConcurrentMap<ApplicationId, RMApp> apps;
   private final Configuration conf;
 
-@Inject AppsBlock(RMContext rmContext, ViewContext ctx, Configuration conf) {
+  @Inject
+  AppsBlock(ResourceManager rm, ViewContext ctx, Configuration conf) {
     super(ctx);
-    apps = rmContext.getRMApps();
+    apps = rm.getRMContext().getRMApps();
     this.conf = conf;
   }
 

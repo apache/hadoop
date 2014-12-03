@@ -40,10 +40,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -58,18 +56,14 @@ import com.google.inject.Inject;
 
 public class AppBlock extends HtmlBlock {
 
-  private ApplicationACLsManager aclsManager;
-  private QueueACLsManager queueACLsManager;
   private final Configuration conf;
+  private final ResourceManager rm;
 
   @Inject
-  AppBlock(ResourceManager rm, ViewContext ctx,
-      ApplicationACLsManager aclsManager, QueueACLsManager queueACLsManager,
-      Configuration conf) {
+  AppBlock(ResourceManager rm, ViewContext ctx, Configuration conf) {
     super(ctx);
-    this.aclsManager = aclsManager;
-    this.queueACLsManager = queueACLsManager;
     this.conf = conf;
+    this.rm = rm;
   }
 
   @Override
@@ -88,7 +82,7 @@ public class AppBlock extends HtmlBlock {
       return;
     }
 
-    RMContext context = getInstance(RMContext.class);
+    RMContext context = this.rm.getRMContext();
     RMApp rmApp = context.getRMApps().get(appID);
     if (rmApp == null) {
       puts("Application not found: "+ aid);
@@ -103,9 +97,9 @@ public class AppBlock extends HtmlBlock {
       callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
     }
     if (callerUGI != null
-        && !(this.aclsManager.checkAccess(callerUGI,
-                ApplicationAccessType.VIEW_APP, app.getUser(), appID) ||
-             this.queueACLsManager.checkAccess(callerUGI,
+        && !(this.rm.getApplicationACLsManager().checkAccess(callerUGI,
+            ApplicationAccessType.VIEW_APP, app.getUser(), appID) || this.rm
+            .getQueueACLsManager().checkAccess(callerUGI,
                 QueueACL.ADMINISTER_QUEUE, app.getQueue()))) {
       puts("You (User " + remoteUser
           + ") are not authorized to view application " + appID);

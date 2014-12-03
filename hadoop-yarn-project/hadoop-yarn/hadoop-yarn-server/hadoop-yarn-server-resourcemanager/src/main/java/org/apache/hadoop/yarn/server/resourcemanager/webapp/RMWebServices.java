@@ -205,7 +205,7 @@ public class RMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ClusterMetricsInfo getClusterMetricsInfo() {
     init();
-    return new ClusterMetricsInfo(this.rm, this.rm.getRMContext());
+    return new ClusterMetricsInfo(this.rm);
   }
 
   @GET
