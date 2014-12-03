@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
@@ -44,7 +43,8 @@ class DefaultSchedulerPage extends RmView {
   static class QueueInfoBlock extends HtmlBlock {
     final FifoSchedulerInfo sinfo;
 
-    @Inject QueueInfoBlock(RMContext context, ViewContext ctx, ResourceManager rm) {
+    @Inject
+    QueueInfoBlock(ViewContext ctx, ResourceManager rm) {
       super(ctx);
       sinfo = new FifoSchedulerInfo(rm);
     }

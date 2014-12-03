@@ -53,8 +53,7 @@ public class UserMetricsInfo {
   public UserMetricsInfo() {
   } // JAXB needs this
 
-  public UserMetricsInfo(final ResourceManager rm, final RMContext rmContext,
-      final String user) {
+  public UserMetricsInfo(final ResourceManager rm, final String user) {
     ResourceScheduler rs = rm.getResourceScheduler();
     QueueMetrics metrics = rs.getRootQueueMetrics();
     QueueMetrics userMetrics = metrics.getUserMetrics(user);
