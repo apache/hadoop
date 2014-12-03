@@ -355,6 +355,9 @@ Trunk (Unreleased)
 
     HADOOP-11298. slaves.sh and stop-all.sh are missing slashes (aw)
 
+    HADOOP-11296. hadoop-daemons.sh throws 'host1: bash: host3: 
+    command not found...' (vinayakumarb)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

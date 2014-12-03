@@ -273,6 +273,12 @@ function hadoop_connect_to_hosts
     # moral of the story: just use pdsh.
     export -f hadoop_actual_ssh
     export HADOOP_SSH_OPTS
+
+    # xargs is used with option -I to replace the placeholder in arguments
+    # list with each hostname read from stdin/pipe. But it consider one 
+    # line as one argument while reading from stdin/pipe. So place each 
+    # hostname in different lines while passing via pipe.
+    SLAVE_NAMES=$(echo "$SLAVE_NAMES" | tr ' ' '\n' )
     echo "${SLAVE_NAMES}" | \
     xargs -n 1 -P"${HADOOP_SSH_PARALLEL}" \
     -I {} bash -c --  "hadoop_actual_ssh {} ${params}"
