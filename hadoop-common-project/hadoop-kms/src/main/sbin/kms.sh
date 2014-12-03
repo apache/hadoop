@@ -54,7 +54,7 @@ catalina_opts="${catalina_opts} -Dkms.ssl.keystore.file=${KMS_SSL_KEYSTORE_FILE}
 print "Adding to CATALINA_OPTS:     ${catalina_opts}"
 print "Found KMS_SSL_KEYSTORE_PASS:     `echo ${KMS_SSL_KEYSTORE_PASS} | sed 's/./*/g'`"
 
-export CATALINA_OPTS="${CATALINA_OPTS_DISP} ${catalina_opts}"
+export CATALINA_OPTS="${CATALINA_OPTS} ${catalina_opts}"
 
 # A bug in catalina.sh script does not use CATALINA_OPTS for stopping the server
 #
@@ -64,6 +64,8 @@ fi
 
 # If ssl, the populate the passwords into ssl-server.xml before starting tomcat
 if [ ! "${KMS_SSL_KEYSTORE_PASS}" = "" ] || [ ! "${KMS_SSL_TRUSTSTORE_PASS}" = "" ]; then
+  # Set a KEYSTORE_PASS if not already set
+  KMS_SSL_KEYSTORE_PASS=${KMS_SSL_KEYSTORE_PASS:-password}
   cat ${CATALINA_BASE}/conf/ssl-server.xml.conf \
     | sed 's/_kms_ssl_keystore_pass_/'${KMS_SSL_KEYSTORE_PASS}'/g' \
     | sed 's/_kms_ssl_truststore_pass_/'${KMS_SSL_TRUSTSTORE_PASS}'/g' > ${CATALINA_BASE}/conf/ssl-server.xml
