@@ -211,7 +211,7 @@ public final class FSImageFormatPBINode {
 
     void loadINodeSection(InputStream in) throws IOException {
       INodeSection s = INodeSection.parseDelimitedFrom(in);
-      fsn.resetLastInodeId(s.getLastInodeId());
+      fsn.dir.resetLastInodeId(s.getLastInodeId());
       LOG.info("Loading " + s.getNumInodes() + " INodes.");
       for (int i = 0; i < s.getNumInodes(); ++i) {
         INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
@@ -490,7 +490,7 @@ public final class FSImageFormatPBINode {
       INodeMap inodesMap = fsn.dir.getINodeMap();
 
       INodeSection.Builder b = INodeSection.newBuilder()
-          .setLastInodeId(fsn.getLastInodeId()).setNumInodes(inodesMap.size());
+          .setLastInodeId(fsn.dir.getLastInodeId()).setNumInodes(inodesMap.size());
       INodeSection s = b.build();
       s.writeDelimitedTo(out);
 

@@ -10,6 +10,9 @@ Trunk - Unreleased
 
     YARN-2438. yarn-env.sh cleanup (aw)
 
+    YARN-2472. yarn-daemons.sh should jsut call yarn directly (Masatake Iwasaki
+    via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -46,7 +49,13 @@ Release 2.7.0 - UNRELEASED
     (Chris Trezzo and Sangjin Lee via kasha)
 
     YARN-2236. [YARN-1492] Shared Cache uploader service on the Node 
-    Manager. (Chris Trezzo and Sanjin Lee via kasha)
+    Manager. (Chris Trezzo and Sangjin Lee via kasha)
+
+    YARN-2188. [YARN-1492] Client service for cache manager. 
+    (Chris Trezzo and Sangjin Lee via kasha)
+
+    YARN-2765. Added leveldb-based implementation for RMStateStore. (Jason Lowe
+    via jianhe)
 
   IMPROVEMENTS
 
@@ -70,6 +79,38 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2780. Log aggregated resource allocation in rm-appsummary.log (Eric
     Payne via jlowe)
+
+    YARN-2690. [YARN-2574] Make ReservationSystem and its dependent classes 
+    independent of Scheduler type. (Anubhav Dhoot via kasha)
+
+    YARN-2157. Added YARN metrics in the documentaion. (Akira AJISAKA via
+    jianhe)
+
+    YARN-2802. ClusterMetrics to include AM launch and register delays.
+    (Zhihai Xu via kasha)
+
+    YARN-2375. Allow enabling/disabling timeline server per framework.
+    (Mit Desai via jeagles)
+
+    YARN-2604. Scheduler should consider max-allocation-* in conjunction
+    with the largest node. (Robert Kanter via kasha)
+
+    YARN-2679. Add metric for container launch duration. (Zhihai Xu via kasha)
+
+    YARN-2669. FairScheduler: queue names shouldn't allow periods
+    (Wei Yan via Sandy Ryza)
+
+    YARN-2404. Removed ApplicationAttemptState and ApplicationState class in
+    RMStateStore. (Tsuyoshi OZAWA via jianhe)
+
+    YARN-2165. Added the sanity check for the numeric configuration values of
+    the timeline service. (Vasanth kumar RJ via zjshen)
+
+    YARN-2907. SchedulerNode#toString should print all resource detail instead 
+    of only memory. (Rohith via junping_du)
+
+    YARN-2136. Changed RMStateStore to ignore store opearations when fenced.
+    (Varun Saxena via jianhe)
 
   OPTIMIZATIONS
 
@@ -98,6 +139,38 @@ Release 2.7.0 - UNRELEASED
 
     YARN-1703. Fixed ResourceManager web-proxy to close connections correctly.
     (Rohith Sharma via vinodkv)
+
+    YARN-2414. RM web UI: app page will crash if app is failed before any
+    attempt has been created (Wangda Tan via jlowe)
+
+    YARN-2870. Updated the command to run the timeline server in the document.
+    (Masatake Iwasaki via zjshen)
+
+    YARN-2878. Fix DockerContainerExecutor.apt.vm formatting. (Abin Shahab via
+    jianhe)
+
+    YARN-2865. Fixed RM to always create a new RMContext when transtions from
+    StandBy to Active. (Rohith Sharmaks via jianhe)
+
+    YARN-2315. FairScheduler: Set current capacity in addition to capacity.
+    (Zhihai Xu via kasha)
+
+    YARN-1984. LeveldbTimelineStore does not handle db exceptions properly
+    (Varun Saxena via jlowe)
+
+    YARN-2697. Remove useless RMAuthenticationHandler. (Haosong Huang via zjshen)
+
+    YARN-2906. CapacitySchedulerPage shows HTML tags for a queue's Active Users.
+    (Jason Lowe via jianhe)
+
+    YARN-2905. AggregatedLogsBlock page can infinitely loop if the aggregated
+    log file is corrupted (Varun Saxena via jlowe)
+
+    YARN-2890. MiniYARNCluster should start the timeline server based on the
+    configuration. (Mit Desai via zjshen)
+
+    YARN-2894. Fixed a bug regarding application view acl when RM fails over.
+    (Rohith Sharmaks via jianhe)
 
 Release 2.6.0 - 2014-11-18
 
@@ -980,7 +1053,7 @@ Release 2.6.0 - 2014-11-18
     YARN-2853. Fixed a bug in ResourceManager causing apps to hang when the user
     kill request races with ApplicationMaster finish. (Jian He via vinodkv)
 
-Release 2.5.2 - 2014-11-10
+Release 2.5.2 - 2014-11-19
 
   INCOMPATIBLE CHANGES
 

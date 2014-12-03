@@ -25,11 +25,9 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -69,15 +67,9 @@ public class SimpleCapacityReplanner implements Planner {
   }
 
   @Override
-  public void init(String planQueueName, Configuration conf) {
-    if (!(conf instanceof CapacitySchedulerConfiguration)) {
-      throw new IllegalArgumentException("Unexpected conf type: "
-          + conf.getClass().getSimpleName() + " only supported conf is: "
-          + CapacitySchedulerConfiguration.class.getSimpleName());
-    }
-    this.lengthOfCheckZone =
-        ((CapacitySchedulerConfiguration) conf)
-            .getEnforcementWindow(planQueueName);
+  public void init(String planQueueName,
+      ReservationSchedulerConfiguration conf) {
+    this.lengthOfCheckZone = conf.getEnforcementWindow(planQueueName);
   }
 
   @Override

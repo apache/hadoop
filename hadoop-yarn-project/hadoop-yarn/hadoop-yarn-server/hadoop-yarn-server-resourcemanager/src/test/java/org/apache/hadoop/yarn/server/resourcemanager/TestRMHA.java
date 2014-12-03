@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFencedException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -459,7 +460,8 @@ public class TestRMHA {
 
     MemoryRMStateStore memStore = new MemoryRMStateStore() {
       @Override
-      public synchronized void updateApplicationState(ApplicationState appState) {
+      public synchronized void updateApplicationState(
+          ApplicationStateData appState) {
         notifyStoreOperationFailed(new StoreFencedException());
       }
     };
@@ -511,6 +513,68 @@ public class TestRMHA {
     rm.adminService.transitionToStandby(requestInfo);
     checkStandbyRMFunctionality();
     rm.stop();
+  }
+
+  @Test
+  public void testFailoverClearsRMContext() throws Exception {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    configuration.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    Configuration conf = new YarnConfiguration(configuration);
+
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    // 1. start RM
+    rm = new MockRM(conf, memStore);
+    rm.init(conf);
+    rm.start();
+
+    StateChangeRequestInfo requestInfo =
+        new StateChangeRequestInfo(
+            HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    // 2. Transition to active
+    rm.adminService.transitionToActive(requestInfo);
+    checkMonitorHealth();
+    checkActiveRMFunctionality();
+    verifyClusterMetrics(1, 1, 1, 1, 2048, 1);
+    assertEquals(1, rm.getRMContext().getRMNodes().size());
+    assertEquals(1, rm.getRMContext().getRMApps().size());
+
+    // 3. Create new RM
+    rm = new MockRM(conf, memStore) {
+      @Override
+      protected ResourceTrackerService createResourceTrackerService() {
+        return new ResourceTrackerService(this.rmContext,
+            this.nodesListManager, this.nmLivelinessMonitor,
+            this.rmContext.getContainerTokenSecretManager(),
+            this.rmContext.getNMTokenSecretManager()) {
+          @Override
+          protected void serviceStart() throws Exception {
+            throw new Exception("ResourceTracker service failed");
+          }
+        };
+      }
+    };
+    rm.init(conf);
+    rm.start();
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    // 4. Try Transition to active, throw exception
+    try {
+      rm.adminService.transitionToActive(requestInfo);
+      Assert.fail("Transitioned to Active should throw exception.");
+    } catch (Exception e) {
+      assertTrue("Error when transitioning to Active mode".contains(e
+          .getMessage()));
+    }
+    // 5. Clears the metrics
+    verifyClusterMetrics(0, 0, 0, 0, 0, 0);
+    assertEquals(0, rm.getRMContext().getRMNodes().size());
+    assertEquals(0, rm.getRMContext().getRMApps().size());
   }
 
   public void innerTestHAWithRMHostName(boolean includeBindHost) {

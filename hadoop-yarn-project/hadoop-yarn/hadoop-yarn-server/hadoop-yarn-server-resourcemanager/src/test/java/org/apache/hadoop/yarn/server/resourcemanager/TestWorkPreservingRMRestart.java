@@ -214,6 +214,14 @@ public class TestWorkPreservingRMRestart {
     AbstractYarnScheduler scheduler =
         (AbstractYarnScheduler) rm2.getResourceScheduler();
     SchedulerNode schedulerNode1 = scheduler.getSchedulerNode(nm1.getNodeId());
+    assertTrue(
+        "SchedulerNode#toString is not in expected format",
+        schedulerNode1
+        .toString().contains(schedulerNode1.getAvailableResource().toString()));
+    assertTrue(
+        "SchedulerNode#toString is not in expected format",
+        schedulerNode1
+        .toString().contains(schedulerNode1.getUsedResource().toString()));
 
     // ********* check scheduler node state.*******
     // 2 running containers.

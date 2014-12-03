@@ -600,6 +600,8 @@ public class DatanodeManager {
     synchronized (datanodeMap) {
       host2DatanodeMap.remove(datanodeMap.remove(key));
     }
+    // Also remove all block invalidation tasks under this node
+    blockManager.removeFromInvalidates(new DatanodeInfo(node));
     if (LOG.isDebugEnabled()) {
       LOG.debug(getClass().getSimpleName() + ".wipeDatanode("
           + node + "): storage " + key 
@@ -843,16 +845,21 @@ public class DatanodeManager {
   @InterfaceAudience.Private
   @VisibleForTesting
   public void startDecommission(DatanodeDescriptor node) {
-    if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
-      for (DatanodeStorageInfo storage : node.getStorageInfos()) {
-        LOG.info("Start Decommissioning " + node + " " + storage
-            + " with " + storage.numBlocks() + " blocks");
+    if (!node.isDecommissionInProgress()) {
+      if (!node.isAlive) {
+        LOG.info("Dead node " + node + " is decommissioned immediately.");
+        node.setDecommissioned();
+      } else if (!node.isDecommissioned()) {
+        for (DatanodeStorageInfo storage : node.getStorageInfos()) {
+          LOG.info("Start Decommissioning " + node + " " + storage
+              + " with " + storage.numBlocks() + " blocks");
+        }
+        heartbeatManager.startDecommission(node);
+        node.decommissioningStatus.setStartTime(now());
+
+        // all the blocks that reside on this node have to be replicated.
+        checkDecommissionState(node);
       }
-      heartbeatManager.startDecommission(node);
-      node.decommissioningStatus.setStartTime(now());
-      
-      // all the blocks that reside on this node have to be replicated.
-      checkDecommissionState(node);
     }
   }
 
@@ -1007,14 +1014,13 @@ public class DatanodeManager {
   
         // register new datanode
         addDatanode(nodeDescr);
-        checkDecommissioning(nodeDescr);
-        
         // also treat the registration message as a heartbeat
         // no need to update its timestamp
         // because its is done when the descriptor is created
         heartbeatManager.addDatanode(nodeDescr);
-        success = true;
         incrementVersionCount(nodeReg.getSoftwareVersion());
+        checkDecommissioning(nodeDescr);
+        success = true;
       } finally {
         if (!success) {
           removeDatanode(nodeDescr);

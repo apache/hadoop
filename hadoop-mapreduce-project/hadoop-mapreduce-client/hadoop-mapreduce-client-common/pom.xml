@@ -74,6 +74,7 @@
               <source>
                 <directory>${basedir}/src/main/proto</directory>
                 <includes>
+                  <include>HSAdminRefreshProtocol.proto</include>
                   <include>mr_protos.proto</include>
                   <include>mr_service_protos.proto</include>
                   <include>MRClientProtocol.proto</include>

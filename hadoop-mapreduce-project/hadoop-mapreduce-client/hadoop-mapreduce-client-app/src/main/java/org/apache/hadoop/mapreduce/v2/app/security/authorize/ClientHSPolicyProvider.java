@@ -19,13 +19,17 @@ package org.apache.hadoop.mapreduce.v2.app.security.authorize;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.mapreduce.v2.api.HSAdminRefreshProtocol;
 import org.apache.hadoop.mapreduce.v2.api.HSClientProtocolPB;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
+import org.apache.hadoop.tools.GetUserMappingsProtocol;
 
 /**
- * {@link PolicyProvider} for YARN MapReduce protocols.
+ * {@link PolicyProvider} for MapReduce history server protocols.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -35,7 +39,16 @@ public class ClientHSPolicyProvider extends PolicyProvider {
       new Service[] {
     new Service(
         JHAdminConfig.MR_HS_SECURITY_SERVICE_AUTHORIZATION,
-        HSClientProtocolPB.class)
+        HSClientProtocolPB.class),
+    new Service(
+        CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_GET_USER_MAPPINGS,
+        GetUserMappingsProtocol.class),
+    new Service(
+        CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_USER_MAPPINGS,
+        RefreshUserMappingsProtocol.class),
+    new Service(
+        JHAdminConfig.MR_HS_SECURITY_SERVICE_AUTHORIZATION_ADMIN_REFRESH,
+        HSAdminRefreshProtocol.class)
   };
 
   @Override

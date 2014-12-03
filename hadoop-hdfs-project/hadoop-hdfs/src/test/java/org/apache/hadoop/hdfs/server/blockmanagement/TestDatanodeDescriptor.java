@@ -25,6 +25,7 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.junit.Test;
 
@@ -61,18 +62,17 @@ public class TestDatanodeDescriptor {
     BlockInfo blk1 = new BlockInfo(new Block(2L), (short) 2);
     DatanodeStorageInfo[] storages = dd.getStorageInfos();
     assertTrue(storages.length > 0);
-    final String storageID = storages[0].getStorageID();
     // add first block
-    assertTrue(storages[0].addBlock(blk));
+    assertTrue(storages[0].addBlock(blk) == AddBlockResult.ADDED);
     assertEquals(1, dd.numBlocks());
     // remove a non-existent block
     assertFalse(dd.removeBlock(blk1));
     assertEquals(1, dd.numBlocks());
     // add an existent block
-    assertFalse(storages[0].addBlock(blk));
+    assertFalse(storages[0].addBlock(blk) == AddBlockResult.ADDED);
     assertEquals(1, dd.numBlocks());
     // add second block
-    assertTrue(storages[0].addBlock(blk1));
+    assertTrue(storages[0].addBlock(blk1) == AddBlockResult.ADDED);
     assertEquals(2, dd.numBlocks());
     // remove first block
     assertTrue(dd.removeBlock(blk));

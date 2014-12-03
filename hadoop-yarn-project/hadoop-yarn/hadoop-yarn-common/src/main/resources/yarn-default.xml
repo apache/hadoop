@@ -420,6 +420,14 @@
   </property>
 
   <property>
+    <description>Local path where the RM state will be stored when using
+    org.apache.hadoop.yarn.server.resourcemanager.recovery.LeveldbRMStateStore
+    as the value for yarn.resourcemanager.store.class</description>
+    <name>yarn.resourcemanager.leveldb-state-store.path</name>
+    <value>${hadoop.tmp.dir}/yarn/system/rmstore</value>
+  </property>
+
+  <property>
     <description>Enable RM high-availability. When enabled,
       (1) The RM starts in the Standby mode by default, and transitions to
       the Active mode when prompted to.
@@ -1355,7 +1363,8 @@
 
   <property>
     <description>
-    Default maximum number of retires for timeline servive client.
+    Default maximum number of retires for timeline servive client
+    and value -1 means no limit.
     </description>
     <name>yarn.timeline-service.client.max-retries</name>
     <value>30</value>
@@ -1459,19 +1468,36 @@
   </property>
 
   <property>
-    <description>The algorithm used to compute checksums of files (SHA-256 by default)</description>
+    <description>The address of the client interface in the SCM
+    (shared cache manager)</description>
+    <name>yarn.sharedcache.client-server.address</name>
+    <value>0.0.0.0:8045</value>
+  </property>
+
+  <property>
+    <description>The number of threads used to handle shared cache manager
+    requests from clients (50 by default)</description>
+    <name>yarn.sharedcache.client-server.thread-count</name>
+    <value>50</value>
+  </property>
+
+  <property>
+    <description>The algorithm used to compute checksums of files (SHA-256 by
+    default)</description>
     <name>yarn.sharedcache.checksum.algo.impl</name>
     <value>org.apache.hadoop.yarn.sharedcache.ChecksumSHA256Impl</value>
   </property>
 
   <property>
-    <description>The replication factor for the node manager uploader for the shared cache (10 by default)</description>
+    <description>The replication factor for the node manager uploader for the
+    shared cache (10 by default)</description>
     <name>yarn.sharedcache.nm.uploader.replication.factor</name>
     <value>10</value>
   </property>
 
   <property>
-    <description>The number of threads used to upload files from a node manager instance (20 by default)</description>
+    <description>The number of threads used to upload files from a node manager
+    instance (20 by default)</description>
     <name>yarn.sharedcache.nm.uploader.thread-count</name>
     <value>20</value>
   </property>

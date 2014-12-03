@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
@@ -70,6 +71,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
@@ -506,6 +508,66 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
+  public void testQueueInfo() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queueA\">");
+    out.println("<weight>.25</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"queueB\">");
+    out.println("<weight>.75</weight>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // Add one big node (only care about aggregate capacity)
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // Queue A wants 1 * 1024.
+    createSchedulingRequest(1 * 1024, "queueA", "user1");
+    // Queue B wants 6 * 1024
+    createSchedulingRequest(6 * 1024, "queueB", "user1");
+
+    scheduler.update();
+
+    // Capacity should be the same as weight of Queue,
+    // because the sum of all active Queues' weight are 1.
+    // Before NodeUpdate Event, CurrentCapacity should be 0
+    QueueInfo queueInfo = scheduler.getQueueInfo("queueA", false, false);
+    Assert.assertEquals(0.25f, queueInfo.getCapacity(), 0.0f);
+    Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity(), 0.0f);
+    queueInfo = scheduler.getQueueInfo("queueB", false, false);
+    Assert.assertEquals(0.75f, queueInfo.getCapacity(), 0.0f);
+    Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity(), 0.0f);
+
+    // Each NodeUpdate Event will only assign one container.
+    // To assign two containers, call handle NodeUpdate Event twice.
+    NodeUpdateSchedulerEvent nodeEvent2 = new NodeUpdateSchedulerEvent(node1);
+    scheduler.handle(nodeEvent2);
+    scheduler.handle(nodeEvent2);
+
+    // After NodeUpdate Event, CurrentCapacity for queueA should be 1/2=0.5
+    // and CurrentCapacity for queueB should be 6/6=1.
+    queueInfo = scheduler.getQueueInfo("queueA", false, false);
+    Assert.assertEquals(0.25f, queueInfo.getCapacity(), 0.0f);
+    Assert.assertEquals(0.5f, queueInfo.getCurrentCapacity(), 0.0f);
+    queueInfo = scheduler.getQueueInfo("queueB", false, false);
+    Assert.assertEquals(0.75f, queueInfo.getCapacity(), 0.0f);
+    Assert.assertEquals(1.0f, queueInfo.getCurrentCapacity(), 0.0f);
+  }
+
+  @Test
   public void testSimpleHierarchicalFairShareCalculation() throws IOException {
     scheduler.init(conf);
     scheduler.start();
@@ -851,6 +913,46 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // submission rejected
     assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
     assertNull(scheduler.getSchedulerApp(appAttemptId));
+    assertEquals(0, resourceManager.getRMContext().getRMApps().size());
+  }
+
+  @Test
+  public void testQueueuNameWithPeriods() throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // only default queue
+    assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
+
+    // submit app with queue name (.A)
+    ApplicationAttemptId appAttemptId1 = createAppAttemptId(1, 1);
+    AppAddedSchedulerEvent appAddedEvent1 =
+        new AppAddedSchedulerEvent(appAttemptId1.getApplicationId(), ".A", "user1");
+    scheduler.handle(appAddedEvent1);
+    // submission rejected
+    assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
+    assertNull(scheduler.getSchedulerApp(appAttemptId1));
+    assertEquals(0, resourceManager.getRMContext().getRMApps().size());
+
+    // submit app with queue name (A.)
+    ApplicationAttemptId appAttemptId2 = createAppAttemptId(2, 1);
+    AppAddedSchedulerEvent appAddedEvent2 =
+        new AppAddedSchedulerEvent(appAttemptId2.getApplicationId(), "A.", "user1");
+    scheduler.handle(appAddedEvent2);
+    // submission rejected
+    assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
+    assertNull(scheduler.getSchedulerApp(appAttemptId2));
+    assertEquals(0, resourceManager.getRMContext().getRMApps().size());
+
+    // submit app with queue name (A.B)
+    ApplicationAttemptId appAttemptId3 = createAppAttemptId(3, 1);
+    AppAddedSchedulerEvent appAddedEvent3 =
+        new AppAddedSchedulerEvent(appAttemptId3.getApplicationId(), "A.B", "user1");
+    scheduler.handle(appAddedEvent3);
+    // submission accepted
+    assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
+    assertNull(scheduler.getSchedulerApp(appAttemptId3));
     assertEquals(0, resourceManager.getRMContext().getRMApps().size());
   }
 
@@ -2529,37 +2631,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     }
     assertEquals(FinalApplicationStatus.FAILED, application.getFinalApplicationStatus());
   }
-  
-  @Test
-  public void testReservationThatDoesntFit() throws IOException {
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
-    RMNode node1 =
-        MockNodes
-            .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
-    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
-    scheduler.handle(nodeEvent1);
-    
-    ApplicationAttemptId attId = createSchedulingRequest(2048, "queue1",
-        "user1", 1);
-    scheduler.update();
-    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
-    scheduler.handle(updateEvent);
-    
-    FSAppAttempt app = scheduler.getSchedulerApp(attId);
-    assertEquals(0, app.getLiveContainers().size());
-    assertEquals(0, app.getReservedContainers().size());
-    
-    createSchedulingRequestExistingApplication(1024, 2, attId);
-    scheduler.update();
-    scheduler.handle(updateEvent);
-    
-    assertEquals(1, app.getLiveContainers().size());
-    assertEquals(0, app.getReservedContainers().size());
-  }
-  
   @Test
   public void testRemoveNodeUpdatesRootQueueMetrics() throws IOException {
     scheduler.init(conf);

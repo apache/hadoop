@@ -56,11 +56,12 @@ function hadoop_subproject_init
   
   HADOOP_IDENT_STRING="${HADOOP_HDFS_IDENT_STRING:-$HADOOP_IDENT_STRING}"
   HADOOP_HDFS_IDENT_STRING="${HADOOP_IDENT_STRING}"
+
   
   # turn on the defaults
-  
-  export HADOOP_NAMENODE_OPTS=${HADOOP_NAMENODE_OPTS:-"-Dhadoop.security.logger=INFO,RFAS -Dhdfs.audit.logger=INFO,NullAppender"}
-  export HADOOP_SECONDARYNAMENODE_OPTS=${HADOOP_SECONDARYNAMENODE_OPTS:-"-Dhadoop.security.logger=INFO,RFAS -Dhdfs.audit.logger=INFO,NullAppender"}
+  export HDFS_AUDIT_LOGGER=${HDFS_AUDIT_LOGGER:-INFO,NullAppender}
+  export HADOOP_NAMENODE_OPTS=${HADOOP_NAMENODE_OPTS:-"-Dhadoop.security.logger=INFO,RFAS"}
+  export HADOOP_SECONDARYNAMENODE_OPTS=${HADOOP_SECONDARYNAMENODE_OPTS:-"-Dhadoop.security.logger=INFO,RFAS"}
   export HADOOP_DATANODE_OPTS=${HADOOP_DATANODE_OPTS:-"-Dhadoop.security.logger=ERROR,RFAS"}
   export HADOOP_DN_SECURE_EXTRA_OPTS=${HADOOP_DN_SECURE_EXTRA_OPTS:-"-jvm server"}
   export HADOOP_NFS3_SECURE_EXTRA_OPTS=${HADOOP_NFS3_SECURE_EXTRA_OPTS:-"-jvm server"}

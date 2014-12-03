@@ -237,10 +237,29 @@ Release 2.7.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-6169. MergeQueue should release reference to the current item 
+    from key and value at the end of the iteration to save memory. 
+    (Zhihai Xu via kasha)
+
   BUG FIXES
 
-  MAPREDUCE-5918. LineRecordReader can return the same decompressor to CodecPool
-  multiple times (Sergey Murylev via raviprak)
+    MAPREDUCE-5918. LineRecordReader can return the same decompressor to
+    CodecPool multiple times (Sergey Murylev via raviprak)
+
+    MAPREDUCE-6162. mapred hsadmin fails on a secure cluster (jlowe)
+
+    MAPREDUCE-6049. AM JVM does not exit if MRClientService graceful shutdown
+    fails (Rohith via devaraj)
+
+    MAPREDUCE-5568. Fixed CompletedJob in JHS to show progress percentage
+    correctly in case the number of mappers or reducers is zero. (MinJi Kim via
+    jianhe)
+ 
+    MAPREDUCE-6172. TestDbClasses timeouts are too aggressive (Varun Saxena
+    via jlowe)
+
+    MAPREDUCE-6160. Potential NullPointerException in MRClientProtocol
+    interface implementation. (Rohith via jlowe)
 
 Release 2.6.0 - 2014-11-18
 
@@ -474,7 +493,7 @@ Release 2.6.0 - 2014-11-18
     MAPREDUCE-6156. Fetcher - connect() doesn't handle connection refused
     correctly (Junping Du via jlowe)
 
-Release 2.5.2 - 2014-11-10
+Release 2.5.2 - 2014-11-19
 
   INCOMPATIBLE CHANGES
 

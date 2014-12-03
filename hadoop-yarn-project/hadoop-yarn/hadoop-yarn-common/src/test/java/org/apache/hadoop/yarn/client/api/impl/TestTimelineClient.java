@@ -120,41 +120,6 @@ public class TestTimelineClient {
   }
 
   @Test
-  public void testPostEntitiesTimelineServiceNotEnabled() throws Exception {
-    YarnConfiguration conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false);
-    TimelineClientImpl client = createTimelineClient(conf);
-    mockEntityClientResponse(
-        client, ClientResponse.Status.INTERNAL_SERVER_ERROR, false, false);
-    try {
-      TimelinePutResponse response = client.putEntities(generateEntity());
-      Assert.assertEquals(0, response.getErrors().size());
-    } catch (YarnException e) {
-      Assert.fail(
-          "putEntities should already return before throwing the exception");
-    }
-  }
-
-  @Test
-  public void testPostEntitiesTimelineServiceDefaultNotEnabled()
-      throws Exception {
-    YarnConfiguration conf = new YarnConfiguration();
-    // Unset the timeline service's enabled properties.
-    // Make sure default value is pickup up
-    conf.unset(YarnConfiguration.TIMELINE_SERVICE_ENABLED);
-    TimelineClientImpl client = createTimelineClient(conf);
-    mockEntityClientResponse(client, ClientResponse.Status.INTERNAL_SERVER_ERROR,
-        false, false);
-    try {
-      TimelinePutResponse response = client.putEntities(generateEntity());
-      Assert.assertEquals(0, response.getErrors().size());
-    } catch (YarnException e) {
-      Assert
-          .fail("putEntities should already return before throwing the exception");
-    }
-  }
-
-  @Test
   public void testPutDomain() throws Exception {
     mockDomainClientResponse(client, ClientResponse.Status.OK, false);
     try {
@@ -189,6 +154,29 @@ public class TestTimelineClient {
 
   @Test
   public void testCheckRetryCount() throws Exception {
+    try {
+      YarnConfiguration conf = new YarnConfiguration();
+      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+      conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+        -2);
+      createTimelineClient(conf);
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES));
+    }
+
+    try {
+      YarnConfiguration conf = new YarnConfiguration();
+      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+      conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+        0);
+      createTimelineClient(conf);
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS));
+    }
     int newMaxRetries = 5;
     long newIntervalMs = 500;
     YarnConfiguration conf = new YarnConfiguration();

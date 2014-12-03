@@ -23,6 +23,7 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.api.records.Resource;
 
@@ -43,6 +44,8 @@ public class NodeManagerMetrics {
   @Metric("Current allocated Virtual Cores")
       MutableGaugeInt allocatedVCores;
   @Metric MutableGaugeInt availableVCores;
+  @Metric("Container launch duration")
+      MutableRate containerLaunchDuration;
 
   public static NodeManagerMetrics create() {
     return create(DefaultMetricsSystem.instance());
@@ -107,7 +110,11 @@ public class NodeManagerMetrics {
     availableGB.incr(res.getMemory() / 1024);
     availableVCores.incr(res.getVirtualCores());
   }
-  
+
+  public void addContainerLaunchDuration(long value) {
+    containerLaunchDuration.add(value);
+  }
+
   public int getRunningContainers() {
     return containersRunning.value();
   }

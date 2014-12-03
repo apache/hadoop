@@ -38,9 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -223,8 +221,8 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   private void loadRMAppState(RMState rmState) throws Exception {
     try {
-      List<ApplicationAttemptState> attempts =
-          new ArrayList<ApplicationAttemptState>();
+      List<ApplicationAttemptStateData> attempts =
+          new ArrayList<ApplicationAttemptStateData>();
 
       for (FileStatus appDir : fs.listStatus(rmAppRoot)) {
         checkAndResumeUpdateOperation(appDir.getPath());
@@ -241,19 +239,11 @@ public class FileSystemRMStateStore extends RMStateStore {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Loading application from node: " + childNodeName);
             }
-            ApplicationId appId = ConverterUtils.toApplicationId(childNodeName);
-            ApplicationStateDataPBImpl appStateData =
+            ApplicationStateDataPBImpl appState =
                 new ApplicationStateDataPBImpl(
                   ApplicationStateDataProto.parseFrom(childData));
-            ApplicationState appState =
-                new ApplicationState(appStateData.getSubmitTime(),
-                  appStateData.getStartTime(),
-                  appStateData.getApplicationSubmissionContext(),
-                  appStateData.getUser(),
-                  appStateData.getState(),
-                  appStateData.getDiagnostics(), appStateData.getFinishTime());
-            // assert child node name is same as actual applicationId
-            assert appId.equals(appState.context.getApplicationId());
+            ApplicationId appId =
+                appState.getApplicationSubmissionContext().getApplicationId();
             rmState.appState.put(appId, appState);
           } else if (childNodeName
             .startsWith(ApplicationAttemptId.appAttemptIdStrPrefix)) {
@@ -262,33 +252,9 @@ public class FileSystemRMStateStore extends RMStateStore {
               LOG.debug("Loading application attempt from node: "
                   + childNodeName);
             }
-            ApplicationAttemptId attemptId =
-                ConverterUtils.toApplicationAttemptId(childNodeName);
-            ApplicationAttemptStateDataPBImpl attemptStateData =
+            ApplicationAttemptStateDataPBImpl attemptState =
                 new ApplicationAttemptStateDataPBImpl(
                   ApplicationAttemptStateDataProto.parseFrom(childData));
-            Credentials credentials = null;
-            if (attemptStateData.getAppAttemptTokens() != null) {
-              credentials = new Credentials();
-              DataInputByteBuffer dibb = new DataInputByteBuffer();
-              dibb.reset(attemptStateData.getAppAttemptTokens());
-              credentials.readTokenStorageStream(dibb);
-            }
-            ApplicationAttemptState attemptState =
-                new ApplicationAttemptState(attemptId,
-                  attemptStateData.getMasterContainer(), credentials,
-                  attemptStateData.getStartTime(),
-                  attemptStateData.getState(),
-                  attemptStateData.getFinalTrackingUrl(),
-                  attemptStateData.getDiagnostics(),
-                  attemptStateData.getFinalApplicationStatus(),
-                  attemptStateData.getAMContainerExitStatus(),
-                  attemptStateData.getFinishTime(),
-                  attemptStateData.getMemorySeconds(),
-                  attemptStateData.getVcoreSeconds());
-
-            // assert child node name is same as application attempt id
-            assert attemptId.equals(attemptState.getAttemptId());
             attempts.add(attemptState);
           } else {
             LOG.info("Unknown child node with name: " + childNodeName);
@@ -299,9 +265,9 @@ public class FileSystemRMStateStore extends RMStateStore {
       // go through all attempts and add them to their apps, Ideally, each
       // attempt node must have a corresponding app node, because remove
       // directory operation remove both at the same time
-      for (ApplicationAttemptState attemptState : attempts) {
+      for (ApplicationAttemptStateData attemptState : attempts) {
         ApplicationId appId = attemptState.getAttemptId().getApplicationId();
-        ApplicationState appState = rmState.appState.get(appId);
+        ApplicationStateData appState = rmState.appState.get(appId);
         assert appState != null;
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
@@ -398,10 +364,9 @@ public class FileSystemRMStateStore extends RMStateStore {
   @Override
   public synchronized void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateData appStateDataPB) throws Exception {
-    String appIdStr = appId.toString();
-    Path appDirPath = getAppDir(rmAppRoot, appIdStr);
+    Path appDirPath = getAppDir(rmAppRoot, appId);
     fs.mkdirs(appDirPath);
-    Path nodeCreatePath = getNodePath(appDirPath, appIdStr);
+    Path nodeCreatePath = getNodePath(appDirPath, appId.toString());
 
     LOG.info("Storing info for app: " + appId + " at: " + nodeCreatePath);
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
@@ -418,9 +383,8 @@ public class FileSystemRMStateStore extends RMStateStore {
   @Override
   public synchronized void updateApplicationStateInternal(ApplicationId appId,
       ApplicationStateData appStateDataPB) throws Exception {
-    String appIdStr = appId.toString();
-    Path appDirPath = getAppDir(rmAppRoot, appIdStr);
-    Path nodeCreatePath = getNodePath(appDirPath, appIdStr);
+    Path appDirPath = getAppDir(rmAppRoot, appId);
+    Path nodeCreatePath = getNodePath(appDirPath, appId.toString());
 
     LOG.info("Updating info for app: " + appId + " at: " + nodeCreatePath);
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
@@ -440,7 +404,7 @@ public class FileSystemRMStateStore extends RMStateStore {
       ApplicationAttemptStateData attemptStateDataPB)
       throws Exception {
     Path appDirPath =
-        getAppDir(rmAppRoot, appAttemptId.getApplicationId().toString());
+        getAppDir(rmAppRoot, appAttemptId.getApplicationId());
     Path nodeCreatePath = getNodePath(appDirPath, appAttemptId.toString());
     LOG.info("Storing info for attempt: " + appAttemptId + " at: "
         + nodeCreatePath);
@@ -461,7 +425,7 @@ public class FileSystemRMStateStore extends RMStateStore {
       ApplicationAttemptStateData attemptStateDataPB)
       throws Exception {
     Path appDirPath =
-        getAppDir(rmAppRoot, appAttemptId.getApplicationId().toString());
+        getAppDir(rmAppRoot, appAttemptId.getApplicationId());
     Path nodeCreatePath = getNodePath(appDirPath, appAttemptId.toString());
     LOG.info("Updating info for attempt: " + appAttemptId + " at: "
         + nodeCreatePath);
@@ -477,9 +441,11 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void removeApplicationStateInternal(ApplicationState appState)
+  public synchronized void removeApplicationStateInternal(
+      ApplicationStateData appState)
       throws Exception {
-    String appId = appState.getAppId().toString();
+    ApplicationId appId =
+        appState.getApplicationSubmissionContext().getApplicationId();
     Path nodeRemovePath = getAppDir(rmAppRoot, appId);
     LOG.info("Removing info for app: " + appId + " at: " + nodeRemovePath);
     deleteFile(nodeRemovePath);
@@ -572,8 +538,8 @@ public class FileSystemRMStateStore extends RMStateStore {
     }
   }
 
-  private Path getAppDir(Path root, String appId) {
-    return getNodePath(root, appId);
+  private Path getAppDir(Path root, ApplicationId appId) {
+    return getNodePath(root, appId.toString());
   }
 
   // FileSystem related code

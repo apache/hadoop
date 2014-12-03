@@ -15,19 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapreduce.v2.hs.protocolPB;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.HSAdminRefreshProtocolService;
-import org.apache.hadoop.security.KerberosInfo;
+package org.apache.hadoop.hdfs.inotify;
 
-@KerberosInfo(serverPrincipal = CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
-@ProtocolInfo(protocolName = "org.apache.hadoop.mapreduce.v2.hs.protocol.HSAdminRefreshProtocol", protocolVersion = 1)
-@Private
-@InterfaceStability.Evolving
-public interface HSAdminRefreshProtocolPB extends
-    HSAdminRefreshProtocolService.BlockingInterface {
+import org.apache.hadoop.classification.InterfaceAudience;
+
+/**
+ * A batch of events that all happened on the same transaction ID.
+ */
+@InterfaceAudience.Public
+public class EventBatch {
+  private final long txid;
+  private final Event[] events;
+
+  public EventBatch(long txid, Event[] events) {
+    this.txid = txid;
+    this.events = events;
+  }
+
+  public long getTxid() {
+    return txid;
+  }
+
+  public Event[] getEvents() { return events; }
 }

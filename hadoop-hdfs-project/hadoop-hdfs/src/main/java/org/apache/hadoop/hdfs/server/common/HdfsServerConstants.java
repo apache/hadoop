@@ -280,8 +280,11 @@ public final class HdfsServerConstants {
   static public enum BlockUCState {
     /**
      * Block construction completed.<br>
-     * The block has at least one {@link ReplicaState#FINALIZED} replica,
-     * and is not going to be modified.
+     * The block has at least the configured minimal replication number
+     * of {@link ReplicaState#FINALIZED} replica(s), and is not going to be
+     * modified.
+     * NOTE, in some special cases, a block may be forced to COMPLETE state,
+     * even if it doesn't have required minimal replications.
      */
     COMPLETE,
     /**

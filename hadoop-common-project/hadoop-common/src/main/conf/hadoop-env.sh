@@ -37,31 +37,38 @@
 #  JAVA_HOME=/usr/java/testing hdfs dfs -ls
 #
 # Therefore, the vast majority (BUT NOT ALL!) of these defaults
-# are configured for substitution and not append.  If you would
-# like append, you'll # need to modify this file accordingly.
+# are configured for substitution and not append.  If append
+# is preferable, modify this file accordingly.
 
 ###
 # Generic settings for HADOOP
 ###
 
 # Technically, the only required environment variable is JAVA_HOME.
-# All others are optional.  However, our defaults are probably not
-# your defaults.  Many sites configure these options outside of Hadoop,
+# All others are optional.  However, the defaults are probably not
+# preferred.  Many sites configure these options outside of Hadoop,
 # such as in /etc/profile.d
 
-# The java implementation to use.
-export JAVA_HOME=${JAVA_HOME:-"hadoop-env.sh is not configured"}
+# The java implementation to use. By default, this environment 
+# variable is REQUIRED on ALL platforms except OS X!
+# export JAVA_HOME=
+
+# Location of Hadoop.  By default, Hadoop will attempt to determine
+# this location based upon its execution path.
+# export HADOOP_PREFIX=
 
 # Location of Hadoop's configuration information.  i.e., where this
-# file is probably living.  You will almost certainly want to set
-# this in /etc/profile.d or equivalent.
+# file is probably living. Many sites will also set this in the
+# same location where JAVA_HOME is defined.  If this is not defined
+# Hadoop will attempt to locate it based upon its execution
+# path.
 # export HADOOP_CONF_DIR=$HADOOP_PREFIX/etc/hadoop
 
 # The maximum amount of heap to use, in MB. Default is 1024.
 # export HADOOP_HEAPSIZE=1024
 
 # Extra Java runtime options for all Hadoop commands. We don't support
-# IPv6 yet/still, so by default we set preference to IPv4.
+# IPv6 yet/still, so by default the preference is set to IPv4.
 # export HADOOP_OPTS="-Djava.net.preferIPv4Stack=true"
 
 # Some parts of the shell code may do special things dependent upon
@@ -72,8 +79,8 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 
 # Under certain conditions, Java on OS X will throw SCDynamicStore errors
 # in the system logs.
-# See HADOOP-8719 for more information.  If you need Kerberos
-# support on OS X, you'll want to change/remove this extra bit.
+# See HADOOP-8719 for more information.  If one needs Kerberos
+# support on OS X, one will want to change/remove this extra bit.
 case ${HADOOP_OS_TYPE} in
   Darwin*)
     export HADOOP_OPTS="${HADOOP_OPTS} -Djava.security.krb5.realm= "
@@ -82,11 +89,11 @@ case ${HADOOP_OS_TYPE} in
   ;;
 esac
 
-# Extra Java runtime options for Hadoop clients (i.e., hdfs dfs -blah)
-# These get added to HADOOP_OPTS for such commands.  In most cases,
-# this should be left empty and let users supply it on the
-# command line.
-# extra HADOOP_CLIENT_OPTS=""
+# Extra Java runtime options for some Hadoop commands
+# and clients (i.e., hdfs dfs -blah).  These get appended to HADOOP_OPTS for 
+# such commands.  In most cases, # this should be left empty and 
+# let users supply it on the command line.
+# export HADOOP_CLIENT_OPTS=""
 
 #
 # A note about classpaths.
@@ -149,20 +156,22 @@ esac
 #
 
 #
-# You can define variables right here and then re-use them later on.
-# For example, it is common to use the same garbage collection settings
-# for all the daemons.  So we could define:
+# Many options may also be specified as Java properties.  It is
+# very common, and in many cases, desirable, to hard-set these
+# in daemon _OPTS variables.  Where applicable, the appropriate
+# Java property is also identified.  Note that many are re-used
+# or set differently in certain contexts (e.g., secure vs
+# non-secure)
 #
-# export HADOOP_GC_SETTINGS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps"
-#
-# .. and then use it as per the b option under the namenode.
 
-# Where (primarily) daemon log files are stored.
-# $HADOOP_PREFIX/logs by default.
+# Where (primarily) daemon log files are stored.  # $HADOOP_PREFIX/logs 
+# by default.
+# Java property: hadoop.log.dir
 # export HADOOP_LOG_DIR=${HADOOP_PREFIX}/logs
 
 # A string representing this instance of hadoop. $USER by default.
 # This is used in writing log and pid files, so keep that in mind!
+# Java property: hadoop.id.str
 # export HADOOP_IDENT_STRING=$USER
 
 # How many seconds to pause after stopping a daemon
@@ -171,23 +180,26 @@ esac
 # Where pid files are stored.  /tmp by default.
 # export HADOOP_PID_DIR=/tmp
 
-# Default log level and output location
-# This sets the hadoop.root.logger property
+# Default log4j setting for interactive commands
+# Java property: hadoop.root.logger
 # export HADOOP_ROOT_LOGGER=INFO,console
 
-# Default log level for daemons spawned explicitly by 
+# Default log4j setting for daemons spawned explicitly by 
 # --daemon option of hadoop, hdfs, mapred and yarn command.
-# This sets the hadoop.root.logger property
+# Java property: hadoop.root.logger
 # export HADOOP_DAEMON_ROOT_LOGGER=INFO,RFA
 
 # Default log level and output location for security-related messages.
-# It sets -Dhadoop.security.logger on the command line.
-# You will almost certainly want to change this on a per-daemon basis!
+# You will almost certainly want to change this on a per-daemon basis via
+# the Java property (i.e., -Dhadoop.security.logger=foo). (Note that the
+# defaults for the NN and 2NN override this by default.)
+# Java property: hadoop.security.logger
 # export HADOOP_SECURITY_LOGGER=INFO,NullAppender
 
 # Default log level for file system audit messages.
-# It sets -Dhdfs.audit.logger on the command line.
-# You will almost certainly want to change this on a per-daemon basis!
+# Generally, this is specifically set in the namenode-specific
+# options line.
+# Java property: hdfs.audit.logger
 # export HADOOP_AUDIT_LOGGER=INFO,NullAppender
 
 # Default process priority level
@@ -195,7 +207,18 @@ esac
 # export HADOOP_NICENESS=0
 
 # Default name for the service level authorization file
+# Java property: hadoop.policy.file
 # export HADOOP_POLICYFILE="hadoop-policy.xml"
+
+#
+# NOTE: this is not used by default!  <-----
+# You can define variables right here and then re-use them later on.
+# For example, it is common to use the same garbage collection settings
+# for all the daemons.  So one could define:
+#
+# export HADOOP_GC_SETTINGS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps"
+#
+# .. and then use it as per the b option under the namenode.
 
 ###
 # Secure/privileged execution
@@ -219,18 +242,26 @@ esac
 
 #
 # This directory contains the logs for secure and privileged processes.
+# Java property: hadoop.log.dir
 # export HADOOP_SECURE_LOG=${HADOOP_LOG_DIR}
 
 #
 # When running a secure daemon, the default value of HADOOP_IDENT_STRING
 # ends up being a bit bogus.  Therefore, by default, the code will
-# replace HADOOP_IDENT_STRING with HADOOP_SECURE_xx_USER.  If you want
+# replace HADOOP_IDENT_STRING with HADOOP_SECURE_xx_USER.  If one wants
 # to keep HADOOP_IDENT_STRING untouched, then uncomment this line.
 # export HADOOP_SECURE_IDENT_PRESERVE="true"
 
 ###
 # NameNode specific parameters
 ###
+
+# Default log level and output location for file system related change
+# messages. For non-namenode daemons, the Java property must be set in
+# the appropriate _OPTS if one wants something other than INFO,NullAppender
+# Java property: hdfs.audit.logger
+# export HDFS_AUDIT_LOGGER=INFO,NullAppender
+
 # Specify the JVM options to be used when starting the NameNode.
 # These options will be appended to the options specified as HADOOP_OPTS
 # and therefore may override any similar flags set in HADOOP_OPTS
@@ -245,7 +276,7 @@ esac
 # export HADOOP_NAMENODE_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:${HADOOP_LOG_DIR}/gc-rm.log-$(date +'%Y%m%d%H%M')"
 
 # this is the default:
-# export HADOOP_NAMENODE_OPTS="-Dhadoop.security.logger=INFO,RFAS -Dhdfs.audit.logger=INFO,NullAppender"
+# export HADOOP_NAMENODE_OPTS="-Dhadoop.security.logger=INFO,RFAS"
 
 ###
 # SecondaryNameNode specific parameters
@@ -255,7 +286,7 @@ esac
 # and therefore may override any similar flags set in HADOOP_OPTS
 #
 # This is the default:
-# export HADOOP_SECONDARYNAMENODE_OPTS="-Dhadoop.security.logger=INFO,RFAS -Dhdfs.audit.logger=INFO,NullAppender"
+# export HADOOP_SECONDARYNAMENODE_OPTS="-Dhadoop.security.logger=INFO,RFAS"
 
 ###
 # DataNode specific parameters
@@ -272,14 +303,16 @@ esac
 # to provide authentication of data transfer protocol.  This **MUST NOT** be
 # defined if SASL is configured for authentication of data transfer protocol
 # using non-privileged ports.
+# This will replace the hadoop.id.str Java property in secure mode.
 # export HADOOP_SECURE_DN_USER=hdfs
 
 # Supplemental options for secure datanodes
-# By default, we use jsvc which needs to know to launch a
+# By default, Hadoop uses jsvc which needs to know to launch a
 # server jvm.
 # export HADOOP_DN_SECURE_EXTRA_OPTS="-jvm server"
 
 # Where datanode log files are stored in the secure data environment.
+# This will replace the hadoop.log.dir Java property in secure mode.
 # export HADOOP_SECURE_DN_LOG_DIR=${HADOOP_SECURE_LOG_DIR}
 
 # Where datanode pid files are stored in the secure data environment.
@@ -301,11 +334,12 @@ esac
 # export HADOOP_PORTMAP_OPTS="-Xmx512m"
 
 # Supplemental options for priviliged gateways
-# By default, we use jsvc which needs to know to launch a
+# By default, Hadoop uses jsvc which needs to know to launch a
 # server jvm.
 # export HADOOP_NFS3_SECURE_EXTRA_OPTS="-jvm server"
 
 # On privileged gateways, user to run the gateway as after dropping privileges
+# This will replace the hadoop.id.str Java property in secure mode.
 # export HADOOP_PRIVILEGED_NFS_USER=nfsserver
 
 ###
@@ -349,7 +383,7 @@ esac
 ###
 
 #
-# When building Hadoop, you can add the class paths to your commands
+# When building Hadoop, one can add the class paths to the commands
 # via this special env var:
-# HADOOP_ENABLE_BUILD_PATHS="true"
+# export HADOOP_ENABLE_BUILD_PATHS="true"
 

@@ -15,49 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.mapreduce.v2.hs.protocol;
-
-import java.io.IOException;
+package org.apache.hadoop.mapreduce.v2.api;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.HSAdminRefreshProtocolService;
 import org.apache.hadoop.security.KerberosInfo;
 
-/**
- * Protocol use
- * 
- */
 @KerberosInfo(serverPrincipal = CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
+@ProtocolInfo(protocolName = "org.apache.hadoop.mapreduce.v2.api.HSAdminRefreshProtocol", protocolVersion = 1)
 @Private
 @InterfaceStability.Evolving
-public interface HSAdminRefreshProtocol {
-  /**
-   * Refresh admin acls.
-   * 
-   * @throws IOException
-   */
-  public void refreshAdminAcls() throws IOException;
-  
-  /**
-   * Refresh loaded job cache
-   * @throws IOException
-   */
-  public void refreshLoadedJobCache() throws IOException;
-
-  /**
-   * Refresh job retention settings.
-   * 
-   * @throws IOException
-   */
-  public void refreshJobRetentionSettings() throws IOException;
-
-  /**
-   * Refresh log retention settings.
-   * 
-   * @throws IOException
-   */
-  public void refreshLogRetentionSettings() throws IOException;
-  
+public interface HSAdminRefreshProtocolPB extends
+    HSAdminRefreshProtocolService.BlockingInterface {
 }

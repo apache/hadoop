@@ -33,18 +33,18 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
@@ -56,18 +56,14 @@ import com.google.inject.Inject;
 
 public class AppBlock extends HtmlBlock {
 
-  private ApplicationACLsManager aclsManager;
-  private QueueACLsManager queueACLsManager;
   private final Configuration conf;
+  private final ResourceManager rm;
 
   @Inject
-  AppBlock(ResourceManager rm, ViewContext ctx,
-      ApplicationACLsManager aclsManager, QueueACLsManager queueACLsManager,
-      Configuration conf) {
+  AppBlock(ResourceManager rm, ViewContext ctx, Configuration conf) {
     super(ctx);
-    this.aclsManager = aclsManager;
-    this.queueACLsManager = queueACLsManager;
     this.conf = conf;
+    this.rm = rm;
   }
 
   @Override
@@ -86,7 +82,7 @@ public class AppBlock extends HtmlBlock {
       return;
     }
 
-    RMContext context = getInstance(RMContext.class);
+    RMContext context = this.rm.getRMContext();
     RMApp rmApp = context.getRMApps().get(appID);
     if (rmApp == null) {
       puts("Application not found: "+ aid);
@@ -101,9 +97,9 @@ public class AppBlock extends HtmlBlock {
       callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
     }
     if (callerUGI != null
-        && !(this.aclsManager.checkAccess(callerUGI,
-                ApplicationAccessType.VIEW_APP, app.getUser(), appID) ||
-             this.queueACLsManager.checkAccess(callerUGI,
+        && !(this.rm.getApplicationACLsManager().checkAccess(callerUGI,
+            ApplicationAccessType.VIEW_APP, app.getUser(), appID) || this.rm
+            .getQueueACLsManager().checkAccess(callerUGI,
                 QueueACL.ADMINISTER_QUEUE, app.getQueue()))) {
       puts("You (User " + remoteUser
           + ") are not authorized to view application " + appID);
@@ -113,8 +109,23 @@ public class AppBlock extends HtmlBlock {
     setTitle(join("Application ", aid));
 
     RMAppMetrics appMerics = rmApp.getRMAppMetrics();
-    RMAppAttemptMetrics attemptMetrics =
-        rmApp.getCurrentAppAttempt().getRMAppAttemptMetrics();
+    
+    // Get attempt metrics and fields, it is possible currentAttempt of RMApp is
+    // null. In that case, we will assume resource preempted and number of Non
+    // AM container preempted on that attempt is 0
+    RMAppAttemptMetrics attemptMetrics;
+    if (null == rmApp.getCurrentAppAttempt()) {
+      attemptMetrics = null;
+    } else {
+      attemptMetrics = rmApp.getCurrentAppAttempt().getRMAppAttemptMetrics();
+    }
+    Resource attemptResourcePreempted =
+        attemptMetrics == null ? Resources.none() : attemptMetrics
+            .getResourcePreempted();
+    int attemptNumNonAMContainerPreempted =
+        attemptMetrics == null ? 0 : attemptMetrics
+            .getNumNonAMContainersPreempted();
+    
     info("Application Overview")
         ._("User:", app.getUser())
         ._("Name:", app.getName())
@@ -143,13 +154,12 @@ public class AppBlock extends HtmlBlock {
         ._("Total Number of AM Containers Preempted:",
           String.valueOf(appMerics.getNumAMContainersPreempted()))
         ._("Resource Preempted from Current Attempt:",
-          attemptMetrics.getResourcePreempted())
+          attemptResourcePreempted)
         ._("Number of Non-AM Containers Preempted from Current Attempt:",
-          String.valueOf(attemptMetrics
-            .getNumNonAMContainersPreempted()))
+          attemptNumNonAMContainerPreempted)
         ._("Aggregate Resource Allocation:",
-            String.format("%d MB-seconds, %d vcore-seconds", 
-                appMerics.getMemorySeconds(), appMerics.getVcoreSeconds()));
+          String.format("%d MB-seconds, %d vcore-seconds", 
+              appMerics.getMemorySeconds(), appMerics.getVcoreSeconds()));
     pdiv._();
 
     Collection<RMAppAttempt> attempts = rmApp.getAppAttempts().values();

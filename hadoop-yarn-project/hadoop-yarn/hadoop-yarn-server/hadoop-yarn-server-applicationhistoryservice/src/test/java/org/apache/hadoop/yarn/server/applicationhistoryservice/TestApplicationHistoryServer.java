@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -49,6 +50,19 @@ public class TestApplicationHistoryServer {
         MemoryTimelineStore.class, TimelineStore.class);
     config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, "localhost:0");
     try {
+      try {
+        historyServer.init(config);
+        config.setInt(YarnConfiguration.TIMELINE_SERVICE_HANDLER_THREAD_COUNT,
+            0);
+        historyServer.start();
+        fail();
+      } catch (IllegalArgumentException e) {
+        Assert.assertTrue(e.getMessage().contains(
+            YarnConfiguration.TIMELINE_SERVICE_HANDLER_THREAD_COUNT));
+      }
+      config.setInt(YarnConfiguration.TIMELINE_SERVICE_HANDLER_THREAD_COUNT,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_THREAD_COUNT);
+      historyServer = new ApplicationHistoryServer();
       historyServer.init(config);
       assertEquals(STATE.INITED, historyServer.getServiceState());
       assertEquals(5, historyServer.getServices().size());

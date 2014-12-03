@@ -67,6 +67,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
@@ -105,7 +106,6 @@ public class TimelineClientImpl extends TimelineClient {
   private DelegationTokenAuthenticator authenticator;
   private DelegationTokenAuthenticatedURL.Token token;
   private URI resURI;
-  private boolean isEnabled;
 
   @Private
   @VisibleForTesting
@@ -142,6 +142,18 @@ public class TimelineClientImpl extends TimelineClient {
 
     // Constructor with default retry settings
     public TimelineClientConnectionRetry(Configuration conf) {
+      Preconditions.checkArgument(conf.getInt(
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES) >= -1,
+          "%s property value should be greater than or equal to -1",
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
+      Preconditions
+          .checkArgument(
+              conf.getLong(
+                  YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+                  YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS) > 0,
+              "%s property value should be greater than zero",
+              YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
       maxRetries = conf.getInt(
         YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
@@ -247,55 +259,42 @@ public class TimelineClientImpl extends TimelineClient {
   }
 
   protected void serviceInit(Configuration conf) throws Exception {
-    isEnabled = conf.getBoolean(
-        YarnConfiguration.TIMELINE_SERVICE_ENABLED,
-        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED);
-    if (!isEnabled) {
-      LOG.info("Timeline service is not enabled");
+    ClientConfig cc = new DefaultClientConfig();
+    cc.getClasses().add(YarnJacksonJaxbJsonProvider.class);
+    connConfigurator = newConnConfigurator(conf);
+    if (UserGroupInformation.isSecurityEnabled()) {
+      authenticator = new KerberosDelegationTokenAuthenticator();
     } else {
-      ClientConfig cc = new DefaultClientConfig();
-      cc.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-      connConfigurator = newConnConfigurator(conf);
-      if (UserGroupInformation.isSecurityEnabled()) {
-        authenticator = new KerberosDelegationTokenAuthenticator();
-      } else {
-        authenticator = new PseudoDelegationTokenAuthenticator();
-      }
-      authenticator.setConnectionConfigurator(connConfigurator);
-      token = new DelegationTokenAuthenticatedURL.Token();
-
-      connectionRetry = new TimelineClientConnectionRetry(conf);
-      client = new Client(new URLConnectionClientHandler(
-          new TimelineURLConnectionFactory()), cc);
-      TimelineJerseyRetryFilter retryFilter = new TimelineJerseyRetryFilter();
-      client.addFilter(retryFilter);
-
-      if (YarnConfiguration.useHttps(conf)) {
-        resURI = URI
-            .create(JOINER.join("https://", conf.get(
-                YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
-                YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS),
-                RESOURCE_URI_STR));
-      } else {
-        resURI = URI.create(JOINER.join("http://", conf.get(
-            YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS),
-            RESOURCE_URI_STR));
-      }
-      LOG.info("Timeline service address: " + resURI);
+      authenticator = new PseudoDelegationTokenAuthenticator();
     }
+    authenticator.setConnectionConfigurator(connConfigurator);
+    token = new DelegationTokenAuthenticatedURL.Token();
+
+    connectionRetry = new TimelineClientConnectionRetry(conf);
+    client = new Client(new URLConnectionClientHandler(
+        new TimelineURLConnectionFactory()), cc);
+    TimelineJerseyRetryFilter retryFilter = new TimelineJerseyRetryFilter();
+    client.addFilter(retryFilter);
+
+    if (YarnConfiguration.useHttps(conf)) {
+      resURI = URI
+          .create(JOINER.join("https://", conf.get(
+              YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
+              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS),
+              RESOURCE_URI_STR));
+    } else {
+      resURI = URI.create(JOINER.join("http://", conf.get(
+          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS),
+          RESOURCE_URI_STR));
+    }
+    LOG.info("Timeline service address: " + resURI);
     super.serviceInit(conf);
   }
 
   @Override
   public TimelinePutResponse putEntities(
       TimelineEntity... entities) throws IOException, YarnException {
-    if (!isEnabled) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Nothing will be put because timeline service is not enabled");
-      }
-      return new TimelinePutResponse();
-    }
     TimelineEntities entitiesContainer = new TimelineEntities();
     entitiesContainer.addEntities(Arrays.asList(entities));
     ClientResponse resp = doPosting(entitiesContainer, null);
@@ -306,12 +305,6 @@ public class TimelineClientImpl extends TimelineClient {
   @Override
   public void putDomain(TimelineDomain domain) throws IOException,
       YarnException {
-    if (!isEnabled) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Nothing will be put because timeline service is not enabled");
-      }
-      return;
-    }
     doPosting(domain, "domain");
   }
 

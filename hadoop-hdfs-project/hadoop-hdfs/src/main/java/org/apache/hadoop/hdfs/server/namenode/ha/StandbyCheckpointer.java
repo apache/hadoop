@@ -153,7 +153,10 @@ public class StandbyCheckpointer {
     final long txid;
     final NameNodeFile imageType;
     
-    namesystem.longReadLockInterruptibly();
+    // Acquire cpLock to make sure no one is modifying the name system.
+    // It does not need the full namesystem write lock, since the only thing
+    // that modifies namesystem on standby node is edit log replaying.
+    namesystem.cpLockInterruptibly();
     try {
       assert namesystem.getEditLog().isOpenForRead() :
         "Standby Checkpointer should only attempt a checkpoint when " +
@@ -190,7 +193,7 @@ public class StandbyCheckpointer {
         img.saveLegacyOIVImage(namesystem, outputDir, canceler);
       }
     } finally {
-      namesystem.longReadUnlock();
+      namesystem.cpUnlock();
     }
     
     // Upload the saved checkpoint back to the active
@@ -226,8 +229,11 @@ public class StandbyCheckpointer {
    * minute or so.
    */
   public void cancelAndPreventCheckpoints(String msg) throws ServiceFailedException {
-    thread.preventCheckpointsFor(PREVENT_AFTER_CANCEL_MS);
     synchronized (cancelLock) {
+      // The checkpointer thread takes this lock and checks if checkpointing is
+      // postponed. 
+      thread.preventCheckpointsFor(PREVENT_AFTER_CANCEL_MS);
+
       // Before beginning a checkpoint, the checkpointer thread
       // takes this lock, and creates a canceler object.
       // If the canceler is non-null, then a checkpoint is in

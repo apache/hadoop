@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -175,7 +176,7 @@ public class FSEditLogLoader {
     prog.setTotal(Phase.LOADING_EDITS, step, numTxns);
     Counter counter = prog.getCounter(Phase.LOADING_EDITS, step);
     long lastLogTime = now();
-    long lastInodeId = fsNamesys.getLastInodeId();
+    long lastInodeId = fsNamesys.dir.getLastInodeId();
     
     try {
       while (true) {
@@ -275,7 +276,7 @@ public class FSEditLogLoader {
         }
       }
     } finally {
-      fsNamesys.resetLastInodeId(lastInodeId);
+      fsNamesys.dir.resetLastInodeId(lastInodeId);
       if(closeOnExit) {
         in.close();
       }
@@ -304,12 +305,12 @@ public class FSEditLogLoader {
         throw new IOException("The layout version " + logVersion
             + " supports inodeId but gave bogus inodeId");
       }
-      inodeId = fsNamesys.allocateNewInodeId();
+      inodeId = fsNamesys.dir.allocateNewInodeId();
     } else {
       // need to reset lastInodeId. fsnamesys gets lastInodeId firstly from
       // fsimage but editlog captures more recent inodeId allocations
       if (inodeId > lastInodeId) {
-        fsNamesys.resetLastInodeId(inodeId);
+        fsNamesys.dir.resetLastInodeId(inodeId);
       }
     }
     return inodeId;
@@ -371,8 +372,8 @@ public class FSEditLogLoader {
 
         // add the op into retry cache if necessary
         if (toAddRetryCache) {
-          HdfsFileStatus stat = fsNamesys.dir.createFileStatus(
-              HdfsFileStatus.EMPTY_NAME, newFile,
+          HdfsFileStatus stat = FSDirStatAndListingOp.createFileStatus(
+              fsNamesys.dir, HdfsFileStatus.EMPTY_NAME, newFile,
               BlockStoragePolicySuite.ID_UNSPECIFIED, Snapshot.CURRENT_STATE_ID,
               false, iip);
           fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
@@ -392,8 +393,13 @@ public class FSEditLogLoader {
           
           // add the op into retry cache is necessary
           if (toAddRetryCache) {
+            HdfsFileStatus stat = FSDirStatAndListingOp.createFileStatus(
+                fsNamesys.dir,
+                HdfsFileStatus.EMPTY_NAME, newFile,
+                BlockStoragePolicySuite.ID_UNSPECIFIED,
+                Snapshot.CURRENT_STATE_ID, false, iip);
             fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
-                addCloseOp.rpcCallId, lb);
+                addCloseOp.rpcCallId, new LastBlockWithStatus(lb, stat));
           }
         }
       }
@@ -490,7 +496,7 @@ public class FSEditLogLoader {
         srcs[i] =
             renameReservedPathsOnUpgrade(concatDeleteOp.srcs[i], logVersion);
       }
-      fsDir.unprotectedConcat(trg, srcs, concatDeleteOp.timestamp);
+      FSDirConcatOp.unprotectedConcat(fsDir, trg, srcs, concatDeleteOp.timestamp);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(concatDeleteOp.rpcClientId,
@@ -502,8 +508,7 @@ public class FSEditLogLoader {
       RenameOldOp renameOp = (RenameOldOp)op;
       final String src = renameReservedPathsOnUpgrade(renameOp.src, logVersion);
       final String dst = renameReservedPathsOnUpgrade(renameOp.dst, logVersion);
-      fsDir.unprotectedRenameTo(src, dst,
-                                renameOp.timestamp);
+      FSDirRenameOp.unprotectedRenameTo(fsDir, src, dst, renameOp.timestamp);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(renameOp.rpcClientId, renameOp.rpcCallId);
@@ -525,7 +530,7 @@ public class FSEditLogLoader {
       MkdirOp mkdirOp = (MkdirOp)op;
       inodeId = getAndUpdateLastInodeId(mkdirOp.inodeId, logVersion,
           lastInodeId);
-      fsDir.unprotectedMkdir(inodeId,
+      FSDirMkdirOp.unprotectedMkdir(fsDir, inodeId,
           renameReservedPathsOnUpgrade(mkdirOp.path, logVersion),
           mkdirOp.permissions, mkdirOp.aclEntries, mkdirOp.timestamp);
       break;
@@ -595,7 +600,7 @@ public class FSEditLogLoader {
     }
     case OP_RENAME: {
       RenameOp renameOp = (RenameOp)op;
-      fsDir.unprotectedRenameTo(
+      FSDirRenameOp.unprotectedRenameTo(fsDir,
           renameReservedPathsOnUpgrade(renameOp.src, logVersion),
           renameReservedPathsOnUpgrade(renameOp.dst, logVersion),
           renameOp.timestamp, renameOp.options);

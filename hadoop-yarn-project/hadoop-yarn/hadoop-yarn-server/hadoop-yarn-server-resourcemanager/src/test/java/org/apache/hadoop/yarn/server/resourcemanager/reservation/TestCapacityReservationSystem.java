@@ -47,15 +47,8 @@ public class TestCapacityReservationSystem {
       Assert.fail(e.getMessage());
     }
     String planQName = testUtil.getreservationQueueName();
-    Plan plan = reservationSystem.getPlan(planQName);
-    Assert.assertNotNull(plan);
-    Assert.assertTrue(plan instanceof InMemoryPlan);
-    Assert.assertEquals(planQName, plan.getQueueName());
-    Assert.assertEquals(8192, plan.getTotalCapacity().getMemory());
-    Assert
-        .assertTrue(plan.getReservationAgent() instanceof GreedyReservationAgent);
-    Assert
-        .assertTrue(plan.getSharingPolicy() instanceof CapacityOverTimePolicy);
+    ReservationSystemTestUtil.validateReservationQueue(reservationSystem,
+        planQName);
   }
 
   @Test
@@ -80,15 +73,7 @@ public class TestCapacityReservationSystem {
     }
     // Assert queue in original config
     String planQName = testUtil.getreservationQueueName();
-    Plan plan = reservationSystem.getPlan(planQName);
-    Assert.assertNotNull(plan);
-    Assert.assertTrue(plan instanceof InMemoryPlan);
-    Assert.assertEquals(planQName, plan.getQueueName());
-    Assert.assertEquals(8192, plan.getTotalCapacity().getMemory());
-    Assert
-        .assertTrue(plan.getReservationAgent() instanceof GreedyReservationAgent);
-    Assert
-        .assertTrue(plan.getSharingPolicy() instanceof CapacityOverTimePolicy);
+    ReservationSystemTestUtil.validateReservationQueue(reservationSystem, planQName);
 
     // Dynamically add a plan
     String newQ = "reservation";
@@ -104,16 +89,6 @@ public class TestCapacityReservationSystem {
     } catch (YarnException e) {
       Assert.fail(e.getMessage());
     }
-    Plan newPlan = reservationSystem.getPlan(newQ);
-    Assert.assertNotNull(newPlan);
-    Assert.assertTrue(newPlan instanceof InMemoryPlan);
-    Assert.assertEquals(newQ, newPlan.getQueueName());
-    Assert.assertEquals(1024, newPlan.getTotalCapacity().getMemory());
-    Assert
-        .assertTrue(newPlan.getReservationAgent() instanceof GreedyReservationAgent);
-    Assert
-        .assertTrue(newPlan.getSharingPolicy() instanceof CapacityOverTimePolicy);
-
+    ReservationSystemTestUtil.validateNewReservationQueue(reservationSystem, newQ);
   }
-
 }

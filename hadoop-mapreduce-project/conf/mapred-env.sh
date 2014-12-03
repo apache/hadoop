@@ -29,9 +29,11 @@
 ###
 
 #Override the log4j settings for all MR apps
+# Java property: hadoop.root.logger
 # export MAPRED_ROOT_LOGGER="INFO,console"
 
 # Override Hadoop's log directory & file
+# Java property: hadoop.log.dir
 # export HADOOP_MAPRED_LOG_DIR=""
 
 # Override Hadoop's pid directory
@@ -39,6 +41,7 @@
 
 # Override Hadoop's identity string. $USER by default.
 # This is used in writing log and pid files, so keep that in mind!
+# Java property: hadoop.id.str
 # export HADOOP_MAPRED_IDENT_STRING=$USER
 
 # Override Hadoop's process priority
@@ -54,8 +57,8 @@
 # the value to 1000.
 # This value will be overridden by an Xmx setting specified in either
 # MAPRED_OPTS, HADOOP_OPTS, and/or HADOOP_JOB_HISTORYSERVER_OPTS.
-# If not specified, the default value will be picked from either YARN_HEAPMAX
-# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
+# If not specified, the default value will be picked from either HADOOP_HEAPSIZE
+# or the built-in default.
 #
 #export HADOOP_JOB_HISTORYSERVER_HEAPSIZE=1000
 
@@ -65,6 +68,7 @@
 #export HADOOP_JOB_HISTORYSERVER_OPTS=
 
 # Specify the log4j settings for the JobHistoryServer
+# Java property: hadoop.root.logger
 #export HADOOP_JHS_LOGGER=INFO,RFA
 
 

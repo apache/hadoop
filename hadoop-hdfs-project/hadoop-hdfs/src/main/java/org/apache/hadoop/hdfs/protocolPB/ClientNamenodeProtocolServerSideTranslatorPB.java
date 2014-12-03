@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -247,9 +248,6 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   private static final CreateResponseProto VOID_CREATE_RESPONSE = 
   CreateResponseProto.newBuilder().build();
 
-  private static final AppendResponseProto VOID_APPEND_RESPONSE = 
-  AppendResponseProto.newBuilder().build();
-
   private static final SetPermissionResponseProto VOID_SET_PERM_RESPONSE = 
   SetPermissionResponseProto.newBuilder().build();
 
@@ -407,17 +405,21 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
   }
-  
+
   @Override
   public AppendResponseProto append(RpcController controller,
       AppendRequestProto req) throws ServiceException {
     try {
-      LocatedBlock result = server.append(req.getSrc(), req.getClientName());
-      if (result != null) {
-        return AppendResponseProto.newBuilder()
-            .setBlock(PBHelper.convert(result)).build();
+      LastBlockWithStatus result = server.append(req.getSrc(),
+          req.getClientName());
+      AppendResponseProto.Builder builder = AppendResponseProto.newBuilder();
+      if (result.getLastBlock() != null) {
+        builder.setBlock(PBHelper.convert(result.getLastBlock()));
       }
-      return VOID_APPEND_RESPONSE;
+      if (result.getFileStatus() != null) {
+        builder.setStat(PBHelper.convert(result.getFileStatus()));
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

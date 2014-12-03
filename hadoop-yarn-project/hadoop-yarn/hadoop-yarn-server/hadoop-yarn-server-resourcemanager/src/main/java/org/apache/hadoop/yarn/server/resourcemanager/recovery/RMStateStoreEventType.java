@@ -23,5 +23,6 @@ public enum RMStateStoreEventType {
   STORE_APP,
   UPDATE_APP,
   UPDATE_APP_ATTEMPT,
-  REMOVE_APP
+  REMOVE_APP,
+  FENCED
 }

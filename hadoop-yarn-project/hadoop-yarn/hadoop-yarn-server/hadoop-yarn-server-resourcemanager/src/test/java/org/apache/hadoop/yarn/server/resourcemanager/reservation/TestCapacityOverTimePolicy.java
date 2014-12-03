@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Map;
@@ -29,8 +30,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ResourceOverCommitException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.junit.Assert;
@@ -74,18 +75,18 @@ public class TestCapacityOverTimePolicy {
 
     mAgent = mock(ReservationAgent.class);
     ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
-    CapacityScheduler scheduler = testUtil.mockCapacityScheduler(totCont);
+    QueueMetrics rootQueueMetrics = mock(QueueMetrics.class);
     String reservationQ = testUtil.getFullReservationQueueName();
-    CapacitySchedulerConfiguration capConf = scheduler.getConfiguration();
-    capConf.setReservationWindow(reservationQ, timeWindow);
-    capConf.setInstantaneousMaxCapacity(reservationQ, instConstraint);
-    capConf.setAverageCapacity(reservationQ, avgConstraint);
+    Resource clusterResource = testUtil.calculateClusterResource(totCont);
+    ReservationSchedulerConfiguration conf =
+        ReservationSystemTestUtil.createConf(reservationQ, timeWindow,
+            instConstraint, avgConstraint);
     CapacityOverTimePolicy policy = new CapacityOverTimePolicy();
-    policy.init(reservationQ, capConf);
+    policy.init(reservationQ, conf);
 
     plan =
-        new InMemoryPlan(scheduler.getRootQueueMetrics(), policy, mAgent,
-            scheduler.getClusterResource(), step, res, minAlloc, maxAlloc,
+        new InMemoryPlan(rootQueueMetrics, policy, mAgent,
+            clusterResource, step, res, minAlloc, maxAlloc,
             "dedicated", null, true);
   }
 

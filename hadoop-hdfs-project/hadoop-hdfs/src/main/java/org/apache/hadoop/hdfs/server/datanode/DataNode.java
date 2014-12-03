@@ -32,14 +32,14 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DNS_NAMESERVER_K
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PLUGINS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
@@ -64,6 +64,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -78,6 +79,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -85,6 +87,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -152,15 +157,13 @@ import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResour
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
-import org.apache.hadoop.hdfs.server.datanode.web.resources.DatanodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.server.datanode.web.DatanodeHttpServer;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
-import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.IOUtils;
@@ -295,12 +298,16 @@ public class DataNode extends ReconfigurableBase
   private DataStorage storage = null;
 
   private HttpServer2 infoServer = null;
+  private DatanodeHttpServer httpServer = null;
   private int infoPort;
   private int infoSecurePort;
 
   DataNodeMetrics metrics;
   private InetSocketAddress streamingAddr;
   
+  // See the note below in incrDatanodeNetworkErrors re: concurrency.
+  private LoadingCache<String, Map<String, Long>> datanodeNetworkCounts;
+
   private String hostName;
   private DatanodeID id;
   
@@ -416,6 +423,20 @@ public class DataNode extends ReconfigurableBase
       shutdown();
       throw ie;
     }
+    final int dncCacheMaxSize =
+        conf.getInt(DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_KEY,
+            DFS_DATANODE_NETWORK_COUNTS_CACHE_MAX_SIZE_DEFAULT) ;
+    datanodeNetworkCounts =
+        CacheBuilder.newBuilder()
+            .maximumSize(dncCacheMaxSize)
+            .build(new CacheLoader<String, Map<String, Long>>() {
+              @Override
+              public Map<String, Long> load(String key) throws Exception {
+                final Map<String, Long> ret = new HashMap<String, Long>();
+                ret.put("networkErrors", 0L);
+                return ret;
+              }
+            });
   }
 
   @Override
@@ -425,7 +446,7 @@ public class DataNode extends ReconfigurableBase
       try {
         LOG.info("Reconfiguring " + property + " to " + newVal);
         this.refreshVolumes(newVal);
-      } catch (Exception e) {
+      } catch (IOException e) {
         throw new ReconfigurationException(property, newVal,
             getConf().get(property), e);
       }
@@ -560,14 +581,15 @@ public class DataNode extends ReconfigurableBase
             IOException ioe = ioExceptionFuture.get();
             if (ioe != null) {
               errorMessageBuilder.append(String.format("FAILED TO ADD: %s: %s\n",
-                  volume.toString(), ioe.getMessage()));
+                  volume, ioe.getMessage()));
+              LOG.error("Failed to add volume: " + volume, ioe);
             } else {
               effectiveVolumes.add(volume.toString());
+              LOG.info("Successfully added volume: " + volume);
             }
-            LOG.info("Storage directory is loaded: " + volume.toString());
           } catch (Exception e) {
             errorMessageBuilder.append(String.format("FAILED to ADD: %s: %s\n",
-                volume.toString(), e.getMessage()));
+                volume, e.getMessage()));
           }
         }
       }
@@ -632,64 +654,36 @@ public class DataNode extends ReconfigurableBase
    * for information related to the different configuration options and
    * Http Policy is decided.
    */
-  private void startInfoServer(Configuration conf) throws IOException {
-    HttpServer2.Builder builder = new HttpServer2.Builder().setName("datanode")
-        .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")));
-
-    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
-
-    if (policy.isHttpEnabled()) {
-      if (secureResources == null) {
-        InetSocketAddress infoSocAddr = DataNode.getInfoAddr(conf);
-        int port = infoSocAddr.getPort();
-        builder.addEndpoint(URI.create("http://"
-            + NetUtils.getHostPortString(infoSocAddr)));
-        if (port == 0) {
-          builder.setFindPort(true);
-        }
-      } else {
-        // The http socket is created externally using JSVC, we add it in
-        // directly.
-        builder.setConnector(secureResources.getListener());
-      }
-    }
-
-    if (policy.isHttpsEnabled()) {
-      InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf.get(
-          DFS_DATANODE_HTTPS_ADDRESS_KEY, DFS_DATANODE_HTTPS_ADDRESS_DEFAULT));
-
-      Configuration sslConf = DFSUtil.loadSslConfiguration(conf);
-      DFSUtil.loadSslConfToHttpServerBuilder(builder, sslConf);
-
-      int port = secInfoSocAddr.getPort();
-      if (port == 0) {
-        builder.setFindPort(true);
-      }
-      builder.addEndpoint(URI.create("https://"
-          + NetUtils.getHostPortString(secInfoSocAddr)));
-    }
+  private void startInfoServer(Configuration conf)
+    throws IOException {
+    Configuration confForInfoServer = new Configuration(conf);
+    confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
+    HttpServer2.Builder builder = new HttpServer2.Builder()
+      .setName("datanode")
+      .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))
+      .addEndpoint(URI.create("http://localhost:0"))
+      .setFindPort(true);
 
     this.infoServer = builder.build();
 
     this.infoServer.setAttribute("datanode", this);
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-    this.infoServer.addServlet(null, "/blockScannerReport", 
+    this.infoServer.addServlet(null, "/blockScannerReport",
                                DataBlockScanner.Servlet.class);
-
-    if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
-      infoServer.addJerseyResourcePackage(DatanodeWebHdfsMethods.class
-          .getPackage().getName() + ";" + Param.class.getPackage().getName(),
-          WebHdfsFileSystem.PATH_PREFIX + "/*");
-    }
     this.infoServer.start();
+    InetSocketAddress jettyAddr = infoServer.getConnectorAddress(0);
 
-    int connIdx = 0;
-    if (policy.isHttpEnabled()) {
-      infoPort = infoServer.getConnectorAddress(connIdx++).getPort();
+    // SecureDataNodeStarter will bind the privileged port to the channel if
+    // the DN is started by JSVC, pass it along.
+    ServerSocketChannel httpServerChannel = secureResources != null ?
+      secureResources.getHttpServerChannel() : null;
+    this.httpServer = new DatanodeHttpServer(conf, jettyAddr, httpServerChannel);
+    httpServer.start();
+    if (httpServer.getHttpAddress() != null) {
+      infoPort = httpServer.getHttpAddress().getPort();
     }
-
-    if (policy.isHttpsEnabled()) {
-      infoSecurePort = infoServer.getConnectorAddress(connIdx).getPort();
+    if (httpServer.getHttpsAddress() != null) {
+      infoSecurePort = httpServer.getHttpsAddress().getPort();
     }
   }
 
@@ -1651,6 +1645,12 @@ public class DataNode extends ReconfigurableBase
         LOG.warn("Exception shutting down DataNode", e);
       }
     }
+    try {
+      httpServer.close();
+    } catch (Exception e) {
+      LOG.warn("Exception shutting down DataNode HttpServer", e);
+    }
+
     if (pauseMonitor != null) {
       pauseMonitor.stop();
     }
@@ -1790,6 +1790,30 @@ public class DataNode extends ReconfigurableBase
   @Override // DataNodeMXBean
   public int getXceiverCount() {
     return threadGroup == null ? 0 : threadGroup.activeCount();
+  }
+
+  @Override // DataNodeMXBean
+  public Map<String, Map<String, Long>> getDatanodeNetworkCounts() {
+    return datanodeNetworkCounts.asMap();
+  }
+
+  void incrDatanodeNetworkErrors(String host) {
+    metrics.incrDatanodeNetworkErrors();
+
+    /*
+     * Synchronizing on the whole cache is a big hammer, but since it's only
+     * accumulating errors, it should be ok. If this is ever expanded to include
+     * non-error stats, then finer-grained concurrency should be applied.
+     */
+    synchronized (datanodeNetworkCounts) {
+      try {
+        final Map<String, Long> curCount = datanodeNetworkCounts.get(host);
+        curCount.put("networkErrors", curCount.get("networkErrors") + 1L);
+        datanodeNetworkCounts.put(host, curCount);
+      } catch (ExecutionException e) {
+        LOG.warn("failed to increment network error counts for " + host);
+      }
+    }
   }
   
   int getXmitsInProgress() {

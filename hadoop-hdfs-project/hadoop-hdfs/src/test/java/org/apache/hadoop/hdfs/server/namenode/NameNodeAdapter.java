@@ -26,6 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -70,7 +71,8 @@ public class NameNodeAdapter {
   public static HdfsFileStatus getFileInfo(NameNode namenode, String src,
       boolean resolveLink) throws AccessControlException, UnresolvedLinkException,
         StandbyException, IOException {
-    return namenode.getNamesystem().getFileInfo(src, resolveLink);
+    return FSDirStatAndListingOp.getFileInfo(namenode.getNamesystem()
+            .getFSDirectory(), src, resolveLink);
   }
   
   public static boolean mkdirs(NameNode namenode, String src,
@@ -186,7 +188,7 @@ public class NameNodeAdapter {
   
   public static FSEditLog spyOnEditLog(NameNode nn) {
     FSEditLog spyEditLog = spy(nn.getNamesystem().getFSImage().getEditLog());
-    nn.getFSImage().setEditLogForTesting(spyEditLog);
+    DFSTestUtil.setEditLogForTesting(nn.getNamesystem(), spyEditLog);
     EditLogTailer tailer = nn.getNamesystem().getEditLogTailer();
     if (tailer != null) {
       tailer.setEditLog(spyEditLog);

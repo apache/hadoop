@@ -366,13 +366,16 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   public BlockInfoUnderConstruction convertToBlockUnderConstruction(
       BlockUCState s, DatanodeStorageInfo[] targets) {
     if(isComplete()) {
-      return new BlockInfoUnderConstruction(this,
+      BlockInfoUnderConstruction ucBlock = new BlockInfoUnderConstruction(this,
           getBlockCollection().getBlockReplication(), s, targets);
+      ucBlock.setBlockCollection(getBlockCollection());
+      return ucBlock;
     }
     // the block is already under construction
     BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;
     ucBlock.setBlockUCState(s);
     ucBlock.setExpectedLocations(targets);
+    ucBlock.setBlockCollection(getBlockCollection());
     return ucBlock;
   }
 

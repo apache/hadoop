@@ -219,4 +219,65 @@ public class TestShellBasedIdMapping {
     assertEquals(iug.getTimeout(),
         IdMappingConstant.USERGROUPID_UPDATE_MILLIS_DEFAULT * 2);
   }
+  
+  @Test
+  public void testUpdateMapIncr() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setLong(IdMappingConstant.USERGROUPID_UPDATE_MILLIS_KEY, 600000);
+    ShellBasedIdMapping refIdMapping =
+        new ShellBasedIdMapping(conf, true);
+    ShellBasedIdMapping incrIdMapping = new ShellBasedIdMapping(conf);
+
+    // Command such as "getent passwd <userName>" will return empty string if
+    // <username> is numerical, remove them from the map for testing purpose.
+    BiMap<Integer, String> uidNameMap = refIdMapping.getUidNameMap();
+    BiMap<Integer, String> gidNameMap = refIdMapping.getGidNameMap();
+
+    // Force empty map, to see effect of incremental map update of calling
+    // getUserName()
+    incrIdMapping.clearNameMaps();
+    uidNameMap = refIdMapping.getUidNameMap();
+    for (BiMap.Entry<Integer, String> me : uidNameMap.entrySet()) {
+      Integer id = me.getKey();
+      String name = me.getValue();
+      String tname = incrIdMapping.getUserName(id, null);
+      assertEquals(name, tname);
+    }
+    assertEquals(uidNameMap.size(), incrIdMapping.getUidNameMap().size());
+
+    // Force empty map, to see effect of incremental map update of calling
+    // getUid()
+    incrIdMapping.clearNameMaps();
+    for (BiMap.Entry<Integer, String> me : uidNameMap.entrySet()) {
+      Integer id = me.getKey();
+      String name = me.getValue();
+      Integer tid = incrIdMapping.getUid(name);
+      assertEquals(id, tid);
+    }
+    assertEquals(uidNameMap.size(), incrIdMapping.getUidNameMap().size());
+
+    // Force empty map, to see effect of incremental map update of calling
+    // getGroupName()
+    incrIdMapping.clearNameMaps();
+    gidNameMap = refIdMapping.getGidNameMap();
+    for (BiMap.Entry<Integer, String> me : gidNameMap.entrySet()) {
+      Integer id = me.getKey();
+      String name = me.getValue();
+      String tname = incrIdMapping.getGroupName(id, null);
+      assertEquals(name, tname);
+    }
+    assertEquals(gidNameMap.size(), incrIdMapping.getGidNameMap().size());
+
+    // Force empty map, to see effect of incremental map update of calling
+    // getGid()
+    incrIdMapping.clearNameMaps();
+    gidNameMap = refIdMapping.getGidNameMap();
+    for (BiMap.Entry<Integer, String> me : gidNameMap.entrySet()) {
+      Integer id = me.getKey();
+      String name = me.getValue();
+      Integer tid = incrIdMapping.getGid(name);
+      assertEquals(id, tid);
+    }
+    assertEquals(gidNameMap.size(), incrIdMapping.getGidNameMap().size());
+  }
 }

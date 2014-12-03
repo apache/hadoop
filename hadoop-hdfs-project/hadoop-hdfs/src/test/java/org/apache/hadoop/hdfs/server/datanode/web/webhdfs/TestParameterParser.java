@@ -15,40 +15,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode.web.resources;
+package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.web.resources.DelegationParam;
+import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
+
+import io.netty.handler.codec.http.QueryStringDecoder;
 
 import javax.servlet.ServletContext;
+
 import java.io.IOException;
 
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
-public class TestDatanodeWebHdfsMethods {
+public class TestParameterParser {
   private static final String LOGICAL_NAME = "minidfs";
 
   @Test
   public void testDeserializeHAToken() throws IOException {
     Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
-    DataNode dn = mock(DataNode.class);
-    doReturn(conf).when(dn).getConf();
-    ServletContext context = mock(ServletContext.class);
-    doReturn(dn).when(context).getAttribute("datanode");
     final Token<DelegationTokenIdentifier> token = new
-            Token<DelegationTokenIdentifier>();
-    DatanodeWebHdfsMethods method = new DatanodeWebHdfsMethods();
-    Whitebox.setInternalState(method, "context", context);
-    final Token<DelegationTokenIdentifier> tok2 = method.deserializeToken
-            (token.encodeToUrlString(), LOGICAL_NAME);
+        Token<DelegationTokenIdentifier>();
+    QueryStringDecoder decoder = new QueryStringDecoder(
+      WebHdfsHandler.WEBHDFS_PREFIX + "/?"
+      + NamenodeAddressParam.NAME + "=" + LOGICAL_NAME + "&"
+      + DelegationParam.NAME + "=" + token.encodeToUrlString());
+    ParameterParser testParser = new ParameterParser(decoder, conf);
+    final Token<DelegationTokenIdentifier> tok2 = testParser.delegationToken();
     Assert.assertTrue(HAUtil.isTokenForLogicalUri(tok2));
   }
 }

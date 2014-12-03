@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -74,6 +74,52 @@ public class TestMover {
           Arrays.asList(StorageType.DEFAULT, StorageType.DEFAULT));
       Assert.assertTrue(processor.scheduleMoveReplica(db, ml, storageTypes));
       Assert.assertFalse(processor.scheduleMoveReplica(db, ml, storageTypes));
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testScheduleBlockWithinSameNode() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3)
+        .storageTypes(
+            new StorageType[] { StorageType.DISK, StorageType.ARCHIVE })
+        .build();
+    try {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final String file = "/testScheduleWithinSameNode/file";
+      Path dir = new Path("/testScheduleWithinSameNode");
+      dfs.mkdirs(dir);
+      // write to DISK
+      dfs.setStoragePolicy(dir, "HOT");
+      {
+        final FSDataOutputStream out = dfs.create(new Path(file));
+        out.writeChars("testScheduleWithinSameNode");
+        out.close();
+      }
+
+      //verify before movement
+      LocatedBlock lb = dfs.getClient().getLocatedBlocks(file, 0).get(0);
+      StorageType[] storageTypes = lb.getStorageTypes();
+      for (StorageType storageType : storageTypes) {
+        Assert.assertTrue(StorageType.DISK == storageType);
+      }
+      // move to ARCHIVE
+      dfs.setStoragePolicy(dir, "COLD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] { "-p", dir.toString() });
+      Assert.assertEquals("Movement to ARCHIVE should be successfull", 0, rc);
+
+      // Wait till namenode notified
+      Thread.sleep(3000);
+      lb = dfs.getClient().getLocatedBlocks(file, 0).get(0);
+      storageTypes = lb.getStorageTypes();
+      for (StorageType storageType : storageTypes) {
+        Assert.assertTrue(StorageType.ARCHIVE == storageType);
+      }
     } finally {
       cluster.shutdown();
     }

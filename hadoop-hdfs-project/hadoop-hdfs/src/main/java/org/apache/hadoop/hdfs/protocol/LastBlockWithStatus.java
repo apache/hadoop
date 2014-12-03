@@ -15,24 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.protocol;
 
-package org.apache.hadoop.mapreduce.v2.hs.protocol;
-
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.security.KerberosInfo;
-import org.apache.hadoop.security.RefreshUserMappingsProtocol;
-import org.apache.hadoop.tools.GetUserMappingsProtocol;
 
 /**
- * Protocol use
- * 
+ * Class to contain Lastblock and HdfsFileStatus for the Append operation
  */
-@KerberosInfo(serverPrincipal = CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
-@Private
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface HSAdminProtocol extends GetUserMappingsProtocol,
-    RefreshUserMappingsProtocol, HSAdminRefreshProtocol {
+public class LastBlockWithStatus {
 
+  private final LocatedBlock lastBlock;
+
+  private final HdfsFileStatus fileStatus;
+
+  public LastBlockWithStatus(LocatedBlock lastBlock, HdfsFileStatus fileStatus) {
+    this.lastBlock = lastBlock;
+    this.fileStatus = fileStatus;
+  }
+
+  public LocatedBlock getLastBlock() {
+    return lastBlock;
+  }
+
+  public HdfsFileStatus getFileStatus() {
+    return fileStatus;
+  }
 }

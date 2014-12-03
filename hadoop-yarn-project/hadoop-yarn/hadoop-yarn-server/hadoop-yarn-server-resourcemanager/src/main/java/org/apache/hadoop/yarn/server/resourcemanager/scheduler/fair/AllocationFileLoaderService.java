@@ -396,6 +396,12 @@ public class AllocationFileLoaderService extends AbstractService {
       Map<FSQueueType, Set<String>> configuredQueues) 
       throws AllocationConfigurationException {
     String queueName = element.getAttribute("name");
+
+    if (queueName.contains(".")) {
+      throw new AllocationConfigurationException("Bad fair scheduler config "
+          + "file: queue name (" + queueName + ") shouldn't contain period.");
+    }
+
     if (parentName != null) {
       queueName = parentName + "." + queueName;
     }

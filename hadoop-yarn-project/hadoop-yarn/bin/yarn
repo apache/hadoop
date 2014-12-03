@@ -95,7 +95,7 @@ case "${COMMAND}" in
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   historyserver)
-    daemon="true"
+    supportdaemonization="true"
     echo "DEPRECATED: Use of this command to start the timeline server is deprecated." 1>&2
     echo "Instead use the timelineserver command for it." 1>&2
     echo "Starting the History Server anyway..." 1>&2
@@ -112,7 +112,7 @@ case "${COMMAND}" in
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   nodemanager)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
     hadoop_debug "Append YARN_NODEMANAGER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_NODEMANAGER_OPTS}"
@@ -121,7 +121,7 @@ case "${COMMAND}" in
     fi
   ;;
   proxyserver)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer'
     hadoop_debug "Append YARN_PROXYSERVER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_PROXYSERVER_OPTS}"
@@ -135,7 +135,7 @@ case "${COMMAND}" in
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   resourcemanager)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
     YARN_OPTS="${YARN_OPTS} ${YARN_RESOURCEMANAGER_OPTS}"
     hadoop_debug "Append YARN_RESOURCEMANAGER_OPTS onto YARN_OPTS"
@@ -149,7 +149,7 @@ case "${COMMAND}" in
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   timelineserver)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
     hadoop_debug "Append YARN_TIMELINESERVER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_TIMELINESERVER_OPTS}"
@@ -158,7 +158,7 @@ case "${COMMAND}" in
     fi
   ;;
   sharedcachemanager)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
     YARN_OPTS="$YARN_OPTS $YARN_SHAREDCACHEMANAGER_OPTS"
   ;;
@@ -206,7 +206,7 @@ hadoop_add_param HADOOP_OPTS yarn.root.logger "-Dyarn.root.logger=${YARN_ROOT_LO
 
 hadoop_finalize
 
-if [[ -n "${daemon}" ]]; then
+if [[ -n "${supportdaemonization}" ]]; then
   if [[ -n "${secure_service}" ]]; then
     hadoop_secure_daemon_handler "${HADOOP_DAEMON_MODE}" "${COMMAND}" \
     "${CLASS}" "${daemon_pidfile}" "${daemon_outfile}" \

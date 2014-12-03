@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -99,15 +100,15 @@ public class TestEditLogRace {
   // an object that does a bunch of transactions
   //
   static class Transactions implements Runnable {
-    final FSNamesystem namesystem;
+    final NamenodeProtocols nn;
     short replication = 3;
     long blockSize = 64;
     volatile boolean stopped = false;
     volatile Thread thr;
     final AtomicReference<Throwable> caught;
 
-    Transactions(FSNamesystem ns, AtomicReference<Throwable> caught) {
-      namesystem = ns;
+    Transactions(NamenodeProtocols ns, AtomicReference<Throwable> caught) {
+      nn = ns;
       this.caught = caught;
     }
 
@@ -115,14 +116,14 @@ public class TestEditLogRace {
     @Override
     public void run() {
       thr = Thread.currentThread();
-      PermissionStatus p = namesystem.createFsOwnerPermissions(
-                                          new FsPermission((short)0777));
+      FsPermission p = new FsPermission((short)0777);
+
       int i = 0;
       while (!stopped) {
         try {
           String dirname = "/thr-" + thr.getId() + "-dir-" + i; 
-          namesystem.mkdirs(dirname, p, true);
-          namesystem.delete(dirname, true);
+          nn.mkdirs(dirname, p, true);
+          nn.delete(dirname, true);
         } catch (SafeModeException sme) {
           // This is OK - the tests will bring NN in and out of safemode
         } catch (Throwable e) {
@@ -143,7 +144,7 @@ public class TestEditLogRace {
     }
   }
 
-  private void startTransactionWorkers(FSNamesystem namesystem,
+  private void startTransactionWorkers(NamenodeProtocols namesystem,
                                        AtomicReference<Throwable> caughtErr) {
     // Create threads and make them run transactions concurrently.
     for (int i = 0; i < NUM_THREADS; i++) {
@@ -163,7 +164,7 @@ public class TestEditLogRace {
       Thread thr = worker.getThread();
       try {
         if (thr != null) thr.join();
-      } catch (InterruptedException ie) {}
+      } catch (InterruptedException ignored) {}
     }
   }
 
@@ -183,11 +184,11 @@ public class TestEditLogRace {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
-      final FSNamesystem namesystem = cluster.getNamesystem();
-      FSImage fsimage = namesystem.getFSImage();
+      final NamenodeProtocols nn = cluster.getNameNode().getRpcServer();
+      FSImage fsimage = cluster.getNamesystem().getFSImage();
       StorageDirectory sd = fsimage.getStorage().getStorageDir(0);
 
-      startTransactionWorkers(namesystem, caughtErr);
+      startTransactionWorkers(nn, caughtErr);
 
       long previousLogTxId = 1;
 
@@ -197,12 +198,13 @@ public class TestEditLogRace {
         } catch (InterruptedException e) {}
 
         LOG.info("Starting roll " + i + ".");
-        CheckpointSignature sig = namesystem.rollEditLog();
+        CheckpointSignature sig = nn.rollEditLog();
         
         long nextLog = sig.curSegmentTxId;
         String logFileName = NNStorage.getFinalizedEditsFileName(
             previousLogTxId, nextLog - 1);
-        previousLogTxId += verifyEditLogs(namesystem, fsimage, logFileName, previousLogTxId);
+        previousLogTxId += verifyEditLogs(cluster.getNamesystem(), fsimage,
+          logFileName, previousLogTxId);
 
         assertEquals(previousLogTxId, nextLog);
         
@@ -264,16 +266,17 @@ public class TestEditLogRace {
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();
+      final NamenodeProtocols nn = cluster.getNameNodeRpc();
 
       FSImage fsimage = namesystem.getFSImage();
       FSEditLog editLog = fsimage.getEditLog();
 
-      startTransactionWorkers(namesystem, caughtErr);
+      startTransactionWorkers(nn, caughtErr);
 
       for (int i = 0; i < NUM_SAVE_IMAGE && caughtErr.get() == null; i++) {
         try {
           Thread.sleep(20);
-        } catch (InterruptedException e) {}
+        } catch (InterruptedException ignored) {}
 
 
         LOG.info("Save " + i + ": entering safe mode");
@@ -433,7 +436,7 @@ public class TestEditLogRace {
           NNStorage.getInProgressEditsFileName(4),
           4));
     } finally {
-      LOG.info("Closing namesystem");
+      LOG.info("Closing nn");
       if(namesystem != null) namesystem.close();
     }
   }
@@ -455,8 +458,8 @@ public class TestEditLogRace {
     try {
       FSImage fsimage = namesystem.getFSImage();
       FSEditLog editLog = spy(fsimage.getEditLog());
-      fsimage.editLog = editLog;
-      
+      DFSTestUtil.setEditLogForTesting(namesystem, editLog);
+
       final AtomicReference<Throwable> deferredException =
           new AtomicReference<Throwable>();
       final CountDownLatch waitToEnterSync = new CountDownLatch(1);
@@ -527,7 +530,7 @@ public class TestEditLogRace {
           NNStorage.getInProgressEditsFileName(4),
           4));
     } finally {
-      LOG.info("Closing namesystem");
+      LOG.info("Closing nn");
       if(namesystem != null) namesystem.close();
     }
   }  

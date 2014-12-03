@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 
 public class RMStateUpdateAppEvent extends RMStateStoreEvent {
-  private final ApplicationState appState;
+  private final ApplicationStateData appState;
 
-  public RMStateUpdateAppEvent(ApplicationState appState) {
+  public RMStateUpdateAppEvent(ApplicationStateData appState) {
     super(RMStateStoreEventType.UPDATE_APP);
     this.appState = appState;
   }
 
-  public ApplicationState getAppState() {
+  public ApplicationStateData getAppState() {
     return appState;
   }
 }
