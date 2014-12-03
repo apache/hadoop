@@ -34,14 +34,17 @@ public class LocatedBlocks {
   private final long fileLength;
   private final List<LocatedBlock> blocks; // array of blocks with prioritized locations
   private final boolean underConstruction;
-  private LocatedBlock lastLocatedBlock = null;
-  private boolean isLastBlockComplete = false;
-  private FileEncryptionInfo fileEncryptionInfo = null;
+  private final LocatedBlock lastLocatedBlock;
+  private final boolean isLastBlockComplete;
+  private final FileEncryptionInfo fileEncryptionInfo;
 
   public LocatedBlocks() {
     fileLength = 0;
     blocks = null;
     underConstruction = false;
+    lastLocatedBlock = null;
+    isLastBlockComplete = false;
+    fileEncryptionInfo = null;
   }
 
   public LocatedBlocks(long flength, boolean isUnderConstuction,

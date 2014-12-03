@@ -243,18 +243,22 @@ public class ShortCircuitReplica {
     String suffix = "";
     
     Preconditions.checkState(refCount == 0,
-        "tried to close replica with refCount " + refCount + ": " + this);
+        "tried to close replica with refCount %d: %s", refCount, this);
     refCount = -1;
     Preconditions.checkState(purged,
-        "tried to close unpurged replica " + this);
+        "tried to close unpurged replica %s", this);
     if (hasMmap()) {
       munmap();
-      suffix += "  munmapped.";
+      if (LOG.isTraceEnabled()) {
+        suffix += "  munmapped.";
+      }
     }
     IOUtils.cleanup(LOG, dataStream, metaStream);
     if (slot != null) {
       cache.scheduleSlotReleaser(slot);
-      suffix += "  scheduling " + slot + " for later release.";
+      if (LOG.isTraceEnabled()) {
+        suffix += "  scheduling " + slot + " for later release.";
+      }
     }
     if (LOG.isTraceEnabled()) {
       LOG.trace("closed " + this + suffix);
