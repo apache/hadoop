@@ -136,6 +136,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11332. KerberosAuthenticator#doSpnegoSequence should check if
     kerberos TGT is available in the subject. (Dian Fu via atm)
 
+    HADOOP-11348. Remove unused variable from CMake error message for finding
+    openssl (Dian Fu via Colin P. McCabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
