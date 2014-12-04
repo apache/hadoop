@@ -87,8 +87,6 @@ public class WorkflowCompositeService extends CompositeService
   /**
    * Add a service, and register it
    * @param service the {@link Service} to be added.
-   * Important: do not add a service to a parent during your own serviceInit/start,
-   * in Hadoop 2.2; you will trigger a ConcurrentModificationException.
    */
   @Override
   public synchronized void addService(Service service) {
@@ -119,9 +117,9 @@ public class WorkflowCompositeService extends CompositeService
         noteFailure(e);
         stop();
       } else {
-        LOG.info("Child service completed {}", child);
+        LOG.debug("Child service completed {}", child);
         if (areAllChildrenStopped()) {
-          LOG.info("All children are halted: stopping");
+          LOG.debug("All children are halted: stopping");
           stop();
         }
       }

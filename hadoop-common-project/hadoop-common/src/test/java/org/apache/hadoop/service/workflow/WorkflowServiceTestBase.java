@@ -20,7 +20,9 @@ package org.apache.hadoop.service.workflow;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
@@ -77,7 +79,7 @@ public abstract class WorkflowServiceTestBase extends Assert {
     Throwable failureCause = s.getFailureCause();
     if (failureCause != null) {
       log.info("Failed in state {} with {}", s.getFailureState(),
-          failureCause);
+          failureCause, failureCause);
     }
   }
 
@@ -132,7 +134,22 @@ public abstract class WorkflowServiceTestBase extends Assert {
     if (!found) {
       String message =
           "Text \"" + text + "\" not found in " + output.size() + " lines\n";
-      fail(message + builder.toString());
+      fail(message + builder);
     }
+  }
+
+
+  /**
+   * skip a test on windows
+   */
+  public static void skipOnWindows() {
+    if (Shell.WINDOWS) {
+      skip("Not supported on windows");
+    }
+  }
+
+  public static void skip(String message) {
+    log.warn("Skipping test: {}", message);
+    Assume.assumeTrue(message, false);
   }
 }

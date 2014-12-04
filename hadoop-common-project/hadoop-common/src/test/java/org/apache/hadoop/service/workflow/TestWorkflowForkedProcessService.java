@@ -42,6 +42,7 @@ public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
   private static final Logger
       processLog =
       LoggerFactory.getLogger("org.apache.hadoop.services.workflow.Process");
+  public static final int RECENT_OUTPUT_SLEEP_DURATION = 4000;
 
   private WorkflowForkedProcessService process;
   private File testDir = new File("target");
@@ -62,40 +63,45 @@ public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
   public void testLs() throws Throwable {
 
     initProcess(commandFactory.ls(testDir));
-    exec();
-    assertFalse(process.isProcessRunning());
-    assertEquals(0, process.getExitCode());
-
-    assertStringInOutput("test-classes", getFinalOutput());
+    assertExecCompletes(0);
     // assert that the service did not fail
     assertNull(process.getFailureCause());
   }
 
   @Test
+  
   public void testExitCodes() throws Throwable {
-
+    skipOnWindows();
     initProcess(commandFactory.exitFalse());
     exec();
     assertFalse(process.isProcessRunning());
-    int exitCode = process.getExitCode();
+    Integer exitCode = process.getExitCode();
+    assertNotNull("null exit code", exitCode);
     assertTrue(exitCode != 0);
     int corrected = process.getExitCodeSignCorrected();
     assertEquals(1, corrected);
     // assert that the exit code was uprated to a service failure
     assertNotNull(process.getFailureCause());
-
   }
 
   @Test
   public void testEcho() throws Throwable {
+    skipOnWindows();
 
     String echoText = "hello, world";
     initProcess(commandFactory.echo(echoText));
-    exec();
 
-    assertEquals(0, process.getExitCode());
+    assertExecCompletes(0);
     assertStringInOutput(echoText, getFinalOutput());
 
+  }
+
+  protected void assertExecCompletes(int expected) throws InterruptedException {
+    exec();
+    assertFalse(process.isProcessRunning());
+    Integer exitCode = process.getExitCode();
+    assertNotNull("null exit code", exitCode);
+    assertEquals(expected, exitCode.intValue());
   }
 
   @Test
@@ -107,7 +113,7 @@ public class TestWorkflowForkedProcessService extends WorkflowServiceTestBase {
     initProcess(commandFactory.env());
     exec();
 
-    assertEquals(0, process.getExitCode());
+    assertEquals(0, process.getExitCode().intValue());
     assertStringInOutput(val, getFinalOutput());
   }
 

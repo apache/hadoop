@@ -268,14 +268,15 @@ public class LongLivedProcess implements Runnable {
   /**
    * Exec the process
    * @return the process
-   * @throws IOException
+   * @throws IOException on any problem
+   * @throws FileNotFoundException if the process could not be found
    */
   private Process spawnChildProcess() throws IOException {
     if (process != null) {
       throw new IOException("Process already started");
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Spawning process:\n " + describeBuilder());
+      LOG.debug("Spawning process:\n {}", describeBuilder());
     }
     process = processBuilder.start();
     return process;
@@ -292,6 +293,8 @@ public class LongLivedProcess implements Runnable {
       lifecycleCallback.onProcessStarted(this);
     }
     try {
+      //close stdin for the process
+      IOUtils.closeStream(process.getOutputStream());
       exitCode = process.waitFor();
     } catch (InterruptedException e) {
       LOG.debug("Process wait interrupted -exiting thread", e);

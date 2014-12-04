@@ -249,10 +249,18 @@ public class WorkflowForkedProcessService
   }
 
 
-  public int getExitCode() {
+  /**
+   * Get the process exit code.
+   * @return the raw exit code in the range 0 to 255
+   */
+  public Integer getExitCode() {
     return process.getExitCode();
   }
-  
+
+  /**
+   * Get the process exit code with sign correction.
+   * @return an exit code in the range -127 to +128
+   */
   public int getExitCodeSignCorrected() {
     return process.getExitCodeSignCorrected();
   }
