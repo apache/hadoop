@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Times;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -536,8 +537,11 @@ public class ApplicationCLI extends YarnCLI {
     writer.printf(CONTAINER_PATTERN, "Container-Id", "Start Time",
         "Finish Time", "State", "Host", "LOG-URL");
     for (ContainerReport containerReport : appsReport) {
-      writer.printf(CONTAINER_PATTERN, containerReport.getContainerId(),
-          containerReport.getCreationTime(), containerReport.getFinishTime(),
+      writer.printf(
+          CONTAINER_PATTERN,
+          containerReport.getContainerId(),
+          Times.format(containerReport.getCreationTime()),
+          Times.format(containerReport.getFinishTime()),      
           containerReport.getContainerState(), containerReport
               .getAssignedNode(), containerReport.getLogUrl());
     }
