@@ -27,6 +27,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2765. Added leveldb-based implementation for RMStateStore. (Jason Lowe
     via jianhe)
 
+    YARN-2880. Added a test to make sure node labels will be recovered
+    if RM restart is enabled. (Rohith Sharmaks via jianhe)
+
   IMPROVEMENTS
 
     YARN-2891. Failed Container Executor does not provide a clear error
