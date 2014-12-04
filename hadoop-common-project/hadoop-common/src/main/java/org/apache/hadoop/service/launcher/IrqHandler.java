@@ -59,19 +59,26 @@ public final class IrqHandler implements SignalHandler {
   private final Interrupted handler;
 
   private final AtomicInteger signalCount = new AtomicInteger(0);
-  private final Signal signal;
+  private Signal signal;
 
   /**
    * Create an IRQ handler bound to the specific interrupt
    * @param name signal name
    * @param handler handler
-   * @throws IllegalArgumentException if the exception could not be set
    */
   public IrqHandler(String name, Interrupted handler) {
     Preconditions.checkArgument(name != null, "Null \"name\"");
     Preconditions.checkArgument(handler != null, "Null \"handler\"");
     this.handler = handler;
     this.name = name;
+  }
+
+  /**
+   * Bind to the interrupt handler
+   * @throws IllegalArgumentException if the exception could not be set
+   */
+  protected void bind() {
+    Preconditions.checkState(signal == null, "Handler already bound");
     try {
       signal = new Signal(name);
       Signal.handle(signal, this);

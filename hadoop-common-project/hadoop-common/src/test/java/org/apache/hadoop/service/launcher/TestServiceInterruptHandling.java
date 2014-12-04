@@ -38,6 +38,7 @@ public class TestServiceInterruptHandling extends AbstractServiceLauncherTestBas
     InterruptCatcher catcher = new InterruptCatcher();
     String name = IrqHandler.CONTROL_C;
     IrqHandler irqHandler = new IrqHandler(name, catcher);
+    irqHandler.bind();
     assertEquals(0, irqHandler.getSignalCount());
     irqHandler.raise();
     // allow for an async event

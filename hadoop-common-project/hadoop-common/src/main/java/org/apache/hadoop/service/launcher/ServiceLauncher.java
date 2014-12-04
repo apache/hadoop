@@ -197,13 +197,14 @@ public class ServiceLauncher<S extends Service>
   /**
    * Launch the service and exit.
    * <p>
-   *   <ol>
+   * <ol>
    * <li>Parse the command line.</li> 
    * <li>Build the service configuration from it.</li>
    * <li>Start the service.</li>.
    * <li>If it is a {@link LaunchableService}: execute it</li>
    * <li>Otherwise: wait for it to finish.</li>
-   * <li>Exit passing the status code to the {@link #exit(int, String)} method.</li>
+   * <li>Exit passing the status code to the {@link #exit(int, String)}
+   * method.</li>
    * </ol>
    * @param args arguments to the service. <code>arg[0]</code> is 
    * assumed to be the service classname.
@@ -224,6 +225,8 @@ public class ServiceLauncher<S extends Service>
     Configuration conf = createConfiguration();
     List<String> processedArgs = extractCommandOptions(conf, args);
     ExitUtil.ExitException ee = launchService(conf, processedArgs, true, true);
+    System.out.flush();
+    System.err.flush();
     exit(ee);
   }
 
@@ -530,6 +533,11 @@ public class ServiceLauncher<S extends Service>
       // the exception provides a status code -extract it
       exitCode = ((ExitCodeProvider) thrown).getExitCode();
       message = thrown.getMessage();
+      if (message==null) {
+        // some exceptions do not have a message; fall back
+        // to the string value.
+        message = thrown.toString();
+      }
     } else {
       // no exception code: use the default
       exitCode = EXIT_EXCEPTION_THROWN;
@@ -573,7 +581,6 @@ public class ServiceLauncher<S extends Service>
     Thread.setDefaultUncaughtExceptionHandler(
       new HadoopUncaughtExceptionHandler(this));
   }
-
 
   /**
    * Handler for uncaught exceptions: terminate the service

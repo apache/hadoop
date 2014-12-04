@@ -129,7 +129,9 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
    * @throws IllegalArgumentException if the registration failed
    */
   public synchronized void register(String signalName) {
-    interruptHandlers.add(new IrqHandler(signalName, this));
+    IrqHandler handler = new IrqHandler(signalName, this);
+    handler.bind();
+    interruptHandlers.add(handler);
   }
 
   /**

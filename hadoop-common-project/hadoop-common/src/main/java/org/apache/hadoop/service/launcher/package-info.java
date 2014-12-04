@@ -81,6 +81,7 @@
  {@link org.apache.hadoop.service.Service#getFailureState()} is not
  <code>STATE.STOPPED</code>, escalated into a non-zero return code.
  <p>
+ 
  To view the worklow in sequence, it is:
  <ol>
  <li>(prepare configuration files -covered later)</li>
