@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -32,6 +35,19 @@ import java.io.IOException;
 import java.util.List;
 
 class FSDirSnapshotOp {
+  /** Verify if the snapshot name is legal. */
+  static void verifySnapshotName(FSDirectory fsd, String snapshotName,
+      String path)
+      throws FSLimitException.PathComponentTooLongException {
+    if (snapshotName.contains(Path.SEPARATOR)) {
+      throw new HadoopIllegalArgumentException(
+          "Snapshot name cannot contain \"" + Path.SEPARATOR + "\"");
+    }
+    final byte[] bytes = DFSUtil.string2Bytes(snapshotName);
+    fsd.verifyINodeName(bytes);
+    fsd.verifyMaxComponentLength(bytes, path, 0);
+  }
+
   /** Allow snapshot on a directory. */
   static void allowSnapshot(FSDirectory fsd, SnapshotManager snapshotManager,
                             String path) throws IOException {
@@ -82,7 +98,7 @@ class FSDirSnapshotOp {
             snapshotName);
       }
     }
-    fsd.verifySnapshotName(snapshotName, snapshotRoot);
+    verifySnapshotName(fsd, snapshotName, snapshotRoot);
     fsd.writeLock();
     try {
       snapshotPath = snapshotManager.createSnapshot(snapshotRoot, snapshotName);
@@ -103,7 +119,7 @@ class FSDirSnapshotOp {
       FSPermissionChecker pc = fsd.getPermissionChecker();
         fsd.checkOwner(pc, path);
     }
-    fsd.verifySnapshotName(snapshotNewName, path);
+    verifySnapshotName(fsd, snapshotNewName, path);
     fsd.writeLock();
     try {
       snapshotManager.renameSnapshot(path, snapshotOldName, snapshotNewName);

@@ -427,6 +427,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7458. Add description to the nfs ports in core-site.xml used by nfs
     test to avoid confusion (Yongjun Zhang via brandonli)
 
+    HDFS-7468. Moving verify* functions to corresponding classes.
+    (Li Lu via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
