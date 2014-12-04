@@ -443,6 +443,7 @@ public class TestClientRMService {
     ConcurrentHashMap<ApplicationId, RMApp> apps = getRMApps(rmContext,
         yarnScheduler);
     when(rmContext.getRMApps()).thenReturn(apps);
+    when(rmContext.getYarnConfiguration()).thenReturn(new Configuration());
     RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler, null,
         mock(ApplicationACLsManager.class), new Configuration());
     when(rmContext.getDispatcher().getEventHandler()).thenReturn(

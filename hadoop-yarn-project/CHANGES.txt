@@ -91,6 +91,8 @@ Release 2.7.0 - UNRELEASED
     YARN-1156. Enhance NodeManager AllocatedGB and AvailableGB metrics 
     for aggregation of decimal values. (Tsuyoshi OZAWA via junping_du)
 
+    YARN-2301. Improved yarn container command. (Naganarasimha G R via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
