@@ -272,6 +272,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-6982. nntop: top­-like tool for name node users.
     (Maysam Yabandeh via wang)
 
+    HDFS-7424. Add web UI for NFS gateway (brandonli)
+
   IMPROVEMENTS
 
     HDFS-7055. Add tracing to DFSInputStream (cmccabe)
