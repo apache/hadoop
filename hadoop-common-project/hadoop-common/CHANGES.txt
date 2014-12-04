@@ -496,6 +496,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11342. KMS key ACL should ignore ALL operation for default key ACL
     and whitelist key ACL. (Dian Fu via wang)
 
+    HADOOP-11332. KerberosAuthenticator#doSpnegoSequence should check if
+    kerberos TGT is available in the subject. (Dian Fu via atm)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
