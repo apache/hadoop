@@ -107,6 +107,7 @@ public class TestRMContainerImpl {
     when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
     when(rmContext.getRMApps()).thenReturn(rmApps);
     when(rmContext.getSystemMetricsPublisher()).thenReturn(publisher);
+    when(rmContext.getYarnConfiguration()).thenReturn(new YarnConfiguration());
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
         nodeId, "user", rmContext);
 
@@ -130,7 +131,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.LAUNCHED));
     drainDispatcher.await();
     assertEquals(RMContainerState.RUNNING, rmContainer.getState());
-    assertEquals("//host:3465/node/containerlogs/container_1_0001_01_000001/user",
+    assertEquals("http://host:3465/node/containerlogs/container_1_0001_01_000001/user",
         rmContainer.getLogURL());
 
     // In RUNNING state. Verify RELEASED and associated actions.
@@ -196,6 +197,7 @@ public class TestRMContainerImpl {
     when(rmContext.getContainerAllocationExpirer()).thenReturn(expirer);
     when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
     when(rmContext.getSystemMetricsPublisher()).thenReturn(publisher);
+    when(rmContext.getYarnConfiguration()).thenReturn(new YarnConfiguration());
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
         nodeId, "user", rmContext);
 
@@ -220,7 +222,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.LAUNCHED));
     drainDispatcher.await();
     assertEquals(RMContainerState.RUNNING, rmContainer.getState());
-    assertEquals("//host:3465/node/containerlogs/container_1_0001_01_000001/user",
+    assertEquals("http://host:3465/node/containerlogs/container_1_0001_01_000001/user",
         rmContainer.getLogURL());
 
     // In RUNNING state. Verify EXPIRE and associated actions.
