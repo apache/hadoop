@@ -20,14 +20,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -35,7 +33,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
 
 /** 
  * Class that helps in checking file system permission.
@@ -50,12 +47,6 @@ class FSPermissionChecker {
   /** @return a string for throwing {@link AccessControlException} */
   private String toAccessControlString(INode inode, int snapshotId,
       FsAction access, FsPermission mode) {
-    return toAccessControlString(inode, snapshotId, access, mode, null);
-  }
-
-  /** @return a string for throwing {@link AccessControlException} */
-  private String toAccessControlString(INode inode, int snapshotId,
-      FsAction access, FsPermission mode, List<AclEntry> featureEntries) {
     StringBuilder sb = new StringBuilder("Permission denied: ")
       .append("user=").append(user).append(", ")
       .append("access=").append(access).append(", ")
@@ -64,9 +55,6 @@ class FSPermissionChecker {
       .append(inode.getGroupName(snapshotId)).append(':')
       .append(inode.isDirectory() ? 'd' : '-')
       .append(mode);
-    if (featureEntries != null) {
-      sb.append(':').append(StringUtils.join(",", featureEntries));
-    }
     return sb.toString();
   }
 
@@ -249,10 +237,10 @@ class FSPermissionChecker {
     FsPermission mode = inode.getFsPermission(snapshotId);
     AclFeature aclFeature = inode.getAclFeature(snapshotId);
     if (aclFeature != null) {
-      List<AclEntry> featureEntries = aclFeature.getEntries();
       // It's possible that the inode has a default ACL but no access ACL.
-      if (featureEntries.get(0).getScope() == AclEntryScope.ACCESS) {
-        checkAccessAcl(inode, snapshotId, access, mode, featureEntries);
+      int firstEntry = aclFeature.getEntryAt(0);
+      if (AclEntryStatusFormat.getScope(firstEntry) == AclEntryScope.ACCESS) {
+        checkAccessAcl(inode, snapshotId, access, mode, aclFeature);
         return;
       }
     }
@@ -294,11 +282,11 @@ class FSPermissionChecker {
    * @param snapshotId int snapshot ID
    * @param access FsAction requested permission
    * @param mode FsPermission mode from inode
-   * @param featureEntries List<AclEntry> ACL entries from AclFeature of inode
+   * @param aclFeature AclFeature of inode
    * @throws AccessControlException if the ACL denies permission
    */
   private void checkAccessAcl(INode inode, int snapshotId, FsAction access,
-      FsPermission mode, List<AclEntry> featureEntries)
+      FsPermission mode, AclFeature aclFeature)
       throws AccessControlException {
     boolean foundMatch = false;
 
@@ -312,17 +300,19 @@ class FSPermissionChecker {
 
     // Check named user and group entries if user was not denied by owner entry.
     if (!foundMatch) {
-      for (AclEntry entry: featureEntries) {
-        if (entry.getScope() == AclEntryScope.DEFAULT) {
+      for (int pos = 0, entry; pos < aclFeature.getEntriesSize(); pos++) {
+        entry = aclFeature.getEntryAt(pos);
+        if (AclEntryStatusFormat.getScope(entry) == AclEntryScope.DEFAULT) {
           break;
         }
-        AclEntryType type = entry.getType();
-        String name = entry.getName();
+        AclEntryType type = AclEntryStatusFormat.getType(entry);
+        String name = AclEntryStatusFormat.getName(entry);
         if (type == AclEntryType.USER) {
           // Use named user entry with mask from permission bits applied if user
           // matches name.
           if (user.equals(name)) {
-            FsAction masked = entry.getPermission().and(mode.getGroupAction());
+            FsAction masked = AclEntryStatusFormat.getPermission(entry).and(
+                mode.getGroupAction());
             if (masked.implies(access)) {
               return;
             }
@@ -336,7 +326,8 @@ class FSPermissionChecker {
           // it doesn't matter which is chosen, so exit early after first match.
           String group = name == null ? inode.getGroupName(snapshotId) : name;
           if (groups.contains(group)) {
-            FsAction masked = entry.getPermission().and(mode.getGroupAction());
+            FsAction masked = AclEntryStatusFormat.getPermission(entry).and(
+                mode.getGroupAction());
             if (masked.implies(access)) {
               return;
             }
@@ -352,7 +343,7 @@ class FSPermissionChecker {
     }
 
     throw new AccessControlException(
-      toAccessControlString(inode, snapshotId, access, mode, featureEntries));
+      toAccessControlString(inode, snapshotId, access, mode));
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */

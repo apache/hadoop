@@ -1395,8 +1395,8 @@ public abstract class FSAclBaseTest {
       // Intentionally capturing a reference to the entries, not using nested
       // calls.  This way, we get compile-time enforcement that the entries are
       // stored in an ImmutableList.
-      ImmutableList<AclEntry> entries = aclFeature.getEntries();
-      assertNotNull(entries);
+      ImmutableList<AclEntry> entries = AclStorage
+          .getEntriesFromAclFeature(aclFeature);
       assertFalse(entries.isEmpty());
     } else {
       assertNull(aclFeature);
