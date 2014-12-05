@@ -430,6 +430,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7468. Moving verify* functions to corresponding classes.
     (Li Lu via wheat9)
 
+    HDFS-7478. Move org.apache.hadoop.hdfs.server.namenode.NNConf to
+    FSNamesystem. (Li Lu via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
