@@ -1401,6 +1401,18 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_SCM_APP_CHECKER_CLASS =
       "org.apache.hadoop.yarn.server.sharedcachemanager.RemoteAppChecker";
 
+  /** The address of the SCM admin interface. */
+  public static final String SCM_ADMIN_ADDRESS =
+      SHARED_CACHE_PREFIX + "admin.address";
+  public static final int DEFAULT_SCM_ADMIN_PORT = 8047;
+  public static final String DEFAULT_SCM_ADMIN_ADDRESS =
+      "0.0.0.0:" + DEFAULT_SCM_ADMIN_PORT;
+
+  /** Number of threads used to handle SCM admin interface. */
+  public static final String SCM_ADMIN_CLIENT_THREAD_COUNT =
+      SHARED_CACHE_PREFIX + "admin.thread-count";
+  public static final int DEFAULT_SCM_ADMIN_CLIENT_THREAD_COUNT = 1;
+
   // In-memory SCM store configuration
   
   public static final String IN_MEMORY_STORE_PREFIX =

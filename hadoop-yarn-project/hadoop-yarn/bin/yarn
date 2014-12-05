@@ -67,6 +67,7 @@ function print_usage(){
   echo "  timelineserver                        run the timeline server"
   echo "  rmadmin                               admin tools"
   echo "  sharedcachemanager                    run the SharedCacheManager daemon"
+  echo "  scmadmin                              SharedCacheManager admin tools"
   echo "  version                               print the version"
   echo "  jar <jar>                             run a jar file"
   echo "  application                           prints application(s)"
@@ -102,7 +103,104 @@ case $COMMAND in
   --help|-help|-h)
     print_usage
     exit
+<<<<<<< HEAD
     ;;
+=======
+  ;;
+  daemonlog)
+    CLASS=org.apache.hadoop.log.LogLevel
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
+  jar)
+    CLASS=org.apache.hadoop.util.RunJar
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
+  historyserver)
+    supportdaemonization="true"
+    echo "DEPRECATED: Use of this command to start the timeline server is deprecated." 1>&2
+    echo "Instead use the timelineserver command for it." 1>&2
+    echo "Starting the History Server anyway..." 1>&2
+    CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
+  ;;
+  logs)
+    CLASS=org.apache.hadoop.yarn.client.cli.LogsCLI
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
+  node)
+    CLASS=org.apache.hadoop.yarn.client.cli.NodeCLI
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
+  nodemanager)
+    supportdaemonization="true"
+    CLASS='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
+    hadoop_debug "Append YARN_NODEMANAGER_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_NODEMANAGER_OPTS}"
+    if [[ -n "${YARN_NODEMANAGER_HEAPSIZE}" ]]; then
+      JAVA_HEAP_MAX="-Xmx${YARN_NODEMANAGER_HEAPSIZE}m"
+    fi
+  ;;
+  proxyserver)
+    supportdaemonization="true"
+    CLASS='org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer'
+    hadoop_debug "Append YARN_PROXYSERVER_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_PROXYSERVER_OPTS}"
+    if [[ -n "${YARN_PROXYSERVER_HEAPSIZE}" ]]; then
+      JAVA_HEAP_MAX="-Xmx${YARN_PROXYSERVER_HEAPSIZE}m"
+    fi
+  ;;
+  queue)
+    CLASS=org.apache.hadoop.yarn.client.cli.QueueCLI
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
+  resourcemanager)
+    supportdaemonization="true"
+    CLASS='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
+    YARN_OPTS="${YARN_OPTS} ${YARN_RESOURCEMANAGER_OPTS}"
+    hadoop_debug "Append YARN_RESOURCEMANAGER_OPTS onto YARN_OPTS"
+    if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
+      JAVA_HEAP_MAX="-Xmx${YARN_RESOURCEMANAGER_HEAPSIZE}m"
+    fi
+  ;;
+  rmadmin)
+    CLASS='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
+  timelineserver)
+    supportdaemonization="true"
+    CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
+    hadoop_debug "Append YARN_TIMELINESERVER_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_TIMELINESERVER_OPTS}"
+    if [[ -n "${YARN_TIMELINESERVER_HEAPSIZE}" ]]; then
+      JAVA_HEAP_MAX="-Xmx${YARN_TIMELINESERVER_HEAPSIZE}m"
+    fi
+  ;;
+  sharedcachemanager)
+    supportdaemonization="true"
+    CLASS='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
+    YARN_OPTS="$YARN_OPTS $YARN_SHAREDCACHEMANAGER_OPTS"
+  ;;
+  scmadmin)
+    CLASS='org.apache.hadoop.yarn.client.SCMAdmin'
+    YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+  ;;
+  version)
+    CLASS=org.apache.hadoop.util.VersionInfo
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
+  *)
+    CLASS="${COMMAND}"
+    if ! hadoop_validate_classname "${CLASS}"; then
+      hadoop_exit_with_usage 1
+    fi
+  ;;
+>>>>>>> 7896815... YARN-2189. [YARN-1492] Admin service for cache manager. (Chris Trezzo via kasha)
 esac
 
 if [ -f "${YARN_CONF_DIR}/yarn-env.sh" ]; then

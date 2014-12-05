@@ -97,6 +97,7 @@
                   <include>application_history_client.proto</include>
                   <include>server/application_history_server.proto</include>
                   <include>client_SCM_protocol.proto</include>
+                  <include>server/SCM_Admin_protocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>

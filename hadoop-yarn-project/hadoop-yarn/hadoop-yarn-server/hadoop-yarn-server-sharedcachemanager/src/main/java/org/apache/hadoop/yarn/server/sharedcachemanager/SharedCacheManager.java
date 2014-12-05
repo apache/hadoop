@@ -74,6 +74,9 @@ public class SharedCacheManager extends CompositeService {
     ClientProtocolService cps = createClientProtocolService(store);
     addService(cps);
 
+    SCMAdminProtocolService saps = createSCMAdminProtocolService(cs);
+    addService(saps);
+
     // init metrics
     DefaultMetricsSystem.initialize("SharedCacheManager");
     JvmMetrics.initSingleton("SharedCacheManager", null);
@@ -111,6 +114,11 @@ public class SharedCacheManager extends CompositeService {
 
   private ClientProtocolService createClientProtocolService(SCMStore store) {
     return new ClientProtocolService(store);
+  }
+
+  private SCMAdminProtocolService createSCMAdminProtocolService(
+      CleanerService cleanerService) {
+    return new SCMAdminProtocolService(cleanerService);
   }
 
   @Override
