@@ -279,6 +279,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7448 TestBookKeeperHACheckpoints fails in trunk build
     (Akira Ajisaka via stevel)
 
+    HDFS-7472. Fix typo in message of ReplicaNotFoundException.
+    (Masatake Iwasaki via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
