@@ -25,6 +25,7 @@
 #include "FileStatus.h"
 #include "FileSystemKey.h"
 #include "FileSystemStats.h"
+#include "LeaseRenewer.h"
 #include "server/LocatedBlocks.h"
 #include "server/Namenode.h"
 #include "SessionConfig.h"
@@ -416,7 +417,7 @@ public:
     /**
      * unregister the output stream from filespace when it is closed.
      */
-    bool unregisterOpenedOutputStream();
+    void unregisterOpenedOutputStream();
 
     /**
      * Get the configuration used in filesystem.
@@ -448,10 +449,8 @@ public:
 
     /**
      * To renew the lease.
-     *
-     * @return return false if the filesystem no long needs to renew lease.
      */
-    bool renewLease();
+    void renewLease();
 
 private:
     FileSystemImpl(const FileSystemImpl &other);
@@ -459,7 +458,7 @@ private:
 
     Config conf;
     FileSystemKey key;
-    int openedOutputStream;
+    LeaseRenewer leaseRenewer;
     mutex mutWorkingDir;
     Namenode *nn;
     SessionConfig sconf;

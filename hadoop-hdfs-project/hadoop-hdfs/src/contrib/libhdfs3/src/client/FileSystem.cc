@@ -180,8 +180,7 @@ Status FileSystem::connect(const std::string &uri, const std::string &username,
                            const std::string &token) {
     AuthMethod auth;
     std::string principal;
-
-    THROW(HdfsIOException, "FileSystem: already connected.");
+    CHECK_PARAMETER(!impl, EIO, "FileSystem: already connected.");
 
     try {
         SessionConfig sconf(*conf.impl);

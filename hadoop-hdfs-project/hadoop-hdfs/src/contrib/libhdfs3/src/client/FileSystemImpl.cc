@@ -97,7 +97,7 @@ static const std::string CanonicalizePath(const std::string &path) {
 FileSystemImpl::FileSystemImpl(const FileSystemKey &key, const Config &c)
     : conf(c),
       key(key),
-      openedOutputStream(0),
+      leaseRenewer(this),
       nn(NULL),
       sconf(*c.impl),
       user(key.getUser()) {
@@ -715,19 +715,13 @@ bool FileSystemImpl::getListing(const std::string &src,
     return nn->getListing(src, startAfter, needLocation, dl);
 }
 
-bool FileSystemImpl::renewLease() {
+void FileSystemImpl::renewLease() {
     if (!nn) {
         THROW(HdfsIOException, "FileSystemImpl: not connected.");
     }
 
-    // protected by LeaseRenewer's lock
-    if (0 == openedOutputStream) {
-        return false;
-    }
-
     try {
         nn->renewLease(clientName);
-        return true;
     } catch (const HdfsException &e) {
         LOG(LOG_ERROR,
             "Failed to renew lease for filesystem which client name "
@@ -739,22 +733,14 @@ bool FileSystemImpl::renewLease() {
             "%s, since:\n%s",
             getClientName(), e.what());
     }
-
-    return false;
 }
 
 void FileSystemImpl::registerOpenedOutputStream() {
-    // protected by LeaseRenewer's lock
-    ++openedOutputStream;
+    leaseRenewer.StartRenew();
 }
 
-bool FileSystemImpl::unregisterOpenedOutputStream() {
-    // protected by LeaseRenewer's lock
-    if (openedOutputStream > 0) {
-        --openedOutputStream;
-    }
-
-    return openedOutputStream == 0;
+void FileSystemImpl::unregisterOpenedOutputStream() {
+    leaseRenewer.StopRenew();
 }
 }
 }
