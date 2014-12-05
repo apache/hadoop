@@ -668,7 +668,8 @@ public class FSEditLogLoader {
       final String snapshotRoot =
           renameReservedPathsOnUpgrade(createSnapshotOp.snapshotRoot,
               logVersion);
-      String path = fsNamesys.getSnapshotManager().createSnapshot(
+      INodesInPath iip = fsDir.getINodesInPath4Write(snapshotRoot);
+      String path = fsNamesys.getSnapshotManager().createSnapshot(iip,
           snapshotRoot, createSnapshotOp.snapshotName);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntryWithPayload(createSnapshotOp.rpcClientId,
@@ -683,8 +684,9 @@ public class FSEditLogLoader {
       final String snapshotRoot =
           renameReservedPathsOnUpgrade(deleteSnapshotOp.snapshotRoot,
               logVersion);
+      INodesInPath iip = fsDir.getINodesInPath4Write(snapshotRoot);
       fsNamesys.getSnapshotManager().deleteSnapshot(
-          snapshotRoot, deleteSnapshotOp.snapshotName,
+          iip, deleteSnapshotOp.snapshotName,
           collectedBlocks, removedINodes);
       fsNamesys.removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
       collectedBlocks.clear();
@@ -702,7 +704,8 @@ public class FSEditLogLoader {
       final String snapshotRoot =
           renameReservedPathsOnUpgrade(renameSnapshotOp.snapshotRoot,
               logVersion);
-      fsNamesys.getSnapshotManager().renameSnapshot(
+      INodesInPath iip = fsDir.getINodesInPath4Write(snapshotRoot);
+      fsNamesys.getSnapshotManager().renameSnapshot(iip,
           snapshotRoot, renameSnapshotOp.snapshotOldName,
           renameSnapshotOp.snapshotNewName);
       
@@ -848,9 +851,10 @@ public class FSEditLogLoader {
     }
     case OP_SET_STORAGE_POLICY: {
       SetStoragePolicyOp setStoragePolicyOp = (SetStoragePolicyOp) op;
-      fsDir.unprotectedSetStoragePolicy(
-          renameReservedPathsOnUpgrade(setStoragePolicyOp.path, logVersion),
-          setStoragePolicyOp.policyId);
+      final String path = renameReservedPathsOnUpgrade(setStoragePolicyOp.path,
+          logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath4Write(path);
+      fsDir.unprotectedSetStoragePolicy(iip, setStoragePolicyOp.policyId);
       break;
     }
     default:

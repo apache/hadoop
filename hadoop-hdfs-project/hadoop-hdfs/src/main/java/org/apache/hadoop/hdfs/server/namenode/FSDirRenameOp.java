@@ -492,11 +492,13 @@ class FSDirRenameOp {
       // Rename does not operates on link targets
       // Do not resolveLink when checking permissions of src and dst
       // Check write access to parent of src
-      fsd.checkPermission(pc, src, false, null, FsAction.WRITE, null, null,
-          false, false);
+      INodesInPath srcIIP = fsd.getINodesInPath(src, false);
+      fsd.checkPermission(pc, srcIIP, false, null, FsAction.WRITE, null, null,
+          false);
+      INodesInPath dstIIP = fsd.getINodesInPath(actualdst, false);
       // Check write access to ancestor of dst
-      fsd.checkPermission(pc, actualdst, false, FsAction.WRITE, null, null,
-          null, false, false);
+      fsd.checkPermission(pc, dstIIP, false, FsAction.WRITE, null, null,
+          null, false);
     }
 
     long mtime = now();
@@ -518,11 +520,13 @@ class FSDirRenameOp {
       // Rename does not operates on link targets
       // Do not resolveLink when checking permissions of src and dst
       // Check write access to parent of src
-      fsd.checkPermission(pc, src, false, null, FsAction.WRITE, null, null,
-          false, false);
+      INodesInPath srcIIP = fsd.getINodesInPath(src, false);
+      fsd.checkPermission(pc, srcIIP, false, null, FsAction.WRITE, null, null,
+          false);
       // Check write access to ancestor of dst
-      fsd.checkPermission(pc, dst, false, FsAction.WRITE, null, null, null,
-          false, false);
+      INodesInPath dstIIP = fsd.getINodesInPath(dst, false);
+      fsd.checkPermission(pc, dstIIP, false, FsAction.WRITE, null, null, null,
+          false);
     }
 
     long mtime = now();

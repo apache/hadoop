@@ -25,7 +25,6 @@ import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -58,18 +57,16 @@ class FSPermissionChecker {
     return sb.toString();
   }
 
-  private final UserGroupInformation ugi;
-  private final String user;  
+  private final String user;
   /** A set with group namess. Not synchronized since it is unmodifiable */
   private final Set<String> groups;
   private final boolean isSuper;
 
   FSPermissionChecker(String fsOwner, String supergroup,
       UserGroupInformation callerUgi) {
-    ugi = callerUgi;
-    HashSet<String> s = new HashSet<String>(Arrays.asList(ugi.getGroupNames()));
+    HashSet<String> s = new HashSet<String>(Arrays.asList(callerUgi.getGroupNames()));
     groups = Collections.unmodifiableSet(s);
-    user = ugi.getShortUserName();
+    user = callerUgi.getShortUserName();
     isSuper = user.equals(fsOwner) || groups.contains(supergroup);
   }
 
@@ -126,18 +123,15 @@ class FSPermissionChecker {
    * it is the access required of the path and all the sub-directories.
    * If path is not a directory, there is no effect.
    * @param ignoreEmptyDir Ignore permission checking for empty directory?
-   * @param resolveLink whether to resolve the final path component if it is
-   * a symlink
    * @throws AccessControlException
-   * @throws UnresolvedLinkException
    * 
    * Guarded by {@link FSNamesystem#readLock()}
    * Caller of this method must hold that lock.
    */
-  void checkPermission(String path, FSDirectory dir, boolean doCheckOwner,
+  void checkPermission(INodesInPath inodesInPath, boolean doCheckOwner,
       FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-      FsAction subAccess, boolean ignoreEmptyDir, boolean resolveLink)
-      throws AccessControlException, UnresolvedLinkException {
+      FsAction subAccess, boolean ignoreEmptyDir)
+      throws AccessControlException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("ACCESS CHECK: " + this
           + ", doCheckOwner=" + doCheckOwner
@@ -145,12 +139,10 @@ class FSPermissionChecker {
           + ", parentAccess=" + parentAccess
           + ", access=" + access
           + ", subAccess=" + subAccess
-          + ", ignoreEmptyDir=" + ignoreEmptyDir
-          + ", resolveLink=" + resolveLink);
+          + ", ignoreEmptyDir=" + ignoreEmptyDir);
     }
     // check if (parentAccess != null) && file exists, then check sb
     // If resolveLink, the check is performed on the link target.
-    final INodesInPath inodesInPath = dir.getINodesInPath(path, resolveLink);
     final int snapshotId = inodesInPath.getPathSnapshotId();
     final INode[] inodes = inodesInPath.getINodes();
     int ancestorIndex = inodes.length - 2;

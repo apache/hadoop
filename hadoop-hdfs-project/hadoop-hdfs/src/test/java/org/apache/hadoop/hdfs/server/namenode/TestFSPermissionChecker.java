@@ -402,15 +402,17 @@ public class TestFSPermissionChecker {
 
   private void assertPermissionGranted(UserGroupInformation user, String path,
       FsAction access) throws IOException {
-    new FSPermissionChecker(SUPERUSER, SUPERGROUP, user).checkPermission(path,
-      dir, false, null, null, access, null, false, true);
+    INodesInPath iip = dir.getINodesInPath(path, true);
+    new FSPermissionChecker(SUPERUSER, SUPERGROUP, user).checkPermission(iip,
+      false, null, null, access, null, false);
   }
 
   private void assertPermissionDenied(UserGroupInformation user, String path,
       FsAction access) throws IOException {
     try {
-      new FSPermissionChecker(SUPERUSER, SUPERGROUP, user).checkPermission(path,
-        dir, false, null, null, access, null, false, true);
+      INodesInPath iip = dir.getINodesInPath(path, true);
+      new FSPermissionChecker(SUPERUSER, SUPERGROUP, user).checkPermission(iip,
+        false, null, null, access, null, false);
       fail("expected AccessControlException for user + " + user + ", path = " +
         path + ", access = " + access);
     } catch (AccessControlException e) {

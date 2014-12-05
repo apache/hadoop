@@ -53,15 +53,17 @@ class FSDirConcatOp {
       }
     }
 
+    final INodesInPath trgIip = fsd.getINodesInPath4Write(target);
     // write permission for the target
     if (fsd.isPermissionEnabled()) {
       FSPermissionChecker pc = fsd.getPermissionChecker();
-      fsd.checkPathAccess(pc, target, FsAction.WRITE);
+      fsd.checkPathAccess(pc, trgIip, FsAction.WRITE);
 
       // and srcs
       for(String aSrc: srcs) {
-        fsd.checkPathAccess(pc, aSrc, FsAction.READ); // read the file
-        fsd.checkParentAccess(pc, aSrc, FsAction.WRITE); // for delete
+        final INodesInPath srcIip = fsd.getINodesInPath4Write(aSrc);
+        fsd.checkPathAccess(pc, srcIip, FsAction.READ); // read the file
+        fsd.checkParentAccess(pc, srcIip, FsAction.WRITE); // for delete
       }
     }
 
@@ -72,7 +74,6 @@ class FSDirConcatOp {
     // replication and blocks sizes should be the same for ALL the blocks
 
     // check the target
-    final INodesInPath trgIip = fsd.getINodesInPath4Write(target);
     if (fsd.getEZForPath(trgIip) != null) {
       throw new HadoopIllegalArgumentException(
           "concat can not be called for files in an encryption zone.");
