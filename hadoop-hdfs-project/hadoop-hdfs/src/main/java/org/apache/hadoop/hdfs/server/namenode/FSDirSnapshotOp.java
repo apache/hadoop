@@ -81,27 +81,24 @@ class FSDirSnapshotOp {
       FSDirectory fsd, SnapshotManager snapshotManager, String snapshotRoot,
       String snapshotName, boolean logRetryCache)
       throws IOException {
-    final FSPermissionChecker pc = fsd.getPermissionChecker();
-
-    String snapshotPath = null;
+    final INodesInPath iip = fsd.getINodesInPath4Write(snapshotRoot);
     if (fsd.isPermissionEnabled()) {
-      fsd.checkOwner(pc, snapshotRoot);
+      FSPermissionChecker pc = fsd.getPermissionChecker();
+      fsd.checkOwner(pc, iip);
     }
 
     if (snapshotName == null || snapshotName.isEmpty()) {
       snapshotName = Snapshot.generateDefaultSnapshotName();
+    } else if (!DFSUtil.isValidNameForComponent(snapshotName)) {
+      throw new InvalidPathException("Invalid snapshot name: " + snapshotName);
     }
 
-    if(snapshotName != null){
-      if (!DFSUtil.isValidNameForComponent(snapshotName)) {
-        throw new InvalidPathException("Invalid snapshot name: " +
-            snapshotName);
-      }
-    }
+    String snapshotPath = null;
     verifySnapshotName(fsd, snapshotName, snapshotRoot);
     fsd.writeLock();
     try {
-      snapshotPath = snapshotManager.createSnapshot(snapshotRoot, snapshotName);
+      snapshotPath = snapshotManager.createSnapshot(iip, snapshotRoot,
+          snapshotName);
     } finally {
       fsd.writeUnlock();
     }
@@ -114,15 +111,16 @@ class FSDirSnapshotOp {
   static void renameSnapshot(FSDirectory fsd, SnapshotManager snapshotManager,
       String path, String snapshotOldName, String snapshotNewName,
       boolean logRetryCache) throws IOException {
-
+    final INodesInPath iip = fsd.getINodesInPath4Write(path);
     if (fsd.isPermissionEnabled()) {
       FSPermissionChecker pc = fsd.getPermissionChecker();
-        fsd.checkOwner(pc, path);
+      fsd.checkOwner(pc, iip);
     }
     verifySnapshotName(fsd, snapshotNewName, path);
     fsd.writeLock();
     try {
-      snapshotManager.renameSnapshot(path, snapshotOldName, snapshotNewName);
+      snapshotManager.renameSnapshot(iip, path, snapshotOldName,
+          snapshotNewName);
     } finally {
       fsd.writeUnlock();
     }
@@ -142,8 +140,8 @@ class FSDirSnapshotOp {
     }
   }
 
-  static SnapshotDiffReport getSnapshotDiffReport(
-      FSDirectory fsd, SnapshotManager snapshotManager, String path,
+  static SnapshotDiffReport getSnapshotDiffReport(FSDirectory fsd,
+      SnapshotManager snapshotManager, String path,
       String fromSnapshot, String toSnapshot) throws IOException {
     SnapshotDiffReport diffs;
     final FSPermissionChecker pc = fsd.getPermissionChecker();
@@ -153,7 +151,8 @@ class FSDirSnapshotOp {
         checkSubtreeReadPermission(fsd, pc, path, fromSnapshot);
         checkSubtreeReadPermission(fsd, pc, path, toSnapshot);
       }
-      diffs = snapshotManager.diff(path, fromSnapshot, toSnapshot);
+      INodesInPath iip = fsd.getINodesInPath(path, true);
+      diffs = snapshotManager.diff(iip, path, fromSnapshot, toSnapshot);
     } finally {
       fsd.readUnlock();
     }
@@ -170,18 +169,18 @@ class FSDirSnapshotOp {
       FSDirectory fsd, SnapshotManager snapshotManager, String snapshotRoot,
       String snapshotName, boolean logRetryCache)
       throws IOException {
-    final FSPermissionChecker pc = fsd.getPermissionChecker();
-
-    INode.BlocksMapUpdateInfo collectedBlocks = new INode.BlocksMapUpdateInfo();
+    final INodesInPath iip = fsd.getINodesInPath4Write(snapshotRoot);
     if (fsd.isPermissionEnabled()) {
-      fsd.checkOwner(pc, snapshotRoot);
+      FSPermissionChecker pc = fsd.getPermissionChecker();
+      fsd.checkOwner(pc, iip);
     }
 
+    INode.BlocksMapUpdateInfo collectedBlocks = new INode.BlocksMapUpdateInfo();
     ChunkedArrayList<INode> removedINodes = new ChunkedArrayList<INode>();
     fsd.writeLock();
     try {
-      snapshotManager.deleteSnapshot(snapshotRoot, snapshotName,
-          collectedBlocks, removedINodes);
+      snapshotManager.deleteSnapshot(iip, snapshotName, collectedBlocks,
+          removedINodes);
       fsd.removeFromInodeMap(removedINodes);
     } finally {
       fsd.writeUnlock();
@@ -199,7 +198,8 @@ class FSDirSnapshotOp {
     final String fromPath = snapshot == null ?
         snapshottablePath : Snapshot.getSnapshotPath(snapshottablePath,
         snapshot);
-    fsd.checkPermission(pc, fromPath, false, null, null, FsAction.READ,
+    INodesInPath iip = fsd.getINodesInPath(fromPath, true);
+    fsd.checkPermission(pc, iip, false, null, null, FsAction.READ,
         FsAction.READ);
   }
 

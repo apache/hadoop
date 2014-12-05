@@ -53,17 +53,18 @@ class FSDirMkdirOp {
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath
         (src);
     src = fsd.resolvePath(pc, src, pathComponents);
+    INodesInPath iip = fsd.getINodesInPath4Write(src);
     if (fsd.isPermissionEnabled()) {
-      fsd.checkTraverse(pc, src);
+      fsd.checkTraverse(pc, iip);
     }
 
-    if (!isDirMutable(fsd, src)) {
+    if (!isDirMutable(fsd, iip)) {
       if (fsd.isPermissionEnabled()) {
-        fsd.checkAncestorAccess(pc, src, FsAction.WRITE);
+        fsd.checkAncestorAccess(pc, iip, FsAction.WRITE);
       }
 
       if (!createParent) {
-        fsd.verifyParentDir(src);
+        fsd.verifyParentDir(iip, src);
       }
 
       // validate that we have enough inodes. This is, at best, a
@@ -203,13 +204,11 @@ class FSDirMkdirOp {
    * Check whether the path specifies a directory
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */
-  private static boolean isDirMutable(
-      FSDirectory fsd, String src) throws UnresolvedLinkException,
-      SnapshotAccessControlException {
-    src = FSDirectory.normalizePath(src);
+  private static boolean isDirMutable(FSDirectory fsd, INodesInPath iip)
+      throws SnapshotAccessControlException {
     fsd.readLock();
     try {
-      INode node = fsd.getINode4Write(src, false);
+      INode node = iip.getLastINode();
       return node != null && node.isDirectory();
     } finally {
       fsd.readUnlock();

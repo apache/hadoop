@@ -285,12 +285,12 @@ public class EncryptionZoneManager {
       CryptoProtocolVersion version, String keyName)
       throws IOException {
     assert dir.hasWriteLock();
-    if (dir.isNonEmptyDirectory(src)) {
+    final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
+    if (dir.isNonEmptyDirectory(srcIIP)) {
       throw new IOException(
           "Attempt to create an encryption zone for a non-empty directory.");
     }
 
-    final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
     if (srcIIP != null &&
         srcIIP.getLastINode() != null &&
         !srcIIP.getLastINode().isDirectory()) {

@@ -41,8 +41,8 @@ public class INodesInPath {
    * @return true if path component is {@link HdfsConstants#DOT_SNAPSHOT_DIR}
    */
   private static boolean isDotSnapshotDir(byte[] pathComponent) {
-    return pathComponent == null ? false
-        : Arrays.equals(HdfsConstants.DOT_SNAPSHOT_DIR_BYTES, pathComponent);
+    return pathComponent != null &&
+        Arrays.equals(HdfsConstants.DOT_SNAPSHOT_DIR_BYTES, pathComponent);
   }
 
   static INodesInPath fromINode(INode inode) {
@@ -177,7 +177,7 @@ public class INodesInPath {
               (dstSnapshotId != Snapshot.CURRENT_STATE_ID && 
                 dstSnapshotId >= latest)) { // the above scenario 
             int lastSnapshot = Snapshot.CURRENT_STATE_ID;
-            DirectoryWithSnapshotFeature sf = null;
+            DirectoryWithSnapshotFeature sf;
             if (curNode.isDirectory() && 
                 (sf = curNode.asDirectory().getDirectoryWithSnapshotFeature()) != null) {
               lastSnapshot = sf.getLastSnapshotId();
@@ -186,7 +186,7 @@ public class INodesInPath {
           }
         }
       }
-      if (curNode.isSymlink() && (!lastComp || (lastComp && resolveLink))) {
+      if (curNode.isSymlink() && (!lastComp || resolveLink)) {
         final String path = constructPath(components, 0, components.length);
         final String preceding = constructPath(components, 0, count);
         final String remainder =
@@ -207,7 +207,7 @@ public class INodesInPath {
       final byte[] childName = components[count + 1];
       
       // check if the next byte[] in components is for ".snapshot"
-      if (isDotSnapshotDir(childName) && isDir && dir.isSnapshottable()) {
+      if (isDotSnapshotDir(childName) && dir.isSnapshottable()) {
         // skip the ".snapshot" in components
         count++;
         index++;
@@ -344,7 +344,12 @@ public class INodesInPath {
   byte[] getLastLocalName() {
     return path[path.length - 1];
   }
-  
+
+  /** @return the full path in string form */
+  public String getPath() {
+    return DFSUtil.byteArray2PathString(path);
+  }
+
   /**
    * @return index of the {@link Snapshot.Root} node in the inodes array,
    * -1 for non-snapshot paths.
@@ -398,7 +403,7 @@ public class INodesInPath {
 
   private String toString(boolean vaildateObject) {
     if (vaildateObject) {
-      vaildate();
+      validate();
     }
 
     final StringBuilder b = new StringBuilder(getClass().getSimpleName())
@@ -423,7 +428,7 @@ public class INodesInPath {
     return b.toString();
   }
 
-  void vaildate() {
+  void validate() {
     // check parent up to snapshotRootIndex or numNonNull
     final int n = snapshotRootIndex >= 0? snapshotRootIndex + 1: numNonNull;  
     int i = 0;

@@ -48,22 +48,20 @@ public class TestSnapshotPathINodes {
   static private final Path file1 = new Path(sub1, "file1");
   static private final Path file2 = new Path(sub1, "file2");
 
-  static private Configuration conf;
   static private MiniDFSCluster cluster;
-  static private FSNamesystem fsn;
   static private FSDirectory fsdir;
 
   static private DistributedFileSystem hdfs;
 
   @BeforeClass
   public static void setUp() throws Exception {
-    conf = new Configuration();
+    Configuration conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(REPLICATION)
       .build();
     cluster.waitActive();
-    
-    fsn = cluster.getNamesystem();
+
+    FSNamesystem fsn = cluster.getNamesystem();
     fsdir = fsn.getFSDirectory();
     
     hdfs = cluster.getFileSystem();
@@ -136,7 +134,6 @@ public class TestSnapshotPathINodes {
   }
 
   /** 
-   * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
    * for normal (non-snapshot) file.
    */
   @Test (timeout=15000)
@@ -180,7 +177,6 @@ public class TestSnapshotPathINodes {
   }
   
   /** 
-   * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
    * for snapshot file.
    */
   @Test (timeout=15000)
@@ -259,7 +255,6 @@ public class TestSnapshotPathINodes {
   }
   
   /** 
-   * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
    * for snapshot file after deleting the original file.
    */
   @Test (timeout=15000)
@@ -316,11 +311,8 @@ public class TestSnapshotPathINodes {
     hdfs.deleteSnapshot(sub1, "s2");
     hdfs.disallowSnapshot(sub1);
   }
-  
-  static private Snapshot s4;
 
-  /** 
-   * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
+  /**
    * for snapshot file while adding a new file after snapshot.
    */
   @Test (timeout=15000)
@@ -333,7 +325,8 @@ public class TestSnapshotPathINodes {
     // Add a new file /TestSnapshot/sub1/file3
     final Path file3 = new Path(sub1, "file3");
     DFSTestUtil.createFile(hdfs, file3, 1024, REPLICATION, seed);
-  
+
+    Snapshot s4;
     {
       // Check the inodes for /TestSnapshot/sub1/.snapshot/s4/file3
       String snapshotPath = sub1.toString() + "/.snapshot/s4/file3";
@@ -379,7 +372,6 @@ public class TestSnapshotPathINodes {
   }
   
   /** 
-   * Test {@link INodeDirectory#getExistingPathINodes(byte[][], int, boolean)} 
    * for snapshot file while modifying file after snapshot.
    */
   @Test (timeout=15000)
