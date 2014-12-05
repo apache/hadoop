@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -111,6 +112,9 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   public static final String NATURAL_TERMINATION_FACTOR =
       "yarn.resourcemanager.monitor.capacity.preemption.natural_termination_factor";
 
+  public static final String BASE_YARN_RM_PREEMPTION = "yarn.scheduler.capacity.";
+  public static final String SUFFIX_DISABLE_PREEMPTION = ".disable_preemption";
+
   // the dispatcher to send preempt and kill events
   public EventHandler<ContainerPreemptEvent> dispatcher;
 
@@ -192,7 +196,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     // extract a summary of the queues from scheduler
     TempQueue tRoot;
     synchronized (scheduler) {
-      tRoot = cloneQueues(root, clusterResources);
+      tRoot = cloneQueues(root, clusterResources, false);
     }
 
     // compute the ideal distribution of resources among queues
@@ -370,33 +374,86 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   private void computeFixpointAllocation(ResourceCalculator rc,
       Resource tot_guarant, Collection<TempQueue> qAlloc, Resource unassigned, 
       boolean ignoreGuarantee) {
-    //assign all cluster resources until no more demand, or no resources are left
-    while (!qAlloc.isEmpty() && Resources.greaterThan(rc, tot_guarant,
-          unassigned, Resources.none())) {
-      Resource wQassigned = Resource.newInstance(0, 0);
+    // Prior to assigning the unused resources, process each queue as follows:
+    // If current > guaranteed, idealAssigned = guaranteed + untouchable extra
+    // Else idealAssigned = current;
+    // Subtract idealAssigned resources from unassigned.
+    // If the queue has all of its needs met (that is, if 
+    // idealAssigned >= current + pending), remove it from consideration.
+    // Sort queues from most under-guaranteed to most over-guaranteed.
+    TQComparator tqComparator = new TQComparator(rc, tot_guarant);
+    PriorityQueue<TempQueue> orderedByNeed =
+                                 new PriorityQueue<TempQueue>(10,tqComparator);
+    for (Iterator<TempQueue> i = qAlloc.iterator(); i.hasNext();) {
+      TempQueue q = i.next();
+      if (Resources.greaterThan(rc, tot_guarant, q.current, q.guaranteed)) {
+        q.idealAssigned = Resources.add(q.guaranteed, q.untouchableExtra);
+      } else {
+        q.idealAssigned = Resources.clone(q.current);
+      }
+      Resources.subtractFrom(unassigned, q.idealAssigned);
+      // If idealAssigned < (current + pending), q needs more resources, so
+      // add it to the list of underserved queues, ordered by need.
+      Resource curPlusPend = Resources.add(q.current, q.pending);
+      if (Resources.lessThan(rc, tot_guarant, q.idealAssigned, curPlusPend)) {
+        orderedByNeed.add(q);
+      }
+    }
 
+    //assign all cluster resources until no more demand, or no resources are left
+    while (!orderedByNeed.isEmpty()
+       && Resources.greaterThan(rc,tot_guarant, unassigned,Resources.none())) {
+      Resource wQassigned = Resource.newInstance(0, 0);
       // we compute normalizedGuarantees capacity based on currently active
       // queues
-      resetCapacity(rc, unassigned, qAlloc, ignoreGuarantee);
-      
-      // offer for each queue their capacity first and in following invocations
-      // their share of over-capacity
-      for (Iterator<TempQueue> i = qAlloc.iterator(); i.hasNext();) {
+      resetCapacity(rc, unassigned, orderedByNeed, ignoreGuarantee);
+
+      // For each underserved queue (or set of queues if multiple are equally
+      // underserved), offer its share of the unassigned resources based on its
+      // normalized guarantee. After the offer, if the queue is not satisfied,
+      // place it back in the ordered list of queues, recalculating its place
+      // in the order of most under-guaranteed to most over-guaranteed. In this
+      // way, the most underserved queue(s) are always given resources first.
+      Collection<TempQueue> underserved =
+          getMostUnderservedQueues(orderedByNeed, tqComparator);
+      for (Iterator<TempQueue> i = underserved.iterator(); i.hasNext();) {
         TempQueue sub = i.next();
-        Resource wQavail =
-          Resources.multiply(unassigned, sub.normalizedGuarantee);
+        Resource wQavail = Resources.multiplyAndNormalizeUp(rc,
+            unassigned, sub.normalizedGuarantee, Resource.newInstance(1, 1));
         Resource wQidle = sub.offer(wQavail, rc, tot_guarant);
         Resource wQdone = Resources.subtract(wQavail, wQidle);
-        // if the queue returned a value > 0 it means it is fully satisfied
-        // and it is removed from the list of active queues qAlloc
-        if (!Resources.greaterThan(rc, tot_guarant,
+
+        if (Resources.greaterThan(rc, tot_guarant,
               wQdone, Resources.none())) {
-          i.remove();
+          // The queue is still asking for more. Put it back in the priority
+          // queue, recalculating its order based on need.
+          orderedByNeed.add(sub);
         }
         Resources.addTo(wQassigned, wQdone);
       }
       Resources.subtractFrom(unassigned, wQassigned);
     }
+  }
+
+  // Take the most underserved TempQueue (the one on the head). Collect and
+  // return the list of all queues that have the same idealAssigned
+  // percentage of guaranteed.
+  protected Collection<TempQueue> getMostUnderservedQueues(
+      PriorityQueue<TempQueue> orderedByNeed, TQComparator tqComparator) {
+    ArrayList<TempQueue> underserved = new ArrayList<TempQueue>();
+    while (!orderedByNeed.isEmpty()) {
+      TempQueue q1 = orderedByNeed.remove();
+      underserved.add(q1);
+      TempQueue q2 = orderedByNeed.peek();
+      // q1's pct of guaranteed won't be larger than q2's. If it's less, then
+      // return what has already been collected. Otherwise, q1's pct of
+      // guaranteed == that of q2, so add q2 to underserved list during the
+      // next pass.
+      if (q2 == null || tqComparator.compare(q1,q2) < 0) {
+        return underserved;
+      }
+    }
+    return underserved;
   }
 
   /**
@@ -626,9 +683,11 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
    *
    * @param root the root of the CapacityScheduler queue hierarchy
    * @param clusterResources the total amount of resources in the cluster
+   * @param parentDisablePreempt true if disable preemption is set for parent
    * @return the root of the cloned queue hierarchy
    */
-  private TempQueue cloneQueues(CSQueue root, Resource clusterResources) {
+  private TempQueue cloneQueues(CSQueue root, Resource clusterResources,
+      boolean parentDisablePreempt) {
     TempQueue ret;
     synchronized (root) {
       String queueName = root.getQueueName();
@@ -639,19 +698,46 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       Resource current = Resources.multiply(clusterResources, absUsed);
       Resource guaranteed = Resources.multiply(clusterResources, absCap);
       Resource maxCapacity = Resources.multiply(clusterResources, absMaxCap);
+
+      boolean queueDisablePreemption = false;
+      String queuePropName = BASE_YARN_RM_PREEMPTION + root.getQueuePath()
+                               + SUFFIX_DISABLE_PREEMPTION;
+      queueDisablePreemption = scheduler.getConfiguration()
+                              .getBoolean(queuePropName, parentDisablePreempt);
+
+      Resource extra = Resource.newInstance(0, 0);
+      if (Resources.greaterThan(rc, clusterResources, current, guaranteed)) {
+        extra = Resources.subtract(current, guaranteed);
+      }
       if (root instanceof LeafQueue) {
         LeafQueue l = (LeafQueue) root;
         Resource pending = l.getTotalResourcePending();
         ret = new TempQueue(queueName, current, pending, guaranteed,
             maxCapacity);
-
+        if (queueDisablePreemption) {
+          ret.untouchableExtra = extra;
+        } else {
+          ret.preemptableExtra = extra;
+        }
         ret.setLeafQueue(l);
       } else {
         Resource pending = Resource.newInstance(0, 0);
         ret = new TempQueue(root.getQueueName(), current, pending, guaranteed,
             maxCapacity);
+        Resource childrensPreemptable = Resource.newInstance(0, 0);
         for (CSQueue c : root.getChildQueues()) {
-          ret.addChild(cloneQueues(c, clusterResources));
+          TempQueue subq =
+                cloneQueues(c, clusterResources, queueDisablePreemption);
+          Resources.addTo(childrensPreemptable, subq.preemptableExtra);
+          ret.addChild(subq);
+        }
+        // untouchableExtra = max(extra - childrenPreemptable, 0)
+        if (Resources.greaterThanOrEqual(
+              rc, clusterResources, childrensPreemptable, extra)) {
+          ret.untouchableExtra = Resource.newInstance(0, 0);
+        } else {
+          ret.untouchableExtra =
+                Resources.subtractFrom(extra, childrensPreemptable);
         }
       }
     }
@@ -690,6 +776,8 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     Resource idealAssigned;
     Resource toBePreempted;
     Resource actuallyPreempted;
+    Resource untouchableExtra;
+    Resource preemptableExtra;
 
     double normalizedGuarantee;
 
@@ -708,6 +796,8 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       this.toBePreempted = Resource.newInstance(0, 0);
       this.normalizedGuarantee = Float.NaN;
       this.children = new ArrayList<TempQueue>();
+      this.untouchableExtra = Resource.newInstance(0, 0);
+      this.preemptableExtra = Resource.newInstance(0, 0);
     }
 
     public void setLeafQueue(LeafQueue l){
@@ -761,10 +851,20 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         .append(" IDEAL_ASSIGNED: ").append(idealAssigned)
         .append(" IDEAL_PREEMPT: ").append(toBePreempted)
         .append(" ACTUAL_PREEMPT: ").append(actuallyPreempted)
+        .append(" UNTOUCHABLE: ").append(untouchableExtra)
+        .append(" PREEMPTABLE: ").append(preemptableExtra)
         .append("\n");
 
       return sb.toString();
     }
+
+    public void printAll() {
+      LOG.info(this.toString());
+      for (TempQueue sub : this.getChildren()) {
+        sub.printAll();
+      }
+    }
+
     public void assignPreemption(float scalingFactor,
         ResourceCalculator rc, Resource clusterResource) {
       if (Resources.greaterThan(rc, clusterResource, current, idealAssigned)) {
@@ -791,6 +891,40 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         .append(actuallyPreempted.getVirtualCores());
     }
 
+  }
+
+  static class TQComparator implements Comparator<TempQueue> {
+    private ResourceCalculator rc;
+    private Resource clusterRes;
+
+    TQComparator(ResourceCalculator rc, Resource clusterRes) {
+      this.rc = rc;
+      this.clusterRes = clusterRes;
+    }
+
+    @Override
+    public int compare(TempQueue tq1, TempQueue tq2) {
+      if (getIdealPctOfGuaranteed(tq1) < getIdealPctOfGuaranteed(tq2)) {
+        return -1;
+      }
+      if (getIdealPctOfGuaranteed(tq1) > getIdealPctOfGuaranteed(tq2)) {
+        return 1;
+      }
+      return 0;
+    }
+
+    // Calculates idealAssigned / guaranteed
+    // TempQueues with 0 guarantees are always considered the most over
+    // capacity and therefore considered last for resources.
+    private double getIdealPctOfGuaranteed(TempQueue q) {
+      double pctOver = Integer.MAX_VALUE;
+      if (q != null && Resources.greaterThan(
+          rc, clusterRes, q.guaranteed, Resources.none())) {
+        pctOver =
+            Resources.divide(rc, clusterRes, q.idealAssigned, q.guaranteed);
+      }
+      return (pctOver);
+    }
   }
 
 }
