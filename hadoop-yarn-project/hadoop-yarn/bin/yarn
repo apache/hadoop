@@ -36,6 +36,7 @@ function hadoop_usage
   echo "  resourcemanager -format-state-store   deletes the RMStateStore"
   echo "  rmadmin                               admin tools"
   echo "  sharedcachemanager                    run the SharedCacheManager daemon"
+  echo "  scmadmin                              SharedCacheManager admin tools"
   echo "  timelineserver                        run the timeline server"
   echo "  version                               print the version"
   echo " or"
@@ -161,6 +162,10 @@ case "${COMMAND}" in
     supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
     YARN_OPTS="$YARN_OPTS $YARN_SHAREDCACHEMANAGER_OPTS"
+  ;;
+  scmadmin)
+    CLASS='org.apache.hadoop.yarn.client.SCMAdmin'
+    YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
   ;;
   version)
     CLASS=org.apache.hadoop.util.VersionInfo
