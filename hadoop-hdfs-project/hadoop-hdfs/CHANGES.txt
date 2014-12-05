@@ -432,6 +432,9 @@ Release 2.7.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
+    (Vinayakumar B via wheat9)
+
   BUG FIXES
 
     HDFS-6741. Improve permission denied message when
