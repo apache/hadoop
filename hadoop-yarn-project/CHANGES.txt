@@ -189,6 +189,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2874. Dead lock in "DelegationTokenRenewer" which blocks RM to execute
     any further apps. (Naganarasimha G R via kasha)
 
+    YARN-2461. Fix PROCFS_USE_SMAPS_BASED_RSS_ENABLED property in
+    YarnConfiguration. (rchiang via rkanter)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
