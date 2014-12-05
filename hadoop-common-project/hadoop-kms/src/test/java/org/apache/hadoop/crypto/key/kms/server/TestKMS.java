@@ -498,6 +498,14 @@ public class TestKMS {
         // deleteKey()
         kp.deleteKey("k1");
 
+        // Check decryption after Key deletion
+        try {
+          kpExt.decryptEncryptedKey(ek1);
+          Assert.fail("Should not be allowed !!");
+        } catch (Exception e) {
+          Assert.assertTrue(e.getMessage().contains("'k1@1' not found"));
+        }
+
         // getKey()
         Assert.assertNull(kp.getKeyVersion("k1"));
 
