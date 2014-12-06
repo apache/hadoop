@@ -18,21 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.NNTOP_ENABLED_KEY;
-import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.anyString;
-
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -52,6 +37,22 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.NNTOP_ENABLED_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doThrow;
 
 /**
  * Tests for the {@link AuditLogger} custom audit logging interface.
@@ -208,27 +209,10 @@ public class TestAuditLogger {
     try {
       cluster.waitClusterUp();
       final FSDirectory dir = cluster.getNamesystem().getFSDirectory();
-      // Set up mock FSDirectory to test FSN audit logging during failure
+
       final FSDirectory mockedDir = Mockito.spy(dir);
-      Mockito.doThrow(new AccessControlException("mock setAcl exception")).
-          when(mockedDir).
-          setAcl(anyString(), anyListOf(AclEntry.class));
-      Mockito.doThrow(new AccessControlException("mock getAclStatus exception")).
-          when(mockedDir).
-          getAclStatus(anyString());
-      Mockito.doThrow(new AccessControlException("mock removeAcl exception")).
-          when(mockedDir).
-          removeAcl(anyString());
-      Mockito.doThrow(new AccessControlException("mock removeDefaultAcl exception")).
-          when(mockedDir).
-          removeDefaultAcl(anyString());
-      Mockito.doThrow(new AccessControlException("mock removeAclEntries exception")).
-          when(mockedDir).
-          removeAclEntries(anyString(), anyListOf(AclEntry.class));
-      Mockito.doThrow(new AccessControlException("mock modifyAclEntries exception")).
-          when(mockedDir).
-          modifyAclEntries(anyString(), anyListOf(AclEntry.class));
-      // Replace the FSD with the mock FSD.
+      AccessControlException ex = new AccessControlException();
+      doThrow(ex).when(mockedDir).getPermissionChecker();
       cluster.getNamesystem().setFSDirectory(mockedDir);
       assertTrue(DummyAuditLogger.initialized);
       DummyAuditLogger.resetLogCount();
@@ -239,39 +223,28 @@ public class TestAuditLogger {
 
       try {
         fs.getAclStatus(p);
-      } catch (AccessControlException e) {
-        assertExceptionContains("mock getAclStatus exception", e);
-      }
+      } catch (AccessControlException ignored) {}
 
       try {
         fs.setAcl(p, acls);
-      } catch (AccessControlException e) {
-        assertExceptionContains("mock setAcl exception", e);
-      }
+      } catch (AccessControlException ignored) {}
 
       try {
         fs.removeAcl(p);
-      } catch (AccessControlException e) {
-        assertExceptionContains("mock removeAcl exception", e);
-      }
+      } catch (AccessControlException ignored) {}
 
       try {
         fs.removeDefaultAcl(p);
-      } catch (AccessControlException e) {
-        assertExceptionContains("mock removeDefaultAcl exception", e);
-      }
+      } catch (AccessControlException ignored) {}
 
       try {
         fs.removeAclEntries(p, acls);
-      } catch (AccessControlException e) {
-        assertExceptionContains("mock removeAclEntries exception", e);
-      }
+      } catch (AccessControlException ignored) {}
 
       try {
         fs.modifyAclEntries(p, acls);
-      } catch (AccessControlException e) {
-        assertExceptionContains("mock modifyAclEntries exception", e);
-      }
+      } catch (AccessControlException ignored) {}
+
       assertEquals(6, DummyAuditLogger.logCount);
       assertEquals(6, DummyAuditLogger.unsuccessfulCount);
     } finally {

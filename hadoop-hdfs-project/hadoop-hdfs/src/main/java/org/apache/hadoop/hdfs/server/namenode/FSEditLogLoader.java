@@ -827,7 +827,7 @@ public class FSEditLogLoader {
     }
     case OP_SET_ACL: {
       SetAclOp setAclOp = (SetAclOp) op;
-      fsDir.unprotectedSetAcl(setAclOp.src, setAclOp.aclEntries);
+      FSDirAclOp.unprotectedSetAcl(fsDir, setAclOp.src, setAclOp.aclEntries);
       break;
     }
     case OP_SET_XATTR: {

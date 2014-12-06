@@ -521,7 +521,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private final RetryCache retryCache;
 
-  private final boolean aclsEnabled;
   private final boolean xattrsEnabled;
   private final int xattrMaxSize;
 
@@ -842,10 +841,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         auditLoggers.get(0) instanceof DefaultAuditLogger;
       this.retryCache = ignoreRetryCache ? null : initRetryCache(conf);
 
-      this.aclsEnabled = conf.getBoolean(
-          DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY,
-          DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_DEFAULT);
-      LOG.info("ACLs enabled? " + aclsEnabled);
       this.xattrsEnabled = conf.getBoolean(
           DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY,
           DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT);
@@ -7731,158 +7726,105 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return results;
   }
 
-  void modifyAclEntries(final String srcArg, List<AclEntry> aclSpec)
+  void modifyAclEntries(final String src, List<AclEntry> aclSpec)
       throws IOException {
-    String src = srcArg;
-    checkAclsConfigFlag();
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+    HdfsFileStatus auditStat = null;
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot modify ACL entries on " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      dir.checkOwner(pc, iip);
-      List<AclEntry> newAcl = dir.modifyAclEntries(src, aclSpec);
-      getEditLog().logSetAcl(src, newAcl);
-      resultingStat = getAuditFileInfo(src, false);
+      auditStat = FSDirAclOp.modifyAclEntries(dir, src, aclSpec);
     } catch (AccessControlException e) {
-      logAuditEvent(false, "modifyAclEntries", srcArg);
+      logAuditEvent(false, "modifyAclEntries", src);
       throw e;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "modifyAclEntries", srcArg, null, resultingStat);
+    logAuditEvent(true, "modifyAclEntries", src, null, auditStat);
   }
 
-  void removeAclEntries(final String srcArg, List<AclEntry> aclSpec)
+  void removeAclEntries(final String src, List<AclEntry> aclSpec)
       throws IOException {
-    String src = srcArg;
-    checkAclsConfigFlag();
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    HdfsFileStatus auditStat = null;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot remove ACL entries on " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      dir.checkOwner(pc, iip);
-      List<AclEntry> newAcl = dir.removeAclEntries(src, aclSpec);
-      getEditLog().logSetAcl(src, newAcl);
-      resultingStat = getAuditFileInfo(src, false);
+      auditStat = FSDirAclOp.removeAclEntries(dir, src, aclSpec);
     } catch (AccessControlException e) {
-      logAuditEvent(false, "removeAclEntries", srcArg);
+      logAuditEvent(false, "removeAclEntries", src);
       throw e;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "removeAclEntries", srcArg, null, resultingStat);
+    logAuditEvent(true, "removeAclEntries", src, null, auditStat);
   }
 
-  void removeDefaultAcl(final String srcArg) throws IOException {
-    String src = srcArg;
-    checkAclsConfigFlag();
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+  void removeDefaultAcl(final String src) throws IOException {
+    HdfsFileStatus auditStat = null;
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot remove default ACL entries on " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      dir.checkOwner(pc, iip);
-      List<AclEntry> newAcl = dir.removeDefaultAcl(src);
-      getEditLog().logSetAcl(src, newAcl);
-      resultingStat = getAuditFileInfo(src, false);
+      auditStat = FSDirAclOp.removeDefaultAcl(dir, src);
     } catch (AccessControlException e) {
-      logAuditEvent(false, "removeDefaultAcl", srcArg);
+      logAuditEvent(false, "removeDefaultAcl", src);
       throw e;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "removeDefaultAcl", srcArg, null, resultingStat);
+    logAuditEvent(true, "removeDefaultAcl", src, null, auditStat);
   }
 
-  void removeAcl(final String srcArg) throws IOException {
-    String src = srcArg;
-    checkAclsConfigFlag();
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+  void removeAcl(final String src) throws IOException {
+    HdfsFileStatus auditStat = null;
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot remove ACL on " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      dir.checkOwner(pc, iip);
-      dir.removeAcl(src);
-      getEditLog().logSetAcl(src, AclFeature.EMPTY_ENTRY_LIST);
-      resultingStat = getAuditFileInfo(src, false);
+      auditStat = FSDirAclOp.removeAcl(dir, src);
     } catch (AccessControlException e) {
-      logAuditEvent(false, "removeAcl", srcArg);
+      logAuditEvent(false, "removeAcl", src);
       throw e;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "removeAcl", srcArg, null, resultingStat);
+    logAuditEvent(true, "removeAcl", src, null, auditStat);
   }
 
-  void setAcl(final String srcArg, List<AclEntry> aclSpec) throws IOException {
-    String src = srcArg;
-    checkAclsConfigFlag();
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+  void setAcl(final String src, List<AclEntry> aclSpec) throws IOException {
+    HdfsFileStatus auditStat = null;
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set ACL on " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      dir.checkOwner(pc, iip);
-      List<AclEntry> newAcl = dir.setAcl(src, aclSpec);
-      getEditLog().logSetAcl(src, newAcl);
-      resultingStat = getAuditFileInfo(src, false);
+      auditStat = FSDirAclOp.setAcl(dir, src, aclSpec);
     } catch (AccessControlException e) {
-      logAuditEvent(false, "setAcl", srcArg);
+      logAuditEvent(false, "setAcl", src);
       throw e;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "setAcl", srcArg, null, resultingStat);
+    logAuditEvent(true, "setAcl", src, null, auditStat);
   }
 
   AclStatus getAclStatus(String src) throws IOException {
-    checkAclsConfigFlag();
-    FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     boolean success = false;
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
-      INodesInPath iip = dir.getINodesInPath(src, true);
-      if (isPermissionEnabled) {
-        dir.checkPermission(pc, iip, false, null, null, null, null);
-      }
-      final AclStatus ret = dir.getAclStatus(src);
+      final AclStatus ret = FSDirAclOp.getAclStatus(dir, src);
       success = true;
       return ret;
     } finally {
@@ -8367,15 +8309,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         asyncAppender.addAppender(appender);
       }
       logger.addAppender(asyncAppender);        
-    }
-  }
-
-  private void checkAclsConfigFlag() throws AclException {
-    if (!aclsEnabled) {
-      throw new AclException(String.format(
-          "The ACL operation has been rejected.  "
-              + "Support for ACLs has been disabled by setting %s to false.",
-          DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY));
     }
   }
 
