@@ -82,6 +82,56 @@ public class TestQueueParsing {
     ServiceOperations.stopQuietly(capacityScheduler);
   }
   
+  private void setupQueueConfigurationWithSpacesShouldBeTrimmed(
+      CapacitySchedulerConfiguration conf) {
+    // Define top-level queues
+    conf.set(
+        CapacitySchedulerConfiguration
+            .getQueuePrefix(CapacitySchedulerConfiguration.ROOT)
+            + CapacitySchedulerConfiguration.QUEUES, " a ,b, c");
+
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+    conf.setCapacity(A, 10);
+    conf.setMaximumCapacity(A, 15);
+    
+    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+    conf.setCapacity(B, 20);
+    
+    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
+    conf.setCapacity(C, 70);
+    conf.setMaximumCapacity(C, 70);
+  }
+  
+  private void setupNestedQueueConfigurationWithSpacesShouldBeTrimmed(
+      CapacitySchedulerConfiguration conf) {
+    // Define top-level queues
+    conf.set(
+        CapacitySchedulerConfiguration
+            .getQueuePrefix(CapacitySchedulerConfiguration.ROOT)
+            + CapacitySchedulerConfiguration.QUEUES, " a ,b, c");
+
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+    conf.setCapacity(A, 10);
+    conf.setMaximumCapacity(A, 15);
+
+    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+    conf.setCapacity(B, 20);
+
+    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
+    conf.setCapacity(C, 70);
+    conf.setMaximumCapacity(C, 70);
+
+    // sub queues for A
+    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(A)
+        + CapacitySchedulerConfiguration.QUEUES, "a1, a2 ");
+
+    final String A1 = CapacitySchedulerConfiguration.ROOT + ".a.a1";
+    conf.setCapacity(A1, 60);
+
+    final String A2 = CapacitySchedulerConfiguration.ROOT + ".a.a2";
+    conf.setCapacity(A2, 40);
+  }
+  
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
@@ -658,5 +708,65 @@ public class TestQueueParsing {
     Assert.assertEquals(0.7 * 0.55 * 0.7, c12.getAbsoluteMaximumCapacity(),
         DELTA);
     capacityScheduler.stop();
+  }
+  
+  @Test
+  public void testQueueParsingShouldTrimSpaces() throws Exception {
+    CapacitySchedulerConfiguration csConf = 
+      new CapacitySchedulerConfiguration();
+    setupQueueConfigurationWithSpacesShouldBeTrimmed(csConf);
+    YarnConfiguration conf = new YarnConfiguration(csConf);
+
+    CapacityScheduler capacityScheduler = new CapacityScheduler();
+    capacityScheduler.setConf(conf);
+    capacityScheduler.setRMContext(TestUtils.getMockRMContext());
+    capacityScheduler.init(conf);
+    capacityScheduler.start();
+    capacityScheduler.reinitialize(conf, TestUtils.getMockRMContext());
+    
+    CSQueue a = capacityScheduler.getQueue("a");
+    Assert.assertNotNull(a);
+    Assert.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
+    
+    CSQueue c = capacityScheduler.getQueue("c");
+    Assert.assertNotNull(c);
+    Assert.assertEquals(0.70, c.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals(0.70, c.getAbsoluteMaximumCapacity(), DELTA);
+  }
+  
+  @Test
+  public void testNestedQueueParsingShouldTrimSpaces() throws Exception {
+    CapacitySchedulerConfiguration csConf = 
+      new CapacitySchedulerConfiguration();
+    setupNestedQueueConfigurationWithSpacesShouldBeTrimmed(csConf);
+    YarnConfiguration conf = new YarnConfiguration(csConf);
+
+    CapacityScheduler capacityScheduler = new CapacityScheduler();
+    capacityScheduler.setConf(conf);
+    capacityScheduler.setRMContext(TestUtils.getMockRMContext());
+    capacityScheduler.init(conf);
+    capacityScheduler.start();
+    capacityScheduler.reinitialize(conf, TestUtils.getMockRMContext());
+    
+    CSQueue a = capacityScheduler.getQueue("a");
+    Assert.assertNotNull(a);
+    Assert.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals(0.15, a.getAbsoluteMaximumCapacity(), DELTA);
+    
+    CSQueue c = capacityScheduler.getQueue("c");
+    Assert.assertNotNull(c);
+    Assert.assertEquals(0.70, c.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals(0.70, c.getAbsoluteMaximumCapacity(), DELTA);
+    
+    CSQueue a1 = capacityScheduler.getQueue("a1");
+    Assert.assertNotNull(a1);
+    Assert.assertEquals(0.10 * 0.6, a1.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals(0.15, a1.getAbsoluteMaximumCapacity(), DELTA);
+    
+    CSQueue a2 = capacityScheduler.getQueue("a2");
+    Assert.assertNotNull(a2);
+    Assert.assertEquals(0.10 * 0.4, a2.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals(0.15, a2.getAbsoluteMaximumCapacity(), DELTA);
   }
 }
