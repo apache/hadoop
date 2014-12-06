@@ -33,7 +33,6 @@ public abstract class AesCtrCryptoCodec extends CryptoCodec {
    * @see http://en.wikipedia.org/wiki/Advanced_Encryption_Standard
    */
   private static final int AES_BLOCK_SIZE = SUITE.getAlgorithmBlockSize();
-  private static final int CTR_OFFSET = 8;
 
   @Override
   public CipherSuite getCipherSuite() {
@@ -48,20 +47,18 @@ public abstract class AesCtrCryptoCodec extends CryptoCodec {
   public void calculateIV(byte[] initIV, long counter, byte[] IV) {
     Preconditions.checkArgument(initIV.length == AES_BLOCK_SIZE);
     Preconditions.checkArgument(IV.length == AES_BLOCK_SIZE);
-    
-    System.arraycopy(initIV, 0, IV, 0, CTR_OFFSET);
-    long l = 0;
-    for (int i = 0; i < 8; i++) {
-      l = ((l << 8) | (initIV[CTR_OFFSET + i] & 0xff));
+
+    int i = IV.length; // IV length
+    int j = 0; // counter bytes index
+    int sum = 0;
+    while (i-- > 0) {
+      // (sum >>> Byte.SIZE) is the carry for addition
+      sum = (initIV[i] & 0xff) + (sum >>> Byte.SIZE);
+      if (j++ < 8) { // Big-endian, and long is 8 bytes length
+        sum += (byte) counter & 0xff;
+        counter >>>= 8;
+      }
+      IV[i] = (byte) sum;
     }
-    l += counter;
-    IV[CTR_OFFSET + 0] = (byte) (l >>> 56);
-    IV[CTR_OFFSET + 1] = (byte) (l >>> 48);
-    IV[CTR_OFFSET + 2] = (byte) (l >>> 40);
-    IV[CTR_OFFSET + 3] = (byte) (l >>> 32);
-    IV[CTR_OFFSET + 4] = (byte) (l >>> 24);
-    IV[CTR_OFFSET + 5] = (byte) (l >>> 16);
-    IV[CTR_OFFSET + 6] = (byte) (l >>> 8);
-    IV[CTR_OFFSET + 7] = (byte) (l);
   }
 }
