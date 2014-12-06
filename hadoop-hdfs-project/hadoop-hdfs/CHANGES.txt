@@ -438,6 +438,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7459. Consolidate cache-related implementation in FSNamesystem into
     a single class. (wheat9)
 
+    HDFS-7476. Consolidate ACL-related operations to a single class.
+    (wheat9 via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
