@@ -435,6 +435,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7474. Avoid resolving path in FSPermissionChecker. (jing9)
 
+    HDFS-7459. Consolidate cache-related implementation in FSNamesystem into
+    a single class. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

@@ -1354,7 +1354,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
     }
   }
-  
+
+  boolean isPermissionEnabled() {
+    return isPermissionEnabled;
+  }
+
   /**
    * We already know that the safemode is on. We will throw a RetriableException
    * if the safemode is not manual or caused by low resource.
@@ -3607,7 +3611,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return status;
   }
     
-  private FSPermissionChecker getPermissionChecker()
+  FSPermissionChecker getPermissionChecker()
       throws AccessControlException {
     return dir.getPermissionChecker();
   }
@@ -7541,52 +7545,38 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                          EnumSet<CacheFlag> flags, boolean logRetryCache)
       throws IOException {
     checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc = isPermissionEnabled ?
-        getPermissionChecker() : null;
-
+    CacheDirectiveInfo effectiveDirective = null;
     if (!flags.contains(CacheFlag.FORCE)) {
       cacheManager.waitForRescanIfNeeded();
     }
-    boolean success = false;
     writeLock();
-    String effectiveDirectiveStr = null;
-    Long result = null;
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
         throw new SafeModeException(
             "Cannot add cache directive", safeMode);
       }
-      if (directive.getId() != null) {
-        throw new IOException("addDirective: you cannot specify an ID " +
-            "for this operation.");
-      }
-      CacheDirectiveInfo effectiveDirective =
-          cacheManager.addDirective(directive, pc, flags);
-      getEditLog().logAddCacheDirectiveInfo(effectiveDirective, logRetryCache);
-      result = effectiveDirective.getId();
-      effectiveDirectiveStr = effectiveDirective.toString();
-      success = true;
+      effectiveDirective = FSNDNCacheOp.addCacheDirective(this, cacheManager,
+          directive, flags, logRetryCache);
     } finally {
       writeUnlock();
+      boolean success = effectiveDirective != null;
       if (success) {
         getEditLog().logSync();
       }
-      if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "addCacheDirective", effectiveDirectiveStr, null, null);
-      }
 
+      String effectiveDirectiveStr = effectiveDirective != null ?
+          effectiveDirective.toString() : null;
+      logAuditEvent(success, "addCacheDirective", effectiveDirectiveStr,
+          null, null);
     }
-    return result;
+    return effectiveDirective != null ? effectiveDirective.getId() : 0;
   }
 
   void modifyCacheDirective(CacheDirectiveInfo directive,
       EnumSet<CacheFlag> flags, boolean logRetryCache) throws IOException {
     checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc = isPermissionEnabled ?
-        getPermissionChecker() : null;
     boolean success = false;
-
     if (!flags.contains(CacheFlag.FORCE)) {
       cacheManager.waitForRescanIfNeeded();
     }
@@ -7597,26 +7587,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         throw new SafeModeException(
             "Cannot add cache directive", safeMode);
       }
-      cacheManager.modifyDirective(directive, pc, flags);
-      getEditLog().logModifyCacheDirectiveInfo(directive, logRetryCache);
+      FSNDNCacheOp.modifyCacheDirective(this, cacheManager, directive, flags,
+          logRetryCache);
       success = true;
     } finally {
       writeUnlock();
       if (success) {
         getEditLog().logSync();
       }
-      if (isAuditEnabled() && isExternalInvocation()) {
-        String idStr = "{id: " + directive.getId().toString() + "}";
-        logAuditEvent(success, "modifyCacheDirective", idStr, directive.toString(), null);
-      }
+      String idStr = "{id: " + directive.getId().toString() + "}";
+      logAuditEvent(success, "modifyCacheDirective", idStr,
+          directive.toString(), null);
     }
   }
 
   void removeCacheDirective(long id, boolean logRetryCache) throws IOException {
     checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc = isPermissionEnabled ?
-        getPermissionChecker() : null;
-
     boolean success = false;
     writeLock();
     try {
@@ -7625,16 +7611,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         throw new SafeModeException(
             "Cannot remove cache directives", safeMode);
       }
-      cacheManager.removeDirective(id, pc);
-      getEditLog().logRemoveCacheDirectiveInfo(id, logRetryCache);
+      FSNDNCacheOp.removeCacheDirective(this, cacheManager, id, logRetryCache);
       success = true;
     } finally {
       writeUnlock();
-      if (isAuditEnabled() && isExternalInvocation()) {
-        String idStr = "{id: " + Long.toString(id) + "}";
-        logAuditEvent(success, "removeCacheDirective", idStr, null,
-            null);
-      }
+      String idStr = "{id: " + Long.toString(id) + "}";
+      logAuditEvent(success, "removeCacheDirective", idStr, null,
+          null);
     }
     getEditLog().logSync();
   }
@@ -7642,33 +7625,26 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   BatchedListEntries<CacheDirectiveEntry> listCacheDirectives(
       long startId, CacheDirectiveInfo filter) throws IOException {
     checkOperation(OperationCategory.READ);
-    final FSPermissionChecker pc = isPermissionEnabled ?
-        getPermissionChecker() : null;
     BatchedListEntries<CacheDirectiveEntry> results;
     cacheManager.waitForRescanIfNeeded();
     readLock();
     boolean success = false;
     try {
       checkOperation(OperationCategory.READ);
-      results =
-          cacheManager.listCacheDirectives(startId, filter, pc);
+      results = FSNDNCacheOp.listCacheDirectives(this, cacheManager, startId,
+          filter);
       success = true;
     } finally {
       readUnlock();
-      if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "listCacheDirectives", filter.toString(), null,
-            null);
-      }
+      logAuditEvent(success, "listCacheDirectives", filter.toString(), null,
+          null);
     }
     return results;
   }
 
-  public void addCachePool(CachePoolInfo req, boolean logRetryCache)
+  void addCachePool(CachePoolInfo req, boolean logRetryCache)
       throws IOException {
     checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc = isPermissionEnabled ?
-        getPermissionChecker() : null;
-
     writeLock();
     boolean success = false;
     String poolInfoStr = null;
@@ -7678,29 +7654,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         throw new SafeModeException(
             "Cannot add cache pool " + req.getPoolName(), safeMode);
       }
-      if (pc != null) {
-        pc.checkSuperuserPrivilege();
-      }
-      CachePoolInfo info = cacheManager.addCachePool(req);
+      CachePoolInfo info = FSNDNCacheOp.addCachePool(this, cacheManager, req,
+          logRetryCache);
       poolInfoStr = info.toString();
-      getEditLog().logAddCachePool(info, logRetryCache);
       success = true;
     } finally {
       writeUnlock();
-      if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "addCachePool", poolInfoStr, null, null);
-      }
+      logAuditEvent(success, "addCachePool", poolInfoStr, null, null);
     }
     
     getEditLog().logSync();
   }
 
-  public void modifyCachePool(CachePoolInfo req, boolean logRetryCache)
+  void modifyCachePool(CachePoolInfo req, boolean logRetryCache)
       throws IOException {
     checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc =
-        isPermissionEnabled ? getPermissionChecker() : null;
-
     writeLock();
     boolean success = false;
     try {
@@ -7709,29 +7677,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         throw new SafeModeException(
             "Cannot modify cache pool " + req.getPoolName(), safeMode);
       }
-      if (pc != null) {
-        pc.checkSuperuserPrivilege();
-      }
-      cacheManager.modifyCachePool(req);
-      getEditLog().logModifyCachePool(req, logRetryCache);
+      FSNDNCacheOp.modifyCachePool(this, cacheManager, req, logRetryCache);
       success = true;
     } finally {
       writeUnlock();
-      if (isAuditEnabled() && isExternalInvocation()) {
-        String poolNameStr = "{poolName: " + req.getPoolName() + "}";
-        logAuditEvent(success, "modifyCachePool", poolNameStr, req.toString(), null);
-      }
+      String poolNameStr = "{poolName: " +
+          (req == null ? null : req.getPoolName()) + "}";
+      logAuditEvent(success, "modifyCachePool", poolNameStr,
+                    req == null ? null : req.toString(), null);
     }
 
     getEditLog().logSync();
   }
 
-  public void removeCachePool(String cachePoolName, boolean logRetryCache)
+  void removeCachePool(String cachePoolName, boolean logRetryCache)
       throws IOException {
     checkOperation(OperationCategory.WRITE);
-    final FSPermissionChecker pc =
-        isPermissionEnabled ? getPermissionChecker() : null;
-
     writeLock();
     boolean success = false;
     try {
@@ -7740,27 +7701,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         throw new SafeModeException(
             "Cannot remove cache pool " + cachePoolName, safeMode);
       }
-      if (pc != null) {
-        pc.checkSuperuserPrivilege();
-      }
-      cacheManager.removeCachePool(cachePoolName);
-      getEditLog().logRemoveCachePool(cachePoolName, logRetryCache);
+      FSNDNCacheOp.removeCachePool(this, cacheManager, cachePoolName,
+          logRetryCache);
       success = true;
     } finally {
       writeUnlock();
-      if (isAuditEnabled() && isExternalInvocation()) {
-        String poolNameStr = "{poolName: " + cachePoolName + "}";
-        logAuditEvent(success, "removeCachePool", poolNameStr, null, null);
-      }
+      String poolNameStr = "{poolName: " + cachePoolName + "}";
+      logAuditEvent(success, "removeCachePool", poolNameStr, null, null);
     }
     
     getEditLog().logSync();
   }
 
-  public BatchedListEntries<CachePoolEntry> listCachePools(String prevKey)
+  BatchedListEntries<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
-    final FSPermissionChecker pc =
-        isPermissionEnabled ? getPermissionChecker() : null;
     BatchedListEntries<CachePoolEntry> results;
     checkOperation(OperationCategory.READ);
     boolean success = false;
@@ -7768,13 +7722,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      results = cacheManager.listCachePools(pc, prevKey);
+      results = FSNDNCacheOp.listCachePools(this, cacheManager, prevKey);
       success = true;
     } finally {
       readUnlock();
-      if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "listCachePools", null, null, null);
-      }
+      logAuditEvent(success, "listCachePools", null, null, null);
     }
     return results;
   }
