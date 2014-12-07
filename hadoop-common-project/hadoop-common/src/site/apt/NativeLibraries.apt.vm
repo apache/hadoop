@@ -164,6 +164,24 @@ Native Libraries Guide
      * If something goes wrong, then:
        <<<INFO util.NativeCodeLoader - Unable to load native-hadoop library for your platform... using builtin-java classes where applicable>>>
 
+* Check
+
+   NativeLibraryChecker is a tool to check whether native libraries are loaded correctly.
+   You can launch NativeLibraryChecker as follows:
+
+----
+   $ hadoop checknative -a
+   14/12/06 01:30:45 WARN bzip2.Bzip2Factory: Failed to load/initialize native-bzip2 library system-native, will use pure-Java version
+   14/12/06 01:30:45 INFO zlib.ZlibFactory: Successfully loaded & initialized native-zlib library
+   Native library checking:
+   hadoop: true /home/ozawa/hadoop/lib/native/libhadoop.so.1.0.0
+   zlib:   true /lib/x86_64-linux-gnu/libz.so.1
+   snappy: true /usr/lib/libsnappy.so.1
+   lz4:    true revision:99
+   bzip2:  false
+----
+
+
 * Native Shared Libraries
 
    You can load any native shared library using DistributedCache for
