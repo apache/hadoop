@@ -532,9 +532,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private final RetryCache retryCache;
 
-  private final boolean xattrsEnabled;
-  private final int xattrMaxSize;
-
   private KeyProviderCryptoExtension provider = null;
 
   private volatile boolean imageLoaded = false;
@@ -849,19 +846,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.isDefaultAuditLogger = auditLoggers.size() == 1 &&
         auditLoggers.get(0) instanceof DefaultAuditLogger;
       this.retryCache = ignoreRetryCache ? null : initRetryCache(conf);
-
-      this.xattrsEnabled = conf.getBoolean(
-          DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY,
-          DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT);
-      LOG.info("XAttrs enabled? " + xattrsEnabled);
-      this.xattrMaxSize = conf.getInt(
-          DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
-          DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
-      Preconditions.checkArgument(xattrMaxSize >= 0,
-          "Cannot set a negative value for the maximum size of an xattr (%s).",
-          DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY);
-      final String unlimited = xattrMaxSize == 0 ? " (unlimited)" : "";
-      LOG.info("Maximum size of an xattr: " + xattrMaxSize + unlimited);
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -5827,7 +5811,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       INode inode, int snapshotId)
       throws IOException {
     if (pc.isSuperUser()) {
-      for (XAttr xattr : dir.getXAttrs(inode, snapshotId)) {
+      for (XAttr xattr : FSDirXAttrOp.getXAttrs(dir, inode, snapshotId)) {
         if (XAttrHelper.getPrefixName(xattr).
             equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
           throw new AccessControlException("Access is denied for " +
@@ -7967,136 +7951,35 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  /**
-   * Set xattr for a file or directory.
-   * 
-   * @param src
-   *          - path on which it sets the xattr
-   * @param xAttr
-   *          - xAttr details to set
-   * @param flag
-   *          - xAttrs flags
-   * @throws AccessControlException
-   * @throws SafeModeException
-   * @throws UnresolvedLinkException
-   * @throws IOException
-   */
   void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
                 boolean logRetryCache)
-      throws AccessControlException, SafeModeException,
-      UnresolvedLinkException, IOException {
-    try {
-      setXAttrInt(src, xAttr, flag, logRetryCache);
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "setXAttr", src);
-      throw e;
-    }
-  }
-  
-  private void setXAttrInt(final String srcArg, XAttr xAttr,
-      EnumSet<XAttrSetFlag> flag, boolean logRetryCache) throws IOException {
-    String src = srcArg;
-    checkXAttrsConfigFlag();
-    checkXAttrSize(xAttr);
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
-    XAttrPermissionFilter.checkPermissionForApi(pc, xAttr,
-        FSDirectory.isReservedRawName(src));
+      throws IOException {
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    HdfsFileStatus auditStat = null;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set XAttr on " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      checkXAttrChangeAccess(iip, xAttr, pc);
-      List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
-      xAttrs.add(xAttr);
-      dir.setXAttrs(src, xAttrs, flag);
-      getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
-      resultingStat = getAuditFileInfo(src, false);
+      auditStat = FSDirXAttrOp.setXAttr(dir, src, xAttr, flag, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "setXAttr", src);
+      throw e;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "setXAttr", srcArg, null, resultingStat);
+    logAuditEvent(true, "setXAttr", src, null, auditStat);
   }
 
-  /**
-   * Verifies that the combined size of the name and value of an xattr is within
-   * the configured limit. Setting a limit of zero disables this check.
-   */
-  private void checkXAttrSize(XAttr xAttr) {
-    if (xattrMaxSize == 0) {
-      return;
-    }
-    int size = xAttr.getName().getBytes(Charsets.UTF_8).length;
-    if (xAttr.getValue() != null) {
-      size += xAttr.getValue().length;
-    }
-    if (size > xattrMaxSize) {
-      throw new HadoopIllegalArgumentException(
-          "The XAttr is too big. The maximum combined size of the"
-          + " name and value is " + xattrMaxSize
-          + ", but the total size is " + size);
-    }
-  }
-  
-  List<XAttr> getXAttrs(final String srcArg, List<XAttr> xAttrs)
+  List<XAttr> getXAttrs(final String src, List<XAttr> xAttrs)
       throws IOException {
-    String src = srcArg;
-    checkXAttrsConfigFlag();
-    FSPermissionChecker pc = getPermissionChecker();
-    final boolean isRawPath = FSDirectory.isReservedRawName(src);
-    boolean getAll = xAttrs == null || xAttrs.isEmpty();
-    if (!getAll) {
-      try {
-        XAttrPermissionFilter.checkPermissionForApi(pc, xAttrs, isRawPath);
-      } catch (AccessControlException e) {
-        logAuditEvent(false, "getXAttrs", srcArg);
-        throw e;
-      }
-    }
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath(src, true);
-      if (isPermissionEnabled) {
-        dir.checkPathAccess(pc, iip, FsAction.READ);
-      }
-      List<XAttr> all = dir.getXAttrs(src);
-      List<XAttr> filteredAll = XAttrPermissionFilter.
-          filterXAttrsForApi(pc, all, isRawPath);
-      if (getAll) {
-        return filteredAll;
-      } else {
-        if (filteredAll == null || filteredAll.isEmpty()) {
-          return null;
-        }
-        List<XAttr> toGet = Lists.newArrayListWithCapacity(xAttrs.size());
-        for (XAttr xAttr : xAttrs) {
-          boolean foundIt = false;
-          for (XAttr a : filteredAll) {
-            if (xAttr.getNameSpace() == a.getNameSpace()
-                && xAttr.getName().equals(a.getName())) {
-              toGet.add(a);
-              foundIt = true;
-              break;
-            }
-          }
-          if (!foundIt) {
-            throw new IOException(
-                "At least one of the attributes provided was not found.");
-          }
-        }
-        return toGet;
-      }
+      return FSDirXAttrOp.getXAttrs(dir, src, xAttrs);
     } catch (AccessControlException e) {
-      logAuditEvent(false, "getXAttrs", srcArg);
+      logAuditEvent(false, "getXAttrs", src);
       throw e;
     } finally {
       readUnlock();
@@ -8104,23 +7987,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   List<XAttr> listXAttrs(String src) throws IOException {
-    checkXAttrsConfigFlag();
-    final FSPermissionChecker pc = getPermissionChecker();
-    final boolean isRawPath = FSDirectory.isReservedRawName(src);
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath(src, true);
-      if (isPermissionEnabled) {
-        /* To access xattr names, you need EXECUTE in the owning directory. */
-        dir.checkParentAccess(pc, iip, FsAction.EXECUTE);
-      }
-      final List<XAttr> all = dir.getXAttrs(src);
-      return XAttrPermissionFilter.
-        filterXAttrsForApi(pc, all, isRawPath);
+      return FSDirXAttrOp.listXAttrs(dir, src);
     } catch (AccessControlException e) {
       logAuditEvent(false, "listXAttrs", src);
       throw e;
@@ -8129,77 +8000,23 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  /**
-   * Remove an xattr for a file or directory.
-   *
-   * @param src
-   *          - path to remove the xattr from
-   * @param xAttr
-   *          - xAttr to remove
-   * @throws AccessControlException
-   * @throws SafeModeException
-   * @throws UnresolvedLinkException
-   * @throws IOException
-   */
   void removeXAttr(String src, XAttr xAttr, boolean logRetryCache)
       throws IOException {
-    try {
-      removeXAttrInt(src, xAttr, logRetryCache);
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "removeXAttr", src);
-      throw e;
-    }
-  }
-
-  void removeXAttrInt(final String srcArg, XAttr xAttr, boolean logRetryCache)
-      throws IOException {
-    String src = srcArg;
-    checkXAttrsConfigFlag();
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
-    XAttrPermissionFilter.checkPermissionForApi(pc, xAttr,
-        FSDirectory.isReservedRawName(src));
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    HdfsFileStatus auditStat = null;
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot remove XAttr entry on " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      checkXAttrChangeAccess(iip, xAttr, pc);
-
-      List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
-      xAttrs.add(xAttr);
-      List<XAttr> removedXAttrs = dir.removeXAttrs(src, xAttrs);
-      if (removedXAttrs != null && !removedXAttrs.isEmpty()) {
-        getEditLog().logRemoveXAttrs(src, removedXAttrs, logRetryCache);
-      } else {
-        throw new IOException(
-            "No matching attributes found for remove operation");
-      }
-      resultingStat = getAuditFileInfo(src, false);
+      auditStat = FSDirXAttrOp.removeXAttr(dir, src, xAttr, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "removeXAttr", src);
+      throw e;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "removeXAttr", srcArg, null, resultingStat);
-  }
-
-  private void checkXAttrChangeAccess(INodesInPath iip, XAttr xAttr,
-      FSPermissionChecker pc) throws AccessControlException {
-    if (isPermissionEnabled && xAttr.getNameSpace() == XAttr.NameSpace.USER) {
-      final INode inode = iip.getLastINode();
-      if (inode != null &&
-          inode.isDirectory() &&
-          inode.getFsPermission().getStickyBit()) {
-        if (!pc.isSuperUser()) {
-          dir.checkOwner(pc, iip);
-        }
-      } else {
-        dir.checkPathAccess(pc, iip, FsAction.WRITE);
-      }
-    }
+    logAuditEvent(true, "removeXAttr", src, null, auditStat);
   }
 
   void checkAccess(String src, FsAction mode) throws IOException {
@@ -8311,13 +8128,5 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  private void checkXAttrsConfigFlag() throws IOException {
-    if (!xattrsEnabled) {
-      throw new IOException(String.format(
-          "The XAttr operation has been rejected.  "
-              + "Support for XAttrs has been disabled by setting %s to false.",
-          DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY));
-    }
-  }
 }
 

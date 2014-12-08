@@ -311,7 +311,8 @@ public class EncryptionZoneManager {
     xattrs.add(ezXAttr);
     // updating the xattr will call addEncryptionZone,
     // done this way to handle edit log loading
-    dir.unprotectedSetXAttrs(src, xattrs, EnumSet.of(XAttrSetFlag.CREATE));
+    FSDirXAttrOp.unprotectedSetXAttrs(dir, src, xattrs,
+                                      EnumSet.of(XAttrSetFlag.CREATE));
     return ezXAttr;
   }
 

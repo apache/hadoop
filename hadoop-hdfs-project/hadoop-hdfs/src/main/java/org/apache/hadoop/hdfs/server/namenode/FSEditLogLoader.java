@@ -537,7 +537,8 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V1: {
       SetGenstampV1Op setGenstampV1Op = (SetGenstampV1Op)op;
-      fsNamesys.getBlockIdManager().setGenerationStampV1(setGenstampV1Op.genStampV1);
+      fsNamesys.getBlockIdManager().setGenerationStampV1(
+          setGenstampV1Op.genStampV1);
       break;
     }
     case OP_SET_PERMISSIONS: {
@@ -730,12 +731,14 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V2: {
       SetGenstampV2Op setGenstampV2Op = (SetGenstampV2Op) op;
-      fsNamesys.getBlockIdManager().setGenerationStampV2(setGenstampV2Op.genStampV2);
+      fsNamesys.getBlockIdManager().setGenerationStampV2(
+          setGenstampV2Op.genStampV2);
       break;
     }
     case OP_ALLOCATE_BLOCK_ID: {
       AllocateBlockIdOp allocateBlockIdOp = (AllocateBlockIdOp) op;
-      fsNamesys.getBlockIdManager().setLastAllocatedBlockId(allocateBlockIdOp.blockId);
+      fsNamesys.getBlockIdManager().setLastAllocatedBlockId(
+          allocateBlockIdOp.blockId);
       break;
     }
     case OP_ROLLING_UPGRADE_START: {
@@ -828,8 +831,10 @@ public class FSEditLogLoader {
     }
     case OP_SET_XATTR: {
       SetXAttrOp setXAttrOp = (SetXAttrOp) op;
-      fsDir.unprotectedSetXAttrs(setXAttrOp.src, setXAttrOp.xAttrs,
-          EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+      FSDirXAttrOp.unprotectedSetXAttrs(fsDir, setXAttrOp.src,
+                                        setXAttrOp.xAttrs,
+                                        EnumSet.of(XAttrSetFlag.CREATE,
+                                                   XAttrSetFlag.REPLACE));
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(setXAttrOp.rpcClientId, setXAttrOp.rpcCallId);
       }
@@ -837,8 +842,8 @@ public class FSEditLogLoader {
     }
     case OP_REMOVE_XATTR: {
       RemoveXAttrOp removeXAttrOp = (RemoveXAttrOp) op;
-      fsDir.unprotectedRemoveXAttrs(removeXAttrOp.src,
-          removeXAttrOp.xAttrs);
+      FSDirXAttrOp.unprotectedRemoveXAttrs(fsDir, removeXAttrOp.src,
+                                           removeXAttrOp.xAttrs);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(removeXAttrOp.rpcClientId,
             removeXAttrOp.rpcCallId);
