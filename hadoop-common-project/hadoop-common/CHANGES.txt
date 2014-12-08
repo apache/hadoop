@@ -368,6 +368,8 @@ Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-10530 Make hadoop build on Java7+ only (stevel)
+
   NEW FEATURES
 
     HADOOP-10987. Provide an iterator-based listing API for FileSystem (kihwal)
