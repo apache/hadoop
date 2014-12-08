@@ -1416,7 +1416,7 @@ public class YarnConfiguration extends Configuration {
   // In-memory SCM store configuration
   
   public static final String IN_MEMORY_STORE_PREFIX =
-      SHARED_CACHE_PREFIX + "in-memory.";
+      SCM_STORE_PREFIX + "in-memory.";
 
   /**
    * A resource in the InMemorySCMStore is considered stale if the time since
