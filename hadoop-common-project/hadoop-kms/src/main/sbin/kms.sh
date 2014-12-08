@@ -31,7 +31,15 @@ BASEDIR=`cd ${BASEDIR}/..;pwd`
 
 KMS_SILENT=${KMS_SILENT:-true}
 
-source ${HADOOP_LIBEXEC_DIR:-${BASEDIR}/libexec}/kms-config.sh
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-${BASEDIR}/libexec}"
+source ${HADOOP_LIBEXEC_DIR}/kms-config.sh
+
+
+if [ "x$JAVA_LIBRARY_PATH" = "x" ]; then
+  JAVA_LIBRARY_PATH="${HADOOP_LIBEXEC_DIR}/../lib/native/"
+else
+  JAVA_LIBRARY_PATH="${HADOOP_LIBEXEC_DIR}/../lib/native/:${JAVA_LIBRARY_PATH}"
+fi
 
 # The Java System property 'kms.http.port' it is not used by Kms,
 # it is used in Tomcat's server.xml configuration file
@@ -50,6 +58,7 @@ catalina_opts="${catalina_opts} -Dkms.admin.port=${KMS_ADMIN_PORT}";
 catalina_opts="${catalina_opts} -Dkms.http.port=${KMS_HTTP_PORT}";
 catalina_opts="${catalina_opts} -Dkms.max.threads=${KMS_MAX_THREADS}";
 catalina_opts="${catalina_opts} -Dkms.ssl.keystore.file=${KMS_SSL_KEYSTORE_FILE}";
+catalina_opts="${catalina_opts} -Djava.library.path=${JAVA_LIBRARY_PATH}";
 
 print "Adding to CATALINA_OPTS:     ${catalina_opts}"
 print "Found KMS_SSL_KEYSTORE_PASS:     `echo ${KMS_SSL_KEYSTORE_PASS} | sed 's/./*/g'`"

@@ -159,6 +159,15 @@ hadoop-${project.version} $ sbin/kms.sh start
   NOTE: You need to restart the KMS for the configuration changes to take
   effect.
 
+** Loading native libraries
+
+  The following environment variable (which can be set in KMS's
+  <<<etc/hadoop/kms-env.sh>>> script) can be used to specify the location
+  of any required native libraries. For eg. Tomact native Apache Portable
+  Runtime (APR) libraries:
+
+  * JAVA_LIBRARY_PATH
+
 ** KMS Security Configuration
 
 *** Enabling Kerberos HTTP SPNEGO Authentication

@@ -47,3 +47,9 @@
 # The password of the SSL keystore if using SSL
 #
 # export KMS_SSL_KEYSTORE_PASS=password
+
+# The full path to any native libraries that need to be loaded
+# (For eg. location of natively compiled tomcat Apache portable
+# runtime (APR) libraries
+#
+# export JAVA_LIBRARY_PATH=${HOME}/lib/native
