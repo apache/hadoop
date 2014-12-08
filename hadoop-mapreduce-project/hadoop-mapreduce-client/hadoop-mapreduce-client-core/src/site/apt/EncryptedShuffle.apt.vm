@@ -202,7 +202,7 @@ Hadoop MapReduce Next Generation - Encrypted Shuffle
 
 ** <<<ssl-client.xml>>> (Reducer/Fetcher) Configuration:
 
-  The mapred user should own the <<ssl-server.xml>> file and it should have
+  The mapred user should own the <<ssl-client.xml>> file and it should have
   default permissions.
 
 *---------------------------------------------+---------------------+-----------------+
