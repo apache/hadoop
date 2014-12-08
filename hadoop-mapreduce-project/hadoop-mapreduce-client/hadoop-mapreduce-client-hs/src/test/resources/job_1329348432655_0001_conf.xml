@@ -166,7 +166,6 @@
 <property><!--Loaded from mapred-default.xml--><name>mapreduce.job.end-notification.max.attempts</name><value>5</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobhistory.max-age-ms</name><value>10000000000</value></property>
 <property><!--Loaded from job.xml--><name>yarn.resourcemanager.zookeeper-store.session.timeout-ms</name><value>60000</value></property>
-<property><!--Loaded from job.xml--><name>mapreduce.task.tmp.dir</name><value>./tmp</value></property>
 <property><!--Loaded from job.xml--><name>dfs.default.chunk.view.size</name><value>32768</value></property>
 <property><!--Loaded from job.xml--><name>kfs.bytes-per-checksum</name><value>512</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.reduce.memory.mb</name><value>512</value></property>

@@ -577,18 +577,6 @@
 </property>
 
 <property>
-  <name>mapreduce.task.tmp.dir</name>
-  <value>./tmp</value>
-  <description> To set the value of tmp directory for map and reduce tasks.
-  If the value is an absolute path, it is directly assigned. Otherwise, it is
-  prepended with task's working directory. The java tasks are executed with
-  option -Djava.io.tmpdir='the absolute path of the tmp dir'. Pipes and
-  streaming are set with environment variable,
-   TMPDIR='the absolute path of the tmp dir'
-  </description>
-</property>
-
-<property>
   <name>mapreduce.map.log.level</name>
   <value>INFO</value>
   <description>The logging level for the map task. The allowed levels are:
