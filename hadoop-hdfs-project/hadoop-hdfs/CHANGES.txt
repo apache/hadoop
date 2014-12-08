@@ -293,6 +293,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7472. Fix typo in message of ReplicaNotFoundException.
     (Masatake Iwasaki via wheat9)
 
+    HDFS-7473. Document setting dfs.namenode.fs-limits.max-directory-items to 0
+    is invalid. (Akira AJISAKA via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
