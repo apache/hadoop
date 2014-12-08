@@ -526,7 +526,7 @@ int check_dir(char* npath, mode_t st_mode, mode_t desired, int finalComponent) {
     int filePermInt = st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
     int desiredInt = desired & (S_IRWXU | S_IRWXG | S_IRWXO);
     if (filePermInt != desiredInt) {
-      fprintf(LOGFILE, "Path %s does not have desired permission.\n", npath);
+      fprintf(LOGFILE, "Path %s has permission %o but needs permission %o.\n", npath, filePermInt, desiredInt);
       return -1;
     }
   }

@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
@@ -70,6 +71,51 @@ class FSDirRenameOp {
       resultingStat = fsd.getAuditFileInfo(dst, false);
     }
     return new RenameOldResult(status, resultingStat);
+  }
+
+  /**
+   * Verify quota for rename operation where srcInodes[srcInodes.length-1] moves
+   * dstInodes[dstInodes.length-1]
+   */
+  static void verifyQuotaForRename(FSDirectory fsd,
+      INode[] src, INode[] dst)
+      throws QuotaExceededException {
+    if (!fsd.getFSNamesystem().isImageLoaded() || fsd.shouldSkipQuotaChecks()) {
+      // Do not check quota if edits log is still being processed
+      return;
+    }
+    int i = 0;
+    while(src[i] == dst[i]) { i++; }
+    // src[i - 1] is the last common ancestor.
+
+    final Quota.Counts delta = src[src.length - 1].computeQuotaUsage();
+
+    // Reduce the required quota by dst that is being removed
+    final int dstIndex = dst.length - 1;
+    if (dst[dstIndex] != null) {
+      delta.subtract(dst[dstIndex].computeQuotaUsage());
+    }
+    FSDirectory.verifyQuota(dst, dstIndex, delta.get(Quota.NAMESPACE),
+        delta.get(Quota.DISKSPACE), src[i - 1]);
+  }
+
+  /**
+   * Checks file system limits (max component length and max directory items)
+   * during a rename operation.
+   */
+  static void verifyFsLimitsForRename(FSDirectory fsd,
+      INodesInPath srcIIP,
+      INodesInPath dstIIP)
+      throws FSLimitException.PathComponentTooLongException,
+          FSLimitException.MaxDirectoryItemsExceededException {
+    byte[] dstChildName = dstIIP.getLastLocalName();
+    INode[] dstInodes = dstIIP.getINodes();
+    int pos = dstInodes.length - 1;
+    fsd.verifyMaxComponentLength(dstChildName, dstInodes, pos);
+    // Do not enforce max directory items if renaming within same directory.
+    if (srcIIP.getINode(-2) != dstIIP.getINode(-2)) {
+      fsd.verifyMaxDirItems(dstInodes, pos);
+    }
   }
 
   /**
@@ -129,8 +175,8 @@ class FSDirRenameOp {
 
     fsd.ezManager.checkMoveValidity(srcIIP, dstIIP, src);
     // Ensure dst has quota to accommodate rename
-    fsd.verifyFsLimitsForRename(srcIIP, dstIIP);
-    fsd.verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
+    verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
+    verifyQuotaForRename(fsd, srcIIP.getINodes(), dstIIP.getINodes());
 
     RenameOperation tx = new RenameOperation(fsd, src, dst, srcIIP, dstIIP);
 
@@ -310,8 +356,8 @@ class FSDirRenameOp {
     }
 
     // Ensure dst has quota to accommodate rename
-    fsd.verifyFsLimitsForRename(srcIIP, dstIIP);
-    fsd.verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
+    verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
+    verifyQuotaForRename(fsd, srcIIP.getINodes(), dstIIP.getINodes());
 
     RenameOperation tx = new RenameOperation(fsd, src, dst, srcIIP, dstIIP);
 
@@ -446,11 +492,13 @@ class FSDirRenameOp {
       // Rename does not operates on link targets
       // Do not resolveLink when checking permissions of src and dst
       // Check write access to parent of src
-      fsd.checkPermission(pc, src, false, null, FsAction.WRITE, null, null,
-          false, false);
+      INodesInPath srcIIP = fsd.getINodesInPath(src, false);
+      fsd.checkPermission(pc, srcIIP, false, null, FsAction.WRITE, null, null,
+          false);
+      INodesInPath dstIIP = fsd.getINodesInPath(actualdst, false);
       // Check write access to ancestor of dst
-      fsd.checkPermission(pc, actualdst, false, FsAction.WRITE, null, null,
-          null, false, false);
+      fsd.checkPermission(pc, dstIIP, false, FsAction.WRITE, null, null,
+          null, false);
     }
 
     long mtime = now();
@@ -472,11 +520,13 @@ class FSDirRenameOp {
       // Rename does not operates on link targets
       // Do not resolveLink when checking permissions of src and dst
       // Check write access to parent of src
-      fsd.checkPermission(pc, src, false, null, FsAction.WRITE, null, null,
-          false, false);
+      INodesInPath srcIIP = fsd.getINodesInPath(src, false);
+      fsd.checkPermission(pc, srcIIP, false, null, FsAction.WRITE, null, null,
+          false);
       // Check write access to ancestor of dst
-      fsd.checkPermission(pc, dst, false, FsAction.WRITE, null, null, null,
-          false, false);
+      INodesInPath dstIIP = fsd.getINodesInPath(dst, false);
+      fsd.checkPermission(pc, dstIIP, false, FsAction.WRITE, null, null, null,
+          false);
     }
 
     long mtime = now();

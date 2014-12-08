@@ -152,20 +152,30 @@ public class KMSACLs implements Runnable, KeyACLs {
         String confKey = KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + keyOp;
         String aclStr = conf.get(confKey);
         if (aclStr != null) {
-          if (aclStr.equals("*")) {
-            LOG.info("Default Key ACL for KEY_OP '{}' is set to '*'", keyOp);
+          if (keyOp == KeyOpType.ALL) {
+            // Ignore All operation for default key acl
+            LOG.warn("Should not configure default key ACL for KEY_OP '{}'", keyOp);
+          } else {
+            if (aclStr.equals("*")) {
+              LOG.info("Default Key ACL for KEY_OP '{}' is set to '*'", keyOp);
+            }
+            defaultKeyAcls.put(keyOp, new AccessControlList(aclStr));
           }
-          defaultKeyAcls.put(keyOp, new AccessControlList(aclStr));
         }
       }
       if (!whitelistKeyAcls.containsKey(keyOp)) {
         String confKey = KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + keyOp;
         String aclStr = conf.get(confKey);
         if (aclStr != null) {
-          if (aclStr.equals("*")) {
-            LOG.info("Whitelist Key ACL for KEY_OP '{}' is set to '*'", keyOp);
+          if (keyOp == KeyOpType.ALL) {
+            // Ignore All operation for whitelist key acl
+            LOG.warn("Should not configure whitelist key ACL for KEY_OP '{}'", keyOp);
+          } else {
+            if (aclStr.equals("*")) {
+              LOG.info("Whitelist Key ACL for KEY_OP '{}' is set to '*'", keyOp);
+            }
+            whitelistKeyAcls.put(keyOp, new AccessControlList(aclStr));
           }
-          whitelistKeyAcls.put(keyOp, new AccessControlList(aclStr));
         }
       }
     }
@@ -271,7 +281,9 @@ public class KMSACLs implements Runnable, KeyACLs {
 
   @Override
   public boolean isACLPresent(String keyName, KeyOpType opType) {
-    return (keyAcls.containsKey(keyName) || defaultKeyAcls.containsKey(opType));
+    return (keyAcls.containsKey(keyName)
+        || defaultKeyAcls.containsKey(opType)
+        || whitelistKeyAcls.containsKey(opType));
   }
 
 }

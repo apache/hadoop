@@ -1431,6 +1431,18 @@
     <name>yarn.sharedcache.store.in-memory.check-period-mins</name>
     <value>720</value>
   </property>
+  
+  <property>
+    <description>The address of the admin interface in the SCM (shared cache manager)</description>
+    <name>yarn.sharedcache.admin.address</name>
+    <value>0.0.0.0:8047</value>
+  </property>
+
+  <property>
+    <description>The number of threads used to handle SCM admin interface (1 by default)</description>
+    <name>yarn.sharedcache.admin.thread-count</name>
+    <value>1</value>
+  </property>
 
   <property>
     <description>The frequency at which a cleaner task runs.

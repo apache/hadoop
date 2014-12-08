@@ -257,9 +257,6 @@ Trunk (Unreleased)
 
     HDFS-7407. Minor typo in privileged pid/out/log names (aw)
 
-    HDFS-7448 TestBookKeeperHACheckpoints fails in trunk build
-    (Akira Ajisaka via stevel)
-
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -274,6 +271,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-6982. nntop: top­-like tool for name node users.
     (Maysam Yabandeh via wang)
+
+    HDFS-7424. Add web UI for NFS gateway (brandonli)
 
   IMPROVEMENTS
 
@@ -424,8 +423,28 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-6735. A minor optimization to avoid pread() be blocked by read()
     inside the same DFSInputStream (Lars Hofhansl via stack)
+    
+    HDFS-7458. Add description to the nfs ports in core-site.xml used by nfs
+    test to avoid confusion (Yongjun Zhang via brandonli)
+
+    HDFS-7468. Moving verify* functions to corresponding classes.
+    (Li Lu via wheat9)
+
+    HDFS-7478. Move org.apache.hadoop.hdfs.server.namenode.NNConf to
+    FSNamesystem. (Li Lu via wheat9)
+
+    HDFS-7474. Avoid resolving path in FSPermissionChecker. (jing9)
+
+    HDFS-7459. Consolidate cache-related implementation in FSNamesystem into
+    a single class. (wheat9)
+
+    HDFS-7476. Consolidate ACL-related operations to a single class.
+    (wheat9 via cnauroth)
 
   OPTIMIZATIONS
+
+    HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
+    (Vinayakumar B via wheat9)
 
   BUG FIXES
 
@@ -521,6 +540,12 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7444. convertToBlockUnderConstruction should preserve BlockCollection.
     (wheat9)
+
+    HDFS-7448 TestBookKeeperHACheckpoints fails in trunk build
+    (Akira Ajisaka via stevel)
+
+    HDFS-7472. Fix typo in message of ReplicaNotFoundException.
+    (Masatake Iwasaki via wheat9)
 
 Release 2.6.1 - UNRELEASED
 

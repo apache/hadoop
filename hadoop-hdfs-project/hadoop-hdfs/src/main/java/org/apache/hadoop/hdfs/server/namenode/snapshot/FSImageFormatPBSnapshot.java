@@ -36,6 +36,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.server.namenode.AclEntryStatusFormat;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
@@ -208,8 +209,10 @@ public class FSImageFormatPBSnapshot {
 
           AclFeature acl = null;
           if (fileInPb.hasAcl()) {
-            acl = new AclFeature(FSImageFormatPBINode.Loader.loadAclEntries(
-                fileInPb.getAcl(), state.getStringTable()));
+            int[] entries = AclEntryStatusFormat
+                .toInt(FSImageFormatPBINode.Loader.loadAclEntries(
+                    fileInPb.getAcl(), state.getStringTable()));
+            acl = new AclFeature(entries);
           }
           XAttrFeature xAttrs = null;
           if (fileInPb.hasXAttrs()) {
@@ -309,8 +312,10 @@ public class FSImageFormatPBSnapshot {
               dirCopyInPb.getPermission(), state.getStringTable());
           AclFeature acl = null;
           if (dirCopyInPb.hasAcl()) {
-            acl = new AclFeature(FSImageFormatPBINode.Loader.loadAclEntries(
-                dirCopyInPb.getAcl(), state.getStringTable()));
+            int[] entries = AclEntryStatusFormat
+                .toInt(FSImageFormatPBINode.Loader.loadAclEntries(
+                    dirCopyInPb.getAcl(), state.getStringTable()));
+            acl = new AclFeature(entries);
           }
           XAttrFeature xAttrs = null;
           if (dirCopyInPb.hasXAttrs()) {

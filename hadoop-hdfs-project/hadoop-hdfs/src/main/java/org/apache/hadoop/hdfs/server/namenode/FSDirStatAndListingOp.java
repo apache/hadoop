@@ -45,15 +45,14 @@ import java.io.IOException;
 import java.util.Arrays;
 
 class FSDirStatAndListingOp {
-  static DirectoryListing getListingInt(
-      FSDirectory fsd, final String srcArg, byte[] startAfter,
-      boolean needLocation)
-    throws IOException {
-    String src = srcArg;
+  static DirectoryListing getListingInt(FSDirectory fsd, final String srcArg,
+      byte[] startAfter, boolean needLocation) throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    String startAfterString = new String(startAfter);
-    src = fsd.resolvePath(pc, src, pathComponents);
+    byte[][] pathComponents = FSDirectory
+        .getPathComponentsForReservedPath(srcArg);
+    final String startAfterString = new String(startAfter);
+    final String src = fsd.resolvePath(pc, srcArg, pathComponents);
+    final INodesInPath iip = fsd.getINodesInPath(src, true);
 
     // Get file name when startAfter is an INodePath
     if (FSDirectory.isReservedName(startAfterString)) {
@@ -73,9 +72,9 @@ class FSDirStatAndListingOp {
     boolean isSuperUser = true;
     if (fsd.isPermissionEnabled()) {
       if (fsd.isDir(src)) {
-        fsd.checkPathAccess(pc, src, FsAction.READ_EXECUTE);
+        fsd.checkPathAccess(pc, iip, FsAction.READ_EXECUTE);
       } else {
-        fsd.checkTraverse(pc, src);
+        fsd.checkTraverse(pc, iip);
       }
       isSuperUser = pc.isSuperUser();
     }
@@ -102,10 +101,10 @@ class FSDirStatAndListingOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     src = fsd.resolvePath(pc, src, pathComponents);
+    final INodesInPath iip = fsd.getINodesInPath(src, resolveLink);
     boolean isSuperUser = true;
     if (fsd.isPermissionEnabled()) {
-      fsd.checkPermission(pc, src, false, null, null, null, null, false,
-          resolveLink);
+      fsd.checkPermission(pc, iip, false, null, null, null, null, false);
       isSuperUser = pc.isSuperUser();
     }
     return getFileInfo(fsd, src, resolveLink,
@@ -119,10 +118,13 @@ class FSDirStatAndListingOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     src = fsd.resolvePath(pc, src, pathComponents);
+    final INodesInPath iip = fsd.getINodesInPath(src, true);
     if (fsd.isPermissionEnabled()) {
-      fsd.checkTraverse(pc, src);
+      fsd.checkTraverse(pc, iip);
     }
-    return !INodeFile.valueOf(fsd.getINode(src), src).isUnderConstruction();
+    INode[] inodes = iip.getINodes();
+    return !INodeFile.valueOf(inodes[inodes.length - 1],
+        src).isUnderConstruction();
   }
 
   static ContentSummary getContentSummary(
@@ -130,8 +132,9 @@ class FSDirStatAndListingOp {
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = fsd.getPermissionChecker();
     src = fsd.resolvePath(pc, src, pathComponents);
+    final INodesInPath iip = fsd.getINodesInPath(src, true);
     if (fsd.isPermissionEnabled()) {
-      fsd.checkPermission(pc, src, false, null, null, null,
+      fsd.checkPermission(pc, iip, false, null, null, null,
           FsAction.READ_EXECUTE);
     }
     return getContentSummaryInt(fsd, src);
@@ -249,7 +252,7 @@ class FSDirStatAndListingOp {
       Snapshot.Root sRoot = snapshots.get(i + skipSize).getRoot();
       listing[i] = createFileStatus(fsd, sRoot.getLocalNameBytes(), sRoot,
           BlockStoragePolicySuite.ID_UNSPECIFIED, Snapshot.CURRENT_STATE_ID,
-          false, null);
+          false, INodesInPath.fromINode(sRoot));
     }
     return new DirectoryListing(
         listing, snapshots.size() - skipSize - numOfListing);

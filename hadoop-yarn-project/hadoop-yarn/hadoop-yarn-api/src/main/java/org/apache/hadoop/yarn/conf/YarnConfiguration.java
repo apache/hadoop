@@ -819,7 +819,7 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CONTAINER_MON_PROCESS_TREE =
     NM_PREFIX + "container-monitor.process-tree.class";
   public static final String PROCFS_USE_SMAPS_BASED_RSS_ENABLED = NM_PREFIX +
-      ".container-monitor.procfs-tree.smaps-based-rss.enabled";
+      "container-monitor.procfs-tree.smaps-based-rss.enabled";
   public static final boolean DEFAULT_PROCFS_USE_SMAPS_BASED_RSS_ENABLED =
       false;
   
@@ -1401,10 +1401,22 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_SCM_APP_CHECKER_CLASS =
       "org.apache.hadoop.yarn.server.sharedcachemanager.RemoteAppChecker";
 
+  /** The address of the SCM admin interface. */
+  public static final String SCM_ADMIN_ADDRESS =
+      SHARED_CACHE_PREFIX + "admin.address";
+  public static final int DEFAULT_SCM_ADMIN_PORT = 8047;
+  public static final String DEFAULT_SCM_ADMIN_ADDRESS =
+      "0.0.0.0:" + DEFAULT_SCM_ADMIN_PORT;
+
+  /** Number of threads used to handle SCM admin interface. */
+  public static final String SCM_ADMIN_CLIENT_THREAD_COUNT =
+      SHARED_CACHE_PREFIX + "admin.thread-count";
+  public static final int DEFAULT_SCM_ADMIN_CLIENT_THREAD_COUNT = 1;
+
   // In-memory SCM store configuration
   
   public static final String IN_MEMORY_STORE_PREFIX =
-      SHARED_CACHE_PREFIX + "in-memory.";
+      SCM_STORE_PREFIX + "in-memory.";
 
   /**
    * A resource in the InMemorySCMStore is considered stale if the time since

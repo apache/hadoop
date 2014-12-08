@@ -260,7 +260,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
   }
 
-  private String getQueuePrefix(String queue) {
+  static String getQueuePrefix(String queue) {
     String queueName = PREFIX + queue + DOT;
     return queueName;
   }
@@ -538,6 +538,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public String[] getQueues(String queue) {
     LOG.debug("CSConf - getQueues called for: queuePrefix=" + getQueuePrefix(queue));
     String[] queues = getStrings(getQueuePrefix(queue) + QUEUES);
+    List<String> trimmedQueueNames = new ArrayList<String>();
+    if (null != queues) {
+      for (String s : queues) {
+        trimmedQueueNames.add(s.trim());
+      }
+      queues = trimmedQueueNames.toArray(new String[0]);
+    }
+ 
     LOG.debug("CSConf - getQueues: queuePrefix=" + getQueuePrefix(queue) + 
         ", queues=" + ((queues == null) ? "" : StringUtils.arrayToString(queues)));
     return queues;

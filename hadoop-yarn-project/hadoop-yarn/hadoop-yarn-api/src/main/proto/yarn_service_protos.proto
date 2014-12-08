@@ -354,3 +354,14 @@ message ReservationDeleteRequestProto {
 
 message ReservationDeleteResponseProto {
 }
+
+//////////////////////////////////////////////////////
+/////// SCM_Admin_Protocol //////////////////////////
+//////////////////////////////////////////////////////
+
+message RunSharedCacheCleanerTaskRequestProto {
+}
+
+message RunSharedCacheCleanerTaskResponseProto {
+  optional bool accepted = 1;
+}
