@@ -2278,15 +2278,24 @@ public class PBHelper {
 
   public static AclStatus convert(GetAclStatusResponseProto e) {
     AclStatusProto r = e.getResult();
-    return new AclStatus.Builder().owner(r.getOwner()).group(r.getGroup())
-        .stickyBit(r.getSticky())
-        .addEntries(convertAclEntry(r.getEntriesList())).build();
+    AclStatus.Builder builder = new AclStatus.Builder();
+    builder.owner(r.getOwner()).group(r.getGroup()).stickyBit(r.getSticky())
+        .addEntries(convertAclEntry(r.getEntriesList()));
+    if (r.hasPermission()) {
+      builder.setPermission(convert(r.getPermission()));
+    }
+    return builder.build();
   }
 
   public static GetAclStatusResponseProto convert(AclStatus e) {
-    AclStatusProto r = AclStatusProto.newBuilder().setOwner(e.getOwner())
+    AclStatusProto.Builder builder = AclStatusProto.newBuilder();
+    builder.setOwner(e.getOwner())
         .setGroup(e.getGroup()).setSticky(e.isStickyBit())
-        .addAllEntries(convertAclEntryProto(e.getEntries())).build();
+        .addAllEntries(convertAclEntryProto(e.getEntries()));
+    if (e.getPermission() != null) {
+      builder.setPermission(convert(e.getPermission()));
+    }
+    AclStatusProto r = builder.build();
     return GetAclStatusResponseProto.newBuilder().setResult(r).build();
   }
   

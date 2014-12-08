@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /**
@@ -36,6 +37,7 @@ public class AclStatus {
   private final String group;
   private final boolean stickyBit;
   private final List<AclEntry> entries;
+  private final FsPermission permission;
 
   /**
    * Returns the file owner.
@@ -71,6 +73,14 @@ public class AclStatus {
    */
   public List<AclEntry> getEntries() {
     return entries;
+  }
+
+  /**
+   * Returns the permission set for the path
+   * @return {@link FsPermission} for the path
+   */
+  public FsPermission getPermission() {
+    return permission;
   }
 
   @Override
@@ -113,6 +123,7 @@ public class AclStatus {
     private String group;
     private boolean stickyBit;
     private List<AclEntry> entries = Lists.newArrayList();
+    private FsPermission permission = null;
 
     /**
      * Sets the file owner.
@@ -173,12 +184,21 @@ public class AclStatus {
     }
 
     /**
+     * Sets the permission for the file.
+     * @param permission
+     */
+    public Builder setPermission(FsPermission permission) {
+      this.permission = permission;
+      return this;
+    }
+
+    /**
      * Builds a new AclStatus populated with the set properties.
      *
      * @return AclStatus new AclStatus
      */
     public AclStatus build() {
-      return new AclStatus(owner, group, stickyBit, entries);
+      return new AclStatus(owner, group, stickyBit, entries, permission);
     }
   }
 
@@ -190,12 +210,67 @@ public class AclStatus {
    * @param group String file group
    * @param stickyBit the sticky bit
    * @param entries the ACL entries
+   * @param permission permission of the path
    */
   private AclStatus(String owner, String group, boolean stickyBit,
-      Iterable<AclEntry> entries) {
+      Iterable<AclEntry> entries, FsPermission permission) {
     this.owner = owner;
     this.group = group;
     this.stickyBit = stickyBit;
     this.entries = Lists.newArrayList(entries);
+    this.permission = permission;
+  }
+
+  /**
+   * Get the effective permission for the AclEntry
+   * @param entry AclEntry to get the effective action
+   */
+  public FsAction getEffectivePermission(AclEntry entry) {
+    return getEffectivePermission(entry, permission);
+  }
+
+  /**
+   * Get the effective permission for the AclEntry. <br>
+   * Recommended to use this API ONLY if client communicates with the old
+   * NameNode, needs to pass the Permission for the path to get effective
+   * permission, else use {@link AclStatus#getEffectivePermission(AclEntry)}.
+   * @param entry AclEntry to get the effective action
+   * @param permArg Permission for the path. However if the client is NOT
+   *          communicating with old namenode, then this argument will not have
+   *          any preference.
+   * @return Returns the effective permission for the entry.
+   * @throws IllegalArgumentException If the client communicating with old
+   *           namenode and permission is not passed as an argument.
+   */
+  public FsAction getEffectivePermission(AclEntry entry, FsPermission permArg)
+      throws IllegalArgumentException {
+    // At least one permission bits should be available.
+    Preconditions.checkArgument(this.permission != null || permArg != null,
+        "Permission bits are not available to calculate effective permission");
+    if (this.permission != null) {
+      // permission bits from server response will have the priority for
+      // accuracy.
+      permArg = this.permission;
+    }
+    if ((entry.getName() != null || entry.getType() == AclEntryType.GROUP)) {
+      if (entry.getScope() == AclEntryScope.ACCESS) {
+        FsAction entryPerm = entry.getPermission();
+        return entryPerm.and(permArg.getGroupAction());
+      } else {
+        Preconditions.checkArgument(this.entries.contains(entry)
+            && this.entries.size() >= 3,
+            "Passed default ACL entry not found in the list of ACLs");
+        // default mask entry for effective permission calculation will be the
+        // penultimate entry. This can be mask entry in case of extended ACLs.
+        // In case of minimal ACL, this is the owner group entry, and we end up
+        // intersecting group FsAction with itself, which is a no-op.
+        FsAction defaultMask = this.entries.get(this.entries.size() - 2)
+            .getPermission();
+        FsAction entryPerm = entry.getPermission();
+        return entryPerm.and(defaultMask);
+      }
+    } else {
+      return entry.getPermission();
+    }
   }
 }

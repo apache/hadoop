@@ -34,10 +34,12 @@ import java.util.Map;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.LimitInputStream;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -314,27 +317,15 @@ class FSImageLoader {
    * @throws IOException if failed to serialize fileStatus to JSON.
    */
   String getAclStatus(String path) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    List<AclEntry> aclEntryList = getAclEntryList(path);
     PermissionStatus p = getPermissionStatus(path);
-    sb.append("{\"AclStatus\":{\"entries\":[");
-    int i = 0;
-    for (AclEntry aclEntry : aclEntryList) {
-      if (i++ != 0) {
-        sb.append(',');
-      }
-      sb.append('"');
-      sb.append(aclEntry.toString());
-      sb.append('"');
-    }
-    sb.append("],\"group\": \"");
-    sb.append(p.getGroupName());
-    sb.append("\",\"owner\": \"");
-    sb.append(p.getUserName());
-    sb.append("\",\"stickyBit\": ");
-    sb.append(p.getPermission().getStickyBit());
-    sb.append("}}\n");
-    return sb.toString();
+    List<AclEntry> aclEntryList = getAclEntryList(path);
+    FsPermission permission = p.getPermission();
+    AclStatus.Builder builder = new AclStatus.Builder();
+    builder.owner(p.getUserName()).group(p.getGroupName())
+        .addEntries(aclEntryList).setPermission(permission)
+        .stickyBit(permission.getStickyBit());
+    AclStatus aclStatus = builder.build();
+    return JsonUtil.toJsonString(aclStatus);
   }
 
   private List<AclEntry> getAclEntryList(String path) throws IOException {

@@ -441,6 +441,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7476. Consolidate ACL-related operations to a single class.
     (wheat9 via cnauroth)
 
+    HDFS-7384. 'getfacl' command and 'getAclStatus' output should be in sync.
+    (Vinayakumar B via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

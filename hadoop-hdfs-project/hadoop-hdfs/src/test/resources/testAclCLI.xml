@@ -318,6 +318,59 @@
       </comparators>
     </test>
     <test>
+      <description>setfacl : Add minimal default ACL</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /dir1</command>
+        <command>-fs NAMENODE -setfacl -m default:user::rwx /dir1</command>
+        <command>-fs NAMENODE -getfacl /dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /dir1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output># file: /dir1</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output># owner: USERNAME</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output># group: supergroup</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>user::rwx</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>group::r-x</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>other::r-x</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:user::rwx</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:group::r-x</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:other::r-x</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>.*(?!default\:mask)*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    <test>
       <description>setfacl : try adding default ACL to file</description>
       <test-commands>
         <command>-fs NAMENODE -touchz /file1</command>

@@ -655,6 +655,16 @@ public class JsonUtil {
     m.put("group", status.getGroup());
     m.put("stickyBit", status.isStickyBit());
     m.put("entries", status.getEntries());
+    FsPermission perm = status.getPermission();
+    if (perm != null) {
+      m.put("permission", toString(perm));
+      if (perm.getAclBit()) {
+        m.put("aclBit", true);
+      }
+      if (perm.getEncryptedBit()) {
+        m.put("encBit", true);
+      }
+    }
     final Map<String, Map<String, Object>> finalMap =
         new TreeMap<String, Map<String, Object>>();
     finalMap.put(AclStatus.class.getSimpleName(), m);
@@ -673,7 +683,12 @@ public class JsonUtil {
     aclStatusBuilder.owner((String) m.get("owner"));
     aclStatusBuilder.group((String) m.get("group"));
     aclStatusBuilder.stickyBit((Boolean) m.get("stickyBit"));
-
+    String permString = (String) m.get("permission");
+    if (permString != null) {
+      final FsPermission permission = toFsPermission(permString,
+          (Boolean) m.get("aclBit"), (Boolean) m.get("encBit"));
+      aclStatusBuilder.setPermission(permission);
+    }
     final Object[] entries = (Object[]) m.get("entries");
 
     List<AclEntry> aclEntryList = new ArrayList<AclEntry>();
