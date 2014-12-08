@@ -246,6 +246,9 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6177. Minor typo in the EncryptedShuffle document about
+    ssl-client.xml (Yangping Wu via harsh)
+
     MAPREDUCE-5918. LineRecordReader can return the same decompressor to
     CodecPool multiple times (Sergey Murylev via raviprak)
 
