@@ -166,8 +166,6 @@ public interface MRJobConfig {
 
   public static final String PRESERVE_FILES_PATTERN = "mapreduce.task.files.preserve.filepattern";
 
-  public static final String TASK_TEMP_DIR = "mapreduce.task.tmp.dir";
-
   public static final String TASK_DEBUGOUT_LINES = "mapreduce.task.debugout.lines";
 
   public static final String RECORDS_BEFORE_PROGRESS = "mapreduce.task.merge.progress.records";
