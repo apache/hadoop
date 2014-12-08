@@ -73,6 +73,17 @@
     <zookeeper.version>3.4.6</zookeeper.version>
 
     <tomcat.version>6.0.41</tomcat.version>
+
+    <!-- define the Java language version used by the compiler -->
+    <javac.version>1.7</javac.version>
+
+    <!-- The java version enforced by the maven enforcer -->
+    <!-- more complex patterns can be used here, such as
+       [${javac.version})
+    for an open-ended enforcement
+    -->
+    <enforced.java.version>[${javac.version},)</enforced.java.version>
+    <enforced.maven.version>[3.0.2,)</enforced.maven.version>
   </properties>
 
   <dependencyManagement>
@@ -922,8 +933,8 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>2.5.1</version>
           <configuration>
-            <source>1.6</source>
-            <target>1.6</target>
+            <source>${javac.version}</source>
+            <target>${javac.version}</target>
           </configuration>
         </plugin>
         <plugin>
@@ -1182,8 +1193,8 @@
             <artifactId>maven-compiler-plugin</artifactId>
             <configuration>
               <fork>true</fork>
-              <source>1.6</source>
-              <target>1.6</target>
+              <source>${javac.version}</source>
+              <target>${javac.version}</target>
               <compilerArguments>
                 <Xlint/>
                 <Xmaxwarns>9999</Xmaxwarns>
