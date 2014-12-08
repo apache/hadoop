@@ -45,10 +45,10 @@
         <configuration>
           <rules>
             <requireMavenVersion>
-              <version>[3.0.0,)</version>
+              <version>${enforced.maven.version}</version>
             </requireMavenVersion>
             <requireJavaVersion>
-              <version>1.6</version>
+              <version>${enforced.java.version}</version>
             </requireJavaVersion>
           </rules>
         </configuration>
