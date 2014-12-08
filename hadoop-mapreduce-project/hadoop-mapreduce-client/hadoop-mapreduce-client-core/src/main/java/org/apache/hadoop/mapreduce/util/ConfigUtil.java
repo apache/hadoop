@@ -274,8 +274,6 @@ public class ConfigUtil {
         MRJobConfig.PRESERVE_FAILED_TASK_FILES),
       new DeprecationDelta("keep.task.files.pattern",
         MRJobConfig.PRESERVE_FILES_PATTERN),
-      new DeprecationDelta("mapred.child.tmp",
-        MRJobConfig.TASK_TEMP_DIR),
       new DeprecationDelta("mapred.debug.out.lines",
         MRJobConfig.TASK_DEBUGOUT_LINES),
       new DeprecationDelta("mapred.merge.recordsBeforeProgress",

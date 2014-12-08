@@ -391,36 +391,7 @@ public class TestMiniMRChildTask {
       ioe.printStackTrace();           
     }
   }
-  
-  /**
-   * Tests task's temp directory.
-   * 
-   * In this test, we give different values to mapreduce.task.tmp.dir
-   * both relative and absolute. And check whether the temp directory 
-   * is created. We also check whether java.io.tmpdir value is same as 
-   * the directory specified. We create a temp file and check if is is 
-   * created in the directory specified.
-   */
-  @Test
-  public void testTaskTempDir(){
-    try {
-      JobConf conf = new JobConf(mr.getConfig());
-      
-      // intialize input, output directories
-      Path inDir = new Path("testing/wc/input");
-      Path outDir = new Path("testing/wc/output");
-      String input = "The input";
-      configure(conf, inDir, outDir, input, 
-          MapClass.class, IdentityReducer.class);
-      launchTest(conf, inDir, outDir, input);
-      
-    } catch(Exception e) {
-      e.printStackTrace();
-      fail("Exception in testing temp dir");
-      tearDown();
-    }
-  }
-
+ 
   /**
    * To test OS dependent setting of default execution path for a MapRed task.
    * Mainly that we can use MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV to set -
