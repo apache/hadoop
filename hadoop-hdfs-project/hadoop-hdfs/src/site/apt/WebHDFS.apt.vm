@@ -919,6 +919,7 @@ Transfer-Encoding: chunked
         ], 
         "group": "supergroup", 
         "owner": "hadoop", 
+        "permission":"775",
         "stickyBit": false
     }
 }

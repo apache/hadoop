@@ -86,22 +86,26 @@ class AclCommands extends FsCommand {
           (perm.getOtherAction().implies(FsAction.EXECUTE) ? "t" : "T"));
       }
 
-      List<AclEntry> entries = perm.getAclBit() ?
-        item.fs.getAclStatus(item.path).getEntries() :
-        Collections.<AclEntry>emptyList();
+      AclStatus aclStatus = item.fs.getAclStatus(item.path);
+      List<AclEntry> entries = perm.getAclBit() ? aclStatus.getEntries()
+          : Collections.<AclEntry> emptyList();
       ScopedAclEntries scopedEntries = new ScopedAclEntries(
         AclUtil.getAclFromPermAndEntries(perm, entries));
-      printAclEntriesForSingleScope(scopedEntries.getAccessEntries());
-      printAclEntriesForSingleScope(scopedEntries.getDefaultEntries());
+      printAclEntriesForSingleScope(aclStatus, perm,
+          scopedEntries.getAccessEntries());
+      printAclEntriesForSingleScope(aclStatus, perm,
+          scopedEntries.getDefaultEntries());
       out.println();
     }
 
     /**
      * Prints all the ACL entries in a single scope.
-     *
+     * @param aclStatus AclStatus for the path
+     * @param fsPerm FsPermission for the path
      * @param entries List<AclEntry> containing ACL entries of file
      */
-    private void printAclEntriesForSingleScope(List<AclEntry> entries) {
+    private void printAclEntriesForSingleScope(AclStatus aclStatus,
+        FsPermission fsPerm, List<AclEntry> entries) {
       if (entries.isEmpty()) {
         return;
       }
@@ -110,10 +114,8 @@ class AclCommands extends FsCommand {
           out.println(entry);
         }
       } else {
-        // ACL sort order guarantees mask is the second-to-last entry.
-        FsAction maskPerm = entries.get(entries.size() - 2).getPermission();
         for (AclEntry entry: entries) {
-          printExtendedAclEntry(entry, maskPerm);
+          printExtendedAclEntry(aclStatus, fsPerm, entry);
         }
       }
     }
@@ -123,14 +125,16 @@ class AclCommands extends FsCommand {
      * permissions of the entry, then also prints the restricted version as the
      * effective permissions.  The mask applies to all named entries and also
      * the unnamed group entry.
-     *
+     * @param aclStatus AclStatus for the path
+     * @param fsPerm FsPermission for the path
      * @param entry AclEntry extended ACL entry to print
-     * @param maskPerm FsAction permissions in the ACL's mask entry
      */
-    private void printExtendedAclEntry(AclEntry entry, FsAction maskPerm) {
+    private void printExtendedAclEntry(AclStatus aclStatus,
+        FsPermission fsPerm, AclEntry entry) {
       if (entry.getName() != null || entry.getType() == AclEntryType.GROUP) {
         FsAction entryPerm = entry.getPermission();
-        FsAction effectivePerm = entryPerm.and(maskPerm);
+        FsAction effectivePerm = aclStatus
+            .getEffectivePermission(entry, fsPerm);
         if (entryPerm != effectivePerm) {
           out.println(String.format("%s\t#effective:%s", entry,
             effectivePerm.SYMBOL));

@@ -1317,6 +1317,52 @@ public abstract class FSAclBaseTest {
     }
   }
 
+  @Test
+  public void testEffectiveAccess() throws Exception {
+    Path p1 = new Path("/testEffectiveAccess");
+    fs.mkdirs(p1);
+    // give all access at first
+    fs.setPermission(p1, FsPermission.valueOf("-rwxrwxrwx"));
+    AclStatus aclStatus = fs.getAclStatus(p1);
+    assertEquals("Entries should be empty", 0, aclStatus.getEntries().size());
+    assertEquals("Permission should be carried by AclStatus",
+        fs.getFileStatus(p1).getPermission(), aclStatus.getPermission());
+
+    // Add a named entries with all access
+    fs.modifyAclEntries(p1, Lists.newArrayList(
+        aclEntry(ACCESS, USER, "bruce", ALL),
+        aclEntry(ACCESS, GROUP, "groupY", ALL)));
+    aclStatus = fs.getAclStatus(p1);
+    assertEquals("Entries should contain owner group entry also", 3, aclStatus
+        .getEntries().size());
+
+    // restrict the access
+    fs.setPermission(p1, FsPermission.valueOf("-rwxr-----"));
+    // latest permissions should be reflected as effective permission
+    aclStatus = fs.getAclStatus(p1);
+    List<AclEntry> entries = aclStatus.getEntries();
+    for (AclEntry aclEntry : entries) {
+      if (aclEntry.getName() != null || aclEntry.getType() == GROUP) {
+        assertEquals(FsAction.ALL, aclEntry.getPermission());
+        assertEquals(FsAction.READ, aclStatus.getEffectivePermission(aclEntry));
+      }
+    }
+    fsAsBruce.access(p1, READ);
+    try {
+      fsAsBruce.access(p1, WRITE);
+      fail("Access should not be given");
+    } catch (AccessControlException e) {
+      // expected
+    }
+    fsAsBob.access(p1, READ);
+    try {
+      fsAsBob.access(p1, WRITE);
+      fail("Access should not be given");
+    } catch (AccessControlException e) {
+      // expected
+    }
+  }
+
   /**
    * Creates a FileSystem for the super-user.
    *
