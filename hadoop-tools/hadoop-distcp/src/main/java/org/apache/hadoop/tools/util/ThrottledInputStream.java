@@ -115,7 +115,7 @@ public class ThrottledInputStream extends InputStream {
   }
 
   private void throttle() throws IOException {
-    if (getBytesPerSec() > maxBytesPerSec) {
+    while (getBytesPerSec() > maxBytesPerSec) {
       try {
         Thread.sleep(SLEEP_DURATION_MS);
         totalSleepTime += SLEEP_DURATION_MS;
