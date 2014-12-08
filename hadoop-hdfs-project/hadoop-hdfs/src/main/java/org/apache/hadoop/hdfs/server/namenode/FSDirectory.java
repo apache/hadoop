@@ -242,7 +242,7 @@ public class FSDirectory implements Closeable {
     Preconditions.checkArgument(
         maxDirItems > 0 && maxDirItems <= MAX_DIR_ITEMS, "Cannot set "
             + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
-            + " to a value less than 0 or greater than " + MAX_DIR_ITEMS);
+            + " to a value less than 1 or greater than " + MAX_DIR_ITEMS);
 
     int threshold = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
