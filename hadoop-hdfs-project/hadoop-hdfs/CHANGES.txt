@@ -574,6 +574,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-4882. Prevent the Namenode's LeaseManager from looping forever in
     checkLeases (Ravi Prakash via Colin P. McCabe)
 
+    HDFS-7489. Incorrect locking in FsVolumeList#checkDirs can hang datanodes
+    (Noah Lorang via Colin P. McCabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
