@@ -552,6 +552,10 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11378. Fix new findbugs warnings in hadoop-kms. (Li Lu via wheat9)
 
+    HADOOP-11349. RawLocalFileSystem leaks file descriptor while creating a
+    file if creat succeeds but chmod fails. (Varun Saxena via Colin P. McCabe)
+
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
