@@ -148,6 +148,9 @@ Trunk (Unreleased)
     HADOOP-11081. Document hadoop properties expected to be set by the shell 
     code in *-env.sh (aw)
 
+    HADOOP-11352 Clean up test-patch.sh to disable "+1 contrib tests"
+    (Akira AJISAKA via stevel)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
