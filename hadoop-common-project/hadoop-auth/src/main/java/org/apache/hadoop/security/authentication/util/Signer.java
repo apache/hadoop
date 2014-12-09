@@ -15,6 +15,7 @@ package org.apache.hadoop.security.authentication.util;
 
 import org.apache.commons.codec.binary.Base64;
 
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -86,7 +87,7 @@ public class Signer {
   protected String computeSignature(byte[] secret, String str) {
     try {
       MessageDigest md = MessageDigest.getInstance("SHA");
-      md.update(str.getBytes());
+      md.update(str.getBytes(Charset.forName("UTF-8")));
       md.update(secret);
       byte[] digest = md.digest();
       return new Base64(0).encodeToString(digest);

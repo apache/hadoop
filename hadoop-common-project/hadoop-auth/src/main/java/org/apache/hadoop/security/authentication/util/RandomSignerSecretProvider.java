@@ -14,6 +14,8 @@
 package org.apache.hadoop.security.authentication.util;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import java.nio.charset.Charset;
 import java.util.Random;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -46,6 +48,6 @@ public class RandomSignerSecretProvider extends RolloverSignerSecretProvider {
 
   @Override
   protected byte[] generateNewSecret() {
-    return Long.toString(rand.nextLong()).getBytes();
+    return Long.toString(rand.nextLong()).getBytes(Charset.forName("UTF-8"));
   }
 }

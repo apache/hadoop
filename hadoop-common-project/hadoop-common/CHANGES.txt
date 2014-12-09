@@ -548,6 +548,8 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11273. TestMiniKdc failure: login options not compatible with IBM
     JDK. (Gao Zhong Liang via wheat9)
 
+    HADOOP-11379. Fix new findbugs warnings in hadoop-auth*. (Li Lu via wheat9)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
