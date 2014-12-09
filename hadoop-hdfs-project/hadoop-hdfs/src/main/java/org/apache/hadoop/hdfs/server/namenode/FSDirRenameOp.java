@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
@@ -42,6 +41,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
+import static org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import static org.apache.hadoop.util.Time.now;
 
 class FSDirRenameOp {
@@ -77,44 +78,40 @@ class FSDirRenameOp {
    * Verify quota for rename operation where srcInodes[srcInodes.length-1] moves
    * dstInodes[dstInodes.length-1]
    */
-  static void verifyQuotaForRename(FSDirectory fsd,
-      INode[] src, INode[] dst)
-      throws QuotaExceededException {
+  private static void verifyQuotaForRename(FSDirectory fsd, INodesInPath src,
+      INodesInPath dst) throws QuotaExceededException {
     if (!fsd.getFSNamesystem().isImageLoaded() || fsd.shouldSkipQuotaChecks()) {
       // Do not check quota if edits log is still being processed
       return;
     }
     int i = 0;
-    while(src[i] == dst[i]) { i++; }
+    while(src.getINode(i) == dst.getINode(i)) { i++; }
     // src[i - 1] is the last common ancestor.
 
-    final Quota.Counts delta = src[src.length - 1].computeQuotaUsage();
+    final Quota.Counts delta = src.getLastINode().computeQuotaUsage();
 
     // Reduce the required quota by dst that is being removed
-    final int dstIndex = dst.length - 1;
-    if (dst[dstIndex] != null) {
-      delta.subtract(dst[dstIndex].computeQuotaUsage());
+    final INode dstINode = dst.getLastINode();
+    if (dstINode != null) {
+      delta.subtract(dstINode.computeQuotaUsage());
     }
-    FSDirectory.verifyQuota(dst, dstIndex, delta.get(Quota.NAMESPACE),
-        delta.get(Quota.DISKSPACE), src[i - 1]);
+    FSDirectory.verifyQuota(dst, dst.length() - 1, delta.get(Quota.NAMESPACE),
+        delta.get(Quota.DISKSPACE), src.getINode(i - 1));
   }
 
   /**
    * Checks file system limits (max component length and max directory items)
    * during a rename operation.
    */
-  static void verifyFsLimitsForRename(FSDirectory fsd,
-      INodesInPath srcIIP,
+  static void verifyFsLimitsForRename(FSDirectory fsd, INodesInPath srcIIP,
       INodesInPath dstIIP)
-      throws FSLimitException.PathComponentTooLongException,
-          FSLimitException.MaxDirectoryItemsExceededException {
+      throws PathComponentTooLongException, MaxDirectoryItemsExceededException {
     byte[] dstChildName = dstIIP.getLastLocalName();
-    INode[] dstInodes = dstIIP.getINodes();
-    int pos = dstInodes.length - 1;
-    fsd.verifyMaxComponentLength(dstChildName, dstInodes, pos);
+    final String parentPath = dstIIP.getParentPath();
+    fsd.verifyMaxComponentLength(dstChildName, parentPath);
     // Do not enforce max directory items if renaming within same directory.
     if (srcIIP.getINode(-2) != dstIIP.getINode(-2)) {
-      fsd.verifyMaxDirItems(dstInodes, pos);
+      fsd.verifyMaxDirItems(dstIIP.getINode(-2).asDirectory(), parentPath);
     }
   }
 
@@ -176,7 +173,7 @@ class FSDirRenameOp {
     fsd.ezManager.checkMoveValidity(srcIIP, dstIIP, src);
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
-    verifyQuotaForRename(fsd, srcIIP.getINodes(), dstIIP.getINodes());
+    verifyQuotaForRename(fsd, srcIIP, dstIIP);
 
     RenameOperation tx = new RenameOperation(fsd, src, dst, srcIIP, dstIIP);
 
@@ -184,7 +181,7 @@ class FSDirRenameOp {
 
     try {
       // remove src
-      final long removedSrc = fsd.removeLastINode(srcIIP);
+      final long removedSrc = fsd.removeLastINode(tx.srcIIP);
       if (removedSrc == -1) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
             + "failed to rename " + src + " to " + dst + " because the source" +
@@ -326,7 +323,7 @@ class FSDirRenameOp {
     validateDestination(src, dst, srcInode);
 
     INodesInPath dstIIP = fsd.getINodesInPath4Write(dst, false);
-    if (dstIIP.getINodes().length == 1) {
+    if (dstIIP.length() == 1) {
       error = "rename destination cannot be the root";
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: " +
           error);
@@ -357,12 +354,12 @@ class FSDirRenameOp {
 
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
-    verifyQuotaForRename(fsd, srcIIP.getINodes(), dstIIP.getINodes());
+    verifyQuotaForRename(fsd, srcIIP, dstIIP);
 
     RenameOperation tx = new RenameOperation(fsd, src, dst, srcIIP, dstIIP);
 
     boolean undoRemoveSrc = true;
-    final long removedSrc = fsd.removeLastINode(srcIIP);
+    final long removedSrc = fsd.removeLastINode(tx.srcIIP);
     if (removedSrc == -1) {
       error = "Failed to rename " + src + " to " + dst +
           " because the source can not be removed";
@@ -594,7 +591,7 @@ class FSDirRenameOp {
           + error);
       throw new FileNotFoundException(error);
     }
-    if (srcIIP.getINodes().length == 1) {
+    if (srcIIP.length() == 1) {
       error = "rename source cannot be the root";
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
           + error);
@@ -624,7 +621,6 @@ class FSDirRenameOp {
                     INodesInPath srcIIP, INodesInPath dstIIP)
         throws QuotaExceededException {
       this.fsd = fsd;
-      this.srcIIP = srcIIP;
       this.dstIIP = dstIIP;
       this.src = src;
       this.dst = dst;
@@ -652,7 +648,7 @@ class FSDirRenameOp {
                 srcChild, srcIIP.getLatestSnapshotId());
         withCount = (INodeReference.WithCount) withName.getReferredINode();
         srcChild = withName;
-        srcIIP.setLastINode(srcChild);
+        srcIIP = INodesInPath.replace(srcIIP, srcIIP.length() - 1, srcChild);
         // get the counts before rename
         withCount.getReferredINode().computeQuotaUsage(oldSrcCounts, true);
       } else if (srcChildIsReference) {
@@ -662,6 +658,7 @@ class FSDirRenameOp {
       } else {
         withCount = null;
       }
+      this.srcIIP = srcIIP;
     }
 
     boolean addSourceToDestination() {

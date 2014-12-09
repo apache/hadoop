@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 
@@ -144,22 +145,25 @@ class FSPermissionChecker {
     // check if (parentAccess != null) && file exists, then check sb
     // If resolveLink, the check is performed on the link target.
     final int snapshotId = inodesInPath.getPathSnapshotId();
-    final INode[] inodes = inodesInPath.getINodes();
-    int ancestorIndex = inodes.length - 2;
-    for(; ancestorIndex >= 0 && inodes[ancestorIndex] == null;
-        ancestorIndex--);
-    checkTraverse(inodes, ancestorIndex, snapshotId);
+    final int length = inodesInPath.length();
+    final INode last = length > 0 ? inodesInPath.getLastINode() : null;
+    final INode parent = length > 1 ? inodesInPath.getINode(-2) : null;
 
-    final INode last = inodes[inodes.length - 1];
+    checkTraverse(inodesInPath, snapshotId);
+
     if (parentAccess != null && parentAccess.implies(FsAction.WRITE)
-        && inodes.length > 1 && last != null) {
-      checkStickyBit(inodes[inodes.length - 2], last, snapshotId);
+        && length > 1 && last != null) {
+      checkStickyBit(parent, last, snapshotId);
     }
-    if (ancestorAccess != null && inodes.length > 1) {
-      check(inodes, ancestorIndex, snapshotId, ancestorAccess);
+    if (ancestorAccess != null && length > 1) {
+      List<INode> inodes = inodesInPath.getReadOnlyINodes();
+      INode ancestor = null;
+      for (int i = inodes.size() - 2; i >= 0 && (ancestor = inodes.get(i)) ==
+          null; i--);
+      check(ancestor, snapshotId, ancestorAccess);
     }
-    if (parentAccess != null && inodes.length > 1) {
-      check(inodes, inodes.length - 2, snapshotId, parentAccess);
+    if (parentAccess != null && length > 1 && parent != null) {
+      check(parent, snapshotId, parentAccess);
     }
     if (access != null) {
       check(last, snapshotId, access);
@@ -184,10 +188,15 @@ class FSPermissionChecker {
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
-  private void checkTraverse(INode[] inodes, int last, int snapshotId
-      ) throws AccessControlException {
-    for(int j = 0; j <= last; j++) {
-      check(inodes[j], snapshotId, FsAction.EXECUTE);
+  private void checkTraverse(INodesInPath iip, int snapshotId)
+      throws AccessControlException {
+    List<INode> inodes = iip.getReadOnlyINodes();
+    for (int i = 0; i < inodes.size() - 1; i++) {
+      INode inode = inodes.get(i);
+      if (inode == null) {
+        break;
+      }
+      check(inode, snapshotId, FsAction.EXECUTE);
     }
   }
 
@@ -215,14 +224,8 @@ class FSPermissionChecker {
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
-  private void check(INode[] inodes, int i, int snapshotId, FsAction access
-      ) throws AccessControlException {
-    check(i >= 0? inodes[i]: null, snapshotId, access);
-  }
-
-  /** Guarded by {@link FSNamesystem#readLock()} */
-  private void check(INode inode, int snapshotId, FsAction access
-      ) throws AccessControlException {
+  private void check(INode inode, int snapshotId, FsAction access)
+      throws AccessControlException {
     if (inode == null) {
       return;
     }
