@@ -827,6 +827,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       encKeyVersionQueue.shutdown();
     } catch (Exception e) {
       throw new IOException(e);
+    } finally {
+      if (sslFactory != null) {
+        sslFactory.destroy();
+      }
     }
   }
 }
