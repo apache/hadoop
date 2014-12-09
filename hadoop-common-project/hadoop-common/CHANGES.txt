@@ -524,6 +524,8 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11329. Add JAVA_LIBRARY_PATH to KMS startup options. (Arun Suresh via wang)
 
+    HADOOP-11363 Hadoop maven surefire-plugin uses must set heap size. (stevel)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
