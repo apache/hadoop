@@ -92,7 +92,7 @@ public class KerberosName {
 
   /**
    * Create a name from the full Kerberos principal name.
-   * @param name
+   * @param name full Kerberos principal name.
    */
   public KerberosName(String name) {
     Matcher match = nameParser.matcher(name);
@@ -367,7 +367,7 @@ public class KerberosName {
    * Get the translation of the principal name into an operating system
    * user name.
    * @return the short name
-   * @throws IOException
+   * @throws IOException throws if something is wrong with the rules
    */
   public String getShortName() throws IOException {
     String[] params;

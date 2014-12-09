@@ -24,19 +24,18 @@ import java.util.Map;
 /**
  * The {@link AuthenticatedURL} class enables the use of the JDK {@link URL} class
  * against HTTP endpoints protected with the {@link AuthenticationFilter}.
- * <p/>
+ * <p>
  * The authentication mechanisms supported by default are Hadoop Simple  authentication
  * (also known as pseudo authentication) and Kerberos SPNEGO authentication.
- * <p/>
+ * <p>
  * Additional authentication mechanisms can be supported via {@link Authenticator} implementations.
- * <p/>
+ * <p>
  * The default {@link Authenticator} is the {@link KerberosAuthenticator} class which supports
  * automatic fallback from Kerberos SPNEGO to Hadoop Simple authentication.
- * <p/>
+ * <p>
  * <code>AuthenticatedURL</code> instances are not thread-safe.
- * <p/>
+ * <p>
  * The usage pattern of the {@link AuthenticatedURL} is:
- * <p/>
  * <pre>
  *
  * // establishing an initial connection
@@ -240,7 +239,7 @@ public class AuthenticatedURL {
 
   /**
    * Helper method that extracts an authentication token received from a connection.
-   * <p/>
+   * <p>
    * This method is used by {@link Authenticator} implementations.
    *
    * @param conn connection to extract the authentication token from.

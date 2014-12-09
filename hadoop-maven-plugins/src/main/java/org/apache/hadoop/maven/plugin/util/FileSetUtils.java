@@ -47,7 +47,7 @@ public class FileSetUtils {
    * Converts a Maven FileSet to a list of File objects.
    * 
    * @param source FileSet to convert
-   * @return List<File> containing every element of the FileSet as a File
+   * @return List containing every element of the FileSet as a File
    * @throws IOException if an I/O error occurs while trying to find the files
    */
   @SuppressWarnings("unchecked")

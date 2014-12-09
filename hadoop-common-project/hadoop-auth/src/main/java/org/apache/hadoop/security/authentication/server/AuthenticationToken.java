@@ -29,7 +29,7 @@ import javax.servlet.http.HttpServletRequest;
  * The {@link AuthenticationToken} contains information about an authenticated
  * HTTP client and doubles as the {@link Principal} to be returned by
  * authenticated {@link HttpServletRequest}s
- * <p/>
+ * <p>
  * The token can be serialized/deserialized to and from a string as it is sent
  * and received in HTTP client responses and requests as a HTTP cookie (this is
  * done by the {@link AuthenticationFilter}).
@@ -170,7 +170,7 @@ public class AuthenticationToken implements Principal {
 
   /**
    * Returns the string representation of the token.
-   * <p/>
+   * <p>
    * This string representation is parseable by the {@link #parse} method.
    *
    * @return the string representation of the token.

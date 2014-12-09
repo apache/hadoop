@@ -27,6 +27,9 @@ Release 2.6.3 - UNRELEASED
     HADOOP-11267. TestSecurityUtil fails when run with JDK8 because of empty
     principal names. (Stephen Chu via wheat9)
 
+    HADOOP-10134 [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in doc
+    comments. (apurtell via stevel)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES

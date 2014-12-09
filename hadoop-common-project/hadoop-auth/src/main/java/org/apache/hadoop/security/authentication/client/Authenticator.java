@@ -19,7 +19,7 @@ import java.net.URL;
 
 /**
  * Interface for client authentication mechanisms.
- * <p/>
+ * <p>
  * Implementations are use-once instances, they don't need to be thread safe.
  */
 public interface Authenticator {

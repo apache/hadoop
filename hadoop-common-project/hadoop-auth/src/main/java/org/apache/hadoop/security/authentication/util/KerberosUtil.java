@@ -135,12 +135,10 @@ public class KerberosUtil {
   /**
    * Get all the unique principals from keytabfile which matches a pattern.
    * 
-   * @param keytab 
-   *          Name of the keytab file to be read.
-   * @param pattern 
-   *         pattern to be matched.
+   * @param keytab Name of the keytab file to be read.
+   * @param pattern pattern to be matched.
    * @return list of unique principals which matches the pattern.
-   * @throws IOException 
+   * @throws IOException if cannot get the principal name
    */
   public static final String[] getPrincipalNames(String keytab,
       Pattern pattern) throws IOException {

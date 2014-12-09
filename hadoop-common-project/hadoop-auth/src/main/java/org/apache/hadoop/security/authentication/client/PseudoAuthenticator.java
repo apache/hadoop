@@ -20,7 +20,7 @@ import java.net.URL;
 /**
  * The {@link PseudoAuthenticator} implementation provides an authentication equivalent to Hadoop's
  * Simple authentication, it trusts the value of the 'user.name' Java System property.
- * <p/>
+ * <p>
  * The 'user.name' value is propagated using an additional query string parameter {@link #USER_NAME} ('user.name').
  */
 public class PseudoAuthenticator implements Authenticator {
@@ -47,13 +47,13 @@ public class PseudoAuthenticator implements Authenticator {
 
   /**
    * Performs simple authentication against the specified URL.
-   * <p/>
+   * <p>
    * If a token is given it does a NOP and returns the given token.
-   * <p/>
+   * <p>
    * If no token is given, it will perform an HTTP <code>OPTIONS</code> request injecting an additional
    * parameter {@link #USER_NAME} in the query string with the value returned by the {@link #getUserName()}
    * method.
-   * <p/>
+   * <p>
    * If the response is successful it will update the authentication token.
    *
    * @param url the URl to authenticate against.
@@ -79,7 +79,7 @@ public class PseudoAuthenticator implements Authenticator {
 
   /**
    * Returns the current user name.
-   * <p/>
+   * <p>
    * This implementation returns the value of the Java system property 'user.name'
    *
    * @return the current user name.
