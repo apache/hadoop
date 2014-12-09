@@ -122,9 +122,7 @@ class FSDirStatAndListingOp {
     if (fsd.isPermissionEnabled()) {
       fsd.checkTraverse(pc, iip);
     }
-    INode[] inodes = iip.getINodes();
-    return !INodeFile.valueOf(inodes[inodes.length - 1],
-        src).isUnderConstruction();
+    return !INodeFile.valueOf(iip.getLastINode(), src).isUnderConstruction();
   }
 
   static ContentSummary getContentSummary(
@@ -167,9 +165,8 @@ class FSDirStatAndListingOp {
         return getSnapshotsListing(fsd, srcs, startAfter);
       }
       final INodesInPath inodesInPath = fsd.getINodesInPath(srcs, true);
-      final INode[] inodes = inodesInPath.getINodes();
       final int snapshot = inodesInPath.getPathSnapshotId();
-      final INode targetNode = inodes[inodes.length - 1];
+      final INode targetNode = inodesInPath.getLastINode();
       if (targetNode == null)
         return null;
       byte parentStoragePolicy = isSuperUser ?
@@ -278,8 +275,7 @@ class FSDirStatAndListingOp {
         return getFileInfo4DotSnapshot(fsd, srcs);
       }
       final INodesInPath inodesInPath = fsd.getINodesInPath(srcs, resolveLink);
-      final INode[] inodes = inodesInPath.getINodes();
-      final INode i = inodes[inodes.length - 1];
+      final INode i = inodesInPath.getLastINode();
       byte policyId = includeStoragePolicy && i != null && !i.isSymlink() ?
           i.getStoragePolicyID() : BlockStoragePolicySuite.ID_UNSPECIFIED;
       return i == null ? null : createFileStatus(fsd,
