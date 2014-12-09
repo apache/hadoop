@@ -13,6 +13,7 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
+import java.nio.charset.Charset;
 import java.util.Properties;
 import javax.servlet.ServletContext;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -36,7 +37,7 @@ public class StringSignerSecretProvider extends SignerSecretProvider {
           long tokenValidity) throws Exception {
     String signatureSecret = config.getProperty(
             AuthenticationFilter.SIGNATURE_SECRET, null);
-    secret = signatureSecret.getBytes();
+    secret = signatureSecret.getBytes(Charset.forName("UTF-8"));
     secrets = new byte[][]{secret};
   }
 
