@@ -41,6 +41,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
@@ -295,8 +296,16 @@ public class RawLocalFileSystem extends FileSystem {
 
     FSDataOutputStream out = create(f,
         overwrite, bufferSize, replication, blockSize, progress);
-    setPermission(f, permission);
-    return out;
+    boolean success = false;
+    try {
+      setPermission(f, permission);
+      success = true;
+      return out;
+    } finally {
+      if (!success) {
+        IOUtils.cleanup(LOG, out);
+      }
+    }
   }
 
   @Override
@@ -306,8 +315,16 @@ public class RawLocalFileSystem extends FileSystem {
       Progressable progress) throws IOException {
     FSDataOutputStream out = create(f,
         overwrite, false, bufferSize, replication, blockSize, progress);
-    setPermission(f, permission);
-    return out;
+    boolean success = false;
+    try {
+      setPermission(f, permission);
+      success = true;
+      return out;
+    } finally {
+      if (!success) {
+        IOUtils.cleanup(LOG, out);
+      } 
+    }
   }
 
   @Override
