@@ -37,7 +37,8 @@ import java.util.HashMap;
 import java.util.Arrays;
 
 public class TestMiniKdc extends KerberosSecurityTestcase {
-
+  private static final boolean IBM_JAVA = System.getProperty("java.vendor")
+      .contains("IBM");
   @Test
   public void testMiniKdcStart() {
     MiniKdc kdc = getKdc();
@@ -94,15 +95,20 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
     @Override
     public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
       Map<String, String> options = new HashMap<String, String>();
-      options.put("keyTab", keytab);
       options.put("principal", principal);
-      options.put("useKeyTab", "true");
-      options.put("storeKey", "true");
-      options.put("doNotPrompt", "true");
-      options.put("useTicketCache", "true");
-      options.put("renewTGT", "true");
       options.put("refreshKrb5Config", "true");
-      options.put("isInitiator", Boolean.toString(isInitiator));
+      if (IBM_JAVA) {
+        options.put("useKeytab", keytab);
+        options.put("credsType", "both");
+      } else {
+        options.put("keyTab", keytab);
+        options.put("useKeyTab", "true");
+        options.put("storeKey", "true");
+        options.put("doNotPrompt", "true");
+        options.put("useTicketCache", "true");
+        options.put("renewTGT", "true");
+        options.put("isInitiator", Boolean.toString(isInitiator));
+      }
       String ticketCache = System.getenv("KRB5CCNAME");
       if (ticketCache != null) {
         options.put("ticketCache", ticketCache);
