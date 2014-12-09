@@ -36,6 +36,7 @@ class FsVolumeList {
    * This list is replaced on modification holding "this" lock.
    */
   volatile List<FsVolumeImpl> volumes = null;
+  private Object checkDirsMutex = new Object();
 
   private final VolumeChoosingPolicy<FsVolumeImpl> blockChooser;
   private volatile int numFailedVolumes;
@@ -167,40 +168,39 @@ class FsVolumeList {
    * Calls {@link FsVolumeImpl#checkDirs()} on each volume, removing any
    * volumes from the active list that result in a DiskErrorException.
    * 
-   * This method is synchronized to allow only one instance of checkDirs() 
-   * call
+   * Use checkDirsMutext to allow only one instance of checkDirs() call
+   *
    * @return list of all the removed volumes.
    */
-  synchronized List<FsVolumeImpl> checkDirs() {
-    ArrayList<FsVolumeImpl> removedVols = null;
-    
-    // Make a copy of volumes for performing modification 
-    final List<FsVolumeImpl> volumeList = new ArrayList<FsVolumeImpl>(volumes);
+  List<FsVolumeImpl> checkDirs() {
+    synchronized(checkDirsMutex) {
+      ArrayList<FsVolumeImpl> removedVols = null;
+      
+      // Make a copy of volumes for performing modification 
+      final List<FsVolumeImpl> volumeList = new ArrayList<FsVolumeImpl>(volumes);
 
-    for(Iterator<FsVolumeImpl> i = volumeList.iterator(); i.hasNext(); ) {
-      final FsVolumeImpl fsv = i.next();
-      try {
-        fsv.checkDirs();
-      } catch (DiskErrorException e) {
-        FsDatasetImpl.LOG.warn("Removing failed volume " + fsv + ": ",e);
-        if (removedVols == null) {
-          removedVols = new ArrayList<FsVolumeImpl>(1);
+      for(Iterator<FsVolumeImpl> i = volumeList.iterator(); i.hasNext(); ) {
+        final FsVolumeImpl fsv = i.next();
+        try {
+          fsv.checkDirs();
+        } catch (DiskErrorException e) {
+          FsDatasetImpl.LOG.warn("Removing failed volume " + fsv + ": ",e);
+          if (removedVols == null) {
+            removedVols = new ArrayList<FsVolumeImpl>(1);
+          }
+          removedVols.add(fsv);
+          removeVolume(fsv.getBasePath());
+          numFailedVolumes++;
         }
-        removedVols.add(fsv);
-        fsv.shutdown(); 
-        i.remove(); // Remove the volume
-        numFailedVolumes++;
       }
-    }
-    
-    if (removedVols != null && removedVols.size() > 0) {
-      // Replace volume list
-      volumes = Collections.unmodifiableList(volumeList);
-      FsDatasetImpl.LOG.warn("Completed checkDirs. Removed " + removedVols.size()
-          + " volumes. Current volumes: " + this);
-    }
+      
+      if (removedVols != null && removedVols.size() > 0) {
+        FsDatasetImpl.LOG.warn("Completed checkDirs. Removed " + removedVols.size()
+            + " volumes. Current volumes: " + this);
+      }
 
-    return removedVols;
+      return removedVols;
+    }
   }
 
   @Override
