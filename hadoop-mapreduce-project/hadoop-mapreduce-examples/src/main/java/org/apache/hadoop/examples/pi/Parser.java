@@ -151,11 +151,10 @@ public final class Parser {
   static <T extends Combinable<T>> Map<Parameter, T> combine(Map<Parameter, List<T>> m) {
     final Map<Parameter, T> combined = new TreeMap<Parameter, T>();
     for(Parameter p : Parameter.values()) {
+      //note: results would never be null due to the design of Util.combine
       final List<T> results = Util.combine(m.get(p));
       Util.out.format("%-6s => ", p); 
-      if (results == null)
-        Util.out.println("null");
-      else if (results.size() != 1) 
+      if (results.size() != 1)
         Util.out.println(results.toString().replace(", ", ",\n           "));
       else {
         final T r = results.get(0);
