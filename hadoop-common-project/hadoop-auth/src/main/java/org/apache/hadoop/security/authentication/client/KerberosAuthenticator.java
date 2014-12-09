@@ -43,9 +43,9 @@ import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 /**
  * The {@link KerberosAuthenticator} implements the Kerberos SPNEGO authentication sequence.
- * <p/>
+ * <p>
  * It uses the default principal for the Kerberos cache (normally set via kinit).
- * <p/>
+ * <p>
  * It falls back to the {@link PseudoAuthenticator} if the HTTP endpoint does not trigger an SPNEGO authentication
  * sequence.
  */
@@ -162,9 +162,9 @@ public class KerberosAuthenticator implements Authenticator {
 
   /**
    * Performs SPNEGO authentication against the specified URL.
-   * <p/>
+   * <p>
    * If a token is given it does a NOP and returns the given token.
-   * <p/>
+   * <p>
    * If no token is given, it will perform the SPNEGO authentication sequence using an
    * HTTP <code>OPTIONS</code> request.
    *
@@ -211,7 +211,7 @@ public class KerberosAuthenticator implements Authenticator {
 
   /**
    * If the specified URL does not support SPNEGO authentication, a fallback {@link Authenticator} will be used.
-   * <p/>
+   * <p>
    * This implementation returns a {@link PseudoAuthenticator}.
    *
    * @return the fallback {@link Authenticator}.
