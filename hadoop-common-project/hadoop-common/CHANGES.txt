@@ -24,6 +24,9 @@ Release 2.6.1 - UNRELEASED
     HADOOP-11343. Overflow is not properly handled in caclulating final iv for
     AES CTR. (Jerry Chen via wang)
 
+    HADOOP-11368. Fix SSLFactory truststore reloader thread leak in
+    KMSClientProvider. (Arun Suresh via wang)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
