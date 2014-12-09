@@ -199,9 +199,9 @@ public class EncryptionZoneManager {
   private EncryptionZoneInt getEncryptionZoneForPath(INodesInPath iip) {
     assert dir.hasReadLock();
     Preconditions.checkNotNull(iip);
-    final INode[] inodes = iip.getINodes();
-    for (int i = inodes.length - 1; i >= 0; i--) {
-      final INode inode = inodes[i];
+    List<INode> inodes = iip.getReadOnlyINodes();
+    for (int i = inodes.size() - 1; i >= 0; i--) {
+      final INode inode = inodes.get(i);
       if (inode != null) {
         final EncryptionZoneInt ezi = encryptionZones.get(inode.getId());
         if (ezi != null) {
@@ -259,9 +259,7 @@ public class EncryptionZoneManager {
       }
     }
 
-    if (srcInEZ || dstInEZ) {
-      Preconditions.checkState(srcEZI != null, "couldn't find src EZ?");
-      Preconditions.checkState(dstEZI != null, "couldn't find dst EZ?");
+    if (srcInEZ) {
       if (srcEZI != dstEZI) {
         final String srcEZPath = getFullPathName(srcEZI);
         final String dstEZPath = getFullPathName(dstEZI);

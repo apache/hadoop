@@ -343,9 +343,7 @@ public class FSEditLogLoader {
 
       // See if the file already exists (persistBlocks call)
       final INodesInPath iip = fsDir.getINodesInPath(path, true);
-      final INode[] inodes = iip.getINodes();
-      INodeFile oldFile = INodeFile.valueOf(
-          inodes[inodes.length - 1], path, true);
+      INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path, true);
       if (oldFile != null && addCloseOp.overwrite) {
         // This is OP_ADD with overwrite
         fsDir.unprotectedDelete(path, addCloseOp.mtime);

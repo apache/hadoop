@@ -187,9 +187,8 @@ class FSDirConcatOp {
     // do the move
 
     final INodesInPath trgIIP = fsd.getINodesInPath4Write(target, true);
-    final INode[] trgINodes = trgIIP.getINodes();
     final INodeFile trgInode = trgIIP.getLastINode().asFile();
-    INodeDirectory trgParent = trgINodes[trgINodes.length-2].asDirectory();
+    INodeDirectory trgParent = trgIIP.getINode(-2).asDirectory();
     final int trgLatestSnapshot = trgIIP.getLatestSnapshotId();
 
     final INodeFile [] allSrcInodes = new INodeFile[srcs.length];
@@ -229,6 +228,6 @@ class FSDirConcatOp {
     trgInode.setModificationTime(timestamp, trgLatestSnapshot);
     trgParent.updateModificationTime(timestamp, trgLatestSnapshot);
     // update quota on the parent directory ('count' files removed, 0 space)
-    FSDirectory.unprotectedUpdateCount(trgIIP, trgINodes.length - 1, -count, 0);
+    FSDirectory.unprotectedUpdateCount(trgIIP, trgIIP.length() - 1, -count, 0);
   }
 }

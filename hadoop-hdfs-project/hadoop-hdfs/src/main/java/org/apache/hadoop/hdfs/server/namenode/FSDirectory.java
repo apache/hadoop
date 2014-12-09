@@ -642,8 +642,7 @@ public class FSDirectory implements Closeable {
    * @param path the file path
    * @return the block size of the file. 
    */
-  long getPreferredBlockSize(String path) throws UnresolvedLinkException,
-      FileNotFoundException, IOException {
+  long getPreferredBlockSize(String path) throws IOException {
     readLock();
     try {
       return INodeFile.valueOf(getNode(path, false), path
@@ -740,15 +739,13 @@ public class FSDirectory implements Closeable {
   
   private static boolean deleteAllowed(final INodesInPath iip,
       final String src) {
-    final INode[] inodes = iip.getINodes(); 
-    if (inodes == null || inodes.length == 0
-        || inodes[inodes.length - 1] == null) {
+    if (iip.length() < 1 || iip.getLastINode() == null) {
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
             + "failed to remove " + src + " because it does not exist");
       }
       return false;
-    } else if (inodes.length == 1) { // src is the root
+    } else if (iip.length() == 1) { // src is the root
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: "
           + "failed to remove " + src
           + " because the root is not allowed to be deleted");
@@ -763,8 +760,7 @@ public class FSDirectory implements Closeable {
   boolean isNonEmptyDirectory(INodesInPath inodesInPath) {
     readLock();
     try {
-      final INode[] inodes = inodesInPath.getINodes();
-      final INode inode = inodes[inodes.length - 1];
+      final INode inode = inodesInPath.getLastINode();
       if (inode == null || !inode.isDirectory()) {
         //not found or not a directory
         return false;
@@ -991,7 +987,7 @@ public class FSDirectory implements Closeable {
   
   private void updateCount(INodesInPath iip, long nsDelta, long dsDelta,
       boolean checkQuota) throws QuotaExceededException {
-    updateCount(iip, iip.getINodes().length - 1, nsDelta, dsDelta, checkQuota);
+    updateCount(iip, iip.length() - 1, nsDelta, dsDelta, checkQuota);
   }
 
   /** update count of each inode with quota
@@ -1011,12 +1007,11 @@ public class FSDirectory implements Closeable {
       //still initializing. do not check or update quotas.
       return;
     }
-    final INode[] inodes = iip.getINodes();
-    if (numOfINodes > inodes.length) {
-      numOfINodes = inodes.length;
+    if (numOfINodes > iip.length()) {
+      numOfINodes = iip.length();
     }
     if (checkQuota && !skipQuotaCheck) {
-      verifyQuota(inodes, numOfINodes, nsDelta, dsDelta, null);
+      verifyQuota(iip, numOfINodes, nsDelta, dsDelta, null);
     }
     unprotectedUpdateCount(iip, numOfINodes, nsDelta, dsDelta);
   }
@@ -1039,11 +1034,11 @@ public class FSDirectory implements Closeable {
    * updates quota without verification
    * callers responsibility is to make sure quota is not exceeded
    */
-  static void unprotectedUpdateCount(INodesInPath inodesInPath, int numOfINodes, long nsDelta, long dsDelta) {
-    final INode[] inodes = inodesInPath.getINodes();
+  static void unprotectedUpdateCount(INodesInPath inodesInPath,
+      int numOfINodes, long nsDelta, long dsDelta) {
     for(int i=0; i < numOfINodes; i++) {
-      if (inodes[i].isQuotaSet()) { // a directory with quota
-        inodes[i].asDirectory().getDirectoryWithQuotaFeature()
+      if (inodesInPath.getINode(i).isQuotaSet()) { // a directory with quota
+        inodesInPath.getINode(i).asDirectory().getDirectoryWithQuotaFeature()
             .addSpaceConsumed2Cache(nsDelta, dsDelta);
       }
     }
@@ -1105,14 +1100,15 @@ public class FSDirectory implements Closeable {
    * @param src The full path name of the child node.
    * @throws QuotaExceededException is thrown if it violates quota limit
    */
-  private boolean addINode(String src, INode child
-      ) throws QuotaExceededException, UnresolvedLinkException {
+  private boolean addINode(String src, INode child)
+      throws QuotaExceededException, UnresolvedLinkException {
     byte[][] components = INode.getPathComponents(src);
     child.setLocalName(components[components.length-1]);
     cacheName(child);
     writeLock();
     try {
-      return addLastINode(getExistingPathINodes(components), child, true);
+      final INodesInPath iip = getExistingPathINodes(components);
+      return addLastINode(iip, child, true);
     } finally {
       writeUnlock();
     }
@@ -1122,7 +1118,7 @@ public class FSDirectory implements Closeable {
    * Verify quota for adding or moving a new INode with required 
    * namespace and diskspace to a given position.
    *  
-   * @param inodes INodes corresponding to a path
+   * @param iip INodes corresponding to a path
    * @param pos position where a new INode will be added
    * @param nsDelta needed namespace
    * @param dsDelta needed diskspace
@@ -1131,7 +1127,7 @@ public class FSDirectory implements Closeable {
    *          Pass null if a node is not being moved.
    * @throws QuotaExceededException if quota limit is exceeded.
    */
-  static void verifyQuota(INode[] inodes, int pos, long nsDelta,
+  static void verifyQuota(INodesInPath iip, int pos, long nsDelta,
       long dsDelta, INode commonAncestor) throws QuotaExceededException {
     if (nsDelta <= 0 && dsDelta <= 0) {
       // if quota is being freed or not being consumed
@@ -1139,18 +1135,20 @@ public class FSDirectory implements Closeable {
     }
 
     // check existing components in the path
-    for(int i = (pos > inodes.length? inodes.length: pos) - 1; i >= 0; i--) {
-      if (commonAncestor == inodes[i]) {
+    for(int i = (pos > iip.length() ? iip.length(): pos) - 1; i >= 0; i--) {
+      if (commonAncestor == iip.getINode(i)) {
         // Stop checking for quota when common ancestor is reached
         return;
       }
       final DirectoryWithQuotaFeature q
-          = inodes[i].asDirectory().getDirectoryWithQuotaFeature();
+          = iip.getINode(i).asDirectory().getDirectoryWithQuotaFeature();
       if (q != null) { // a directory with quota
         try {
           q.verifyQuota(nsDelta, dsDelta);
         } catch (QuotaExceededException e) {
-          e.setPathName(getFullPathName(inodes, i));
+          List<INode> inodes = iip.getReadOnlyINodes();
+          final String path = getFullPathName(inodes.toArray(new INode[inodes.size()]), i);
+          e.setPathName(path);
           throw e;
         }
       }
@@ -1172,22 +1170,20 @@ public class FSDirectory implements Closeable {
    * Verify child's name for fs limit.
    *
    * @param childName byte[] containing new child name
-   * @param parentPath Object either INode[] or String containing parent path
-   * @param pos int position of new child in path
+   * @param parentPath String containing parent path
    * @throws PathComponentTooLongException child's name is too long.
    */
-  void verifyMaxComponentLength(byte[] childName, Object parentPath,
-      int pos) throws PathComponentTooLongException {
+  void verifyMaxComponentLength(byte[] childName, String parentPath)
+      throws PathComponentTooLongException {
     if (maxComponentLength == 0) {
       return;
     }
 
     final int length = childName.length;
     if (length > maxComponentLength) {
-      final String p = parentPath instanceof INode[]?
-          getFullPathName((INode[])parentPath, pos - 1): (String)parentPath;
       final PathComponentTooLongException e = new PathComponentTooLongException(
-          maxComponentLength, length, p, DFSUtil.bytes2String(childName));
+          maxComponentLength, length, parentPath,
+          DFSUtil.bytes2String(childName));
       if (namesystem.isImageLoaded()) {
         throw e;
       } else {
@@ -1200,20 +1196,16 @@ public class FSDirectory implements Closeable {
   /**
    * Verify children size for fs limit.
    *
-   * @param pathComponents INode[] containing full path of inodes to new child
-   * @param pos int position of new child in pathComponents
    * @throws MaxDirectoryItemsExceededException too many children.
    */
-  void verifyMaxDirItems(INode[] pathComponents, int pos)
+  void verifyMaxDirItems(INodeDirectory parent, String parentPath)
       throws MaxDirectoryItemsExceededException {
-
-    final INodeDirectory parent = pathComponents[pos-1].asDirectory();
     final int count = parent.getChildrenList(Snapshot.CURRENT_STATE_ID).size();
     if (count >= maxDirItems) {
       final MaxDirectoryItemsExceededException e
           = new MaxDirectoryItemsExceededException(maxDirItems, count);
       if (namesystem.isImageLoaded()) {
-        e.setPathName(getFullPathName(pathComponents, pos - 1));
+        e.setPathName(parentPath);
         throw e;
       } else {
         // Do not throw if edits log is still being processed
@@ -1227,9 +1219,9 @@ public class FSDirectory implements Closeable {
    * The same as {@link #addChild(INodesInPath, int, INode, boolean)}
    * with pos = length - 1.
    */
-  private boolean addLastINode(INodesInPath inodesInPath,
-      INode inode, boolean checkQuota) throws QuotaExceededException {
-    final int pos = inodesInPath.getINodes().length - 1;
+  private boolean addLastINode(INodesInPath inodesInPath, INode inode,
+      boolean checkQuota) throws QuotaExceededException {
+    final int pos = inodesInPath.length() - 1;
     return addChild(inodesInPath, pos, inode, checkQuota);
   }
 
@@ -1241,18 +1233,18 @@ public class FSDirectory implements Closeable {
    */
   boolean addChild(INodesInPath iip, int pos, INode child, boolean checkQuota)
       throws QuotaExceededException {
-    final INode[] inodes = iip.getINodes();
     // Disallow creation of /.reserved. This may be created when loading
     // editlog/fsimage during upgrade since /.reserved was a valid name in older
     // release. This may also be called when a user tries to create a file
     // or directory /.reserved.
-    if (pos == 1 && inodes[0] == rootDir && isReservedName(child)) {
+    if (pos == 1 && iip.getINode(0) == rootDir && isReservedName(child)) {
       throw new HadoopIllegalArgumentException(
           "File name \"" + child.getLocalName() + "\" is reserved and cannot "
               + "be created. If this is during upgrade change the name of the "
               + "existing file or directory to another name before upgrading "
               + "to the new release.");
     }
+    final INodeDirectory parent = iip.getINode(pos-1).asDirectory();
     // The filesystem limits are not really quotas, so this check may appear
     // odd. It's because a rename operation deletes the src, tries to add
     // to the dest, if that fails, re-adds the src from whence it came.
@@ -1260,8 +1252,9 @@ public class FSDirectory implements Closeable {
     // original location becase a quota violation would cause the the item
     // to go "poof".  The fs limits must be bypassed for the same reason.
     if (checkQuota) {
-      verifyMaxComponentLength(child.getLocalNameBytes(), inodes, pos);
-      verifyMaxDirItems(inodes, pos);
+      final String parentPath = iip.getPath(pos - 1);
+      verifyMaxComponentLength(child.getLocalNameBytes(), parentPath);
+      verifyMaxDirItems(parent, parentPath);
     }
     // always verify inode name
     verifyINodeName(child.getLocalNameBytes());
@@ -1270,7 +1263,6 @@ public class FSDirectory implements Closeable {
     updateCount(iip, pos,
         counts.get(Quota.NAMESPACE), counts.get(Quota.DISKSPACE), checkQuota);
     boolean isRename = (child.getParent() != null);
-    final INodeDirectory parent = inodes[pos-1].asDirectory();
     boolean added;
     try {
       added = parent.addChild(child, true, iip.getLatestSnapshotId());
@@ -1283,7 +1275,6 @@ public class FSDirectory implements Closeable {
       updateCountNoQuotaCheck(iip, pos,
           -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
     } else {
-      iip.setINode(pos - 1, child.getParent());
       if (!isRename) {
         AclStorage.copyINodeDefaultAcl(child);
       }
@@ -1320,7 +1311,7 @@ public class FSDirectory implements Closeable {
     
     if (!last.isInLatestSnapshot(latestSnapshot)) {
       final Quota.Counts counts = last.computeQuotaUsage();
-      updateCountNoQuotaCheck(iip, iip.getINodes().length - 1,
+      updateCountNoQuotaCheck(iip, iip.length() - 1,
           -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
 
       if (INodeReference.tryRemoveReference(last) > 0) {
@@ -1715,10 +1706,10 @@ public class FSDirectory implements Closeable {
 
   static INode resolveLastINode(String src, INodesInPath iip)
       throws FileNotFoundException {
-    INode[] inodes = iip.getINodes();
-    INode inode = inodes[inodes.length - 1];
-    if (inode == null)
+    INode inode = iip.getLastINode();
+    if (inode == null) {
       throw new FileNotFoundException("cannot find " + src);
+    }
     return inode;
   }
 

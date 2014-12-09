@@ -447,6 +447,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7486. Consolidate XAttr-related implementation into a single class.
     (wheat9)
 
+    HDFS-7498. Simplify the logic in INodesInPath. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

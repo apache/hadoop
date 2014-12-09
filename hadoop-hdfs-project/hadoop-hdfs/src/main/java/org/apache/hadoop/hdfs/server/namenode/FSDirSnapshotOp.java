@@ -45,7 +45,7 @@ class FSDirSnapshotOp {
     }
     final byte[] bytes = DFSUtil.string2Bytes(snapshotName);
     fsd.verifyINodeName(bytes);
-    fsd.verifyMaxComponentLength(bytes, path, 0);
+    fsd.verifyMaxComponentLength(bytes, path);
   }
 
   /** Allow snapshot on a directory. */

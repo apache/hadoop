@@ -1861,9 +1861,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           doAccessTime = false;
         }
 
-        final INode[] inodes = iip.getINodes();
-        final INodeFile inode = INodeFile.valueOf(
-            inodes[inodes.length - 1], src);
+        final INodeFile inode = INodeFile.valueOf(iip.getLastINode(), src);
         if (isPermissionEnabled) {
           checkUnreadableBySuperuser(pc, inode, iip.getPathSnapshotId());
         }
@@ -8027,8 +8025,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.READ);
       src = FSDirectory.resolvePath(src, pathComponents, dir);
       final INodesInPath iip = dir.getINodesInPath(src, true);
-      INode[] inodes = iip.getINodes();
-      if (inodes[inodes.length - 1] == null) {
+      INode inode = iip.getLastINode();
+      if (inode == null) {
         throw new FileNotFoundException("Path not found");
       }
       if (isPermissionEnabled) {
