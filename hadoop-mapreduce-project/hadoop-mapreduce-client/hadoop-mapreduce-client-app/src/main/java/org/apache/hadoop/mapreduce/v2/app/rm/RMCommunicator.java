@@ -76,7 +76,6 @@ public abstract class RMCommunicator extends AbstractService
   protected EventHandler eventHandler;
   protected ApplicationMasterProtocol scheduler;
   private final ClientService clientService;
-  protected int lastResponseID;
   private Resource maxContainerCapability;
   protected Map<ApplicationAccessType, String> applicationACLs;
   private volatile long lastHeartbeatTime;

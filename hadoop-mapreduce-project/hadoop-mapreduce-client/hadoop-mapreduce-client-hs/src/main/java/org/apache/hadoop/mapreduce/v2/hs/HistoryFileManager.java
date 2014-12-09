@@ -848,7 +848,7 @@ public class HistoryFileManager extends AbstractService {
             }
           });
         }
-      } else if (old != null && !old.isMovePending()) {
+      } else if (!old.isMovePending()) {
         //This is a duplicate so just delete it
         if (LOG.isDebugEnabled()) {
           LOG.debug("Duplicate: deleting");
