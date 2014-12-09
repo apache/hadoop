@@ -44,9 +44,9 @@ import java.util.Set;
 
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.kerberos.KerberosKey;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
+import javax.security.auth.kerberos.KeyTab;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
 import javax.security.auth.login.LoginContext;
@@ -610,20 +610,6 @@ public class UserGroupInformation {
     user.setLogin(login);
   }
 
-  private static Class<?> KEY_TAB_CLASS = KerberosKey.class;
-  static {
-    try {
-      // We use KEY_TAB_CLASS to determine if the UGI is logged in from
-      // keytab. In JDK6 and JDK7, if useKeyTab and storeKey are specified
-      // in the Krb5LoginModule, then some number of KerberosKey objects
-      // are added to the Subject's private credentials. However, in JDK8,
-      // a KeyTab object is added instead. More details in HADOOP-10786.
-      KEY_TAB_CLASS = Class.forName("javax.security.auth.kerberos.KeyTab");
-    } catch (ClassNotFoundException cnfe) {
-      // Ignore. javax.security.auth.kerberos.KeyTab does not exist in JDK6.
-    }
-  }
-
   /**
    * Create a UserGroupInformation for the given subject.
    * This does not change the subject or acquire new credentials.
@@ -632,7 +618,7 @@ public class UserGroupInformation {
   UserGroupInformation(Subject subject) {
     this.subject = subject;
     this.user = subject.getPrincipals(User.class).iterator().next();
-    this.isKeytab = !subject.getPrivateCredentials(KEY_TAB_CLASS).isEmpty();
+    this.isKeytab = !subject.getPrivateCredentials(KeyTab.class).isEmpty();
     this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
   }
   
