@@ -41,8 +41,6 @@ public class Signer {
 
   /**
    * Returns a signed string.
-   * <p/>
-   * The signature '&s=SIGNATURE' is appended at the end of the string.
    *
    * @param str string to sign.
    *

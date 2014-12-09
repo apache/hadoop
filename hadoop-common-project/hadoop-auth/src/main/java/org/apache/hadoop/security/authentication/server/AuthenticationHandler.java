@@ -24,9 +24,7 @@ import java.util.Properties;
 
 /**
  * Interface for server authentication mechanisms.
- * <p/>
  * The {@link AuthenticationFilter} manages the lifecycle of the authentication handler.
- * <p/>
  * Implementations must be thread-safe as one instance is initialized and used for all requests.
  */
 public interface AuthenticationHandler {
@@ -35,7 +33,6 @@ public interface AuthenticationHandler {
 
   /**
    * Returns the authentication type of the authentication handler.
-   * <p/>
    * This should be a name that uniquely identifies the authentication type.
    * For example 'simple' or 'kerberos'.
    *
@@ -45,7 +42,7 @@ public interface AuthenticationHandler {
 
   /**
    * Initializes the authentication handler instance.
-   * <p/>
+   * <p>
    * This method is invoked by the {@link AuthenticationFilter#init} method.
    *
    * @param config configuration properties to initialize the handler.
@@ -56,21 +53,21 @@ public interface AuthenticationHandler {
 
   /**
    * Destroys the authentication handler instance.
-   * <p/>
+   * <p>
    * This method is invoked by the {@link AuthenticationFilter#destroy} method.
    */
   public void destroy();
 
   /**
    * Performs an authentication management operation.
-   * <p/>
+   * <p>
    * This is useful for handling operations like get/renew/cancel
    * delegation tokens which are being handled as operations of the
    * service end-point.
-   * <p/>
+   * <p>
    * If the method returns <code>TRUE</code> the request will continue normal
    * processing, this means the method has not produced any HTTP response.
-   * <p/>
+   * <p>
    * If the method returns <code>FALSE</code> the request will end, this means 
    * the method has produced the corresponding HTTP response.
    *
@@ -91,17 +88,17 @@ public interface AuthenticationHandler {
 
   /**
    * Performs an authentication step for the given HTTP client request.
-   * <p/>
+   * <p>
    * This method is invoked by the {@link AuthenticationFilter} only if the HTTP client request is
    * not yet authenticated.
-   * <p/>
+   * <p>
    * Depending upon the authentication mechanism being implemented, a particular HTTP client may
    * end up making a sequence of invocations before authentication is successfully established (this is
    * the case of Kerberos SPNEGO).
-   * <p/>
+   * <p>
    * This method must return an {@link AuthenticationToken} only if the the HTTP client request has
    * been successfully and fully authenticated.
-   * <p/>
+   * <p>
    * If the HTTP client request has not been completely authenticated, this method must take over
    * the corresponding HTTP response and it must return <code>null</code>.
    *
