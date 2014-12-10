@@ -558,6 +558,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7473. Document setting dfs.namenode.fs-limits.max-directory-items to 0
     is invalid. (Akira AJISAKA via cnauroth)
 
+    HDFS-7481. Add ACL indicator to the "Permission Denied" exception.
+    (vinayakumarb)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
