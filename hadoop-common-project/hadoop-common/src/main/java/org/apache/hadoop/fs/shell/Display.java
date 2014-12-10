@@ -197,11 +197,11 @@ class Display extends FsCommand {
 
       FileChecksum checksum = item.fs.getFileChecksum(item.path);
       if (checksum == null) {
-        out.printf("%s\tNONE\t\n", item.toString());
+        out.printf("%s\tNONE\t%n", item.toString());
       } else {
         String checksumString = StringUtils.byteToHexString(
             checksum.getBytes(), 0, checksum.getLength());
-        out.printf("%s\t%s\t%s\n",
+        out.printf("%s\t%s\t%s%n",
             item.toString(), checksum.getAlgorithmName(),
             checksumString);
       }
