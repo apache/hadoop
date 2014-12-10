@@ -84,11 +84,4 @@
 #    echo "ERROR: ${JAVA} is not executable." 1>&2
 #    exit 1
 #  fi
-#  JAVA_HEAP_MAX=-Xmx1g
-#  HADOOP_HEAPSIZE=${HADOOP_HEAPSIZE:-128}
-#
-#  # check envvars which might override default args
-#  if [[ -n "$HADOOP_HEAPSIZE" ]]; then
-#    JAVA_HEAP_MAX="-Xmx${HADOOP_HEAPSIZE}m"
-#  fi
 #}

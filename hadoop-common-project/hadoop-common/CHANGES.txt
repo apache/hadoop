@@ -11,6 +11,8 @@ Trunk (Unreleased)
 
     HADOOP-9902. Shell script rewrite (aw)
 
+    HADOOP-10950. rework heap management vars (John Smith via aw)
+
   NEW FEATURES
 
     HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.

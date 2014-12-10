@@ -117,8 +117,9 @@ case "${COMMAND}" in
     CLASS='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
     hadoop_debug "Append YARN_NODEMANAGER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_NODEMANAGER_OPTS}"
+    # Backwards compatibility
     if [[ -n "${YARN_NODEMANAGER_HEAPSIZE}" ]]; then
-      JAVA_HEAP_MAX="-Xmx${YARN_NODEMANAGER_HEAPSIZE}m"
+      HADOOP_HEAPSIZE_MAX="${YARN_NODEMANAGER_HEAPSIZE}"
     fi
   ;;
   proxyserver)
@@ -126,8 +127,9 @@ case "${COMMAND}" in
     CLASS='org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer'
     hadoop_debug "Append YARN_PROXYSERVER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_PROXYSERVER_OPTS}"
+    # Backwards compatibility
     if [[ -n "${YARN_PROXYSERVER_HEAPSIZE}" ]]; then
-      JAVA_HEAP_MAX="-Xmx${YARN_PROXYSERVER_HEAPSIZE}m"
+      HADOOP_HEAPSIZE_MAX="${YARN_PROXYSERVER_HEAPSIZE}"
     fi
   ;;
   queue)
@@ -140,8 +142,9 @@ case "${COMMAND}" in
     CLASS='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
     YARN_OPTS="${YARN_OPTS} ${YARN_RESOURCEMANAGER_OPTS}"
     hadoop_debug "Append YARN_RESOURCEMANAGER_OPTS onto YARN_OPTS"
+    # Backwards compatibility
     if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
-      JAVA_HEAP_MAX="-Xmx${YARN_RESOURCEMANAGER_HEAPSIZE}m"
+      HADOOP_HEAPSIZE_MAX="${YARN_RESOURCEMANAGER_HEAPSIZE}"
     fi
   ;;
   rmadmin)
@@ -154,8 +157,9 @@ case "${COMMAND}" in
     CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
     hadoop_debug "Append YARN_TIMELINESERVER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_TIMELINESERVER_OPTS}"
+    # Backwards compatibility
     if [[ -n "${YARN_TIMELINESERVER_HEAPSIZE}" ]]; then
-      JAVA_HEAP_MAX="-Xmx${YARN_TIMELINESERVER_HEAPSIZE}m"
+      HADOOP_HEAPSIZE_MAX="${YARN_TIMELINESERVER_HEAPSIZE}"
     fi
   ;;
   sharedcachemanager)
@@ -195,8 +199,6 @@ if [[  "${HADOOP_DAEMON_MODE}" != "default" ]]; then
   YARN_ROOT_LOGGER="${HADOOP_DAEMON_ROOT_LOGGER}"
   HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.log"
 fi
-
-hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 
 # Add YARN custom options to comamnd line in case someone actaully 
 # used these.
