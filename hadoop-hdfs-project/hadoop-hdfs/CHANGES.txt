@@ -561,6 +561,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7481. Add ACL indicator to the "Permission Denied" exception.
     (vinayakumarb)
 
+    HDFS-7502. Fix findbugs warning in hdfs-nfs project.
+    (Brandon Li via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
