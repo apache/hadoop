@@ -47,6 +47,12 @@ class FSPermissionChecker {
   /** @return a string for throwing {@link AccessControlException} */
   private String toAccessControlString(INode inode, int snapshotId,
       FsAction access, FsPermission mode) {
+    return toAccessControlString(inode, snapshotId, access, mode, false);
+  }
+
+  /** @return a string for throwing {@link AccessControlException} */
+  private String toAccessControlString(INode inode, int snapshotId, FsAction access,
+      FsPermission mode, boolean deniedFromAcl) {
     StringBuilder sb = new StringBuilder("Permission denied: ")
       .append("user=").append(user).append(", ")
       .append("access=").append(access).append(", ")
@@ -55,6 +61,9 @@ class FSPermissionChecker {
       .append(inode.getGroupName(snapshotId)).append(':')
       .append(inode.isDirectory() ? 'd' : '-')
       .append(mode);
+    if (deniedFromAcl) {
+      sb.append("+");
+    }
     return sb.toString();
   }
 
@@ -338,7 +347,7 @@ class FSPermissionChecker {
     }
 
     throw new AccessControlException(
-      toAccessControlString(inode, snapshotId, access, mode));
+      toAccessControlString(inode, snapshotId, access, mode, true));
   }
 
   /** Guarded by {@link FSNamesystem#readLock()} */
