@@ -307,6 +307,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7502. Fix findbugs warning in hdfs-nfs project.
     (Brandon Li via wheat9)
 
+    HDFS-5578. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags
+    in doc comments. (Andrew Purtell via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

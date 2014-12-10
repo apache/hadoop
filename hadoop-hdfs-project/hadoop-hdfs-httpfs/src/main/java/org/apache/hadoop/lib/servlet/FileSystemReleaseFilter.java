@@ -33,7 +33,7 @@ import java.io.IOException;
 /**
  * The <code>FileSystemReleaseFilter</code> releases back to the
  * {@link FileSystemAccess} service a <code>FileSystem</code> instance.
- * <p/>
+ * <p>
  * This filter is useful in situations where a servlet request
  * is streaming out HDFS data and the corresponding filesystem
  * instance have to be closed after the streaming completes.
@@ -44,7 +44,7 @@ public abstract class FileSystemReleaseFilter implements Filter {
 
   /**
    * Initializes the filter.
-   * <p/>
+   * <p>
    * This implementation is a NOP.
    *
    * @param filterConfig filter configuration.
@@ -83,7 +83,7 @@ public abstract class FileSystemReleaseFilter implements Filter {
 
   /**
    * Destroys the filter.
-   * <p/>
+   * <p>
    * This implementation is a NOP.
    */
   @Override
