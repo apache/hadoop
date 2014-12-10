@@ -43,7 +43,6 @@ public class HttpFSExceptionProvider extends ExceptionProvider {
 
   /**
    * Maps different exceptions thrown by HttpFSServer to HTTP status codes.
-   * <p/>
    * <ul>
    * <li>SecurityException : HTTP UNAUTHORIZED</li>
    * <li>FileNotFoundException : HTTP NOT_FOUND</li>

@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 
 /**
  * Utility methods to check preconditions.
- * <p/>
+ * <p>
  * Commonly used for method arguments preconditions.
  */
 @InterfaceAudience.Private
