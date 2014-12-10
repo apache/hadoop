@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -2048,6 +2049,19 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   // 4. Get cluster and node lobel, it should be present by recovering it
   @Test(timeout = 20000)
   public void testRMRestartRecoveringNodeLabelManager() throws Exception {
+    // Initial FS node label store root dir to a random tmp dir
+    File nodeLabelFsStoreDir =
+        new File("target", this.getClass().getSimpleName()
+            + "-testRMRestartRecoveringNodeLabelManager");
+    if (nodeLabelFsStoreDir.exists()) {
+      FileUtils.deleteDirectory(nodeLabelFsStoreDir);
+    }
+    nodeLabelFsStoreDir.deleteOnExit();
+    
+    String nodeLabelFsStoreDirURI = nodeLabelFsStoreDir.toURI().toString(); 
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR,
+        nodeLabelFsStoreDirURI);
+    
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
     MockRM rm1 = new MockRM(conf, memStore) {
