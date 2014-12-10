@@ -1154,3 +1154,15 @@ function hadoop_secure_daemon_handler
   esac
 }
 
+function hadoop_verify_user
+{
+  local command=$1
+  local uservar="HADOOP_${command}_USER"
+
+  if [[ -n ${!uservar} ]]; then
+    if [[ ${!uservar} !=  ${USER} ]]; then
+      hadoop_error "ERROR: ${command} can only be executed by ${!uservar}."
+      exit 1
+    fi
+  fi
+}

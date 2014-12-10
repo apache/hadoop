@@ -24,6 +24,8 @@ Trunk (Unreleased)
     (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
     Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
     Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
+
+    HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via aw)
     
   IMPROVEMENTS
 

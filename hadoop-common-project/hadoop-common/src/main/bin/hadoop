@@ -179,6 +179,8 @@ case ${COMMAND} in
   ;;
 esac
 
+hadoop_verify_user "${COMMAND}"
+
 # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
 hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
 HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
