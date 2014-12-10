@@ -57,7 +57,7 @@ class Ls extends FsCommand {
 		  
   
 
-  protected static final SimpleDateFormat dateFormat = 
+  protected final SimpleDateFormat dateFormat =
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
   protected int maxRepl = 3, maxLen = 10, maxOwner = 0, maxGroup = 0;

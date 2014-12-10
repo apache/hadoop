@@ -2619,9 +2619,6 @@ public abstract class FileSystem extends Configured implements Closeable {
   private static FileSystem createFileSystem(URI uri, Configuration conf
       ) throws IOException {
     Class<?> clazz = getFileSystemClass(uri.getScheme(), conf);
-    if (clazz == null) {
-      throw new IOException("No FileSystem for scheme: " + uri.getScheme());
-    }
     FileSystem fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
     fs.initialize(uri, conf);
     return fs;

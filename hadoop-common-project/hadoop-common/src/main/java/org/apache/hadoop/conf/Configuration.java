@@ -1481,11 +1481,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param pattern new value
    */
   public void setPattern(String name, Pattern pattern) {
-    if (null == pattern) {
-      set(name, null);
-    } else {
-      set(name, pattern.pattern());
-    }
+    assert pattern != null : "Pattern cannot be null";
+    set(name, pattern.pattern());
   }
 
   /**

@@ -168,12 +168,6 @@ public abstract class HAAdmin extends Configured implements Tool {
   private boolean isOtherTargetNodeActive(String targetNodeToActivate, boolean forceActive)
       throws IOException  {
     Collection<String> targetIds = getTargetIds(targetNodeToActivate);
-    if(targetIds == null) {
-      errOut.println("transitionToActive: No target node in the "
-          + "current configuration");
-      printUsage(errOut, "-transitionToActive");
-      return true;
-    }
     targetIds.remove(targetNodeToActivate);
     for(String targetId : targetIds) {
       HAServiceTarget target = resolveTarget(targetId);

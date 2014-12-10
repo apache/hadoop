@@ -72,14 +72,14 @@ public class ServletUtil {
       throw new IOException("Invalid request has no " + param + " parameter");
     }
     
-    return Long.valueOf(paramStr);
+    return Long.parseLong(paramStr);
   }
 
   public static final String HTML_TAIL = "<hr />\n"
-    + "<a href='http://hadoop.apache.org/core'>Hadoop</a>, " 
+    + "<a href='http://hadoop.apache.org/core'>Hadoop</a>, "
     + Calendar.getInstance().get(Calendar.YEAR) + ".\n"
     + "</body></html>";
-  
+
   /**
    * HTML footer to be added in the jsps.
    * @return the HTML footer.

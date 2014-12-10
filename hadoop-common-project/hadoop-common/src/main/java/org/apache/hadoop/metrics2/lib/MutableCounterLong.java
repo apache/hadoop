@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * A mutable long counter
  */
@@ -30,36 +32,35 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 @InterfaceStability.Evolving
 public class MutableCounterLong extends MutableCounter {
 
-  private volatile long value;
+  private AtomicLong value = new AtomicLong();
 
   MutableCounterLong(MetricsInfo info, long initValue) {
     super(info);
-    this.value = initValue;
+    this.value.set(initValue);
   }
 
   @Override
-  public synchronized void incr() {
-    ++value;
-    setChanged();
+  public void incr() {
+    incr(1);
   }
 
   /**
    * Increment the value by a delta
    * @param delta of the increment
    */
-  public synchronized void incr(long delta) {
-    value += delta;
+  public void incr(long delta) {
+    value.addAndGet(delta);
     setChanged();
   }
 
   public long value() {
-    return value;
+    return value.get();
   }
 
   @Override
   public void snapshot(MetricsRecordBuilder builder, boolean all) {
     if (all || changed()) {
-      builder.addCounter(info(), value);
+      builder.addCounter(info(), value());
       clearChanged();
     }
   }

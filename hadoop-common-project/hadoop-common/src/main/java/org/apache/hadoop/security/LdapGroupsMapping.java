@@ -367,10 +367,8 @@ public class LdapGroupsMapping
       return "";
     }
     
-    Reader reader = null;
-    try {
+    try (Reader reader = new FileReader(pwFile)) {
       StringBuilder password = new StringBuilder();
-      reader = new FileReader(pwFile);
       int c = reader.read();
       while (c > -1) {
         password.append((char)c);
@@ -379,8 +377,6 @@ public class LdapGroupsMapping
       return password.toString().trim();
     } catch (IOException ioe) {
       throw new RuntimeException("Could not read password file: " + pwFile, ioe);
-    } finally {
-      IOUtils.cleanup(LOG, reader);
     }
   }
 }
