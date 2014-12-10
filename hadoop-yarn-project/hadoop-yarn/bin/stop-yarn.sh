@@ -43,9 +43,11 @@ else
   exit 1
 fi
 
-# start resourceManager
+# stop resourceManager
+echo "Stopping resourcemanager"
 "${HADOOP_YARN_HOME}/bin/yarn" --config "${YARN_CONF_DIR}" --daemon stop resourcemanager
-# start nodeManager
+# stop nodeManager
+echo "Stopping nodemanagers"
 "${bin}/yarn-daemons.sh" --config "${YARN_CONF_DIR}"  stop nodemanager
-# start proxyserver
+# stop proxyserver
 #"${HADOOP_YARN_HOME}/bin/yarn" --config "${YARN_CONF_DIR}" --daemon stop proxyserver
