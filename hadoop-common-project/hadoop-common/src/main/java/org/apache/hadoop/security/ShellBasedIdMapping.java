@@ -181,7 +181,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
       final Integer key, final String value,
       final Integer ekey, final String evalue) {    
       LOG.warn("\n" + header + String.format(
-          "new entry (%d, %s), existing entry: (%d, %s).\n%s\n%s",
+          "new entry (%d, %s), existing entry: (%d, %s).%n%s%n%s",
           key, value, ekey, evalue,
           "The new entry is to be ignored for the following reason.",
           DUPLICATE_NAME_ID_DEBUG_INFO));

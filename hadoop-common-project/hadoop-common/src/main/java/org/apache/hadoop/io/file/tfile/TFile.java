@@ -2341,7 +2341,7 @@ public class TFile {
    *          A list of TFile paths.
    */
   public static void main(String[] args) {
-    System.out.printf("TFile Dumper (TFile %s, BCFile %s)\n", TFile.API_VERSION
+    System.out.printf("TFile Dumper (TFile %s, BCFile %s)%n", TFile.API_VERSION
         .toString(), BCFile.API_VERSION.toString());
     if (args.length == 0) {
       System.out
