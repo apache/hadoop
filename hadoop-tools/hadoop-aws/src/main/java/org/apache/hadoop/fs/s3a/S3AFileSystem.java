@@ -875,6 +875,8 @@ public class S3AFileSystem extends FileSystem {
           case ProgressEvent.PART_COMPLETED_EVENT_CODE:
             statistics.incrementWriteOps(1);
             break;
+          default:
+            break;
         }
       }
     };
@@ -932,6 +934,8 @@ public class S3AFileSystem extends FileSystem {
         switch (progressEvent.getEventCode()) {
           case ProgressEvent.PART_COMPLETED_EVENT_CODE:
             statistics.incrementWriteOps(1);
+            break;
+          default:
             break;
         }
       }
