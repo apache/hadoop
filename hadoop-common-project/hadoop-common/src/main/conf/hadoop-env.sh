@@ -64,8 +64,19 @@
 # path.
 # export HADOOP_CONF_DIR=$HADOOP_PREFIX/etc/hadoop
 
-# The maximum amount of heap to use, in MB. Default is 1024.
-# export HADOOP_HEAPSIZE=1024
+# The maximum amount of heap to use (Java -Xmx).  If no unit 
+# is provided, it will be converted to MB.  Daemons will 
+# prefer any Xmx setting in their respective _OPT variable.
+# There is no default; the JVM will autoscale based upon machine
+# memory size.
+# export HADOOP_HEAPSIZE_MAX=
+
+# The minimum amount of heap to use (Java -Xms).  If no unit 
+# is provided, it will be converted to MB.  Daemons will 
+# prefer any Xms setting in their respective _OPT variable.
+# There is no default; the JVM will autoscale based upon machine
+# memory size.
+# export HADOOP_HEAPSIZE_MIN=
 
 # Extra Java runtime options for all Hadoop commands. We don't support
 # IPv6 yet/still, so by default the preference is set to IPv4.

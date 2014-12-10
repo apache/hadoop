@@ -273,7 +273,6 @@ if [[ "${HADOOP_DAEMON_MODE}" != "default" ]]; then
   fi
 fi
 
-hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 hadoop_finalize
 
 if [[ -n "${supportdaemonization}" ]]; then
