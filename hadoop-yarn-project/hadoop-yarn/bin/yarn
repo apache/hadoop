@@ -184,6 +184,8 @@ case "${COMMAND}" in
   ;;
 esac
 
+hadoop_verify_user "${COMMAND}"
+
 # set HADOOP_OPTS to YARN_OPTS so that we can use
 # finalize, etc, without doing anything funky
 hadoop_debug "Resetting HADOOP_OPTS=YARN_OPTS"

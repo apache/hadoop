@@ -398,3 +398,9 @@ esac
 # via this special env var:
 # export HADOOP_ENABLE_BUILD_PATHS="true"
 
+#
+# To prevent accidents, shell commands be (superficially) locked
+# to only allow certain users to execute certain subcommands.
+#
+# For example, to limit who can execute the namenode command,
+# export HADOOP_namenode_USER=hdfs

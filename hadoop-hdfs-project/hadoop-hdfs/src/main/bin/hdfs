@@ -247,6 +247,8 @@ case ${COMMAND} in
   ;;
 esac
 
+hadoop_verify_user "${COMMAND}"
+
 if [[ -n "${secure_service}" ]]; then
   HADOOP_SECURE_USER="${secure_user}"
   hadoop_verify_secure_prereq
