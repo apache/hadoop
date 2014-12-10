@@ -144,13 +144,8 @@ public class JavaKeyStoreProvider extends KeyProvider {
           // Provided Password file does not exist
           throw new IOException("Password file does not exists");
         }
-        if (pwdFile != null) {
-          InputStream is = pwdFile.openStream();
-          try {
-            password = IOUtils.toString(is).trim().toCharArray();
-          } finally {
-            is.close();
-          }
+        try (InputStream is = pwdFile.openStream()) {
+          password = IOUtils.toString(is).trim().toCharArray();
         }
       }
     }

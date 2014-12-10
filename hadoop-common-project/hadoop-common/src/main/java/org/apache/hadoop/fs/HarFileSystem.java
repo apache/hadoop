@@ -220,12 +220,7 @@ public class HarFileSystem extends FileSystem {
       return FileSystem.getDefaultUri(conf);
     }
     String authority = rawURI.getAuthority();
-    if (authority == null) {
-      throw new IOException("URI: " + rawURI
-          + " is an invalid Har URI since authority==null."
-          + "  Expecting har://<scheme>-<host>/<path>.");
-    }
- 
+
     int i = authority.indexOf('-');
     if (i < 0) {
       throw new IOException("URI: " + rawURI
@@ -489,19 +484,12 @@ public class HarFileSystem extends FileSystem {
   }
   
   static class Store {
-    public Store() {
-      begin = end = startHash = endHash = 0;
-    }
-    public Store(long begin, long end, int startHash, int endHash) {
+    public Store(long begin, long end) {
       this.begin = begin;
       this.end = end;
-      this.startHash = startHash;
-      this.endHash = endHash;
     }
     public long begin;
     public long end;
-    public int startHash;
-    public int endHash;
   }
   
   /**
@@ -594,7 +582,7 @@ public class HarFileSystem extends FileSystem {
     public HarStatus(String harString) throws UnsupportedEncodingException {
       String[] splits = harString.split(" ");
       this.name = decodeFileName(splits[0]);
-      this.isDir = "dir".equals(splits[1]) ? true: false;
+      this.isDir = "dir".equals(splits[1]);
       // this is equal to "none" if its a directory
       this.partName = splits[2];
       this.startIndex = Long.parseLong(splits[3]);
@@ -1167,11 +1155,8 @@ public class HarFileSystem extends FileSystem {
           int b = lin.readLine(line);
           read += b;
           readStr = line.toString().split(" ");
-          int startHash = Integer.parseInt(readStr[0]);
-          int endHash  = Integer.parseInt(readStr[1]);
           stores.add(new Store(Long.parseLong(readStr[2]), 
-              Long.parseLong(readStr[3]), startHash,
-              endHash));
+              Long.parseLong(readStr[3])));
           line.clear();
         }
       } catch (IOException ioe) {

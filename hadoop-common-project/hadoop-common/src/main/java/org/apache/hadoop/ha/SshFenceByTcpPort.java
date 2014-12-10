@@ -310,6 +310,8 @@ public class SshFenceByTcpPort extends Configured
       case com.jcraft.jsch.Logger.FATAL:
         LOG.fatal(message);
         break;
+      default:
+        break;
       }
     }
   }

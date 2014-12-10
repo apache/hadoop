@@ -665,7 +665,7 @@ public abstract class Server {
         assert !running;
         readSelector.wakeup();
         try {
-          join();
+          super.join();
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
         }
@@ -1119,7 +1119,8 @@ public abstract class Server {
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
     private LinkedList<Call> responseQueue;
-    private volatile int rpcCount = 0; // number of outstanding rpcs
+    // number of outstanding rpcs
+    private AtomicInteger rpcCount = new AtomicInteger();
     private long lastContact;
     private int dataLength;
     private Socket socket;
@@ -1207,17 +1208,17 @@ public abstract class Server {
 
     /* Return true if the connection has no outstanding rpc */
     private boolean isIdle() {
-      return rpcCount == 0;
+      return rpcCount.get() == 0;
     }
     
     /* Decrement the outstanding RPC count */
     private void decRpcCount() {
-      rpcCount--;
+      rpcCount.decrementAndGet();
     }
     
     /* Increment the outstanding RPC count */
     private void incRpcCount() {
-      rpcCount++;
+      rpcCount.incrementAndGet();
     }
     
     private UserGroupInformation getAuthorizedUgi(String authorizedId)
@@ -2068,9 +2069,9 @@ public abstract class Server {
         LOG.debug("Ignoring socket shutdown exception", e);
       }
       if (channel.isOpen()) {
-        try {channel.close();} catch(Exception e) {}
+        IOUtils.cleanup(null, channel);
       }
-      try {socket.close();} catch(Exception e) {}
+      IOUtils.cleanup(null, socket);
     }
   }
 
