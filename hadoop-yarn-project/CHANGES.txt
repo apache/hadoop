@@ -13,6 +13,8 @@ Trunk - Unreleased
     YARN-2472. yarn-daemons.sh should jsut call yarn directly (Masatake Iwasaki
     via aw)
 
+    YARN-2437. start-yarn.sh/stop-yarn should give info (Varun Saxena via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
