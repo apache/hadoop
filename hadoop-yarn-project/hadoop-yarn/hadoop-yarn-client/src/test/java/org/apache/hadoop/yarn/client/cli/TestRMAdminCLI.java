@@ -468,9 +468,9 @@ public class TestRMAdminCLI {
   @Test
   public void testReplaceLabelsOnNode() throws Exception {
     // Successfully replace labels
-    dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x", "Y"));
     String[] args =
-        { "-replaceLabelsOnNode", "node1,x,y node2,y",
+        { "-replaceLabelsOnNode", "node1,x,Y node2,Y",
             "-directlyAccessNodeLabelStore" };
     assertEquals(0, rmAdminCLI.run(args));
     assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(

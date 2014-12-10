@@ -399,7 +399,7 @@ public class RMAdminCLI extends HAAdmin {
 
       for (int i = 1; i < splits.length; i++) {
         if (!splits[i].trim().isEmpty()) {
-          map.get(nodeId).add(splits[i].trim().toLowerCase());
+          map.get(nodeId).add(splits[i].trim());
         }
       }
     }
