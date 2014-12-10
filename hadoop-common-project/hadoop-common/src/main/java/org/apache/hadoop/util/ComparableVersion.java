@@ -195,6 +195,8 @@ public class ComparableVersion
                     case 'm':
                         value = "milestone";
                         break;
+                    default:
+                        break;
                 }
             }
             this.value = ALIASES.getProperty( value , value );
