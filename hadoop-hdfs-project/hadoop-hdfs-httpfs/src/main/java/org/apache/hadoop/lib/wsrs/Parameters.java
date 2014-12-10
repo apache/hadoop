@@ -26,7 +26,7 @@ import java.util.Map;
 
 /**
  * Class that contains all parsed JAX-RS parameters.
- * <p/>
+ * <p>
  * Instances are created by the {@link ParametersProvider} class.
  */
 @InterfaceAudience.Private
@@ -63,7 +63,7 @@ public class Parameters {
    *
    * @param name parameter name.
    * @param klass class of the parameter, used for value casting.
-   * @return List<V> the values of the parameter.
+   * @return the values of the parameter.
    */
   @SuppressWarnings("unchecked")
   public <V, T extends Param<V>> List<V> getValues(String name, Class<T> klass) {
