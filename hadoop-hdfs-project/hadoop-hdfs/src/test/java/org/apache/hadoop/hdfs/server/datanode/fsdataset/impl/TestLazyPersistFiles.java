@@ -304,37 +304,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
 
     // Make sure that there is a saved copy of the replica on persistent
     // storage.
-    final String bpid = cluster.getNamesystem().getBlockPoolId();
-    List<? extends FsVolumeSpi> volumes =
-        cluster.getDataNodes().get(0).getFSDataset().getVolumes();
-
-    final Set<Long> persistedBlockIds = new HashSet<Long>();
-
-    // Make sure at least one non-transient volume has a saved copy of
-    // the replica.
-    for (FsVolumeSpi v : volumes) {
-      if (v.isTransientStorage()) {
-        continue;
-      }
-
-      FsVolumeImpl volume = (FsVolumeImpl) v;
-      File lazyPersistDir = volume.getBlockPoolSlice(bpid).getLazypersistDir();
-
-      for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
-        File targetDir = DatanodeUtil.idToBlockDir(lazyPersistDir, lb.getBlock().getBlockId());
-        File blockFile = new File(targetDir, lb.getBlock().getBlockName());
-        if (blockFile.exists()) {
-          // Found a persisted copy for this block!
-          boolean added = persistedBlockIds.add(lb.getBlock().getBlockId());
-          assertThat(added, is(true));
-        } else {
-          LOG.error(blockFile + " not found");
-        }
-      }
-    }
-
-    // We should have found a persisted copy for each located block.
-    assertThat(persistedBlockIds.size(), is(locatedBlocks.getLocatedBlocks().size()));
+    ensureLazyPersistBlocksAreSaved(locatedBlocks);
   }
 
   /**

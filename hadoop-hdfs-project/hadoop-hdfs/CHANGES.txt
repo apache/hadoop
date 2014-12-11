@@ -310,6 +310,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-5578. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags
     in doc comments. (Andrew Purtell via wheat9)
 
+    HDFS-7475. Make TestLazyPersistFiles#testLazyPersistBlocksAreSaved
+    deterministic. (Xiaoyu Yao via Arpit Agarwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
