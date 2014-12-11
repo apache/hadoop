@@ -182,6 +182,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2924. Fixed RMAdminCLI to not convert node labels to lower case.
     (Wangda Tan via jianhe)
 
+    YARN-2917. Fixed potential deadlock when system.exit is called in AsyncDispatcher
+    (Rohith Sharmaks via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
