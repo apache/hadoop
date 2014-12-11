@@ -425,7 +425,7 @@ public class DataStorage extends Storage {
           LOG.warn(String.format(
             "I/O error attempting to unlock storage directory %s.",
             sd.getRoot()), e);
-          errorMsgBuilder.append(String.format("Failed to remove %s: %s\n",
+          errorMsgBuilder.append(String.format("Failed to remove %s: %s%n",
               sd.getRoot(), e.getMessage()));
         }
       }

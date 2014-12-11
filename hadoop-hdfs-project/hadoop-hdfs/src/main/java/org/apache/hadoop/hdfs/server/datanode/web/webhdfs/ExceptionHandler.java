@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
+import com.google.common.base.Charsets;
 import com.sun.jersey.api.ParamException;
 import com.sun.jersey.api.container.ContainerException;
 import io.netty.buffer.Unpooled;
@@ -39,7 +40,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.apache.hadoop.hdfs.server.datanode.web.webhdfs.WebHdfsHandler.APPLICATION_JSON;
+import static org.apache.hadoop.hdfs.server.datanode.web.webhdfs.WebHdfsHandler.APPLICATION_JSON_UTF8;
 
 class ExceptionHandler {
   static Log LOG = WebHdfsHandler.LOG;
@@ -82,11 +83,11 @@ class ExceptionHandler {
       s = INTERNAL_SERVER_ERROR;
     }
 
-    final byte[] js = JsonUtil.toJsonString(e).getBytes();
+    final byte[] js = JsonUtil.toJsonString(e).getBytes(Charsets.UTF_8);
     DefaultFullHttpResponse resp =
       new DefaultFullHttpResponse(HTTP_1_1, s, Unpooled.wrappedBuffer(js));
 
-    resp.headers().set(CONTENT_TYPE, APPLICATION_JSON);
+    resp.headers().set(CONTENT_TYPE, APPLICATION_JSON_UTF8);
     resp.headers().set(CONTENT_LENGTH, js.length);
     return resp;
   }

@@ -111,16 +111,14 @@ class FSImageLoader {
     }
 
     FsImageProto.FileSummary summary = FSImageUtil.loadSummary(file);
-    FileInputStream fin = null;
 
-    try {
+
+    try (FileInputStream fin = new FileInputStream(file.getFD())) {
       // Map to record INodeReference to the referred id
       ImmutableList<Long> refIdList = null;
       String[] stringTable = null;
       byte[][] inodes = null;
       Map<Long, long[]> dirmap = null;
-
-      fin = new FileInputStream(file.getFD());
 
       ArrayList<FsImageProto.FileSummary.Section> sections =
           Lists.newArrayList(summary.getSectionsList());
@@ -169,8 +167,6 @@ class FSImageLoader {
         }
       }
       return new FSImageLoader(stringTable, inodes, dirmap);
-    } finally {
-      IOUtils.cleanup(null, fin);
     }
   }
 

@@ -727,7 +727,7 @@ public abstract class Storage extends StorageInfo {
         file.close();
         throw e;
       }
-      if (res != null && !deletionHookAdded) {
+      if (!deletionHookAdded) {
         // If the file existed prior to our startup, we didn't
         // call deleteOnExit above. But since we successfully locked
         // the dir, we can take care of cleaning it up.

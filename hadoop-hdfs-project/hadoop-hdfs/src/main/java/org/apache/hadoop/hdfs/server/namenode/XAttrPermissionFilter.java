@@ -100,7 +100,7 @@ public class XAttrPermissionFilter {
   static List<XAttr> filterXAttrsForApi(FSPermissionChecker pc,
       List<XAttr> xAttrs, boolean isRawPath) {
     assert xAttrs != null : "xAttrs can not be null";
-    if (xAttrs == null || xAttrs.isEmpty()) {
+    if (xAttrs.isEmpty()) {
       return xAttrs;
     }
     
