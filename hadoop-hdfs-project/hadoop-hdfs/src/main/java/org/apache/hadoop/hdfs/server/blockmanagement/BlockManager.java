@@ -1776,6 +1776,8 @@ public class BlockManager {
     final long startTime = Time.now(); //after acquiring write lock
     final long endTime;
     DatanodeDescriptor node;
+    Collection<Block> invalidatedBlocks = null;
+
     try {
       node = datanodeManager.getDatanode(nodeID);
       if (node == null || !node.isAlive) {
@@ -1804,7 +1806,7 @@ public class BlockManager {
         // ordinary block reports.  This shortens restart times.
         processFirstBlockReport(storageInfo, newReport);
       } else {
-        processReport(storageInfo, newReport);
+        invalidatedBlocks = processReport(storageInfo, newReport);
       }
       
       // Now that we have an up-to-date block report, we know that any
@@ -1821,6 +1823,14 @@ public class BlockManager {
     } finally {
       endTime = Time.now();
       namesystem.writeUnlock();
+    }
+
+    if (invalidatedBlocks != null) {
+      for (Block b : invalidatedBlocks) {
+        blockLog.info("BLOCK* processReport: " + b + " on " + node
+                          + " size " + b.getNumBytes()
+                          + " does not belong to any file");
+      }
     }
 
     // Log the block report processing stats from Namenode perspective
@@ -1866,8 +1876,9 @@ public class BlockManager {
     }
   }
   
-  private void processReport(final DatanodeStorageInfo storageInfo,
-                             final BlockListAsLongs report) throws IOException {
+  private Collection<Block> processReport(
+      final DatanodeStorageInfo storageInfo,
+      final BlockListAsLongs report) throws IOException {
     // Normal case:
     // Modify the (block-->datanode) map, according to the difference
     // between the old and new block report.
@@ -1898,14 +1909,13 @@ public class BlockManager {
           + " of " + numBlocksLogged + " reported.");
     }
     for (Block b : toInvalidate) {
-      blockLog.info("BLOCK* processReport: "
-          + b + " on " + node + " size " + b.getNumBytes()
-          + " does not belong to any file");
       addToInvalidates(b, node);
     }
     for (BlockToMarkCorrupt b : toCorrupt) {
       markBlockAsCorrupt(b, storageInfo, node);
     }
+
+    return toInvalidate;
   }
 
   /**
