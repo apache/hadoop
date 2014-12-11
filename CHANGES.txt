@@ -256,6 +256,9 @@ Release 1.3.0 - unreleased
 
     MAPREDUCE-6170. TestUlimit failure on JDK8. (bc Wong via kasha)
 
+    HDFS-7503. Namenode restart after large deletions can cause slow
+    processReport (Arpit Agarwal)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES

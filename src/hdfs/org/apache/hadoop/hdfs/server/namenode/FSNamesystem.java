@@ -3934,9 +3934,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * The given node is reporting all its blocks.  Use this info to 
    * update the (machine-->blocklist) and (block-->machinelist) tables.
    */
-  public synchronized void processReport(DatanodeID nodeID, 
-                                         BlockListAsLongs newReport
-                                        ) throws IOException {
+  public synchronized Collection<Block> processReport(
+      DatanodeID nodeID,
+      BlockListAsLongs newReport) throws IOException {
     long startTime = now();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* processReport: "
@@ -3961,7 +3961,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       NameNode.stateChangeLog.info("BLOCK* processReport: "
           + "discarded non-initial block report from " + nodeID.getName()
           + " because namenode still in startup phase");
-      return;
+      return null;
     }
 
     //
@@ -3980,9 +3980,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       addStoredBlock(b, node, null);
     }
     for (Block b : toInvalidate) {
-      NameNode.stateChangeLog.info("BLOCK* processReport: " 
-          + b + " on " + node.getName() + " size " + b.getNumBytes()
-          + " does not belong to any file");
       addToInvalidates(b, node);
     }
     long endTime = now();
@@ -3991,6 +3988,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         + nodeID.getName() + ", blocks: " + newReport.getNumberOfBlocks()
         + ", processing time: " + (endTime - startTime) + " msecs");
     node.processedBlockReport();
+    return toInvalidate;
   }
 
   /**

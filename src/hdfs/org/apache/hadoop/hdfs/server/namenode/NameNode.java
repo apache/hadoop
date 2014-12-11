@@ -1130,7 +1130,17 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
            +"from "+nodeReg.getName()+" "+blist.getNumberOfBlocks() +" blocks");
 
-    namesystem.processReport(nodeReg, blist);
+    Collection<Block> blocksInvalidated =
+        namesystem.processReport(nodeReg, blist);
+
+    final String node = nodeReg.toString();
+    if (blocksInvalidated != null) {
+      for (Block b : blocksInvalidated) {
+        stateChangeLog.info("BLOCK* processReport: "
+                                + b + " on " + node + " size " + b.getNumBytes()
+                                + " does not belong to any file");
+      }
+    }
     if (getFSImage().isUpgradeFinalized())
       return DatanodeCommand.FINALIZE;
     return null;
