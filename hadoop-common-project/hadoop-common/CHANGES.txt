@@ -26,6 +26,8 @@ Trunk (Unreleased)
     Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
 
     HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via aw)
+
+    HADOOP-11353. Add support for .hadooprc (aw)
     
   IMPROVEMENTS
 

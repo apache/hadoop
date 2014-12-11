@@ -113,6 +113,17 @@ function hadoop_exec_userfuncs
   fi
 }
 
+function hadoop_exec_hadooprc
+{
+  # Read the user's settings.  This provides for users to override 
+  # and/or append hadoop-env.sh. It is not meant as a complete system override.
+
+  if [[ -f "${HOME}/.hadooprc" ]]; then
+    hadoop_debug "Applying the user's .hadooprc"
+    . "${HOME}/.hadooprc"
+  fi
+}
+
 function hadoop_basic_init
 {
   # Some of these are also set in hadoop-env.sh.
