@@ -300,7 +300,7 @@ public class FileJournalManager implements JournalManager {
             .matcher(name);
         if (staleInprogressEditsMatch.matches()) {
           try {
-            long startTxId = Long.valueOf(staleInprogressEditsMatch.group(1));
+            long startTxId = Long.parseLong(staleInprogressEditsMatch.group(1));
             ret.add(new EditLogFile(f, startTxId, HdfsConstants.INVALID_TXID,
                 true));
             continue;

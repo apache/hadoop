@@ -29,6 +29,8 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -836,9 +838,8 @@ class BlockReceiver implements Closeable {
               LOG.warn("Failed to delete restart meta file: " +
                   restartMeta.getPath());
             }
-            FileWriter out = null;
-            try {
-              out = new FileWriter(restartMeta);
+            try (Writer out = new OutputStreamWriter(
+                new FileOutputStream(restartMeta), "UTF-8")) {
               // write out the current time.
               out.write(Long.toString(Time.now() + restartBudget));
               out.flush();

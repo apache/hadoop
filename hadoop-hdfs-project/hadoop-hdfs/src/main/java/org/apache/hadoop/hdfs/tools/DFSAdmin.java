@@ -1476,7 +1476,7 @@ public class DFSAdmin extends FsShell {
           } else {
             out.print("FAILED: ");
           }
-          out.printf("Change property %s\n\tFrom: \"%s\"\n\tTo: \"%s\"\n",
+          out.printf("Change property %s%n\tFrom: \"%s\"%n\tTo: \"%s\"%n",
               result.getKey().prop, result.getKey().oldVal,
               result.getKey().newVal);
           if (result.getValue().isPresent()) {

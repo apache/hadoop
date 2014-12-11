@@ -433,7 +433,6 @@ class FSDirRenameOp {
         } else {
           fsd.addLastINodeNoQuotaCheck(dstIIP, removedDst);
         }
-        assert removedDst != null;
         if (removedDst.isReference()) {
           final INodeReference removedDstRef = removedDst.asReference();
           final INodeReference.WithCount wc = (INodeReference.WithCount)

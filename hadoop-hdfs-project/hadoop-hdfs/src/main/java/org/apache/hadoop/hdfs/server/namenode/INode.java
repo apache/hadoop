@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.charset.Charset;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -769,8 +770,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   @VisibleForTesting
   public final void dumpTreeRecursively(PrintStream out) {
-    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder(),
-        Snapshot.CURRENT_STATE_ID);
+    out.println(dumpTreeRecursively().toString());
   }
 
   /**

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
@@ -50,7 +51,7 @@ class FSDirStatAndListingOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory
         .getPathComponentsForReservedPath(srcArg);
-    final String startAfterString = new String(startAfter);
+    final String startAfterString = new String(startAfter, Charsets.UTF_8);
     final String src = fsd.resolvePath(pc, srcArg, pathComponents);
     final INodesInPath iip = fsd.getINodesInPath(src, true);
 
@@ -195,8 +196,7 @@ class FSDirStatAndListingOp {
             cur.getLocalStoragePolicyID():
             BlockStoragePolicySuite.ID_UNSPECIFIED;
         listing[i] = createFileStatus(fsd, cur.getLocalNameBytes(), cur,
-            needLocation, fsd.getStoragePolicyID(curPolicy,
-                parentStoragePolicy), snapshot, isRawPath, inodesInPath);
+            needLocation, fsd.getStoragePolicyID(curPolicy, parentStoragePolicy), snapshot, isRawPath, inodesInPath);
         listingCnt++;
         if (needLocation) {
             // Once we  hit lsLimit locations, stop.

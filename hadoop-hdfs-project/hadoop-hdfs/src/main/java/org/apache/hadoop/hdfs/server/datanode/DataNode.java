@@ -580,7 +580,8 @@ public class DataNode extends ReconfigurableBase
           try {
             IOException ioe = ioExceptionFuture.get();
             if (ioe != null) {
-              errorMessageBuilder.append(String.format("FAILED TO ADD: %s: %s\n",
+              errorMessageBuilder.append(
+                  String.format("FAILED TO ADD: %s: %s%n",
                   volume, ioe.getMessage()));
               LOG.error("Failed to add volume: " + volume, ioe);
             } else {
@@ -588,8 +589,9 @@ public class DataNode extends ReconfigurableBase
               LOG.info("Successfully added volume: " + volume);
             }
           } catch (Exception e) {
-            errorMessageBuilder.append(String.format("FAILED to ADD: %s: %s\n",
-                volume, e.getMessage()));
+            errorMessageBuilder.append(
+                String.format("FAILED to ADD: %s: %s%n", volume,
+                              e.toString()));
           }
         }
       }
