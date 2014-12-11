@@ -42,7 +42,8 @@ public class Nfs3 extends Nfs3Base {
   
   public Nfs3(NfsConfiguration conf, DatagramSocket registrationSocket,
       boolean allowInsecurePorts) throws IOException {
-    super(new RpcProgramNfs3(conf, registrationSocket, allowInsecurePorts), conf);
+    super(RpcProgramNfs3.createRpcProgramNfs3(conf, registrationSocket,
+        allowInsecurePorts), conf);
     mountd = new Mountd(conf, registrationSocket, allowInsecurePorts);
   }
 

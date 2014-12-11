@@ -48,6 +48,8 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.nfs.AccessPrivilege;
 import org.apache.hadoop.nfs.NfsExports;
 import org.apache.hadoop.nfs.NfsFileType;
@@ -164,6 +166,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   private final RpcCallCache rpcCallCache;
   private JvmPauseMonitor pauseMonitor;
   private Nfs3HttpServer infoServer = null;
+  static Nfs3Metrics metrics;
 
   public RpcProgramNfs3(NfsConfiguration config, DatagramSocket registrationSocket,
       boolean allowInsecurePorts) throws IOException {
@@ -209,6 +212,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     infoServer = new Nfs3HttpServer(config);
   }
 
+  public static RpcProgramNfs3 createRpcProgramNfs3(NfsConfiguration config,
+      DatagramSocket registrationSocket, boolean allowInsecurePorts)
+      throws IOException {
+    DefaultMetricsSystem.initialize("Nfs3");
+    String displayName = DNS.getDefaultHost("default", "default")
+        + config.getInt(NfsConfigKeys.DFS_NFS_SERVER_PORT_KEY,
+            NfsConfigKeys.DFS_NFS_SERVER_PORT_DEFAULT);
+    metrics = Nfs3Metrics.create(config, displayName);
+    return new RpcProgramNfs3(config, registrationSocket, allowInsecurePorts);
+  }
+  
   private void clearDirectory(String writeDumpDir) throws IOException {
     File dumpDir = new File(writeDumpDir);
     if (dumpDir.exists()) {
@@ -225,10 +239,11 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   }
   
   @Override
-  public void startDaemons() {    
+  public void startDaemons() {
     if (pauseMonitor == null) {
       pauseMonitor = new JvmPauseMonitor(config);
       pauseMonitor.start();
+      metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
     }
     writeManager.startAsyncDataSerivce();
     try {
@@ -770,6 +785,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
         try {
           readCount = fis.read(offset, readbuffer, 0, count);
+          metrics.incrBytesRead(readCount);
         } catch (IOException e) {
           // TODO: A cleaner way is to throw a new type of exception
           // which requires incompatible changes.
@@ -2049,8 +2065,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           : (request.getOffset() + request.getCount());
 
       // Insert commit as an async request
-      writeManager.handleCommit(dfsClient, handle, commitOffset,
-          channel, xid, preOpAttr);
+      writeManager.handleCommit(dfsClient, handle, commitOffset, channel, xid,
+          preOpAttr);
       return null;
     } catch (IOException e) {
       LOG.warn("Exception ", e);
@@ -2132,20 +2148,29 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         }
       }
     }
-
+    
+    // Since write and commit could be async, they use their own startTime and
+    // only record success requests.
+    final long startTime = System.nanoTime();
+    
     NFS3Response response = null;
     if (nfsproc3 == NFSPROC3.NULL) {
       response = nullProcedure();
     } else if (nfsproc3 == NFSPROC3.GETATTR) {
       response = getattr(xdr, info);
+      metrics.addGetattr(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.SETATTR) {
       response = setattr(xdr, info);
+      metrics.addSetattr(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.LOOKUP) {
       response = lookup(xdr, info);
+      metrics.addLookup(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.ACCESS) {
       response = access(xdr, info);
+      metrics.addAccess(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.READLINK) {
       response = readlink(xdr, info);
+      metrics.addReadlink(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.READ) {
       if (LOG.isDebugEnabled()) {
           LOG.debug(Nfs3Utils.READ_RPC_START + xid);
@@ -2154,6 +2179,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       if (LOG.isDebugEnabled() && (nfsproc3 == NFSPROC3.READ)) {
         LOG.debug(Nfs3Utils.READ_RPC_END + xid);
       }
+      metrics.addRead(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.WRITE) {
       if (LOG.isDebugEnabled()) {
           LOG.debug(Nfs3Utils.WRITE_RPC_START + xid);
@@ -2162,30 +2188,43 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       // Write end debug trace is in Nfs3Utils.writeChannel
     } else if (nfsproc3 == NFSPROC3.CREATE) {
       response = create(xdr, info);
+      metrics.addCreate(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.MKDIR) {
       response = mkdir(xdr, info);
+      metrics.addMkdir(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.SYMLINK) {
       response = symlink(xdr, info);
+      metrics.addSymlink(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.MKNOD) {
       response = mknod(xdr, info);
+      metrics.addMknod(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.REMOVE) {
       response = remove(xdr, info);
+      metrics.addRemove(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.RMDIR) {
       response = rmdir(xdr, info);
+      metrics.addRmdir(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.RENAME) {
       response = rename(xdr, info);
+      metrics.addRename(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.LINK) {
       response = link(xdr, info);
+      metrics.addLink(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.READDIR) {
       response = readdir(xdr, info);
+      metrics.addReaddir(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.READDIRPLUS) {
       response = readdirplus(xdr, info);
+      metrics.addReaddirplus(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.FSSTAT) {
       response = fsstat(xdr, info);
+      metrics.addFsstat(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.FSINFO) {
       response = fsinfo(xdr, info);
+      metrics.addFsinfo(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.PATHCONF) {
-      response = pathconf(xdr,info);
+      response = pathconf(xdr, info);
+      metrics.addPathconf(Nfs3Utils.getElapsedTime(startTime));
     } else if (nfsproc3 == NFSPROC3.COMMIT) {
       response = commit(xdr, info);
     } else {

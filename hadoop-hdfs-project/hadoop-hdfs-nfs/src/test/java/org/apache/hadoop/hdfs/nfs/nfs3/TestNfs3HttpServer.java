@@ -48,6 +48,10 @@ public class TestNfs3HttpServer {
         HttpConfig.Policy.HTTP_AND_HTTPS.name());
     conf.set(NfsConfigKeys.NFS_HTTP_ADDRESS_KEY, "localhost:0");
     conf.set(NfsConfigKeys.NFS_HTTPS_ADDRESS_KEY, "localhost:0");
+    // Use emphral port in case tests are running in parallel
+    conf.setInt(NfsConfigKeys.DFS_NFS_SERVER_PORT_KEY, 0);
+    conf.setInt(NfsConfigKeys.DFS_NFS_MOUNTD_PORT_KEY, 0);
+    
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     base.mkdirs();
