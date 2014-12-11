@@ -87,7 +87,7 @@ public class TestApplicationClassLoader {
     assertEquals(jarFile.toURI().toURL(), urls[2]);
     // nofile should be ignored
   }
-  
+
   @Test
   public void testIsSystemClass() {
     testIsSystemClassInternal("");
@@ -112,8 +112,12 @@ public class TestApplicationClassLoader {
         classes("-org.example.Foo,org.example.")));
     assertTrue(isSystemClass("org.example.Bar" + nestedClass,
         classes("-org.example.Foo.,org.example.")));
+    assertFalse(isSystemClass("org.example.Foo" + nestedClass,
+        classes("org.example.,-org.example.Foo")));
+    assertFalse(isSystemClass("org.example.Foo" + nestedClass,
+        classes("org.example.Foo,-org.example.Foo")));
   }
-  
+
   private List<String> classes(String classes) {
     return Lists.newArrayList(Splitter.on(',').split(classes));
   }

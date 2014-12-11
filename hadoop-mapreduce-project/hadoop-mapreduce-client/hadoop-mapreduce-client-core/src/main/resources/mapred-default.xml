@@ -1363,10 +1363,23 @@
    <value></value>
   <description>Used to override the default definition of the system classes for
     the job classloader. The system classes are a comma-separated list of
-    classes that should be loaded from the system classpath, not the
-    user-supplied JARs, when mapreduce.job.classloader is enabled. Names ending
-    in '.' (period) are treated as package names, and names starting with a '-'
-    are treated as negative matches.
+    patterns that indicate whether to load a class from the system classpath,
+    instead from the user-supplied JARs, when mapreduce.job.classloader is
+    enabled.
+
+    A positive pattern is defined as:
+        1. A single class name 'C' that matches 'C' and transitively all nested
+            classes 'C$*' defined in C;
+        2. A package name ending with a '.' (e.g., "com.example.") that matches
+            all classes from that package.
+    A negative pattern is defined by a '-' in front of a positive pattern
+    (e.g., "-com.example.").
+
+    A class is considered a system class if and only if it matches one of the
+    positive patterns and none of the negative ones. More formally:
+    A class is a member of the inclusion set I if it matches one of the positive
+    patterns. A class is a member of the exclusion set E if it matches one of
+    the negative patterns. The set of system classes S = I \ E.
   </description>
 </property>
 
