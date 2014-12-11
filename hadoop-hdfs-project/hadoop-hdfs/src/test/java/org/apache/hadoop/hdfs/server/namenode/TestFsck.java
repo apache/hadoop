@@ -996,9 +996,9 @@ public class TestFsck {
     DatanodeManager dnManager = mock(DatanodeManager.class);
     
     when(namenode.getNamesystem()).thenReturn(fsName);
-    when(fsName.getBlockLocations(anyString(), anyLong(), anyLong(),
-        anyBoolean(), anyBoolean(), anyBoolean())).
-        thenThrow(new FileNotFoundException()) ;
+    when(fsName.getBlockLocations(
+        anyString(), anyLong(), anyLong(), anyBoolean(), anyBoolean()))
+        .thenThrow(new FileNotFoundException());
     when(fsName.getBlockManager()).thenReturn(blockManager);
     when(blockManager.getDatanodeManager()).thenReturn(dnManager);
 
