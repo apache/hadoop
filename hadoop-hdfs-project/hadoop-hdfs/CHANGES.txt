@@ -16,6 +16,8 @@ Release 2.7.0 - UNRELEASED
     (Maysam Yabandeh via wang)
 
     HDFS-7424. Add web UI for NFS gateway (brandonli)
+    
+    HDFS-7449. Add metrics to NFS gateway (brandonli)
 
   IMPROVEMENTS
 
