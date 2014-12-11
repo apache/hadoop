@@ -129,9 +129,8 @@ class OpenFileCtx {
     private final Channel channel;
     private final int xid;
     private final Nfs3FileAttributes preOpAttr;
-
-    // Remember time for debug purpose
-    private final long startTime;
+    
+    public final long startTime;
 
     long getOffset() {
       return offset;
@@ -159,7 +158,7 @@ class OpenFileCtx {
       this.channel = channel;
       this.xid = xid;
       this.preOpAttr = preOpAttr;
-      this.startTime = Time.monotonicNow();
+      this.startTime = System.nanoTime();
     }
 
     @Override
@@ -687,6 +686,8 @@ class OpenFileCtx {
         WccData fileWcc = new WccData(preOpAttr, latestAttr);
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
+        RpcProgramNfs3.metrics.addWrite(Nfs3Utils
+            .getElapsedTime(writeCtx.startTime));
         Nfs3Utils
             .writeChannel(channel, response.serialize(new XDR(),
                 xid, new VerifierNone()), xid);
@@ -1131,14 +1132,16 @@ class OpenFileCtx {
 
       COMMIT3Response response = new COMMIT3Response(status, wccData,
           Nfs3Constant.WRITE_COMMIT_VERF);
+      RpcProgramNfs3.metrics.addCommit(Nfs3Utils
+          .getElapsedTime(commit.startTime));
       Nfs3Utils.writeChannelCommit(commit.getChannel(), response
           .serialize(new XDR(), commit.getXid(),
               new VerifierNone()), commit.getXid());
       
       if (LOG.isDebugEnabled()) {
         LOG.debug("FileId: " + latestAttr.getFileId() + " Service time:"
-            + (Time.monotonicNow() - commit.getStartTime())
-            + "ms. Sent response for commit:" + commit);
+            + Nfs3Utils.getElapsedTime(commit.startTime)
+            + "ns. Sent response for commit:" + commit);
       }
       entry = pendingCommits.firstEntry();
     }
@@ -1162,6 +1165,7 @@ class OpenFileCtx {
       // The write is not protected by lock. asyncState is used to make sure
       // there is one thread doing write back at any time    
       writeCtx.writeData(fos);
+      RpcProgramNfs3.metrics.incrBytesWritten(writeCtx.getCount());
       
       long flushedOffset = getFlushedOffset();
       if (flushedOffset != (offset + count)) {
@@ -1213,6 +1217,7 @@ class OpenFileCtx {
         }
         WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
             fileWcc, count, stableHow, Nfs3Constant.WRITE_COMMIT_VERF);
+        RpcProgramNfs3.metrics.addWrite(Nfs3Utils.getElapsedTime(writeCtx.startTime));
         Nfs3Utils.writeChannel(channel, response.serialize(
             new XDR(), xid, new VerifierNone()), xid);
       }

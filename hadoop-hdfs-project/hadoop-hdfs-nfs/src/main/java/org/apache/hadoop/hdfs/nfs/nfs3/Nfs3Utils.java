@@ -213,4 +213,8 @@ public class Nfs3Utils {
     data[7] = (byte) (v >>> 0);
     return data;
   }
+  
+  public static long getElapsedTime(long startTimeNano) {
+    return System.nanoTime() - startTimeNano;
+  }
 }

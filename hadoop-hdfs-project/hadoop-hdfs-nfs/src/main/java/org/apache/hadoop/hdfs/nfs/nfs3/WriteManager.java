@@ -224,6 +224,7 @@ public class WriteManager {
       status = Nfs3Status.NFS3_OK;
 
     } else {
+      // commit request triggered by read won't create pending comment obj
       COMMIT_STATUS ret = openFileCtx.checkCommit(dfsClient, commitOffset,
           null, 0, null, true);
       switch (ret) {
@@ -260,6 +261,7 @@ public class WriteManager {
   
   void handleCommit(DFSClient dfsClient, FileHandle fileHandle,
       long commitOffset, Channel channel, int xid, Nfs3FileAttributes preOpAttr) {
+    long startTime = System.nanoTime();
     int status;
     OpenFileCtx openFileCtx = fileContextCache.get(fileHandle);
 
@@ -306,9 +308,9 @@ public class WriteManager {
     WccData fileWcc = new WccData(Nfs3Utils.getWccAttr(preOpAttr), postOpAttr);
     COMMIT3Response response = new COMMIT3Response(status, fileWcc,
         Nfs3Constant.WRITE_COMMIT_VERF);
+    RpcProgramNfs3.metrics.addCommit(Nfs3Utils.getElapsedTime(startTime));
     Nfs3Utils.writeChannelCommit(channel,
-        response.serialize(new XDR(), xid, new VerifierNone()),
-        xid);
+        response.serialize(new XDR(), xid, new VerifierNone()), xid);
   }
 
   /**
