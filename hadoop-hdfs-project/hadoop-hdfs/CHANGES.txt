@@ -593,6 +593,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7489. Incorrect locking in FsVolumeList#checkDirs can hang datanodes
     (Noah Lorang via Colin P. McCabe)
 
+    HDFS-7503. Namenode restart after large deletions can cause slow
+    processReport. (Arpit Agarwal)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
