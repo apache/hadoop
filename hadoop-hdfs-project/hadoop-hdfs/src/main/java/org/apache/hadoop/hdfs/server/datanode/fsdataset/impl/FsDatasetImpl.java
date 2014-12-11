@@ -770,7 +770,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final byte[] crcs = new byte[checksum.getChecksumSize(data.length)];
 
     DataOutputStream metaOut = null;
-    InputStream dataIn = null;
     try {
       File parentFile = dstMeta.getParentFile();
       if (parentFile != null) {
@@ -783,22 +782,23 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           new FileOutputStream(dstMeta), HdfsConstants.SMALL_BUFFER_SIZE));
       BlockMetadataHeader.writeHeader(metaOut, checksum);
 
-      dataIn = isNativeIOAvailable ?
-          NativeIO.getShareDeleteFileInputStream(blockFile) :
-          new FileInputStream(blockFile);
-
       int offset = 0;
-      for(int n; (n = dataIn.read(data, offset, data.length - offset)) != -1; ) {
-        if (n > 0) {
-          n += offset;
-          offset = n % checksum.getBytesPerChecksum();
-          final int length = n - offset;
+      try (InputStream dataIn = isNativeIOAvailable ?
+          NativeIO.getShareDeleteFileInputStream(blockFile) :
+          new FileInputStream(blockFile)) {
 
-          if (length > 0) {
-            checksum.calculateChunkedSums(data, 0, length, crcs, 0);
-            metaOut.write(crcs, 0, checksum.getChecksumSize(length));
+        for (int n; (n = dataIn.read(data, offset, data.length - offset)) != -1; ) {
+          if (n > 0) {
+            n += offset;
+            offset = n % checksum.getBytesPerChecksum();
+            final int length = n - offset;
 
-            System.arraycopy(data, length, data, 0, offset);
+            if (length > 0) {
+              checksum.calculateChunkedSums(data, 0, length, crcs, 0);
+              metaOut.write(crcs, 0, checksum.getChecksumSize(length));
+
+              System.arraycopy(data, length, data, 0, offset);
+            }
           }
         }
       }
@@ -807,7 +807,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       checksum.calculateChunkedSums(data, 0, offset, crcs, 0);
       metaOut.write(crcs, 0, 4);
     } finally {
-      IOUtils.cleanup(LOG, dataIn, metaOut);
+      IOUtils.cleanup(LOG, metaOut);
     }
   }
 
@@ -1600,11 +1600,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
         f = info.getBlockFile();
         v = (FsVolumeImpl)info.getVolume();
-        if (f == null) {
-          errors.add("Failed to delete replica " + invalidBlks[i]
-              +  ": File not found, volume=" + v);
-          continue;
-        }
         if (v == null) {
           errors.add("Failed to delete replica " + invalidBlks[i]
               +  ". No volume for this replica, file=" + f);

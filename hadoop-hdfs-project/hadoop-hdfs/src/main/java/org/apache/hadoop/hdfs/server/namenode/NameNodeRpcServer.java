@@ -969,10 +969,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
   throws IOException {
     DatanodeInfo results[] = namesystem.datanodeReport(type);
-    if (results == null ) {
-      throw new IOException("Failed to get datanode report for " + type
-          + " datanodes.");
-    }
     return results;
   }
     
@@ -980,10 +976,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public DatanodeStorageReport[] getDatanodeStorageReport(
       DatanodeReportType type) throws IOException {
     final DatanodeStorageReport[] reports = namesystem.getDatanodeStorageReport(type);
-    if (reports == null ) {
-      throw new IOException("Failed to get datanode storage report for " + type
-          + " datanodes.");
-    }
     return reports;
   }
 

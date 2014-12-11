@@ -315,6 +315,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7475. Make TestLazyPersistFiles#testLazyPersistBlocksAreSaved
     deterministic. (Xiaoyu Yao via Arpit Agarwal)
 
+    HDFS-7515. Fix new findbugs warnings in hadoop-hdfs. (wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

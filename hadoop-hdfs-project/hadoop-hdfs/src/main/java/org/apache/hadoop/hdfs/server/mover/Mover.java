@@ -48,8 +48,10 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.text.DateFormat;
 import java.util.*;
@@ -579,7 +581,8 @@ public class Mover {
 
     private static String[] readPathFile(String file) throws IOException {
       List<String> list = Lists.newArrayList();
-      BufferedReader reader = new BufferedReader(new FileReader(file));
+      BufferedReader reader = new BufferedReader(
+          new InputStreamReader(new FileInputStream(file), "UTF-8"));
       try {
         String line;
         while ((line = reader.readLine()) != null) {

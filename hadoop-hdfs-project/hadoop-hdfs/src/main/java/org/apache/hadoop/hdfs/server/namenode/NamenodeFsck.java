@@ -638,10 +638,6 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         }
         if (fos == null) {
           fos = dfs.create(target + "/" + chain, true);
-          if (fos == null) {
-            throw new IOException("Failed to copy " + fullName +
-                " to /lost+found: could not store chain " + chain);
-          }
           chain++;
         }
         

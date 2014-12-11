@@ -233,6 +233,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     Preconditions.checkArgument(jid != null &&
         !jid.isEmpty(),
         "bad journal identifier: %s", jid);
+    assert jid != null;
     return new File(new File(dir), jid);
   }
 

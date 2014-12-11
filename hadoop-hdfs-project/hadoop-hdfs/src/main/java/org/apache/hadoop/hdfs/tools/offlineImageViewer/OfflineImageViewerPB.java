@@ -18,9 +18,8 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.EOFException;
-import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.PrintStream;
 import java.io.RandomAccessFile;
 
 import org.apache.commons.cli.CommandLine;
@@ -33,7 +32,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 
 /**
@@ -144,36 +142,33 @@ public class OfflineImageViewerPB {
     String processor = cmd.getOptionValue("p", "Web");
     String outputFile = cmd.getOptionValue("o", "-");
 
-    PrintWriter out = outputFile.equals("-") ?
-        new PrintWriter(System.out) : new PrintWriter(new File(outputFile));
-
     Configuration conf = new Configuration();
-    try {
-      if (processor.equals("FileDistribution")) {
-        long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
-        int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
-        new FileDistributionCalculator(conf, maxSize, step, out)
-            .visit(new RandomAccessFile(inputFile, "r"));
-      } else if (processor.equals("XML")) {
-        new PBImageXmlWriter(conf, out).visit(new RandomAccessFile(inputFile,
-            "r"));
-      } else if (processor.equals("Web")) {
-        String addr = cmd.getOptionValue("addr", "localhost:5978");
-        WebImageViewer viewer = new WebImageViewer(NetUtils.createSocketAddr
-                (addr));
-        try {
-          viewer.start(inputFile);
-        } finally {
-          viewer.close();
-        }
+    try (PrintStream out = outputFile.equals("-") ?
+        System.out : new PrintStream(outputFile, "UTF-8")) {
+      switch (processor) {
+        case "FileDistribution":
+          long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
+          int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
+          new FileDistributionCalculator(conf, maxSize, step, out).visit(
+              new RandomAccessFile(inputFile, "r"));
+          break;
+        case "XML":
+          new PBImageXmlWriter(conf, out).visit(
+              new RandomAccessFile(inputFile, "r"));
+          break;
+        case "Web":
+          String addr = cmd.getOptionValue("addr", "localhost:5978");
+          try (WebImageViewer viewer = new WebImageViewer(
+              NetUtils.createSocketAddr(addr))) {
+            viewer.start(inputFile);
+          }
+          break;
       }
       return 0;
     } catch (EOFException e) {
       System.err.println("Input file ended unexpectedly. Exiting");
     } catch (IOException e) {
       System.err.println("Encountered exception.  Exiting: " + e.getMessage());
-    } finally {
-      IOUtils.cleanup(null, out);
     }
     return -1;
   }
