@@ -191,7 +191,7 @@ class FSDirXAttrOp {
     assert fsd.hasWriteLock();
     INodesInPath iip = fsd.getINodesInPath4Write(
         FSDirectory.normalizePath(src), true);
-    INode inode = FSDirectory.resolveLastINode(src, iip);
+    INode inode = FSDirectory.resolveLastINode(iip);
     int snapshotId = iip.getLatestSnapshotId();
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
     List<XAttr> removedXAttrs = Lists.newArrayListWithCapacity(toRemove.size());
@@ -260,8 +260,9 @@ class FSDirXAttrOp {
       final EnumSet<XAttrSetFlag> flag)
       throws IOException {
     assert fsd.hasWriteLock();
-    INodesInPath iip = fsd.getINodesInPath4Write(FSDirectory.normalizePath(src), true);
-    INode inode = FSDirectory.resolveLastINode(src, iip);
+    INodesInPath iip = fsd.getINodesInPath4Write(FSDirectory.normalizePath(src),
+        true);
+    INode inode = FSDirectory.resolveLastINode(iip);
     int snapshotId = iip.getLatestSnapshotId();
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
     List<XAttr> newXAttrs = setINodeXAttrs(fsd, existingXAttrs, xAttrs, flag);
@@ -444,8 +445,8 @@ class FSDirXAttrOp {
     String srcs = FSDirectory.normalizePath(src);
     fsd.readLock();
     try {
-      INodesInPath iip = fsd.getLastINodeInPath(srcs, true);
-      INode inode = FSDirectory.resolveLastINode(src, iip);
+      INodesInPath iip = fsd.getINodesInPath(srcs, true);
+      INode inode = FSDirectory.resolveLastINode(iip);
       int snapshotId = iip.getPathSnapshotId();
       return XAttrStorage.readINodeXAttrs(inode, snapshotId);
     } finally {

@@ -196,6 +196,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7463. Simplify FSNamesystem#getBlockLocationsUpdateTimes. (wheat9)
 
+    HDFS-7509. Avoid resolving path multiple times. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

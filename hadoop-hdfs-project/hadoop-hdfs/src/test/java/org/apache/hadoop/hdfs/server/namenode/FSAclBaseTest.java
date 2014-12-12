@@ -827,8 +827,8 @@ public abstract class FSAclBaseTest {
     fs.setPermission(path,
       new FsPermissionExtension(FsPermission.
           createImmutable((short)0755), true, true));
-    INode inode = cluster.getNamesystem().getFSDirectory().getNode(
-      path.toUri().getPath(), false);
+    INode inode = cluster.getNamesystem().getFSDirectory().getINode(
+        path.toUri().getPath(), false);
     assertNotNull(inode);
     FsPermission perm = inode.getFsPermission();
     assertNotNull(perm);
@@ -1433,7 +1433,7 @@ public abstract class FSAclBaseTest {
   private static void assertAclFeature(Path pathToCheck,
       boolean expectAclFeature) throws IOException {
     INode inode = cluster.getNamesystem().getFSDirectory()
-      .getNode(pathToCheck.toUri().getPath(), false);
+      .getINode(pathToCheck.toUri().getPath(), false);
     assertNotNull(inode);
     AclFeature aclFeature = inode.getAclFeature();
     if (expectAclFeature) {
