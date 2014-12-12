@@ -325,6 +325,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7517. Remove redundant non-null checks in FSNamesystem#
     getBlockLocations. (wheat9)
 
+    HDFS-7514. TestTextCommand fails on Windows. (Arpit Agarwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

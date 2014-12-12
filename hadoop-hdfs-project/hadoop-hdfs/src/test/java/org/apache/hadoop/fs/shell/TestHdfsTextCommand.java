@@ -42,13 +42,12 @@ import org.junit.Test;
  * This class tests the logic for displaying the binary formats supported
  * by the Text command.
  */
-public class TestTextCommand {
-  private static final String TEST_ROOT_DIR =
-    System.getProperty("test.build.data", "build/test/data/") + "/testText";
+public class TestHdfsTextCommand {
+  private static final String TEST_ROOT_DIR = "/build/test/data/testText";
   private static final Path AVRO_FILENAME = new Path(TEST_ROOT_DIR, "weather.avro");
   private static MiniDFSCluster cluster;
   private static FileSystem fs;
-  
+
   @Before
     public void setUp() throws IOException{
     Configuration conf = new HdfsConfiguration();
@@ -66,7 +65,7 @@ public class TestTextCommand {
       cluster.shutdown();
     }
   }
-  
+
   /**
    * Tests whether binary Avro data files are displayed correctly.
    */
@@ -214,5 +213,3 @@ public class TestTextCommand {
     return contents;
   }
 }
-
-
