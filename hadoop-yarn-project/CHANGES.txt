@@ -188,6 +188,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2243. Order of arguments for Preconditions.checkNotNull() is wrong in 
     SchedulerApplicationAttempt ctor. (devaraj)
 
+    YARN-2912 Jersey Tests failing with port in use. (varun saxena via stevel)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
