@@ -596,7 +596,7 @@ public class FSImageFormat {
      // Rename .snapshot paths if we're doing an upgrade
      parentPath = renameReservedPathsOnUpgrade(parentPath, getLayoutVersion());
      final INodeDirectory parent = INodeDirectory.valueOf(
-         namesystem.dir.getNode(parentPath, true), parentPath);
+         namesystem.dir.getINode(parentPath, true), parentPath);
      return loadChildren(parent, in, counter);
    }
 
@@ -940,8 +940,8 @@ public class FSImageFormat {
           inSnapshot = true;
         } else {
           path = renameReservedPathsOnUpgrade(path, getLayoutVersion());
-          final INodesInPath iip = fsDir.getLastINodeInPath(path);
-          oldnode = INodeFile.valueOf(iip.getINode(0), path);
+          final INodesInPath iip = fsDir.getINodesInPath(path, true);
+          oldnode = INodeFile.valueOf(iip.getLastINode(), path);
         }
 
         FileUnderConstructionFeature uc = cons.getFileUnderConstructionFeature();

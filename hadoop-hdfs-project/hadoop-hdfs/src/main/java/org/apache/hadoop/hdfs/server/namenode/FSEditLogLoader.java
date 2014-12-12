@@ -342,7 +342,7 @@ public class FSEditLogLoader {
       // 3. OP_ADD to open file for append
 
       // See if the file already exists (persistBlocks call)
-      final INodesInPath iip = fsDir.getINodesInPath(path, true);
+      INodesInPath iip = fsDir.getINodesInPath(path, true);
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path, true);
       if (oldFile != null && addCloseOp.overwrite) {
         // This is OP_ADD with overwrite
@@ -361,11 +361,12 @@ public class FSEditLogLoader {
         inodeId = getAndUpdateLastInodeId(addCloseOp.inodeId, logVersion,
             lastInodeId);
         newFile = fsDir.unprotectedAddFile(inodeId,
-            path, addCloseOp.permissions, addCloseOp.aclEntries,
+            iip, addCloseOp.permissions, addCloseOp.aclEntries,
             addCloseOp.xAttrs,
             replication, addCloseOp.mtime, addCloseOp.atime,
             addCloseOp.blockSize, true, addCloseOp.clientName,
             addCloseOp.clientMachine, addCloseOp.storagePolicyId);
+        iip = INodesInPath.replace(iip, iip.length() - 1, newFile);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, path);
 
         // add the op into retry cache if necessary
@@ -384,10 +385,10 @@ public class FSEditLogLoader {
             FSNamesystem.LOG.debug("Reopening an already-closed file " +
                 "for append");
           }
-          LocatedBlock lb = fsNamesys.prepareFileForWrite(path,
-              oldFile, addCloseOp.clientName, addCloseOp.clientMachine, false, iip.getLatestSnapshotId(), false);
-          newFile = INodeFile.valueOf(fsDir.getINode(path),
-              path, true);
+          // Note we do not replace the INodeFile when converting it to
+          // under-construction
+          LocatedBlock lb = fsNamesys.prepareFileForWrite(path, iip,
+              addCloseOp.clientName, addCloseOp.clientMachine, false, false);
           
           // add the op into retry cache is necessary
           if (toAddRetryCache) {
@@ -408,7 +409,7 @@ public class FSEditLogLoader {
       // Update the salient file attributes.
       newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
       newFile.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
-      updateBlocks(fsDir, addCloseOp, newFile);
+      updateBlocks(fsDir, addCloseOp, iip, newFile);
       break;
     }
     case OP_CLOSE: {
@@ -422,13 +423,13 @@ public class FSEditLogLoader {
             " clientMachine " + addCloseOp.clientMachine);
       }
 
-      final INodesInPath iip = fsDir.getLastINodeInPath(path);
-      final INodeFile file = INodeFile.valueOf(iip.getINode(0), path);
+      final INodesInPath iip = fsDir.getINodesInPath(path, true);
+      final INodeFile file = INodeFile.valueOf(iip.getLastINode(), path);
 
       // Update the salient file attributes.
       file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
       file.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
-      updateBlocks(fsDir, addCloseOp, file);
+      updateBlocks(fsDir, addCloseOp, iip, file);
 
       // Now close the file
       if (!file.isUnderConstruction() &&
@@ -455,10 +456,10 @@ public class FSEditLogLoader {
         FSNamesystem.LOG.debug(op.opCode + ": " + path +
             " numblocks : " + updateOp.blocks.length);
       }
-      INodeFile oldFile = INodeFile.valueOf(fsDir.getINode(path),
-          path);
+      INodesInPath iip = fsDir.getINodesInPath(path, true);
+      INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path);
       // Update in-memory data structures
-      updateBlocks(fsDir, updateOp, oldFile);
+      updateBlocks(fsDir, updateOp, iip, oldFile);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(updateOp.rpcClientId, updateOp.rpcCallId);
@@ -587,8 +588,10 @@ public class FSEditLogLoader {
       SymlinkOp symlinkOp = (SymlinkOp)op;
       inodeId = getAndUpdateLastInodeId(symlinkOp.inodeId, logVersion,
           lastInodeId);
-      fsDir.unprotectedAddSymlink(inodeId,
-          renameReservedPathsOnUpgrade(symlinkOp.path, logVersion),
+      final String path = renameReservedPathsOnUpgrade(symlinkOp.path,
+          logVersion);
+      final INodesInPath iip = fsDir.getINodesInPath(path, false);
+      fsDir.unprotectedAddSymlink(iip, inodeId,
           symlinkOp.value, symlinkOp.mtime, symlinkOp.atime,
           symlinkOp.permissionStatus);
       
@@ -922,7 +925,7 @@ public class FSEditLogLoader {
    * @throws IOException
    */
   private void updateBlocks(FSDirectory fsDir, BlockListUpdatingOp op,
-      INodeFile file) throws IOException {
+      INodesInPath iip, INodeFile file) throws IOException {
     // Update its block list
     BlockInfo[] oldBlocks = file.getBlocks();
     Block[] newBlocks = op.getBlocks();
@@ -976,7 +979,7 @@ public class FSEditLogLoader {
             + path);
       }
       Block oldBlock = oldBlocks[oldBlocks.length - 1];
-      boolean removed = fsDir.unprotectedRemoveBlock(path, file, oldBlock);
+      boolean removed = fsDir.unprotectedRemoveBlock(path, iip, file, oldBlock);
       if (!removed && !(op instanceof UpdateBlocksOp)) {
         throw new IOException("Trying to delete non-existant block " + oldBlock);
       }

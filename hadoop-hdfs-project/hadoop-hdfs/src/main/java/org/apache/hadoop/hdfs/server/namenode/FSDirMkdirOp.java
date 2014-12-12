@@ -50,8 +50,7 @@ class FSDirMkdirOp {
       throw new InvalidPathException(src);
     }
     FSPermissionChecker pc = fsd.getPermissionChecker();
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath
-        (src);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     src = fsd.resolvePath(pc, src, pathComponents);
     INodesInPath iip = fsd.getINodesInPath4Write(src);
     if (fsd.isPermissionEnabled()) {
@@ -72,7 +71,7 @@ class FSDirMkdirOp {
       // create multiple inodes.
       fsn.checkFsObjectLimit();
 
-      if (!mkdirsRecursively(fsd, src, permissions, false, now())) {
+      if (mkdirsRecursively(fsd, iip, permissions, false, now()) == null) {
         throw new IOException("Failed to create directory: " + src);
       }
     }
@@ -97,33 +96,34 @@ class FSDirMkdirOp {
    * If ancestor directories do not exist, automatically create them.
 
    * @param fsd FSDirectory
-   * @param src string representation of the path to the directory
+   * @param iip the INodesInPath instance containing all the existing INodes
+   *            and null elements for non-existing components in the path
    * @param permissions the permission of the directory
    * @param inheritPermission
    *   if the permission of the directory should inherit from its parent or not.
    *   u+wx is implicitly added to the automatically created directories,
    *   and to the given directory if inheritPermission is true
    * @param now creation time
-   * @return true if the operation succeeds false otherwise
+   * @return non-null INodesInPath instance if operation succeeds
    * @throws QuotaExceededException if directory creation violates
    *                                any quota limit
    * @throws UnresolvedLinkException if a symlink is encountered in src.
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */
-  static boolean mkdirsRecursively(
-      FSDirectory fsd, String src, PermissionStatus permissions,
-      boolean inheritPermission, long now)
+  static INodesInPath mkdirsRecursively(FSDirectory fsd, INodesInPath iip,
+      PermissionStatus permissions, boolean inheritPermission, long now)
       throws FileAlreadyExistsException, QuotaExceededException,
              UnresolvedLinkException, SnapshotAccessControlException,
              AclException {
-    src = FSDirectory.normalizePath(src);
-    String[] names = INode.getPathNames(src);
-    byte[][] components = INode.getPathComponents(names);
-    final int lastInodeIndex = components.length - 1;
+    final int lastInodeIndex = iip.length() - 1;
+    final byte[][] components = iip.getPathComponents();
+    final String[] names = new String[components.length];
+    for (int i = 0; i < components.length; i++) {
+      names[i] = DFSUtil.bytes2String(components[i]);
+    }
 
     fsd.writeLock();
     try {
-      INodesInPath iip = fsd.getExistingPathINodes(components);
       if (iip.isSnapshot()) {
         throw new SnapshotAccessControlException(
                 "Modification on RO snapshot is disallowed");
@@ -136,8 +136,7 @@ class FSDirMkdirOp {
       for(; i < length && (curNode = iip.getINode(i)) != null; i++) {
         pathbuilder.append(Path.SEPARATOR).append(names[i]);
         if (!curNode.isDirectory()) {
-          throw new FileAlreadyExistsException(
-                  "Parent path is not a directory: "
+          throw new FileAlreadyExistsException("Parent path is not a directory: "
                   + pathbuilder + " " + curNode.getLocalName());
         }
       }
@@ -181,7 +180,7 @@ class FSDirMkdirOp {
             components[i], (i < lastInodeIndex) ? parentPermissions :
                 permissions, null, now);
         if (iip.getINode(i) == null) {
-          return false;
+          return null;
         }
         // Directory creation also count towards FilesCreated
         // to match count of FilesDeleted metric.
@@ -197,7 +196,7 @@ class FSDirMkdirOp {
     } finally {
       fsd.writeUnlock();
     }
-    return true;
+    return iip;
   }
 
   /**

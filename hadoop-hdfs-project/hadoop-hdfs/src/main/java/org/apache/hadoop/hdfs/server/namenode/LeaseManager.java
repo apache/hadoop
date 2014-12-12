@@ -116,7 +116,7 @@ public class LeaseManager {
         final INodeFile cons;
         try {
           cons = this.fsnamesystem.getFSDirectory().getINode(path).asFile();
-            Preconditions.checkState(cons.isUnderConstruction());
+          Preconditions.checkState(cons.isUnderConstruction());
         } catch (UnresolvedLinkException e) {
           throw new AssertionError("Lease files should reside on this FS");
         }
@@ -481,8 +481,10 @@ public class LeaseManager {
       leaseToCheck.getPaths().toArray(leasePaths);
       for(String p : leasePaths) {
         try {
+          INodesInPath iip = fsnamesystem.getFSDirectory().getINodesInPath(p,
+              true);
           boolean completed = fsnamesystem.internalReleaseLease(leaseToCheck, p,
-              HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+              iip, HdfsServerConstants.NAMENODE_LEASE_HOLDER);
           if (LOG.isDebugEnabled()) {
             if (completed) {
               LOG.debug("Lease recovery for " + p + " is complete. File closed.");
