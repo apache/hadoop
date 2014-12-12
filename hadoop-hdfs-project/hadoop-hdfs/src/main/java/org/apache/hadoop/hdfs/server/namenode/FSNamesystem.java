@@ -1782,10 +1782,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     logAuditEvent(true, "open", src);
 
-    if (res == null) {
-      return null;
-    }
-
     if (res.updateAccessTime()) {
       writeLock();
       final long now = now();
