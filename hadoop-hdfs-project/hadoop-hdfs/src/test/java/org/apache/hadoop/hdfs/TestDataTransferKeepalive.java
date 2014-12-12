@@ -245,9 +245,7 @@ public class TestDataTransferKeepalive {
   private void assertXceiverCount(int expected) {
     int count = getXceiverCountWithoutServer();
     if (count != expected) {
-      ReflectionUtils.printThreadInfo(
-          new PrintWriter(System.err),
-          "Thread dumps");
+      ReflectionUtils.printThreadInfo(System.err, "Thread dumps");
       fail("Expected " + expected + " xceivers, found " +
           count);
     }

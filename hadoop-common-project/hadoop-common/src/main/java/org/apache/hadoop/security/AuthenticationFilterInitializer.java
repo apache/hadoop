@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.security;
 
+import com.google.common.base.Charsets;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.conf.Configuration;
@@ -24,8 +25,10 @@ import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
@@ -78,10 +81,10 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
     if (signatureSecretFile == null) {
       throw new RuntimeException("Undefined property: " + SIGNATURE_SECRET_FILE);      
     }
-    
-    try {
-      StringBuilder secret = new StringBuilder();
-      Reader reader = new FileReader(signatureSecretFile);
+
+    StringBuilder secret = new StringBuilder();
+    try (Reader reader = new InputStreamReader(
+        new FileInputStream(signatureSecretFile), Charsets.UTF_8)) {
       int c = reader.read();
       while (c > -1) {
         secret.append((char)c);

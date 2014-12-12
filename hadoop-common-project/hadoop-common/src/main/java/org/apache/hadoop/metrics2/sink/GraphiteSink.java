@@ -25,6 +25,7 @@ import java.io.Closeable;
 import java.net.Socket;
 
 import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -64,7 +65,8 @@ public class GraphiteSink implements MetricsSink, Closeable {
         try {
             // Open an connection to Graphite server.
             socket = new Socket(serverHost, serverPort);
-            writer = new OutputStreamWriter(socket.getOutputStream());
+            writer = new OutputStreamWriter(
+                socket.getOutputStream(), Charsets.UTF_8);
         } catch (Exception e) {
             throw new MetricsException("Error creating connection, "
                     + serverHost + ":" + serverPort, e);

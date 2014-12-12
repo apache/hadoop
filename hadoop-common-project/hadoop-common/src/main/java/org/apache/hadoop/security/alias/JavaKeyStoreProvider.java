@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.security.alias;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -165,7 +166,7 @@ public class JavaKeyStoreProvider extends CredentialProvider {
   }
   
   public static char[] bytesToChars(byte[] bytes) {
-    String pass = new String(bytes);
+    String pass = new String(bytes, Charsets.UTF_8);
     return pass.toCharArray();
   }
 

@@ -22,11 +22,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -217,7 +219,9 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
     try {
       Process process = Runtime.getRuntime().exec(
           new String[] { "bash", "-c", command });
-      br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+      br = new BufferedReader(
+          new InputStreamReader(process.getInputStream(),
+                                Charset.defaultCharset()));
       String line = null;
       while ((line = br.readLine()) != null) {
         String[] nameId = line.split(regex);
@@ -552,7 +556,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
     Map<Integer, Integer> gidMapping = new HashMap<Integer, Integer>();
     
     BufferedReader in = new BufferedReader(new InputStreamReader(
-        new FileInputStream(staticMapFile)));
+        new FileInputStream(staticMapFile), Charsets.UTF_8));
     
     try {
       String line = null;

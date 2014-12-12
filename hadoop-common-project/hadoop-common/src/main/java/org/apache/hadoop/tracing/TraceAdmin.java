@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -91,7 +92,7 @@ public class TraceAdmin extends Configured implements Tool {
       return 1;
     }
     ByteArrayOutputStream configStream = new ByteArrayOutputStream();
-    PrintStream configsOut = new PrintStream(configStream);
+    PrintStream configsOut = new PrintStream(configStream, false, "UTF-8");
     SpanReceiverInfoBuilder factory = new SpanReceiverInfoBuilder(className);
     String prefix = "";
     for (int i = 0; i < args.size(); ++i) {
@@ -113,13 +114,15 @@ public class TraceAdmin extends Configured implements Tool {
       configsOut.print(prefix + key + " = " + value);
       prefix = ", ";
     }
+
+    String configStreamStr = configStream.toString("UTF-8");
     try {
       long id = remote.addSpanReceiver(factory.build());
       System.out.println("Added trace span receiver " + id +
-          " with configuration " + configStream.toString());
+          " with configuration " + configStreamStr);
     } catch (IOException e) {
       System.out.println("addSpanReceiver error with configuration " +
-          configStream.toString());
+                             configStreamStr);
       throw e;
     }
     return 0;
