@@ -20,6 +20,8 @@ package org.apache.hadoop.http;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.BindException;
 import java.net.InetSocketAddress;
@@ -1065,13 +1067,14 @@ public final class HttpServer2 implements FilterContainer {
     public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
       if (!HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
-                                                     request, response)) {
+                                                      request, response)) {
         return;
       }
       response.setContentType("text/plain; charset=UTF-8");
-      PrintWriter out = response.getWriter();
-      ReflectionUtils.printThreadInfo(out, "");
-      out.close();
+      try (PrintStream out = new PrintStream(
+          response.getOutputStream(), false, "UTF-8")) {
+        ReflectionUtils.printThreadInfo(out, "");
+      }
       ReflectionUtils.logThreadInfo(LOG, "jsp requested", 1);
     }
   }

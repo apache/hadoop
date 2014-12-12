@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -100,7 +101,8 @@ public class SpanReceiverHost implements TraceAdminProtocol {
       // out of /proc/self/stat.  (There isn't any portable way to get the
       // process ID from Java.)
       reader = new BufferedReader(
-          new InputStreamReader(new FileInputStream("/proc/self/stat")));
+          new InputStreamReader(new FileInputStream("/proc/self/stat"),
+                                Charsets.UTF_8));
       String line = reader.readLine();
       if (line == null) {
         throw new EOFException();

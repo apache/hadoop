@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 
@@ -281,7 +282,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
         // The compressed bzip2 stream should start with the
         // identifying characters BZ. Caller of CBZip2OutputStream
         // i.e. this class must write these characters.
-        out.write(HEADER.getBytes());
+        out.write(HEADER.getBytes(Charsets.UTF_8));
       }
     }
 
@@ -415,7 +416,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
         byte[] headerBytes = new byte[HEADER_LEN];
         int actualRead = bufferedIn.read(headerBytes, 0, HEADER_LEN);
         if (actualRead != -1) {
-          String header = new String(headerBytes);
+          String header = new String(headerBytes, Charsets.UTF_8);
           if (header.compareTo(HEADER) != 0) {
             bufferedIn.reset();
           } else {
