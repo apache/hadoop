@@ -576,6 +576,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7515. Fix new findbugs warnings in hadoop-hdfs. (wheat9)
 
+    HDFS-7497. Inconsistent report of decommissioning DataNodes between
+    dfsadmin and NameNode webui. (Yongjun Zhang via wang)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
