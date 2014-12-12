@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -233,7 +234,7 @@ class TFileDumper {
               out.printf("%X", b);
             }
           } else {
-            out.print(new String(key, 0, sampleLen));
+            out.print(new String(key, 0, sampleLen, Charsets.UTF_8));
           }
           if (sampleLen < key.length) {
             out.print("...");

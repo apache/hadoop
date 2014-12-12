@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
+import com.google.common.base.Charsets;
 import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.*;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -66,7 +67,7 @@ public class LogLevel {
       connection.connect();
 
       BufferedReader in = new BufferedReader(new InputStreamReader(
-          connection.getInputStream()));
+          connection.getInputStream(), Charsets.UTF_8));
       for(String line; (line = in.readLine()) != null; )
         if (line.startsWith(MARKER)) {
           System.out.println(TAG.matcher(line).replaceAll(""));

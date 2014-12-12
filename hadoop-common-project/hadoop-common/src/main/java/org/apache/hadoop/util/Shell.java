@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Timer;
@@ -493,11 +494,11 @@ abstract public class Shell {
       timeOutTimer.schedule(timeoutTimerTask, timeOutInterval);
     }
     final BufferedReader errReader = 
-            new BufferedReader(new InputStreamReader(process
-                                                     .getErrorStream()));
+            new BufferedReader(new InputStreamReader(
+                process.getErrorStream(), Charset.defaultCharset()));
     BufferedReader inReader = 
-            new BufferedReader(new InputStreamReader(process
-                                                     .getInputStream()));
+            new BufferedReader(new InputStreamReader(
+                process.getInputStream(), Charset.defaultCharset()));
     final StringBuffer errMsg = new StringBuffer();
     
     // read error and input streams as this would free up the buffers

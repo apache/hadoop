@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -218,7 +219,8 @@ public class Credentials implements Writable {
     readFields(in);
   }
   
-  private static final byte[] TOKEN_STORAGE_MAGIC = "HDTS".getBytes();
+  private static final byte[] TOKEN_STORAGE_MAGIC =
+      "HDTS".getBytes(Charsets.UTF_8);
   private static final byte TOKEN_STORAGE_VERSION = 0;
   
   public void writeTokenStorageToStream(DataOutputStream os)

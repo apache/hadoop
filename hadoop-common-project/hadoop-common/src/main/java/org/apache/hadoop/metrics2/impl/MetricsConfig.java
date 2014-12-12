@@ -272,13 +272,14 @@ class MetricsConfig extends SubsetConfiguration {
 
   static String toString(Configuration c) {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    PrintStream ps = new PrintStream(buffer);
-    PropertiesConfiguration tmp = new PropertiesConfiguration();
-    tmp.copy(c);
-    try { tmp.save(ps); }
-    catch (Exception e) {
+    try {
+      PrintStream ps = new PrintStream(buffer, false, "UTF-8");
+      PropertiesConfiguration tmp = new PropertiesConfiguration();
+      tmp.copy(c);
+      tmp.save(ps);
+      return buffer.toString("UTF-8");
+    } catch (Exception e) {
       throw new MetricsConfigException(e);
     }
-    return buffer.toString();
   }
 }
