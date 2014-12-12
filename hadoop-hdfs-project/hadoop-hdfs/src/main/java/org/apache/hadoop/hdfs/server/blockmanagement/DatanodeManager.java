@@ -1112,16 +1112,8 @@ public class DatanodeManager {
   public List<DatanodeDescriptor> getDecommissioningNodes() {
     // There is no need to take namesystem reader lock as
     // getDatanodeListForReport will synchronize on datanodeMap
-    final List<DatanodeDescriptor> decommissioningNodes
-        = new ArrayList<DatanodeDescriptor>();
-    final List<DatanodeDescriptor> results = getDatanodeListForReport(
-        DatanodeReportType.LIVE);
-    for(DatanodeDescriptor node : results) {
-      if (node.isDecommissionInProgress()) {
-        decommissioningNodes.add(node);
-      }
-    }
-    return decommissioningNodes;
+    // A decommissioning DN may be "alive" or "dead".
+    return getDatanodeListForReport(DatanodeReportType.DECOMMISSIONING);
   }
   
   /* Getter and Setter for stale DataNodes related attributes */

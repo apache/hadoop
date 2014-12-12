@@ -239,10 +239,10 @@ public class TestDecommissioningStatus {
       System.setOut(oldOut);
     }
   }
+
   /**
    * Tests Decommissioning Status in DFS.
    */
-
   @Test
   public void testDecommissionStatus() throws IOException, InterruptedException {
     InetSocketAddress addr = new InetSocketAddress("localhost", cluster
@@ -351,6 +351,11 @@ public class TestDecommissioningStatus {
     assertTrue("the node should be DECOMMISSION_IN_PROGRESSS",
         dead.get(0).isDecommissionInProgress());
 
+    // Check DatanodeManager#getDecommissionNodes, make sure it returns
+    // the node as decommissioning, even if it's dead
+    List<DatanodeDescriptor> decomlist = dm.getDecommissioningNodes();
+    assertTrue("The node should be be decommissioning", decomlist.size() == 1);
+    
     // Delete the under-replicated file, which should let the 
     // DECOMMISSION_IN_PROGRESS node become DECOMMISSIONED
     cleanupFile(fileSys, f);
