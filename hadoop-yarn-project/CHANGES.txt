@@ -217,6 +217,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2917. Fixed potential deadlock when system.exit is called in AsyncDispatcher
     (Rohith Sharmaks via jianhe)
 
+    YARN-2243. Order of arguments for Preconditions.checkNotNull() is wrong in 
+    SchedulerApplicationAttempt ctor. (devaraj)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
