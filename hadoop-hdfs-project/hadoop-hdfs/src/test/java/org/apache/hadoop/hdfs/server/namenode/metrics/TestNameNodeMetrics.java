@@ -47,10 +47,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
-import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
-import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -58,7 +55,6 @@ import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -93,11 +89,6 @@ public class TestNameNodeMetrics {
     CONF.setBoolean(DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY, true);
     ((Log4JLogger)LogFactory.getLog(MetricsAsserts.class))
       .getLogger().setLevel(Level.DEBUG);
-    /**
-     * need it to test {@link #testTopAuditLogger}
-     */
-    CONF.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
-        TopAuditLogger.class.getName());
   }
   
   private MiniDFSCluster cluster;
@@ -112,7 +103,6 @@ public class TestNameNodeMetrics {
   
   @Before
   public void setUp() throws Exception {
-    TopMetrics.reset();//reset the static init done by prev test
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(DATANODE_COUNT).build();
     cluster.waitActive();
     namesystem = cluster.getNamesystem();
@@ -464,54 +454,5 @@ public class TestNameNodeMetrics {
     // Check that the percentiles were updated
     assertQuantileGauges("Syncs1s", rb);
     assertQuantileGauges("BlockReport1s", rb);
-  }
-
-  /**
-   * Test whether {@link TopMetrics} is registered with metrics system
-   * @throws Exception
-   */
-  @Test
-  public void testTopMetrics() throws Exception {
-    final String testUser = "NNTopTestUser";
-    final String testOp = "NNTopTestOp";
-    final String metricName =
-        RollingWindowManager.createMetricName(testOp, testUser);
-    TopMetrics.getInstance().report(testUser, testOp);
-    final String regName = TopConf.TOP_METRICS_REGISTRATION_NAME;
-    MetricsRecordBuilder rb = getMetrics(regName);
-    assertGauge(metricName, 1L, rb);
-  }
-
-  /**
-   * Test whether {@link TopAuditLogger} is registered as an audit logger
-   * @throws Exception
-   */
-  @Test
-  public void testTopAuditLogger() throws Exception {
-    //note: the top audit logger should already be set in conf
-    //issue one command, any command is fine
-    FileSystem fs = cluster.getFileSystem();
-    long time = System.currentTimeMillis();
-    fs.setTimes(new Path("/"), time, time);
-    //the command should be reflected in the total count of all users
-    final String testUser = TopConf.ALL_USERS;
-    final String testOp = TopConf.CMD_TOTAL;
-    final String metricName =
-        RollingWindowManager.createMetricName(testOp, testUser);
-    final String regName = TopConf.TOP_METRICS_REGISTRATION_NAME;
-    MetricsRecordBuilder rb = getMetrics(regName);
-    assertGaugeGreaterThan(metricName, 1L, rb);
-  }
-
-  /**
-   * Assert a long gauge metric greater than
-   * @param name  of the metric
-   * @param expected  minimum expected value of the metric
-   * @param rb  the record builder mock used to getMetrics
-   */
-  public static void assertGaugeGreaterThan(String name, long expected,
-                                 MetricsRecordBuilder rb) {
-    Assert.assertTrue("Bad value for metric " + name,
-        expected <= MetricsAsserts.getLongGauge(name, rb));
   }
 }
