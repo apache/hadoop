@@ -133,6 +133,11 @@
       <item name="Node Manager" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html"/>
     </menu>
     
+    <menu name="Hadoop Compatible File Systems" inherit="top">
+      <item name="Amazon S3" href="hadoop-aws/tools/hadoop-aws/index.html"/>
+      <item name="OpenStack Swift" href="hadoop-openstack/index.html"/>
+    </menu>
+
     <menu name="Auth" inherit="top">
       <item name="Overview" href="hadoop-auth/index.html"/>
       <item name="Examples" href="hadoop-auth/Examples.html"/>
