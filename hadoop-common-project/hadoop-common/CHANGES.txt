@@ -582,6 +582,9 @@ Release 2.7.0 - UNRELEASED
     (wheat9)
 
     HADOOP-11394. hadoop-aws documentation missing. (cnauroth)
+
+    HADOOP-11396. Provide navigation in the site documentation linking to the
+    Hadoop Compatible File Systems. (cnauroth)
     
 Release 2.6.0 - 2014-11-18
 
