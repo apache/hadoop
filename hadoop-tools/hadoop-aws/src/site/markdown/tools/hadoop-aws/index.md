@@ -48,7 +48,7 @@ the number of files, during which time partial updates may be visible. If
 the operations are interrupted, the filesystem is left in an intermediate state.
 
 For further discussion on these topics, please consult
-[/filesystem](The Hadoop FileSystem API Definition).
+[The Hadoop FileSystem API Definition](../../../hadoop-project-dist/hadoop-common/filesystem/index.html).
 
 ## Warning #2: your AWS credentials are valuable
 
