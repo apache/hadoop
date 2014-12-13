@@ -17,21 +17,22 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.top.window;
 
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * A class to manage the set of {@link RollingWindow}s. This class is the
@@ -46,25 +47,93 @@ public class RollingWindowManager {
   public static final Logger LOG = LoggerFactory.getLogger(
       RollingWindowManager.class);
 
-  private int windowLenMs;
-  private int bucketsPerWindow; // e.g., 10 buckets per minute
-  private int topUsersCnt; // e.g., report top 10 metrics
-
-  /**
-   * Create a metric name composed of the command and user
-   *
-   * @param command the command executed
-   * @param user    the user
-   * @return a composed metric name
-   */
-  @VisibleForTesting
-  public static String createMetricName(String command, String user) {
-    return command + "." + user;
-  }
+  private final int windowLenMs;
+  private final int bucketsPerWindow; // e.g., 10 buckets per minute
+  private final int topUsersCnt; // e.g., report top 10 metrics
 
   static private class RollingWindowMap extends
       ConcurrentHashMap<String, RollingWindow> {
     private static final long serialVersionUID = -6785807073237052051L;
+  }
+
+  /**
+   * Represents a snapshot of the rolling window. It contains one Op per 
+   * operation in the window, with ranked users for each Op.
+   */
+  public static class TopWindow {
+    private final int windowMillis;
+    private final List<Op> top;
+
+    public TopWindow(int windowMillis) {
+      this.windowMillis = windowMillis;
+      this.top = Lists.newArrayList();
+    }
+
+    public void addOp(Op op) {
+      top.add(op);
+    }
+
+    public int getWindowLenMs() {
+      return windowMillis;
+    }
+
+    public List<Op> getOps() {
+      return top;
+    }
+  }
+
+  /**
+   * Represents an operation within a TopWindow. It contains a ranked 
+   * set of the top users for the operation.
+   */
+  public static class Op {
+    private final String opType;
+    private final List<User> topUsers;
+    private final long totalCount;
+
+    public Op(String opType, long totalCount) {
+      this.opType = opType;
+      this.topUsers = Lists.newArrayList();
+      this.totalCount = totalCount;
+    }
+
+    public void addUser(User u) {
+      topUsers.add(u);
+    }
+
+    public String getOpType() {
+      return opType;
+    }
+
+    public List<User> getTopUsers() {
+      return topUsers;
+    }
+
+    public long getTotalCount() {
+      return totalCount;
+    }
+  }
+
+  /**
+   * Represents a user who called an Op within a TopWindow. Specifies the 
+   * user and the number of times the user called the operation.
+   */
+  public static class User {
+    private final String user;
+    private final long count;
+
+    public User(String user, long count) {
+      this.user = user;
+      this.count = count;
+    }
+
+    public String getUser() {
+      return user;
+    }
+
+    public long getCount() {
+      return count;
+    }
   }
 
   /**
@@ -75,8 +144,9 @@ public class RollingWindowManager {
   public ConcurrentHashMap<String, RollingWindowMap> metricMap =
       new ConcurrentHashMap<String, RollingWindowMap>();
 
-  public RollingWindowManager(Configuration conf, long reportingPeriodMs) {
-    windowLenMs = (int) reportingPeriodMs;
+  public RollingWindowManager(Configuration conf, int reportingPeriodMs) {
+    
+    windowLenMs = reportingPeriodMs;
     bucketsPerWindow =
         conf.getInt(DFSConfigKeys.NNTOP_BUCKETS_PER_WINDOW_KEY,
             DFSConfigKeys.NNTOP_BUCKETS_PER_WINDOW_DEFAULT);
@@ -112,53 +182,71 @@ public class RollingWindowManager {
    * Take a snapshot of current top users in the past period.
    *
    * @param time the current time
-   * @return a map between the top metrics and their values. The user is encoded
-   * in the metric name. Refer to {@link RollingWindowManager#createMetricName} for
-   * the actual format.
+   * @return a TopWindow describing the top users for each metric in the 
+   * window.
    */
-  public MetricValueMap snapshot(long time) {
-    MetricValueMap map = new MetricValueMap();
-    Set<String> metricNames = metricMap.keySet();
-    LOG.debug("iterating in reported metrics, size={} values={}",
-        metricNames.size(), metricNames);
-    for (Map.Entry<String,RollingWindowMap> rwEntry: metricMap.entrySet()) {
-      String metricName = rwEntry.getKey();
-      RollingWindowMap rollingWindows = rwEntry.getValue();
-      TopN topN = new TopN(topUsersCnt);
-      Iterator<Map.Entry<String, RollingWindow>> iterator =
-          rollingWindows.entrySet().iterator();
-      while (iterator.hasNext()) {
-        Map.Entry<String, RollingWindow> entry = iterator.next();
-        String userName = entry.getKey();
-        RollingWindow aWindow = entry.getValue();
-        long windowSum = aWindow.getSum(time);
-        // do the gc here
-        if (windowSum == 0) {
-          LOG.debug("gc window of metric: {} userName: {}",
-              metricName, userName);
-          iterator.remove();
-          continue;
-        }
-        LOG.debug("offer window of metric: {} userName: {} sum: {}",
-            metricName, userName, windowSum);
-        topN.offer(new NameValuePair(userName, windowSum));
-      }
-      int n = topN.size();
-      LOG.info("topN size for command " + metricName + " is: " + n);
-      if (n == 0) {
+  public TopWindow snapshot(long time) {
+    TopWindow window = new TopWindow(windowLenMs);
+    if (LOG.isDebugEnabled()) {
+      Set<String> metricNames = metricMap.keySet();
+      LOG.debug("iterating in reported metrics, size={} values={}",
+          metricNames.size(), metricNames);
+    }
+    for (Map.Entry<String, RollingWindowMap> entry : metricMap.entrySet()) {
+      String metricName = entry.getKey();
+      RollingWindowMap rollingWindows = entry.getValue();
+      TopN topN = getTopUsersForMetric(time, metricName, rollingWindows);
+      final int size = topN.size();
+      if (size == 0) {
         continue;
       }
-      String allMetricName =
-          createMetricName(metricName, TopConf.ALL_USERS);
-      map.put(allMetricName, Long.valueOf(topN.total));
-      for (int i = 0; i < n; i++) {
-        NameValuePair userEntry = topN.poll();
-        String userMetricName =
-            createMetricName(metricName, userEntry.name);
-        map.put(userMetricName, Long.valueOf(userEntry.value));
+      Op op = new Op(metricName, topN.getTotal());
+      window.addOp(op);
+      // Reverse the users from the TopUsers using a stack, 
+      // since we'd like them sorted in descending rather than ascending order
+      Stack<NameValuePair> reverse = new Stack<NameValuePair>();
+      for (int i = 0; i < size; i++) {
+        reverse.push(topN.poll());
+      }
+      for (int i = 0; i < size; i++) {
+        NameValuePair userEntry = reverse.pop();
+        User user = new User(userEntry.name, Long.valueOf(userEntry.value));
+        op.addUser(user);
       }
     }
-    return map;
+    return window;
+  }
+
+  /**
+   * Calculates the top N users over a time interval.
+   * 
+   * @param time the current time
+   * @param metricName Name of metric
+   * @return
+   */
+  private TopN getTopUsersForMetric(long time, String metricName, 
+      RollingWindowMap rollingWindows) {
+    TopN topN = new TopN(topUsersCnt);
+    Iterator<Map.Entry<String, RollingWindow>> iterator =
+        rollingWindows.entrySet().iterator();
+    while (iterator.hasNext()) {
+      Map.Entry<String, RollingWindow> entry = iterator.next();
+      String userName = entry.getKey();
+      RollingWindow aWindow = entry.getValue();
+      long windowSum = aWindow.getSum(time);
+      // do the gc here
+      if (windowSum == 0) {
+        LOG.debug("gc window of metric: {} userName: {}",
+            metricName, userName);
+        iterator.remove();
+        continue;
+      }
+      LOG.debug("offer window of metric: {} userName: {} sum: {}",
+          metricName, userName, windowSum);
+      topN.offer(new NameValuePair(userName, windowSum));
+    }
+    LOG.info("topN size for command {} is: {}", metricName, topN.size());
+    return topN;
   }
 
   /**
@@ -190,7 +278,8 @@ public class RollingWindowManager {
   }
 
   /**
-   * A pair of a name and its corresponding value
+   * A pair of a name and its corresponding value. Defines a custom 
+   * comparator so the TopN PriorityQueue sorts based on the count.
    */
   static private class NameValuePair implements Comparable<NameValuePair> {
     String name;
@@ -253,13 +342,5 @@ public class RollingWindowManager {
     public long getTotal() {
       return total;
     }
-  }
-
-  /**
-   * A mapping from metric names to their absolute values and their percentage
-   */
-  @InterfaceAudience.Private
-  public static class MetricValueMap extends HashMap<String, Number> {
-    private static final long serialVersionUID = 8936732010242400171L;
   }
 }
