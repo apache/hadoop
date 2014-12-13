@@ -10,6 +10,9 @@ Release 2.6.1 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-11238. Update the NameNode's Group Cache in the background when
+    possible (Chris Li via Colin P. McCabe)
+
   BUG FIXES
 
     HADOOP-11466: FastByteComparisons: do not use UNSAFE_COMPARER on the SPARC
