@@ -17,16 +17,19 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.top.window;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.MetricValueMap;
+import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.Op;
+import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.TopWindow;
+import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.User;
+import static org.junit.Assert.assertEquals;
 
 public class TestRollingWindowManager {
 
@@ -61,33 +64,39 @@ public class TestRollingWindowManager {
     for (int i = 0; i < users.length; i++)
       manager.recordMetric(time, "close", users[i], i + 1);
     time++;
-    MetricValueMap tops = manager.snapshot(time);
+    TopWindow tops = manager.snapshot(time);
 
-    assertEquals("The number of returned top metrics is invalid",
-        2 * (N_TOP_USERS + 1), tops.size());
-    int userIndex = users.length - 2;
-    String metricName = RollingWindowManager.createMetricName("open",
-        users[userIndex]);
-    boolean includes = tops.containsKey(metricName);
-    assertTrue("The order of entries in top metrics is wrong", includes);
-    assertEquals("The reported value by top is different from recorded one",
-        (userIndex + 1) * 2, ((Long) tops.get(metricName)).longValue());
+    assertEquals("Unexpected number of ops", 2, tops.getOps().size());
+    for (Op op : tops.getOps()) {
+      final List<User> topUsers = op.getTopUsers();
+      assertEquals("Unexpected number of users", N_TOP_USERS, topUsers.size());
+      if (op.getOpType() == "open") {
+        for (int i = 0; i < topUsers.size(); i++) {
+          User user = topUsers.get(i);
+          assertEquals("Unexpected count for user " + user.getUser(),
+              (users.length-i)*2, user.getCount());
+        }
+        // Closed form of sum(range(2,42,2))
+        assertEquals("Unexpected total count for op", 
+            (2+(users.length*2))*(users.length/2),
+            op.getTotalCount());
+      }
+    }
 
     // move the window forward not to see the "open" results
     time += WINDOW_LEN_MS - 2;
-    // top should not include only "close" results
     tops = manager.snapshot(time);
-    assertEquals("The number of returned top metrics is invalid",
-        N_TOP_USERS + 1, tops.size());
-    includes = tops.containsKey(metricName);
-    assertFalse("After rolling, the top list still includes the stale metrics",
-        includes);
-
-    metricName = RollingWindowManager.createMetricName("close",
-        users[userIndex]);
-    includes = tops.containsKey(metricName);
-    assertTrue("The order of entries in top metrics is wrong", includes);
-    assertEquals("The reported value by top is different from recorded one",
-        (userIndex + 1), ((Long) tops.get(metricName)).longValue());
+    assertEquals("Unexpected number of ops", 1, tops.getOps().size());
+    final Op op = tops.getOps().get(0);
+    assertEquals("Should only see close ops", "close", op.getOpType());
+    final List<User> topUsers = op.getTopUsers();
+    for (int i = 0; i < topUsers.size(); i++) {
+      User user = topUsers.get(i);
+      assertEquals("Unexpected count for user " + user.getUser(),
+          (users.length-i), user.getCount());
+    }
+    // Closed form of sum(range(1,21))
+    assertEquals("Unexpected total count for op",
+        (1 + users.length) * (users.length / 2), op.getTotalCount());
   }
 }

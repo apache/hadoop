@@ -198,6 +198,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7509. Avoid resolving path multiple times. (jing9)
 
+    HDFS-7426. Change nntop JMX format to be a JSON blob. (wang)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
