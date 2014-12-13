@@ -91,7 +91,8 @@ public class JQueryUI extends HtmlBlock {
   public static void jsnotice(HTML html) {
     html.
       div("#jsnotice.ui-state-error").
-          _("This page works best with javascript enabled.")._();
+          _("This page will not function without javascript enabled."
+            + " Please enable javascript on your browser.")._();
     html.
       script().$type("text/javascript").
         _("$('#jsnotice').hide();")._();
