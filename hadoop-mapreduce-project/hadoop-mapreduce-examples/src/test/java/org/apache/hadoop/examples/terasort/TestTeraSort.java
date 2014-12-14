@@ -20,17 +20,19 @@ package org.apache.hadoop.examples.terasort;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Ignore;
-@Ignore
 public class TestTeraSort extends HadoopTestCase {
+  private static Log LOG = LogFactory.getLog(TestTeraSort.class);
   
   public TestTeraSort()
       throws IOException {
-    super(CLUSTER_MR, DFS_FS, 1, 1);
+    super(LOCAL_MR, LOCAL_FS, 1, 1);
   }
 
   protected void tearDown() throws Exception {
@@ -45,41 +47,57 @@ public class TestTeraSort extends HadoopTestCase {
   private static final Path SORT_INPUT_PATH = new Path(TEST_DIR, "sortin");
   private static final Path SORT_OUTPUT_PATH = new Path(TEST_DIR, "sortout");
   private static final Path TERA_OUTPUT_PATH = new Path(TEST_DIR, "validate");
-  private static final String NUM_ROWS = "100"; 
+  private static final String NUM_ROWS = "100";
 
-  private void runTeraGen(Configuration conf, Path sortInput) 
+  private void runTeraGen(Configuration conf, Path sortInput)
       throws Exception {
     String[] genArgs = {NUM_ROWS, sortInput.toString()};
-    
+
     // Run TeraGen
     assertEquals(ToolRunner.run(conf, new TeraGen(), genArgs), 0);
   }
-  
+
   private void runTeraSort(Configuration conf,
       Path sortInput, Path sortOutput) throws Exception {
 
     // Setup command-line arguments to 'sort'
     String[] sortArgs = {sortInput.toString(), sortOutput.toString()};
-    
+
     // Run Sort
     assertEquals(ToolRunner.run(conf, new TeraSort(), sortArgs), 0);
   }
-  
-  private void runTeraValidator(Configuration job, 
-                                       Path sortOutput, Path valOutput) 
+
+  private void runTeraValidator(Configuration job,
+                                       Path sortOutput, Path valOutput)
   throws Exception {
     String[] svArgs = {sortOutput.toString(), valOutput.toString()};
 
     // Run Tera-Validator
     assertEquals(ToolRunner.run(job, new TeraValidate(), svArgs), 0);
   }
-  
+
   public void testTeraSort() throws Exception {
     // Run TeraGen to generate input for 'terasort'
     runTeraGen(createJobConf(), SORT_INPUT_PATH);
 
+    // Run teragen again to check for FAE
+    try {
+      runTeraGen(createJobConf(), SORT_INPUT_PATH);
+      fail("Teragen output overwritten!");
+    } catch (FileAlreadyExistsException fae) {
+      LOG.info("Expected exception: ", fae);
+    }
+
     // Run terasort
     runTeraSort(createJobConf(), SORT_INPUT_PATH, SORT_OUTPUT_PATH);
+
+    // Run terasort again to check for FAE
+    try {
+      runTeraSort(createJobConf(), SORT_INPUT_PATH, SORT_OUTPUT_PATH);
+      fail("Terasort output overwritten!");
+    } catch (FileAlreadyExistsException fae) {
+      LOG.info("Expected exception: ", fae);
+    }
 
     // Run tera-validator to check if sort worked correctly
     runTeraValidator(createJobConf(), SORT_OUTPUT_PATH,
