@@ -289,10 +289,6 @@ public class TeraGen extends Configured implements Tool {
     }
     setNumberOfRows(job, parseHumanLong(args[0]));
     Path outputDir = new Path(args[1]);
-    if (outputDir.getFileSystem(getConf()).exists(outputDir)) {
-      throw new IOException("Output directory " + outputDir + 
-                            " already exists.");
-    }
     FileOutputFormat.setOutputPath(job, outputDir);
     job.setJobName("TeraGen");
     job.setJarByClass(TeraGen.class);
