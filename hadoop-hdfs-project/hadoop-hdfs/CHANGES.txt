@@ -333,6 +333,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7514. TestTextCommand fails on Windows. (Arpit Agarwal)
 
+    HDFS-7506. Consolidate implementation of setting inode attributes into a
+    single class. (wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
