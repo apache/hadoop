@@ -86,8 +86,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.util.Time.now;
 
@@ -428,9 +426,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final CacheManager cacheManager;
   private final DatanodeStatistics datanodeStatistics;
 
-  // whether setStoragePolicy is allowed.
-  private final boolean isStoragePolicyEnabled;
-
   private String nameserviceId;
 
   private RollingUpgradeInfo rollingUpgradeInfo = null;
@@ -752,10 +747,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.blockManager = new BlockManager(this, conf);
       this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
       this.blockIdManager = new BlockIdManager(blockManager);
-
-      this.isStoragePolicyEnabled =
-          conf.getBoolean(DFS_STORAGE_POLICY_ENABLED_KEY,
-                          DFS_STORAGE_POLICY_ENABLED_DEFAULT);
 
       this.fsOwner = UserGroupInformation.getCurrentUser();
       this.supergroup = conf.get(DFS_PERMISSIONS_SUPERUSERGROUP_KEY, 
@@ -1674,36 +1665,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws IOException
    */
   void setPermission(String src, FsPermission permission) throws IOException {
-    try {
-      setPermissionInt(src, permission);
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "setPermission", src);
-      throw e;
-    }
-  }
-
-  private void setPermissionInt(final String srcArg, FsPermission permission)
-      throws IOException {
-    String src = srcArg;
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+    HdfsFileStatus auditStat;
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set permission for " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      dir.checkOwner(pc, iip);
-      dir.setPermission(src, permission);
-      getEditLog().logSetPermissions(src, permission);
-      resultingStat = getAuditFileInfo(src, false);
+      auditStat = FSDirAttrOp.setPermission(dir, src, permission);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "setPermission", src);
+      throw e;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "setPermission", srcArg, null, resultingStat);
+    logAuditEvent(true, "setPermission", src, null, auditStat);
   }
 
   /**
@@ -1712,44 +1688,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void setOwner(String src, String username, String group)
       throws IOException {
-    try {
-      setOwnerInt(src, username, group);
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "setOwner", src);
-      throw e;
-    } 
-  }
-
-  private void setOwnerInt(final String srcArg, String username, String group)
-      throws IOException {
-    String src = srcArg;
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+    HdfsFileStatus auditStat;
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set owner for " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      dir.checkOwner(pc, iip);
-      if (!pc.isSuperUser()) {
-        if (username != null && !pc.getUser().equals(username)) {
-          throw new AccessControlException("Non-super user cannot change owner");
-        }
-        if (group != null && !pc.containsGroup(group)) {
-          throw new AccessControlException("User does not belong to " + group);
-        }
-      }
-      dir.setOwner(src, username, group);
-      getEditLog().logSetOwner(src, username, group);
-      resultingStat = getAuditFileInfo(src, false);
+      auditStat = FSDirAttrOp.setOwner(dir, src, username, group);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "setOwner", src);
+      throw e;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "setOwner", srcArg, null, resultingStat);
+    logAuditEvent(true, "setOwner", src, null, auditStat);
   }
 
   static class GetBlockLocationsResult {
@@ -1794,7 +1747,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         boolean updateAccessTime = now > inode.getAccessTime() +
             getAccessTimePrecision();
         if (!isInSafeMode() && updateAccessTime) {
-          boolean changed = dir.setTimes(
+          boolean changed = FSDirAttrOp.setTimes(dir,
               inode, -1, now, false, res.iip.getLatestSnapshotId());
           if (changed) {
             getEditLog().logTimes(src, -1, now);
@@ -1941,52 +1894,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * The access time is precise up to an hour. The transaction, if needed, is
    * written to the edits log but is not flushed.
    */
-  void setTimes(String src, long mtime, long atime) 
-      throws IOException, UnresolvedLinkException {
-    if (!isAccessTimeSupported() && atime != -1) {
-      throw new IOException("Access time for hdfs is not configured. " +
-                            " Please set " + DFS_NAMENODE_ACCESSTIME_PRECISION_KEY + " configuration parameter.");
-    }
-    try {
-      setTimesInt(src, mtime, atime);
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "setTimes", src);
-      throw e;
-    }
-  }
-
-  private void setTimesInt(final String srcArg, long mtime, long atime)
-    throws IOException {
-    String src = srcArg;
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+  void setTimes(String src, long mtime, long atime) throws IOException {
+    HdfsFileStatus auditStat;
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set times " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      // Write access is required to set access and modification times
-      if (isPermissionEnabled) {
-        dir.checkPathAccess(pc, iip, FsAction.WRITE);
-      }
-      final INode inode = iip.getLastINode();
-      if (inode != null) {
-        boolean changed = dir.setTimes(inode, mtime, atime, true,
-                iip.getLatestSnapshotId());
-        if (changed) {
-          getEditLog().logTimes(src, mtime, atime);
-        }
-        resultingStat = getAuditFileInfo(src, false);
-      } else {
-        throw new FileNotFoundException("File/Directory " + src + " does not exist.");
-      }
+      auditStat = FSDirAttrOp.setTimes(dir, src, mtime, atime);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "setTimes", src);
+      throw e;
     } finally {
       writeUnlock();
     }
-    logAuditEvent(true, "setTimes", srcArg, null, resultingStat);
+    getEditLog().logSync();
+    logAuditEvent(true, "setTimes", src, null, auditStat);
   }
 
   /**
@@ -2066,49 +1989,25 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   boolean setReplication(final String src, final short replication)
       throws IOException {
-    try {
-      return setReplicationInt(src, replication);
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "setReplication", src);
-      throw e;
-    }
-  }
-
-  private boolean setReplicationInt(final String srcArg,
-      final short replication) throws IOException {
-    String src = srcArg;
-    blockManager.verifyReplication(src, replication, null);
-    final boolean isFile;
-    FSPermissionChecker pc = getPermissionChecker();
-    checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    boolean success = false;
     waitForLoadingFSImage();
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set replication for " + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      if (isPermissionEnabled) {
-        dir.checkPathAccess(pc, iip, FsAction.WRITE);
-      }
-
-      final short[] blockRepls = new short[2]; // 0: old, 1: new
-      final Block[] blocks = dir.setReplication(src, replication, blockRepls);
-      isFile = blocks != null;
-      if (isFile) {
-        getEditLog().logSetReplication(src, replication);
-        blockManager.setReplication(blockRepls[0], blockRepls[1], src, blocks);
-      }
+      success = FSDirAttrOp.setReplication(dir, blockManager, src, replication);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "setReplication", src);
+      throw e;
     } finally {
       writeUnlock();
     }
-
-    getEditLog().logSync();
-    if (isFile) {
-      logAuditEvent(true, "setReplication", srcArg);
+    if (success) {
+      getEditLog().logSync();
+      logAuditEvent(true, "setReplication", src);
     }
-    return isFile;
+    return success;
   }
 
   /**
@@ -2117,58 +2016,24 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param src file/directory path
    * @param policyName storage policy name
    */
-  void setStoragePolicy(String src, final String policyName)
-      throws IOException {
-    try {
-      setStoragePolicyInt(src, policyName);
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "setStoragePolicy", src);
-      throw e;
-    }
-  }
-
-  private void setStoragePolicyInt(String src, final String policyName)
-      throws IOException {
-    if (!isStoragePolicyEnabled) {
-      throw new IOException("Failed to set storage policy since "
-          + DFS_STORAGE_POLICY_ENABLED_KEY + " is set to false.");
-    }
-    FSPermissionChecker pc = null;
-    if (isPermissionEnabled) {
-      pc = getPermissionChecker();
-    }
-
-    checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+  void setStoragePolicy(String src, String policyName) throws IOException {
+    HdfsFileStatus auditStat;
     waitForLoadingFSImage();
-    HdfsFileStatus fileStat;
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set storage policy for " + src);
-
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-
-      if (pc != null) {
-        dir.checkPermission(pc, iip, false, null, null, FsAction.WRITE, null, false);
-      }
-
-      // get the corresponding policy and make sure the policy name is valid
-      BlockStoragePolicy policy = blockManager.getStoragePolicy(policyName);
-      if (policy == null) {
-        throw new HadoopIllegalArgumentException(
-            "Cannot find a block policy with the name " + policyName);
-      }
-      dir.setStoragePolicy(iip, policy.getId());
-      getEditLog().logSetStoragePolicy(src, policy.getId());
-      fileStat = getAuditFileInfo(src, false);
+      auditStat = FSDirAttrOp.setStoragePolicy(
+          dir, blockManager, src, policyName);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "setStoragePolicy", src);
+      throw e;
     } finally {
       writeUnlock();
     }
-
     getEditLog().logSync();
-    logAuditEvent(true, "setStoragePolicy", src, null, fileStat);
+    logAuditEvent(true, "setStoragePolicy", src, null, auditStat);
   }
 
   /**
@@ -2180,26 +2045,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      return blockManager.getStoragePolicies();
+      return FSDirAttrOp.getStoragePolicies(blockManager);
     } finally {
       readUnlock();
     }
   }
 
-  long getPreferredBlockSize(String filename) throws IOException {
-    FSPermissionChecker pc = getPermissionChecker();
+  long getPreferredBlockSize(String src) throws IOException {
     checkOperation(OperationCategory.READ);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(filename);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
-      filename = dir.resolvePath(pc, filename, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath(filename, false);
-      if (isPermissionEnabled) {
-        dir.checkTraverse(pc, iip);
-      }
-      return INodeFile.valueOf(iip.getLastINode(), filename)
-          .getPreferredBlockSize();
+      return FSDirAttrOp.getPreferredBlockSize(dir, src);
     } finally {
       readUnlock();
     }
@@ -3857,20 +3714,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * 
    * Note: This does not support ".inodes" relative path.
    */
-  void setQuota(String path, long nsQuota, long dsQuota)
-      throws IOException, UnresolvedLinkException {
-    checkSuperuserPrivilege();
+  void setQuota(String src, long nsQuota, long dsQuota)
+      throws IOException {
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode("Cannot set quota on " + path);
-      INodeDirectory changed = dir.setQuota(path, nsQuota, dsQuota);
-      if (changed != null) {
-        final Quota.Counts q = changed.getQuotaCounts();
-        getEditLog().logSetQuota(path,
-                q.get(Quota.NAMESPACE), q.get(Quota.DISKSPACE));
-      }
+      checkNameNodeSafeMode("Cannot set quota on " + src);
+      FSDirAttrOp.setQuota(dir, src, nsQuota, dsQuota);
     } finally {
       writeUnlock();
     }

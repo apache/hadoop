@@ -482,9 +482,8 @@ public class FSEditLogLoader {
       SetReplicationOp setReplicationOp = (SetReplicationOp)op;
       short replication = fsNamesys.getBlockManager().adjustReplication(
           setReplicationOp.replication);
-      fsDir.unprotectedSetReplication(
-          renameReservedPathsOnUpgrade(setReplicationOp.path, logVersion),
-                                      replication, null);
+      FSDirAttrOp.unprotectedSetReplication(fsDir, renameReservedPathsOnUpgrade(
+          setReplicationOp.path, logVersion), replication, null);
       break;
     }
     case OP_CONCAT_DELETE: {
@@ -542,45 +541,42 @@ public class FSEditLogLoader {
     }
     case OP_SET_PERMISSIONS: {
       SetPermissionsOp setPermissionsOp = (SetPermissionsOp)op;
-      fsDir.unprotectedSetPermission(
-          renameReservedPathsOnUpgrade(setPermissionsOp.src, logVersion),
-          setPermissionsOp.permissions);
+      FSDirAttrOp.unprotectedSetPermission(fsDir, renameReservedPathsOnUpgrade(
+          setPermissionsOp.src, logVersion), setPermissionsOp.permissions);
       break;
     }
     case OP_SET_OWNER: {
       SetOwnerOp setOwnerOp = (SetOwnerOp)op;
-      fsDir.unprotectedSetOwner(
-          renameReservedPathsOnUpgrade(setOwnerOp.src, logVersion),
+      FSDirAttrOp.unprotectedSetOwner(
+          fsDir, renameReservedPathsOnUpgrade(setOwnerOp.src, logVersion),
           setOwnerOp.username, setOwnerOp.groupname);
       break;
     }
     case OP_SET_NS_QUOTA: {
       SetNSQuotaOp setNSQuotaOp = (SetNSQuotaOp)op;
-      fsDir.unprotectedSetQuota(
-          renameReservedPathsOnUpgrade(setNSQuotaOp.src, logVersion),
+      FSDirAttrOp.unprotectedSetQuota(
+          fsDir, renameReservedPathsOnUpgrade(setNSQuotaOp.src, logVersion),
           setNSQuotaOp.nsQuota, HdfsConstants.QUOTA_DONT_SET);
       break;
     }
     case OP_CLEAR_NS_QUOTA: {
       ClearNSQuotaOp clearNSQuotaOp = (ClearNSQuotaOp)op;
-      fsDir.unprotectedSetQuota(
-          renameReservedPathsOnUpgrade(clearNSQuotaOp.src, logVersion),
+      FSDirAttrOp.unprotectedSetQuota(
+          fsDir, renameReservedPathsOnUpgrade(clearNSQuotaOp.src, logVersion),
           HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_DONT_SET);
       break;
     }
 
     case OP_SET_QUOTA:
       SetQuotaOp setQuotaOp = (SetQuotaOp)op;
-      fsDir.unprotectedSetQuota(
-          renameReservedPathsOnUpgrade(setQuotaOp.src, logVersion),
-          setQuotaOp.nsQuota, setQuotaOp.dsQuota);
+      FSDirAttrOp.unprotectedSetQuota(fsDir, renameReservedPathsOnUpgrade(
+          setQuotaOp.src, logVersion), setQuotaOp.nsQuota, setQuotaOp.dsQuota);
       break;
 
     case OP_TIMES: {
       TimesOp timesOp = (TimesOp)op;
-
-      fsDir.unprotectedSetTimes(
-          renameReservedPathsOnUpgrade(timesOp.path, logVersion),
+      FSDirAttrOp.unprotectedSetTimes(
+          fsDir, renameReservedPathsOnUpgrade(timesOp.path, logVersion),
           timesOp.mtime, timesOp.atime, true);
       break;
     }
@@ -856,7 +852,9 @@ public class FSEditLogLoader {
       final String path = renameReservedPathsOnUpgrade(setStoragePolicyOp.path,
           logVersion);
       final INodesInPath iip = fsDir.getINodesInPath4Write(path);
-      fsDir.unprotectedSetStoragePolicy(iip, setStoragePolicyOp.policyId);
+      FSDirAttrOp.unprotectedSetStoragePolicy(
+          fsDir, fsNamesys.getBlockManager(), iip,
+          setStoragePolicyOp.policyId);
       break;
     }
     default:
