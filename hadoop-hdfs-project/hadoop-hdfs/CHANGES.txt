@@ -457,6 +457,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7426. Change nntop JMX format to be a JSON blob. (wang)
 
+    HDFS-7513. HDFS inotify: add defaultBlockSize to CreateEvent (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

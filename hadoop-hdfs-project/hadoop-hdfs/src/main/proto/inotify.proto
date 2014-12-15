@@ -78,6 +78,7 @@ message CreateEventProto {
   optional int32 replication = 7;
   optional string symlinkTarget = 8;
   optional bool overwrite = 9;
+  optional int64 defaultBlockSize = 10 [default=0];
 }
 
 message CloseEventProto {
