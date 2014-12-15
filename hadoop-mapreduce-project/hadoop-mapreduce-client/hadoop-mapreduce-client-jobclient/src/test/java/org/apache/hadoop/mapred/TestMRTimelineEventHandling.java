@@ -35,58 +35,6 @@ import org.junit.Test;
 public class TestMRTimelineEventHandling {
 
   @Test
-  public void testTimelineServiceStartInMiniCluster() throws Exception {
-    Configuration conf = new YarnConfiguration();
-
-    /*
-     * Timeline service should not start if the config is set to false
-     * Regardless to the value of MAPREDUCE_JOB_EMIT_TIMELINE_DATA
-     */
-    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false);
-    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, true);
-    MiniMRYarnCluster cluster = null;
-    try {
-      cluster = new MiniMRYarnCluster(
-          TestJobHistoryEventHandler.class.getSimpleName(), 1);
-      cluster.init(conf);
-      cluster.start();
-
-      //verify that the timeline service is not started.
-      Assert.assertNull("Timeline Service should not have been started",
-          cluster.getApplicationHistoryServer());
-
-      //Run a MR job and verify it succeeds
-      Path inDir = new Path("input");
-      Path outDir = new Path("output");
-      RunningJob job =
-          UtilsForTests.runJobSucceed(new JobConf(conf), inDir, outDir);
-      Assert.assertEquals(JobStatus.SUCCEEDED,
-          job.getJobStatus().getState().getValue());
-    }
-    finally {
-      if(cluster != null) {
-        cluster.stop();
-      }
-    }
-    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false);
-    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_EMIT_TIMELINE_DATA, false);
-    cluster = null;
-    try {
-        cluster = new MiniMRYarnCluster(
-            TestJobHistoryEventHandler.class.getSimpleName(), 1);
-        cluster.init(conf);
-        cluster.start();
-        Assert.assertNull("Timeline Service should not have been started",
-            cluster.getApplicationHistoryServer());
-      }
-      finally {
-        if(cluster != null) {
-          cluster.stop();
-        }
-      }
-  }
-
-  @Test
   public void testMRTimelineEventHandling() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
@@ -94,7 +42,7 @@ public class TestMRTimelineEventHandling {
     MiniMRYarnCluster cluster = null;
     try {
       cluster = new MiniMRYarnCluster(
-          TestJobHistoryEventHandler.class.getSimpleName(), 1);
+              TestJobHistoryEventHandler.class.getSimpleName(), 1, true);
       cluster.init(conf);
       cluster.start();
       TimelineStore ts = cluster.getApplicationHistoryServer()
@@ -148,7 +96,7 @@ public class TestMRTimelineEventHandling {
     MiniMRYarnCluster cluster = null;
     try {
       cluster = new MiniMRYarnCluster(
-          TestJobHistoryEventHandler.class.getSimpleName(), 1);
+          TestJobHistoryEventHandler.class.getSimpleName(), 1, true);
       cluster.init(conf);
       cluster.start();
       TimelineStore ts = cluster.getApplicationHistoryServer()
@@ -185,7 +133,7 @@ public class TestMRTimelineEventHandling {
     cluster = null;
     try {
       cluster = new MiniMRYarnCluster(
-          TestJobHistoryEventHandler.class.getSimpleName(), 1);
+          TestJobHistoryEventHandler.class.getSimpleName(), 1, true);
       cluster.init(conf);
       cluster.start();
       TimelineStore ts = cluster.getApplicationHistoryServer()
