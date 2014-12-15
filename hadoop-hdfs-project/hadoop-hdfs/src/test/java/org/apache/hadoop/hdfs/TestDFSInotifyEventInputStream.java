@@ -170,6 +170,7 @@ public class TestDFSInotifyEventInputStream {
       Assert.assertTrue(ce.getReplication() > 0);
       Assert.assertTrue(ce.getSymlinkTarget() == null);
       Assert.assertTrue(ce.getOverwrite());
+      Assert.assertEquals(BLOCK_SIZE, ce.getDefaultBlockSize());
 
       // CloseOp
       batch = waitForNextEvents(eis);
@@ -186,7 +187,8 @@ public class TestDFSInotifyEventInputStream {
       Assert.assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
       Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.APPEND);
-      Assert.assertTrue(((Event.AppendEvent) batch.getEvents()[0]).getPath().equals("/file2"));
+      Event.AppendEvent append2 = (Event.AppendEvent)batch.getEvents()[0];
+      Assert.assertEquals("/file2", append2.getPath());
 
       // CloseOp
       batch = waitForNextEvents(eis);
