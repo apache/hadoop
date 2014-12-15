@@ -62,7 +62,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Before;
@@ -319,14 +321,12 @@ public class TestYarnCLI {
     when(client.getApplicationReport(any(ApplicationId.class))).thenThrow(
         new ApplicationNotFoundException("History file for application"
             + applicationId + " is not found"));
-    try {
-      cli.run(new String[] { "application", "-status", applicationId.toString() });
-      Assert.fail();
-    } catch (Exception ex) {
-      Assert.assertTrue(ex instanceof ApplicationNotFoundException);
-      Assert.assertEquals("History file for application"
-          + applicationId + " is not found", ex.getMessage());
-    }
+    int exitCode = cli.run(new String[] { "application", "-status",
+        applicationId.toString() });
+    verify(sysOut).println(
+        "Application with id '" + applicationId
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
   }
 
   @Test
@@ -1318,6 +1318,80 @@ public class TestYarnCLI {
     Assert.assertEquals(queueInfoStr, sysOutStream.toString());
   }
 
+  @Test
+  public void testGetApplicationAttemptReportException() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId attemptId1 = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    when(client.getApplicationAttemptReport(attemptId1)).thenThrow(
+        new ApplicationNotFoundException("History file for application"
+            + applicationId + " is not found"));
+
+    int exitCode = cli.run(new String[] { "applicationattempt", "-status",
+        attemptId1.toString() });
+    verify(sysOut).println(
+        "Application for AppAttempt with id '" + attemptId1
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+
+    ApplicationAttemptId attemptId2 = ApplicationAttemptId.newInstance(
+        applicationId, 2);
+    when(client.getApplicationAttemptReport(attemptId2)).thenThrow(
+        new ApplicationAttemptNotFoundException(
+            "History file for application attempt" + attemptId2
+                + " is not found"));
+
+    exitCode = cli.run(new String[] { "applicationattempt", "-status",
+        attemptId2.toString() });
+    verify(sysOut).println(
+        "Application Attempt with id '" + attemptId2
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+  }
+
+  @Test
+  public void testGetContainerReportException() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    long cntId = 1;
+    ContainerId containerId1 = ContainerId.newContainerId(attemptId, cntId++);
+    when(client.getContainerReport(containerId1)).thenThrow(
+        new ApplicationNotFoundException("History file for application"
+            + applicationId + " is not found"));
+
+    int exitCode = cli.run(new String[] { "container", "-status",
+        containerId1.toString() });
+    verify(sysOut).println(
+        "Application for Container with id '" + containerId1
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+    ContainerId containerId2 = ContainerId.newContainerId(attemptId, cntId++);
+    when(client.getContainerReport(containerId2)).thenThrow(
+        new ApplicationAttemptNotFoundException(
+            "History file for application attempt" + attemptId
+                + " is not found"));
+
+    exitCode = cli.run(new String[] { "container", "-status",
+        containerId2.toString() });
+    verify(sysOut).println(
+        "Application Attempt for Container with id '" + containerId2
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+
+    ContainerId containerId3 = ContainerId.newContainerId(attemptId, cntId++);
+    when(client.getContainerReport(containerId3)).thenThrow(
+        new ContainerNotFoundException("History file for container"
+            + containerId3 + " is not found"));
+    exitCode = cli.run(new String[] { "container", "-status",
+        containerId3.toString() });
+    verify(sysOut).println(
+        "Container with id '" + containerId3
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+  }
 
   private void verifyUsageInfo(YarnCLI cli) throws Exception {
     cli.setSysErrPrintStream(sysErr);
