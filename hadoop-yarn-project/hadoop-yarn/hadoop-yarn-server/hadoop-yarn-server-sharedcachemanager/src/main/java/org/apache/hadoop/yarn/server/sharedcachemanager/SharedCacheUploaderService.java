@@ -72,7 +72,7 @@ public class SharedCacheUploaderService extends AbstractService
   @Override
   protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
-    this.metrics = SharedCacheUploaderMetrics.initSingleton(conf);
+    this.metrics = SharedCacheUploaderMetrics.getInstance();
 
     YarnRPC rpc = YarnRPC.create(conf);
     this.server =

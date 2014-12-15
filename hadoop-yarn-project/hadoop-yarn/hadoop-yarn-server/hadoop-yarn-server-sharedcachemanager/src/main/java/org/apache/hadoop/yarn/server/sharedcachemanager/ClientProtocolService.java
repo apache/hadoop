@@ -94,7 +94,7 @@ public class ClientProtocolService extends AbstractService implements
   @Override
   protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
-    this.metrics = ClientSCMMetrics.initSingleton(conf);
+    this.metrics = ClientSCMMetrics.getInstance();
 
     YarnRPC rpc = YarnRPC.create(conf);
     this.server =

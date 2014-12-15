@@ -21,7 +21,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -40,37 +39,15 @@ public class ClientSCMMetrics {
 
   private static final Log LOG = LogFactory.getLog(ClientSCMMetrics.class);
   final MetricsRegistry registry;
+  private final static ClientSCMMetrics INSTANCE = create();
 
-  ClientSCMMetrics() {
+  private ClientSCMMetrics() {
     registry = new MetricsRegistry("clientRequests");
     LOG.debug("Initialized " + registry);
   }
-
-  enum Singleton {
-    INSTANCE;
-
-    ClientSCMMetrics impl;
-
-    synchronized ClientSCMMetrics init(Configuration conf) {
-      if (impl == null) {
-        impl = create();
-      }
-      return impl;
-    }
-  }
-
-  public static ClientSCMMetrics initSingleton(Configuration conf) {
-    return Singleton.INSTANCE.init(conf);
-  }
-
+  
   public static ClientSCMMetrics getInstance() {
-    ClientSCMMetrics topMetrics = Singleton.INSTANCE.impl;
-    if (topMetrics == null) {
-      throw new IllegalStateException(
-          "The ClientSCMMetrics singleton instance is not initialized."
-          + " Have you called init first?");
-    }
-    return topMetrics;
+    return INSTANCE;
   }
 
   static ClientSCMMetrics create() {
