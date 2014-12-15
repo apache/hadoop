@@ -91,7 +91,7 @@ public class CleanerService extends CompositeService {
           "It appears there is another CleanerService running in the cluster");
     }
 
-    this.metrics = CleanerMetrics.initSingleton(conf);
+    this.metrics = CleanerMetrics.getInstance();
 
     // Start dependent services (i.e. AppChecker)
     super.serviceStart();

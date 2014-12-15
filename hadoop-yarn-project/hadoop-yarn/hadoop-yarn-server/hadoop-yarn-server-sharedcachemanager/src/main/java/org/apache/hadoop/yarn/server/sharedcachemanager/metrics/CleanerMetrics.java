@@ -21,7 +21,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -43,31 +42,10 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 public class CleanerMetrics {
   public static final Log LOG = LogFactory.getLog(CleanerMetrics.class);
   private final MetricsRegistry registry = new MetricsRegistry("cleaner");
-
-  enum Singleton {
-    INSTANCE;
-
-    CleanerMetrics impl;
-
-    synchronized CleanerMetrics init(Configuration conf) {
-      if (impl == null) {
-        impl = create(conf);
-      }
-      return impl;
-    }
-  }
-
-  public static CleanerMetrics initSingleton(Configuration conf) {
-    return Singleton.INSTANCE.init(conf);
-  }
-
+  private final static CleanerMetrics INSTANCE = create();
+  
   public static CleanerMetrics getInstance() {
-    CleanerMetrics topMetrics = Singleton.INSTANCE.impl;
-    if (topMetrics == null)
-      throw new IllegalStateException(
-          "The CleanerMetics singlton instance is not initialized."
-              + " Have you called init first?");
-    return topMetrics;
+    return INSTANCE;
   }
 
   @Metric("number of deleted files over all runs")
@@ -120,7 +98,7 @@ public class CleanerMetrics {
    */
   MetricsSource metricSource;
 
-  static CleanerMetrics create(Configuration conf) {
+  static CleanerMetrics create() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
 
     CleanerMetrics metricObject = new CleanerMetrics();

@@ -193,6 +193,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2356. yarn status command for non-existent application/application 
     attempt/container is too verbose. (Sunil G via devaraj)
 
+    YARN-2914. [YARN-1492] Potential race condition in Singleton implementation of 
+    SharedCacheUploaderMetrics, CleanerMetrics, ClientSCMMetrics. (Varun Saxena via kasha)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

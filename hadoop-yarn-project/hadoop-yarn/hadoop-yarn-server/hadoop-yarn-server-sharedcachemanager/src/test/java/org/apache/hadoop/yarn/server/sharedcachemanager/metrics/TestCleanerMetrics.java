@@ -30,7 +30,6 @@ public class TestCleanerMetrics {
 
   @Before
   public void init() {
-    CleanerMetrics.initSingleton(conf);
     cleanerMetrics = CleanerMetrics.getInstance();
   }
 
