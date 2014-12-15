@@ -53,10 +53,13 @@ public class InotifyFSEditLogOpTranslator {
             .groupName(addOp.permissions.getGroupName())
             .perms(addOp.permissions.getPermission())
             .overwrite(addOp.overwrite)
+            .defaultBlockSize(addOp.blockSize)
             .iNodeType(Event.CreateEvent.INodeType.FILE).build() });
-      } else {
+      } else { // append
         return new EventBatch(op.txid,
-            new Event[] { new Event.AppendEvent(addOp.path) });
+            new Event[]{new Event.AppendEvent.Builder()
+                .path(addOp.path)
+                .build()});
       }
     case OP_CLOSE:
       FSEditLogOp.CloseOp cOp = (FSEditLogOp.CloseOp) op;
@@ -72,25 +75,40 @@ public class InotifyFSEditLogOpTranslator {
     case OP_CONCAT_DELETE:
       FSEditLogOp.ConcatDeleteOp cdOp = (FSEditLogOp.ConcatDeleteOp) op;
       List<Event> events = Lists.newArrayList();
-      events.add(new Event.AppendEvent(cdOp.trg));
+      events.add(new Event.AppendEvent.Builder()
+          .path(cdOp.trg)
+          .build());
       for (String src : cdOp.srcs) {
-        events.add(new Event.UnlinkEvent(src, cdOp.timestamp));
+        events.add(new Event.UnlinkEvent.Builder()
+          .path(src)
+          .timestamp(cdOp.timestamp)
+          .build());
       }
       events.add(new Event.CloseEvent(cdOp.trg, -1, cdOp.timestamp));
       return new EventBatch(op.txid, events.toArray(new Event[0]));
     case OP_RENAME_OLD:
       FSEditLogOp.RenameOldOp rnOpOld = (FSEditLogOp.RenameOldOp) op;
       return new EventBatch(op.txid, new Event[] {
-          new Event.RenameEvent(rnOpOld.src,
-              rnOpOld.dst, rnOpOld.timestamp) });
+          new Event.RenameEvent.Builder()
+              .srcPath(rnOpOld.src)
+              .dstPath(rnOpOld.dst)
+              .timestamp(rnOpOld.timestamp)
+              .build() });
     case OP_RENAME:
       FSEditLogOp.RenameOp rnOp = (FSEditLogOp.RenameOp) op;
       return new EventBatch(op.txid, new Event[] {
-          new Event.RenameEvent(rnOp.src, rnOp.dst, rnOp.timestamp) });
+          new Event.RenameEvent.Builder()
+            .srcPath(rnOp.src)
+            .dstPath(rnOp.dst)
+            .timestamp(rnOp.timestamp)
+            .build() });
     case OP_DELETE:
       FSEditLogOp.DeleteOp delOp = (FSEditLogOp.DeleteOp) op;
       return new EventBatch(op.txid, new Event[] {
-          new Event.UnlinkEvent(delOp.path, delOp.timestamp) });
+          new Event.UnlinkEvent.Builder()
+            .path(delOp.path)
+            .timestamp(delOp.timestamp)
+            .build() });
     case OP_MKDIR:
       FSEditLogOp.MkdirOp mkOp = (FSEditLogOp.MkdirOp) op;
       return new EventBatch(op.txid,

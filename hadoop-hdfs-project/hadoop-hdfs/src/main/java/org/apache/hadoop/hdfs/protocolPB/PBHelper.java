@@ -2567,6 +2567,7 @@ public class PBHelper {
                 .replication(create.getReplication())
                 .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
                     create.getSymlinkTarget())
+                .defaultBlockSize(create.getDefaultBlockSize())
                 .overwrite(create.getOverwrite()).build());
             break;
           case EVENT_METADATA:
@@ -2593,19 +2594,26 @@ public class PBHelper {
           case EVENT_RENAME:
             InotifyProtos.RenameEventProto rename =
                 InotifyProtos.RenameEventProto.parseFrom(p.getContents());
-            events.add(new Event.RenameEvent(rename.getSrcPath(),
-                rename.getDestPath(), rename.getTimestamp()));
+            events.add(new Event.RenameEvent.Builder()
+                  .srcPath(rename.getSrcPath())
+                  .dstPath(rename.getDestPath())
+                  .timestamp(rename.getTimestamp())
+                  .build());
             break;
           case EVENT_APPEND:
             InotifyProtos.AppendEventProto reopen =
                 InotifyProtos.AppendEventProto.parseFrom(p.getContents());
-            events.add(new Event.AppendEvent(reopen.getPath()));
+            events.add(new Event.AppendEvent.Builder()
+                  .path(reopen.getPath())
+                  .build());
             break;
           case EVENT_UNLINK:
             InotifyProtos.UnlinkEventProto unlink =
                 InotifyProtos.UnlinkEventProto.parseFrom(p.getContents());
-            events.add(new Event.UnlinkEvent(unlink.getPath(),
-                unlink.getTimestamp()));
+            events.add(new Event.UnlinkEvent.Builder()
+                  .path(unlink.getPath())
+                  .timestamp(unlink.getTimestamp())
+                  .build());
             break;
           default:
             throw new RuntimeException("Unexpected inotify event type: " +
@@ -2651,6 +2659,7 @@ public class PBHelper {
                         .setReplication(ce2.getReplication())
                         .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
                             "" : ce2.getSymlinkTarget())
+                        .setDefaultBlockSize(ce2.getDefaultBlockSize())
                         .setOverwrite(ce2.getOverwrite()).build().toByteString()
                 ).build());
             break;
