@@ -367,6 +367,8 @@ Trunk (Unreleased)
     HADOOP-11296. hadoop-daemons.sh throws 'host1: bash: host3: 
     command not found...' (vinayakumarb)
 
+    HADOOP-11380. Restore Rack Awareness documenation (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
