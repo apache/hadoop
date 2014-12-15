@@ -592,6 +592,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7506. Consolidate implementation of setting inode attributes into a
     single class. (wheat9)
+    
+    HDFS-7516. Fix findbugs warnings in hdfs-nfs project. (brandonli)
 
 Release 2.6.1 - UNRELEASED
 
