@@ -235,6 +235,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-6194. Bubble up final exception in failures during creation
+    of output collectors (Varun Saxena via harsh)
+
     MAPREDUCE-5420. Remove mapreduce.task.tmp.dir from mapred-default.xml
     (James Carman via harsh)
 
