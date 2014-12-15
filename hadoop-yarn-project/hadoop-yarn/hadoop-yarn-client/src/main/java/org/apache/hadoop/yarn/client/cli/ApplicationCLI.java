@@ -41,7 +41,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
@@ -152,12 +154,14 @@ public class ApplicationCLI extends YarnCLI {
         return exitCode;
       }
       if (args[0].equalsIgnoreCase(APPLICATION)) {
-        printApplicationReport(cliParser.getOptionValue(STATUS_CMD));
+        exitCode = printApplicationReport(cliParser.getOptionValue(STATUS_CMD));
       } else if (args[0].equalsIgnoreCase(APPLICATION_ATTEMPT)) {
-        printApplicationAttemptReport(cliParser.getOptionValue(STATUS_CMD));
+        exitCode = printApplicationAttemptReport(cliParser
+            .getOptionValue(STATUS_CMD));
       } else if (args[0].equalsIgnoreCase(CONTAINER)) {
-        printContainerReport(cliParser.getOptionValue(STATUS_CMD));
+        exitCode = printContainerReport(cliParser.getOptionValue(STATUS_CMD));
       }
+      return exitCode;
     } else if (cliParser.hasOption(LIST_CMD)) {
       if (args[0].equalsIgnoreCase(APPLICATION)) {
         allAppStates = false;
@@ -252,13 +256,24 @@ public class ApplicationCLI extends YarnCLI {
    * Prints the application attempt report for an application attempt id.
    * 
    * @param applicationAttemptId
+   * @return exitCode
    * @throws YarnException
    */
-  private void printApplicationAttemptReport(String applicationAttemptId)
+  private int printApplicationAttemptReport(String applicationAttemptId)
       throws YarnException, IOException {
-    ApplicationAttemptReport appAttemptReport = client
-        .getApplicationAttemptReport(ConverterUtils
-            .toApplicationAttemptId(applicationAttemptId));
+    ApplicationAttemptReport appAttemptReport = null;
+    try {
+      appAttemptReport = client.getApplicationAttemptReport(ConverterUtils
+          .toApplicationAttemptId(applicationAttemptId));
+    } catch (ApplicationNotFoundException e) {
+      sysout.println("Application for AppAttempt with id '"
+          + applicationAttemptId + "' doesn't exist in RM or Timeline Server.");
+      return -1;
+    } catch (ApplicationAttemptNotFoundException e) {
+      sysout.println("Application Attempt with id '" + applicationAttemptId
+          + "' doesn't exist in RM or Timeline Server.");
+      return -1;
+    }
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter appAttemptReportStr = new PrintWriter(baos);
@@ -282,22 +297,42 @@ public class ApplicationCLI extends YarnCLI {
       appAttemptReportStr.print(appAttemptReport.getDiagnostics());
     } else {
       appAttemptReportStr.print("Application Attempt with id '"
-          + applicationAttemptId + "' doesn't exist in History Server.");
+          + applicationAttemptId + "' doesn't exist in Timeline Server.");
+      appAttemptReportStr.close();
+      sysout.println(baos.toString("UTF-8"));
+      return -1;
     }
     appAttemptReportStr.close();
     sysout.println(baos.toString("UTF-8"));
+    return 0;
   }
 
   /**
    * Prints the container report for an container id.
    * 
    * @param containerId
+   * @return exitCode
    * @throws YarnException
    */
-  private void printContainerReport(String containerId) throws YarnException,
+  private int printContainerReport(String containerId) throws YarnException,
       IOException {
-    ContainerReport containerReport = client.getContainerReport((ConverterUtils
-        .toContainerId(containerId)));
+    ContainerReport containerReport = null;
+    try {
+      containerReport = client.getContainerReport((ConverterUtils
+          .toContainerId(containerId)));
+    } catch (ApplicationNotFoundException e) {
+      sysout.println("Application for Container with id '" + containerId
+          + "' doesn't exist in RM or Timeline Server.");
+      return -1;
+    } catch (ApplicationAttemptNotFoundException e) {
+      sysout.println("Application Attempt for Container with id '"
+          + containerId + "' doesn't exist in RM or Timeline Server.");
+      return -1;
+    } catch (ContainerNotFoundException e) {
+      sysout.println("Container with id '" + containerId
+          + "' doesn't exist in RM or Timeline Server.");
+      return -1;
+    }
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter containerReportStr = new PrintWriter(baos);
@@ -319,10 +354,14 @@ public class ApplicationCLI extends YarnCLI {
       containerReportStr.print(containerReport.getDiagnosticsInfo());
     } else {
       containerReportStr.print("Container with id '" + containerId
-          + "' doesn't exist in Hostory Server.");
+          + "' doesn't exist in Timeline Server.");
+      containerReportStr.close();
+      sysout.println(baos.toString("UTF-8"));
+      return -1;
     }
     containerReportStr.close();
     sysout.println(baos.toString("UTF-8"));
+    return 0;
   }
 
   /**
@@ -423,12 +462,20 @@ public class ApplicationCLI extends YarnCLI {
    * Prints the application report for an application id.
    * 
    * @param applicationId
+   * @return exitCode
    * @throws YarnException
    */
-  private void printApplicationReport(String applicationId)
+  private int printApplicationReport(String applicationId)
       throws YarnException, IOException {
-    ApplicationReport appReport = client.getApplicationReport(ConverterUtils
-        .toApplicationId(applicationId));
+    ApplicationReport appReport = null;
+    try {
+      appReport = client.getApplicationReport(ConverterUtils
+          .toApplicationId(applicationId));
+    } catch (ApplicationNotFoundException e) {
+      sysout.println("Application with id '" + applicationId
+          + "' doesn't exist in RM or Timeline Server.");
+      return -1;
+    }
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter appReportStr = new PrintWriter(baos);
@@ -478,9 +525,13 @@ public class ApplicationCLI extends YarnCLI {
     } else {
       appReportStr.print("Application with id '" + applicationId
           + "' doesn't exist in RM.");
+      appReportStr.close();
+      sysout.println(baos.toString("UTF-8"));
+      return -1;
     }
     appReportStr.close();
     sysout.println(baos.toString("UTF-8"));
+    return 0;
   }
 
   private String getAllValidApplicationStates() {
