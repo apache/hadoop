@@ -193,6 +193,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2912 Jersey Tests failing with port in use. (varun saxena via stevel)
 
+    YARN-2356. yarn status command for non-existent application/application 
+    attempt/container is too verbose. (Sunil G via devaraj)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
