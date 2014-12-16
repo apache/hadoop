@@ -598,6 +598,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-6425. Large postponedMisreplicatedBlocks has impact on blockReport
     latency. (Ming Ma via kihwal)
 
+    HDFS-7494. Checking of closed in DFSInputStream#pread() should be protected
+    by synchronization (Ted Yu via Colin P. McCabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
