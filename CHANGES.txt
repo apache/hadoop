@@ -259,6 +259,9 @@ Release 1.3.0 - unreleased
     HDFS-7503. Namenode restart after large deletions can cause slow
     processReport (Arpit Agarwal)
 
+    MAPREDUCE-6196. Fix BigDecimal ArithmeticException in PiEstimator
+    (rchiang via rkanter)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES

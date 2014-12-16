@@ -20,6 +20,7 @@ package org.apache.hadoop.examples;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configured;
@@ -67,6 +68,9 @@ public class PiEstimator extends Configured implements Tool {
   /** tmp directory for input/output */
   static private final Path TMP_DIR = new Path(
       PiEstimator.class.getSimpleName() + "_TMP_3_141592654");
+
+  /* Default value for maximum precision during estimation */
+  public static int DEFAULT_PRECISION = 20;
   
   /** 2-dimensional Halton sequence {H(i)},
    * where H(i) is a 2-dimensional point and i >= 1 is the index.
@@ -310,10 +314,12 @@ public class PiEstimator extends Configured implements Tool {
       }
 
       //compute estimated value
-      return BigDecimal.valueOf(4).setScale(20)
-          .multiply(BigDecimal.valueOf(numInside.get()))
-          .divide(BigDecimal.valueOf(numMaps))
-          .divide(BigDecimal.valueOf(numPoints));
+      int precision = PiEstimator.DEFAULT_PRECISION;
+      MathContext mc = new MathContext(precision);
+      return BigDecimal.valueOf(4).setScale(precision)
+          .multiply(BigDecimal.valueOf(numInside.get()),mc)
+          .divide(BigDecimal.valueOf(numMaps),mc)
+          .divide(BigDecimal.valueOf(numPoints),mc);
     } finally {
       fs.delete(TMP_DIR, true);
     }
