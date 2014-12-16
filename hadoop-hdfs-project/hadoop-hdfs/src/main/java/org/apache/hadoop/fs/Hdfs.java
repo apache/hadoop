@@ -30,7 +30,6 @@ import java.util.NoSuchElementException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.CryptoCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -61,7 +60,6 @@ import org.apache.hadoop.util.Progressable;
 public class Hdfs extends AbstractFileSystem {
 
   DFSClient dfs;
-  final CryptoCodec factory;
   private boolean verifyChecksum = true;
 
   static {
@@ -88,7 +86,6 @@ public class Hdfs extends AbstractFileSystem {
     }
 
     this.dfs = new DFSClient(theUri, conf, getStatistics());
-    this.factory = CryptoCodec.getInstance(conf);
   }
 
   @Override
