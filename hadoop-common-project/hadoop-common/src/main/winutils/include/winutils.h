@@ -165,6 +165,12 @@ DWORD JunctionPointCheck(__in LPCWSTR pathName, __out LPBOOL result);
 
 DWORD ChangeFileModeByMask(__in LPCWSTR path, INT mode);
 
+DWORD CreateDirectoryWithMode(__in LPCWSTR path, __in INT mode);
+
+DWORD CreateFileWithMode(__in LPCWSTR lpPath, __in DWORD dwDesiredAccess,
+    __in DWORD dwShareMode, __in DWORD dwCreationDisposition, __in INT mode,
+    __out_opt PHANDLE pHFile);
+
 DWORD GetLocalGroupsForUser(__in LPCWSTR user,
   __out LPLOCALGROUP_USERS_INFO_0 *groups, __out LPDWORD entries);
 
