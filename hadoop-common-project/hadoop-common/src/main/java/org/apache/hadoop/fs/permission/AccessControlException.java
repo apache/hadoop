@@ -15,19 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.security;
+package org.apache.hadoop.fs.permission;
+
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * An exception class for access control related issues.
+ * @deprecated Use {@link org.apache.hadoop.security.AccessControlException} 
+ *             instead.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
-@InterfaceStability.Evolving
-public class AccessControlException 
-    extends org.apache.hadoop.fs.permission.AccessControlException {
-
+@Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
+public class AccessControlException extends IOException {
   //Required by {@link java.io.Serializable}.
   private static final long serialVersionUID = 1L;
 
@@ -44,7 +47,9 @@ public class AccessControlException
    * with the specified detail message.
    * @param s the detail message.
    */
-  public AccessControlException(String s) {super(s);}
+  public AccessControlException(String s) {
+    super(s);
+  }
   
   /**
    * Constructs a new exception with the specified cause and a detail
