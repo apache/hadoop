@@ -101,6 +101,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2056. Disable preemption at Queue level (Eric Payne via jlowe)
 
+    YARN-2762. Fixed RMAdminCLI to trim and check node-label related arguments
+    before sending to RM. (Rohith Sharmaks via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

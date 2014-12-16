@@ -443,14 +443,31 @@ public class TestRMAdminCLI {
         new String[] { "-addToClusterNodeLabels",
             "-directlyAccessNodeLabelStore" };
     assertTrue(0 != rmAdminCLI.run(args));
+
+    // no labels, should fail at client validation
+    args = new String[] { "-addToClusterNodeLabels", " " };
+    assertTrue(0 != rmAdminCLI.run(args));
+
+    // no labels, should fail at client validation
+    args = new String[] { "-addToClusterNodeLabels", " , " };
+    assertTrue(0 != rmAdminCLI.run(args));
+
+    // successfully add labels
+    args =
+        new String[] { "-addToClusterNodeLabels", ",x,,",
+            "-directlyAccessNodeLabelStore" };
+    assertEquals(0, rmAdminCLI.run(args));
+    assertTrue(dummyNodeLabelsManager.getClusterNodeLabels().containsAll(
+        ImmutableSet.of("x")));
   }
   
   @Test
   public void testRemoveFromClusterNodeLabels() throws Exception {
     // Successfully remove labels
-    dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x"));
+    dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
     String[] args =
-        { "-removeFromClusterNodeLabels", "x", "-directlyAccessNodeLabelStore" };
+        { "-removeFromClusterNodeLabels", "x,,y",
+            "-directlyAccessNodeLabelStore" };
     assertEquals(0, rmAdminCLI.run(args));
     assertTrue(dummyNodeLabelsManager.getClusterNodeLabels().isEmpty());
     
@@ -462,6 +479,14 @@ public class TestRMAdminCLI {
     args =
         new String[] { "-removeFromClusterNodeLabels",
             "-directlyAccessNodeLabelStore" };
+    assertTrue(0 != rmAdminCLI.run(args));
+
+    // no labels, should fail at client validation
+    args = new String[] { "-removeFromClusterNodeLabels", " " };
+    assertTrue(0 != rmAdminCLI.run(args));
+
+    // no labels, should fail at client validation
+    args = new String[] { "-removeFromClusterNodeLabels", ", " };
     assertTrue(0 != rmAdminCLI.run(args));
   }
   
@@ -486,6 +511,13 @@ public class TestRMAdminCLI {
     args =
         new String[] { "-replaceLabelsOnNode",
             "-directlyAccessNodeLabelStore" };
+    assertTrue(0 != rmAdminCLI.run(args));
+
+    // no labels, should fail
+    args = new String[] { "-replaceLabelsOnNode", " " };
+    assertTrue(0 != rmAdminCLI.run(args));
+
+    args = new String[] { "-replaceLabelsOnNode", ", " };
     assertTrue(0 != rmAdminCLI.run(args));
   }
 
