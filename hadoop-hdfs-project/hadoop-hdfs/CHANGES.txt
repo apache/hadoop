@@ -338,6 +338,9 @@ Release 2.7.0 - UNRELEASED
     
     HDFS-7516. Fix findbugs warnings in hdfs-nfs project. (brandonli)
 
+    HDFS-6425. Large postponedMisreplicatedBlocks has impact on blockReport
+    latency. (Ming Ma via kihwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

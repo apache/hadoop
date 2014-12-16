@@ -109,6 +109,10 @@ public class TestDNFencingWithReplication {
     HAStressTestHarness harness = new HAStressTestHarness();
     harness.conf.setInt(
         DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
+    harness.conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1);
+    harness.conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
 
     final MiniDFSCluster cluster = harness.startCluster();
     try {
