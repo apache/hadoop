@@ -508,10 +508,62 @@ public class NativeIO {
     
     public static final long FILE_ATTRIBUTE_NORMAL = 0x00000080L;
 
+    /**
+     * Create a directory with permissions set to the specified mode.  By setting
+     * permissions at creation time, we avoid issues related to the user lacking
+     * WRITE_DAC rights on subsequent chmod calls.  One example where this can
+     * occur is writing to an SMB share where the user does not have Full Control
+     * rights, and therefore WRITE_DAC is denied.
+     *
+     * @param path directory to create
+     * @param mode permissions of new directory
+     * @throws IOException if there is an I/O error
+     */
+    public static void createDirectoryWithMode(File path, int mode)
+        throws IOException {
+      createDirectoryWithMode0(path.getAbsolutePath(), mode);
+    }
+
+    /** Wrapper around CreateDirectory() on Windows */
+    private static native void createDirectoryWithMode0(String path, int mode)
+        throws NativeIOException;
+
     /** Wrapper around CreateFile() on Windows */
     public static native FileDescriptor createFile(String path,
         long desiredAccess, long shareMode, long creationDisposition)
         throws IOException;
+
+    /**
+     * Create a file for write with permissions set to the specified mode.  By
+     * setting permissions at creation time, we avoid issues related to the user
+     * lacking WRITE_DAC rights on subsequent chmod calls.  One example where
+     * this can occur is writing to an SMB share where the user does not have
+     * Full Control rights, and therefore WRITE_DAC is denied.
+     *
+     * This method mimics the semantics implemented by the JDK in
+     * {@link java.io.FileOutputStream}.  The file is opened for truncate or
+     * append, the sharing mode allows other readers and writers, and paths
+     * longer than MAX_PATH are supported.  (See io_util_md.c in the JDK.)
+     *
+     * @param path file to create
+     * @param append if true, then open file for append
+     * @param mode permissions of new directory
+     * @return FileOutputStream of opened file
+     * @throws IOException if there is an I/O error
+     */
+    public static FileOutputStream createFileOutputStreamWithMode(File path,
+        boolean append, int mode) throws IOException {
+      long desiredAccess = GENERIC_WRITE;
+      long shareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+      long creationDisposition = append ? OPEN_ALWAYS : CREATE_ALWAYS;
+      return new FileOutputStream(createFileWithMode0(path.getAbsolutePath(),
+          desiredAccess, shareMode, creationDisposition, mode));
+    }
+
+    /** Wrapper around CreateFile() with security descriptor on Windows */
+    private static native FileDescriptor createFileWithMode0(String path,
+        long desiredAccess, long shareMode, long creationDisposition, int mode)
+        throws NativeIOException;
 
     /** Wrapper around SetFilePointer() on Windows */
     public static native long setFilePointer(FileDescriptor fd,

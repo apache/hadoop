@@ -138,15 +138,17 @@ DWORD GetFileInformationByName(
 // Function: IsLongWindowsPath
 //
 // Description:
-//  Checks if the path is longer than MAX_PATH in which case it needs to be
-//  prepended with \\?\ for Windows OS to understand it.
+//  Checks if the path is longer than (MAX_PATH - 13) in which case it needs to
+//  be prepended with \\?\ for Windows OS to understand it.  The -13 is to
+//  account for an additional constraint for directories that it must be possible
+//  to append an additional path separator followed by an 8.3 file name.
 //
 // Returns:
 //  TRUE long path
 //  FALSE otherwise
 static BOOL IsLongWindowsPath(__in PCWSTR path)
 {
-  return (wcslen(path) + 1) > MAX_PATH;
+  return (wcslen(path) + 1) > (MAX_PATH - 13);
 }
 
 //----------------------------------------------------------------------------
@@ -1449,6 +1451,265 @@ ChangeFileModeByMaskEnd:
   LocalFree(pAbsSD);
 
   return ret;
+}
+
+//----------------------------------------------------------------------------
+// Function: GetTokenInformationByClass
+//
+// Description:
+//  Gets a class of information from a token.  On success, this function has
+//  dynamically allocated memory and set the ppTokenInformation parameter to
+//  point to it.  The caller owns this memory and is reponsible for releasing it
+//  by calling LocalFree.
+//
+// Returns:
+//  ERROR_SUCCESS: on success
+//  Error code: otherwise
+//
+static DWORD GetTokenInformationByClass(__in HANDLE hToken,
+    __in TOKEN_INFORMATION_CLASS class, __out_opt LPVOID *ppTokenInformation) {
+  DWORD dwRtnCode = ERROR_SUCCESS;
+  LPVOID pTokenInformation = NULL;
+  DWORD dwSize = 0;
+
+  // Call GetTokenInformation first time to get the required buffer size.
+  if (!GetTokenInformation(hToken, class, NULL, 0, &dwSize)) {
+    dwRtnCode = GetLastError();
+    if (dwRtnCode != ERROR_INSUFFICIENT_BUFFER) {
+      return dwRtnCode;
+    }
+  }
+
+  // Allocate memory.
+  pTokenInformation = LocalAlloc(LPTR, dwSize);
+  if (!pTokenInformation) {
+    return GetLastError();
+  }
+
+  // Call GetTokenInformation second time to fill our buffer with data.
+  if (!GetTokenInformation(hToken, class, pTokenInformation, dwSize, &dwSize)) {
+    LocalFree(pTokenInformation);
+    return GetLastError();
+  }
+
+  *ppTokenInformation = pTokenInformation;
+  return ERROR_SUCCESS;
+}
+
+//----------------------------------------------------------------------------
+// Function: GetWindowsDACLsForCreate
+//
+// Description:
+//  Get the Windows discretionary access control list equivalent to the given
+//  mode, suitable for creating a new file or directory.  Ownership is assumed
+//  to be the current process owner and primary group.  On success, this function
+//  has dynamically allocated memory and set the ppDACL parameter to point to it.
+//  The caller owns this memory and is reponsible for releasing it by calling
+//  LocalFree.
+//
+// Returns:
+//  ERROR_SUCCESS: on success
+//  Error code: otherwise
+//
+static DWORD GetWindowsDACLsForCreate(__in INT mode, __out PACL *ppDACL) {
+  DWORD dwRtnCode = ERROR_SUCCESS;
+  HANDLE hToken = NULL;
+  DWORD dwSize = 0;
+  PTOKEN_OWNER pTokenOwner = NULL;
+  PTOKEN_PRIMARY_GROUP pTokenPrimaryGroup = NULL;
+  PSID pOwnerSid = NULL, pGroupSid = NULL;
+  PACL pDACL = NULL;
+
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+    dwRtnCode = GetLastError();
+    goto done;
+  }
+
+  dwRtnCode = GetTokenInformationByClass(hToken, TokenOwner, &pTokenOwner);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+  pOwnerSid = pTokenOwner->Owner;
+
+  dwRtnCode = GetTokenInformationByClass(hToken, TokenPrimaryGroup,
+      &pTokenPrimaryGroup);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+  pGroupSid = pTokenPrimaryGroup->PrimaryGroup;
+
+  dwRtnCode = GetWindowsDACLs(mode, pOwnerSid, pGroupSid, &pDACL);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+
+  *ppDACL = pDACL;
+
+done:
+  if (hToken) {
+    CloseHandle(hToken);
+  }
+  LocalFree(pTokenOwner);
+  LocalFree(pTokenPrimaryGroup);
+  return dwRtnCode;
+}
+
+//----------------------------------------------------------------------------
+// Function: CreateSecurityDescriptorForCreate
+//
+// Description:
+//  Creates a security descriptor with the given DACL, suitable for creating a
+//  new file or directory.  On success, this function has dynamically allocated
+//  memory and set the ppSD parameter to point to it.  The caller owns this
+//  memory and is reponsible for releasing it by calling LocalFree.
+//
+// Returns:
+//  ERROR_SUCCESS: on success
+//  Error code: otherwise
+//
+static DWORD CreateSecurityDescriptorForCreate(__in PACL pDACL,
+    __out PSECURITY_DESCRIPTOR *ppSD) {
+  DWORD dwRtnCode = ERROR_SUCCESS;
+  PSECURITY_DESCRIPTOR pSD = NULL;
+
+  pSD = LocalAlloc(LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH);
+  if (!pSD) {
+    dwRtnCode = GetLastError();
+    goto done;
+  }
+
+  if (!InitializeSecurityDescriptor(pSD, SECURITY_DESCRIPTOR_REVISION)) {
+    dwRtnCode = GetLastError();
+    goto done;
+  }
+
+  if (!SetSecurityDescriptorDacl(pSD, TRUE, pDACL, FALSE)) {
+    dwRtnCode = GetLastError();
+    goto done;
+  }
+
+  *ppSD = pSD;
+
+done:
+  if (dwRtnCode != ERROR_SUCCESS) {
+    LocalFree(pSD);
+  }
+  return dwRtnCode;
+}
+
+//----------------------------------------------------------------------------
+// Function: CreateDirectoryWithMode
+//
+// Description:
+//  Create a directory with initial security descriptor containing a
+//  discretionary access control list equivalent to the given mode.
+//
+// Returns:
+//  ERROR_SUCCESS: on success
+//  Error code: otherwise
+//
+// Notes:
+//  This function is long path safe, i.e. the path will be converted to long
+//  path format if not already converted. So the caller does not need to do
+//  the conversion before calling the method.
+//
+DWORD CreateDirectoryWithMode(__in LPCWSTR lpPath, __in INT mode) {
+  DWORD dwRtnCode = ERROR_SUCCESS;
+  LPWSTR lpLongPath = NULL;
+  PACL pDACL = NULL;
+  PSECURITY_DESCRIPTOR pSD = NULL;
+  SECURITY_ATTRIBUTES sa;
+
+  dwRtnCode = ConvertToLongPath(lpPath, &lpLongPath);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+
+  dwRtnCode = GetWindowsDACLsForCreate(mode, &pDACL);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+
+  dwRtnCode = CreateSecurityDescriptorForCreate(pDACL, &pSD);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+
+  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+  sa.lpSecurityDescriptor = pSD;
+  sa.bInheritHandle = FALSE;
+
+  if (!CreateDirectoryW(lpLongPath, &sa)) {
+    dwRtnCode = GetLastError();
+  }
+
+done:
+  LocalFree(lpLongPath);
+  LocalFree(pDACL);
+  LocalFree(pSD);
+  return dwRtnCode;
+}
+
+//----------------------------------------------------------------------------
+// Function: CreateFileWithMode
+//
+// Description:
+//  Create a file with initial security descriptor containing a discretionary
+//  access control list equivalent to the given mode.
+//
+// Returns:
+//  ERROR_SUCCESS: on success
+//  Error code: otherwise
+//
+// Notes:
+//  This function is long path safe, i.e. the path will be converted to long
+//  path format if not already converted. So the caller does not need to do
+//  the conversion before calling the method.
+//
+DWORD CreateFileWithMode(__in LPCWSTR lpPath, __in DWORD dwDesiredAccess,
+    __in DWORD dwShareMode, __in DWORD dwCreationDisposition, __in INT mode,
+    __out PHANDLE pHFile) {
+  DWORD dwRtnCode = ERROR_SUCCESS;
+  LPWSTR lpLongPath = NULL;
+  PACL pDACL = NULL;
+  PSECURITY_DESCRIPTOR pSD = NULL;
+  SECURITY_ATTRIBUTES sa;
+  DWORD dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
+  HANDLE hFile = INVALID_HANDLE_VALUE;
+
+  dwRtnCode = ConvertToLongPath(lpPath, &lpLongPath);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+
+  dwRtnCode = GetWindowsDACLsForCreate(mode, &pDACL);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+
+  dwRtnCode = CreateSecurityDescriptorForCreate(pDACL, &pSD);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+
+  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+  sa.lpSecurityDescriptor = pSD;
+  sa.bInheritHandle = FALSE;
+
+  hFile = CreateFileW(lpLongPath, dwDesiredAccess, dwShareMode, &sa,
+    dwCreationDisposition, dwFlagsAndAttributes, NULL);
+  if (hFile == INVALID_HANDLE_VALUE) {
+    dwRtnCode = GetLastError();
+    goto done;
+  }
+
+  *pHFile = hFile;
+
+done:
+  LocalFree(lpLongPath);
+  LocalFree(pDACL);
+  LocalFree(pSD);
+  return dwRtnCode;
 }
 
 //----------------------------------------------------------------------------

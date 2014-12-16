@@ -31,9 +31,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestLocalDirsHandlerService {
@@ -41,14 +41,14 @@ public class TestLocalDirsHandlerService {
       TestDirectoryCollection.class.getName()).getAbsoluteFile();
   private static final File testFile = new File(testDir, "testfile");
 
-  @BeforeClass
-  public static void setup() throws IOException {
+  @Before
+  public void setup() throws IOException {
     testDir.mkdirs();
     testFile.createNewFile();
   }
 
-  @AfterClass
-  public static void teardown() {
+  @After
+  public void teardown() {
     FileUtil.fullyDelete(testDir);
   }
 
