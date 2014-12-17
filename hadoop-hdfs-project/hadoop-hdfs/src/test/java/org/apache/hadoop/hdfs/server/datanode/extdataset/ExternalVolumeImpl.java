@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
@@ -79,5 +80,21 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
 
   @Override
   public void releaseReservedSpace(long bytesToRelease) {
+  }
+
+  @Override
+  public BlockIterator newBlockIterator(String bpid, String name) {
+    return null;
+  }
+
+  @Override
+  public BlockIterator loadBlockIterator(String bpid, String name)
+      throws IOException {
+    return null;
+  }
+
+  @Override
+  public FsDatasetSpi getDataset() {
+    return null;
   }
 }

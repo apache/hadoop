@@ -453,8 +453,7 @@ public class TestReplication {
 
     // Change the length of a replica
     for (int i=0; i<cluster.getDataNodes().size(); i++) {
-      if (TestDatanodeBlockScanner.changeReplicaLength(cluster, block, i,
-          lenDelta)) {
+      if (DFSTestUtil.changeReplicaLength(cluster, block, i, lenDelta)) {
         break;
       }
     }
