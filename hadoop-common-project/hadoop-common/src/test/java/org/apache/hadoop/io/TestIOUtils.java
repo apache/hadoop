@@ -24,14 +24,21 @@ import static org.junit.Assert.fail;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -243,6 +250,43 @@ public class TestIOUtils {
       }
     } finally {
       in.close();
+    }
+  }
+
+  private static enum NoEntry3Filter implements FilenameFilter {
+    INSTANCE;
+
+    @Override
+    public boolean accept(File dir, String name) {
+      return !name.equals("entry3");
+    }
+  }
+
+  @Test
+  public void testListDirectory() throws IOException {
+    File dir = new File("testListDirectory");
+    Files.createDirectory(dir.toPath());
+    try {
+      Set<String> entries = new HashSet<String>();
+      entries.add("entry1");
+      entries.add("entry2");
+      entries.add("entry3");
+      for (String entry : entries) {
+        Files.createDirectory(new File(dir, entry).toPath());
+      }
+      List<String> list = IOUtils.listDirectory(dir,
+          NoEntry3Filter.INSTANCE);
+      for (String entry : list) {
+        Assert.assertTrue(entries.remove(entry));
+      }
+      Assert.assertTrue(entries.contains("entry3"));
+      list = IOUtils.listDirectory(dir, null);
+      for (String entry : list) {
+        entries.remove(entry);
+      }
+      Assert.assertTrue(entries.isEmpty());
+    } finally {
+      FileUtils.deleteDirectory(dir);
     }
   }
 }
