@@ -605,6 +605,9 @@ Release 2.7.0 - UNRELEASED
     NativeAzureFileSystem#NativeAzureFsInputStream#close().
     (Chen He via cnauroth)
 
+    HADOOP-11358. Tests for encryption/decryption with IV calculation
+    overflow. (yliu)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
