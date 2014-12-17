@@ -168,7 +168,6 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.UnknownCryptoProtocolVersionException;
 import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -1918,60 +1917,23 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void createSymlink(String target, String link,
       PermissionStatus dirPerms, boolean createParent, boolean logRetryCache)
       throws IOException {
-    if (!DFSUtil.isValidName(link)) {
-      throw new InvalidPathException("Invalid link name: " + link);
-    }
-    if (FSDirectory.isReservedName(target)) {
-      throw new InvalidPathException("Invalid target name: " + target);
-    }
-
-    try {
-      createSymlinkInt(target, link, dirPerms, createParent, logRetryCache);
-    } catch (AccessControlException e) {
-      logAuditEvent(false, "createSymlink", link, target, null);
-      throw e;
-    }
-  }
-
-  private void createSymlinkInt(String target, final String linkArg,
-      PermissionStatus dirPerms, boolean createParent, boolean logRetryCache) 
-      throws IOException {
-    String link = linkArg;
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.createSymlink: target="
-          + target + " link=" + link);
-    }
-    HdfsFileStatus resultingStat = null;
-    FSPermissionChecker pc = getPermissionChecker();
+    waitForLoadingFSImage();
+    HdfsFileStatus auditStat = null;
     checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(link);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create symlink " + link);
-      link = dir.resolvePath(pc, link, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(link, false);
-      if (!createParent) {
-        dir.verifyParentDir(iip, link);
-      }
-      if (!dir.isValidToCreate(link, iip)) {
-        throw new IOException("failed to create link " + link 
-            +" either because the filename is invalid or the file exists");
-      }
-      if (isPermissionEnabled) {
-        dir.checkAncestorAccess(pc, iip, FsAction.WRITE);
-      }
-      // validate that we have enough inodes.
-      checkFsObjectLimit();
-
-      // add symbolic link to namespace
-      addSymlink(link, iip, target, dirPerms, createParent, logRetryCache);
-      resultingStat = getAuditFileInfo(link, false);
+      auditStat = FSDirSymlinkOp.createSymlinkInt(this, target, link, dirPerms,
+                                                  createParent, logRetryCache);
+    } catch (AccessControlException e) {
+      logAuditEvent(false, "createSymlink", link, target, null);
+      throw e;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "createSymlink", linkArg, target, resultingStat);
+    logAuditEvent(true, "createSymlink", link, target, auditStat);
   }
 
   /**
@@ -4358,43 +4320,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               +path+" with "+ file.getBlocks().length
               +" blocks is persisted to the file system");
     }
-  }
-
-  /**
-   * Add the given symbolic link to the fs. Record it in the edits log.
-   */
-  private INodeSymlink addSymlink(String path, INodesInPath iip, String target,
-                                  PermissionStatus dirPerms,
-                                  boolean createParent, boolean logRetryCache)
-      throws UnresolvedLinkException, FileAlreadyExistsException,
-      QuotaExceededException, SnapshotAccessControlException, AclException {
-    waitForLoadingFSImage();
-
-    final long modTime = now();
-    if (createParent) {
-      INodesInPath parentIIP = iip.getParentINodesInPath();
-      if (parentIIP == null || (parentIIP = FSDirMkdirOp.mkdirsRecursively(dir,
-          parentIIP, dirPerms, true, modTime)) == null) {
-        return null;
-      } else {
-        iip = INodesInPath.append(parentIIP, null, iip.getLastLocalName());
-      }
-    }
-    final String userName = dirPerms.getUserName();
-    long id = dir.allocateNewInodeId();
-    INodeSymlink newNode = dir.addSymlink(iip, id, target, modTime, modTime,
-            new PermissionStatus(userName, null, FsPermission.getDefault()));
-    if (newNode == null) {
-      NameNode.stateChangeLog.info("addSymlink: failed to add " + path);
-      return null;
-    }
-    getEditLog().logSymlink(path, target, modTime, modTime, newNode,
-        logRetryCache);
-
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("addSymlink: " + path + " is added");
-    }
-    return newNode;
   }
 
   /**
