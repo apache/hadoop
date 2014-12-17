@@ -199,6 +199,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2914. [YARN-1492] Potential race condition in Singleton implementation of 
     SharedCacheUploaderMetrics, CleanerMetrics, ClientSCMMetrics. (Varun Saxena via kasha)
 
+    YARN-2964. FSLeafQueue#assignContainer - document the reason for using both write and
+    read locks. (Tsuyoshi Ozawa via kasha)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

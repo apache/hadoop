@@ -252,6 +252,9 @@ public class FSLeafQueue extends FSQueue {
     } finally {
       writeLock.unlock();
     }
+    // Release write lock here for better performance and avoiding deadlocks.
+    // runnableApps can be in unsorted state because of this section,
+    // but we can accept it in practice since the probability is low.
     readLock.lock();
     try {
       for (FSAppAttempt sched : runnableApps) {
