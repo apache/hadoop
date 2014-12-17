@@ -35,8 +35,8 @@ function hadoop_usage
   echo "  resourcemanager                       run the ResourceManager"
   echo "  resourcemanager -format-state-store   deletes the RMStateStore"
   echo "  rmadmin                               admin tools"
-  echo "  sharedcachemanager                    run the SharedCacheManager daemon"
   echo "  scmadmin                              SharedCacheManager admin tools"
+  echo "  sharedcachemanager                    run the SharedCacheManager daemon"
   echo "  timelineserver                        run the timeline server"
   echo "  version                               print the version"
   echo " or"
@@ -152,6 +152,17 @@ case "${COMMAND}" in
     hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
+  scmadmin)
+    CLASS='org.apache.hadoop.yarn.client.SCMAdmin'
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
+  sharedcachemanager)
+    supportdaemonization="true"
+    CLASS='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
+    hadoop_debug "Append YARN_SHAREDCACHEMANAGER_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_SHAREDCACHEMANAGER_OPTS}"
+  ;;
   timelineserver)
     supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
@@ -161,15 +172,6 @@ case "${COMMAND}" in
     if [[ -n "${YARN_TIMELINESERVER_HEAPSIZE}" ]]; then
       HADOOP_HEAPSIZE_MAX="${YARN_TIMELINESERVER_HEAPSIZE}"
     fi
-  ;;
-  sharedcachemanager)
-    supportdaemonization="true"
-    CLASS='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
-    YARN_OPTS="$YARN_OPTS $YARN_SHAREDCACHEMANAGER_OPTS"
-  ;;
-  scmadmin)
-    CLASS='org.apache.hadoop.yarn.client.SCMAdmin'
-    YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
   ;;
   version)
     CLASS=org.apache.hadoop.util.VersionInfo

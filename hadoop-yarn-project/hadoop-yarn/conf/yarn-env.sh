@@ -133,4 +133,14 @@
 #
 #export YARN_PROXYSERVER_OPTS=
 
-
+###
+# Shared Cache Manager specific parameters
+###
+# Specify the JVM options to be used when starting the
+# shared cache manager server.
+# These options will be appended to the options specified as YARN_OPTS
+# and therefore may override any similar flags set in YARN_OPTS
+#
+# See ResourceManager for some examples
+#
+#export YARN_SHAREDCACHEMANAGER_OPTS=
