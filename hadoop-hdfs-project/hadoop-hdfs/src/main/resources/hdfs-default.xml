@@ -1005,6 +1005,26 @@
 </property>
 
 <property>
+  <name>dfs.datanode.scan.period.hours</name>
+  <value>0</value>
+  <description>
+        If this is 0 or negative, the DataNode's block scanner will be
+        disabled.  If this is positive, the DataNode will not scan any
+        individual block more than once in the specified scan period.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.scanner.volume.bytes.per.second</name>
+  <value>1048576</value>
+  <description>
+        If this is 0, the DataNode's block scanner will be disabled.  If this
+        is positive, this is the number of bytes per second that the DataNode's
+        block scanner will try to scan from each volume.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.readahead.bytes</name>
   <value>4193404</value>
   <description>

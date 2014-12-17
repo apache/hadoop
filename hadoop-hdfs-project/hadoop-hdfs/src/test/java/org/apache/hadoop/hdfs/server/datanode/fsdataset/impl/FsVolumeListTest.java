@@ -19,7 +19,9 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
@@ -41,16 +43,21 @@ public class FsVolumeListTest {
       new RoundRobinVolumeChoosingPolicy<>();
   private FsDatasetImpl dataset = null;
   private String baseDir;
+  private BlockScanner blockScanner;
 
   @Before
   public void setUp() {
     dataset = mock(FsDatasetImpl.class);
     baseDir = new FileSystemTestHelper().getTestRootDir();
+    Configuration blockScannerConf = new Configuration();
+    blockScannerConf.setInt(DFSConfigKeys.
+        DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
+    blockScanner = new BlockScanner(null, blockScannerConf);
   }
 
   @Test
   public void testGetNextVolumeWithClosedVolume() throws IOException {
-    FsVolumeList volumeList = new FsVolumeList(0, blockChooser);
+    FsVolumeList volumeList = new FsVolumeList(0, blockScanner, blockChooser);
     List<FsVolumeImpl> volumes = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       File curDir = new File(baseDir, "nextvolume-" + i);
@@ -59,7 +66,7 @@ public class FsVolumeListTest {
           conf, StorageType.DEFAULT);
       volume.setCapacityForTesting(1024 * 1024 * 1024);
       volumes.add(volume);
-      volumeList.addVolume(volume);
+      volumeList.addVolume(volume.obtainReference());
     }
 
     // Close the second volume.
@@ -75,7 +82,7 @@ public class FsVolumeListTest {
 
   @Test
   public void testCheckDirsWithClosedVolume() throws IOException {
-    FsVolumeList volumeList = new FsVolumeList(0, blockChooser);
+    FsVolumeList volumeList = new FsVolumeList(0, blockScanner, blockChooser);
     List<FsVolumeImpl> volumes = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       File curDir = new File(baseDir, "volume-" + i);
@@ -83,7 +90,7 @@ public class FsVolumeListTest {
       FsVolumeImpl volume = new FsVolumeImpl(dataset, "storage-id", curDir,
           conf, StorageType.DEFAULT);
       volumes.add(volume);
-      volumeList.addVolume(volume);
+      volumeList.addVolume(volume.obtainReference());
     }
 
     // Close the 2nd volume.
