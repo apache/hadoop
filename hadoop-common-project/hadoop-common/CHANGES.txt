@@ -240,6 +240,10 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10689. InputStream is not closed in
     AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
 
+    HADOOP-10690. Lack of synchronization on access to InputStream in
+    NativeAzureFileSystem#NativeAzureFsInputStream#close().
+    (Chen He via cnauroth)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
@@ -1293,10 +1297,6 @@ Release 2.5.0 - 2014-08-11
     via Arpit Agarwal)
 
     HADOOP-10910. Increase findbugs maxHeap size. (wang)
-
-    HADOOP-10690. Lack of synchronization on access to InputStream in
-    NativeAzureFileSystem#NativeAzureFsInputStream#close().
-    (Chen He via cnauroth)
 
   BREAKDOWN OF HADOOP-10514 SUBTASKS AND RELATED JIRAS
 
