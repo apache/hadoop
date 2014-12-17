@@ -1142,8 +1142,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       return; // Return previous response
     }
 
-    metrics.incrCreateSymlinkOps();
-    /* We enforce the MAX_PATH_LENGTH limit even though a symlink target 
+    /* We enforce the MAX_PATH_LENGTH limit even though a symlink target
      * URI may refer to a non-HDFS file system. 
      */
     if (!checkPathLength(link)) {
@@ -1151,9 +1150,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
                             " character limit");
                             
     }
-    if ("".equals(target)) {
-      throw new IOException("Invalid symlink target");
-    }
+
     final UserGroupInformation ugi = getRemoteUser();
 
     boolean success = false;
