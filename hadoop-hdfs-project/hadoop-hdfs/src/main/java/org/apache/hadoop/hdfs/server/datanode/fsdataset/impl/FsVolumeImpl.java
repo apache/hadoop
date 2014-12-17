@@ -17,9 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.io.OutputStreamWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -41,15 +50,24 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.CloseableReferenceCount;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.Time;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The underlying volume used to store replica.
@@ -59,6 +77,9 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceAudience.Private
 @VisibleForTesting
 public class FsVolumeImpl implements FsVolumeSpi {
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FsVolumeImpl.class);
+
   private final FsDatasetImpl dataset;
   private final String storageID;
   private final StorageType storageType;
@@ -393,6 +414,332 @@ public class FsVolumeImpl implements FsVolumeSpi {
         }
       } while (!reservedForRbw.compareAndSet(oldReservation, newReservation));
     }
+  }
+
+  private enum SubdirFilter implements FilenameFilter {
+    INSTANCE;
+
+    @Override
+    public boolean accept(File dir, String name) {
+      return name.startsWith("subdir");
+    }
+  }
+
+  private enum BlockFileFilter implements FilenameFilter {
+    INSTANCE;
+
+    @Override
+    public boolean accept(File dir, String name) {
+      return !name.endsWith(".meta") && name.startsWith("blk_");
+    }
+  }
+
+  @VisibleForTesting
+  public static String nextSorted(List<String> arr, String prev) {
+    int res = 0;
+    if (prev != null) {
+      res = Collections.binarySearch(arr, prev);
+      if (res < 0) {
+        res = -1 - res;
+      } else {
+        res++;
+      }
+    }
+    if (res >= arr.size()) {
+      return null;
+    }
+    return arr.get(res);
+  }
+
+  private static class BlockIteratorState {
+    BlockIteratorState() {
+      lastSavedMs = iterStartMs = Time.now();
+      curFinalizedDir = null;
+      curFinalizedSubDir = null;
+      curEntry = null;
+      atEnd = false;
+    }
+
+    // The wall-clock ms since the epoch at which this iterator was last saved.
+    @JsonProperty
+    private long lastSavedMs;
+
+    // The wall-clock ms since the epoch at which this iterator was created.
+    @JsonProperty
+    private long iterStartMs;
+
+    @JsonProperty
+    private String curFinalizedDir;
+
+    @JsonProperty
+    private String curFinalizedSubDir;
+
+    @JsonProperty
+    private String curEntry;
+
+    @JsonProperty
+    private boolean atEnd;
+  }
+
+  /**
+   * A BlockIterator implementation for FsVolumeImpl.
+   */
+  private class BlockIteratorImpl implements FsVolumeSpi.BlockIterator {
+    private final File bpidDir;
+    private final String name;
+    private final String bpid;
+    private long maxStalenessMs = 0;
+
+    private List<String> cache;
+    private long cacheMs;
+
+    private BlockIteratorState state;
+
+    BlockIteratorImpl(String bpid, String name) {
+      this.bpidDir = new File(currentDir, bpid);
+      this.name = name;
+      this.bpid = bpid;
+      rewind();
+    }
+
+    /**
+     * Get the next subdirectory within the block pool slice.
+     *
+     * @return         The next subdirectory within the block pool slice, or
+     *                   null if there are no more.
+     */
+    private String getNextSubDir(String prev, File dir)
+          throws IOException {
+      List<String> children =
+          IOUtils.listDirectory(dir, SubdirFilter.INSTANCE);
+      cache = null;
+      cacheMs = 0;
+      if (children.size() == 0) {
+        LOG.trace("getNextSubDir({}, {}): no subdirectories found in {}",
+            storageID, bpid, dir.getAbsolutePath());
+        return null;
+      }
+      Collections.sort(children);
+      String nextSubDir = nextSorted(children, prev);
+      if (nextSubDir == null) {
+        LOG.trace("getNextSubDir({}, {}): no more subdirectories found in {}",
+            storageID, bpid, dir.getAbsolutePath());
+      } else {
+        LOG.trace("getNextSubDir({}, {}): picking next subdirectory {} " +
+            "within {}", storageID, bpid, nextSubDir, dir.getAbsolutePath());
+      }
+      return nextSubDir;
+    }
+
+    private String getNextFinalizedDir() throws IOException {
+      File dir = Paths.get(
+          bpidDir.getAbsolutePath(), "current", "finalized").toFile();
+      return getNextSubDir(state.curFinalizedDir, dir);
+    }
+
+    private String getNextFinalizedSubDir() throws IOException {
+      if (state.curFinalizedDir == null) {
+        return null;
+      }
+      File dir = Paths.get(
+          bpidDir.getAbsolutePath(), "current", "finalized",
+              state.curFinalizedDir).toFile();
+      return getNextSubDir(state.curFinalizedSubDir, dir);
+    }
+
+    private List<String> getSubdirEntries() throws IOException {
+      if (state.curFinalizedSubDir == null) {
+        return null; // There are no entries in the null subdir.
+      }
+      long now = Time.monotonicNow();
+      if (cache != null) {
+        long delta = now - cacheMs;
+        if (delta < maxStalenessMs) {
+          return cache;
+        } else {
+          LOG.trace("getSubdirEntries({}, {}): purging entries cache for {} " +
+            "after {} ms.", storageID, bpid, state.curFinalizedSubDir, delta);
+          cache = null;
+        }
+      }
+      File dir = Paths.get(bpidDir.getAbsolutePath(), "current", "finalized",
+                    state.curFinalizedDir, state.curFinalizedSubDir).toFile();
+      List<String> entries =
+          IOUtils.listDirectory(dir, BlockFileFilter.INSTANCE);
+      if (entries.size() == 0) {
+        entries = null;
+      } else {
+        Collections.sort(entries);
+      }
+      if (entries == null) {
+        LOG.trace("getSubdirEntries({}, {}): no entries found in {}",
+            storageID, bpid, dir.getAbsolutePath());
+      } else {
+        LOG.trace("getSubdirEntries({}, {}): listed {} entries in {}", 
+            storageID, bpid, entries.size(), dir.getAbsolutePath());
+      }
+      cache = entries;
+      cacheMs = now;
+      return cache;
+    }
+
+    /**
+     * Get the next block.<p/>
+     *
+     * Each volume has a hierarchical structure.<p/>
+     *
+     * <code>
+     * BPID B0
+     *   finalized/
+     *     subdir0
+     *       subdir0
+     *         blk_000
+     *         blk_001
+     *       ...
+     *     subdir1
+     *       subdir0
+     *         ...
+     *   rbw/
+     * </code>
+     *
+     * When we run out of entries at one level of the structure, we search
+     * progressively higher levels.  For example, when we run out of blk_
+     * entries in a subdirectory, we search for the next subdirectory.
+     * And so on.
+     */
+    @Override
+    public ExtendedBlock nextBlock() throws IOException {
+      if (state.atEnd) {
+        return null;
+      }
+      try {
+        while (true) {
+          List<String> entries = getSubdirEntries();
+          if (entries != null) {
+            state.curEntry = nextSorted(entries, state.curEntry);
+            if (state.curEntry == null) {
+              LOG.trace("nextBlock({}, {}): advancing from {} to next " +
+                  "subdirectory.", storageID, bpid, state.curFinalizedSubDir);
+            } else {
+              ExtendedBlock block =
+                  new ExtendedBlock(bpid, Block.filename2id(state.curEntry));
+              LOG.trace("nextBlock({}, {}): advancing to {}",
+                  storageID, bpid, block);
+              return block;
+            }
+          }
+          state.curFinalizedSubDir = getNextFinalizedSubDir();
+          if (state.curFinalizedSubDir == null) {
+            state.curFinalizedDir = getNextFinalizedDir();
+            if (state.curFinalizedDir == null) {
+              state.atEnd = true;
+              return null;
+            }
+          }
+        }
+      } catch (IOException e) {
+        state.atEnd = true;
+        LOG.error("nextBlock({}, {}): I/O error", storageID, bpid, e);
+        throw e;
+      }
+    }
+
+    @Override
+    public boolean atEnd() {
+      return state.atEnd;
+    }
+
+    @Override
+    public void rewind() {
+      cache = null;
+      cacheMs = 0;
+      state = new BlockIteratorState();
+    }
+
+    @Override
+    public void save() throws IOException {
+      state.lastSavedMs = Time.now();
+      boolean success = false;
+      ObjectMapper mapper = new ObjectMapper();
+      try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                new FileOutputStream(getTempSaveFile(), false), "UTF-8"))) {
+        mapper.writerWithDefaultPrettyPrinter().writeValue(writer, state);
+        success = true;
+      } finally {
+        if (!success) {
+          if (getTempSaveFile().delete()) {
+            LOG.debug("save({}, {}): error deleting temporary file.",
+                storageID, bpid);
+          }
+        }
+      }
+      Files.move(getTempSaveFile().toPath(), getSaveFile().toPath(),
+          StandardCopyOption.ATOMIC_MOVE);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("save({}, {}): saved {}", storageID, bpid,
+            mapper.writerWithDefaultPrettyPrinter().writeValueAsString(state));
+      }
+    }
+
+    public void load() throws IOException {
+      ObjectMapper mapper = new ObjectMapper();
+      File file = getSaveFile();
+      this.state = mapper.reader(BlockIteratorState.class).readValue(file);
+      LOG.trace("load({}, {}): loaded iterator {} from {}: {}", storageID,
+          bpid, name, file.getAbsoluteFile(),
+          mapper.writerWithDefaultPrettyPrinter().writeValueAsString(state));
+    }
+
+    File getSaveFile() {
+      return new File(bpidDir, name + ".cursor");
+    }
+
+    File getTempSaveFile() {
+      return new File(bpidDir, name + ".cursor.tmp");
+    }
+
+    @Override
+    public void setMaxStalenessMs(long maxStalenessMs) {
+      this.maxStalenessMs = maxStalenessMs;
+    }
+
+    @Override
+    public void close() throws IOException {
+      // No action needed for this volume implementation.
+    }
+
+    @Override
+    public long getIterStartMs() {
+      return state.iterStartMs;
+    }
+
+    @Override
+    public long getLastSavedMs() {
+      return state.lastSavedMs;
+    }
+
+    @Override
+    public String getBlockPoolId() {
+      return bpid;
+    }
+  }
+
+  @Override
+  public BlockIterator newBlockIterator(String bpid, String name) {
+    return new BlockIteratorImpl(bpid, name);
+  }
+
+  @Override
+  public BlockIterator loadBlockIterator(String bpid, String name)
+      throws IOException {
+    BlockIteratorImpl iter = new BlockIteratorImpl(bpid, name);
+    iter.load();
+    return iter;
+  }
+
+  @Override
+  public FsDatasetSpi getDataset() {
+    return dataset;
   }
 
   /**

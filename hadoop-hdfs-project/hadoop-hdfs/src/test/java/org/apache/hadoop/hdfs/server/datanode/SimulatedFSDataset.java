@@ -50,7 +50,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -483,6 +482,22 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     @Override
     public void releaseReservedSpace(long bytesToRelease) {
+    }
+
+    @Override
+    public BlockIterator newBlockIterator(String bpid, String name) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public BlockIterator loadBlockIterator(String bpid, String name)
+        throws IOException {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FsDatasetSpi getDataset() {
+      throw new UnsupportedOperationException();
     }
   }
 
@@ -1234,11 +1249,6 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public Map<String, Object> getVolumeInfoMap() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public RollingLogs createRollingLogs(String bpid, String prefix) {
     throw new UnsupportedOperationException();
   }
 

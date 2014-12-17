@@ -140,6 +140,9 @@ Trunk (Unreleased)
     class and constructor to public; and fix FsDatasetSpi to use generic type
     instead of FsVolumeImpl.  (David Powell and Joe Pallas via szetszwo)
 
+    HDFS-7430. Rewrite the BlockScanner to use O(1) memory and use multiple
+    threads (cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES

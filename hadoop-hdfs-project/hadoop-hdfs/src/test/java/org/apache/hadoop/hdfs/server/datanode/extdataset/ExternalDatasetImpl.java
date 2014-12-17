@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -49,12 +48,6 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   private final DatanodeStorage storage = new DatanodeStorage(
       DatanodeStorage.generateUuid(), DatanodeStorage.State.NORMAL,
       StorageType.DEFAULT);
-
-  @Override
-  public RollingLogs createRollingLogs(String bpid, String prefix)
-      throws IOException {
-    return new ExternalRollingLogs();
-  }
 
   @Override
   public List<ExternalVolumeImpl> getVolumes() {

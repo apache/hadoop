@@ -184,8 +184,8 @@ public class TestInterDatanodeProtocol {
       InterDatanodeProtocol idp = DataNodeTestUtils.createInterDatanodeProtocolProxy(
           datanode, datanodeinfo[0], conf, useDnHostname);
       
-      //stop block scanner, so we could compare lastScanTime
-      DataNodeTestUtils.shutdownBlockScanner(datanode);
+      // Stop the block scanners.
+      datanode.getBlockScanner().removeAllVolumeScanners();
 
       //verify BlockMetaDataInfo
       ExtendedBlock b = locatedblock.getBlock();

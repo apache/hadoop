@@ -22,7 +22,6 @@ import org.apache.hadoop.hdfs.server.datanode.Replica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipelineInterface;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
 import org.junit.Test;
 
 /**
@@ -77,14 +76,6 @@ public class TestExternalDataset {
   @Test
   public void testInstantiateReplicaInPipeline() throws Throwable {
     ReplicaInPipelineInterface inst = new ExternalReplicaInPipeline();
-  }
-
-  /**
-   * Tests instantiating a RollingLogs subclass.
-   */
-  @Test
-  public void testInstantiateRollingLogs() throws Throwable {
-    RollingLogs inst = new ExternalRollingLogs();
   }
 
   /**
