@@ -37,6 +37,12 @@ public class SyncableDataOutputStream extends DataOutputStream implements Syncab
   }
 
   @Override
+  @Deprecated
+  public void sync() throws IOException {
+    hflush();
+  }
+
+  @Override
   public void hflush() throws IOException {
     if (out instanceof Syncable) {
       ((Syncable) out).hflush();
