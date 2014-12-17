@@ -860,7 +860,7 @@ public class FSDirectory implements Closeable {
    * @param iip the INodesInPath instance containing all the ancestral INodes
    * @throws QuotaExceededException is thrown if it violates quota limit
    */
-  private boolean addINode(INodesInPath iip, INode child)
+  boolean addINode(INodesInPath iip, INode child)
       throws QuotaExceededException, UnresolvedLinkException {
     child.setLocalName(iip.getLastLocalName());
     cacheName(child);
@@ -1190,29 +1190,6 @@ public class FSDirectory implements Closeable {
     } finally {
       writeUnlock();
     }
-  }
-
-  /**
-   * Add the specified path into the namespace.
-   */
-  INodeSymlink addSymlink(INodesInPath iip, long id, String target,
-                          long mtime, long atime, PermissionStatus perm)
-          throws UnresolvedLinkException, QuotaExceededException {
-    writeLock();
-    try {
-      return unprotectedAddSymlink(iip, id, target, mtime, atime, perm);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  INodeSymlink unprotectedAddSymlink(INodesInPath iip, long id, String target,
-      long mtime, long atime, PermissionStatus perm)
-      throws UnresolvedLinkException, QuotaExceededException {
-    assert hasWriteLock();
-    final INodeSymlink symlink = new INodeSymlink(id, null, perm, mtime, atime,
-        target);
-    return addINode(iip, symlink) ? symlink : null;
   }
 
   boolean isInAnEZ(INodesInPath iip)

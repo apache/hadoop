@@ -361,12 +361,12 @@ public class FSEditLogLoader {
         // add to the file tree
         inodeId = getAndUpdateLastInodeId(addCloseOp.inodeId, logVersion,
             lastInodeId);
-        newFile = fsDir.unprotectedAddFile(inodeId,
-            iip, addCloseOp.permissions, addCloseOp.aclEntries,
-            addCloseOp.xAttrs,
-            replication, addCloseOp.mtime, addCloseOp.atime,
-            addCloseOp.blockSize, true, addCloseOp.clientName,
-            addCloseOp.clientMachine, addCloseOp.storagePolicyId);
+        newFile = fsDir.unprotectedAddFile(
+            inodeId, iip, addCloseOp.permissions, addCloseOp.aclEntries,
+            addCloseOp.xAttrs, replication, addCloseOp.mtime,
+            addCloseOp.atime, addCloseOp.blockSize, true,
+            addCloseOp.clientName, addCloseOp.clientMachine,
+            addCloseOp.storagePolicyId);
         iip = INodesInPath.replace(iip, iip.length() - 1, newFile);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, path);
 
@@ -591,9 +591,9 @@ public class FSEditLogLoader {
       final String path = renameReservedPathsOnUpgrade(symlinkOp.path,
           logVersion);
       final INodesInPath iip = fsDir.getINodesInPath(path, false);
-      fsDir.unprotectedAddSymlink(iip, inodeId,
-          symlinkOp.value, symlinkOp.mtime, symlinkOp.atime,
-          symlinkOp.permissionStatus);
+      FSDirSymlinkOp.unprotectedAddSymlink(fsDir, iip, inodeId, symlinkOp.value,
+                                           symlinkOp.mtime, symlinkOp.atime,
+                                           symlinkOp.permissionStatus);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(symlinkOp.rpcClientId, symlinkOp.rpcCallId);
