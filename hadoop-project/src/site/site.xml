@@ -38,7 +38,7 @@
   <body>
     <links position="left">
       <item name="Wiki" href="http://wiki.apache.org/hadoop" />
-      <item name="SVN" href="https://svn.apache.org/repos/asf/hadoop/" />
+      <item name="git" href="https://git-wip-us.apache.org/repos/asf/hadoop.git" />
     </links>
 
     <breadcrumbs position="left">
