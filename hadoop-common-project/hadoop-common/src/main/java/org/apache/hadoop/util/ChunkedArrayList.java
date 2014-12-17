@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.util;
+package org.apache.hadoop.util;
 
 import java.util.AbstractList;
 import java.util.Iterator;
