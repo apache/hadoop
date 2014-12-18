@@ -633,6 +633,22 @@ public class TestCheckpoint {
         });
   }
 
+  private void checkTempImages(NNStorage storage) throws IOException {
+    List<File> dirs = new ArrayList<File>();
+    dirs.add(storage.getStorageDir(0).getCurrentDir());
+    dirs.add(storage.getStorageDir(1).getCurrentDir());
+
+    for (File dir : dirs) {
+      File[] list = dir.listFiles();
+      for (File f : list) {
+        // Throw an exception if a temp image file is found.
+        if(f.getName().contains(NNStorage.NameNodeFile.IMAGE_NEW.getName())) {
+          throw new IOException("Found " + f);
+        }
+      }
+    }
+  }
+
   /**
    * Simulate 2NN failing to send the whole file (error type 3)
    * The length header in the HTTP transfer should prevent
@@ -694,6 +710,9 @@ public class TestCheckpoint {
         GenericTestUtils.assertExceptionContains(exceptionSubstring, e);
       }
       Mockito.reset(faultInjector);
+      // Make sure there is no temporary files left around.
+      checkTempImages(cluster.getNameNode().getFSImage().getStorage());
+      checkTempImages(secondary.getFSImage().getStorage());
       secondary.shutdown(); // secondary namenode crash!
       secondary = null;
 
