@@ -148,11 +148,14 @@ public abstract class AbstractFileSystem {
    */
   public static AbstractFileSystem createFileSystem(URI uri, Configuration conf)
       throws UnsupportedFileSystemException {
-    Class<?> clazz = conf.getClass("fs.AbstractFileSystem." + 
-                                uri.getScheme() + ".impl", null);
+    final String fsImplConf = String.format("fs.AbstractFileSystem.%s.impl",
+        uri.getScheme());
+
+    Class<?> clazz = conf.getClass(fsImplConf, null);
     if (clazz == null) {
-      throw new UnsupportedFileSystemException(
-          "No AbstractFileSystem for scheme: " + uri.getScheme());
+      throw new UnsupportedFileSystemException(String.format(
+          "%s=null: No AbstractFileSystem configured for scheme: %s",
+          fsImplConf, uri.getScheme()));
     }
     return (AbstractFileSystem) newInstance(clazz, uri, conf);
   }
