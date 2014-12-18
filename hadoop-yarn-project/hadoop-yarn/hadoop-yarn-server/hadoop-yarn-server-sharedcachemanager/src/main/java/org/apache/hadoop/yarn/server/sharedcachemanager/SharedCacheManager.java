@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
+import org.apache.hadoop.yarn.server.sharedcachemanager.webapp.SCMWebServer;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -77,6 +78,9 @@ public class SharedCacheManager extends CompositeService {
     SCMAdminProtocolService saps = createSCMAdminProtocolService(cs);
     addService(saps);
 
+    SCMWebServer webUI = createSCMWebServer(this);
+    addService(webUI);
+
     // init metrics
     DefaultMetricsSystem.initialize("SharedCacheManager");
     JvmMetrics.initSingleton("SharedCacheManager", null);
@@ -119,6 +123,10 @@ public class SharedCacheManager extends CompositeService {
   private SCMAdminProtocolService createSCMAdminProtocolService(
       CleanerService cleanerService) {
     return new SCMAdminProtocolService(cleanerService);
+  }
+
+  private SCMWebServer createSCMWebServer(SharedCacheManager scm) {
+    return new SCMWebServer(scm);
   }
 
   @Override
