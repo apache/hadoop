@@ -249,6 +249,10 @@ public class EncryptionZoneManager {
     final boolean dstInEZ = (dstEZI != null);
     if (srcInEZ) {
       if (!dstInEZ) {
+        if (srcEZI.getINodeId() == srcIIP.getLastINode().getId()) {
+          // src is ez root and dest is not in an ez. Allow the rename.
+          return;
+        }
         throw new IOException(
             src + " can't be moved from an encryption zone.");
       }
