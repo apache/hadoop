@@ -269,6 +269,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11385. Prevent cross site scripting attack on JMXJSONServlet.
     (wheat9)
 
+    HADOOP-11409. FileContext.getFileContext can stack overflow if default fs
+    misconfigured (Gera Shegalov via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
