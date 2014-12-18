@@ -211,6 +211,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7531. Improve the concurrent access on FsVolumeList (Lei Xu via Colin
     P. McCabe)
 
+    HDFS-7373. Clean up temporary files after fsimage transfer failures.
+    (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
