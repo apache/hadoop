@@ -217,6 +217,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7543. Avoid path resolution when getting FileStatus for audit logs.
     (wheat9)
 
+    HDFS-7530. Allow renaming of encryption zone roots. (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
