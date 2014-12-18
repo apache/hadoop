@@ -52,10 +52,11 @@ class FSDirSymlinkOp {
 
     FSPermissionChecker pc = fsn.getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(link);
+    INodesInPath iip;
     fsd.writeLock();
     try {
       link = fsd.resolvePath(pc, link, pathComponents);
-      final INodesInPath iip = fsd.getINodesInPath4Write(link, false);
+      iip = fsd.getINodesInPath4Write(link, false);
       if (!createParent) {
         fsd.verifyParentDir(iip, link);
       }
@@ -76,7 +77,7 @@ class FSDirSymlinkOp {
       fsd.writeUnlock();
     }
     NameNode.getNameNodeMetrics().incrCreateSymlinkOps();
-    return fsd.getAuditFileInfo(link, false);
+    return fsd.getAuditFileInfo(iip);
   }
 
   static INodeSymlink unprotectedAddSymlink(

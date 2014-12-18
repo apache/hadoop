@@ -50,17 +50,18 @@ public class FSDirAttrOp {
     String src = srcArg;
     FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    INodesInPath iip;
     fsd.writeLock();
     try {
       src = fsd.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.getINodesInPath4Write(src);
       fsd.checkOwner(pc, iip);
       unprotectedSetPermission(fsd, src, permission);
     } finally {
       fsd.writeUnlock();
     }
     fsd.getEditLog().logSetPermissions(src, permission);
-    return fsd.getAuditFileInfo(src, false);
+    return fsd.getAuditFileInfo(iip);
   }
 
   static HdfsFileStatus setOwner(
@@ -68,10 +69,11 @@ public class FSDirAttrOp {
       throws IOException {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    INodesInPath iip;
     fsd.writeLock();
     try {
       src = fsd.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.getINodesInPath4Write(src);
       fsd.checkOwner(pc, iip);
       if (!pc.isSuperUser()) {
         if (username != null && !pc.getUser().equals(username)) {
@@ -86,7 +88,7 @@ public class FSDirAttrOp {
       fsd.writeUnlock();
     }
     fsd.getEditLog().logSetOwner(src, username, group);
-    return fsd.getAuditFileInfo(src, false);
+    return fsd.getAuditFileInfo(iip);
   }
 
   static HdfsFileStatus setTimes(
@@ -102,10 +104,11 @@ public class FSDirAttrOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
 
+    INodesInPath iip;
     fsd.writeLock();
     try {
       src = fsd.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.getINodesInPath4Write(src);
       // Write access is required to set access and modification times
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
@@ -123,7 +126,7 @@ public class FSDirAttrOp {
     } finally {
       fsd.writeUnlock();
     }
-    return fsd.getAuditFileInfo(src, false);
+    return fsd.getAuditFileInfo(iip);
   }
 
   static boolean setReplication(
@@ -165,10 +168,11 @@ public class FSDirAttrOp {
     }
     FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+    INodesInPath iip;
     fsd.writeLock();
     try {
       src = FSDirectory.resolvePath(src, pathComponents, fsd);
-      final INodesInPath iip = fsd.getINodesInPath4Write(src);
+      iip = fsd.getINodesInPath4Write(src);
 
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
@@ -185,7 +189,7 @@ public class FSDirAttrOp {
     } finally {
       fsd.writeUnlock();
     }
-    return fsd.getAuditFileInfo(src, false);
+    return fsd.getAuditFileInfo(iip);
   }
 
   static BlockStoragePolicy[] getStoragePolicies(BlockManager bm)
