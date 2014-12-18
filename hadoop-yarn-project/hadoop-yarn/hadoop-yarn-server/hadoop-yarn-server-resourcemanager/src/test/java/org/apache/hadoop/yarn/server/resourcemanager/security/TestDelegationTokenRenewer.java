@@ -79,6 +79,7 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
+import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -86,6 +87,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityM
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.After;
@@ -116,11 +118,12 @@ public class TestDelegationTokenRenewer {
     private static int counter = 0;
     private static Token<?> lastRenewed = null;
     private static Token<?> tokenToRenewIn2Sec = null;
-
+    private static boolean cancelled = false; 
     private static void reset() {
       counter = 0;
       lastRenewed = null;
       tokenToRenewIn2Sec = null;
+
     }
 
     @Override
@@ -136,7 +139,8 @@ public class TestDelegationTokenRenewer {
     @Override
     public long renew(Token<?> t, Configuration conf) throws IOException {
       if ( !(t instanceof MyToken)) {
-        return DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT;
+        // renew in 3 seconds
+        return System.currentTimeMillis() + 3000;
       }
       MyToken token = (MyToken)t;
       if(token.isCanceled()) {
@@ -158,9 +162,12 @@ public class TestDelegationTokenRenewer {
 
     @Override
     public void cancel(Token<?> t, Configuration conf) {
-      MyToken token = (MyToken)t;
-      LOG.info("Cancel token " + token);
-      token.cancelToken();
+      cancelled = true;
+      if (t instanceof MyToken) {
+        MyToken token = (MyToken) t;
+        LOG.info("Cancel token " + token);
+        token.cancelToken();
+      }
    }
     
   }
@@ -921,6 +928,7 @@ public class TestDelegationTokenRenewer {
   // YARN will get the token for the app submitted without the delegation token.
   @Test
   public void testAppSubmissionWithoutDelegationToken() throws Exception {
+    conf.setBoolean(YarnConfiguration.RM_PROXY_USER_PRIVILEGES_ENABLED, true);
     // create token2
     Text userText2 = new Text("user2");
     DelegationTokenIdentifier dtId2 =
@@ -969,5 +977,49 @@ public class TestDelegationTokenRenewer {
     buf.reset(tokenBuffer);
     appCredentials.readTokenStorageStream(buf);
     Assert.assertTrue(appCredentials.getAllTokens().contains(token2));
+  }
+
+  // Test submitting an application with the token obtained by a previously
+  // submitted application.
+  @Test (timeout = 30000)
+  public void testAppSubmissionWithPreviousToken() throws Exception{
+    MockRM rm = new TestSecurityMockRM(conf, null);
+    rm.start();
+    final MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create Token1:
+    Text userText1 = new Text("user");
+    DelegationTokenIdentifier dtId1 =
+        new DelegationTokenIdentifier(userText1, new Text("renewer1"),
+          userText1);
+    final Token<DelegationTokenIdentifier> token1 =
+        new Token<DelegationTokenIdentifier>(dtId1.getBytes(),
+          "password1".getBytes(), dtId1.getKind(), new Text("service1"));
+
+    Credentials credentials = new Credentials();
+    credentials.addToken(userText1, token1);
+
+    // submit app1 with a token, set cancelTokenWhenComplete to false;
+    RMApp app1 =
+        rm.submitApp(200, "name", "user", null, false, null, 2, credentials,
+          null, true, false, false, null, 0, null, false);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+    rm.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
+
+    // submit app2 with the same token, set cancelTokenWhenComplete to true;
+    RMApp app2 =
+        rm.submitApp(200, "name", "user", null, false, null, 2, credentials,
+          null, true, false, false, null, 0, null, true);
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
+    rm.waitForState(app2.getApplicationId(), RMAppState.RUNNING);
+    MockRM.finishAMAndVerifyAppState(app2, rm, nm1, am2);
+    Assert.assertTrue(rm.getRMContext().getDelegationTokenRenewer()
+      .getAllTokens().containsKey(token1));
+
+    MockRM.finishAMAndVerifyAppState(app1, rm, nm1, am1);
+    // app2 completes, app1 is still running, check the token is not cancelled
+    Assert.assertFalse(Renewer.cancelled);
   }
 }

@@ -69,7 +69,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 /**
  * Service to renew application delegation tokens.
  */
@@ -93,6 +92,9 @@ public class DelegationTokenRenewer extends AbstractService {
 
   private ConcurrentMap<ApplicationId, Set<DelegationTokenToRenew>> appTokens =
       new ConcurrentHashMap<ApplicationId, Set<DelegationTokenToRenew>>();
+
+  private ConcurrentMap<Token<?>, DelegationTokenToRenew> allTokens =
+      new ConcurrentHashMap<Token<?>, DelegationTokenToRenew>();
 
   private final ConcurrentMap<ApplicationId, Long> delayedRemovalMap =
       new ConcurrentHashMap<ApplicationId, Long>();
@@ -202,6 +204,7 @@ public class DelegationTokenRenewer extends AbstractService {
       renewalTimer.cancel();
     }
     appTokens.clear();
+    allTokens.clear();
     this.renewerService.shutdown();
     dtCancelThread.interrupt();
     try {
@@ -230,7 +233,7 @@ public class DelegationTokenRenewer extends AbstractService {
     public final Configuration conf;
     public long expirationDate;
     public TimerTask timerTask;
-    public final boolean shouldCancelAtEnd;
+    public volatile boolean shouldCancelAtEnd;
     public long maxDate;
     public String user;
 
@@ -407,12 +410,25 @@ public class DelegationTokenRenewer extends AbstractService {
     boolean hasHdfsToken = false;
     for (Token<?> token : tokens) {
       if (token.isManaged()) {
-        tokenList.add(new DelegationTokenToRenew(applicationId,
-            token, getConfig(), now, shouldCancelAtEnd, evt.getUser()));
         if (token.getKind().equals(new Text("HDFS_DELEGATION_TOKEN"))) {
           LOG.info(applicationId + " found existing hdfs token " + token);
           hasHdfsToken = true;
         }
+
+        DelegationTokenToRenew dttr = allTokens.get(token);
+        if (dttr != null) {
+          // If any of the jobs sharing the same token doesn't want to cancel
+          // the token, we should not cancel the token.
+          if (!evt.shouldCancelAtEnd) {
+            dttr.shouldCancelAtEnd = evt.shouldCancelAtEnd;
+            LOG.info("Set shouldCancelAtEnd=" + shouldCancelAtEnd
+                + " for token " + dttr.token);
+          }
+          continue;
+        }
+
+        tokenList.add(new DelegationTokenToRenew(applicationId, token,
+          getConfig(), now, shouldCancelAtEnd, evt.getUser()));
       }
     }
 
@@ -429,6 +445,7 @@ public class DelegationTokenRenewer extends AbstractService {
       }
       for (DelegationTokenToRenew dtr : tokenList) {
         appTokens.get(applicationId).add(dtr);
+        allTokens.put(dtr.token, dtr);
         setTimerForTokenRenewal(dtr);
       }
     }
@@ -496,7 +513,6 @@ public class DelegationTokenRenewer extends AbstractService {
     token.setTimerTask(tTask); // keep reference to the timer
 
     renewalTimer.schedule(token.timerTask, new Date(renewIn));
-
     LOG.info("Renew " + token + " in " + expiresIn + " ms, appId = "
         + token.applicationId);
   }
@@ -559,6 +575,10 @@ public class DelegationTokenRenewer extends AbstractService {
   private void requestNewHdfsDelegationToken(ApplicationId applicationId,
       String user, boolean shouldCancelAtEnd) throws IOException,
       InterruptedException {
+    if (!hasProxyUserPrivileges) {
+      LOG.info("RM proxy-user privilege is not enabled. Skip requesting hdfs tokens.");
+      return;
+    }
     // Get new hdfs tokens for this user
     Credentials credentials = new Credentials();
     Token<?>[] newTokens = obtainSystemTokensForUser(user, credentials);
@@ -621,6 +641,8 @@ public class DelegationTokenRenewer extends AbstractService {
     LOG.error("removing failed delegation token for appid=" + applicationId
         + ";t=" + t.token.getService());
     appTokens.get(applicationId).remove(t);
+    allTokens.remove(t.token);
+
     // cancel the timer
     if (t.timerTask != null) {
       t.timerTask.cancel();
@@ -685,8 +707,13 @@ public class DelegationTokenRenewer extends AbstractService {
           cancelToken(dttr);
 
           it.remove();
+          allTokens.remove(dttr.token);
         }
       }
+    }
+
+    if(tokens != null && tokens.isEmpty()) {
+      appTokens.remove(applicationId);
     }
   }
 
@@ -841,5 +868,10 @@ public class DelegationTokenRenewer extends AbstractService {
     public ApplicationId getApplicationId() {
       return appId;
     }
+  }
+
+  // only for testing
+  protected ConcurrentMap<Token<?>, DelegationTokenToRenew> getAllTokens() {
+    return allTokens;
   }
 }
