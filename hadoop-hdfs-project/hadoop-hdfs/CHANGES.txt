@@ -53,6 +53,8 @@ Release 2.6.5 - UNRELEASED
     HDFS-10763. Open files can leak permanently due to inconsistent
     lease update (kihwal)
 
+    HDFS-7530. Allow renaming of encryption zone roots. (Charles Lamb via wang)
+
 Release 2.6.4 - 2016-02-11
 
   INCOMPATIBLE CHANGES
