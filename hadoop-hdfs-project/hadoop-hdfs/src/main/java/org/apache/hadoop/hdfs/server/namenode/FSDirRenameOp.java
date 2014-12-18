@@ -70,7 +70,8 @@ class FSDirRenameOp {
     @SuppressWarnings("deprecation")
     final boolean status = renameTo(fsd, pc, src, dst, logRetryCache);
     if (status) {
-      resultingStat = fsd.getAuditFileInfo(dst, false);
+      INodesInPath dstIIP = fsd.getINodesInPath(dst, false);
+      resultingStat = fsd.getAuditFileInfo(dstIIP);
     }
     return new RenameOldResult(status, resultingStat);
   }
@@ -122,6 +123,7 @@ class FSDirRenameOp {
    * <br>
    */
   @Deprecated
+  @SuppressWarnings("deprecation")
   static boolean unprotectedRenameTo(FSDirectory fsd, String src, String dst,
       long timestamp) throws IOException {
     if (fsd.isDir(dst)) {
@@ -246,10 +248,11 @@ class FSDirRenameOp {
     src = fsd.resolvePath(pc, src, srcComponents);
     dst = fsd.resolvePath(pc, dst, dstComponents);
     renameTo(fsd, pc, src, dst, collectedBlocks, logRetryCache, options);
-    HdfsFileStatus resultingStat = fsd.getAuditFileInfo(dst, false);
+    INodesInPath dstIIP = fsd.getINodesInPath(dst, false);
+    HdfsFileStatus resultingStat = fsd.getAuditFileInfo(dstIIP);
 
-    return new AbstractMap.SimpleImmutableEntry<BlocksMapUpdateInfo,
-        HdfsFileStatus>(collectedBlocks, resultingStat);
+    return new AbstractMap.SimpleImmutableEntry<>(
+        collectedBlocks, resultingStat);
   }
 
   /**
@@ -357,7 +360,7 @@ class FSDirRenameOp {
 
     fsd.ezManager.checkMoveValidity(srcIIP, dstIIP, src);
     final INode dstInode = dstIIP.getLastINode();
-    List<INodeDirectory> snapshottableDirs = new ArrayList<INodeDirectory>();
+    List<INodeDirectory> snapshottableDirs = new ArrayList<>();
     if (dstInode != null) { // Destination exists
       validateOverwrite(src, dst, overwrite, srcInode, dstInode);
       FSDirSnapshotOp.checkSnapshot(dstInode, snapshottableDirs);
@@ -419,7 +422,7 @@ class FSDirRenameOp {
         if (removedDst != null) {
           undoRemoveDst = false;
           if (removedNum > 0) {
-            List<INode> removedINodes = new ChunkedArrayList<INode>();
+            List<INode> removedINodes = new ChunkedArrayList<>();
             if (!removedDst.isInLatestSnapshot(tx.dstIIP.getLatestSnapshotId())) {
               removedDst.destroyAndCollectBlocks(collectedBlocks,
                   removedINodes);

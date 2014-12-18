@@ -264,29 +264,46 @@ class FSDirStatAndListingOp {
   /** Get the file info for a specific file.
    * @param fsd FSDirectory
    * @param src The string representation of the path to the file
-   * @param resolveLink whether to throw UnresolvedLinkException
    * @param isRawPath true if a /.reserved/raw pathname was passed by the user
    * @param includeStoragePolicy whether to include storage policy
    * @return object containing information regarding the file
    *         or null if file not found
    */
   static HdfsFileStatus getFileInfo(
+      FSDirectory fsd, INodesInPath src, boolean isRawPath,
+      boolean includeStoragePolicy)
+      throws IOException {
+    fsd.readLock();
+    try {
+      final INode i = src.getLastINode();
+      byte policyId = includeStoragePolicy && i != null && !i.isSymlink() ?
+          i.getStoragePolicyID() : BlockStoragePolicySuite.ID_UNSPECIFIED;
+      return i == null ? null : createFileStatus(
+          fsd, HdfsFileStatus.EMPTY_NAME, i, policyId,
+          src.getPathSnapshotId(), isRawPath, src);
+    } finally {
+      fsd.readUnlock();
+    }
+  }
+
+  static HdfsFileStatus getFileInfo(
       FSDirectory fsd, String src, boolean resolveLink, boolean isRawPath,
       boolean includeStoragePolicy)
     throws IOException {
     String srcs = FSDirectory.normalizePath(src);
+    if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
+      if (fsd.getINode4DotSnapshot(srcs) != null) {
+        return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
+            HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
+            BlockStoragePolicySuite.ID_UNSPECIFIED);
+      }
+      return null;
+    }
+
     fsd.readLock();
     try {
-      if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
-        return getFileInfo4DotSnapshot(fsd, srcs);
-      }
-      final INodesInPath inodesInPath = fsd.getINodesInPath(srcs, resolveLink);
-      final INode i = inodesInPath.getLastINode();
-      byte policyId = includeStoragePolicy && i != null && !i.isSymlink() ?
-          i.getStoragePolicyID() : BlockStoragePolicySuite.ID_UNSPECIFIED;
-      return i == null ? null : createFileStatus(fsd,
-          HdfsFileStatus.EMPTY_NAME, i, policyId,
-          inodesInPath.getPathSnapshotId(), isRawPath, inodesInPath);
+      final INodesInPath iip = fsd.getINodesInPath(srcs, resolveLink);
+      return getFileInfo(fsd, iip, isRawPath, includeStoragePolicy);
     } finally {
       fsd.readUnlock();
     }
