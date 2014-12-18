@@ -33,6 +33,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2880. Added a test to make sure node labels will be recovered
     if RM restart is enabled. (Rohith Sharmaks via jianhe)
 
+    YARN-2203. [YARN-1492] Web UI for cache manager. (Chris Trezzo via kasha)
+
   IMPROVEMENTS
 
     YARN-2950. Change message to mandate, not suggest JS requirement on UI.

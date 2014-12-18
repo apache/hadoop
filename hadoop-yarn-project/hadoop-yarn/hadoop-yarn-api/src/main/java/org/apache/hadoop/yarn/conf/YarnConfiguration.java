@@ -1413,6 +1413,13 @@ public class YarnConfiguration extends Configuration {
       SHARED_CACHE_PREFIX + "admin.thread-count";
   public static final int DEFAULT_SCM_ADMIN_CLIENT_THREAD_COUNT = 1;
 
+  /** The address of the SCM web application. */
+  public static final String SCM_WEBAPP_ADDRESS =
+      SHARED_CACHE_PREFIX + "webapp.address";
+  public static final int DEFAULT_SCM_WEBAPP_PORT = 8788;
+  public static final String DEFAULT_SCM_WEBAPP_ADDRESS =
+      "0.0.0.0:" + DEFAULT_SCM_WEBAPP_PORT;
+
   // In-memory SCM store configuration
   
   public static final String IN_MEMORY_STORE_PREFIX =
