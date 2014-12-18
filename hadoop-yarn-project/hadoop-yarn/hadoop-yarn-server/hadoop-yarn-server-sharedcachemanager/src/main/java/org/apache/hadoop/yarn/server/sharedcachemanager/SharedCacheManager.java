@@ -152,24 +152,4 @@ public class SharedCacheManager extends CompositeService {
       System.exit(-1);
     }
   }
-
-  @Private
-  @SuppressWarnings("unchecked")
-  public static AppChecker createAppCheckerService(Configuration conf) {
-    Class<? extends AppChecker> defaultCheckerClass;
-    try {
-      defaultCheckerClass =
-          (Class<? extends AppChecker>) Class
-              .forName(YarnConfiguration.DEFAULT_SCM_APP_CHECKER_CLASS);
-    } catch (Exception e) {
-      throw new YarnRuntimeException("Invalid default scm app checker class"
-          + YarnConfiguration.DEFAULT_SCM_APP_CHECKER_CLASS, e);
-    }
-
-    AppChecker checker =
-        ReflectionUtils.newInstance(conf.getClass(
-            YarnConfiguration.SCM_APP_CHECKER_CLASS, defaultCheckerClass,
-            AppChecker.class), conf);
-    return checker;
-  }
 }
