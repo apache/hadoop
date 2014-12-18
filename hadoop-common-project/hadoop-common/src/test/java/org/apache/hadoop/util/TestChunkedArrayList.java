@@ -20,7 +20,9 @@ package org.apache.hadoop.util;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.base.Stopwatch;
@@ -89,5 +91,81 @@ public class TestChunkedArrayList {
         System.out.println("ChunkedArrayList " + sw.elapsedMillis());
       }
     }
+  }
+
+  @Test
+  public void testRemovals() throws Exception {
+    final int NUM_ELEMS = 100000;
+    ChunkedArrayList<Integer> list = new ChunkedArrayList<Integer>();
+    for (int i = 0; i < NUM_ELEMS; i++) {
+      list.add(i);
+    }
+
+    // Iterate through all list elements.
+    Iterator<Integer> iter = list.iterator();
+    for (int i = 0; i < NUM_ELEMS; i++) {
+      Assert.assertTrue(iter.hasNext());
+      Integer val = iter.next();
+      Assert.assertEquals(Integer.valueOf(i), val);
+    }
+    Assert.assertFalse(iter.hasNext());
+    Assert.assertEquals(NUM_ELEMS, list.size());
+
+    // Remove even elements.
+    iter = list.iterator();
+    for (int i = 0; i < NUM_ELEMS; i++) {
+      Assert.assertTrue(iter.hasNext());
+      Integer val = iter.next();
+      Assert.assertEquals(Integer.valueOf(i), val);
+      if (i % 2 == 0) {
+        iter.remove();
+      }
+    }
+    Assert.assertFalse(iter.hasNext());
+    Assert.assertEquals(NUM_ELEMS / 2, list.size());
+
+    // Iterate through all odd list elements.
+    iter = list.iterator();
+    for (int i = 0; i < NUM_ELEMS / 2; i++) {
+      Assert.assertTrue(iter.hasNext());
+      Integer val = iter.next();
+      Assert.assertEquals(Integer.valueOf(1 + (2 * i)), val);
+      iter.remove();
+    }
+    Assert.assertFalse(iter.hasNext());
+
+    // Check that list is now empty.
+    Assert.assertEquals(0, list.size());
+    Assert.assertTrue(list.isEmpty());
+    iter = list.iterator();
+    Assert.assertFalse(iter.hasNext());
+  }
+
+  @Test
+  public void testGet() throws Exception {
+    final int NUM_ELEMS = 100001;
+    ChunkedArrayList<Integer> list = new ChunkedArrayList<Integer>();
+    for (int i = 0; i < NUM_ELEMS; i++) {
+      list.add(i);
+    }
+
+    Assert.assertEquals(Integer.valueOf(100), list.get(100));
+    Assert.assertEquals(Integer.valueOf(1000), list.get(1000));
+    Assert.assertEquals(Integer.valueOf(10000), list.get(10000));
+    Assert.assertEquals(Integer.valueOf(100000), list.get(100000));
+
+    Iterator<Integer> iter = list.iterator();
+    iter.next();
+    iter.remove();
+    Assert.assertEquals(Integer.valueOf(1), list.get(0));
+
+    iter = list.iterator();
+    for (int i = 0; i < 500; i++) {
+      iter.next();
+    }
+    iter.remove();
+
+    Assert.assertEquals(Integer.valueOf(502), list.get(500));
+    Assert.assertEquals(Integer.valueOf(602), list.get(600));
   }
 }
