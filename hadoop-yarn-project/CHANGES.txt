@@ -138,6 +138,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2762. Fixed RMAdminCLI to trim and check node-label related arguments
     before sending to RM. (Rohith Sharmaks via jianhe)
 
+    YARN-2972. DelegationTokenRenewer thread pool never expands. (Jason Lowe
+    via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
