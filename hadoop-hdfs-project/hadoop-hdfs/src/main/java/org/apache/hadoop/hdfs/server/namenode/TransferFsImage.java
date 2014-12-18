@@ -528,10 +528,18 @@ public class TransferFsImage {
         fos.getChannel().force(true);
         fos.close();
       }
+
+      // Something went wrong and did not finish reading.
+      // Remove the temporary files.
+      if (!finishedReceiving) {
+        deleteTmpFiles(localPaths);
+      }
+
       if (finishedReceiving && received != advertisedSize) {
         // only throw this exception if we think we read all of it on our end
         // -- otherwise a client-side IOException would be masked by this
         // exception that makes it look like a server-side problem!
+        deleteTmpFiles(localPaths);
         throw new IOException("File " + url + " received length " + received +
                               " is not of the advertised size " +
                               advertisedSize);
@@ -548,6 +556,7 @@ public class TransferFsImage {
       
       if (advertisedDigest != null &&
           !computedDigest.equals(advertisedDigest)) {
+        deleteTmpFiles(localPaths);
         throw new IOException("File " + url + " computed digest " +
             computedDigest + " does not match advertised digest " + 
             advertisedDigest);
@@ -557,6 +566,18 @@ public class TransferFsImage {
       return null;
     }    
   }
+
+  private static void deleteTmpFiles(List<File> files) {
+    if (files == null) {
+      return;
+    }
+
+    LOG.info("Deleting temporary files: " + files);
+    for (File file : files) {
+      file.delete(); // ignore the return value
+    }
+  }
+
 
   private static MD5Hash parseMD5Header(HttpURLConnection connection) {
     String header = connection.getHeaderField(MD5_HEADER);
