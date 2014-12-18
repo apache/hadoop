@@ -127,7 +127,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   @Override // FsDatasetSpi
   public List<FsVolumeImpl> getVolumes() {
-    return volumes.volumes;
+    return volumes.getVolumes();
   }
 
   @Override
@@ -140,9 +140,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       throws IOException {
     StorageReport[] reports;
     synchronized (statsLock) {
-      reports = new StorageReport[volumes.volumes.size()];
+      List<FsVolumeImpl> curVolumes = getVolumes();
+      reports = new StorageReport[curVolumes.size()];
       int i = 0;
-      for (FsVolumeImpl volume : volumes.volumes) {
+      for (FsVolumeImpl volume : curVolumes) {
         reports[i++] = new StorageReport(volume.toDatanodeStorage(),
                                          false,
                                          volume.getCapacity(),
@@ -1389,7 +1390,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     Map<String, ArrayList<ReplicaInfo>> uc =
         new HashMap<String, ArrayList<ReplicaInfo>>();
 
-    for (FsVolumeSpi v : volumes.volumes) {
+    List<FsVolumeImpl> curVolumes = getVolumes();
+    for (FsVolumeSpi v : curVolumes) {
       finalized.put(v.getStorageID(), new ArrayList<ReplicaInfo>());
       uc.put(v.getStorageID(), new ArrayList<ReplicaInfo>());
     }
@@ -1416,7 +1418,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     }
 
-    for (FsVolumeSpi v : volumes.volumes) {
+    for (FsVolumeImpl v : curVolumes) {
       ArrayList<ReplicaInfo> finalizedList = finalized.get(v.getStorageID());
       ArrayList<ReplicaInfo> ucList = uc.get(v.getStorageID());
       blockReportsMap.put(((FsVolumeImpl) v).toDatanodeStorage(),
@@ -2284,7 +2286,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   private Collection<VolumeInfo> getVolumeInfo() {
     Collection<VolumeInfo> info = new ArrayList<VolumeInfo>();
-    for (FsVolumeImpl volume : volumes.volumes) {
+    for (FsVolumeImpl volume : getVolumes()) {
       long used = 0;
       long free = 0;
       try {
@@ -2318,8 +2320,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override //FsDatasetSpi
   public synchronized void deleteBlockPool(String bpid, boolean force)
       throws IOException {
+    List<FsVolumeImpl> curVolumes = getVolumes();
     if (!force) {
-      for (FsVolumeImpl volume : volumes.volumes) {
+      for (FsVolumeImpl volume : curVolumes) {
         if (!volume.isBPDirEmpty(bpid)) {
           LOG.warn(bpid + " has some block files, cannot delete unless forced");
           throw new IOException("Cannot delete block pool, "
@@ -2327,7 +2330,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
       }
     }
-    for (FsVolumeImpl volume : volumes.volumes) {
+    for (FsVolumeImpl volume : curVolumes) {
       volume.deleteBPDirectories(bpid, force);
     }
   }
@@ -2345,13 +2348,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public HdfsBlocksMetadata getHdfsBlocksMetadata(String poolId,
       long[] blockIds) throws IOException {
+    List<FsVolumeImpl> curVolumes = getVolumes();
     // List of VolumeIds, one per volume on the datanode
-    List<byte[]> blocksVolumeIds = new ArrayList<byte[]>(volumes.volumes.size());
+    List<byte[]> blocksVolumeIds = new ArrayList<>(curVolumes.size());
     // List of indexes into the list of VolumeIds, pointing at the VolumeId of
     // the volume that the block is on
     List<Integer> blocksVolumeIndexes = new ArrayList<Integer>(blockIds.length);
     // Initialize the list of VolumeIds simply by enumerating the volumes
-    for (int i = 0; i < volumes.volumes.size(); i++) {
+    for (int i = 0; i < curVolumes.size(); i++) {
       blocksVolumeIds.add(ByteBuffer.allocate(4).putInt(i).array());
     }
     // Determine the index of the VolumeId of each block's volume, by comparing 
@@ -2364,7 +2368,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       int volumeIndex = 0;
       if (info != null) {
         FsVolumeSpi blockVolume = info.getVolume();
-        for (FsVolumeImpl volume : volumes.volumes) {
+        for (FsVolumeImpl volume : curVolumes) {
           // This comparison of references should be safe
           if (blockVolume == volume) {
             isValid = true;
@@ -2617,7 +2621,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
       // Don't worry about fragmentation for now. We don't expect more than one
       // transient volume per DN.
-      for (FsVolumeImpl v : volumes.volumes) {
+      for (FsVolumeImpl v : getVolumes()) {
         if (v.isTransientStorage()) {
           capacity += v.getCapacity();
           free += v.getAvailable();

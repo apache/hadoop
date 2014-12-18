@@ -208,6 +208,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7528. Consolidate symlink-related implementation into a single class.
     (wheat9)
 
+    HDFS-7531. Improve the concurrent access on FsVolumeList (Lei Xu via Colin
+    P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
