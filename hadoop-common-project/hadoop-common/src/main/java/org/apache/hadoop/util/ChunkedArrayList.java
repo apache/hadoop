@@ -110,11 +110,33 @@ public class ChunkedArrayList<T> extends AbstractList<T> {
 
   @Override
   public Iterator<T> iterator() {
-    return Iterables.concat(chunks).iterator();
+    final Iterator<T> it = Iterables.concat(chunks).iterator();
+
+    return new Iterator<T>() {
+      @Override
+      public boolean hasNext() {
+        return it.hasNext();
+      }
+
+      @Override
+      public T next() {
+        return it.next();
+      }
+
+      @Override
+      public void remove() {
+        it.remove();
+        size--;
+      }
+    };
   }
 
   @Override
   public boolean add(T e) {
+    if (size == Integer.MAX_VALUE) {
+      throw new RuntimeException("Can't add an additional element to the " +
+          "list; list already has INT_MAX elements.");
+    }
     if (lastChunk == null) {
       addChunk(initialChunkCapacity);
     } else if (lastChunk.size() >= lastChunkCapacity) {
@@ -164,8 +186,20 @@ public class ChunkedArrayList<T> extends AbstractList<T> {
   }
 
   @Override
-  public T get(int arg0) {
-    throw new UnsupportedOperationException(
-        this.getClass().getName() + " does not support random access");
+  public T get(int idx) {
+    if (idx < 0) {
+      throw new IndexOutOfBoundsException();
+    }
+    int base = 0;
+    Iterator<List<T>> it = chunks.iterator();
+    while (it.hasNext()) {
+      List<T> list = it.next();
+      int size = list.size();
+      if (idx < base + size) {
+        return list.get(idx - base);
+      }
+      base += size;
+    }
+    throw new IndexOutOfBoundsException();
   }
 }
