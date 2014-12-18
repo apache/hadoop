@@ -326,11 +326,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return !isDefaultAuditLogger || auditLog.isInfoEnabled();
   }
 
-  private HdfsFileStatus getAuditFileInfo(String path, boolean resolveSymlink)
-      throws IOException {
-    return dir.getAuditFileInfo(path, resolveSymlink);
-  }
-  
   private void logAuditEvent(boolean succeeded, String cmd, String src)
       throws IOException {
     logAuditEvent(succeeded, cmd, src, null, null);
@@ -7668,7 +7663,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
       xAttrs.add(ezXAttr);
       getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
-      resultingStat = getAuditFileInfo(src, false);
+      final INodesInPath iip = dir.getINodesInPath4Write(src, false);
+      resultingStat = dir.getAuditFileInfo(iip);
     } finally {
       writeUnlock();
     }
@@ -7702,7 +7698,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         dir.checkPathAccess(pc, iip, FsAction.READ);
       }
       final EncryptionZone ret = dir.getEZForPath(iip);
-      resultingStat = getAuditFileInfo(src, false);
+      resultingStat = dir.getAuditFileInfo(iip);
       success = true;
       return ret;
     } finally {

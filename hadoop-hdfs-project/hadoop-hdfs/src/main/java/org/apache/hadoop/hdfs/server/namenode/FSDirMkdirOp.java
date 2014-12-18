@@ -42,7 +42,6 @@ class FSDirMkdirOp {
       FSNamesystem fsn, String src, PermissionStatus permissions,
       boolean createParent) throws IOException {
     FSDirectory fsd = fsn.getFSDirectory();
-    final String srcArg = src;
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
     }
@@ -70,12 +69,12 @@ class FSDirMkdirOp {
       // heuristic because the mkdirs() operation might need to
       // create multiple inodes.
       fsn.checkFsObjectLimit();
-
-      if (mkdirsRecursively(fsd, iip, permissions, false, now()) == null) {
+      iip = mkdirsRecursively(fsd, iip, permissions, false, now());
+      if (iip == null) {
         throw new IOException("Failed to create directory: " + src);
       }
     }
-    return fsd.getAuditFileInfo(srcArg, false);
+    return fsd.getAuditFileInfo(iip);
   }
 
   static INode unprotectedMkdir(

@@ -214,6 +214,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7373. Clean up temporary files after fsimage transfer failures.
     (kihwal)
 
+    HDFS-7543. Avoid path resolution when getting FileStatus for audit logs.
+    (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
