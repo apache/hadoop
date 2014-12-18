@@ -17,12 +17,11 @@
 
 package org.apache.hadoop.jmx;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.lang.management.ManagementFactory;
-import java.lang.reflect.Array;
-import java.util.Iterator;
-import java.util.Set;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.http.HttpServer2;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerator;
 
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
@@ -43,12 +42,12 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.http.HttpServer2;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.lang.management.ManagementFactory;
+import java.lang.reflect.Array;
+import java.util.Iterator;
+import java.util.Set;
 
 /*
  * This servlet is based off of the JMXProxyServlet from Tomcat 7.0.14. It has
@@ -114,16 +113,15 @@ import org.codehaus.jackson.JsonGenerator;
  *  
  *  The bean's name and modelerType will be returned for all beans.
  *
- *  Optional paramater "callback" should be used to deliver JSONP response.
- *  
  */
 public class JMXJsonServlet extends HttpServlet {
   private static final Log LOG = LogFactory.getLog(JMXJsonServlet.class);
+  static final String ACCESS_CONTROL_ALLOW_METHODS =
+      "Access-Control-Allow-Methods";
+  static final String ACCESS_CONTROL_ALLOW_ORIGIN =
+      "Access-Control-Allow-Origin";
 
   private static final long serialVersionUID = 1L;
-
-  // ----------------------------------------------------- Instance Variables
-  private static final String CALLBACK_PARAM = "callback";
 
   /**
    * MBean server.
@@ -164,17 +162,12 @@ public class JMXJsonServlet extends HttpServlet {
       }
       
       JsonGenerator jg = null;
-
-      writer = response.getWriter();
+      try {
+        writer = response.getWriter();
  
-      // "callback" parameter implies JSONP outpout
-      jsonpcb = request.getParameter(CALLBACK_PARAM);
-      if (jsonpcb != null) {
-        response.setContentType("application/javascript; charset=utf8");
-        writer.write(jsonpcb + "(");
-      } else {
         response.setContentType("application/json; charset=utf8");
-      }
+        response.setHeader(ACCESS_CONTROL_ALLOW_METHODS, "GET");
+        response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
 
       JsonFactory jsonFactory = new JsonFactory();
       jg = jsonFactory.createJsonGenerator(writer);
@@ -209,14 +202,20 @@ public class JMXJsonServlet extends HttpServlet {
         
       }
 
-      // query per mbean
-      String qry = request.getParameter("qry");
-      if (qry == null) {
-        qry = "*:*";
+        // query per mbean
+        String qry = request.getParameter("qry");
+        if (qry == null) {
+          qry = "*:*";
+        }
+        listBeans(jg, new ObjectName(qry), null, response);
+      } finally {
+        if (jg != null) {
+          jg.close();
+        }
+        if (writer != null) {
+          writer.close();
+        }
       }
-      listBeans(jg, new ObjectName(qry), null, response);
-      jg.close();
-
     } catch ( IOException e ) {
       LOG.error("Caught an exception while processing JMX request", e);
       response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -224,9 +223,6 @@ public class JMXJsonServlet extends HttpServlet {
       LOG.error("Caught an exception while processing JMX request", e);
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
     } finally {
-      if (jsonpcb != null) {
-         writer.write(");");
-      }
       if (writer != null) {
         writer.close();
       }
