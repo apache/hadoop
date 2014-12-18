@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.sharedcachemanager;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.IOException;
@@ -84,7 +84,7 @@ public class TestClientSCMProtocolService {
     conf.set(YarnConfiguration.SCM_STORE_CLASS,
         InMemorySCMStore.class.getName());
     conf.set(YarnConfiguration.SHARED_CACHE_ROOT, testDir.getPath());
-    AppChecker appChecker = mock(AppChecker.class);
+    AppChecker appChecker = spy(new DummyAppChecker());
     store = new InMemorySCMStore(appChecker);
     store.init(conf);
     store.start();
