@@ -25,16 +25,22 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -110,12 +116,28 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   public void testServerSaslNoClientSasl() throws Exception {
     HdfsConfiguration clusterConf = createSecureConfig(
       "authentication,integrity,privacy");
+    // Set short retry timeouts so this test runs faster
+    clusterConf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
     startCluster(clusterConf);
     HdfsConfiguration clientConf = new HdfsConfiguration(clusterConf);
     clientConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "");
-    exception.expect(IOException.class);
-    exception.expectMessage("could only be replicated to 0 nodes");
-    doTest(clientConf);
+
+    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+        LogFactory.getLog(DataNode.class));
+    try {
+      doTest(clientConf);
+      Assert.fail("Should fail if SASL data transfer protection is not " +
+          "configured or not supported in client");
+    } catch (IOException e) {
+      GenericTestUtils.assertMatches(e.getMessage(), 
+          "could only be replicated to 0 nodes");
+    } finally {
+      logs.stopCapturing();
+    }
+
+    GenericTestUtils.assertMatches(logs.getOutput(),
+        "Failed to read expected SASL data transfer protection " +
+        "handshake from client at");
   }
 
   @Test

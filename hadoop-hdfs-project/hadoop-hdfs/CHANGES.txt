@@ -361,6 +361,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7494. Checking of closed in DFSInputStream#pread() should be protected
     by synchronization (Ted Yu via Colin P. McCabe)
 
+    HDFS-7431. log message for InvalidMagicNumberException may be incorrect.
+    (Yi Liu via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
