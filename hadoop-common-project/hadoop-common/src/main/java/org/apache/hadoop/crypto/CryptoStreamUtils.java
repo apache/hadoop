@@ -49,6 +49,13 @@ public class CryptoStreamUtils {
         HADOOP_SECURITY_CRYPTO_BUFFER_SIZE_DEFAULT);
   }
   
+  /** AES/CTR/NoPadding is required */
+  public static void checkCodec(CryptoCodec codec) {
+    if (codec.getCipherSuite() != CipherSuite.AES_CTR_NOPADDING) {
+      throw new UnsupportedCodecException("AES/CTR/NoPadding is required");
+    }
+  }
+
   /** Check and floor buffer size */
   public static int checkBufferSize(CryptoCodec codec, int bufferSize) {
     Preconditions.checkArgument(bufferSize >= MIN_BUFFER_SIZE, 
