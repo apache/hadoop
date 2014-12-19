@@ -465,11 +465,15 @@ public class TestMapReduce {
   private static boolean isSequenceFile(FileSystem fs,
                                         Path f) throws IOException {
     DataInputStream in = fs.open(f);
-    byte[] seq = "SEQ".getBytes();
-    for(int i=0; i < seq.length; ++i) {
-      if (seq[i] != in.read()) {
-        return false;
+    try {
+      byte[] seq = "SEQ".getBytes();
+      for (int i = 0; i < seq.length; ++i) {
+        if (seq[i] != in.read()) {
+          return false;
+        }
       }
+    } finally {
+      in.close();
     }
     return true;
   }
