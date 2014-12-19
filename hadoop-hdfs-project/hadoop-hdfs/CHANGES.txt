@@ -391,6 +391,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7503. Namenode restart after large deletions can cause slow
     processReport. (Arpit Agarwal)
 
+    HDFS-7443. Datanode upgrade to BLOCKID_BASED_LAYOUT fails if duplicate
+    block files are present in the same volume (cmccabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
