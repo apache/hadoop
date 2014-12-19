@@ -42,8 +42,8 @@ implements Configurable
   static final int MIN_ALLOWABLE_ARGS = 1;
   
   static final int DEFAULT_ARG_COUNT = 100;
-  
-  static final String SCRIPT_FILENAME_KEY = "topology.script.file.name";
+
+  public static final String SCRIPT_FILENAME_KEY = "topology.script.file.name";
   static final String SCRIPT_ARG_COUNT_KEY = "topology.script.number.args";
   
   public ScriptBasedMapping(Configuration conf) {

@@ -2818,7 +2818,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     List <String> tmpList = new ArrayList<String>(1);
     tmpList.add(name);
     List <String> rNameList = dnsToSwitchMapping.resolve(tmpList);
-    String rName = rNameList.get(0);
+    String rName = null;
+    if (rNameList == null || rNameList.get(0) == null) {
+      rName = NetworkTopology.DEFAULT_RACK;
+      LOG.warn("Couldn't resolve " + name + ". Falling back to "
+          + NetworkTopology.DEFAULT_RACK);
+    } else {
+      rName = rNameList.get(0);
+    }
     String networkLoc = NodeBase.normalize(rName);
     return addHostToNodeMapping(name, networkLoc);
   }
