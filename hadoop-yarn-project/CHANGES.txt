@@ -35,6 +35,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2203. [YARN-1492] Web UI for cache manager. (Chris Trezzo via kasha)
 
+    YARN-2738. [YARN-2574] Add FairReservationSystem for FairScheduler. 
+    (Anubhav Dhoot via kasha)
+
   IMPROVEMENTS
 
     YARN-2950. Change message to mandate, not suggest JS requirement on UI.
