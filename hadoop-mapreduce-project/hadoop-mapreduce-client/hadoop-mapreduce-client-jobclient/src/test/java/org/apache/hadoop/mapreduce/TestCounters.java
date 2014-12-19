@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.mapreduce;
 
+import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -70,7 +74,40 @@ public class TestCounters {
       testMaxGroups(new Counters());
     }
   }
-  
+
+  @Test public void testResetOnDeserialize() throws IOException {
+    // Allow only one counterGroup
+    Configuration conf = new Configuration();
+    conf.setInt(MRJobConfig.COUNTER_GROUPS_MAX_KEY, 1);
+    Limits.init(conf);
+
+    Counters countersWithOneGroup = new Counters();
+    countersWithOneGroup.findCounter("firstOf1Allowed", "First group");
+    boolean caughtExpectedException = false;
+    try {
+      countersWithOneGroup.findCounter("secondIsTooMany", "Second group");
+    }
+    catch (LimitExceededException _) {
+      caughtExpectedException = true;
+    }
+
+    assertTrue("Did not throw expected exception",
+        caughtExpectedException);
+
+    Counters countersWithZeroGroups = new Counters();
+    DataOutputBuffer out = new DataOutputBuffer();
+    countersWithZeroGroups.write(out);
+
+    DataInputBuffer in = new DataInputBuffer();
+    in.reset(out.getData(), out.getLength());
+
+    countersWithOneGroup.readFields(in);
+
+    // After reset one should be able to add a group
+    countersWithOneGroup.findCounter("firstGroupAfterReset", "After reset " +
+        "limit should be set back to zero");
+  }
+
   @Test
   public void testCountersIncrement() {
     Counters fCounters = new Counters();

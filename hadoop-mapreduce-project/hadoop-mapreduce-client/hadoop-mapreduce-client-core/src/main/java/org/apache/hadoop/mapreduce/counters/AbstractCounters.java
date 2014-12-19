@@ -307,6 +307,10 @@ public abstract class AbstractCounters<C extends Counter,
       fgroups.put(group.getName(), group);
     }
     int numGroups = WritableUtils.readVInt(in);
+    if (!groups.isEmpty()) {
+      groups.clear();
+      limits.reset();
+    }
     while (numGroups-- > 0) {
       limits.checkGroups(groups.size() + 1);
       G group = groupFactory.newGenericGroup(
