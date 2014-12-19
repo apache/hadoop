@@ -213,7 +213,7 @@ class FsVolumeList {
 
   @Override
   public String toString() {
-    return volumes.toString();
+    return Arrays.toString(volumes.get());
   }
 
   /**
