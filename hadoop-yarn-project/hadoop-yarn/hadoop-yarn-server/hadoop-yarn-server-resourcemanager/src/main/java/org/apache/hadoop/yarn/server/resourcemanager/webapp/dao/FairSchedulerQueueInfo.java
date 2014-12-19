@@ -94,9 +94,14 @@ public class FairSchedulerQueueInfo {
     fractionMemMaxShare = (float)maxResources.getMemory() / clusterResources.getMemory();
     
     maxApps = allocConf.getQueueMaxApps(queueName);
-    
-    Collection<FSQueue> children = queue.getChildQueues();
+
     childQueues = new ArrayList<FairSchedulerQueueInfo>();
+    if (allocConf.isReservable(queueName) &&
+        !allocConf.getShowReservationAsQueues(queueName)) {
+      return;
+    }
+
+    Collection<FSQueue> children = queue.getChildQueues();
     for (FSQueue child : children) {
       if (child instanceof FSLeafQueue) {
         childQueues.add(new FairSchedulerLeafQueueInfo((FSLeafQueue)child, scheduler));
