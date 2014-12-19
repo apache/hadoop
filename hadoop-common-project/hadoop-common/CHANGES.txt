@@ -82,6 +82,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11430. Add GenericTestUtils#disableLog, GenericTestUtils#setLogLevel
     (cmccabe)
 
+    HADOOP-11422. Check CryptoCodec is AES-CTR for Crypto input/output stream
+    (Yi Liu via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
