@@ -711,11 +711,6 @@ public class DFSTestUtil {
     return ((DFSOutputStream) out.getWrappedStream()).getBlockToken();
   }
 
-  static void setLogLevel2All(org.apache.commons.logging.Log log) {
-    ((org.apache.commons.logging.impl.Log4JLogger)log
-        ).getLogger().setLevel(org.apache.log4j.Level.ALL);
-  }
-
   public static String readFile(File f) throws IOException {
     StringBuilder b = new StringBuilder();
     BufferedReader in = new BufferedReader(new FileReader(f));

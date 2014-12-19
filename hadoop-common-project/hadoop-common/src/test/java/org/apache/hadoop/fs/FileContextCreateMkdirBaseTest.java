@@ -28,6 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.test.GenericTestUtils;
 
 /**
  * <p>
@@ -54,14 +55,8 @@ public abstract class FileContextCreateMkdirBaseTest {
   protected final FileContextTestHelper fileContextTestHelper;
   protected static FileContext fc;
       
-  {
-    try {
-      ((Log4JLogger)FileSystem.LOG).getLogger().setLevel(Level.DEBUG);
-    }
-    catch(Exception e) {
-      System.out.println("Cannot change log level\n"
-          + StringUtils.stringifyException(e));
-    }
+  static {
+    GenericTestUtils.setLogLevel(FileSystem.LOG, Level.DEBUG);
   }
   
   public FileContextCreateMkdirBaseTest() {
