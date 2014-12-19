@@ -23,7 +23,9 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Random;
@@ -100,6 +102,62 @@ public class ReservationSystemTestUtil {
         .assertTrue(newPlan.getReservationAgent() instanceof GreedyReservationAgent);
     Assert
         .assertTrue(newPlan.getSharingPolicy() instanceof CapacityOverTimePolicy);
+  }
+
+  static void setupFSAllocationFile(String allocationFile)
+      throws IOException {
+    PrintWriter out = new PrintWriter(new FileWriter(allocationFile));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"default\">");
+    out.println("<weight>1</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a\">");
+    out.println("<weight>1</weight>");
+    out.println("<queue name=\"a1\">");
+    out.println("<weight>3</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a2\">");
+    out.println("<weight>7</weight>");
+    out.println("</queue>");
+    out.println("</queue>");
+    out.println("<queue name=\"dedicated\">");
+    out.println("<reservation></reservation>");
+    out.println("<weight>8</weight>");
+    out.println("</queue>");
+    out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
+    out.println("</allocations>");
+    out.close();
+  }
+
+  static void updateFSAllocationFile(String allocationFile)
+      throws IOException {
+    PrintWriter out = new PrintWriter(new FileWriter(allocationFile));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"default\">");
+    out.println("<weight>5</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a\">");
+    out.println("<weight>5</weight>");
+    out.println("<queue name=\"a1\">");
+    out.println("<weight>3</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a2\">");
+    out.println("<weight>7</weight>");
+    out.println("</queue>");
+    out.println("</queue>");
+    out.println("<queue name=\"dedicated\">");
+    out.println("<reservation></reservation>");
+    out.println("<weight>80</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"reservation\">");
+    out.println("<reservation></reservation>");
+    out.println("<weight>10</weight>");
+    out.println("</queue>");
+    out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
+    out.println("</allocations>");
+    out.close();
   }
 
   @SuppressWarnings("unchecked")
