@@ -85,6 +85,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11422. Check CryptoCodec is AES-CTR for Crypto input/output stream
     (Yi Liu via Colin P. McCabe)
 
+    HADOOP-11213. Typos in html pages: SecureMode and EncryptedShuffle. 
+    (Wei Yan via kasha)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
