@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.TestZKRMStateStore.TestZKRMStateStoreTester;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -161,6 +162,59 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       testAppDeletion(fsTester);
       testDeleteStore(fsTester);
       testAMRMTokenSecretManagerStateStore(fsTester);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testCheckMajorVersionChange() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      fsTester = new TestFSRMStateStoreTester(cluster) {
+        Version VERSION_INFO = Version.newInstance(Integer.MAX_VALUE, 0);
+
+        @Override
+        public Version getCurrentVersion() throws Exception {
+          return VERSION_INFO;
+        }
+
+        @Override
+        public RMStateStore getRMStateStore() throws Exception {
+          YarnConfiguration conf = new YarnConfiguration();
+          conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI,
+              workingDirPathURI.toString());
+          conf.set(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
+              "100,6000");
+          this.store = new TestFileSystemRMStore(conf) {
+            Version storedVersion = null;
+
+            @Override
+            public Version getCurrentVersion() {
+              return VERSION_INFO;
+            }
+
+            @Override
+            protected synchronized Version loadVersion() throws Exception {
+              return storedVersion;
+            }
+
+            @Override
+            protected synchronized void storeVersion() throws Exception {
+              storedVersion = VERSION_INFO;
+            }
+          };
+          return store;
+        }
+      };
+
+      // default version
+      RMStateStore store = fsTester.getRMStateStore();
+      Version defaultVersion = fsTester.getCurrentVersion();
+      store.checkVersion();
+      Assert.assertEquals(defaultVersion, store.loadVersion());
     } finally {
       cluster.shutdown();
     }

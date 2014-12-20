@@ -365,7 +365,7 @@ public abstract class RMStateStore extends AbstractService {
    * 1) Versioning scheme: major.minor. For e.g. 1.0, 1.1, 1.2...1.25, 2.0 etc.
    * 2) Any incompatible change of state-store is a major upgrade, and any
    *    compatible change of state-store is a minor upgrade.
-   * 3) If theres's no version, treat it as 1.0.
+   * 3) If theres's no version, treat it as CURRENT_VERSION_INFO.
    * 4) Within a minor upgrade, say 1.1 to 1.2:
    *    overwrite the version info and proceed as normal.
    * 5) Within a major upgrade, say 1.2 to 2.0:
@@ -378,9 +378,9 @@ public abstract class RMStateStore extends AbstractService {
     if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
       return;
     }
-    // if there is no version info, treat it as 1.0;
+    // if there is no version info, treat it as CURRENT_VERSION_INFO;
     if (loadedVersion == null) {
-      loadedVersion = Version.newInstance(1, 0);
+      loadedVersion = getCurrentVersion();
     }
     if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
       LOG.info("Storing RM state version info " + getCurrentVersion());

@@ -221,6 +221,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2675. containersKilled metrics is not updated when the container is killed 
     during localization. (Zhihai Xu via kasha)
 
+    YARN-2952. Fixed incorrect version check in StateStore. (Rohith Sharmaks
+    via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

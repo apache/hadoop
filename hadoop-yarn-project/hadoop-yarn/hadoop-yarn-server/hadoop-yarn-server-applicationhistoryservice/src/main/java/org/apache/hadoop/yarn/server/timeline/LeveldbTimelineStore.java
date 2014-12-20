@@ -1637,9 +1637,9 @@ public class LeveldbTimelineStore extends AbstractService
   Version loadVersion() throws IOException {
     try {
       byte[] data = db.get(bytes(TIMELINE_STORE_VERSION_KEY));
-      // if version is not stored previously, treat it as 1.0.
+      // if version is not stored previously, treat it as CURRENT_VERSION_INFO.
       if (data == null || data.length == 0) {
-        return Version.newInstance(1, 0);
+        return getCurrentVersion();
       }
       Version version =
           new VersionPBImpl(VersionProto.parseFrom(data));
