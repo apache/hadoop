@@ -1,5 +1,20 @@
 Hadoop YARN Change Log
 
+Release 2.6.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-2977. Fixed intermittent TestNMClient failure.
+    (Junping Du via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
