@@ -218,6 +218,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2964. RM prematurely cancels tokens for jobs that submit jobs (oozie)
     (Jian He via jlowe)
 
+    YARN-2675. containersKilled metrics is not updated when the container is killed 
+    during localization. (Zhihai Xu via kasha)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
