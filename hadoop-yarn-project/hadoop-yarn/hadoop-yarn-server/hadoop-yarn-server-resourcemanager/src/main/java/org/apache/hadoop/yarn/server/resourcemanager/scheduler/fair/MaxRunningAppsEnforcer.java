@@ -203,7 +203,7 @@ public class MaxRunningAppsEnforcer {
       if (canAppBeRunnable(next.getQueue(), next.getUser())) {
         trackRunnableApp(next);
         FSAppAttempt appSched = next;
-        next.getQueue().getRunnableAppSchedulables().add(appSched);
+        next.getQueue().addApp(appSched, true);
         noLongerPendingApps.add(appSched);
 
         if (noLongerPendingApps.size() >= maxRunnableApps) {
@@ -218,8 +218,7 @@ public class MaxRunningAppsEnforcer {
     // pull them out from under the iterator.  If they are not in these lists
     // in the first place, there is a bug.
     for (FSAppAttempt appSched : noLongerPendingApps) {
-      if (!appSched.getQueue().getNonRunnableAppSchedulables()
-          .remove(appSched)) {
+      if (!appSched.getQueue().removeNonRunnableApp(appSched)) {
         LOG.error("Can't make app runnable that does not already exist in queue"
             + " as non-runnable: " + appSched + ". This should never happen.");
       }
@@ -269,7 +268,8 @@ public class MaxRunningAppsEnforcer {
     if (queue.getNumRunnableApps() < scheduler.getAllocationConfiguration()
         .getQueueMaxApps(queue.getName())) {
       if (queue instanceof FSLeafQueue) {
-        appLists.add(((FSLeafQueue)queue).getNonRunnableAppSchedulables());
+        appLists.add(
+            ((FSLeafQueue)queue).getCopyOfNonRunnableAppSchedulables());
       } else {
         for (FSQueue child : queue.getChildQueues()) {
           gatherPossiblyRunnableAppLists(child, appLists);

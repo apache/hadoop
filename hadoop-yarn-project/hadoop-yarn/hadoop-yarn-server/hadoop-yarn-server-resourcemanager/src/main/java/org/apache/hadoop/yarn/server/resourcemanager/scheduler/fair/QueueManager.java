@@ -297,7 +297,7 @@ public class QueueManager {
     if (queue instanceof FSLeafQueue) {
       FSLeafQueue leafQueue = (FSLeafQueue)queue;
       return queue.getNumRunnableApps() == 0 &&
-          leafQueue.getNonRunnableAppSchedulables().isEmpty();
+          leafQueue.getNumNonRunnableApps() == 0;
     } else {
       for (FSQueue child : queue.getChildQueues()) {
         if (!isEmpty(child)) {
