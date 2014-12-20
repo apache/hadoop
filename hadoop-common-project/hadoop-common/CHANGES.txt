@@ -88,6 +88,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11213. Typos in html pages: SecureMode and EncryptedShuffle. 
     (Wei Yan via kasha)
 
+    HADOOP-11395. Add site documentation for Azure Storage FileSystem
+    integration. (Chris Nauroth via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.

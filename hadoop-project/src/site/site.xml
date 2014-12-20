@@ -137,6 +137,7 @@
     
     <menu name="Hadoop Compatible File Systems" inherit="top">
       <item name="Amazon S3" href="hadoop-aws/tools/hadoop-aws/index.html"/>
+      <item name="Azure Blob Storage" href="hadoop-azure/index.html"/>
       <item name="OpenStack Swift" href="hadoop-openstack/index.html"/>
     </menu>
 
