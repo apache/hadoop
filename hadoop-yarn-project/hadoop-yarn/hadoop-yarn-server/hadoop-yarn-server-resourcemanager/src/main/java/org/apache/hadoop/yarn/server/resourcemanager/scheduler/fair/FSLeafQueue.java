@@ -107,34 +107,94 @@ public class FSLeafQueue extends FSQueue {
    */
   public boolean removeApp(FSAppAttempt app) {
     boolean runnable = false;
+
+    // Remove app from runnable/nonRunnable list while holding the write lock
     writeLock.lock();
     try {
-      if (runnableApps.remove(app)) {
-        runnable = true;
-      } else if (nonRunnableApps.remove(app)) {
-        runnable = false; //nop, runnable is initialised to false already
-      } else {
-        throw new IllegalStateException("Given app to remove " + app +
-            " does not exist in queue " + this);
+      runnable = runnableApps.remove(app);
+      if (!runnable) {
+        // removeNonRunnableApp acquires the write lock again, which is fine
+        if (!removeNonRunnableApp(app)) {
+          throw new IllegalStateException("Given app to remove " + app +
+              " does not exist in queue " + this);
+        }
       }
     } finally {
       writeLock.unlock();
     }
+
     // Update AM resource usage if needed
     if (runnable && app.isAmRunning() && app.getAMResource() != null) {
       Resources.subtractFrom(amResourceUsage, app.getAMResource());
     }
+
     return runnable;
   }
-  
-  public Collection<FSAppAttempt> getRunnableAppSchedulables() {
-    return runnableApps;
+
+  /**
+   * Removes the given app if it is non-runnable and belongs to this queue
+   * @return true if the app is removed, false otherwise
+   */
+  public boolean removeNonRunnableApp(FSAppAttempt app) {
+    writeLock.lock();
+    try {
+      return nonRunnableApps.remove(app);
+    } finally {
+      writeLock.unlock();
+    }
   }
-  
-  public List<FSAppAttempt> getNonRunnableAppSchedulables() {
-    return nonRunnableApps;
+
+  public boolean isRunnableApp(FSAppAttempt attempt) {
+    readLock.lock();
+    try {
+      return runnableApps.contains(attempt);
+    } finally {
+      readLock.unlock();
+    }
   }
-  
+
+  public boolean isNonRunnableApp(FSAppAttempt attempt) {
+    readLock.lock();
+    try {
+      return nonRunnableApps.contains(attempt);
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public void resetPreemptedResources() {
+    readLock.lock();
+    try {
+      for (FSAppAttempt attempt : runnableApps) {
+        attempt.resetPreemptedResources();
+      }
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public void clearPreemptedResources() {
+    readLock.lock();
+    try {
+      for (FSAppAttempt attempt : runnableApps) {
+        attempt.clearPreemptedResources();
+      }
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public List<FSAppAttempt> getCopyOfNonRunnableAppSchedulables() {
+    List<FSAppAttempt> appsToReturn = new ArrayList<FSAppAttempt>();
+    readLock.lock();
+    try {
+      appsToReturn.addAll(nonRunnableApps);
+    } finally {
+      readLock.unlock();
+    }
+    return appsToReturn;
+  }
+
   @Override
   public void collectSchedulerApplications(
       Collection<ApplicationAttemptId> apps) {
@@ -162,7 +222,12 @@ public class FSLeafQueue extends FSQueue {
   
   @Override
   public void recomputeShares() {
-    policy.computeShares(getRunnableAppSchedulables(), getFairShare());
+    readLock.lock();
+    try {
+      policy.computeShares(runnableApps, getFairShare());
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override
@@ -349,9 +414,58 @@ public class FSLeafQueue extends FSQueue {
 
   @Override
   public int getNumRunnableApps() {
-    return runnableApps.size();
+    readLock.lock();
+    try {
+      return runnableApps.size();
+    } finally {
+      readLock.unlock();
+    }
   }
-  
+
+  public int getNumNonRunnableApps() {
+    readLock.lock();
+    try {
+      return nonRunnableApps.size();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public int getNumPendingApps() {
+    int numPendingApps = 0;
+    readLock.lock();
+    try {
+      for (FSAppAttempt attempt : runnableApps) {
+        if (attempt.isPending()) {
+          numPendingApps++;
+        }
+      }
+      numPendingApps += nonRunnableApps.size();
+    } finally {
+      readLock.unlock();
+    }
+    return numPendingApps;
+  }
+
+  /**
+   * TODO: Based on how frequently this is called, we might want to club
+   * counting pending and active apps in the same method.
+   */
+  public int getNumActiveApps() {
+    int numActiveApps = 0;
+    readLock.lock();
+    try {
+      for (FSAppAttempt attempt : runnableApps) {
+        if (!attempt.isPending()) {
+          numActiveApps++;
+        }
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return numActiveApps;
+  }
+
   @Override
   public ActiveUsersManager getActiveUsersManager() {
     return activeUsersManager;

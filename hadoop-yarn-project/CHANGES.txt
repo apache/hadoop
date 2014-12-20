@@ -224,6 +224,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2952. Fixed incorrect version check in StateStore. (Rohith Sharmaks
     via jianhe)
 
+    YARN-2975. FSLeafQueue app lists are accessed without required locks. (kasha)
+
 Release 2.6.1 - Unreleased
 
   INCOMPATIBLE CHANGES
