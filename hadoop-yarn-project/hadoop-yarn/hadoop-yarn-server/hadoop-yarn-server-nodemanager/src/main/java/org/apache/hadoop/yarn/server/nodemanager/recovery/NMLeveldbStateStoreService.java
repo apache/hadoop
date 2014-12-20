@@ -907,9 +907,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   Version loadVersion() throws IOException {
     byte[] data = db.get(bytes(DB_SCHEMA_VERSION_KEY));
-    // if version is not stored previously, treat it as 1.0.
+    // if version is not stored previously, treat it as CURRENT_VERSION_INFO.
     if (data == null || data.length == 0) {
-      return Version.newInstance(1, 0);
+      return getCurrentVersion();
     }
     Version version =
         new VersionPBImpl(VersionProto.parseFrom(data));

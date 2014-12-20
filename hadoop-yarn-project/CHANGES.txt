@@ -51,6 +51,9 @@ Release 2.6.1 - UNRELEASED
     YARN-1984. LeveldbTimelineStore does not handle db exceptions properly
     (Varun Saxena via jlowe)
 
+    YARN-2952. Fixed incorrect version check in StateStore. (Rohith Sharmaks
+    via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
