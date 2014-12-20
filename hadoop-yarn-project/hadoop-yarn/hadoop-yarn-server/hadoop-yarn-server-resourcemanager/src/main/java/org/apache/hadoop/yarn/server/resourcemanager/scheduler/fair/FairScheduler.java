@@ -400,9 +400,7 @@ public class FairScheduler extends
     try {
       // Reset preemptedResource for each app
       for (FSLeafQueue queue : getQueueManager().getLeafQueues()) {
-        for (FSAppAttempt app : queue.getRunnableAppSchedulables()) {
-          app.resetPreemptedResources();
-        }
+        queue.resetPreemptedResources();
       }
 
       while (Resources.greaterThan(RESOURCE_CALCULATOR, clusterResource,
@@ -421,9 +419,7 @@ public class FairScheduler extends
     } finally {
       // Clear preemptedResources for each app
       for (FSLeafQueue queue : getQueueManager().getLeafQueues()) {
-        for (FSAppAttempt app : queue.getRunnableAppSchedulables()) {
-          app.clearPreemptedResources();
-        }
+        queue.clearPreemptedResources();
       }
     }
 
@@ -1453,7 +1449,7 @@ public class FairScheduler extends
         return oldQueue.getQueueName();
       }
       
-      if (oldQueue.getRunnableAppSchedulables().contains(attempt)) {
+      if (oldQueue.isRunnableApp(attempt)) {
         verifyMoveDoesNotViolateConstraints(attempt, oldQueue, targetQueue);
       }
       
