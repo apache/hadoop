@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestZKRMStateStore extends RMStateStoreTestBase {
@@ -142,6 +143,52 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     testAppDeletion(zkTester);
     testDeleteStore(zkTester);
     testAMRMTokenSecretManagerStateStore(zkTester);
+  }
+
+  @Test (timeout = 60000)
+  public void testCheckMajorVersionChange() throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester() {
+      Version VERSION_INFO = Version.newInstance(Integer.MAX_VALUE, 0);
+
+      @Override
+      public Version getCurrentVersion() throws Exception {
+        return VERSION_INFO;
+      }
+
+      @Override
+      public RMStateStore getRMStateStore() throws Exception {
+        YarnConfiguration conf = new YarnConfiguration();
+        workingZnode = "/Test";
+        conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
+        conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
+        this.client = createClient();
+        this.store = new TestZKRMStateStoreInternal(conf, workingZnode) {
+          Version storedVersion = null;
+
+          @Override
+          public Version getCurrentVersion() {
+            return VERSION_INFO;
+          }
+
+          @Override
+          protected synchronized Version loadVersion() throws Exception {
+            return storedVersion;
+          }
+
+          @Override
+          protected synchronized void storeVersion() throws Exception {
+            storedVersion = VERSION_INFO;
+          }
+        };
+        return this.store;
+      }
+
+    };
+    // default version
+    RMStateStore store = zkTester.getRMStateStore();
+    Version defaultVersion = zkTester.getCurrentVersion();
+    store.checkVersion();
+    Assert.assertEquals(defaultVersion, store.loadVersion());
   }
 
   private Configuration createHARMConf(
