@@ -91,6 +91,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11395. Add site documentation for Azure Storage FileSystem
     integration. (Chris Nauroth via Arpit Agarwal)
 
+    HDFS-7555. Remove the support of unmanaged connectors in HttpServer2.
+    (wheat9)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
