@@ -727,17 +727,17 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.client.hedged.read.threadpool.size";
   public static final int     DEFAULT_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE = 0;
 
-   // Slow io warning log threshold settings for dfsclient and datanode.
-   public static final String DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
-     "dfs.client.slow.io.warning.threshold.ms";
-   public static final long DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 30000;
-   public static final String DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY =
-     "dfs.datanode.slow.io.warning.threshold.ms";
-   public static final long DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 300;
+  // Slow io warning log threshold settings for dfsclient and datanode.
+  public static final String DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
+    "dfs.client.slow.io.warning.threshold.ms";
+  public static final long DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 30000;
+  public static final String DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY =
+    "dfs.datanode.slow.io.warning.threshold.ms";
+  public static final long DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 300;
 
-   public static final String DFS_DATANODE_BLOCK_ID_LAYOUT_UPGRADE_THREADS_KEY =
-       "dfs.datanode.block.id.layout.upgrade.threads";
-   public static final int DFS_DATANODE_BLOCK_ID_LAYOUT_UPGRADE_THREADS = 12;
+  public static final String DFS_DATANODE_BLOCK_ID_LAYOUT_UPGRADE_THREADS_KEY =
+      "dfs.datanode.block.id.layout.upgrade.threads";
+  public static final int DFS_DATANODE_BLOCK_ID_LAYOUT_UPGRADE_THREADS = 12;
 
   public static final String DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_KEY =
       "dfs.namenode.inotify.max.events.per.rpc";
