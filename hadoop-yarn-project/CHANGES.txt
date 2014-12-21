@@ -226,18 +226,6 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2975. FSLeafQueue app lists are accessed without required locks. (kasha)
 
-Release 2.6.1 - Unreleased
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
     YARN-2977. Fixed intermittent TestNMClient failure.
     (Junping Du via ozawa)
 
