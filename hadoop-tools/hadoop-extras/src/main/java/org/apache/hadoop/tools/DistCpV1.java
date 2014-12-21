@@ -24,6 +24,7 @@ import java.io.DataOutput;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -697,16 +698,13 @@ public class DistCpV1 implements Tool {
       throws IOException {
     List<Path> result = new ArrayList<Path>();
     FileSystem fs = srcList.getFileSystem(conf);
-    BufferedReader input = null;
-    try {
-      input = new BufferedReader(new InputStreamReader(fs.open(srcList)));
+    try (BufferedReader input = new BufferedReader(new InputStreamReader(fs.open(srcList),
+            Charset.forName("UTF-8")))) {
       String line = input.readLine();
       while (line != null) {
         result.add(new Path(line));
         line = input.readLine();
       }
-    } finally {
-      checkAndClose(input);
     }
     return result;
   }
@@ -957,7 +955,7 @@ public class DistCpV1 implements Tool {
             throw new IllegalArgumentException("num_maps not specified in -m");
           }
           try {
-            conf.setInt(MAX_MAPS_LABEL, Integer.valueOf(args[idx]));
+            conf.setInt(MAX_MAPS_LABEL, Integer.parseInt(args[idx]));
           } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Invalid argument to -m: " +
                                                args[idx]);
