@@ -238,11 +238,10 @@ public class DistCh extends DistTool {
 
       Text key = new Text();
       FileOperation value = new FileOperation();
-      SequenceFile.Reader in = null;
       long prev = 0L;
       int count = 0; //count src
-      try {
-        for(in = new SequenceFile.Reader(fs, srcs, job); in.next(key, value); ) {
+      try (SequenceFile.Reader in = new SequenceFile.Reader(fs, srcs, job)) {
+        for ( ; in.next(key, value); ) {
           long curr = in.getPosition();
           long delta = curr - prev;
           if (++count > targetcount) {
@@ -251,9 +250,6 @@ public class DistCh extends DistTool {
             prev = curr;
           }
         }
-      }
-      finally {
-        in.close();
       }
       long remaining = fs.getFileStatus(srcs).getLen() - prev;
       if (remaining != 0) {
@@ -449,10 +445,8 @@ public class DistCh extends DistTool {
     Path opList = new Path(jobdir, "_" + OP_LIST_LABEL);
     jobconf.set(OP_LIST_LABEL, opList.toString());
     int opCount = 0, synCount = 0;
-    SequenceFile.Writer opWriter = null;
-    try {
-      opWriter = SequenceFile.createWriter(fs, jobconf, opList, Text.class,
-          FileOperation.class, SequenceFile.CompressionType.NONE);
+    try (SequenceFile.Writer opWriter = SequenceFile.createWriter(fs, jobconf, opList, Text.class,
+            FileOperation.class, SequenceFile.CompressionType.NONE)) {
       for(FileOperation op : ops) {
         FileStatus srcstat = fs.getFileStatus(op.src); 
         if (srcstat.isDirectory() && op.isDifferent(srcstat)) {
@@ -479,8 +473,6 @@ public class DistCh extends DistTool {
           }
         }
       }
-    } finally {
-      opWriter.close();
     }
 
     checkDuplication(fs, opList, new Path(jobdir, "_sorted"), jobconf);
@@ -496,9 +488,7 @@ public class DistCh extends DistTool {
     SequenceFile.Sorter sorter = new SequenceFile.Sorter(fs,
         new Text.Comparator(), Text.class, FileOperation.class, conf);
     sorter.sort(file, sorted);
-    SequenceFile.Reader in = null;
-    try {
-      in = new SequenceFile.Reader(fs, sorted, conf);
+    try (SequenceFile.Reader in = new SequenceFile.Reader(fs, sorted, conf)) {
       FileOperation curop = new FileOperation();
       Text prevsrc = null, cursrc = new Text(); 
       for(; in.next(cursrc, curop); ) {
@@ -511,9 +501,6 @@ public class DistCh extends DistTool {
         cursrc = new Text();
         curop = new FileOperation();
       }
-    }
-    finally {
-      in.close();
     }
   } 
 
