@@ -367,6 +367,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7552. Change FsVolumeList toString() to fix
     TestDataNodeVolumeFailureToleration (Liang Xie via Colin P. McCabe)
 
+    HDFS-7557. Fix spacing for a few keys in DFSConfigKeys.java 
+    (Colin P.McCabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
