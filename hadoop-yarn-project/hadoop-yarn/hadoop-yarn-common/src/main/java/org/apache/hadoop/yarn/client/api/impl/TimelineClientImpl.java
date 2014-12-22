@@ -136,9 +136,13 @@ public class TimelineClientImpl extends TimelineClient {
 
     // Indicates if retries happened last time. Only tests should read it.
     // In unit tests, retryOn() calls should _not_ be concurrent.
+    private boolean retried = false;
+
     @Private
     @VisibleForTesting
-    public boolean retried = false;
+    boolean getRetired() {
+      return retried;
+    }
 
     // Constructor with default retry settings
     public TimelineClientConnectionRetry(Configuration conf) {

@@ -20,10 +20,12 @@ package org.apache.hadoop.yarn.util;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -297,7 +299,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
 
   private static final String PROCESSTREE_DUMP_FORMAT =
-      "\t|- %s %s %d %d %s %d %d %d %d %s\n";
+      "\t|- %s %s %d %d %s %d %d %d %d %s%n";
 
   public List<String> getCurrentProcessIDs() {
     List<String> currentPIDs = new ArrayList<String>();
@@ -317,7 +319,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     // The header.
     ret.append(String.format("\t|- PID PPID PGRPID SESSID CMD_NAME "
         + "USER_MODE_TIME(MILLIS) SYSTEM_TIME(MILLIS) VMEM_USAGE(BYTES) "
-        + "RSSMEM_USAGE(PAGES) FULL_CMD_LINE\n"));
+        + "RSSMEM_USAGE(PAGES) FULL_CMD_LINE%n"));
     for (ProcessInfo p : processTree.values()) {
       if (p != null) {
         ret.append(String.format(PROCESSTREE_DUMP_FORMAT, p.getPid(), p
@@ -489,10 +491,12 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     ProcessInfo ret = null;
     // Read "procfsDir/<pid>/stat" file - typically /proc/<pid>/stat
     BufferedReader in = null;
-    FileReader fReader = null;
+    InputStreamReader fReader = null;
     try {
       File pidDir = new File(procfsDir, pinfo.getPid());
-      fReader = new FileReader(new File(pidDir, PROCFS_STAT_FILE));
+      fReader = new InputStreamReader(
+          new FileInputStream(
+              new File(pidDir, PROCFS_STAT_FILE)), Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // The process vanished in the interim!
@@ -671,11 +675,12 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         return ret;
       }
       BufferedReader in = null;
-      FileReader fReader = null;
+      InputStreamReader fReader = null;
       try {
-        fReader =
-            new FileReader(new File(new File(procfsDir, pid.toString()),
-                PROCFS_CMDLINE_FILE));
+        fReader = new InputStreamReader(
+            new FileInputStream(
+                new File(new File(procfsDir, pid.toString()), PROCFS_CMDLINE_FILE)),
+                Charset.forName("UTF-8"));
       } catch (FileNotFoundException f) {
         // The process vanished in the interim!
         return ret;
@@ -725,14 +730,15 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   private static void constructProcessSMAPInfo(ProcessTreeSmapMemInfo pInfo,
       String procfsDir) {
     BufferedReader in = null;
-    FileReader fReader = null;
+    InputStreamReader fReader = null;
     try {
       File pidDir = new File(procfsDir, pInfo.getPid());
       File file = new File(pidDir, SMAPS);
       if (!file.exists()) {
         return;
       }
-      fReader = new FileReader(file);
+      fReader = new InputStreamReader(
+          new FileInputStream(file), Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
       ProcessSmapMemoryInfo memoryMappingInfo = null;
       List<String> lines = IOUtils.readLines(in);

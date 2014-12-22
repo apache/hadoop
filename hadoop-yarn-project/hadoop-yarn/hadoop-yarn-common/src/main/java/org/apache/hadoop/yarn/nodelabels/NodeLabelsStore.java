@@ -29,8 +29,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 
 public abstract class NodeLabelsStore implements Closeable {
   protected final CommonNodeLabelsManager mgr;
-  protected Configuration conf;
-  
+
   public NodeLabelsStore(CommonNodeLabelsManager mgr) {
     this.mgr = mgr;
   }
@@ -59,9 +58,7 @@ public abstract class NodeLabelsStore implements Closeable {
    */
   public abstract void recover() throws IOException;
   
-  public void init(Configuration conf) throws Exception {
-    this.conf = conf;
-  }
+  public void init(Configuration conf) throws Exception {}
   
   public CommonNodeLabelsManager getNodeLabelsManager() {
     return mgr;
