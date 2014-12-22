@@ -265,6 +265,11 @@
     <Class name="org.apache.hadoop.yarn.YarnUncaughtExceptionHandler"/>
     <Bug pattern="DM_EXIT"/>
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.event.AsyncDispatcher$2"/>
+    <Method name="run" />
+    <Bug pattern="DM_EXIT"/>
+  </Match>
 
   <!-- AsyncDispatcher will kill the process if there is an error dispatching -->
   <Match>
@@ -389,6 +394,12 @@
   <Match>
     <Class name="org.apache.hadoop.registry.client.binding.JsonSerDeser"/>
     <Bug pattern="UI_INHERITANCE_UNSAFE_GETRESOURCE"/>
+  </Match>
+
+  <!-- Ignore the false alarms on DM_DEFAULT_ENCODING (encoding already set) -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat$LogReader" />
+    <Bug pattern="DM_DEFAULT_ENCODING" />
   </Match>
 
 </FindBugsFilter>

@@ -83,11 +83,16 @@ public class CommonNodeLabelsManager extends AbstractService {
   protected NodeLabelsStore store;
 
   protected static class Label {
-    public Resource resource;
+    private Resource resource;
 
     protected Label() {
       this.resource = Resource.newInstance(0, 0);
     }
+
+    public Resource getResource() {
+      return this.resource;
+    }
+
   }
 
   /**

@@ -56,7 +56,7 @@ public class VisualizeStateMachine {
 
   public static void main(String [] args) throws Exception {
     if (args.length < 3) {
-      System.err.printf("Usage: %s <GraphName> <class[,class[,...]]> <OutputFile>\n",
+      System.err.printf("Usage: %s <GraphName> <class[,class[,...]]> <OutputFile>%n",
           VisualizeStateMachine.class.getName());
       System.exit(1);
     }

@@ -229,6 +229,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2977. Fixed intermittent TestNMClient failure.
     (Junping Du via ozawa)
 
+    YARN-2939. Fix new findbugs warnings in hadoop-yarn-common. (Li Lu via junping_du)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
