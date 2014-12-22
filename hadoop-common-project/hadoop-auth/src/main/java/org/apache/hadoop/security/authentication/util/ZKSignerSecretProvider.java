@@ -15,6 +15,7 @@ package org.apache.hadoop.security.authentication.util;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -44,7 +45,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A SignerSecretProvider that synchronizes a rolling random secret between
  * multiple servers using ZooKeeper.
- * <p/>
+ * <p>
  * It works by storing the secrets and next rollover time in a ZooKeeper znode.
  * All ZKSignerSecretProviders looking at that znode will use those
  * secrets and next rollover time to ensure they are synchronized.  There is no
@@ -55,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * your own Curator client, you can pass it to ZKSignerSecretProvider; see
  * {@link org.apache.hadoop.security.authentication.server.AuthenticationFilter}
  * for more details.
- * <p/>
+ * <p>
  * The supported configuration properties are:
  * <ul>
  * <li>signer.secret.provider.zookeeper.connection.string: indicates the
@@ -77,11 +78,13 @@ import org.slf4j.LoggerFactory;
  * </ul>
  *
  * The following attribute in the ServletContext can also be set if desired:
+ * <ul>
  * <li>signer.secret.provider.zookeeper.curator.client: A CuratorFramework
  * client object can be passed here. If given, the "zookeeper" implementation
  * will use this Curator client instead of creating its own, which is useful if
  * you already have a Curator client or want more control over its
  * configuration.</li>
+ * </ul>
  */
 @InterfaceStability.Unstable
 @InterfaceAudience.Private
@@ -367,14 +370,14 @@ public class ZKSignerSecretProvider extends RolloverSignerSecretProvider {
   }
 
   private byte[] generateRandomSecret() {
-    return Long.toString(rand.nextLong()).getBytes();
+    return Long.toString(rand.nextLong()).getBytes(Charset.forName("UTF-8"));
   }
 
   /**
    * This method creates the Curator client and connects to ZooKeeper.
    * @param config configuration properties
    * @return A Curator client
-   * @throws java.lang.Exception
+   * @throws Exception
    */
   protected CuratorFramework createCuratorClient(Properties config)
           throws Exception {

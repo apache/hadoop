@@ -584,6 +584,8 @@ public class Text extends BinaryComparable
           state = TRAIL_BYTE;
         }
         break;
+      default:
+        break;
       } // switch (state)
       count++;
     }

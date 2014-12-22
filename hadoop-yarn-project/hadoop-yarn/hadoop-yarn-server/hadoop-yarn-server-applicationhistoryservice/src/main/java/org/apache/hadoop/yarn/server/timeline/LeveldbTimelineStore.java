@@ -76,6 +76,7 @@ import org.iq80.leveldb.WriteBatch;
 import org.iq80.leveldb.WriteOptions;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /**
  * <p>An implementation of an application timeline store backed by leveldb.</p>
@@ -194,6 +195,32 @@ public class LeveldbTimelineStore extends AbstractService
   @Override
   @SuppressWarnings("unchecked")
   protected void serviceInit(Configuration conf) throws Exception {
+    Preconditions.checkArgument(conf.getLong(
+        YarnConfiguration.TIMELINE_SERVICE_TTL_MS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_TTL_MS) > 0,
+        "%s property value should be greater than zero",
+        YarnConfiguration.TIMELINE_SERVICE_TTL_MS);
+    Preconditions.checkArgument(conf.getLong(
+        YarnConfiguration.TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS) > 0,
+        "%s property value should be greater than zero",
+        YarnConfiguration.TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS);
+    Preconditions.checkArgument(conf.getLong(
+        YarnConfiguration.TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE) >= 0,
+        "%s property value should be greater than or equal to zero",
+        YarnConfiguration.TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE);
+    Preconditions.checkArgument(conf.getLong(
+        YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE) > 0,
+        " %s property value should be greater than zero",
+        YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE);
+    Preconditions.checkArgument(conf.getLong(
+        YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE) > 0,
+        "%s property value should be greater than zero",
+        YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE);
+
     Options options = new Options();
     options.createIfMissing(true);
     options.cacheSize(conf.getLong(
@@ -1610,9 +1637,9 @@ public class LeveldbTimelineStore extends AbstractService
   Version loadVersion() throws IOException {
     try {
       byte[] data = db.get(bytes(TIMELINE_STORE_VERSION_KEY));
-      // if version is not stored previously, treat it as 1.0.
+      // if version is not stored previously, treat it as CURRENT_VERSION_INFO.
       if (data == null || data.length == 0) {
-        return Version.newInstance(1, 0);
+        return getCurrentVersion();
       }
       Version version =
           new VersionPBImpl(VersionProto.parseFrom(data));

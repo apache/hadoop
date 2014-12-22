@@ -50,9 +50,9 @@ Hadoop MapReduce Next Generation - Encrypted Shuffle
 *--------------------------------------+---------------------+-----------------+
 | <<<hadoop.ssl.keystores.factory.class>>> | <<<org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory>>> | The KeyStoresFactory implementation to use |
 *--------------------------------------+---------------------+-----------------+
-| <<<hadoop.ssl.server.conf>>>         | <<<ss-server.xml>>> | Resource file from which ssl server keystore information will be extracted. This file is looked up in the classpath, typically it should be in Hadoop conf/ directory |
+| <<<hadoop.ssl.server.conf>>>         | <<<ssl-server.xml>>> | Resource file from which ssl server keystore information will be extracted. This file is looked up in the classpath, typically it should be in Hadoop conf/ directory |
 *--------------------------------------+---------------------+-----------------+
-| <<<hadoop.ssl.client.conf>>>         | <<<ss-client.xml>>> | Resource file from which ssl server keystore information will be extracted. This file is looked up in the classpath, typically it should be in Hadoop conf/ directory |
+| <<<hadoop.ssl.client.conf>>>         | <<<ssl-client.xml>>> | Resource file from which ssl server keystore information will be extracted. This file is looked up in the classpath, typically it should be in Hadoop conf/ directory |
 *--------------------------------------+---------------------+-----------------+
 | <<<hadoop.ssl.enabled.protocols>>>   | <<<TLSv1>>>         | The supported SSL protocols (JDK6 can use <<TLSv1>>, JDK7+ can use <<TLSv1,TLSv1.1,TLSv1.2>>) |
 *--------------------------------------+---------------------+-----------------+
@@ -202,7 +202,7 @@ Hadoop MapReduce Next Generation - Encrypted Shuffle
 
 ** <<<ssl-client.xml>>> (Reducer/Fetcher) Configuration:
 
-  The mapred user should own the <<ssl-server.xml>> file and it should have
+  The mapred user should own the <<ssl-client.xml>> file and it should have
   default permissions.
 
 *---------------------------------------------+---------------------+-----------------+

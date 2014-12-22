@@ -202,7 +202,7 @@ if (USABLE_OPENSSL)
         "${D}/crypto/OpensslCipher.c"
         "${D}/crypto/random/OpensslSecureRandom.c")
 else (USABLE_OPENSSL)
-    MESSAGE("Cannot find a usable OpenSSL library.  OPENSSL_LIBRARY=${OPENSSL_LIBRARY}, OPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR}, CUSTOM_OPENSSL_INCLUDE_DIR=${CUSTOM_OPENSSL_INCLUDE_DIR}, CUSTOM_OPENSSL_PREFIX=${CUSTOM_OPENSSL_PREFIX}, CUSTOM_OPENSSL_INCLUDE=${CUSTOM_OPENSSL_INCLUDE}")
+    MESSAGE("Cannot find a usable OpenSSL library.  OPENSSL_LIBRARY=${OPENSSL_LIBRARY}, OPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR}, CUSTOM_OPENSSL_LIB=${CUSTOM_OPENSSL_LIB}, CUSTOM_OPENSSL_PREFIX=${CUSTOM_OPENSSL_PREFIX}, CUSTOM_OPENSSL_INCLUDE=${CUSTOM_OPENSSL_INCLUDE}")
     IF(REQUIRE_OPENSSL)
         MESSAGE(FATAL_ERROR "Terminating build because require.openssl was specified.")
     ENDIF(REQUIRE_OPENSSL)
@@ -267,8 +267,12 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     # dlopen will look in the directory containing libhadoop.so.
     # However, $ORIGIN is not supported by all operating systems.
     #
+    set(RPATH "\$ORIGIN/")
+    if (EXTRA_LIBHADOOP_RPATH)
+        set(RPATH "${RPATH}:${EXTRA_LIBHADOOP_RPATH}/")
+    endif(EXTRA_LIBHADOOP_RPATH)
     SET_TARGET_PROPERTIES(hadoop 
-        PROPERTIES INSTALL_RPATH "\$ORIGIN/")
+        PROPERTIES INSTALL_RPATH "${RPATH}")
 ENDIF()
 
 target_link_dual_libraries(hadoop

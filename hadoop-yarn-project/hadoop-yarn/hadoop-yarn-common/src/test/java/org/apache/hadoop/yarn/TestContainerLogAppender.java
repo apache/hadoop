@@ -30,6 +30,7 @@ public class TestContainerLogAppender {
     claAppender.setName("testCLA");
     claAppender.setLayout(new PatternLayout("%-5p [%t]: %m%n"));
     claAppender.setContainerLogDir("target/testAppendInClose/logDir");
+    claAppender.setContainerLogFile("syslog");
     claAppender.setTotalLogFileSize(1000);
     claAppender.activateOptions();
     final Logger claLog = Logger.getLogger("testAppendInClose-catergory");

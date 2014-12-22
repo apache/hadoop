@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.inotify.Event;
+import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.protocol.Block;
 
 import java.util.List;
@@ -39,107 +40,138 @@ public class InotifyFSEditLogOpTranslator {
     return size;
   }
 
-  public static Event[] translate(FSEditLogOp op) {
+  public static EventBatch translate(FSEditLogOp op) {
     switch(op.opCode) {
     case OP_ADD:
       FSEditLogOp.AddOp addOp = (FSEditLogOp.AddOp) op;
       if (addOp.blocks.length == 0) { // create
-        return new Event[] { new Event.CreateEvent.Builder().path(addOp.path)
+        return new EventBatch(op.txid,
+            new Event[] { new Event.CreateEvent.Builder().path(addOp.path)
             .ctime(addOp.atime)
             .replication(addOp.replication)
             .ownerName(addOp.permissions.getUserName())
             .groupName(addOp.permissions.getGroupName())
             .perms(addOp.permissions.getPermission())
             .overwrite(addOp.overwrite)
-            .iNodeType(Event.CreateEvent.INodeType.FILE).build() };
-      } else {
-        return new Event[] { new Event.AppendEvent(addOp.path) };
+            .defaultBlockSize(addOp.blockSize)
+            .iNodeType(Event.CreateEvent.INodeType.FILE).build() });
+      } else { // append
+        return new EventBatch(op.txid,
+            new Event[]{new Event.AppendEvent.Builder()
+                .path(addOp.path)
+                .build()});
       }
     case OP_CLOSE:
       FSEditLogOp.CloseOp cOp = (FSEditLogOp.CloseOp) op;
-      return new Event[] {
-          new Event.CloseEvent(cOp.path, getSize(cOp), cOp.mtime) };
+      return new EventBatch(op.txid, new Event[] {
+          new Event.CloseEvent(cOp.path, getSize(cOp), cOp.mtime) });
     case OP_SET_REPLICATION:
       FSEditLogOp.SetReplicationOp setRepOp = (FSEditLogOp.SetReplicationOp) op;
-      return new Event[] { new Event.MetadataUpdateEvent.Builder()
+      return new EventBatch(op.txid,
+        new Event[] { new Event.MetadataUpdateEvent.Builder()
           .metadataType(Event.MetadataUpdateEvent.MetadataType.REPLICATION)
           .path(setRepOp.path)
-          .replication(setRepOp.replication).build() };
+          .replication(setRepOp.replication).build() });
     case OP_CONCAT_DELETE:
       FSEditLogOp.ConcatDeleteOp cdOp = (FSEditLogOp.ConcatDeleteOp) op;
       List<Event> events = Lists.newArrayList();
-      events.add(new Event.AppendEvent(cdOp.trg));
+      events.add(new Event.AppendEvent.Builder()
+          .path(cdOp.trg)
+          .build());
       for (String src : cdOp.srcs) {
-        events.add(new Event.UnlinkEvent(src, cdOp.timestamp));
+        events.add(new Event.UnlinkEvent.Builder()
+          .path(src)
+          .timestamp(cdOp.timestamp)
+          .build());
       }
       events.add(new Event.CloseEvent(cdOp.trg, -1, cdOp.timestamp));
-      return events.toArray(new Event[0]);
+      return new EventBatch(op.txid, events.toArray(new Event[0]));
     case OP_RENAME_OLD:
       FSEditLogOp.RenameOldOp rnOpOld = (FSEditLogOp.RenameOldOp) op;
-      return new Event[] {
-          new Event.RenameEvent(rnOpOld.src, rnOpOld.dst, rnOpOld.timestamp) };
+      return new EventBatch(op.txid, new Event[] {
+          new Event.RenameEvent.Builder()
+              .srcPath(rnOpOld.src)
+              .dstPath(rnOpOld.dst)
+              .timestamp(rnOpOld.timestamp)
+              .build() });
     case OP_RENAME:
       FSEditLogOp.RenameOp rnOp = (FSEditLogOp.RenameOp) op;
-      return new Event[] {
-          new Event.RenameEvent(rnOp.src, rnOp.dst, rnOp.timestamp) };
+      return new EventBatch(op.txid, new Event[] {
+          new Event.RenameEvent.Builder()
+            .srcPath(rnOp.src)
+            .dstPath(rnOp.dst)
+            .timestamp(rnOp.timestamp)
+            .build() });
     case OP_DELETE:
       FSEditLogOp.DeleteOp delOp = (FSEditLogOp.DeleteOp) op;
-      return new Event[] { new Event.UnlinkEvent(delOp.path, delOp.timestamp) };
+      return new EventBatch(op.txid, new Event[] {
+          new Event.UnlinkEvent.Builder()
+            .path(delOp.path)
+            .timestamp(delOp.timestamp)
+            .build() });
     case OP_MKDIR:
       FSEditLogOp.MkdirOp mkOp = (FSEditLogOp.MkdirOp) op;
-      return new Event[] { new Event.CreateEvent.Builder().path(mkOp.path)
+      return new EventBatch(op.txid,
+        new Event[] { new Event.CreateEvent.Builder().path(mkOp.path)
           .ctime(mkOp.timestamp)
           .ownerName(mkOp.permissions.getUserName())
           .groupName(mkOp.permissions.getGroupName())
           .perms(mkOp.permissions.getPermission())
-          .iNodeType(Event.CreateEvent.INodeType.DIRECTORY).build() };
+          .iNodeType(Event.CreateEvent.INodeType.DIRECTORY).build() });
     case OP_SET_PERMISSIONS:
       FSEditLogOp.SetPermissionsOp permOp = (FSEditLogOp.SetPermissionsOp) op;
-      return new Event[] { new Event.MetadataUpdateEvent.Builder()
+      return new EventBatch(op.txid,
+        new Event[] { new Event.MetadataUpdateEvent.Builder()
           .metadataType(Event.MetadataUpdateEvent.MetadataType.PERMS)
           .path(permOp.src)
-          .perms(permOp.permissions).build() };
+          .perms(permOp.permissions).build() });
     case OP_SET_OWNER:
       FSEditLogOp.SetOwnerOp ownOp = (FSEditLogOp.SetOwnerOp) op;
-      return new Event[] { new Event.MetadataUpdateEvent.Builder()
+      return new EventBatch(op.txid,
+        new Event[] { new Event.MetadataUpdateEvent.Builder()
           .metadataType(Event.MetadataUpdateEvent.MetadataType.OWNER)
           .path(ownOp.src)
-          .ownerName(ownOp.username).groupName(ownOp.groupname).build() };
+          .ownerName(ownOp.username).groupName(ownOp.groupname).build() });
     case OP_TIMES:
       FSEditLogOp.TimesOp timesOp = (FSEditLogOp.TimesOp) op;
-      return new Event[] { new Event.MetadataUpdateEvent.Builder()
+      return new EventBatch(op.txid,
+        new Event[] { new Event.MetadataUpdateEvent.Builder()
           .metadataType(Event.MetadataUpdateEvent.MetadataType.TIMES)
           .path(timesOp.path)
-          .atime(timesOp.atime).mtime(timesOp.mtime).build() };
+          .atime(timesOp.atime).mtime(timesOp.mtime).build() });
     case OP_SYMLINK:
       FSEditLogOp.SymlinkOp symOp = (FSEditLogOp.SymlinkOp) op;
-      return new Event[] { new Event.CreateEvent.Builder().path(symOp.path)
+      return new EventBatch(op.txid,
+        new Event[] { new Event.CreateEvent.Builder().path(symOp.path)
           .ctime(symOp.atime)
           .ownerName(symOp.permissionStatus.getUserName())
           .groupName(symOp.permissionStatus.getGroupName())
           .perms(symOp.permissionStatus.getPermission())
           .symlinkTarget(symOp.value)
-          .iNodeType(Event.CreateEvent.INodeType.SYMLINK).build() };
+          .iNodeType(Event.CreateEvent.INodeType.SYMLINK).build() });
     case OP_REMOVE_XATTR:
       FSEditLogOp.RemoveXAttrOp rxOp = (FSEditLogOp.RemoveXAttrOp) op;
-      return new Event[] { new Event.MetadataUpdateEvent.Builder()
+      return new EventBatch(op.txid,
+        new Event[] { new Event.MetadataUpdateEvent.Builder()
           .metadataType(Event.MetadataUpdateEvent.MetadataType.XATTRS)
           .path(rxOp.src)
           .xAttrs(rxOp.xAttrs)
-          .xAttrsRemoved(true).build() };
+          .xAttrsRemoved(true).build() });
     case OP_SET_XATTR:
       FSEditLogOp.SetXAttrOp sxOp = (FSEditLogOp.SetXAttrOp) op;
-      return new Event[] { new Event.MetadataUpdateEvent.Builder()
+      return new EventBatch(op.txid,
+        new Event[] { new Event.MetadataUpdateEvent.Builder()
           .metadataType(Event.MetadataUpdateEvent.MetadataType.XATTRS)
           .path(sxOp.src)
           .xAttrs(sxOp.xAttrs)
-          .xAttrsRemoved(false).build() };
+          .xAttrsRemoved(false).build() });
     case OP_SET_ACL:
       FSEditLogOp.SetAclOp saOp = (FSEditLogOp.SetAclOp) op;
-      return new Event[] { new Event.MetadataUpdateEvent.Builder()
+      return new EventBatch(op.txid,
+        new Event[] { new Event.MetadataUpdateEvent.Builder()
           .metadataType(Event.MetadataUpdateEvent.MetadataType.ACLS)
           .path(saOp.src)
-          .acls(saOp.aclEntries).build() };
+          .acls(saOp.aclEntries).build() });
     default:
       return null;
     }

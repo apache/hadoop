@@ -60,4 +60,17 @@ public class NfsConfigKeys {
   
   public final static String LARGE_FILE_UPLOAD = "nfs.large.file.upload";
   public final static boolean LARGE_FILE_UPLOAD_DEFAULT = true;
+  
+  public static final String NFS_HTTP_PORT_KEY = "nfs.http.port";
+  public static final int NFS_HTTP_PORT_DEFAULT = 50079;
+  public static final String NFS_HTTP_ADDRESS_KEY = "nfs.http.address";
+  public static final String NFS_HTTP_ADDRESS_DEFAULT = "0.0.0.0:" + NFS_HTTP_PORT_DEFAULT;
+
+  public static final String NFS_HTTPS_PORT_KEY = "nfs.https.port";
+  public static final int NFS_HTTPS_PORT_DEFAULT = 50579;
+  public static final String NFS_HTTPS_ADDRESS_KEY = "nfs.https.address";
+  public static final String NFS_HTTPS_ADDRESS_DEFAULT = "0.0.0.0:" + NFS_HTTPS_PORT_DEFAULT;
+  
+  public static final String  NFS_METRICS_PERCENTILES_INTERVALS_KEY = "nfs.metrics.percentiles.intervals";
+  public static final String  NFS_METRICS_PERCENTILES_INTERVALS_DEFAULT = "";
 }

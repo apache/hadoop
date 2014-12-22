@@ -42,40 +42,39 @@ import java.util.Properties;
 /**
  * A Server class provides standard configuration, logging and {@link Service}
  * lifecyle management.
- * <p/>
+ * <p>
  * A Server normally has a home directory, a configuration directory, a temp
  * directory and logs directory.
- * <p/>
+ * <p>
  * The Server configuration is loaded from 2 overlapped files,
  * <code>#SERVER#-default.xml</code> and <code>#SERVER#-site.xml</code>. The
  * default file is loaded from the classpath, the site file is laoded from the
  * configuration directory.
- * <p/>
+ * <p>
  * The Server collects all configuration properties prefixed with
  * <code>#SERVER#</code>. The property names are then trimmed from the
  * <code>#SERVER#</code> prefix.
- * <p/>
+ * <p>
  * The Server log configuration is loaded from the
  * <code>#SERVICE#-log4j.properties</code> file in the configuration directory.
- * <p/>
+ * <p>
  * The lifecycle of server is defined in by {@link Server.Status} enum.
  * When a server is create, its status is UNDEF, when being initialized it is
  * BOOTING, once initialization is complete by default transitions to NORMAL.
  * The <code>#SERVER#.startup.status</code> configuration property can be used
  * to specify a different startup status (NORMAL, ADMIN or HALTED).
- * <p/>
+ * <p>
  * Services classes are defined in the <code>#SERVER#.services</code> and
  * <code>#SERVER#.services.ext</code> properties. They are loaded in order
  * (services first, then services.ext).
- * <p/>
+ * <p>
  * Before initializing the services, they are traversed and duplicate service
  * interface are removed from the service list. The last service using a given
  * interface wins (this enables a simple override mechanism).
- * <p/>
+ * <p>
  * After the services have been resoloved by interface de-duplication they are
  * initialized in order. Once all services are initialized they are
  * post-initialized (this enables late/conditional service bindings).
- * <p/>
  */
 @InterfaceAudience.Private
 public class Server {
@@ -152,7 +151,7 @@ public class Server {
 
   /**
    * Creates a server instance.
-   * <p/>
+   * <p>
    * The config, log and temp directories are all under the specified home directory.
    *
    * @param name server name.
@@ -177,9 +176,9 @@ public class Server {
 
   /**
    * Creates a server instance.
-   * <p/>
+   * <p>
    * The config, log and temp directories are all under the specified home directory.
-   * <p/>
+   * <p>
    * It uses the provided configuration instead loading it from the config dir.
    *
    * @param name server name.
@@ -192,7 +191,7 @@ public class Server {
 
   /**
    * Creates a server instance.
-   * <p/>
+   * <p>
    * It uses the provided configuration instead loading it from the config dir.
    *
    * @param name server name.
@@ -250,9 +249,9 @@ public class Server {
 
   /**
    * Sets a new server status.
-   * <p/>
+   * <p>
    * The status must be settable.
-   * <p/>
+   * <p>
    * All services will be notified o the status change via the
    * {@link Service#serverStatusChange(Server.Status, Server.Status)} method. If a service
    * throws an exception during the notification, the server will be destroyed.
@@ -299,7 +298,7 @@ public class Server {
   /**
    * Convenience method that returns a resource as inputstream from the
    * classpath.
-   * <p/>
+   * <p>
    * It first attempts to use the Thread's context classloader and if not
    * set it uses the <code>ClassUtils</code> classloader.
    *
@@ -319,7 +318,7 @@ public class Server {
 
   /**
    * Initializes the Server.
-   * <p/>
+   * <p>
    * The initialization steps are:
    * <ul>
    * <li>It verifies the service home and temp directories exist</li>
@@ -335,6 +334,7 @@ public class Server {
    * <li>Initializes the services</li>
    * <li>Post-initializes the services</li>
    * <li>Sets the server startup status</li>
+   * </ul>
    *
    * @throws ServerException thrown if the server could not be initialized.
    */
@@ -625,7 +625,7 @@ public class Server {
 
   /**
    * Destroys the server.
-   * <p/>
+   * <p>
    * All services are destroyed in reverse order of initialization, then the
    * Log4j framework is shutdown.
    */
@@ -651,7 +651,7 @@ public class Server {
 
   /**
    * Returns the server prefix for server configuration properties.
-   * <p/>
+   * <p>
    * By default it is the server name.
    *
    * @return the prefix for server configuration properties.
@@ -733,10 +733,10 @@ public class Server {
 
   /**
    * Adds a service programmatically.
-   * <p/>
+   * <p>
    * If a service with the same interface exists, it will be destroyed and
    * removed before the given one is initialized and added.
-   * <p/>
+   * <p>
    * If an exception is thrown the server is destroyed.
    *
    * @param klass service class to add.

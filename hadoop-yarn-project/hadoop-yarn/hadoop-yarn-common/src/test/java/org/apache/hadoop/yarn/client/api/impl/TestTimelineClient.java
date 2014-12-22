@@ -154,6 +154,29 @@ public class TestTimelineClient {
 
   @Test
   public void testCheckRetryCount() throws Exception {
+    try {
+      YarnConfiguration conf = new YarnConfiguration();
+      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+      conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+        -2);
+      createTimelineClient(conf);
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES));
+    }
+
+    try {
+      YarnConfiguration conf = new YarnConfiguration();
+      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+      conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+        0);
+      createTimelineClient(conf);
+      Assert.fail();
+    } catch(IllegalArgumentException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS));
+    }
     int newMaxRetries = 5;
     long newIntervalMs = 500;
     YarnConfiguration conf = new YarnConfiguration();

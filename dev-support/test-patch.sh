@@ -858,74 +858,6 @@ findModules () {
   echo $CHANGED_MODULES
 }
 ###############################################################################
-### Run the test-contrib target
-runContribTests () {
-  echo ""
-  echo ""
-  echo "======================================================================"
-  echo "======================================================================"
-  echo "    Running contrib tests."
-  echo "======================================================================"
-  echo "======================================================================"
-  echo ""
-  echo ""
-
-  if [[ `$GREP -c 'test-contrib' build.xml` == 0 ]] ; then
-    echo "No contrib tests in this project."
-    return 0
-  fi
-
-  ### Kill any rogue build processes from the last attempt
-  $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
-
-  #echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no test-contrib"
-  #$ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no test-contrib
-  echo "NOP"
-  if [[ $? != 0 ]] ; then
-    JIRA_COMMENT="$JIRA_COMMENT
-
-    {color:red}-1 contrib tests{color}.  The patch failed contrib unit tests."
-    return 1
-  fi
-  JIRA_COMMENT="$JIRA_COMMENT
-
-    {color:green}+1 contrib tests{color}.  The patch passed contrib unit tests."
-  return 0
-}
-
-###############################################################################
-### Run the inject-system-faults target
-checkInjectSystemFaults () {
-  echo ""
-  echo ""
-  echo "======================================================================"
-  echo "======================================================================"
-  echo "    Checking the integrity of system test framework code."
-  echo "======================================================================"
-  echo "======================================================================"
-  echo ""
-  echo ""
-  
-  ### Kill any rogue build processes from the last attempt
-  $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
-
-  #echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME inject-system-faults"
-  #$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME inject-system-faults
-  echo "NOP"
-  return 0
-  if [[ $? != 0 ]] ; then
-    JIRA_COMMENT="$JIRA_COMMENT
-
-    {color:red}-1 system test framework{color}.  The patch failed system test framework compile."
-    return 1
-  fi
-  JIRA_COMMENT="$JIRA_COMMENT
-
-    {color:green}+1 system test framework{color}.  The patch passed system test framework compile."
-  return 0
-}
-
-###############################################################################
 ### Submit a comment to the defect's Jira
 submitJiraComment () {
   local result=$1
@@ -1059,10 +991,7 @@ checkReleaseAuditWarnings
 if [[ $JENKINS == "true" || $RUN_TESTS == "true" ]] ; then
   runTests
   (( RESULT = RESULT + $? ))
-  runContribTests
-  (( RESULT = RESULT + $? ))
 fi
-checkInjectSystemFaults
 (( RESULT = RESULT + $? ))
 JIRA_COMMENT_FOOTER="Test results: $BUILD_URL/testReport/
 $JIRA_COMMENT_FOOTER"

@@ -66,9 +66,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent.RMAppNodeUpdateType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -728,10 +728,12 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   @Override
   public void recover(RMState state) {
-    ApplicationState appState = state.getApplicationState().get(getApplicationId());
+    ApplicationStateData appState =
+        state.getApplicationState().get(getApplicationId());
     this.recoveredFinalState = appState.getState();
     LOG.info("Recovering app: " + getApplicationId() + " with " + 
-        + appState.getAttemptCount() + " attempts and final state = " + this.recoveredFinalState );
+        + appState.getAttemptCount() + " attempts and final state = "
+        + this.recoveredFinalState );
     this.diagnostics.append(appState.getDiagnostics());
     this.storedFinishTime = appState.getFinishTime();
     this.startTime = appState.getStartTime();
@@ -1019,10 +1021,10 @@ public class RMAppImpl implements RMApp, Recoverable {
     default:
       break;
     }
-    ApplicationState appState =
-        new ApplicationState(this.submitTime, this.startTime,
-          this.submissionContext, this.user, stateToBeStored, diags,
-          this.storedFinishTime);
+    ApplicationStateData appState =
+        ApplicationStateData.newInstance(this.submitTime, this.startTime,
+            this.user, this.submissionContext,
+            stateToBeStored, diags, this.storedFinishTime);
     this.rmContext.getStateStore().updateApplicationState(appState);
   }
 

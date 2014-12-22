@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
@@ -38,13 +37,11 @@ import com.google.inject.Inject;
 public class MetricsOverviewTable extends HtmlBlock {
   private static final long BYTES_IN_MB = 1024 * 1024;
 
-  private final RMContext rmContext;
   private final ResourceManager rm;
 
   @Inject
-  MetricsOverviewTable(RMContext context, ResourceManager rm, ViewContext ctx) {
+  MetricsOverviewTable(ResourceManager rm, ViewContext ctx) {
     super(ctx);
-    this.rmContext = context;
     this.rm = rm;
   }
 
@@ -56,7 +53,7 @@ public class MetricsOverviewTable extends HtmlBlock {
     html.style(".metrics {margin-bottom:5px}"); 
     
     ClusterMetricsInfo clusterMetrics = 
-        new ClusterMetricsInfo(this.rm, this.rmContext);
+ new ClusterMetricsInfo(this.rm);
     
     DIV<Hamlet> div = html.div().$class("metrics");
     
@@ -110,7 +107,7 @@ public class MetricsOverviewTable extends HtmlBlock {
     
     String user = request().getRemoteUser();
     if (user != null) {
-      UserMetricsInfo userMetrics = new UserMetricsInfo(this.rm, this.rmContext, user);
+      UserMetricsInfo userMetrics = new UserMetricsInfo(this.rm, user);
       if (userMetrics.metricsAvailable()) {
         div.h3("User Metrics for " + user).
         table("#usermetricsoverview").

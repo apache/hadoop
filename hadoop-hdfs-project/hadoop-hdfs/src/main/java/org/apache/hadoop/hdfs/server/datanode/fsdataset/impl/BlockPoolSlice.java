@@ -22,10 +22,13 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
+import java.io.Writer;
 import java.util.Scanner;
 
 import org.apache.commons.io.FileUtils;
@@ -157,6 +160,10 @@ class BlockPoolSlice {
     return rbwDir;
   }
 
+  File getTmpDir() {
+    return tmpDir;
+  }
+
   /** Run DU on local drives.  It must be synchronized from caller. */
   void decDfsUsed(long value) {
     dfsUsage.decDfsUsed(value);
@@ -182,7 +189,7 @@ class BlockPoolSlice {
     Scanner sc;
 
     try {
-      sc = new Scanner(new File(currentDir, DU_CACHE_FILE));
+      sc = new Scanner(new File(currentDir, DU_CACHE_FILE), "UTF-8");
     } catch (FileNotFoundException fnfe) {
       return -1;
     }
@@ -223,23 +230,18 @@ class BlockPoolSlice {
         outFile.getParent());
     }
 
-    FileWriter out = null;
     try {
       long used = getDfsUsed();
-      if (used > 0) {
-        out = new FileWriter(outFile);
+      try (Writer out = new OutputStreamWriter(
+          new FileOutputStream(outFile), "UTF-8")) {
         // mtime is written last, so that truncated writes won't be valid.
         out.write(Long.toString(used) + " " + Long.toString(Time.now()));
         out.flush();
-        out.close();
-        out = null;
       }
     } catch (IOException ioe) {
       // If write failed, the volume might be bad. Since the cache file is
       // not critical, log the error and continue.
       FsDatasetImpl.LOG.warn("Failed to write dfsUsed to " + outFile, ioe);
-    } finally {
-      IOUtils.cleanup(null, out);
     }
   }
 
@@ -443,7 +445,7 @@ class BlockPoolSlice {
             File.pathSeparator + "." + file.getName() + ".restart");
         Scanner sc = null;
         try {
-          sc = new Scanner(restartMeta);
+          sc = new Scanner(restartMeta, "UTF-8");
           // The restart meta file exists
           if (sc.hasNextLong() && (sc.nextLong() > Time.now())) {
             // It didn't expire. Load the replica as a RBW.

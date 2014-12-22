@@ -457,9 +457,15 @@ public class FileContext {
    */
   public static FileContext getFileContext(final Configuration aConf)
       throws UnsupportedFileSystemException {
-    return getFileContext(
-      URI.create(aConf.get(FS_DEFAULT_NAME_KEY, FS_DEFAULT_NAME_DEFAULT)), 
-      aConf);
+    final URI defaultFsUri = URI.create(aConf.get(FS_DEFAULT_NAME_KEY,
+        FS_DEFAULT_NAME_DEFAULT));
+    if (   defaultFsUri.getScheme() != null
+        && !defaultFsUri.getScheme().trim().isEmpty()) {
+      return getFileContext(defaultFsUri, aConf);
+    }
+    throw new UnsupportedFileSystemException(String.format(
+        "%s: URI configured via %s carries no scheme",
+        defaultFsUri, FS_DEFAULT_NAME_KEY));
   }
 
   /**

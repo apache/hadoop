@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -420,7 +421,7 @@ public class TestRetryCacheWithHA {
   /** append operation */
   class AppendOp extends AtMostOnceOp {
     private final String fileName;
-    private LocatedBlock lbk;
+    private LastBlockWithStatus lbk;
     
     AppendOp(DFSClient client, String fileName) {
       super("append", client);

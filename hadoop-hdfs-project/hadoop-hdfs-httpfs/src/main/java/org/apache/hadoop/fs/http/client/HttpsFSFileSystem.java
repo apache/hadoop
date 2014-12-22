@@ -18,10 +18,10 @@
 package org.apache.hadoop.fs.http.client;
 
 /**
- * HttpFSServer implementation of the FileSystemAccess FileSystem for SSL.
- * <p/>
- * This implementation allows a user to access HDFS over HTTPS via a
- * HttpFSServer server.
+ * <p>HttpFSServer implementation of the FileSystemAccess FileSystem for SSL.
+ * </p>
+ * <p>This implementation allows a user to access HDFS over HTTPS via a
+ * HttpFSServer server.</p>
  */
 public class HttpsFSFileSystem extends HttpFSFileSystem {
 

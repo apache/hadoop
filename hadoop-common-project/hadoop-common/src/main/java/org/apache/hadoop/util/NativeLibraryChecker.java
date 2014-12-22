@@ -108,14 +108,14 @@ public class NativeLibraryChecker {
     }
 
     System.out.println("Native library checking:");
-    System.out.printf("hadoop:  %b %s\n", nativeHadoopLoaded, hadoopLibraryName);
-    System.out.printf("zlib:    %b %s\n", zlibLoaded, zlibLibraryName);
-    System.out.printf("snappy:  %b %s\n", snappyLoaded, snappyLibraryName);
-    System.out.printf("lz4:     %b %s\n", lz4Loaded, lz4LibraryName);
-    System.out.printf("bzip2:   %b %s\n", bzip2Loaded, bzip2LibraryName);
-    System.out.printf("openssl: %b %s\n", openSslLoaded, openSslDetail);
+    System.out.printf("hadoop:  %b %s%n", nativeHadoopLoaded, hadoopLibraryName);
+    System.out.printf("zlib:    %b %s%n", zlibLoaded, zlibLibraryName);
+    System.out.printf("snappy:  %b %s%n", snappyLoaded, snappyLibraryName);
+    System.out.printf("lz4:     %b %s%n", lz4Loaded, lz4LibraryName);
+    System.out.printf("bzip2:   %b %s%n", bzip2Loaded, bzip2LibraryName);
+    System.out.printf("openssl: %b %s%n", openSslLoaded, openSslDetail);
     if (Shell.WINDOWS) {
-      System.out.printf("winutils: %b %s\n", winutilsExists, winutilsPath);
+      System.out.printf("winutils: %b %s%n", winutilsExists, winutilsPath);
     }
 
     if ((!nativeHadoopLoaded) || (Shell.WINDOWS && (!winutilsExists)) ||

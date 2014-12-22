@@ -113,6 +113,17 @@ function hadoop_exec_userfuncs
   fi
 }
 
+function hadoop_exec_hadooprc
+{
+  # Read the user's settings.  This provides for users to override 
+  # and/or append hadoop-env.sh. It is not meant as a complete system override.
+
+  if [[ -f "${HOME}/.hadooprc" ]]; then
+    hadoop_debug "Applying the user's .hadooprc"
+    . "${HOME}/.hadooprc"
+  fi
+}
+
 function hadoop_basic_init
 {
   # Some of these are also set in hadoop-env.sh.
@@ -152,7 +163,7 @@ function hadoop_basic_init
     export HADOOP_MAPRED_HOME="${HADOOP_PREFIX}"
   fi
   
-  HADOOP_IDENT_STRING=${HADOP_IDENT_STRING:-$USER}
+  HADOOP_IDENT_STRING=${HADOOP_IDENT_STRING:-$USER}
   HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-"${HADOOP_PREFIX}/logs"}
   HADOOP_LOGFILE=${HADOOP_LOGFILE:-hadoop.log}
   HADOOP_LOGLEVEL=${HADOOP_LOGLEVEL:-INFO}
@@ -162,7 +173,6 @@ function hadoop_basic_init
   HADOOP_ROOT_LOGGER=${HADOOP_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}
   HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_DAEMON_ROOT_LOGGER:-${HADOOP_LOGLEVEL},RFA}
   HADOOP_SECURITY_LOGGER=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}
-  HADOOP_HEAPSIZE=${HADOOP_HEAPSIZE:-1024}
   HADOOP_SSH_OPTS=${HADOOP_SSH_OPTS:-"-o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=10s"}
   HADOOP_SECURE_LOG_DIR=${HADOOP_SECURE_LOG_DIR:-${HADOOP_LOG_DIR}}
   HADOOP_SECURE_PID_DIR=${HADOOP_SECURE_PID_DIR:-${HADOOP_PID_DIR}}
@@ -273,6 +283,12 @@ function hadoop_connect_to_hosts
     # moral of the story: just use pdsh.
     export -f hadoop_actual_ssh
     export HADOOP_SSH_OPTS
+
+    # xargs is used with option -I to replace the placeholder in arguments
+    # list with each hostname read from stdin/pipe. But it consider one 
+    # line as one argument while reading from stdin/pipe. So place each 
+    # hostname in different lines while passing via pipe.
+    SLAVE_NAMES=$(echo "$SLAVE_NAMES" | tr ' ' '\n' )
     echo "${SLAVE_NAMES}" | \
     xargs -n 1 -P"${HADOOP_SSH_PARALLEL}" \
     -I {} bash -c --  "hadoop_actual_ssh {} ${params}"
@@ -591,15 +607,6 @@ function hadoop_java_setup
     hadoop_error "ERROR: $JAVA is not executable."
     exit 1
   fi
-  # shellcheck disable=SC2034
-  JAVA_HEAP_MAX=-Xmx1g
-  HADOOP_HEAPSIZE=${HADOOP_HEAPSIZE:-1024}
-  
-  # check envvars which might override default args
-  if [[ -n "$HADOOP_HEAPSIZE" ]]; then
-    # shellcheck disable=SC2034
-    JAVA_HEAP_MAX="-Xmx${HADOOP_HEAPSIZE}m"
-  fi
 }
 
 function hadoop_finalize_libpaths
@@ -608,6 +615,31 @@ function hadoop_finalize_libpaths
     hadoop_add_param HADOOP_OPTS java.library.path \
     "-Djava.library.path=${JAVA_LIBRARY_PATH}"
     export LD_LIBRARY_PATH
+  fi
+}
+
+function hadoop_finalize_hadoop_heap
+{
+  if [[ -n "${HADOOP_HEAPSIZE_MAX}" ]]; then
+    if [[ "${HADOOP_HEAPSIZE_MAX}" =~ ^[0-9]+$ ]]; then
+      HADOOP_HEAPSIZE_MAX="${HADOOP_HEAPSIZE_MAX}m"
+    fi
+    hadoop_add_param HADOOP_OPTS Xmx "-Xmx${HADOOP_HEAPSIZE_MAX}"
+  fi
+
+  # backwards compatibility
+  if [[ -n "${HADOOP_HEAPSIZE}" ]]; then
+    if [[ "${HADOOP_HEAPSIZE}" =~ ^[0-9]+$ ]]; then
+      HADOOP_HEAPSIZE="${HADOOP_HEAPSIZE}m"
+    fi
+    hadoop_add_param HADOOP_OPTS Xmx "-Xmx${HADOOP_HEAPSIZE}"
+  fi
+
+  if [[ -n "${HADOOP_HEAPSIZE_MIN}" ]]; then
+    if [[ "${HADOOP_HEAPSIZE_MIN}" =~ ^[0-9]+$ ]]; then
+      HADOOP_HEAPSIZE_MIN="${HADOOP_HEAPSIZE_MIN}m"
+    fi
+    hadoop_add_param HADOOP_OPTS Xms "-Xms${HADOOP_HEAPSIZE_MIN}"
   fi
 }
 
@@ -640,6 +672,7 @@ function hadoop_finalize
   # override of CONF dirs and more
   hadoop_finalize_classpath
   hadoop_finalize_libpaths
+  hadoop_finalize_hadoop_heap
   hadoop_finalize_hadoop_opts
 }
 
@@ -1132,3 +1165,15 @@ function hadoop_secure_daemon_handler
   esac
 }
 
+function hadoop_verify_user
+{
+  local command=$1
+  local uservar="HADOOP_${command}_USER"
+
+  if [[ -n ${!uservar} ]]; then
+    if [[ ${!uservar} !=  ${USER} ]]; then
+      hadoop_error "ERROR: ${command} can only be executed by ${!uservar}."
+      exit 1
+    fi
+  fi
+}

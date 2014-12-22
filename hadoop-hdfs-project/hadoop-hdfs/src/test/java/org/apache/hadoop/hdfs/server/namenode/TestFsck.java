@@ -711,8 +711,8 @@ public class TestFsck {
       DFSTestUtil.waitReplication(fs, filePath, (short)1);
       
       // intentionally corrupt NN data structure
-      INodeFile node = (INodeFile)cluster.getNamesystem().dir.getNode(
-          fileName, true);
+      INodeFile node = (INodeFile) cluster.getNamesystem().dir.getINode
+          (fileName, true);
       final BlockInfo[] blocks = node.getBlocks(); 
       assertEquals(blocks.length, 1);
       blocks[0].setNumBytes(-1L);  // set the block length to be negative
@@ -996,9 +996,9 @@ public class TestFsck {
     DatanodeManager dnManager = mock(DatanodeManager.class);
     
     when(namenode.getNamesystem()).thenReturn(fsName);
-    when(fsName.getBlockLocations(anyString(), anyLong(), anyLong(),
-        anyBoolean(), anyBoolean(), anyBoolean())).
-        thenThrow(new FileNotFoundException()) ;
+    when(fsName.getBlockLocations(
+        anyString(), anyLong(), anyLong(), anyBoolean(), anyBoolean()))
+        .thenThrow(new FileNotFoundException());
     when(fsName.getBlockManager()).thenReturn(blockManager);
     when(blockManager.getDatanodeManager()).thenReturn(dnManager);
 

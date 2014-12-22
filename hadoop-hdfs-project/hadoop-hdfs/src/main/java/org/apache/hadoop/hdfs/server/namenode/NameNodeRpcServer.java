@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
+
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -68,7 +69,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.inotify.Event;
-import org.apache.hadoop.hdfs.inotify.EventsList;
+import org.apache.hadoop.hdfs.inotify.EventBatch;
+import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -86,6 +88,7 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -618,7 +621,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public LocatedBlock append(String src, String clientName) 
+  public LastBlockWithStatus append(String src, String clientName) 
       throws IOException {
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
@@ -627,10 +630,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
     CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache, null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (LocatedBlock) cacheEntry.getPayload();
+      return (LastBlockWithStatus) cacheEntry.getPayload();
     }
 
-    LocatedBlock info = null;
+    LastBlockWithStatus info = null;
     boolean success = false;
     try {
       info = namesystem.appendFile(src, clientName, clientMachine,
@@ -971,10 +974,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
   throws IOException {
     DatanodeInfo results[] = namesystem.datanodeReport(type);
-    if (results == null ) {
-      throw new IOException("Failed to get datanode report for " + type
-          + " datanodes.");
-    }
     return results;
   }
     
@@ -982,10 +981,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public DatanodeStorageReport[] getDatanodeStorageReport(
       DatanodeReportType type) throws IOException {
     final DatanodeStorageReport[] reports = namesystem.getDatanodeStorageReport(type);
-    if (reports == null ) {
-      throw new IOException("Failed to get datanode storage report for " + type
-          + " datanodes.");
-    }
     return reports;
   }
 
@@ -1147,8 +1142,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       return; // Return previous response
     }
 
-    metrics.incrCreateSymlinkOps();
-    /* We enforce the MAX_PATH_LENGTH limit even though a symlink target 
+    /* We enforce the MAX_PATH_LENGTH limit even though a symlink target
      * URI may refer to a non-HDFS file system. 
      */
     if (!checkPathLength(link)) {
@@ -1156,9 +1150,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
                             " character limit");
                             
     }
-    if ("".equals(target)) {
-      throw new IOException("Invalid symlink target");
-    }
+
     final UserGroupInformation ugi = getRemoteUser();
 
     boolean success = false;
@@ -1792,7 +1784,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public EventsList getEditsFromTxid(long txid) throws IOException {
+  public EventBatchList getEditsFromTxid(long txid) throws IOException {
     namesystem.checkOperation(OperationCategory.READ); // only active
     namesystem.checkSuperuserPrivilege();
     int maxEventsPerRPC = nn.conf.getInt(
@@ -1810,13 +1802,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
     // guaranteed to have been written by this NameNode.)
     boolean readInProgress = syncTxid > 0;
 
-    List<Event> events = Lists.newArrayList();
+    List<EventBatch> batches = Lists.newArrayList();
+    int totalEvents = 0;
     long maxSeenTxid = -1;
     long firstSeenTxid = -1;
 
     if (syncTxid > 0 && txid > syncTxid) {
       // we can't read past syncTxid, so there's no point in going any further
-      return new EventsList(events, firstSeenTxid, maxSeenTxid, syncTxid);
+      return new EventBatchList(batches, firstSeenTxid, maxSeenTxid, syncTxid);
     }
 
     Collection<EditLogInputStream> streams = null;
@@ -1828,7 +1821,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       // will result
       LOG.info("NN is transitioning from active to standby and FSEditLog " +
       "is closed -- could not read edits");
-      return new EventsList(events, firstSeenTxid, maxSeenTxid, syncTxid);
+      return new EventBatchList(batches, firstSeenTxid, maxSeenTxid, syncTxid);
     }
 
     boolean breakOuter = false;
@@ -1846,9 +1839,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
             break;
           }
 
-          Event[] eventsFromOp = InotifyFSEditLogOpTranslator.translate(op);
-          if (eventsFromOp != null) {
-            events.addAll(Arrays.asList(eventsFromOp));
+          EventBatch eventBatch = InotifyFSEditLogOpTranslator.translate(op);
+          if (eventBatch != null) {
+            batches.add(eventBatch);
+            totalEvents += eventBatch.getEvents().length;
           }
           if (op.getTransactionId() > maxSeenTxid) {
             maxSeenTxid = op.getTransactionId();
@@ -1856,7 +1850,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           if (firstSeenTxid == -1) {
             firstSeenTxid = op.getTransactionId();
           }
-          if (events.size() >= maxEventsPerRPC || (syncTxid > 0 &&
+          if (totalEvents >= maxEventsPerRPC || (syncTxid > 0 &&
               op.getTransactionId() == syncTxid)) {
             // we're done
             breakOuter = true;
@@ -1871,7 +1865,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       }
     }
 
-    return new EventsList(events, firstSeenTxid, maxSeenTxid, syncTxid);
+    return new EventBatchList(batches, firstSeenTxid, maxSeenTxid, syncTxid);
   }
 
   @Override

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -76,7 +77,8 @@ final class AclStorage {
     }
 
     // Split parent's entries into access vs. default.
-    List<AclEntry> featureEntries = parent.getAclFeature().getEntries();
+    List<AclEntry> featureEntries = getEntriesFromAclFeature(parent
+        .getAclFeature());
     ScopedAclEntries scopedEntries = new ScopedAclEntries(featureEntries);
     List<AclEntry> parentDefaultEntries = scopedEntries.getDefaultEntries();
 
@@ -153,7 +155,25 @@ final class AclStorage {
    */
   public static List<AclEntry> readINodeAcl(INode inode, int snapshotId) {
     AclFeature f = inode.getAclFeature(snapshotId);
-    return f == null ? ImmutableList.<AclEntry> of() : f.getEntries();
+    return getEntriesFromAclFeature(f);
+  }
+
+  /**
+   * Build list of AclEntries from the AclFeature
+   * @param aclFeature AclFeature
+   * @return List of entries
+   */
+  @VisibleForTesting
+  static ImmutableList<AclEntry> getEntriesFromAclFeature(AclFeature aclFeature) {
+    if (aclFeature == null) {
+      return ImmutableList.<AclEntry> of();
+    }
+    ImmutableList.Builder<AclEntry> b = new ImmutableList.Builder<AclEntry>();
+    for (int pos = 0, entry; pos < aclFeature.getEntriesSize(); pos++) {
+      entry = aclFeature.getEntryAt(pos);
+      b.add(AclEntryStatusFormat.toAclEntry(entry));
+    }
+    return b.build();
   }
 
   /**
@@ -179,7 +199,7 @@ final class AclStorage {
 
     final List<AclEntry> existingAcl;
     // Split ACL entries stored in the feature into access vs. default.
-    List<AclEntry> featureEntries = f.getEntries();
+    List<AclEntry> featureEntries = getEntriesFromAclFeature(f);
     ScopedAclEntries scoped = new ScopedAclEntries(featureEntries);
     List<AclEntry> accessEntries = scoped.getAccessEntries();
     List<AclEntry> defaultEntries = scoped.getDefaultEntries();
@@ -218,39 +238,6 @@ final class AclStorage {
 
     // The above adds entries in the correct order, so no need to sort here.
     return existingAcl;
-  }
-
-  /**
-   * Completely removes the ACL from an inode.
-   *
-   * @param inode INode to update
-   * @param snapshotId int latest snapshot ID of inode
-   * @throws QuotaExceededException if quota limit is exceeded
-   */
-  public static void removeINodeAcl(INode inode, int snapshotId)
-      throws QuotaExceededException {
-    AclFeature f = inode.getAclFeature();
-    if (f == null) {
-      return;
-    }
-
-    FsPermission perm = inode.getFsPermission();
-    List<AclEntry> featureEntries = f.getEntries();
-    if (featureEntries.get(0).getScope() == AclEntryScope.ACCESS) {
-      // Restore group permissions from the feature's entry to permission
-      // bits, overwriting the mask, which is not part of a minimal ACL.
-      AclEntry groupEntryKey = new AclEntry.Builder()
-          .setScope(AclEntryScope.ACCESS).setType(AclEntryType.GROUP).build();
-      int groupEntryIndex = Collections.binarySearch(featureEntries,
-          groupEntryKey, AclTransformation.ACL_ENTRY_COMPARATOR);
-      assert groupEntryIndex >= 0;
-      FsAction groupPerm = featureEntries.get(groupEntryIndex).getPermission();
-      FsPermission newPerm = new FsPermission(perm.getUserAction(), groupPerm,
-          perm.getOtherAction(), perm.getStickyBit());
-      inode.setPermission(newPerm, snapshotId);
-    }
-
-    inode.removeAclFeature(snapshotId);
   }
 
   /**
@@ -330,7 +317,7 @@ final class AclStorage {
 
     // Add all default entries to the feature.
     featureEntries.addAll(defaultEntries);
-    return new AclFeature(ImmutableList.copyOf(featureEntries));
+    return new AclFeature(AclEntryStatusFormat.toInt(featureEntries));
   }
 
   /**

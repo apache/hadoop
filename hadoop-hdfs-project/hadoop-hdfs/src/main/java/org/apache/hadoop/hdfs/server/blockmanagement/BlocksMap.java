@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
@@ -223,8 +224,9 @@ class BlocksMap {
       final boolean removed = storage.removeBlock(currentBlock);
       Preconditions.checkState(removed, "currentBlock not found.");
 
-      final boolean added = storage.addBlock(newBlock);
-      Preconditions.checkState(added, "newBlock already exists.");
+      final AddBlockResult result = storage.addBlock(newBlock);
+      Preconditions.checkState(result == AddBlockResult.ADDED,
+          "newBlock already exists.");
     }
     // replace block in the map itself
     blocks.put(newBlock);

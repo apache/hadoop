@@ -42,8 +42,8 @@ public class Exec {
    * Runs the specified command and saves each line of the command's output to
    * the given list.
    * 
-   * @param command List<String> containing command and all arguments
-   * @param output List<String> in/out parameter to receive command output
+   * @param command List containing command and all arguments
+   * @param output List in/out parameter to receive command output
    * @return int exit code of command
    */
   public int run(List<String> command, List<String> output) {

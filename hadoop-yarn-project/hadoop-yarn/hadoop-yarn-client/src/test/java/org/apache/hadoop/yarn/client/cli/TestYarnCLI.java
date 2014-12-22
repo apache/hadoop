@@ -32,19 +32,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang.time.DateFormatUtils;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -64,10 +62,10 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
-import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.util.Records;
-import org.jboss.netty.logging.CommonsLoggerFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -257,25 +255,31 @@ public class TestYarnCLI {
         applicationId, 1);
     ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
     ContainerId containerId1 = ContainerId.newContainerId(attemptId, 2);
+    ContainerId containerId2 = ContainerId.newContainerId(attemptId, 3);
+    long time1=1234,time2=5678;
     ContainerReport container = ContainerReport.newInstance(containerId, null,
-        NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
+        NodeId.newInstance("host", 1234), Priority.UNDEFINED, time1, time2,
         "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
     ContainerReport container1 = ContainerReport.newInstance(containerId1, null,
-        NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
+        NodeId.newInstance("host", 1234), Priority.UNDEFINED, time1, time2,
         "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+    ContainerReport container2 = ContainerReport.newInstance(containerId2, null,
+        NodeId.newInstance("host", 1234), Priority.UNDEFINED, time1,0,
+        "diagnosticInfo", "", 0, ContainerState.RUNNING);
     List<ContainerReport> reports = new ArrayList<ContainerReport>();
     reports.add(container);
     reports.add(container1);
+    reports.add(container2);
+    DateFormat dateFormat=new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy");
     when(client.getContainers(any(ApplicationAttemptId.class))).thenReturn(
         reports);
     int result = cli.run(new String[] { "container", "-list",
         attemptId.toString() });
     assertEquals(0, result);
     verify(client).getContainers(attemptId);
-    Log.info(sysOutStream.toString());
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
-    pw.println("Total number of containers :2");
+    pw.println("Total number of containers :3");
     pw.print("                  Container-Id");
     pw.print("\t          Start Time");
     pw.print("\t         Finish Time");
@@ -283,19 +287,30 @@ public class TestYarnCLI {
     pw.print("\t                Host");
     pw.println("\t                            LOG-URL");
     pw.print(" container_1234_0005_01_000001");
-    pw.print("\t                1234");
-    pw.print("\t                5678");
+    pw.print("\t"+dateFormat.format(new Date(time1)));
+    pw.print("\t"+dateFormat.format(new Date(time2)));
     pw.print("\t            COMPLETE");
     pw.print("\t           host:1234");
     pw.println("\t                             logURL");
     pw.print(" container_1234_0005_01_000002");
-    pw.print("\t                1234");
-    pw.print("\t                5678");
+    pw.print("\t"+dateFormat.format(new Date(time1)));
+    pw.print("\t"+dateFormat.format(new Date(time2)));
     pw.print("\t            COMPLETE");
     pw.print("\t           host:1234");
     pw.println("\t                             logURL");
+    pw.print(" container_1234_0005_01_000003");
+    pw.print("\t"+dateFormat.format(new Date(time1)));
+    pw.print("\t                 N/A");
+    pw.print("\t             RUNNING");
+    pw.print("\t           host:1234");
+    pw.println("\t                                   ");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
+    Log.info("ExpectedOutput");
+    Log.info("["+appReportStr+"]");
+    Log.info("OutputFrom command");
+    String actualOutput = sysOutStream.toString();
+    Log.info("["+actualOutput+"]");
     Assert.assertEquals(appReportStr, sysOutStream.toString());
   }
   
@@ -306,14 +321,12 @@ public class TestYarnCLI {
     when(client.getApplicationReport(any(ApplicationId.class))).thenThrow(
         new ApplicationNotFoundException("History file for application"
             + applicationId + " is not found"));
-    try {
-      cli.run(new String[] { "application", "-status", applicationId.toString() });
-      Assert.fail();
-    } catch (Exception ex) {
-      Assert.assertTrue(ex instanceof ApplicationNotFoundException);
-      Assert.assertEquals("History file for application"
-          + applicationId + " is not found", ex.getMessage());
-    }
+    int exitCode = cli.run(new String[] { "application", "-status",
+        applicationId.toString() });
+    verify(sysOut).println(
+        "Application with id '" + applicationId
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
   }
 
   @Test
@@ -1305,6 +1318,80 @@ public class TestYarnCLI {
     Assert.assertEquals(queueInfoStr, sysOutStream.toString());
   }
 
+  @Test
+  public void testGetApplicationAttemptReportException() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId attemptId1 = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    when(client.getApplicationAttemptReport(attemptId1)).thenThrow(
+        new ApplicationNotFoundException("History file for application"
+            + applicationId + " is not found"));
+
+    int exitCode = cli.run(new String[] { "applicationattempt", "-status",
+        attemptId1.toString() });
+    verify(sysOut).println(
+        "Application for AppAttempt with id '" + attemptId1
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+
+    ApplicationAttemptId attemptId2 = ApplicationAttemptId.newInstance(
+        applicationId, 2);
+    when(client.getApplicationAttemptReport(attemptId2)).thenThrow(
+        new ApplicationAttemptNotFoundException(
+            "History file for application attempt" + attemptId2
+                + " is not found"));
+
+    exitCode = cli.run(new String[] { "applicationattempt", "-status",
+        attemptId2.toString() });
+    verify(sysOut).println(
+        "Application Attempt with id '" + attemptId2
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+  }
+
+  @Test
+  public void testGetContainerReportException() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    long cntId = 1;
+    ContainerId containerId1 = ContainerId.newContainerId(attemptId, cntId++);
+    when(client.getContainerReport(containerId1)).thenThrow(
+        new ApplicationNotFoundException("History file for application"
+            + applicationId + " is not found"));
+
+    int exitCode = cli.run(new String[] { "container", "-status",
+        containerId1.toString() });
+    verify(sysOut).println(
+        "Application for Container with id '" + containerId1
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+    ContainerId containerId2 = ContainerId.newContainerId(attemptId, cntId++);
+    when(client.getContainerReport(containerId2)).thenThrow(
+        new ApplicationAttemptNotFoundException(
+            "History file for application attempt" + attemptId
+                + " is not found"));
+
+    exitCode = cli.run(new String[] { "container", "-status",
+        containerId2.toString() });
+    verify(sysOut).println(
+        "Application Attempt for Container with id '" + containerId2
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+
+    ContainerId containerId3 = ContainerId.newContainerId(attemptId, cntId++);
+    when(client.getContainerReport(containerId3)).thenThrow(
+        new ContainerNotFoundException("History file for container"
+            + containerId3 + " is not found"));
+    exitCode = cli.run(new String[] { "container", "-status",
+        containerId3.toString() });
+    verify(sysOut).println(
+        "Container with id '" + containerId3
+            + "' doesn't exist in RM or Timeline Server.");
+    Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+  }
 
   private void verifyUsageInfo(YarnCLI cli) throws Exception {
     cli.setSysErrPrintStream(sysErr);

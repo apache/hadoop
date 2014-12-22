@@ -42,21 +42,25 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.sharedcachemanager.AppChecker;
+import org.apache.hadoop.yarn.server.sharedcachemanager.DummyAppChecker;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestInMemorySCMStore {
+public class TestInMemorySCMStore extends SCMStoreBaseTest {
 
   private InMemorySCMStore store;
   private AppChecker checker;
+
+  @Override
+  Class<? extends SCMStore> getStoreClass() {
+    return InMemorySCMStore.class;
+  }
 
   @Before
   public void setup() {
@@ -309,24 +313,5 @@ public class TestInMemorySCMStore {
 
   private ApplicationId createAppId(int id, long timestamp) {
     return ApplicationId.newInstance(timestamp, id);
-  }
-
-  class DummyAppChecker extends AppChecker {
-
-    @Override
-    @Private
-    public boolean isApplicationActive(ApplicationId id) throws YarnException {
-      // stub
-      return false;
-    }
-
-    @Override
-    @Private
-    public Collection<ApplicationId> getActiveApplications()
-        throws YarnException {
-      // stub
-      return null;
-    }
-
   }
 }

@@ -40,7 +40,7 @@ public class DecompressorStream extends CompressionInputStream {
   throws IOException {
     super(in);
 
-    if (in == null || decompressor == null) {
+    if (decompressor == null) {
       throw new NullPointerException();
     } else if (bufferSize <= 0) {
       throw new IllegalArgumentException("Illegal bufferSize");

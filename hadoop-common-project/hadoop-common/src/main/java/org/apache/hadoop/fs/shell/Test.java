@@ -83,6 +83,8 @@ class Test extends FsCommand {
       case 'z':
         test = (item.stat.getLen() == 0);
         break;
+      default:
+        break;
     }
     if (!test) exitCode = 1;
   }

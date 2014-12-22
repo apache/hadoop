@@ -870,8 +870,7 @@ public class JobHistoryEventHandler extends AbstractService
         TaskAttemptStartedEvent tase = (TaskAttemptStartedEvent) event;
         tEvent.addEventInfo("TASK_TYPE", tase.getTaskType().toString());
         tEvent.addEventInfo("TASK_ATTEMPT_ID",
-            tase.getTaskAttemptId().toString() == null ?
-            "" : tase.getTaskAttemptId().toString());
+            tase.getTaskAttemptId().toString());
         tEvent.addEventInfo("START_TIME", tase.getStartTime());
         tEvent.addEventInfo("HTTP_PORT", tase.getHttpPort());
         tEvent.addEventInfo("TRACKER_NAME", tase.getTrackerName());

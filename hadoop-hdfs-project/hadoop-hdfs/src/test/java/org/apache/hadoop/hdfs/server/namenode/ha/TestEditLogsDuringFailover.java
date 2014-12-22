@@ -142,7 +142,7 @@ public class TestEditLogsDuringFailover {
       File sharedDir = new File(sharedUri.getPath(), "current");
       FSNamesystem fsn = cluster.getNamesystem(0);
       FSImageTestUtil.createAbortedLogWithMkdirs(sharedDir, NUM_DIRS_IN_LOG, 1,
-          fsn.getLastInodeId() + 1);
+          fsn.getFSDirectory().getLastInodeId() + 1);
       
       assertEditFiles(Collections.singletonList(sharedUri),
           NNStorage.getInProgressEditsFileName(1));

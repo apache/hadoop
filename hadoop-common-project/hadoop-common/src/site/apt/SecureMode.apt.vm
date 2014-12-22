@@ -699,7 +699,7 @@ Configuration for  <<<conf/yarn-site.xml>>>
 | | | required for validating the secure access of the <container-executor> |
 | | | binary. |
 *-------------------------+-------------------------+------------------------+
-| <<<banned.users>>> | hfds,yarn,mapred,bin | Banned users. |
+| <<<banned.users>>> | hdfs,yarn,mapred,bin | Banned users. |
 *-------------------------+-------------------------+------------------------+
 | <<<allowed.system.users>>> | foo,bar | Allowed system users. |
 *-------------------------+-------------------------+------------------------+

@@ -18,8 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -37,6 +44,8 @@ import com.google.protobuf.TextFormat;
 
 public class ApplicationAttemptStateDataPBImpl extends
     ApplicationAttemptStateData {
+  private static Log LOG =
+      LogFactory.getLog(ApplicationAttemptStateDataPBImpl.class);
   ApplicationAttemptStateDataProto proto = 
       ApplicationAttemptStateDataProto.getDefaultInstance();
   ApplicationAttemptStateDataProto.Builder builder = null;
@@ -137,26 +146,27 @@ public class ApplicationAttemptStateDataPBImpl extends
   }
 
   @Override
-  public ByteBuffer getAppAttemptTokens() {
+  public Credentials getAppAttemptTokens() {
     ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
     if(appAttemptTokens != null) {
-      return appAttemptTokens;
+      return convertCredentialsFromByteBuffer(appAttemptTokens);
     }
     if(!p.hasAppAttemptTokens()) {
       return null;
     }
     this.appAttemptTokens = ProtoUtils.convertFromProtoFormat(
         p.getAppAttemptTokens());
-    return appAttemptTokens;
+    return convertCredentialsFromByteBuffer(appAttemptTokens);
   }
 
   @Override
-  public void setAppAttemptTokens(ByteBuffer attemptTokens) {
+  public void setAppAttemptTokens(Credentials attemptTokens) {
     maybeInitBuilder();
     if(attemptTokens == null) {
       builder.clearAppAttemptTokens();
+      return;
     }
-    this.appAttemptTokens = attemptTokens;
+    this.appAttemptTokens = convertCredentialsToByteBuffer(attemptTokens);
   }
 
   @Override
@@ -329,5 +339,45 @@ public class ApplicationAttemptStateDataPBImpl extends
   public void setFinishTime(long finishTime) {
     maybeInitBuilder();
     builder.setFinishTime(finishTime);
+  }
+
+  private static ByteBuffer convertCredentialsToByteBuffer(
+      Credentials credentials) {
+    ByteBuffer appAttemptTokens = null;
+    DataOutputBuffer dob = new DataOutputBuffer();
+    try {
+      if (credentials != null) {
+        credentials.writeTokenStorageToStream(dob);
+        appAttemptTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      }
+      return appAttemptTokens;
+    } catch (IOException e) {
+      LOG.error("Failed to convert Credentials to ByteBuffer.");
+      assert false;
+      return null;
+    } finally {
+      IOUtils.closeStream(dob);
+    }
+  }
+
+  private static Credentials convertCredentialsFromByteBuffer(
+      ByteBuffer appAttemptTokens) {
+    DataInputByteBuffer dibb = new DataInputByteBuffer();
+    try {
+      Credentials credentials = null;
+      if (appAttemptTokens != null) {
+        credentials = new Credentials();
+        appAttemptTokens.rewind();
+        dibb.reset(appAttemptTokens);
+        credentials.readTokenStorageStream(dibb);
+      }
+      return credentials;
+    } catch (IOException e) {
+      LOG.error("Failed to convert Credentials from ByteBuffer.");
+      assert false;
+      return null;
+    } finally {
+      IOUtils.closeStream(dibb);
+    }
   }
 }

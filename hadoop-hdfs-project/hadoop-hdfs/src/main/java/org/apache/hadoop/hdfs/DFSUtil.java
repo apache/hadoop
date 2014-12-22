@@ -341,21 +341,30 @@ public class DFSUtil {
   /**
    * Given a list of path components returns a path as a UTF8 String
    */
-  public static String byteArray2PathString(byte[][] pathComponents) {
+  public static String byteArray2PathString(byte[][] pathComponents,
+      int offset, int length) {
     if (pathComponents.length == 0) {
       return "";
-    } else if (pathComponents.length == 1
+    }
+    Preconditions.checkArgument(offset >= 0 && offset < pathComponents.length);
+    Preconditions.checkArgument(length >= 0 && offset + length <=
+        pathComponents.length);
+    if (pathComponents.length == 1
         && (pathComponents[0] == null || pathComponents[0].length == 0)) {
       return Path.SEPARATOR;
     }
     StringBuilder result = new StringBuilder();
-    for (int i = 0; i < pathComponents.length; i++) {
+    for (int i = offset; i < offset + length; i++) {
       result.append(new String(pathComponents[i], Charsets.UTF_8));
       if (i < pathComponents.length - 1) {
         result.append(Path.SEPARATOR_CHAR);
       }
     }
     return result.toString();
+  }
+
+  public static String byteArray2PathString(byte[][] pathComponents) {
+    return byteArray2PathString(pathComponents, 0, pathComponents.length);
   }
 
   /**

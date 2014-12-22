@@ -146,7 +146,9 @@ public class AclEntry {
      * @return Builder this builder, for call chaining
      */
     public Builder setName(String name) {
-      this.name = name;
+      if (name != null && !name.isEmpty()) {
+        this.name = name;
+      }
       return this;
     }
 

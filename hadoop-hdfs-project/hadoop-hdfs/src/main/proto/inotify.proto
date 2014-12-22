@@ -48,6 +48,11 @@ message EventProto {
   required bytes contents = 2;
 }
 
+message EventBatchProto {
+  required int64 txid = 1;
+  repeated EventProto events = 2;
+}
+
 enum INodeType {
   I_TYPE_FILE = 0x0;
   I_TYPE_DIRECTORY = 0x1;
@@ -73,6 +78,7 @@ message CreateEventProto {
   optional int32 replication = 7;
   optional string symlinkTarget = 8;
   optional bool overwrite = 9;
+  optional int64 defaultBlockSize = 10 [default=0];
 }
 
 message CloseEventProto {
@@ -111,8 +117,9 @@ message UnlinkEventProto {
 }
 
 message EventsListProto {
-  repeated EventProto events = 1;
+  repeated EventProto events = 1; // deprecated
   required int64 firstTxid = 2;
   required int64 lastTxid = 3;
   required int64 syncTxid = 4;
+  repeated EventBatchProto batch = 5;
 }

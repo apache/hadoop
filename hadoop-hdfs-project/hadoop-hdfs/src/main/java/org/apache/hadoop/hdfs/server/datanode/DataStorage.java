@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
@@ -57,13 +58,16 @@ import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -425,7 +429,7 @@ public class DataStorage extends Storage {
           LOG.warn(String.format(
             "I/O error attempting to unlock storage directory %s.",
             sd.getRoot()), e);
-          errorMsgBuilder.append(String.format("Failed to remove %s: %s\n",
+          errorMsgBuilder.append(String.format("Failed to remove %s: %s%n",
               sd.getRoot(), e.getMessage()));
         }
       }
@@ -979,10 +983,10 @@ public class DataStorage extends Storage {
   }
 
   private static class LinkArgs {
-    public File src;
-    public File dst;
+    File src;
+    File dst;
 
-    public LinkArgs(File src, File dst) {
+    LinkArgs(File src, File dst) {
       this.src = src;
       this.dst = dst;
     }
@@ -999,9 +1003,19 @@ public class DataStorage extends Storage {
       upgradeToIdBasedLayout = true;
     }
 
-    final List<LinkArgs> idBasedLayoutSingleLinks = Lists.newArrayList();
+    final ArrayList<LinkArgs> idBasedLayoutSingleLinks = Lists.newArrayList();
     linkBlocksHelper(from, to, oldLV, hl, upgradeToIdBasedLayout, to,
         idBasedLayoutSingleLinks);
+
+    // Detect and remove duplicate entries.
+    final ArrayList<LinkArgs> duplicates =
+        findDuplicateEntries(idBasedLayoutSingleLinks);
+    if (!duplicates.isEmpty()) {
+      LOG.error("There are " + duplicates.size() + " duplicate block " +
+          "entries within the same volume.");
+      removeDuplicateEntries(idBasedLayoutSingleLinks, duplicates);
+    }
+
     int numLinkWorkers = datanode.getConf().getInt(
         DFSConfigKeys.DFS_DATANODE_BLOCK_ID_LAYOUT_UPGRADE_THREADS_KEY,
         DFSConfigKeys.DFS_DATANODE_BLOCK_ID_LAYOUT_UPGRADE_THREADS);
@@ -1028,7 +1042,162 @@ public class DataStorage extends Storage {
       Futures.get(f, IOException.class);
     }
   }
-  
+
+  /**
+   * Find duplicate entries with an array of LinkArgs.
+   * Duplicate entries are entries with the same last path component.
+   */
+  static ArrayList<LinkArgs> findDuplicateEntries(ArrayList<LinkArgs> all) {
+    // Find duplicates by sorting the list by the final path component.
+    Collections.sort(all, new Comparator<LinkArgs>() {
+      /**
+       * Compare two LinkArgs objects, such that objects with the same
+       * terminal source path components are grouped together.
+       */
+      @Override
+      public int compare(LinkArgs a, LinkArgs b) {
+        return ComparisonChain.start().
+            compare(a.src.getName(), b.src.getName()).
+            compare(a.src, b.src).
+            compare(a.dst, b.dst).
+            result();
+      }
+    });
+    final ArrayList<LinkArgs> duplicates = Lists.newArrayList();
+    Long prevBlockId = null;
+    boolean prevWasMeta = false;
+    boolean addedPrev = false;
+    for (int i = 0; i < all.size(); i++) {
+      LinkArgs args = all.get(i);
+      long blockId = Block.getBlockId(args.src.getName());
+      boolean isMeta = Block.isMetaFilename(args.src.getName());
+      if ((prevBlockId == null) ||
+          (prevBlockId.longValue() != blockId)) {
+        prevBlockId = blockId;
+        addedPrev = false;
+      } else if (isMeta == prevWasMeta) {
+        // If we saw another file for the same block ID previously,
+        // and it had the same meta-ness as this file, we have a
+        // duplicate.
+        duplicates.add(args);
+        if (!addedPrev) {
+          duplicates.add(all.get(i - 1));
+        }
+        addedPrev = true;
+      } else {
+        addedPrev = false;
+      }
+      prevWasMeta = isMeta;
+    }
+    return duplicates;
+  }
+
+  /**
+   * Remove duplicate entries from the list.
+   * We do this by choosing:
+   * 1. the entries with the highest genstamp (this takes priority),
+   * 2. the entries with the longest block files,
+   * 3. arbitrarily, if neither #1 nor #2 gives a clear winner.
+   *
+   * Block and metadata files form a pair-- if you take a metadata file from
+   * one subdirectory, you must also take the block file from that
+   * subdirectory.
+   */
+  private static void removeDuplicateEntries(ArrayList<LinkArgs> all,
+                                             ArrayList<LinkArgs> duplicates) {
+    // Maps blockId -> metadata file with highest genstamp
+    TreeMap<Long, List<LinkArgs>> highestGenstamps =
+        new TreeMap<Long, List<LinkArgs>>();
+    for (LinkArgs duplicate : duplicates) {
+      if (!Block.isMetaFilename(duplicate.src.getName())) {
+        continue;
+      }
+      long blockId = Block.getBlockId(duplicate.src.getName());
+      List<LinkArgs> prevHighest = highestGenstamps.get(blockId);
+      if (prevHighest == null) {
+        List<LinkArgs> highest = new LinkedList<LinkArgs>();
+        highest.add(duplicate);
+        highestGenstamps.put(blockId, highest);
+        continue;
+      }
+      long prevGenstamp =
+          Block.getGenerationStamp(prevHighest.get(0).src.getName());
+      long genstamp = Block.getGenerationStamp(duplicate.src.getName());
+      if (genstamp < prevGenstamp) {
+        continue;
+      }
+      if (genstamp > prevGenstamp) {
+        prevHighest.clear();
+      }
+      prevHighest.add(duplicate);
+    }
+
+    // Remove data / metadata entries that don't have the highest genstamp
+    // from the duplicates list.
+    for (Iterator<LinkArgs> iter = duplicates.iterator(); iter.hasNext(); ) {
+      LinkArgs duplicate = iter.next();
+      long blockId = Block.getBlockId(duplicate.src.getName());
+      List<LinkArgs> highest = highestGenstamps.get(blockId);
+      if (highest != null) {
+        boolean found = false;
+        for (LinkArgs high : highest) {
+          if (high.src.getParent().equals(duplicate.src.getParent())) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          LOG.warn("Unexpectedly low genstamp on " +
+                   duplicate.src.getAbsolutePath() + ".");
+          iter.remove();
+        }
+      }
+    }
+
+    // Find the longest block files
+    // We let the "last guy win" here, since we're only interested in
+    // preserving one block file / metadata file pair.
+    TreeMap<Long, LinkArgs> longestBlockFiles = new TreeMap<Long, LinkArgs>();
+    for (LinkArgs duplicate : duplicates) {
+      if (Block.isMetaFilename(duplicate.src.getName())) {
+        continue;
+      }
+      long blockId = Block.getBlockId(duplicate.src.getName());
+      LinkArgs prevLongest = longestBlockFiles.get(blockId);
+      if (prevLongest == null) {
+        longestBlockFiles.put(blockId, duplicate);
+        continue;
+      }
+      long blockLength = duplicate.src.length();
+      long prevBlockLength = prevLongest.src.length();
+      if (blockLength < prevBlockLength) {
+        LOG.warn("Unexpectedly short length on " +
+            duplicate.src.getAbsolutePath() + ".");
+        continue;
+      }
+      if (blockLength > prevBlockLength) {
+        LOG.warn("Unexpectedly short length on " +
+            prevLongest.src.getAbsolutePath() + ".");
+      }
+      longestBlockFiles.put(blockId, duplicate);
+    }
+
+    // Remove data / metadata entries that aren't the longest, or weren't
+    // arbitrarily selected by us.
+    for (Iterator<LinkArgs> iter = all.iterator(); iter.hasNext(); ) {
+      LinkArgs args = iter.next();
+      long blockId = Block.getBlockId(args.src.getName());
+      LinkArgs bestDuplicate = longestBlockFiles.get(blockId);
+      if (bestDuplicate == null) {
+        continue; // file has no duplicates
+      }
+      if (!bestDuplicate.src.getParent().equals(args.src.getParent())) {
+        LOG.warn("Discarding " + args.src.getAbsolutePath() + ".");
+        iter.remove();
+      }
+    }
+  }
+
   static void linkBlocksHelper(File from, File to, int oldLV, HardLink hl,
   boolean upgradeToIdBasedLayout, File blockRoot,
       List<LinkArgs> idBasedLayoutSingleLinks) throws IOException {

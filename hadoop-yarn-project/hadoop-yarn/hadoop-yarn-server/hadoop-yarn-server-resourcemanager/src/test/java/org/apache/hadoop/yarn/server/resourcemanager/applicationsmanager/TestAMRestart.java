@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -386,7 +386,7 @@ public class TestAMRestart {
     am1.waitForState(RMAppAttemptState.FAILED);
     Assert.assertTrue(! attempt1.shouldCountTowardsMaxAttemptRetry());
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
-    ApplicationState appState =
+    ApplicationStateData appState =
         memStore.getState().getApplicationState().get(app1.getApplicationId());
     // AM should be restarted even though max-am-attempt is 1.
     MockAM am2 =
@@ -497,7 +497,7 @@ public class TestAMRestart {
     rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
 
     // state store has 1 attempt stored.
-    ApplicationState appState =
+    ApplicationStateData appState =
         memStore.getState().getApplicationState().get(app1.getApplicationId());
     Assert.assertEquals(1, appState.getAttemptCount());
     // attempt stored has the preempted container exit status.
@@ -555,7 +555,7 @@ public class TestAMRestart {
     // Restart rm.
     MockRM rm2 = new MockRM(conf, memStore);
     rm2.start();
-    ApplicationState appState =
+    ApplicationStateData appState =
         memStore.getState().getApplicationState().get(app1.getApplicationId());
     // re-register the NM
     nm1.setResourceTrackerService(rm2.getResourceTrackerService());

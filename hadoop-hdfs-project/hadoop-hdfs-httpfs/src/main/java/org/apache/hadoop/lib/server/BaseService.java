@@ -44,11 +44,11 @@ public abstract class BaseService implements Service {
 
   /**
    * Initializes the service.
-   * <p/>
+   * <p>
    * It collects all service properties (properties having the
    * <code>#SERVER#.#SERVICE#.</code> prefix). The property names are then
    * trimmed from the <code>#SERVER#.#SERVICE#.</code> prefix.
-   * <p/>
+   * <p>
    * After collecting  the service properties it delegates to the
    * {@link #init()} method.
    *
@@ -75,7 +75,7 @@ public abstract class BaseService implements Service {
   /**
    * Post initializes the service. This method is called by the
    * {@link Server} after all services of the server have been initialized.
-   * <p/>
+   * <p>
    * This method does a NOP.
    *
    * @throws ServiceException thrown if the service could not be
@@ -88,7 +88,7 @@ public abstract class BaseService implements Service {
   /**
    * Destroy the services.  This method is called once, when the
    * {@link Server} owning the service is being destroyed.
-   * <p/>
+   * <p>
    * This method does a NOP.
    */
   @Override
@@ -98,7 +98,7 @@ public abstract class BaseService implements Service {
   /**
    * Returns the service dependencies of this service. The service will be
    * instantiated only if all the service dependencies are already initialized.
-   * <p/>
+   * <p>
    * This method returns an empty array (size 0)
    *
    * @return an empty array (size 0).
@@ -110,7 +110,7 @@ public abstract class BaseService implements Service {
 
   /**
    * Notification callback when the server changes its status.
-   * <p/>
+   * <p>
    * This method returns an empty array (size 0)
    *
    * @param oldStatus old server status.
@@ -154,7 +154,7 @@ public abstract class BaseService implements Service {
   /**
    * Returns the service configuration properties. Property
    * names are trimmed off from its prefix.
-   * <p/>
+   * <p>
    * The sevice configuration properties are all properties
    * with names starting with <code>#SERVER#.#SERVICE#.</code>
    * in the server configuration.
@@ -169,7 +169,7 @@ public abstract class BaseService implements Service {
 
   /**
    * Initializes the server.
-   * <p/>
+   * <p>
    * This method is called by {@link #init(Server)} after all service properties
    * (properties prefixed with
    *

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.top;
 
 import java.net.InetAddress;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -36,6 +37,14 @@ import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
 public class TopAuditLogger implements AuditLogger {
   public static final Logger LOG = LoggerFactory.getLogger(TopAuditLogger.class);
 
+  private final TopMetrics topMetrics;
+
+  public TopAuditLogger(TopMetrics topMetrics) {
+    Preconditions.checkNotNull(topMetrics, "Cannot init with a null " +
+        "TopMetrics");
+    this.topMetrics = topMetrics;
+  }
+
   @Override
   public void initialize(Configuration conf) {
   }
@@ -43,12 +52,11 @@ public class TopAuditLogger implements AuditLogger {
   @Override
   public void logAuditEvent(boolean succeeded, String userName,
       InetAddress addr, String cmd, String src, String dst, FileStatus status) {
-
-    TopMetrics instance = TopMetrics.getInstance();
-    if (instance != null) {
-      instance.report(succeeded, userName, addr, cmd, src, dst, status);
-    } else {
-      LOG.error("TopMetrics is not initialized yet!");
+    try {
+      topMetrics.report(succeeded, userName, addr, cmd, src, dst, status);
+    } catch (Throwable t) {
+      LOG.error("An error occurred while reflecting the event in top service, "
+          + "event: (cmd={},userName={})", cmd, userName);
     }
 
     if (LOG.isDebugEnabled()) {

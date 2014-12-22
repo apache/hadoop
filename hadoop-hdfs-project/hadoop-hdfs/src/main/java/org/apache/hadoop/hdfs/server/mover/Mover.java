@@ -48,8 +48,10 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.text.DateFormat;
 import java.util.*;
@@ -86,8 +88,8 @@ public class Mover {
       return get(sources, ml);
     }
 
-    private StorageGroup getTarget(MLocation ml) {
-      return get(targets, ml);
+    private StorageGroup getTarget(String uuid, StorageType storageType) {
+      return targets.get(uuid, storageType);
     }
 
     private static <G extends StorageGroup> G get(StorageGroupMap<G> map, MLocation ml) {
@@ -387,6 +389,11 @@ public class Mover {
 
     boolean scheduleMoveReplica(DBlock db, Source source,
         List<StorageType> targetTypes) {
+      // Match storage on the same node
+      if (chooseTargetInSameNode(db, source, targetTypes)) {
+        return true;
+      }
+
       if (dispatcher.getCluster().isNodeGroupAware()) {
         if (chooseTarget(db, source, targetTypes, Matcher.SAME_NODE_GROUP)) {
           return true;
@@ -399,6 +406,26 @@ public class Mover {
       }
       // At last, match all remaining nodes
       return chooseTarget(db, source, targetTypes, Matcher.ANY_OTHER);
+    }
+
+    /**
+     * Choose the target storage within same Datanode if possible.
+     */
+    boolean chooseTargetInSameNode(DBlock db, Source source,
+        List<StorageType> targetTypes) {
+      for (StorageType t : targetTypes) {
+        StorageGroup target = storages.getTarget(source.getDatanodeInfo()
+            .getDatanodeUuid(), t);
+        if (target == null) {
+          continue;
+        }
+        final PendingMove pm = source.addPendingMove(db, target);
+        if (pm != null) {
+          dispatcher.executePendingMove(pm);
+          return true;
+        }
+      }
+      return false;
     }
 
     boolean chooseTarget(DBlock db, Source source,
@@ -554,7 +581,8 @@ public class Mover {
 
     private static String[] readPathFile(String file) throws IOException {
       List<String> list = Lists.newArrayList();
-      BufferedReader reader = new BufferedReader(new FileReader(file));
+      BufferedReader reader = new BufferedReader(
+          new InputStreamReader(new FileInputStream(file), "UTF-8"));
       try {
         String line;
         while ((line = reader.readLine()) != null) {

@@ -29,6 +29,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.stream.ChunkedStream;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -77,7 +78,8 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
   public static final int WEBHDFS_PREFIX_LENGTH = WEBHDFS_PREFIX.length();
   public static final String APPLICATION_OCTET_STREAM =
     "application/octet-stream";
-  public static final String APPLICATION_JSON = "application/json";
+  public static final String APPLICATION_JSON_UTF8 =
+      "application/json; charset=utf-8";
 
   private final Configuration conf;
   private final Configuration confForCreate;
@@ -224,11 +226,11 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     } finally {
       IOUtils.cleanup(LOG, dfsclient);
     }
-    final byte[] js = JsonUtil.toJsonString(checksum).getBytes();
+    final byte[] js = JsonUtil.toJsonString(checksum).getBytes(Charsets.UTF_8);
     DefaultFullHttpResponse resp =
       new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(js));
 
-    resp.headers().set(CONTENT_TYPE, APPLICATION_JSON);
+    resp.headers().set(CONTENT_TYPE, APPLICATION_JSON_UTF8);
     resp.headers().set(CONTENT_LENGTH, js.length);
     resp.headers().set(CONNECTION, CLOSE);
     ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);

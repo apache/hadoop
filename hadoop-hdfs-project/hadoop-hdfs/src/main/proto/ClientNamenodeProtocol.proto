@@ -90,6 +90,7 @@ message AppendRequestProto {
 
 message AppendResponseProto {
   optional LocatedBlockProto block = 1;
+  optional HdfsFileStatusProto stat = 2;
 }
 
 message SetReplicationRequestProto {

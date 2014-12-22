@@ -20,18 +20,18 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Comparator;
@@ -43,6 +43,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -186,10 +187,10 @@ public class TestOfflineImageViewer {
   @Test(expected = IOException.class)
   public void testTruncatedFSImage() throws IOException {
     File truncatedFile = folder.newFile();
-    StringWriter output = new StringWriter();
+    PrintStream output = new PrintStream(NullOutputStream.NULL_OUTPUT_STREAM);
     copyPartOfFile(originalFsimage, truncatedFile);
-    new FileDistributionCalculator(new Configuration(), 0, 0, new PrintWriter(
-        output)).visit(new RandomAccessFile(truncatedFile, "r"));
+    new FileDistributionCalculator(new Configuration(), 0, 0, output)
+        .visit(new RandomAccessFile(truncatedFile, "r"));
   }
 
   private void copyPartOfFile(File src, File dest) throws IOException {
@@ -208,20 +209,21 @@ public class TestOfflineImageViewer {
 
   @Test
   public void testFileDistributionCalculator() throws IOException {
-    StringWriter output = new StringWriter();
-    PrintWriter o = new PrintWriter(output);
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    PrintStream o = new PrintStream(output);
     new FileDistributionCalculator(new Configuration(), 0, 0, o)
         .visit(new RandomAccessFile(originalFsimage, "r"));
     o.close();
 
+    String outputString = output.toString();
     Pattern p = Pattern.compile("totalFiles = (\\d+)\n");
-    Matcher matcher = p.matcher(output.getBuffer());
+    Matcher matcher = p.matcher(outputString);
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalFiles = Integer.parseInt(matcher.group(1));
     assertEquals(NUM_DIRS * FILES_PER_DIR, totalFiles);
 
     p = Pattern.compile("totalDirectories = (\\d+)\n");
-    matcher = p.matcher(output.getBuffer());
+    matcher = p.matcher(outputString);
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalDirs = Integer.parseInt(matcher.group(1));
     // totalDirs includes root directory, empty directory, and xattr directory
@@ -236,7 +238,7 @@ public class TestOfflineImageViewer {
       }
     });
     p = Pattern.compile("maxFileSize = (\\d+)\n");
-    matcher = p.matcher(output.getBuffer());
+    matcher = p.matcher(output.toString("UTF-8"));
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     assertEquals(maxFile.getLen(), Long.parseLong(matcher.group(1)));
   }
@@ -252,13 +254,13 @@ public class TestOfflineImageViewer {
   @Test
   public void testPBImageXmlWriter() throws IOException, SAXException,
       ParserConfigurationException {
-    StringWriter output = new StringWriter();
-    PrintWriter o = new PrintWriter(output);
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    PrintStream o = new PrintStream(output);
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
     SAXParserFactory spf = SAXParserFactory.newInstance();
     SAXParser parser = spf.newSAXParser();
-    final String xml = output.getBuffer().toString();
+    final String xml = output.toString();
     parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
   }
 
@@ -298,7 +300,7 @@ public class TestOfflineImageViewer {
       verifyHttpResponseCode(HttpURLConnection.HTTP_NOT_FOUND, url);
 
       // LISTSTATUS operation to a invalid prefix
-      url = new URL("http://localhost:" + port + "/webhdfs/v1?op=LISTSTATUS");
+      url = new URL("http://localhost:" + port + "/foo");
       verifyHttpResponseCode(HttpURLConnection.HTTP_NOT_FOUND, url);
 
       // GETFILESTATUS operation

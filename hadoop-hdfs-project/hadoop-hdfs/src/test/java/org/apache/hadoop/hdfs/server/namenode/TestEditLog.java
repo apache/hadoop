@@ -204,7 +204,7 @@ public class TestEditLog {
       FSEditLog editLog = namesystem.getEditLog();
 
       for (int i = 0; i < numTransactions; i++) {
-        INodeFile inode = new INodeFile(namesystem.allocateNewInodeId(), null,
+        INodeFile inode = new INodeFile(namesystem.dir.allocateNewInodeId(), null,
             p, 0L, 0L, BlockInfo.EMPTY_ARRAY, replication, blockSize);
         inode.toUnderConstruction("", "");
 
@@ -375,7 +375,7 @@ public class TestEditLog {
       // Remember the current lastInodeId and will reset it back to test
       // loading editlog segments.The transactions in the following allocate new
       // inode id to write to editlogs but doesn't create ionde in namespace
-      long originalLastInodeId = namesystem.getLastInodeId();
+      long originalLastInodeId = namesystem.dir.getLastInodeId();
       
       // Create threads and make them run transactions concurrently.
       Thread threadId[] = new Thread[NUM_THREADS];
@@ -409,7 +409,7 @@ public class TestEditLog {
       // If there were any corruptions, it is likely that the reading in
       // of these transactions will throw an exception.
       //
-      namesystem.resetLastInodeIdWithoutChecking(originalLastInodeId);
+      namesystem.dir.resetLastInodeIdWithoutChecking(originalLastInodeId);
       for (Iterator<StorageDirectory> it = 
               fsimage.getStorage().dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
         FSEditLogLoader loader = new FSEditLogLoader(namesystem, 0);

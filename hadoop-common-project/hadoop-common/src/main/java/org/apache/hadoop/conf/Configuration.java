@@ -67,6 +67,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import com.google.common.base.Charsets;
 import org.apache.commons.collections.map.UnmodifiableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1487,11 +1488,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param pattern new value
    */
   public void setPattern(String name, Pattern pattern) {
-    if (null == pattern) {
-      set(name, null);
-    } else {
-      set(name, pattern.pattern());
-    }
+    assert pattern != null : "Pattern cannot be null";
+    set(name, pattern.pattern());
   }
 
   /**
@@ -2266,7 +2264,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         LOG.info("found resource " + name + " at " + url);
       }
 
-      return new InputStreamReader(url.openStream());
+      return new InputStreamReader(url.openStream(), Charsets.UTF_8);
     } catch (Exception e) {
       return null;
     }

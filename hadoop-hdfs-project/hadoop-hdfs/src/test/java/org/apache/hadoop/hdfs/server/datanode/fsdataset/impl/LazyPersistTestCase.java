@@ -50,6 +50,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
@@ -129,6 +131,48 @@ public abstract class LazyPersistTestCase {
       assertThat(locatedBlock.getStorageTypes()[0], is(storageType));
     }
     return locatedBlocks;
+  }
+
+  /**
+   * Make sure at least one non-transient volume has a saved copy of the replica.
+   * An infinite loop is used to ensure the async lazy persist tasks are completely
+   * done before verification. Caller of ensureLazyPersistBlocksAreSaved expects
+   * either a successful pass or timeout failure.
+   */
+  protected final void ensureLazyPersistBlocksAreSaved(
+      LocatedBlocks locatedBlocks) throws IOException, InterruptedException {
+    final String bpid = cluster.getNamesystem().getBlockPoolId();
+    List<? extends FsVolumeSpi> volumes =
+      cluster.getDataNodes().get(0).getFSDataset().getVolumes();
+    final Set<Long> persistedBlockIds = new HashSet<Long>();
+
+    while (persistedBlockIds.size() < locatedBlocks.getLocatedBlocks().size()) {
+      // Take 1 second sleep before each verification iteration
+      Thread.sleep(1000);
+
+      for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
+        for (FsVolumeSpi v : volumes) {
+          if (v.isTransientStorage()) {
+            continue;
+          }
+
+          FsVolumeImpl volume = (FsVolumeImpl) v;
+          File lazyPersistDir = volume.getBlockPoolSlice(bpid).getLazypersistDir();
+
+          long blockId = lb.getBlock().getBlockId();
+          File targetDir =
+            DatanodeUtil.idToBlockDir(lazyPersistDir, blockId);
+          File blockFile = new File(targetDir, lb.getBlock().getBlockName());
+          if (blockFile.exists()) {
+            // Found a persisted copy for this block and added to the Set
+            persistedBlockIds.add(blockId);
+          }
+        }
+      }
+    }
+
+    // We should have found a persisted copy for each located block.
+    assertThat(persistedBlockIds.size(), is(locatedBlocks.getLocatedBlocks().size()));
   }
 
   protected final void makeRandomTestFile(Path path, long length,

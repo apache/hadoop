@@ -554,11 +554,6 @@ public class FSImage implements Closeable {
     return editLog;
   }
 
-  @VisibleForTesting
-  public void setEditLogForTesting(FSEditLog newLog) {
-    editLog = newLog;
-  }
-
   void openEditLogForWrite() throws IOException {
     assert editLog != null : "editLog must be initialized";
     editLog.openForWrite();

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.security;
 
+import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -25,8 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class AccessControlException 
-    extends org.apache.hadoop.fs.permission.AccessControlException {
+public class AccessControlException extends IOException {
 
   //Required by {@link java.io.Serializable}.
   private static final long serialVersionUID = 1L;

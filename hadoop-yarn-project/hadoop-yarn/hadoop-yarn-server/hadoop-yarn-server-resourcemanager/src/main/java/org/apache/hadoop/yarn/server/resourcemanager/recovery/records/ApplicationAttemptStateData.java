@@ -18,18 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery.records;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationAttemptStateDataProto;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -41,7 +37,7 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class ApplicationAttemptStateData {
   public static ApplicationAttemptStateData newInstance(
       ApplicationAttemptId attemptId, Container container,
-      ByteBuffer attemptTokens, long startTime, RMAppAttemptState finalState,
+      Credentials attemptTokens, long startTime, RMAppAttemptState finalState,
       String finalTrackingUrl, String diagnostics,
       FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus,
       long finishTime, long memorySeconds, long vcoreSeconds) {
@@ -52,7 +48,7 @@ public abstract class ApplicationAttemptStateData {
     attemptStateData.setAppAttemptTokens(attemptTokens);
     attemptStateData.setState(finalState);
     attemptStateData.setFinalTrackingUrl(finalTrackingUrl);
-    attemptStateData.setDiagnostics(diagnostics);
+    attemptStateData.setDiagnostics(diagnostics == null ? "" : diagnostics);
     attemptStateData.setStartTime(startTime);
     attemptStateData.setFinalApplicationStatus(amUnregisteredFinalStatus);
     attemptStateData.setAMContainerExitStatus(exitStatus);
@@ -63,22 +59,14 @@ public abstract class ApplicationAttemptStateData {
   }
 
   public static ApplicationAttemptStateData newInstance(
-      ApplicationAttemptState attemptState) throws IOException {
-    Credentials credentials = attemptState.getAppAttemptCredentials();
-    ByteBuffer appAttemptTokens = null;
-    if (credentials != null) {
-      DataOutputBuffer dob = new DataOutputBuffer();
-      credentials.writeTokenStorageToStream(dob);
-      appAttemptTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+      ApplicationAttemptId attemptId, Container masterContainer,
+      Credentials attemptTokens, long startTime, long memorySeconds,
+      long vcoreSeconds) {
+    return newInstance(attemptId, masterContainer, attemptTokens,
+        startTime, null, "N/A", "", null, ContainerExitStatus.INVALID, 0,
+        memorySeconds, vcoreSeconds);
     }
-    return newInstance(attemptState.getAttemptId(),
-      attemptState.getMasterContainer(), appAttemptTokens,
-      attemptState.getStartTime(), attemptState.getState(),
-      attemptState.getFinalTrackingUrl(), attemptState.getDiagnostics(),
-      attemptState.getFinalApplicationStatus(),
-      attemptState.getAMContainerExitStatus(), attemptState.getFinishTime(),
-      attemptState.getMemorySeconds(), attemptState.getVcoreSeconds());
-  }
+
 
   public abstract ApplicationAttemptStateDataProto getProto();
 
@@ -108,9 +96,9 @@ public abstract class ApplicationAttemptStateData {
    */
   @Public
   @Unstable
-  public abstract ByteBuffer getAppAttemptTokens();
+  public abstract Credentials getAppAttemptTokens();
 
-  public abstract void setAppAttemptTokens(ByteBuffer attemptTokens);
+  public abstract void setAppAttemptTokens(Credentials attemptTokens);
 
   /**
    * Get the final state of the application attempt.

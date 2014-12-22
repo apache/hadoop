@@ -242,9 +242,8 @@ public abstract class SchedulerNode {
   @Override
   public String toString() {
     return "host: " + rmNode.getNodeAddress() + " #containers="
-        + getNumContainers() + " available="
-        + getAvailableResource().getMemory() + " used="
-        + getUsedResource().getMemory();
+        + getNumContainers() + " available=" + getAvailableResource()
+        + " used=" + getUsedResource();
   }
 
   /**

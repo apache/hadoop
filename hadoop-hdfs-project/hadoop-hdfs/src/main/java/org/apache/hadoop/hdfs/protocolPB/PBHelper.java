@@ -46,11 +46,12 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
+import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.inotify.Event;
-import org.apache.hadoop.hdfs.inotify.EventsList;
+import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -2277,15 +2278,24 @@ public class PBHelper {
 
   public static AclStatus convert(GetAclStatusResponseProto e) {
     AclStatusProto r = e.getResult();
-    return new AclStatus.Builder().owner(r.getOwner()).group(r.getGroup())
-        .stickyBit(r.getSticky())
-        .addEntries(convertAclEntry(r.getEntriesList())).build();
+    AclStatus.Builder builder = new AclStatus.Builder();
+    builder.owner(r.getOwner()).group(r.getGroup()).stickyBit(r.getSticky())
+        .addEntries(convertAclEntry(r.getEntriesList()));
+    if (r.hasPermission()) {
+      builder.setPermission(convert(r.getPermission()));
+    }
+    return builder.build();
   }
 
   public static GetAclStatusResponseProto convert(AclStatus e) {
-    AclStatusProto r = AclStatusProto.newBuilder().setOwner(e.getOwner())
+    AclStatusProto.Builder builder = AclStatusProto.newBuilder();
+    builder.setOwner(e.getOwner())
         .setGroup(e.getGroup()).setSticky(e.isStickyBit())
-        .addAllEntries(convertAclEntryProto(e.getEntries())).build();
+        .addAllEntries(convertAclEntryProto(e.getEntries()));
+    if (e.getPermission() != null) {
+      builder.setPermission(convert(e.getPermission()));
+    }
+    AclStatusProto r = builder.build();
     return GetAclStatusResponseProto.newBuilder().setResult(r).build();
   }
   
@@ -2517,173 +2527,206 @@ public class PBHelper {
     }
   }
 
-  public static EventsList convert(GetEditsFromTxidResponseProto resp) throws
+  public static EventBatchList convert(GetEditsFromTxidResponseProto resp) throws
     IOException {
-    List<Event> events = Lists.newArrayList();
-    for (InotifyProtos.EventProto p : resp.getEventsList().getEventsList()) {
-      switch(p.getType()) {
-      case EVENT_CLOSE:
-        InotifyProtos.CloseEventProto close =
-            InotifyProtos.CloseEventProto.parseFrom(p.getContents());
-        events.add(new Event.CloseEvent(close.getPath(), close.getFileSize(),
-            close.getTimestamp()));
-        break;
-      case EVENT_CREATE:
-        InotifyProtos.CreateEventProto create =
-            InotifyProtos.CreateEventProto.parseFrom(p.getContents());
-        events.add(new Event.CreateEvent.Builder()
-            .iNodeType(createTypeConvert(create.getType()))
-            .path(create.getPath())
-            .ctime(create.getCtime())
-            .ownerName(create.getOwnerName())
-            .groupName(create.getGroupName())
-            .perms(convert(create.getPerms()))
-            .replication(create.getReplication())
-            .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
-            create.getSymlinkTarget())
-            .overwrite(create.getOverwrite()).build());
-        break;
-      case EVENT_METADATA:
-        InotifyProtos.MetadataUpdateEventProto meta =
-            InotifyProtos.MetadataUpdateEventProto.parseFrom(p.getContents());
-        events.add(new Event.MetadataUpdateEvent.Builder()
-            .path(meta.getPath())
-            .metadataType(metadataUpdateTypeConvert(meta.getType()))
-            .mtime(meta.getMtime())
-            .atime(meta.getAtime())
-            .replication(meta.getReplication())
-            .ownerName(
-                meta.getOwnerName().isEmpty() ? null : meta.getOwnerName())
-            .groupName(
-                meta.getGroupName().isEmpty() ? null : meta.getGroupName())
-            .perms(meta.hasPerms() ? convert(meta.getPerms()) : null)
-            .acls(meta.getAclsList().isEmpty() ? null : convertAclEntry(
-                meta.getAclsList()))
-            .xAttrs(meta.getXAttrsList().isEmpty() ? null : convertXAttrs(
-                meta.getXAttrsList()))
-            .xAttrsRemoved(meta.getXAttrsRemoved())
-            .build());
-        break;
-      case EVENT_RENAME:
-        InotifyProtos.RenameEventProto rename =
-            InotifyProtos.RenameEventProto.parseFrom(p.getContents());
-        events.add(new Event.RenameEvent(rename.getSrcPath(), rename.getDestPath(),
-            rename.getTimestamp()));
-        break;
-      case EVENT_APPEND:
-        InotifyProtos.AppendEventProto reopen =
-            InotifyProtos.AppendEventProto.parseFrom(p.getContents());
-        events.add(new Event.AppendEvent(reopen.getPath()));
-        break;
-      case EVENT_UNLINK:
-        InotifyProtos.UnlinkEventProto unlink =
-            InotifyProtos.UnlinkEventProto.parseFrom(p.getContents());
-        events.add(new Event.UnlinkEvent(unlink.getPath(), unlink.getTimestamp()));
-        break;
-      default:
-        throw new RuntimeException("Unexpected inotify event type: " +
-            p.getType());
-      }
+    final InotifyProtos.EventsListProto list = resp.getEventsList();
+    final long firstTxid = list.getFirstTxid();
+    final long lastTxid = list.getLastTxid();
+
+    List<EventBatch> batches = Lists.newArrayList();
+    if (list.getEventsList().size() > 0) {
+      throw new IOException("Can't handle old inotify server response.");
     }
-    return new EventsList(events, resp.getEventsList().getFirstTxid(),
+    for (InotifyProtos.EventBatchProto bp : list.getBatchList()) {
+      long txid = bp.getTxid();
+      if ((txid != -1) && ((txid < firstTxid) || (txid > lastTxid))) {
+        throw new IOException("Error converting TxidResponseProto: got a " +
+            "transaction id " + txid + " that was outside the range of [" +
+            firstTxid + ", " + lastTxid + "].");
+      }
+      List<Event> events = Lists.newArrayList();
+      for (InotifyProtos.EventProto p : bp.getEventsList()) {
+        switch (p.getType()) {
+          case EVENT_CLOSE:
+            InotifyProtos.CloseEventProto close =
+                InotifyProtos.CloseEventProto.parseFrom(p.getContents());
+            events.add(new Event.CloseEvent(close.getPath(),
+                close.getFileSize(), close.getTimestamp()));
+            break;
+          case EVENT_CREATE:
+            InotifyProtos.CreateEventProto create =
+                InotifyProtos.CreateEventProto.parseFrom(p.getContents());
+            events.add(new Event.CreateEvent.Builder()
+                .iNodeType(createTypeConvert(create.getType()))
+                .path(create.getPath())
+                .ctime(create.getCtime())
+                .ownerName(create.getOwnerName())
+                .groupName(create.getGroupName())
+                .perms(convert(create.getPerms()))
+                .replication(create.getReplication())
+                .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
+                    create.getSymlinkTarget())
+                .defaultBlockSize(create.getDefaultBlockSize())
+                .overwrite(create.getOverwrite()).build());
+            break;
+          case EVENT_METADATA:
+            InotifyProtos.MetadataUpdateEventProto meta =
+                InotifyProtos.MetadataUpdateEventProto.parseFrom(p.getContents());
+            events.add(new Event.MetadataUpdateEvent.Builder()
+                .path(meta.getPath())
+                .metadataType(metadataUpdateTypeConvert(meta.getType()))
+                .mtime(meta.getMtime())
+                .atime(meta.getAtime())
+                .replication(meta.getReplication())
+                .ownerName(
+                    meta.getOwnerName().isEmpty() ? null : meta.getOwnerName())
+                .groupName(
+                    meta.getGroupName().isEmpty() ? null : meta.getGroupName())
+                .perms(meta.hasPerms() ? convert(meta.getPerms()) : null)
+                .acls(meta.getAclsList().isEmpty() ? null : convertAclEntry(
+                    meta.getAclsList()))
+                .xAttrs(meta.getXAttrsList().isEmpty() ? null : convertXAttrs(
+                    meta.getXAttrsList()))
+                .xAttrsRemoved(meta.getXAttrsRemoved())
+                .build());
+            break;
+          case EVENT_RENAME:
+            InotifyProtos.RenameEventProto rename =
+                InotifyProtos.RenameEventProto.parseFrom(p.getContents());
+            events.add(new Event.RenameEvent.Builder()
+                  .srcPath(rename.getSrcPath())
+                  .dstPath(rename.getDestPath())
+                  .timestamp(rename.getTimestamp())
+                  .build());
+            break;
+          case EVENT_APPEND:
+            InotifyProtos.AppendEventProto reopen =
+                InotifyProtos.AppendEventProto.parseFrom(p.getContents());
+            events.add(new Event.AppendEvent.Builder()
+                  .path(reopen.getPath())
+                  .build());
+            break;
+          case EVENT_UNLINK:
+            InotifyProtos.UnlinkEventProto unlink =
+                InotifyProtos.UnlinkEventProto.parseFrom(p.getContents());
+            events.add(new Event.UnlinkEvent.Builder()
+                  .path(unlink.getPath())
+                  .timestamp(unlink.getTimestamp())
+                  .build());
+            break;
+          default:
+            throw new RuntimeException("Unexpected inotify event type: " +
+                p.getType());
+        }
+      }
+      batches.add(new EventBatch(txid, events.toArray(new Event[0])));
+    }
+    return new EventBatchList(batches, resp.getEventsList().getFirstTxid(),
         resp.getEventsList().getLastTxid(), resp.getEventsList().getSyncTxid());
   }
 
-  public static GetEditsFromTxidResponseProto convertEditsResponse(EventsList el) {
+  public static GetEditsFromTxidResponseProto convertEditsResponse(EventBatchList el) {
     InotifyProtos.EventsListProto.Builder builder =
         InotifyProtos.EventsListProto.newBuilder();
-    for (Event e : el.getEvents()) {
-      switch(e.getEventType()) {
-      case CLOSE:
-        Event.CloseEvent ce = (Event.CloseEvent) e;
-        builder.addEvents(InotifyProtos.EventProto.newBuilder()
-            .setType(InotifyProtos.EventType.EVENT_CLOSE)
-            .setContents(
-                InotifyProtos.CloseEventProto.newBuilder()
-                    .setPath(ce.getPath())
-                    .setFileSize(ce.getFileSize())
-                    .setTimestamp(ce.getTimestamp()).build().toByteString()
-            ).build());
-        break;
-      case CREATE:
-        Event.CreateEvent ce2 = (Event.CreateEvent) e;
-        builder.addEvents(InotifyProtos.EventProto.newBuilder()
-            .setType(InotifyProtos.EventType.EVENT_CREATE)
-            .setContents(
-                InotifyProtos.CreateEventProto.newBuilder()
-                    .setType(createTypeConvert(ce2.getiNodeType()))
-                    .setPath(ce2.getPath())
-                    .setCtime(ce2.getCtime())
-                    .setOwnerName(ce2.getOwnerName())
-                    .setGroupName(ce2.getGroupName())
-                    .setPerms(convert(ce2.getPerms()))
-                    .setReplication(ce2.getReplication())
-                    .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
-                        "" : ce2.getSymlinkTarget())
-                    .setOverwrite(ce2.getOverwrite()).build().toByteString()
-            ).build());
-        break;
-      case METADATA:
-        Event.MetadataUpdateEvent me = (Event.MetadataUpdateEvent) e;
-        InotifyProtos.MetadataUpdateEventProto.Builder metaB =
-            InotifyProtos.MetadataUpdateEventProto.newBuilder()
-                .setPath(me.getPath())
-                .setType(metadataUpdateTypeConvert(me.getMetadataType()))
-                .setMtime(me.getMtime())
-                .setAtime(me.getAtime())
-                .setReplication(me.getReplication())
-                .setOwnerName(me.getOwnerName() == null ? "" :
-                    me.getOwnerName())
-                .setGroupName(me.getGroupName() == null ? "" :
-                    me.getGroupName())
-                .addAllAcls(me.getAcls() == null ?
-                    Lists.<AclEntryProto>newArrayList() :
-                    convertAclEntryProto(me.getAcls()))
-                .addAllXAttrs(me.getxAttrs() == null ?
-                    Lists.<XAttrProto>newArrayList() :
-                    convertXAttrProto(me.getxAttrs()))
-                .setXAttrsRemoved(me.isxAttrsRemoved());
-        if (me.getPerms() != null) {
-          metaB.setPerms(convert(me.getPerms()));
+    for (EventBatch b : el.getBatches()) {
+      List<InotifyProtos.EventProto> events = Lists.newArrayList();
+      for (Event e : b.getEvents()) {
+        switch (e.getEventType()) {
+          case CLOSE:
+            Event.CloseEvent ce = (Event.CloseEvent) e;
+            events.add(InotifyProtos.EventProto.newBuilder()
+                .setType(InotifyProtos.EventType.EVENT_CLOSE)
+                .setContents(
+                    InotifyProtos.CloseEventProto.newBuilder()
+                        .setPath(ce.getPath())
+                        .setFileSize(ce.getFileSize())
+                        .setTimestamp(ce.getTimestamp()).build().toByteString()
+                ).build());
+            break;
+          case CREATE:
+            Event.CreateEvent ce2 = (Event.CreateEvent) e;
+            events.add(InotifyProtos.EventProto.newBuilder()
+                .setType(InotifyProtos.EventType.EVENT_CREATE)
+                .setContents(
+                    InotifyProtos.CreateEventProto.newBuilder()
+                        .setType(createTypeConvert(ce2.getiNodeType()))
+                        .setPath(ce2.getPath())
+                        .setCtime(ce2.getCtime())
+                        .setOwnerName(ce2.getOwnerName())
+                        .setGroupName(ce2.getGroupName())
+                        .setPerms(convert(ce2.getPerms()))
+                        .setReplication(ce2.getReplication())
+                        .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
+                            "" : ce2.getSymlinkTarget())
+                        .setDefaultBlockSize(ce2.getDefaultBlockSize())
+                        .setOverwrite(ce2.getOverwrite()).build().toByteString()
+                ).build());
+            break;
+          case METADATA:
+            Event.MetadataUpdateEvent me = (Event.MetadataUpdateEvent) e;
+            InotifyProtos.MetadataUpdateEventProto.Builder metaB =
+                InotifyProtos.MetadataUpdateEventProto.newBuilder()
+                    .setPath(me.getPath())
+                    .setType(metadataUpdateTypeConvert(me.getMetadataType()))
+                    .setMtime(me.getMtime())
+                    .setAtime(me.getAtime())
+                    .setReplication(me.getReplication())
+                    .setOwnerName(me.getOwnerName() == null ? "" :
+                        me.getOwnerName())
+                    .setGroupName(me.getGroupName() == null ? "" :
+                        me.getGroupName())
+                    .addAllAcls(me.getAcls() == null ?
+                        Lists.<AclEntryProto>newArrayList() :
+                        convertAclEntryProto(me.getAcls()))
+                    .addAllXAttrs(me.getxAttrs() == null ?
+                        Lists.<XAttrProto>newArrayList() :
+                        convertXAttrProto(me.getxAttrs()))
+                    .setXAttrsRemoved(me.isxAttrsRemoved());
+            if (me.getPerms() != null) {
+              metaB.setPerms(convert(me.getPerms()));
+            }
+            events.add(InotifyProtos.EventProto.newBuilder()
+                .setType(InotifyProtos.EventType.EVENT_METADATA)
+                .setContents(metaB.build().toByteString())
+                .build());
+            break;
+          case RENAME:
+            Event.RenameEvent re = (Event.RenameEvent) e;
+            events.add(InotifyProtos.EventProto.newBuilder()
+                .setType(InotifyProtos.EventType.EVENT_RENAME)
+                .setContents(
+                    InotifyProtos.RenameEventProto.newBuilder()
+                        .setSrcPath(re.getSrcPath())
+                        .setDestPath(re.getDstPath())
+                        .setTimestamp(re.getTimestamp()).build().toByteString()
+                ).build());
+            break;
+          case APPEND:
+            Event.AppendEvent re2 = (Event.AppendEvent) e;
+            events.add(InotifyProtos.EventProto.newBuilder()
+                .setType(InotifyProtos.EventType.EVENT_APPEND)
+                .setContents(
+                    InotifyProtos.AppendEventProto.newBuilder()
+                        .setPath(re2.getPath()).build().toByteString()
+                ).build());
+            break;
+          case UNLINK:
+            Event.UnlinkEvent ue = (Event.UnlinkEvent) e;
+            events.add(InotifyProtos.EventProto.newBuilder()
+                .setType(InotifyProtos.EventType.EVENT_UNLINK)
+                .setContents(
+                    InotifyProtos.UnlinkEventProto.newBuilder()
+                        .setPath(ue.getPath())
+                        .setTimestamp(ue.getTimestamp()).build().toByteString()
+                ).build());
+            break;
+          default:
+            throw new RuntimeException("Unexpected inotify event: " + e);
         }
-        builder.addEvents(InotifyProtos.EventProto.newBuilder()
-            .setType(InotifyProtos.EventType.EVENT_METADATA)
-            .setContents(metaB.build().toByteString())
-            .build());
-        break;
-      case RENAME:
-        Event.RenameEvent re = (Event.RenameEvent) e;
-        builder.addEvents(InotifyProtos.EventProto.newBuilder()
-            .setType(InotifyProtos.EventType.EVENT_RENAME)
-            .setContents(
-                InotifyProtos.RenameEventProto.newBuilder()
-                    .setSrcPath(re.getSrcPath())
-                    .setDestPath(re.getDstPath())
-                    .setTimestamp(re.getTimestamp()).build().toByteString()
-            ).build());
-        break;
-      case APPEND:
-        Event.AppendEvent re2 = (Event.AppendEvent) e;
-        builder.addEvents(InotifyProtos.EventProto.newBuilder()
-            .setType(InotifyProtos.EventType.EVENT_APPEND)
-            .setContents(
-                InotifyProtos.AppendEventProto.newBuilder()
-                    .setPath(re2.getPath()).build().toByteString()
-            ).build());
-        break;
-      case UNLINK:
-        Event.UnlinkEvent ue = (Event.UnlinkEvent) e;
-        builder.addEvents(InotifyProtos.EventProto.newBuilder()
-            .setType(InotifyProtos.EventType.EVENT_UNLINK)
-            .setContents(
-                InotifyProtos.UnlinkEventProto.newBuilder()
-                    .setPath(ue.getPath())
-                    .setTimestamp(ue.getTimestamp()).build().toByteString()
-            ).build());
-        break;
-      default:
-        throw new RuntimeException("Unexpected inotify event: " + e);
       }
+      builder.addBatch(InotifyProtos.EventBatchProto.newBuilder().
+          setTxid(b.getTxid()).
+          addAllEvents(events));
     }
     builder.setFirstTxid(el.getFirstTxid());
     builder.setLastTxid(el.getLastTxid());

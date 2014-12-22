@@ -23,6 +23,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosKey;
+import javax.security.auth.kerberos.KerberosTicket;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
@@ -41,9 +43,9 @@ import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 /**
  * The {@link KerberosAuthenticator} implements the Kerberos SPNEGO authentication sequence.
- * <p/>
+ * <p>
  * It uses the default principal for the Kerberos cache (normally set via kinit).
- * <p/>
+ * <p>
  * It falls back to the {@link PseudoAuthenticator} if the HTTP endpoint does not trigger an SPNEGO authentication
  * sequence.
  */
@@ -160,9 +162,9 @@ public class KerberosAuthenticator implements Authenticator {
 
   /**
    * Performs SPNEGO authentication against the specified URL.
-   * <p/>
+   * <p>
    * If a token is given it does a NOP and returns the given token.
-   * <p/>
+   * <p>
    * If no token is given, it will perform the SPNEGO authentication sequence using an
    * HTTP <code>OPTIONS</code> request.
    *
@@ -209,7 +211,7 @@ public class KerberosAuthenticator implements Authenticator {
 
   /**
    * If the specified URL does not support SPNEGO authentication, a fallback {@link Authenticator} will be used.
-   * <p/>
+   * <p>
    * This implementation returns a {@link PseudoAuthenticator}.
    *
    * @return the fallback {@link Authenticator}.
@@ -247,7 +249,9 @@ public class KerberosAuthenticator implements Authenticator {
     try {
       AccessControlContext context = AccessController.getContext();
       Subject subject = Subject.getSubject(context);
-      if (subject == null) {
+      if (subject == null
+          || (subject.getPrivateCredentials(KerberosKey.class).isEmpty()
+              && subject.getPrivateCredentials(KerberosTicket.class).isEmpty())) {
         LOG.debug("No subject in context, logging in");
         subject = new Subject();
         LoginContext login = new LoginContext("", subject,

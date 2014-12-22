@@ -17,11 +17,53 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
-import static org.apache.hadoop.util.Time.now;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.AclException;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
+import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
+import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.util.ByteArray;
+import org.apache.hadoop.util.ChunkedArrayList;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.FileNotFoundException;
@@ -30,76 +72,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.HadoopIllegalArgumentException;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.crypto.CipherSuite;
-import org.apache.hadoop.crypto.CryptoProtocolVersion;
-import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileEncryptionInfo;
-import org.apache.hadoop.fs.Options;
-import org.apache.hadoop.fs.Options.Rename;
-import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathIsNotDirectoryException;
-import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.fs.XAttr;
-import org.apache.hadoop.fs.XAttrSetFlag;
-import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.AclStatus;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.protocol.AclException;
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.EncryptionZone;
-import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
-import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
-import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
-import org.apache.hadoop.hdfs.protocol.SnapshotException;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
-import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
-import org.apache.hadoop.hdfs.util.ByteArray;
-import org.apache.hadoop.hdfs.util.ChunkedArrayList;
-import org.apache.hadoop.hdfs.util.ReadOnlyList;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
+import static org.apache.hadoop.util.Time.now;
 
 /**
  * Both FSDirectory and FSNamesystem manage the state of the namespace.
@@ -137,10 +119,6 @@ public class FSDirectory implements Closeable {
   public final static String DOT_INODES_STRING = ".inodes";
   public final static byte[] DOT_INODES = 
       DFSUtil.string2Bytes(DOT_INODES_STRING);
-  private final XAttr KEYID_XATTR =
-      XAttrHelper.buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, null);
-  private final XAttr UNREADABLE_BY_SUPERUSER_XATTR =
-      XAttrHelper.buildXAttr(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER, null);
 
   INodeDirectory rootDir;
   private final FSNamesystem namesystem;
@@ -151,14 +129,30 @@ public class FSDirectory implements Closeable {
   private final int contentCountLimit; // max content summary counts per run
   private final INodeMap inodeMap; // Synchronized by dirLock
   private long yieldCount = 0; // keep track of lock yield count.
+
   private final int inodeXAttrsLimit; //inode xattrs max limit
 
   // lock to protect the directory and BlockMap
   private final ReentrantReadWriteLock dirLock;
 
   private final boolean isPermissionEnabled;
+  /**
+   * Support for ACLs is controlled by a configuration flag. If the
+   * configuration flag is false, then the NameNode will reject all
+   * ACL-related operations.
+   */
+  private final boolean aclsEnabled;
+  private final boolean xattrsEnabled;
+  private final int xattrMaxSize;
+
+  // precision of access times.
+  private final long accessTimePrecision;
+  // whether setStoragePolicy is allowed.
+  private final boolean storagePolicyEnabled;
+
   private final String fsOwnerShortUserName;
   private final String supergroup;
+  private final INodeId inodeId;
 
   private final FSEditLog editLog;
 
@@ -206,6 +200,7 @@ public class FSDirectory implements Closeable {
 
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
+    this.inodeId = new INodeId();
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir);
     this.isPermissionEnabled = conf.getBoolean(
@@ -216,6 +211,30 @@ public class FSDirectory implements Closeable {
     this.supergroup = conf.get(
       DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
       DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
+    this.aclsEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY,
+        DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_DEFAULT);
+    LOG.info("ACLs enabled? " + aclsEnabled);
+    this.xattrsEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY,
+        DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT);
+    LOG.info("XAttrs enabled? " + xattrsEnabled);
+    this.xattrMaxSize = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
+    Preconditions.checkArgument(xattrMaxSize >= 0,
+                                "Cannot set a negative value for the maximum size of an xattr (%s).",
+                                DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY);
+    final String unlimited = xattrMaxSize == 0 ? " (unlimited)" : "";
+    LOG.info("Maximum size of an xattr: " + xattrMaxSize + unlimited);
+
+    this.accessTimePrecision = conf.getLong(
+        DFS_NAMENODE_ACCESSTIME_PRECISION_KEY,
+        DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT);
+
+    this.storagePolicyEnabled =
+        conf.getBoolean(DFS_STORAGE_POLICY_ENABLED_KEY,
+                        DFS_STORAGE_POLICY_ENABLED_DEFAULT);
 
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
@@ -246,7 +265,7 @@ public class FSDirectory implements Closeable {
     Preconditions.checkArgument(
         maxDirItems > 0 && maxDirItems <= MAX_DIR_ITEMS, "Cannot set "
             + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
-            + " to a value less than 0 or greater than " + MAX_DIR_ITEMS);
+            + " to a value less than 1 or greater than " + MAX_DIR_ITEMS);
 
     int threshold = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
@@ -259,7 +278,7 @@ public class FSDirectory implements Closeable {
     ezManager = new EncryptionZoneManager(this, conf);
   }
     
-  private FSNamesystem getFSNamesystem() {
+  FSNamesystem getFSNamesystem() {
     return namesystem;
   }
 
@@ -274,6 +293,32 @@ public class FSDirectory implements Closeable {
 
   boolean isPermissionEnabled() {
     return isPermissionEnabled;
+  }
+  boolean isAclsEnabled() {
+    return aclsEnabled;
+  }
+  boolean isXattrsEnabled() {
+    return xattrsEnabled;
+  }
+  int getXattrMaxSize() { return xattrMaxSize; }
+  boolean isStoragePolicyEnabled() {
+    return storagePolicyEnabled;
+  }
+  boolean isAccessTimeSupported() {
+    return accessTimePrecision > 0;
+  }
+
+
+  int getLsLimit() {
+    return lsLimit;
+  }
+
+  int getContentCountLimit() {
+    return contentCountLimit;
+  }
+
+  int getInodeXAttrsLimit() {
+    return inodeXAttrsLimit;
   }
 
   FSEditLog getEditLog() {
@@ -295,6 +340,10 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  boolean shouldSkipQuotaChecks() {
+    return skipQuotaCheck;
+  }
+
   /** Enable quota verification */
   void enableQuotaChecks() {
     skipQuotaCheck = false;
@@ -307,8 +356,8 @@ public class FSDirectory implements Closeable {
 
   private static INodeFile newINodeFile(long id, PermissionStatus permissions,
       long mtime, long atime, short replication, long preferredBlockSize) {
-    return newINodeFile(id, permissions, mtime, atime, replication, preferredBlockSize,
-        (byte)0);
+    return newINodeFile(id, permissions, mtime, atime, replication,
+        preferredBlockSize, (byte)0);
   }
 
   private static INodeFile newINodeFile(long id, PermissionStatus permissions,
@@ -326,21 +375,21 @@ public class FSDirectory implements Closeable {
    * @throws UnresolvedLinkException
    * @throws SnapshotAccessControlException 
    */
-  INodeFile addFile(String path, PermissionStatus permissions,
+  INodeFile addFile(INodesInPath iip, String path, PermissionStatus permissions,
                     short replication, long preferredBlockSize,
                     String clientName, String clientMachine)
     throws FileAlreadyExistsException, QuotaExceededException,
       UnresolvedLinkException, SnapshotAccessControlException, AclException {
 
     long modTime = now();
-    INodeFile newNode = newINodeFile(namesystem.allocateNewInodeId(),
-        permissions, modTime, modTime, replication, preferredBlockSize);
+    INodeFile newNode = newINodeFile(allocateNewInodeId(), permissions, modTime,
+        modTime, replication, preferredBlockSize);
     newNode.toUnderConstruction(clientName, clientMachine);
 
     boolean added = false;
     writeLock();
     try {
-      added = addINode(path, newNode);
+      added = addINode(iip, newNode);
     } finally {
       writeUnlock();
     }
@@ -355,8 +404,8 @@ public class FSDirectory implements Closeable {
     return newNode;
   }
 
-  INodeFile unprotectedAddFile( long id,
-                            String path, 
+  INodeFile unprotectedAddFile(long id,
+                            INodesInPath iip,
                             PermissionStatus permissions,
                             List<AclEntry> aclEntries,
                             List<XAttr> xAttrs,
@@ -374,14 +423,13 @@ public class FSDirectory implements Closeable {
       newNode = newINodeFile(id, permissions, modificationTime,
           modificationTime, replication, preferredBlockSize, storagePolicyId);
       newNode.toUnderConstruction(clientName, clientMachine);
-
     } else {
       newNode = newINodeFile(id, permissions, modificationTime, atime,
           replication, preferredBlockSize, storagePolicyId);
     }
 
     try {
-      if (addINode(path, newNode)) {
+      if (addINode(iip, newNode)) {
         if (aclEntries != null) {
           AclStorage.updateINodeAcl(newNode, aclEntries,
             Snapshot.CURRENT_STATE_ID);
@@ -395,8 +443,8 @@ public class FSDirectory implements Closeable {
     } catch (IOException e) {
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug(
-            "DIR* FSDirectory.unprotectedAddFile: exception when add " + path
-                + " to the file system", e);
+            "DIR* FSDirectory.unprotectedAddFile: exception when add "
+                + iip.getPath() + " to the file system", e);
       }
     }
     return null;
@@ -441,18 +489,18 @@ public class FSDirectory implements Closeable {
    * Remove a block from the file.
    * @return Whether the block exists in the corresponding file
    */
-  boolean removeBlock(String path, INodeFile fileNode, Block block)
-      throws IOException {
+  boolean removeBlock(String path, INodesInPath iip, INodeFile fileNode,
+      Block block) throws IOException {
     Preconditions.checkArgument(fileNode.isUnderConstruction());
     writeLock();
     try {
-      return unprotectedRemoveBlock(path, fileNode, block);
+      return unprotectedRemoveBlock(path, iip, fileNode, block);
     } finally {
       writeUnlock();
     }
   }
   
-  boolean unprotectedRemoveBlock(String path,
+  boolean unprotectedRemoveBlock(String path, INodesInPath iip,
       INodeFile fileNode, Block block) throws IOException {
     // modify file-> block and blocksMap
     // fileNode should be under construction
@@ -469,407 +517,14 @@ public class FSDirectory implements Closeable {
     }
 
     // update space consumed
-    final INodesInPath iip = getINodesInPath4Write(path, true);
     updateCount(iip, 0, -fileNode.getBlockDiskspace(), true);
     return true;
   }
 
   /**
-   * @throws SnapshotAccessControlException 
-   * @see #unprotectedRenameTo(String, String, long)
-   * @deprecated Use {@link #renameTo(String, String, long,
-   *                                  BlocksMapUpdateInfo, Rename...)}
-   */
-  @Deprecated
-  boolean renameTo(String src, String dst, long mtime)
-      throws QuotaExceededException, UnresolvedLinkException, 
-      FileAlreadyExistsException, SnapshotAccessControlException, IOException {
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
-          +src+" to "+dst);
-    }
-    writeLock();
-    try {
-      if (!unprotectedRenameTo(src, dst, mtime))
-        return false;
-    } finally {
-      writeUnlock();
-    }
-    return true;
-  }
-
-  /**
-   * @see #unprotectedRenameTo(String, String, long, Options.Rename...)
-   */
-  void renameTo(String src, String dst, long mtime,
-      BlocksMapUpdateInfo collectedBlocks, Options.Rename... options)
-      throws FileAlreadyExistsException, FileNotFoundException,
-      ParentNotDirectoryException, QuotaExceededException,
-      UnresolvedLinkException, IOException {
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: " + src
-          + " to " + dst);
-    }
-    writeLock();
-    try {
-      if (unprotectedRenameTo(src, dst, mtime, collectedBlocks, options)) {
-        namesystem.incrDeletedFileCount(1);
-      }
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  /**
-   * Change a path name
-   * 
-   * @param src source path
-   * @param dst destination path
-   * @return true if rename succeeds; false otherwise
-   * @throws QuotaExceededException if the operation violates any quota limit
-   * @throws FileAlreadyExistsException if the src is a symlink that points to dst
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   * @deprecated See {@link #renameTo(String, String, long, BlocksMapUpdateInfo, Rename...)}
-   */
-  @Deprecated
-  boolean unprotectedRenameTo(String src, String dst, long timestamp)
-    throws QuotaExceededException, UnresolvedLinkException, 
-    FileAlreadyExistsException, SnapshotAccessControlException, IOException {
-    assert hasWriteLock();
-    INodesInPath srcIIP = getINodesInPath4Write(src, false);
-    final INode srcInode = srcIIP.getLastINode();
-    try {
-      validateRenameSource(src, srcIIP);
-    } catch (SnapshotException e) {
-      throw e;
-    } catch (IOException ignored) {
-      return false;
-    }
-
-    if (isDir(dst)) {
-      dst += Path.SEPARATOR + new Path(src).getName();
-    }
-
-    // validate the destination
-    if (dst.equals(src)) {
-      return true;
-    }
-
-    try {
-      validateRenameDestination(src, dst, srcInode);
-    } catch (IOException ignored) {
-      return false;
-    }
-
-    INodesInPath dstIIP = getINodesInPath4Write(dst, false);
-    if (dstIIP.getLastINode() != null) {
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                   +"failed to rename "+src+" to "+dst+ 
-                                   " because destination exists");
-      return false;
-    }
-    INode dstParent = dstIIP.getINode(-2);
-    if (dstParent == null) {
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-          +"failed to rename "+src+" to "+dst+ 
-          " because destination's parent does not exist");
-      return false;
-    }
-    
-    ezManager.checkMoveValidity(srcIIP, dstIIP, src);
-    // Ensure dst has quota to accommodate rename
-    verifyFsLimitsForRename(srcIIP, dstIIP);
-    verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
-
-    RenameOperation tx = new RenameOperation(src, dst, srcIIP, dstIIP);
-
-    boolean added = false;
-
-    try {
-      // remove src
-      final long removedSrc = removeLastINode(srcIIP);
-      if (removedSrc == -1) {
-        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-            + "failed to rename " + src + " to " + dst
-            + " because the source can not be removed");
-        return false;
-      }
-
-      added = tx.addSourceToDestination();
-      if (added) {
-        if (NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: " 
-              + src + " is renamed to " + dst);
-        }
-
-        tx.updateMtimeAndLease(timestamp);
-        tx.updateQuotasInSourceTree();
-        
-        return true;
-      }
-    } finally {
-      if (!added) {
-        tx.restoreSource();
-      }
-    }
-    NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-        +"failed to rename "+src+" to "+dst);
-    return false;
-  }
-
-  /**
-   * Rename src to dst.
-   * <br>
-   * Note: This is to be used by {@link FSEditLog} only.
-   * <br>
-   * 
-   * @param src source path
-   * @param dst destination path
-   * @param timestamp modification time
-   * @param options Rename options
-   */
-  boolean unprotectedRenameTo(String src, String dst, long timestamp,
-      Options.Rename... options) throws FileAlreadyExistsException, 
-      FileNotFoundException, ParentNotDirectoryException, 
-      QuotaExceededException, UnresolvedLinkException, IOException {
-    BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-    boolean ret = unprotectedRenameTo(src, dst, timestamp, 
-        collectedBlocks, options);
-    if (!collectedBlocks.getToDeleteList().isEmpty()) {
-      getFSNamesystem().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
-    }
-    return ret;
-  }
-  
-  /**
-   * Rename src to dst.
-   * See {@link DistributedFileSystem#rename(Path, Path, Options.Rename...)}
-   * for details related to rename semantics and exceptions.
-   * 
-   * @param src source path
-   * @param dst destination path
-   * @param timestamp modification time
-   * @param collectedBlocks blocks to be removed
-   * @param options Rename options
-   */
-  boolean unprotectedRenameTo(String src, String dst, long timestamp,
-      BlocksMapUpdateInfo collectedBlocks, Options.Rename... options) 
-      throws FileAlreadyExistsException, FileNotFoundException, 
-      ParentNotDirectoryException, QuotaExceededException, 
-      UnresolvedLinkException, IOException {
-    assert hasWriteLock();
-    boolean overwrite = options != null && Arrays.asList(options).contains
-            (Rename.OVERWRITE);
-
-    final String error;
-    final INodesInPath srcIIP = getINodesInPath4Write(src, false);
-    final INode srcInode = srcIIP.getLastINode();
-    validateRenameSource(src, srcIIP);
-
-    // validate the destination
-    if (dst.equals(src)) {
-      throw new FileAlreadyExistsException(
-          "The source "+src+" and destination "+dst+" are the same");
-    }
-    validateRenameDestination(src, dst, srcInode);
-
-    INodesInPath dstIIP = getINodesInPath4Write(dst, false);
-    if (dstIIP.getINodes().length == 1) {
-      error = "rename destination cannot be the root";
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-          + error);
-      throw new IOException(error);
-    }
-
-    ezManager.checkMoveValidity(srcIIP, dstIIP, src);
-    final INode dstInode = dstIIP.getLastINode();
-    List<INodeDirectory> snapshottableDirs = new ArrayList<INodeDirectory>();
-    if (dstInode != null) { // Destination exists
-      validateRenameOverwrite(src, dst, overwrite, srcInode, dstInode);
-      checkSnapshot(dstInode, snapshottableDirs);
-    }
-
-    INode dstParent = dstIIP.getINode(-2);
-    if (dstParent == null) {
-      error = "rename destination parent " + dst + " not found.";
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-          + error);
-      throw new FileNotFoundException(error);
-    }
-    if (!dstParent.isDirectory()) {
-      error = "rename destination parent " + dst + " is a file.";
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-          + error);
-      throw new ParentNotDirectoryException(error);
-    }
-
-    // Ensure dst has quota to accommodate rename
-    verifyFsLimitsForRename(srcIIP, dstIIP);
-    verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
-
-    RenameOperation tx = new RenameOperation(src, dst, srcIIP, dstIIP);
-
-    boolean undoRemoveSrc = true;
-    final long removedSrc = removeLastINode(srcIIP);
-    if (removedSrc == -1) {
-      error = "Failed to rename " + src + " to " + dst
-          + " because the source can not be removed";
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-          + error);
-      throw new IOException(error);
-    }
-    
-    boolean undoRemoveDst = false;
-    INode removedDst = null;
-    long removedNum = 0;
-    try {
-      if (dstInode != null) { // dst exists remove it
-        if ((removedNum = removeLastINode(dstIIP)) != -1) {
-          removedDst = dstIIP.getLastINode();
-          undoRemoveDst = true;
-        }
-      }
-
-      // add src as dst to complete rename
-      if (tx.addSourceToDestination()) {
-        undoRemoveSrc = false;
-        if (NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug(
-              "DIR* FSDirectory.unprotectedRenameTo: " + src
-              + " is renamed to " + dst);
-        }
-
-        tx.updateMtimeAndLease(timestamp);
-
-        // Collect the blocks and remove the lease for previous dst
-        boolean filesDeleted = false;
-        if (removedDst != null) {
-          undoRemoveDst = false;
-          if (removedNum > 0) {
-            List<INode> removedINodes = new ChunkedArrayList<INode>();
-            if (!removedDst.isInLatestSnapshot(dstIIP.getLatestSnapshotId())) {
-              removedDst.destroyAndCollectBlocks(collectedBlocks, removedINodes);
-              filesDeleted = true;
-            } else {
-              filesDeleted = removedDst.cleanSubtree(Snapshot.CURRENT_STATE_ID,
-                  dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes,
-                  true).get(Quota.NAMESPACE) >= 0;
-            }
-            getFSNamesystem().removePathAndBlocks(src, null, 
-                removedINodes, false);
-          }
-        }
-
-        if (snapshottableDirs.size() > 0) {
-          // There are snapshottable directories (without snapshots) to be
-          // deleted. Need to update the SnapshotManager.
-          namesystem.removeSnapshottableDirs(snapshottableDirs);
-        }
-
-        tx.updateQuotasInSourceTree();
-        return filesDeleted;
-      }
-    } finally {
-      if (undoRemoveSrc) {
-        tx.restoreSource();
-      }
-
-      if (undoRemoveDst) {
-        // Rename failed - restore dst
-        if (dstParent.isDirectory() && dstParent.asDirectory().isWithSnapshot()) {
-          dstParent.asDirectory().undoRename4DstParent(removedDst,
-              dstIIP.getLatestSnapshotId());
-        } else {
-          addLastINodeNoQuotaCheck(dstIIP, removedDst);
-        }
-        if (removedDst.isReference()) {
-          final INodeReference removedDstRef = removedDst.asReference();
-          final INodeReference.WithCount wc = 
-              (WithCount) removedDstRef.getReferredINode().asReference();
-          wc.addReference(removedDstRef);
-        }
-      }
-    }
-    NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-        + "failed to rename " + src + " to " + dst);
-    throw new IOException("rename from " + src + " to " + dst + " failed.");
-  }
-
-  private static void validateRenameOverwrite(String src, String dst,
-                                              boolean overwrite,
-                                              INode srcInode, INode dstInode)
-          throws IOException {
-    String error;// It's OK to rename a file to a symlink and vice versa
-    if (dstInode.isDirectory() != srcInode.isDirectory()) {
-      error = "Source " + src + " and destination " + dst
-          + " must both be directories";
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-          + error);
-      throw new IOException(error);
-    }
-    if (!overwrite) { // If destination exists, overwrite flag must be true
-      error = "rename destination " + dst + " already exists";
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-          + error);
-      throw new FileAlreadyExistsException(error);
-    }
-    if (dstInode.isDirectory()) {
-      final ReadOnlyList<INode> children = dstInode.asDirectory()
-          .getChildrenList(Snapshot.CURRENT_STATE_ID);
-      if (!children.isEmpty()) {
-        error = "rename destination directory is not empty: " + dst;
-        NameNode.stateChangeLog.warn(
-            "DIR* FSDirectory.unprotectedRenameTo: " + error);
-        throw new IOException(error);
-      }
-    }
-  }
-
-  private static void validateRenameDestination(String src, String dst, INode srcInode)
-          throws IOException {
-    String error;
-    if (srcInode.isSymlink() &&
-        dst.equals(srcInode.asSymlink().getSymlinkString())) {
-      throw new FileAlreadyExistsException(
-          "Cannot rename symlink "+src+" to its target "+dst);
-    }
-    // dst cannot be a directory or a file under src
-    if (dst.startsWith(src) &&
-        dst.charAt(src.length()) == Path.SEPARATOR_CHAR) {
-      error = "Rename destination " + dst
-          + " is a directory or file under source " + src;
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-          + error);
-      throw new IOException(error);
-    }
-  }
-
-  private static void validateRenameSource(String src, INodesInPath srcIIP)
-          throws IOException {
-    String error;
-    final INode srcInode = srcIIP.getLastINode();
-    // validate source
-    if (srcInode == null) {
-      error = "rename source " + src + " is not found.";
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-          + error);
-      throw new FileNotFoundException(error);
-    }
-    if (srcIIP.getINodes().length == 1) {
-      error = "rename source cannot be the root";
-      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-          + error);
-      throw new IOException(error);
-    }
-    // srcInode and its subtree cannot contain snapshottable directories with
-    // snapshots
-    checkSnapshot(srcInode, null);
-  }
-
-  /**
    * This is a wrapper for resolvePath(). If the path passed
    * is prefixed with /.reserved/raw, then it checks to ensure that the caller
-   * has super user has super user privileges.
+   * has super user privileges.
    *
    * @param pc The permission checker used when resolving path.
    * @param path The path to resolve.
@@ -889,327 +544,28 @@ public class FSDirectory implements Closeable {
     return resolvePath(path, pathComponents, this);
   }
 
-  private class RenameOperation {
-    private final INodesInPath srcIIP;
-    private final INodesInPath dstIIP;
-    private final String src;
-    private final String dst;
-
-    private INode srcChild;
-    private final INodeReference.WithCount withCount;
-    private final int srcRefDstSnapshot;
-    private final INodeDirectory srcParent;
-    private final byte[] srcChildName;
-    private final boolean isSrcInSnapshot;
-    private final boolean srcChildIsReference;
-    private final Quota.Counts oldSrcCounts;
-
-    private RenameOperation(String src, String dst, INodesInPath srcIIP, INodesInPath dstIIP)
-            throws QuotaExceededException {
-      this.srcIIP = srcIIP;
-      this.dstIIP = dstIIP;
-      this.src = src;
-      this.dst = dst;
-      srcChild = srcIIP.getLastINode();
-      srcChildName = srcChild.getLocalNameBytes();
-      isSrcInSnapshot = srcChild.isInLatestSnapshot(
-              srcIIP.getLatestSnapshotId());
-      srcChildIsReference = srcChild.isReference();
-      srcParent = srcIIP.getINode(-2).asDirectory();
-
-      // Record the snapshot on srcChild. After the rename, before any new
-      // snapshot is taken on the dst tree, changes will be recorded in the latest
-      // snapshot of the src tree.
-      if (isSrcInSnapshot) {
-        srcChild.recordModification(srcIIP.getLatestSnapshotId());
-      }
-
-      // check srcChild for reference
-      srcRefDstSnapshot = srcChildIsReference ? srcChild.asReference()
-              .getDstSnapshotId() : Snapshot.CURRENT_STATE_ID;
-      oldSrcCounts = Quota.Counts.newInstance();
-      if (isSrcInSnapshot) {
-        final INodeReference.WithName withName = srcIIP.getINode(-2).asDirectory()
-                .replaceChild4ReferenceWithName(srcChild, srcIIP.getLatestSnapshotId());
-        withCount = (INodeReference.WithCount) withName.getReferredINode();
-        srcChild = withName;
-        srcIIP.setLastINode(srcChild);
-        // get the counts before rename
-        withCount.getReferredINode().computeQuotaUsage(oldSrcCounts, true);
-      } else if (srcChildIsReference) {
-        // srcChild is reference but srcChild is not in latest snapshot
-        withCount = (WithCount) srcChild.asReference().getReferredINode();
-      } else {
-        withCount = null;
-      }
-    }
-
-    boolean addSourceToDestination() {
-      final INode dstParent = dstIIP.getINode(-2);
-      srcChild = srcIIP.getLastINode();
-      final byte[] dstChildName = dstIIP.getLastLocalName();
-      final INode toDst;
-      if (withCount == null) {
-        srcChild.setLocalName(dstChildName);
-        toDst = srcChild;
-      } else {
-        withCount.getReferredINode().setLocalName(dstChildName);
-        int dstSnapshotId = dstIIP.getLatestSnapshotId();
-        toDst = new INodeReference.DstReference(
-                dstParent.asDirectory(), withCount, dstSnapshotId);
-      }
-      return addLastINodeNoQuotaCheck(dstIIP, toDst);
-    }
-
-    void updateMtimeAndLease(long timestamp) throws QuotaExceededException {
-      srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshotId());
-      final INode dstParent = dstIIP.getINode(-2);
-      dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshotId());
-      // update moved lease with new filename
-      getFSNamesystem().unprotectedChangeLease(src, dst);
-    }
-
-    void restoreSource() throws QuotaExceededException {
-      // Rename failed - restore src
-      final INode oldSrcChild = srcChild;
-      // put it back
-      if (withCount == null) {
-        srcChild.setLocalName(srcChildName);
-      } else if (!srcChildIsReference) { // src must be in snapshot
-        // the withCount node will no longer be used thus no need to update
-        // its reference number here
-        srcChild = withCount.getReferredINode();
-        srcChild.setLocalName(srcChildName);
-      } else {
-        withCount.removeReference(oldSrcChild.asReference());
-        srcChild = new INodeReference.DstReference(
-                srcParent, withCount, srcRefDstSnapshot);
-        withCount.getReferredINode().setLocalName(srcChildName);
-      }
-
-      if (isSrcInSnapshot) {
-        srcParent.undoRename4ScrParent(oldSrcChild.asReference(), srcChild);
-      } else {
-        // srcParent is not an INodeDirectoryWithSnapshot, we only need to add
-        // the srcChild back
-        addLastINodeNoQuotaCheck(srcIIP, srcChild);
-      }
-    }
-
-    void updateQuotasInSourceTree() throws QuotaExceededException {
-      // update the quota usage in src tree
-      if (isSrcInSnapshot) {
-        // get the counts after rename
-        Quota.Counts newSrcCounts = srcChild.computeQuotaUsage(
-                Quota.Counts.newInstance(), false);
-        newSrcCounts.subtract(oldSrcCounts);
-        srcParent.addSpaceConsumed(newSrcCounts.get(Quota.NAMESPACE),
-                newSrcCounts.get(Quota.DISKSPACE), false);
-      }
-    }
-  }
-
-  /**
-   * Set file replication
-   * 
-   * @param src file name
-   * @param replication new replication
-   * @param blockRepls block replications - output parameter
-   * @return array of file blocks
-   * @throws QuotaExceededException
-   * @throws SnapshotAccessControlException 
-   */
-  Block[] setReplication(String src, short replication, short[] blockRepls)
-      throws QuotaExceededException, UnresolvedLinkException,
-      SnapshotAccessControlException {
-    writeLock();
-    try {
-      return unprotectedSetReplication(src, replication, blockRepls);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  Block[] unprotectedSetReplication(String src, short replication,
-      short[] blockRepls) throws QuotaExceededException,
-      UnresolvedLinkException, SnapshotAccessControlException {
-    assert hasWriteLock();
-
-    final INodesInPath iip = getINodesInPath4Write(src, true);
-    final INode inode = iip.getLastINode();
-    if (inode == null || !inode.isFile()) {
-      return null;
-    }
-    INodeFile file = inode.asFile();
-    final short oldBR = file.getBlockReplication();
-
-    // before setFileReplication, check for increasing block replication.
-    // if replication > oldBR, then newBR == replication.
-    // if replication < oldBR, we don't know newBR yet. 
-    if (replication > oldBR) {
-      long dsDelta = (replication - oldBR)*(file.diskspaceConsumed()/oldBR);
-      updateCount(iip, 0, dsDelta, true);
-    }
-
-    file.setFileReplication(replication, iip.getLatestSnapshotId());
-    
-    final short newBR = file.getBlockReplication(); 
-    // check newBR < oldBR case. 
-    if (newBR < oldBR) {
-      long dsDelta = (newBR - oldBR)*(file.diskspaceConsumed()/newBR);
-      updateCount(iip, 0, dsDelta, true);
-    }
-
-    if (blockRepls != null) {
-      blockRepls[0] = oldBR;
-      blockRepls[1] = newBR;
-    }
-    return file.getBlocks();
-  }
-
-  /** Set block storage policy for a directory */
-  void setStoragePolicy(String src, byte policyId)
-      throws IOException {
-    writeLock();
-    try {
-      unprotectedSetStoragePolicy(src, policyId);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  void unprotectedSetStoragePolicy(String src, byte policyId)
-      throws IOException {
-    assert hasWriteLock();
-    final INodesInPath iip = getINodesInPath4Write(src, true);
-    final INode inode = iip.getLastINode();
-    if (inode == null) {
-      throw new FileNotFoundException("File/Directory does not exist: " + src);
-    }
-    final int snapshotId = iip.getLatestSnapshotId();
-    if (inode.isFile()) {
-      BlockStoragePolicy newPolicy = getBlockManager().getStoragePolicy(policyId);
-      if (newPolicy.isCopyOnCreateFile()) {
-        throw new HadoopIllegalArgumentException(
-            "Policy " + newPolicy + " cannot be set after file creation.");
-      }
-
-      BlockStoragePolicy currentPolicy =
-          getBlockManager().getStoragePolicy(inode.getLocalStoragePolicyID());
-
-      if (currentPolicy != null && currentPolicy.isCopyOnCreateFile()) {
-        throw new HadoopIllegalArgumentException(
-            "Existing policy " + currentPolicy.getName() +
-                " cannot be changed after file creation.");
-      }
-      inode.asFile().setStoragePolicyID(policyId, snapshotId);
-    } else if (inode.isDirectory()) {
-      setDirStoragePolicy(inode.asDirectory(), policyId, snapshotId);  
-    } else {
-      throw new FileNotFoundException(src + " is not a file or directory");
-    }
-  }
-
-  private void setDirStoragePolicy(INodeDirectory inode, byte policyId,
-      int latestSnapshotId) throws IOException {
-    List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
-    XAttr xAttr = BlockStoragePolicySuite.buildXAttr(policyId);
-    List<XAttr> newXAttrs = setINodeXAttrs(existingXAttrs, Arrays.asList(xAttr),
-        EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
-    XAttrStorage.updateINodeXAttrs(inode, newXAttrs, latestSnapshotId);
-  }
-
-  /**
-   * @param path the file path
-   * @return the block size of the file. 
-   */
-  long getPreferredBlockSize(String path) throws UnresolvedLinkException,
-      FileNotFoundException, IOException {
-    readLock();
-    try {
-      return INodeFile.valueOf(getNode(path, false), path
-          ).getPreferredBlockSize();
-    } finally {
-      readUnlock();
-    }
-  }
-
-  void setPermission(String src, FsPermission permission)
-      throws FileNotFoundException, UnresolvedLinkException,
-      QuotaExceededException, SnapshotAccessControlException {
-    writeLock();
-    try {
-      unprotectedSetPermission(src, permission);
-    } finally {
-      writeUnlock();
-    }
-  }
-  
-  void unprotectedSetPermission(String src, FsPermission permissions)
-      throws FileNotFoundException, UnresolvedLinkException,
-      QuotaExceededException, SnapshotAccessControlException {
-    assert hasWriteLock();
-    final INodesInPath inodesInPath = getINodesInPath4Write(src, true);
-    final INode inode = inodesInPath.getLastINode();
-    if (inode == null) {
-      throw new FileNotFoundException("File does not exist: " + src);
-    }
-    int snapshotId = inodesInPath.getLatestSnapshotId();
-    inode.setPermission(permissions, snapshotId);
-  }
-
-  void setOwner(String src, String username, String groupname)
-      throws FileNotFoundException, UnresolvedLinkException,
-      QuotaExceededException, SnapshotAccessControlException {
-    writeLock();
-    try {
-      unprotectedSetOwner(src, username, groupname);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  void unprotectedSetOwner(String src, String username, String groupname)
-      throws FileNotFoundException, UnresolvedLinkException,
-      QuotaExceededException, SnapshotAccessControlException {
-    assert hasWriteLock();
-    final INodesInPath inodesInPath = getINodesInPath4Write(src, true);
-    INode inode = inodesInPath.getLastINode();
-    if (inode == null) {
-      throw new FileNotFoundException("File does not exist: " + src);
-    }
-    if (username != null) {
-      inode = inode.setUser(username, inodesInPath.getLatestSnapshotId());
-    }
-    if (groupname != null) {
-      inode.setGroup(groupname, inodesInPath.getLatestSnapshotId());
-    }
-  }
-
   /**
    * Delete the target directory and collect the blocks under it
-   * 
-   * @param src Path of a directory to delete
+   *
+   * @param iip the INodesInPath instance containing all the INodes for the path
    * @param collectedBlocks Blocks under the deleted directory
    * @param removedINodes INodes that should be removed from {@link #inodeMap}
    * @return the number of files that have been removed
    */
-  long delete(String src, BlocksMapUpdateInfo collectedBlocks,
+  long delete(INodesInPath iip, BlocksMapUpdateInfo collectedBlocks,
               List<INode> removedINodes, long mtime) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + iip.getPath());
     }
     final long filesRemoved;
     writeLock();
     try {
-      final INodesInPath inodesInPath = getINodesInPath4Write(
-          normalizePath(src), false);
-      if (!deleteAllowed(inodesInPath, src) ) {
+      if (!deleteAllowed(iip, iip.getPath()) ) {
         filesRemoved = -1;
       } else {
         List<INodeDirectory> snapshottableDirs = new ArrayList<INodeDirectory>();
-        checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
-        filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks,
+        FSDirSnapshotOp.checkSnapshot(iip.getLastINode(), snapshottableDirs);
+        filesRemoved = unprotectedDelete(iip, collectedBlocks,
             removedINodes, mtime);
         namesystem.removeSnapshottableDirs(snapshottableDirs);
       }
@@ -1221,15 +577,13 @@ public class FSDirectory implements Closeable {
   
   private static boolean deleteAllowed(final INodesInPath iip,
       final String src) {
-    final INode[] inodes = iip.getINodes(); 
-    if (inodes == null || inodes.length == 0
-        || inodes[inodes.length - 1] == null) {
+    if (iip.length() < 1 || iip.getLastINode() == null) {
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
             + "failed to remove " + src + " because it does not exist");
       }
       return false;
-    } else if (inodes.length == 1) { // src is the root
+    } else if (iip.length() == 1) { // src is the root
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: "
           + "failed to remove " + src
           + " because the root is not allowed to be deleted");
@@ -1241,11 +595,10 @@ public class FSDirectory implements Closeable {
   /**
    * @return true if the path is a non-empty directory; otherwise, return false.
    */
-  boolean isNonEmptyDirectory(String path) throws UnresolvedLinkException {
+  boolean isNonEmptyDirectory(INodesInPath inodesInPath) {
     readLock();
     try {
-      final INodesInPath inodesInPath = getLastINodeInPath(path, false);
-      final INode inode = inodesInPath.getINode(0);
+      final INode inode = inodesInPath.getLastINode();
       if (inode == null || !inode.isDirectory()) {
         //not found or not a directory
         return false;
@@ -1278,7 +631,7 @@ public class FSDirectory implements Closeable {
     long filesRemoved = -1;
     if (deleteAllowed(inodesInPath, src)) {
       List<INodeDirectory> snapshottableDirs = new ArrayList<INodeDirectory>();
-      checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
+      FSDirSnapshotOp.checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
       filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks,
           removedINodes, mtime);
       namesystem.removeSnapshottableDirs(snapshottableDirs); 
@@ -1338,290 +691,20 @@ public class FSDirectory implements Closeable {
     }
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
-          + targetNode.getFullPathName() + " is removed");
+          + iip.getPath() + " is removed");
     }
     return removed;
-  }
-  
-  /**
-   * Check if the given INode (or one of its descendants) is snapshottable and
-   * already has snapshots.
-   * 
-   * @param target The given INode
-   * @param snapshottableDirs The list of directories that are snapshottable 
-   *                          but do not have snapshots yet
-   */
-  private static void checkSnapshot(INode target,
-      List<INodeDirectory> snapshottableDirs) throws SnapshotException {
-    if (target.isDirectory()) {
-      INodeDirectory targetDir = target.asDirectory();
-      DirectorySnapshottableFeature sf = targetDir
-          .getDirectorySnapshottableFeature();
-      if (sf != null) {
-        if (sf.getNumSnapshots() > 0) {
-          String fullPath = targetDir.getFullPathName();
-          throw new SnapshotException("The directory " + fullPath
-              + " cannot be deleted since " + fullPath
-              + " is snapshottable and already has snapshots");
-        } else {
-          if (snapshottableDirs != null) {
-            snapshottableDirs.add(targetDir);
-          }
-        }
-      } 
-      for (INode child : targetDir.getChildrenList(Snapshot.CURRENT_STATE_ID)) {
-        checkSnapshot(child, snapshottableDirs);
-      }
-    }
-  }
-
-  private byte getStoragePolicyID(byte inodePolicy, byte parentPolicy) {
-    return inodePolicy != BlockStoragePolicySuite.ID_UNSPECIFIED ? inodePolicy :
-        parentPolicy;
-  }
-
-  /**
-   * Get a partial listing of the indicated directory
-   *
-   * We will stop when any of the following conditions is met:
-   * 1) this.lsLimit files have been added
-   * 2) needLocation is true AND enough files have been added such
-   * that at least this.lsLimit block locations are in the response
-   *
-   * @param src the directory name
-   * @param startAfter the name to start listing after
-   * @param needLocation if block locations are returned
-   * @return a partial listing starting after startAfter
-   */
-  DirectoryListing getListing(String src, byte[] startAfter,
-      boolean needLocation, boolean isSuperUser)
-      throws UnresolvedLinkException, IOException {
-    String srcs = normalizePath(src);
-    final boolean isRawPath = isReservedRawName(src);
-
-    readLock();
-    try {
-      if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
-        return getSnapshotsListing(srcs, startAfter);
-      }
-      final INodesInPath inodesInPath = getINodesInPath(srcs, true);
-      final INode[] inodes = inodesInPath.getINodes();
-      final int snapshot = inodesInPath.getPathSnapshotId();
-      final INode targetNode = inodes[inodes.length - 1];
-      if (targetNode == null)
-        return null;
-      byte parentStoragePolicy = isSuperUser ?
-          targetNode.getStoragePolicyID() : BlockStoragePolicySuite.ID_UNSPECIFIED;
-      
-      if (!targetNode.isDirectory()) {
-        return new DirectoryListing(
-            new HdfsFileStatus[]{createFileStatus(HdfsFileStatus.EMPTY_NAME,
-                targetNode, needLocation, parentStoragePolicy, snapshot,
-                isRawPath, inodesInPath)}, 0);
-      }
-
-      final INodeDirectory dirInode = targetNode.asDirectory();
-      final ReadOnlyList<INode> contents = dirInode.getChildrenList(snapshot);
-      int startChild = INodeDirectory.nextChild(contents, startAfter);
-      int totalNumChildren = contents.size();
-      int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
-      int locationBudget = this.lsLimit;
-      int listingCnt = 0;
-      HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
-      for (int i=0; i<numOfListing && locationBudget>0; i++) {
-        INode cur = contents.get(startChild+i);
-        byte curPolicy = isSuperUser && !cur.isSymlink()?
-            cur.getLocalStoragePolicyID():
-            BlockStoragePolicySuite.ID_UNSPECIFIED;
-        listing[i] = createFileStatus(cur.getLocalNameBytes(), cur, needLocation,
-            getStoragePolicyID(curPolicy, parentStoragePolicy), snapshot,
-            isRawPath, inodesInPath);
-        listingCnt++;
-        if (needLocation) {
-            // Once we  hit lsLimit locations, stop.
-            // This helps to prevent excessively large response payloads.
-            // Approximate #locations with locatedBlockCount() * repl_factor
-            LocatedBlocks blks = 
-                ((HdfsLocatedFileStatus)listing[i]).getBlockLocations();
-            locationBudget -= (blks == null) ? 0 :
-               blks.locatedBlockCount() * listing[i].getReplication();
-        }
-      }
-      // truncate return array if necessary
-      if (listingCnt < numOfListing) {
-          listing = Arrays.copyOf(listing, listingCnt);
-      }
-      return new DirectoryListing(
-          listing, totalNumChildren-startChild-listingCnt);
-    } finally {
-      readUnlock();
-    }
-  }
-  
-  /**
-   * Get a listing of all the snapshots of a snapshottable directory
-   */
-  private DirectoryListing getSnapshotsListing(String src, byte[] startAfter)
-      throws UnresolvedLinkException, IOException {
-    Preconditions.checkState(hasReadLock());
-    Preconditions.checkArgument(
-        src.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR),
-        "%s does not end with %s", src, HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR);
-
-    final String dirPath = normalizePath(src.substring(0,
-        src.length() - HdfsConstants.DOT_SNAPSHOT_DIR.length()));
-    
-    final INode node = this.getINode(dirPath);
-    final INodeDirectory dirNode = INodeDirectory.valueOf(node, dirPath);
-    final DirectorySnapshottableFeature sf = dirNode.getDirectorySnapshottableFeature();
-    if (sf == null) {
-      throw new SnapshotException(
-          "Directory is not a snapshottable directory: " + dirPath);
-    }
-    final ReadOnlyList<Snapshot> snapshots = sf.getSnapshotList();
-    int skipSize = ReadOnlyList.Util.binarySearch(snapshots, startAfter);
-    skipSize = skipSize < 0 ? -skipSize - 1 : skipSize + 1;
-    int numOfListing = Math.min(snapshots.size() - skipSize, this.lsLimit);
-    final HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
-    for (int i = 0; i < numOfListing; i++) {
-      Root sRoot = snapshots.get(i + skipSize).getRoot();
-      listing[i] = createFileStatus(sRoot.getLocalNameBytes(), sRoot,
-          BlockStoragePolicySuite.ID_UNSPECIFIED, Snapshot.CURRENT_STATE_ID,
-          false, null);
-    }
-    return new DirectoryListing(
-        listing, snapshots.size() - skipSize - numOfListing);
-  }
-
-  /** Get the file info for a specific file.
-   * @param src The string representation of the path to the file
-   * @param resolveLink whether to throw UnresolvedLinkException
-   * @param isRawPath true if a /.reserved/raw pathname was passed by the user
-   * @param includeStoragePolicy whether to include storage policy
-   * @return object containing information regarding the file
-   *         or null if file not found
-   */
-  HdfsFileStatus getFileInfo(String src, boolean resolveLink,
-      boolean isRawPath, boolean includeStoragePolicy)
-    throws IOException {
-    String srcs = normalizePath(src);
-    readLock();
-    try {
-      if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
-        return getFileInfo4DotSnapshot(srcs);
-      }
-      final INodesInPath inodesInPath = getINodesInPath(srcs, resolveLink);
-      final INode[] inodes = inodesInPath.getINodes();
-      final INode i = inodes[inodes.length - 1];
-      byte policyId = includeStoragePolicy && i != null && !i.isSymlink() ?
-          i.getStoragePolicyID() : BlockStoragePolicySuite.ID_UNSPECIFIED;
-      return i == null ? null : createFileStatus(HdfsFileStatus.EMPTY_NAME, i,
-          policyId, inodesInPath.getPathSnapshotId(), isRawPath,
-          inodesInPath);
-    } finally {
-      readUnlock();
-    }
-  }
-  
-  /**
-   * Currently we only support "ls /xxx/.snapshot" which will return all the
-   * snapshots of a directory. The FSCommand Ls will first call getFileInfo to
-   * make sure the file/directory exists (before the real getListing call).
-   * Since we do not have a real INode for ".snapshot", we return an empty
-   * non-null HdfsFileStatus here.
-   */
-  private HdfsFileStatus getFileInfo4DotSnapshot(String src)
-      throws UnresolvedLinkException {
-    if (getINode4DotSnapshot(src) != null) {
-      return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
-          HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
-          BlockStoragePolicySuite.ID_UNSPECIFIED);
-    }
-    return null;
-  }
-
-  private INode getINode4DotSnapshot(String src) throws UnresolvedLinkException {
-    Preconditions.checkArgument(
-        src.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR),
-        "%s does not end with %s", src, HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR);
-    
-    final String dirPath = normalizePath(src.substring(0,
-        src.length() - HdfsConstants.DOT_SNAPSHOT_DIR.length()));
-    
-    final INode node = this.getINode(dirPath);
-    if (node != null && node.isDirectory()
-        && node.asDirectory().isSnapshottable()) {
-      return node;
-    }
-    return null;
-  }
-
-  INodesInPath getExistingPathINodes(byte[][] components)
-      throws UnresolvedLinkException {
-    return INodesInPath.resolve(rootDir, components);
-  }
-
-  /**
-   * Get {@link INode} associated with the file / directory.
-   */
-  public INode getINode(String src) throws UnresolvedLinkException {
-    return getLastINodeInPath(src).getINode(0);
-  }
-
-  /**
-   * Get {@link INode} associated with the file / directory.
-   */
-  public INodesInPath getLastINodeInPath(String src)
-       throws UnresolvedLinkException {
-    readLock();
-    try {
-      return getLastINodeInPath(src, true);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  /**
-   * Get {@link INode} associated with the file / directory.
-   */
-  public INodesInPath getINodesInPath4Write(String src
-      ) throws UnresolvedLinkException, SnapshotAccessControlException {
-    readLock();
-    try {
-      return getINodesInPath4Write(src, true);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  /**
-   * Get {@link INode} associated with the file / directory.
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   */
-  public INode getINode4Write(String src) throws UnresolvedLinkException,
-      SnapshotAccessControlException {
-    readLock();
-    try {
-      return getINode4Write(src, true);
-    } finally {
-      readUnlock();
-    }
   }
 
   /** 
    * Check whether the filepath could be created
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */
-  boolean isValidToCreate(String src) throws UnresolvedLinkException,
-      SnapshotAccessControlException {
+  boolean isValidToCreate(String src, INodesInPath iip)
+      throws SnapshotAccessControlException {
     String srcs = normalizePath(src);
-    readLock();
-    try {
-      return srcs.startsWith("/") && !srcs.endsWith("/")
-              && getINode4Write(srcs, false) == null;
-    } finally {
-      readUnlock();
-    }
+    return srcs.startsWith("/") && !srcs.endsWith("/") &&
+        iip.getLastINode() == null;
   }
 
   /**
@@ -1631,23 +714,7 @@ public class FSDirectory implements Closeable {
     src = normalizePath(src);
     readLock();
     try {
-      INode node = getNode(src, false);
-      return node != null && node.isDirectory();
-    } finally {
-      readUnlock();
-    }
-  }
-  
-  /**
-   * Check whether the path specifies a directory
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   */
-  boolean isDirMutable(String src) throws UnresolvedLinkException,
-      SnapshotAccessControlException {
-    src = normalizePath(src);
-    readLock();
-    try {
-      INode node = getINode4Write(src, false);
+      INode node = getINode(src, false);
       return node != null && node.isDirectory();
     } finally {
       readUnlock();
@@ -1656,21 +723,21 @@ public class FSDirectory implements Closeable {
 
   /** Updates namespace and diskspace consumed for all
    * directories until the parent directory of file represented by path.
-   * 
-   * @param path path for the file.
+   *
+   * @param iip the INodesInPath instance containing all the INodes for
+   *            updating quota usage
    * @param nsDelta the delta change of namespace
    * @param dsDelta the delta change of diskspace
    * @throws QuotaExceededException if the new count violates any quota limit
    * @throws FileNotFoundException if path does not exist.
    */
-  void updateSpaceConsumed(String path, long nsDelta, long dsDelta)
+  void updateSpaceConsumed(INodesInPath iip, long nsDelta, long dsDelta)
       throws QuotaExceededException, FileNotFoundException,
           UnresolvedLinkException, SnapshotAccessControlException {
     writeLock();
     try {
-      final INodesInPath iip = getINodesInPath4Write(path, false);
       if (iip.getLastINode() == null) {
-        throw new FileNotFoundException("Path not found: " + path);
+        throw new FileNotFoundException("Path not found: " + iip.getPath());
       }
       updateCount(iip, nsDelta, dsDelta, true);
     } finally {
@@ -1678,9 +745,9 @@ public class FSDirectory implements Closeable {
     }
   }
   
-  private void updateCount(INodesInPath iip, long nsDelta, long dsDelta,
+  void updateCount(INodesInPath iip, long nsDelta, long dsDelta,
       boolean checkQuota) throws QuotaExceededException {
-    updateCount(iip, iip.getINodes().length - 1, nsDelta, dsDelta, checkQuota);
+    updateCount(iip, iip.length() - 1, nsDelta, dsDelta, checkQuota);
   }
 
   /** update count of each inode with quota
@@ -1700,12 +767,11 @@ public class FSDirectory implements Closeable {
       //still initializing. do not check or update quotas.
       return;
     }
-    final INode[] inodes = iip.getINodes();
-    if (numOfINodes > inodes.length) {
-      numOfINodes = inodes.length;
+    if (numOfINodes > iip.length()) {
+      numOfINodes = iip.length();
     }
     if (checkQuota && !skipQuotaCheck) {
-      verifyQuota(inodes, numOfINodes, nsDelta, dsDelta, null);
+      verifyQuota(iip, numOfINodes, nsDelta, dsDelta, null);
     }
     unprotectedUpdateCount(iip, numOfINodes, nsDelta, dsDelta);
   }
@@ -1728,11 +794,11 @@ public class FSDirectory implements Closeable {
    * updates quota without verification
    * callers responsibility is to make sure quota is not exceeded
    */
-  static void unprotectedUpdateCount(INodesInPath inodesInPath, int numOfINodes, long nsDelta, long dsDelta) {
-    final INode[] inodes = inodesInPath.getINodes();
+  static void unprotectedUpdateCount(INodesInPath inodesInPath,
+      int numOfINodes, long nsDelta, long dsDelta) {
     for(int i=0; i < numOfINodes; i++) {
-      if (inodes[i].isQuotaSet()) { // a directory with quota
-        inodes[i].asDirectory().getDirectoryWithQuotaFeature()
+      if (inodesInPath.getINode(i).isQuotaSet()) { // a directory with quota
+        inodesInPath.getINode(i).asDirectory().getDirectoryWithQuotaFeature()
             .addSpaceConsumed2Cache(nsDelta, dsDelta);
       }
     }
@@ -1789,51 +855,18 @@ public class FSDirectory implements Closeable {
     return inodes == null ? "" : getFullPathName(inodes, inodes.length - 1);
   }
 
-  INode unprotectedMkdir(long inodeId, String src, PermissionStatus permissions,
-                          List<AclEntry> aclEntries, long timestamp)
-      throws QuotaExceededException, UnresolvedLinkException, AclException {
-    assert hasWriteLock();
-    byte[][] components = INode.getPathComponents(src);
-    INodesInPath iip = getExistingPathINodes(components);
-    INode[] inodes = iip.getINodes();
-    final int pos = inodes.length - 1;
-    unprotectedMkdir(inodeId, iip, pos, components[pos], permissions, aclEntries,
-        timestamp);
-    return inodes[pos];
-  }
-
-  /** create a directory at index pos.
-   * The parent path to the directory is at [0, pos-1].
-   * All ancestors exist. Newly created one stored at index pos.
-   */
-  void unprotectedMkdir(long inodeId, INodesInPath inodesInPath,
-      int pos, byte[] name, PermissionStatus permission,
-      List<AclEntry> aclEntries, long timestamp)
-      throws QuotaExceededException, AclException {
-    assert hasWriteLock();
-    final INodeDirectory dir = new INodeDirectory(inodeId, name, permission,
-        timestamp);
-    if (addChild(inodesInPath, pos, dir, true)) {
-      if (aclEntries != null) {
-        AclStorage.updateINodeAcl(dir, aclEntries, Snapshot.CURRENT_STATE_ID);
-      }
-      inodesInPath.setINode(pos, dir);
-    }
-  }
-  
   /**
    * Add the given child to the namespace.
-   * @param src The full path name of the child node.
+   * @param iip the INodesInPath instance containing all the ancestral INodes
    * @throws QuotaExceededException is thrown if it violates quota limit
    */
-  private boolean addINode(String src, INode child
-      ) throws QuotaExceededException, UnresolvedLinkException {
-    byte[][] components = INode.getPathComponents(src);
-    child.setLocalName(components[components.length-1]);
+  boolean addINode(INodesInPath iip, INode child)
+      throws QuotaExceededException, UnresolvedLinkException {
+    child.setLocalName(iip.getLastLocalName());
     cacheName(child);
     writeLock();
     try {
-      return addLastINode(getExistingPathINodes(components), child, true);
+      return addLastINode(iip, child, true);
     } finally {
       writeUnlock();
     }
@@ -1843,7 +876,7 @@ public class FSDirectory implements Closeable {
    * Verify quota for adding or moving a new INode with required 
    * namespace and diskspace to a given position.
    *  
-   * @param inodes INodes corresponding to a path
+   * @param iip INodes corresponding to a path
    * @param pos position where a new INode will be added
    * @param nsDelta needed namespace
    * @param dsDelta needed diskspace
@@ -1852,7 +885,7 @@ public class FSDirectory implements Closeable {
    *          Pass null if a node is not being moved.
    * @throws QuotaExceededException if quota limit is exceeded.
    */
-  private static void verifyQuota(INode[] inodes, int pos, long nsDelta,
+  static void verifyQuota(INodesInPath iip, int pos, long nsDelta,
       long dsDelta, INode commonAncestor) throws QuotaExceededException {
     if (nsDelta <= 0 && dsDelta <= 0) {
       // if quota is being freed or not being consumed
@@ -1860,86 +893,26 @@ public class FSDirectory implements Closeable {
     }
 
     // check existing components in the path
-    for(int i = (pos > inodes.length? inodes.length: pos) - 1; i >= 0; i--) {
-      if (commonAncestor == inodes[i]) {
+    for(int i = (pos > iip.length() ? iip.length(): pos) - 1; i >= 0; i--) {
+      if (commonAncestor == iip.getINode(i)) {
         // Stop checking for quota when common ancestor is reached
         return;
       }
       final DirectoryWithQuotaFeature q
-          = inodes[i].asDirectory().getDirectoryWithQuotaFeature();
+          = iip.getINode(i).asDirectory().getDirectoryWithQuotaFeature();
       if (q != null) { // a directory with quota
         try {
           q.verifyQuota(nsDelta, dsDelta);
         } catch (QuotaExceededException e) {
-          e.setPathName(getFullPathName(inodes, i));
+          List<INode> inodes = iip.getReadOnlyINodes();
+          final String path = getFullPathName(inodes.toArray(new INode[inodes.size()]), i);
+          e.setPathName(path);
           throw e;
         }
       }
     }
   }
-  
-  /**
-   * Verify quota for rename operation where srcInodes[srcInodes.length-1] moves
-   * dstInodes[dstInodes.length-1]
-   * 
-   * @param src directory from where node is being moved.
-   * @param dst directory to where node is moved to.
-   * @throws QuotaExceededException if quota limit is exceeded.
-   */
-  private void verifyQuotaForRename(INode[] src, INode[] dst)
-      throws QuotaExceededException {
-    if (!namesystem.isImageLoaded() || skipQuotaCheck) {
-      // Do not check quota if edits log is still being processed
-      return;
-    }
-    int i = 0;
-    while(src[i] == dst[i]) { i++; }
-    // src[i - 1] is the last common ancestor.
 
-    final Quota.Counts delta = src[src.length - 1].computeQuotaUsage();
-    
-    // Reduce the required quota by dst that is being removed
-    final int dstIndex = dst.length - 1;
-    if (dst[dstIndex] != null) {
-      delta.subtract(dst[dstIndex].computeQuotaUsage());
-    }
-    verifyQuota(dst, dstIndex, delta.get(Quota.NAMESPACE),
-        delta.get(Quota.DISKSPACE), src[i - 1]);
-  }
-
-  /**
-   * Checks file system limits (max component length and max directory items)
-   * during a rename operation.
-   *
-   * @param srcIIP INodesInPath containing every inode in the rename source
-   * @param dstIIP INodesInPath containing every inode in the rename destination
-   * @throws PathComponentTooLongException child's name is too long.
-   * @throws MaxDirectoryItemsExceededException too many children.
-   */
-  private void verifyFsLimitsForRename(INodesInPath srcIIP, INodesInPath dstIIP)
-      throws PathComponentTooLongException, MaxDirectoryItemsExceededException {
-    byte[] dstChildName = dstIIP.getLastLocalName();
-    INode[] dstInodes = dstIIP.getINodes();
-    int pos = dstInodes.length - 1;
-    verifyMaxComponentLength(dstChildName, dstInodes, pos);
-    // Do not enforce max directory items if renaming within same directory.
-    if (srcIIP.getINode(-2) != dstIIP.getINode(-2)) {
-      verifyMaxDirItems(dstInodes, pos);
-    }
-  }
-
-  /** Verify if the snapshot name is legal. */
-  void verifySnapshotName(String snapshotName, String path)
-      throws PathComponentTooLongException {
-    if (snapshotName.contains(Path.SEPARATOR)) {
-      throw new HadoopIllegalArgumentException(
-          "Snapshot name cannot contain \"" + Path.SEPARATOR + "\"");
-    }
-    final byte[] bytes = DFSUtil.string2Bytes(snapshotName);
-    verifyINodeName(bytes);
-    verifyMaxComponentLength(bytes, path, 0);
-  }
-  
   /** Verify if the inode name is legal. */
   void verifyINodeName(byte[] childName) throws HadoopIllegalArgumentException {
     if (Arrays.equals(HdfsConstants.DOT_SNAPSHOT_DIR_BYTES, childName)) {
@@ -1955,22 +928,20 @@ public class FSDirectory implements Closeable {
    * Verify child's name for fs limit.
    *
    * @param childName byte[] containing new child name
-   * @param parentPath Object either INode[] or String containing parent path
-   * @param pos int position of new child in path
+   * @param parentPath String containing parent path
    * @throws PathComponentTooLongException child's name is too long.
    */
-  private void verifyMaxComponentLength(byte[] childName, Object parentPath,
-      int pos) throws PathComponentTooLongException {
+  void verifyMaxComponentLength(byte[] childName, String parentPath)
+      throws PathComponentTooLongException {
     if (maxComponentLength == 0) {
       return;
     }
 
     final int length = childName.length;
     if (length > maxComponentLength) {
-      final String p = parentPath instanceof INode[]?
-          getFullPathName((INode[])parentPath, pos - 1): (String)parentPath;
       final PathComponentTooLongException e = new PathComponentTooLongException(
-          maxComponentLength, length, p, DFSUtil.bytes2String(childName));
+          maxComponentLength, length, parentPath,
+          DFSUtil.bytes2String(childName));
       if (namesystem.isImageLoaded()) {
         throw e;
       } else {
@@ -1983,20 +954,16 @@ public class FSDirectory implements Closeable {
   /**
    * Verify children size for fs limit.
    *
-   * @param pathComponents INode[] containing full path of inodes to new child
-   * @param pos int position of new child in pathComponents
    * @throws MaxDirectoryItemsExceededException too many children.
    */
-  private void verifyMaxDirItems(INode[] pathComponents, int pos)
+  void verifyMaxDirItems(INodeDirectory parent, String parentPath)
       throws MaxDirectoryItemsExceededException {
-
-    final INodeDirectory parent = pathComponents[pos-1].asDirectory();
     final int count = parent.getChildrenList(Snapshot.CURRENT_STATE_ID).size();
     if (count >= maxDirItems) {
       final MaxDirectoryItemsExceededException e
           = new MaxDirectoryItemsExceededException(maxDirItems, count);
       if (namesystem.isImageLoaded()) {
-        e.setPathName(getFullPathName(pathComponents, pos - 1));
+        e.setPathName(parentPath);
         throw e;
       } else {
         // Do not throw if edits log is still being processed
@@ -2010,9 +977,9 @@ public class FSDirectory implements Closeable {
    * The same as {@link #addChild(INodesInPath, int, INode, boolean)}
    * with pos = length - 1.
    */
-  private boolean addLastINode(INodesInPath inodesInPath,
-      INode inode, boolean checkQuota) throws QuotaExceededException {
-    final int pos = inodesInPath.getINodes().length - 1;
+  private boolean addLastINode(INodesInPath inodesInPath, INode inode,
+      boolean checkQuota) throws QuotaExceededException {
+    final int pos = inodesInPath.length() - 1;
     return addChild(inodesInPath, pos, inode, checkQuota);
   }
 
@@ -2022,20 +989,20 @@ public class FSDirectory implements Closeable {
    *         otherwise return true;
    * @throws QuotaExceededException is thrown if it violates quota limit
    */
-  private boolean addChild(INodesInPath iip, int pos,
-      INode child, boolean checkQuota) throws QuotaExceededException {
-    final INode[] inodes = iip.getINodes();
+  boolean addChild(INodesInPath iip, int pos, INode child, boolean checkQuota)
+      throws QuotaExceededException {
     // Disallow creation of /.reserved. This may be created when loading
     // editlog/fsimage during upgrade since /.reserved was a valid name in older
     // release. This may also be called when a user tries to create a file
     // or directory /.reserved.
-    if (pos == 1 && inodes[0] == rootDir && isReservedName(child)) {
+    if (pos == 1 && iip.getINode(0) == rootDir && isReservedName(child)) {
       throw new HadoopIllegalArgumentException(
           "File name \"" + child.getLocalName() + "\" is reserved and cannot "
               + "be created. If this is during upgrade change the name of the "
               + "existing file or directory to another name before upgrading "
               + "to the new release.");
     }
+    final INodeDirectory parent = iip.getINode(pos-1).asDirectory();
     // The filesystem limits are not really quotas, so this check may appear
     // odd. It's because a rename operation deletes the src, tries to add
     // to the dest, if that fails, re-adds the src from whence it came.
@@ -2043,8 +1010,9 @@ public class FSDirectory implements Closeable {
     // original location becase a quota violation would cause the the item
     // to go "poof".  The fs limits must be bypassed for the same reason.
     if (checkQuota) {
-      verifyMaxComponentLength(child.getLocalNameBytes(), inodes, pos);
-      verifyMaxDirItems(inodes, pos);
+      final String parentPath = iip.getPath(pos - 1);
+      verifyMaxComponentLength(child.getLocalNameBytes(), parentPath);
+      verifyMaxDirItems(parent, parentPath);
     }
     // always verify inode name
     verifyINodeName(child.getLocalNameBytes());
@@ -2053,7 +1021,6 @@ public class FSDirectory implements Closeable {
     updateCount(iip, pos,
         counts.get(Quota.NAMESPACE), counts.get(Quota.DISKSPACE), checkQuota);
     boolean isRename = (child.getParent() != null);
-    final INodeDirectory parent = inodes[pos-1].asDirectory();
     boolean added;
     try {
       added = parent.addChild(child, true, iip.getLatestSnapshotId());
@@ -2066,7 +1033,6 @@ public class FSDirectory implements Closeable {
       updateCountNoQuotaCheck(iip, pos,
           -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
     } else {
-      iip.setINode(pos - 1, child.getParent());
       if (!isRename) {
         AclStorage.copyINodeDefaultAcl(child);
       }
@@ -2075,7 +1041,7 @@ public class FSDirectory implements Closeable {
     return added;
   }
   
-  private boolean addLastINodeNoQuotaCheck(INodesInPath inodesInPath, INode i) {
+  boolean addLastINodeNoQuotaCheck(INodesInPath inodesInPath, INode i) {
     try {
       return addLastINode(inodesInPath, i, false);
     } catch (QuotaExceededException e) {
@@ -2092,7 +1058,7 @@ public class FSDirectory implements Closeable {
    *            reference nodes;
    *         >0 otherwise. 
    */
-  private long removeLastINode(final INodesInPath iip)
+  long removeLastINode(final INodesInPath iip)
       throws QuotaExceededException {
     final int latestSnapshot = iip.getLatestSnapshotId();
     final INode last = iip.getLastINode();
@@ -2103,7 +1069,7 @@ public class FSDirectory implements Closeable {
     
     if (!last.isInLatestSnapshot(latestSnapshot)) {
       final Quota.Counts counts = last.computeQuotaUsage();
-      updateCountNoQuotaCheck(iip, iip.getINodes().length - 1,
+      updateCountNoQuotaCheck(iip, iip.length() - 1,
           -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
 
       if (INodeReference.tryRemoveReference(last) > 0) {
@@ -2122,34 +1088,13 @@ public class FSDirectory implements Closeable {
     return src;
   }
 
-  ContentSummary getContentSummary(String src) 
-    throws FileNotFoundException, UnresolvedLinkException {
-    String srcs = normalizePath(src);
-    readLock();
-    try {
-      INode targetNode = getNode(srcs, false);
-      if (targetNode == null) {
-        throw new FileNotFoundException("File does not exist: " + srcs);
-      }
-      else {
-        // Make it relinquish locks everytime contentCountLimit entries are
-        // processed. 0 means disabled. I.e. blocking for the entire duration.
-        ContentSummaryComputationContext cscc =
-
-            new ContentSummaryComputationContext(this, getFSNamesystem(),
-            contentCountLimit);
-        ContentSummary cs = targetNode.computeAndConvertContentSummary(cscc);
-        yieldCount += cscc.getYieldCount();
-        return cs;
-      }
-    } finally {
-      readUnlock();
-    }
-  }
-
   @VisibleForTesting
   public long getYieldCount() {
     return yieldCount;
+  }
+
+  void addYieldCount(long value) {
+    yieldCount += value;
   }
 
   public INodeMap getINodeMap() {
@@ -2220,77 +1165,7 @@ public class FSDirectory implements Closeable {
   int getInodeMapSize() {
     return inodeMap.size();
   }
-  
-  /**
-   * See {@link ClientProtocol#setQuota(String, long, long)} for the contract.
-   * Sets quota for for a directory.
-   * @return INodeDirectory if any of the quotas have changed. null otherwise.
-   * @throws FileNotFoundException if the path does not exist.
-   * @throws PathIsNotDirectoryException if the path is not a directory.
-   * @throws QuotaExceededException if the directory tree size is 
-   *                                greater than the given quota
-   * @throws UnresolvedLinkException if a symlink is encountered in src.
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   */
-  INodeDirectory unprotectedSetQuota(String src, long nsQuota, long dsQuota)
-      throws FileNotFoundException, PathIsNotDirectoryException,
-      QuotaExceededException, UnresolvedLinkException,
-      SnapshotAccessControlException {
-    assert hasWriteLock();
-    // sanity check
-    if ((nsQuota < 0 && nsQuota != HdfsConstants.QUOTA_DONT_SET && 
-         nsQuota != HdfsConstants.QUOTA_RESET) || 
-        (dsQuota < 0 && dsQuota != HdfsConstants.QUOTA_DONT_SET && 
-          dsQuota != HdfsConstants.QUOTA_RESET)) {
-      throw new IllegalArgumentException("Illegal value for nsQuota or " +
-                                         "dsQuota : " + nsQuota + " and " +
-                                         dsQuota);
-    }
-    
-    String srcs = normalizePath(src);
-    final INodesInPath iip = getINodesInPath4Write(srcs, true);
-    INodeDirectory dirNode = INodeDirectory.valueOf(iip.getLastINode(), srcs);
-    if (dirNode.isRoot() && nsQuota == HdfsConstants.QUOTA_RESET) {
-      throw new IllegalArgumentException("Cannot clear namespace quota on root.");
-    } else { // a directory inode
-      final Quota.Counts oldQuota = dirNode.getQuotaCounts();
-      final long oldNsQuota = oldQuota.get(Quota.NAMESPACE);
-      final long oldDsQuota = oldQuota.get(Quota.DISKSPACE);
-      if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
-        nsQuota = oldNsQuota;
-      }
-      if (dsQuota == HdfsConstants.QUOTA_DONT_SET) {
-        dsQuota = oldDsQuota;
-      }        
-      if (oldNsQuota == nsQuota && oldDsQuota == dsQuota) {
-        return null;
-      }
 
-      final int latest = iip.getLatestSnapshotId();
-      dirNode.recordModification(latest);
-      dirNode.setQuota(nsQuota, dsQuota);
-      return dirNode;
-    }
-  }
-  
-  /**
-   * See {@link ClientProtocol#setQuota(String, long, long)} for the contract.
-   * @return INodeDirectory if any of the quotas have changed. null otherwise.
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   * @see #unprotectedSetQuota(String, long, long)
-   */
-  INodeDirectory setQuota(String src, long nsQuota, long dsQuota)
-      throws FileNotFoundException, PathIsNotDirectoryException,
-      QuotaExceededException, UnresolvedLinkException,
-      SnapshotAccessControlException {
-    writeLock();
-    try {
-      return unprotectedSetQuota(src, nsQuota, dsQuota);
-    } finally {
-      writeUnlock();
-    }
-  }
-  
   long totalInodes() {
     readLock();
     try {
@@ -2299,50 +1174,6 @@ public class FSDirectory implements Closeable {
     } finally {
       readUnlock();
     }
-  }
-
-  /**
-   * Sets the access time on the file/directory. Logs it in the transaction log.
-   */
-  boolean setTimes(INode inode, long mtime, long atime, boolean force,
-                   int latestSnapshotId) throws QuotaExceededException {
-    writeLock();
-    try {
-      return unprotectedSetTimes(inode, mtime, atime, force, latestSnapshotId);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force) 
-      throws UnresolvedLinkException, QuotaExceededException {
-    assert hasWriteLock();
-    final INodesInPath i = getLastINodeInPath(src); 
-    return unprotectedSetTimes(i.getLastINode(), mtime, atime, force,
-        i.getLatestSnapshotId());
-  }
-
-  private boolean unprotectedSetTimes(INode inode, long mtime,
-      long atime, boolean force, int latest) throws QuotaExceededException {
-    assert hasWriteLock();
-    boolean status = false;
-    if (mtime != -1) {
-      inode = inode.setModificationTime(mtime, latest);
-      status = true;
-    }
-    if (atime != -1) {
-      long inodeTime = inode.getAccessTime();
-
-      // if the last access time update was within the last precision interval, then
-      // no need to store access time
-      if (atime <= inodeTime + getFSNamesystem().getAccessTimePrecision() && !force) {
-        status =  false;
-      } else {
-        inode.setAccessTime(atime, latest);
-        status = true;
-      }
-    } 
-    return status;
   }
 
   /**
@@ -2355,397 +1186,10 @@ public class FSDirectory implements Closeable {
       inodeMap.clear();
       addToInodeMap(rootDir);
       nameCache.reset();
+      inodeId.setCurrentValue(INodeId.LAST_RESERVED_ID);
     } finally {
       writeUnlock();
     }
-  }
-
-  /**
-   * create an hdfs file status from an inode
-   * 
-   * @param path the local name
-   * @param node inode
-   * @param needLocation if block locations need to be included or not
-   * @param isRawPath true if this is being called on behalf of a path in
-   *                  /.reserved/raw
-   * @return a file status
-   * @throws IOException if any error occurs
-   */
-  private HdfsFileStatus createFileStatus(byte[] path, INode node,
-      boolean needLocation, byte storagePolicy, int snapshot,
-      boolean isRawPath, INodesInPath iip)
-      throws IOException {
-    if (needLocation) {
-      return createLocatedFileStatus(path, node, storagePolicy, snapshot,
-          isRawPath, iip);
-    } else {
-      return createFileStatus(path, node, storagePolicy, snapshot,
-          isRawPath, iip);
-    }
-  }
-
-  /**
-   * Create FileStatus by file INode 
-   */
-  HdfsFileStatus createFileStatus(byte[] path, INode node, byte storagePolicy,
-      int snapshot, boolean isRawPath, INodesInPath iip) throws IOException {
-     long size = 0;     // length is zero for directories
-     short replication = 0;
-     long blocksize = 0;
-     final boolean isEncrypted;
-
-     final FileEncryptionInfo feInfo = isRawPath ? null :
-         getFileEncryptionInfo(node, snapshot, iip);
-
-     if (node.isFile()) {
-       final INodeFile fileNode = node.asFile();
-       size = fileNode.computeFileSize(snapshot);
-       replication = fileNode.getFileReplication(snapshot);
-       blocksize = fileNode.getPreferredBlockSize();
-       isEncrypted = (feInfo != null) ||
-           (isRawPath && isInAnEZ(INodesInPath.fromINode(node)));
-     } else {
-       isEncrypted = isInAnEZ(INodesInPath.fromINode(node));
-     }
-
-     int childrenNum = node.isDirectory() ? 
-         node.asDirectory().getChildrenNum(snapshot) : 0;
-
-     return new HdfsFileStatus(
-        size, 
-        node.isDirectory(), 
-        replication, 
-        blocksize,
-        node.getModificationTime(snapshot),
-        node.getAccessTime(snapshot),
-        getPermissionForFileStatus(node, snapshot, isEncrypted),
-        node.getUserName(snapshot),
-        node.getGroupName(snapshot),
-        node.isSymlink() ? node.asSymlink().getSymlink() : null,
-        path,
-        node.getId(),
-        childrenNum,
-        feInfo,
-        storagePolicy);
-  }
-
-  /**
-   * Create FileStatus with location info by file INode
-   */
-  private HdfsLocatedFileStatus createLocatedFileStatus(byte[] path, INode node,
-      byte storagePolicy, int snapshot, boolean isRawPath,
-      INodesInPath iip) throws IOException {
-    assert hasReadLock();
-    long size = 0; // length is zero for directories
-    short replication = 0;
-    long blocksize = 0;
-    LocatedBlocks loc = null;
-    final boolean isEncrypted;
-    final FileEncryptionInfo feInfo = isRawPath ? null :
-        getFileEncryptionInfo(node, snapshot, iip);
-    if (node.isFile()) {
-      final INodeFile fileNode = node.asFile();
-      size = fileNode.computeFileSize(snapshot);
-      replication = fileNode.getFileReplication(snapshot);
-      blocksize = fileNode.getPreferredBlockSize();
-
-      final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID; 
-      final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
-      final long fileSize = !inSnapshot && isUc ? 
-          fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
-
-      loc = getFSNamesystem().getBlockManager().createLocatedBlocks(
-          fileNode.getBlocks(), fileSize, isUc, 0L, size, false,
-          inSnapshot, feInfo);
-      if (loc == null) {
-        loc = new LocatedBlocks();
-      }
-      isEncrypted = (feInfo != null) ||
-          (isRawPath && isInAnEZ(INodesInPath.fromINode(node)));
-    } else {
-      isEncrypted = isInAnEZ(INodesInPath.fromINode(node));
-    }
-    int childrenNum = node.isDirectory() ? 
-        node.asDirectory().getChildrenNum(snapshot) : 0;
-
-    HdfsLocatedFileStatus status =
-        new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
-          blocksize, node.getModificationTime(snapshot),
-          node.getAccessTime(snapshot),
-          getPermissionForFileStatus(node, snapshot, isEncrypted),
-          node.getUserName(snapshot), node.getGroupName(snapshot),
-          node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
-          node.getId(), loc, childrenNum, feInfo, storagePolicy);
-    // Set caching information for the located blocks.
-    if (loc != null) {
-      CacheManager cacheManager = namesystem.getCacheManager();
-      for (LocatedBlock lb: loc.getLocatedBlocks()) {
-        cacheManager.setCachedLocations(lb);
-      }
-    }
-    return status;
-  }
-
-  /**
-   * Returns an inode's FsPermission for use in an outbound FileStatus.  If the
-   * inode has an ACL or is for an encrypted file/dir, then this method will
-   * return an FsPermissionExtension.
-   *
-   * @param node INode to check
-   * @param snapshot int snapshot ID
-   * @param isEncrypted boolean true if the file/dir is encrypted
-   * @return FsPermission from inode, with ACL bit on if the inode has an ACL
-   * and encrypted bit on if it represents an encrypted file/dir.
-   */
-  private static FsPermission getPermissionForFileStatus(INode node,
-      int snapshot, boolean isEncrypted) {
-    FsPermission perm = node.getFsPermission(snapshot);
-    boolean hasAcl = node.getAclFeature(snapshot) != null;
-    if (hasAcl || isEncrypted) {
-      perm = new FsPermissionExtension(perm, hasAcl, isEncrypted);
-    }
-    return perm;
-  }
-
-  /**
-   * Add the specified path into the namespace.
-   */
-  INodeSymlink addSymlink(long id, String path, String target,
-                          long mtime, long atime, PermissionStatus perm)
-          throws UnresolvedLinkException, QuotaExceededException {
-    writeLock();
-    try {
-      return unprotectedAddSymlink(id, path, target, mtime, atime, perm);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  INodeSymlink unprotectedAddSymlink(long id, String path, String target,
-      long mtime, long atime, PermissionStatus perm)
-      throws UnresolvedLinkException, QuotaExceededException {
-    assert hasWriteLock();
-    final INodeSymlink symlink = new INodeSymlink(id, null, perm, mtime, atime,
-        target);
-    return addINode(path, symlink) ? symlink : null;
-  }
-
-  List<AclEntry> modifyAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
-    writeLock();
-    try {
-      return unprotectedModifyAclEntries(src, aclSpec);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  private List<AclEntry> unprotectedModifyAclEntries(String src,
-      List<AclEntry> aclSpec) throws IOException {
-    assert hasWriteLock();
-    INodesInPath iip = getINodesInPath4Write(normalizePath(src), true);
-    INode inode = resolveLastINode(src, iip);
-    int snapshotId = iip.getLatestSnapshotId();
-    List<AclEntry> existingAcl = AclStorage.readINodeLogicalAcl(inode);
-    List<AclEntry> newAcl = AclTransformation.mergeAclEntries(existingAcl,
-      aclSpec);
-    AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
-    return newAcl;
-  }
-
-  List<AclEntry> removeAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
-    writeLock();
-    try {
-      return unprotectedRemoveAclEntries(src, aclSpec);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  private List<AclEntry> unprotectedRemoveAclEntries(String src,
-      List<AclEntry> aclSpec) throws IOException {
-    assert hasWriteLock();
-    INodesInPath iip = getINodesInPath4Write(normalizePath(src), true);
-    INode inode = resolveLastINode(src, iip);
-    int snapshotId = iip.getLatestSnapshotId();
-    List<AclEntry> existingAcl = AclStorage.readINodeLogicalAcl(inode);
-    List<AclEntry> newAcl = AclTransformation.filterAclEntriesByAclSpec(
-      existingAcl, aclSpec);
-    AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
-    return newAcl;
-  }
-
-  List<AclEntry> removeDefaultAcl(String src) throws IOException {
-    writeLock();
-    try {
-      return unprotectedRemoveDefaultAcl(src);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  private List<AclEntry> unprotectedRemoveDefaultAcl(String src)
-      throws IOException {
-    assert hasWriteLock();
-    INodesInPath iip = getINodesInPath4Write(normalizePath(src), true);
-    INode inode = resolveLastINode(src, iip);
-    int snapshotId = iip.getLatestSnapshotId();
-    List<AclEntry> existingAcl = AclStorage.readINodeLogicalAcl(inode);
-    List<AclEntry> newAcl = AclTransformation.filterDefaultAclEntries(
-      existingAcl);
-    AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
-    return newAcl;
-  }
-
-  void removeAcl(String src) throws IOException {
-    writeLock();
-    try {
-      unprotectedRemoveAcl(src);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  private void unprotectedRemoveAcl(String src) throws IOException {
-    assert hasWriteLock();
-    INodesInPath iip = getINodesInPath4Write(normalizePath(src), true);
-    INode inode = resolveLastINode(src, iip);
-    int snapshotId = iip.getLatestSnapshotId();
-    AclStorage.removeINodeAcl(inode, snapshotId);
-  }
-
-  List<AclEntry> setAcl(String src, List<AclEntry> aclSpec) throws IOException {
-    writeLock();
-    try {
-      return unprotectedSetAcl(src, aclSpec);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  List<AclEntry> unprotectedSetAcl(String src, List<AclEntry> aclSpec)
-      throws IOException {
-    // ACL removal is logged to edits as OP_SET_ACL with an empty list.
-    if (aclSpec.isEmpty()) {
-      unprotectedRemoveAcl(src);
-      return AclFeature.EMPTY_ENTRY_LIST;
-    }
-
-    assert hasWriteLock();
-    INodesInPath iip = getINodesInPath4Write(normalizePath(src), true);
-    INode inode = resolveLastINode(src, iip);
-    int snapshotId = iip.getLatestSnapshotId();
-    List<AclEntry> existingAcl = AclStorage.readINodeLogicalAcl(inode);
-    List<AclEntry> newAcl = AclTransformation.replaceAclEntries(existingAcl,
-      aclSpec);
-    AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
-    return newAcl;
-  }
-
-  AclStatus getAclStatus(String src) throws IOException {
-    String srcs = normalizePath(src);
-    readLock();
-    try {
-      // There is no real inode for the path ending in ".snapshot", so return a
-      // non-null, unpopulated AclStatus.  This is similar to getFileInfo.
-      if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR) &&
-          getINode4DotSnapshot(srcs) != null) {
-        return new AclStatus.Builder().owner("").group("").build();
-      }
-      INodesInPath iip = getLastINodeInPath(srcs, true);
-      INode inode = resolveLastINode(src, iip);
-      int snapshotId = iip.getPathSnapshotId();
-      List<AclEntry> acl = AclStorage.readINodeAcl(inode, snapshotId);
-      return new AclStatus.Builder()
-          .owner(inode.getUserName()).group(inode.getGroupName())
-          .stickyBit(inode.getFsPermission(snapshotId).getStickyBit())
-          .addEntries(acl).build();
-    } finally {
-      readUnlock();
-    }
-  }
-
-  /**
-   * Removes a list of XAttrs from an inode at a path.
-   *
-   * @param src path of inode
-   * @param toRemove XAttrs to be removed
-   * @return List of XAttrs that were removed
-   * @throws IOException if the inode does not exist, if quota is exceeded
-   */
-  List<XAttr> removeXAttrs(final String src, final List<XAttr> toRemove)
-      throws IOException {
-    writeLock();
-    try {
-      return unprotectedRemoveXAttrs(src, toRemove);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  List<XAttr> unprotectedRemoveXAttrs(final String src,
-      final List<XAttr> toRemove) throws IOException {
-    assert hasWriteLock();
-    INodesInPath iip = getINodesInPath4Write(normalizePath(src), true);
-    INode inode = resolveLastINode(src, iip);
-    int snapshotId = iip.getLatestSnapshotId();
-    List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
-    List<XAttr> removedXAttrs = Lists.newArrayListWithCapacity(toRemove.size());
-    List<XAttr> newXAttrs = filterINodeXAttrs(existingXAttrs, toRemove,
-        removedXAttrs);
-    if (existingXAttrs.size() != newXAttrs.size()) {
-      XAttrStorage.updateINodeXAttrs(inode, newXAttrs, snapshotId);
-      return removedXAttrs;
-    }
-    return null;
-  }
-
-  /**
-   * Filter XAttrs from a list of existing XAttrs. Removes matched XAttrs from
-   * toFilter and puts them into filtered. Upon completion,
-   * toFilter contains the filter XAttrs that were not found, while
-   * fitleredXAttrs contains the XAttrs that were found.
-   *
-   * @param existingXAttrs Existing XAttrs to be filtered
-   * @param toFilter XAttrs to filter from the existing XAttrs
-   * @param filtered Return parameter, XAttrs that were filtered
-   * @return List of XAttrs that does not contain filtered XAttrs
-   */
-  @VisibleForTesting
-  List<XAttr> filterINodeXAttrs(final List<XAttr> existingXAttrs,
-      final List<XAttr> toFilter, final List<XAttr> filtered)
-    throws AccessControlException {
-    if (existingXAttrs == null || existingXAttrs.isEmpty() ||
-        toFilter == null || toFilter.isEmpty()) {
-      return existingXAttrs;
-    }
-
-    // Populate a new list with XAttrs that pass the filter
-    List<XAttr> newXAttrs =
-        Lists.newArrayListWithCapacity(existingXAttrs.size());
-    for (XAttr a : existingXAttrs) {
-      boolean add = true;
-      for (ListIterator<XAttr> it = toFilter.listIterator(); it.hasNext()
-          ;) {
-        XAttr filter = it.next();
-        Preconditions.checkArgument(!KEYID_XATTR.equalsIgnoreValue(filter),
-            "The encryption zone xattr should never be deleted.");
-        if (UNREADABLE_BY_SUPERUSER_XATTR.equalsIgnoreValue(filter)) {
-          throw new AccessControlException("The xattr '" +
-              SECURITY_XATTR_UNREADABLE_BY_SUPERUSER + "' can not be deleted.");
-        }
-        if (a.equalsIgnoreValue(filter)) {
-          add = false;
-          it.remove();
-          filtered.add(filter);
-          break;
-        }
-      }
-      if (add) {
-        newXAttrs.add(a);
-      }
-    }
-
-    return newXAttrs;
   }
 
   boolean isInAnEZ(INodesInPath iip)
@@ -2813,7 +1257,8 @@ public class FSDirectory implements Closeable {
 
     writeLock();
     try {
-      unprotectedSetXAttrs(src, xAttrs, EnumSet.of(XAttrSetFlag.CREATE));
+      FSDirXAttrOp.unprotectedSetXAttrs(this, src, xAttrs,
+                                        EnumSet.of(XAttrSetFlag.CREATE));
     } finally {
       writeUnlock();
     }
@@ -2840,9 +1285,6 @@ public class FSDirectory implements Closeable {
     }
     readLock();
     try {
-      if (iip == null) {
-        iip = getINodesInPath(inode.getFullPathName(), true);
-      }
       EncryptionZone encryptionZone = getEZForPath(iip);
       if (encryptionZone == null) {
         // not an encrypted file
@@ -2859,13 +1301,13 @@ public class FSDirectory implements Closeable {
       final CipherSuite suite = encryptionZone.getSuite();
       final String keyName = encryptionZone.getKeyName();
 
-      XAttr fileXAttr = unprotectedGetXAttrByName(inode, snapshotId,
-          CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
+      XAttr fileXAttr = FSDirXAttrOp.unprotectedGetXAttrByName(inode,
+                                                               snapshotId,
+                                                               CRYPTO_XATTR_FILE_ENCRYPTION_INFO);
 
       if (fileXAttr == null) {
         NameNode.LOG.warn("Could not find encryption XAttr for file " +
-            inode.getFullPathName() + " in encryption zone " +
-            encryptionZone.getPath());
+            iip.getPath() + " in encryption zone " + encryptionZone.getPath());
         return null;
       }
 
@@ -2883,178 +1325,11 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  void setXAttrs(final String src, final List<XAttr> xAttrs,
-      final EnumSet<XAttrSetFlag> flag) throws IOException {
-    writeLock();
-    try {
-      unprotectedSetXAttrs(src, xAttrs, flag);
-    } finally {
-      writeUnlock();
-    }
-  }
-  
-  INode unprotectedSetXAttrs(final String src, final List<XAttr> xAttrs,
-      final EnumSet<XAttrSetFlag> flag)
-      throws QuotaExceededException, IOException {
-    assert hasWriteLock();
-    INodesInPath iip = getINodesInPath4Write(normalizePath(src), true);
-    INode inode = resolveLastINode(src, iip);
-    int snapshotId = iip.getLatestSnapshotId();
-    List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
-    List<XAttr> newXAttrs = setINodeXAttrs(existingXAttrs, xAttrs, flag);
-    final boolean isFile = inode.isFile();
-
-    for (XAttr xattr : newXAttrs) {
-      final String xaName = XAttrHelper.getPrefixName(xattr);
-
-      /*
-       * If we're adding the encryption zone xattr, then add src to the list
-       * of encryption zones.
-       */
-      if (CRYPTO_XATTR_ENCRYPTION_ZONE.equals(xaName)) {
-        final HdfsProtos.ZoneEncryptionInfoProto ezProto =
-            HdfsProtos.ZoneEncryptionInfoProto.parseFrom(xattr.getValue());
-        ezManager.addEncryptionZone(inode.getId(),
-            PBHelper.convert(ezProto.getSuite()),
-            PBHelper.convert(ezProto.getCryptoProtocolVersion()),
-            ezProto.getKeyName());
-      }
-
-      if (!isFile && SECURITY_XATTR_UNREADABLE_BY_SUPERUSER.equals(xaName)) {
-        throw new IOException("Can only set '" +
-            SECURITY_XATTR_UNREADABLE_BY_SUPERUSER + "' on a file.");
-      }
-    }
-
-    XAttrStorage.updateINodeXAttrs(inode, newXAttrs, snapshotId);
-    return inode;
-  }
-
-  List<XAttr> setINodeXAttrs(final List<XAttr> existingXAttrs,
-      final List<XAttr> toSet, final EnumSet<XAttrSetFlag> flag)
-      throws IOException {
-    // Check for duplicate XAttrs in toSet
-    // We need to use a custom comparator, so using a HashSet is not suitable
-    for (int i = 0; i < toSet.size(); i++) {
-      for (int j = i + 1; j < toSet.size(); j++) {
-        if (toSet.get(i).equalsIgnoreValue(toSet.get(j))) {
-          throw new IOException("Cannot specify the same XAttr to be set " +
-              "more than once");
-        }
-      }
-    }
-
-    // Count the current number of user-visible XAttrs for limit checking
-    int userVisibleXAttrsNum = 0; // Number of user visible xAttrs
-
-    // The XAttr list is copied to an exactly-sized array when it's stored,
-    // so there's no need to size it precisely here.
-    int newSize = (existingXAttrs != null) ? existingXAttrs.size() : 0;
-    newSize += toSet.size();
-    List<XAttr> xAttrs = Lists.newArrayListWithCapacity(newSize);
-
-    // Check if the XAttr already exists to validate with the provided flag
-    for (XAttr xAttr: toSet) {
-      boolean exist = false;
-      if (existingXAttrs != null) {
-        for (XAttr a : existingXAttrs) {
-          if (a.equalsIgnoreValue(xAttr)) {
-            exist = true;
-            break;
-          }
-        }
-      }
-      XAttrSetFlag.validate(xAttr.getName(), exist, flag);
-      // add the new XAttr since it passed validation
-      xAttrs.add(xAttr);
-      if (isUserVisible(xAttr)) {
-        userVisibleXAttrsNum++;
-      }
-    }
-
-    // Add the existing xattrs back in, if they weren't already set
-    if (existingXAttrs != null) {
-      for (XAttr existing : existingXAttrs) {
-        boolean alreadySet = false;
-        for (XAttr set : toSet) {
-          if (set.equalsIgnoreValue(existing)) {
-            alreadySet = true;
-            break;
-          }
-        }
-        if (!alreadySet) {
-          xAttrs.add(existing);
-          if (isUserVisible(existing)) {
-            userVisibleXAttrsNum++;
-          }
-        }
-      }
-    }
-
-    if (userVisibleXAttrsNum > inodeXAttrsLimit) {
-      throw new IOException("Cannot add additional XAttr to inode, "
-          + "would exceed limit of " + inodeXAttrsLimit);
-    }
-
-    return xAttrs;
-  }
-  
-  private boolean isUserVisible(XAttr xAttr) {
-    if (xAttr.getNameSpace() == XAttr.NameSpace.USER || 
-        xAttr.getNameSpace() == XAttr.NameSpace.TRUSTED) {
-      return true;
-    }
-    return false;
-  }
-  
-  List<XAttr> getXAttrs(String src) throws IOException {
-    String srcs = normalizePath(src);
-    readLock();
-    try {
-      INodesInPath iip = getLastINodeInPath(srcs, true);
-      INode inode = resolveLastINode(src, iip);
-      int snapshotId = iip.getPathSnapshotId();
-      return unprotectedGetXAttrs(inode, snapshotId);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  List<XAttr> getXAttrs(INode inode, int snapshotId) throws IOException {
-    readLock();
-    try {
-      return unprotectedGetXAttrs(inode, snapshotId);
-    } finally {
-      readUnlock();
-    }
-  }
-
-  private List<XAttr> unprotectedGetXAttrs(INode inode, int snapshotId)
-      throws IOException {
-    return XAttrStorage.readINodeXAttrs(inode, snapshotId);
-  }
-
-  private XAttr unprotectedGetXAttrByName(INode inode, int snapshotId,
-      String xAttrName)
-      throws IOException {
-    List<XAttr> xAttrs = XAttrStorage.readINodeXAttrs(inode, snapshotId);
-    if (xAttrs == null) {
-      return null;
-    }
-    for (XAttr x : xAttrs) {
-      if (XAttrHelper.getPrefixName(x)
-          .equals(xAttrName)) {
-        return x;
-      }
-    }
-    return null;
-  }
-
-  private static INode resolveLastINode(String src, INodesInPath iip)
-      throws FileNotFoundException {
+  static INode resolveLastINode(INodesInPath iip) throws FileNotFoundException {
     INode inode = iip.getLastINode();
-    if (inode == null)
-      throw new FileNotFoundException("cannot find " + src);
+    if (inode == null) {
+      throw new FileNotFoundException("cannot find " + iip.getPath());
+    }
     return inode;
   }
 
@@ -3230,36 +1505,62 @@ public class FSDirectory implements Closeable {
     return path.toString();
   }
 
-  /** @return the {@link INodesInPath} containing only the last inode. */
-  private INodesInPath getLastINodeInPath(String path, boolean resolveLink
-  ) throws UnresolvedLinkException {
-    return INodesInPath.resolve(rootDir, INode.getPathComponents(path), 1,
-            resolveLink);
+  INode getINode4DotSnapshot(String src) throws UnresolvedLinkException {
+    Preconditions.checkArgument(
+        src.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR),
+        "%s does not end with %s", src, HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR);
+
+    final String dirPath = normalizePath(src.substring(0,
+        src.length() - HdfsConstants.DOT_SNAPSHOT_DIR.length()));
+
+    final INode node = this.getINode(dirPath);
+    if (node != null && node.isDirectory()
+        && node.asDirectory().isSnapshottable()) {
+      return node;
+    }
+    return null;
   }
 
-  /** @return the {@link INodesInPath} containing all inodes in the path. */
-  INodesInPath getINodesInPath(String path, boolean resolveLink
-  ) throws UnresolvedLinkException {
-    final byte[][] components = INode.getPathComponents(path);
-    return INodesInPath.resolve(rootDir, components, components.length,
-            resolveLink);
-  }
-
-  /** @return the last inode in the path. */
-  INode getNode(String path, boolean resolveLink)
-          throws UnresolvedLinkException {
-    return getLastINodeInPath(path, resolveLink).getINode(0);
+  INodesInPath getExistingPathINodes(byte[][] components)
+      throws UnresolvedLinkException {
+    return INodesInPath.resolve(rootDir, components, false);
   }
 
   /**
-   * @return the INode of the last component in src, or null if the last
-   * component does not exist.
-   * @throws UnresolvedLinkException if symlink can't be resolved
+   * Get {@link INode} associated with the file / directory.
+   */
+  public INodesInPath getINodesInPath4Write(String src)
+      throws UnresolvedLinkException, SnapshotAccessControlException {
+    return getINodesInPath4Write(src, true);
+  }
+
+  /**
+   * Get {@link INode} associated with the file / directory.
    * @throws SnapshotAccessControlException if path is in RO snapshot
    */
-  private INode getINode4Write(String src, boolean resolveLink)
-          throws UnresolvedLinkException, SnapshotAccessControlException {
-    return getINodesInPath4Write(src, resolveLink).getLastINode();
+  public INode getINode4Write(String src) throws UnresolvedLinkException,
+      SnapshotAccessControlException {
+    return getINodesInPath4Write(src, true).getLastINode();
+  }
+
+  /** @return the {@link INodesInPath} containing all inodes in the path. */
+  public INodesInPath getINodesInPath(String path, boolean resolveLink)
+      throws UnresolvedLinkException {
+    final byte[][] components = INode.getPathComponents(path);
+    return INodesInPath.resolve(rootDir, components, resolveLink);
+  }
+
+  /** @return the last inode in the path. */
+  INode getINode(String path, boolean resolveLink)
+      throws UnresolvedLinkException {
+    return getINodesInPath(path, resolveLink).getLastINode();
+  }
+
+  /**
+   * Get {@link INode} associated with the file / directory.
+   */
+  public INode getINode(String src) throws UnresolvedLinkException {
+    return getINode(src, true);
   }
 
   /**
@@ -3271,7 +1572,7 @@ public class FSDirectory implements Closeable {
           throws UnresolvedLinkException, SnapshotAccessControlException {
     final byte[][] components = INode.getPathComponents(src);
     INodesInPath inodesInPath = INodesInPath.resolve(rootDir, components,
-            components.length, resolveLink);
+        resolveLink);
     if (inodesInPath.isSnapshot()) {
       throw new SnapshotAccessControlException(
               "Modification on a read-only snapshot is disallowed");
@@ -3289,31 +1590,28 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  void checkOwner(FSPermissionChecker pc, String path)
-      throws AccessControlException, UnresolvedLinkException {
-    checkPermission(pc, path, true, null, null, null, null);
+  void checkOwner(FSPermissionChecker pc, INodesInPath iip)
+      throws AccessControlException {
+    checkPermission(pc, iip, true, null, null, null, null);
   }
 
-  void checkPathAccess(FSPermissionChecker pc, String path,
-                       FsAction access)
-      throws AccessControlException, UnresolvedLinkException {
-    checkPermission(pc, path, false, null, null, access, null);
+  void checkPathAccess(FSPermissionChecker pc, INodesInPath iip,
+      FsAction access) throws AccessControlException {
+    checkPermission(pc, iip, false, null, null, access, null);
   }
-  void checkParentAccess(
-      FSPermissionChecker pc, String path, FsAction access)
-      throws AccessControlException, UnresolvedLinkException {
-    checkPermission(pc, path, false, null, access, null, null);
+  void checkParentAccess(FSPermissionChecker pc, INodesInPath iip,
+      FsAction access) throws AccessControlException {
+    checkPermission(pc, iip, false, null, access, null, null);
   }
 
-  void checkAncestorAccess(
-      FSPermissionChecker pc, String path, FsAction access)
-      throws AccessControlException, UnresolvedLinkException {
-    checkPermission(pc, path, false, access, null, null, null);
+  void checkAncestorAccess(FSPermissionChecker pc, INodesInPath iip,
+      FsAction access) throws AccessControlException {
+    checkPermission(pc, iip, false, access, null, null, null);
   }
 
-  void checkTraverse(FSPermissionChecker pc, String path)
-      throws AccessControlException, UnresolvedLinkException {
-    checkPermission(pc, path, false, null, null, null, null);
+  void checkTraverse(FSPermissionChecker pc, INodesInPath iip)
+      throws AccessControlException {
+    checkPermission(pc, iip, false, null, null, null, null);
   }
 
   /**
@@ -3321,13 +1619,12 @@ public class FSDirectory implements Closeable {
    * details of the parameters, see
    * {@link FSPermissionChecker#checkPermission}.
    */
-  private void checkPermission(
-    FSPermissionChecker pc, String path, boolean doCheckOwner,
-    FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-    FsAction subAccess)
-    throws AccessControlException, UnresolvedLinkException {
-    checkPermission(pc, path, doCheckOwner, ancestorAccess,
-        parentAccess, access, subAccess, false, true);
+  void checkPermission(FSPermissionChecker pc, INodesInPath iip,
+      boolean doCheckOwner, FsAction ancestorAccess, FsAction parentAccess,
+      FsAction access, FsAction subAccess)
+    throws AccessControlException {
+    checkPermission(pc, iip, doCheckOwner, ancestorAccess,
+        parentAccess, access, subAccess, false);
   }
 
   /**
@@ -3335,25 +1632,68 @@ public class FSDirectory implements Closeable {
    * details of the parameters, see
    * {@link FSPermissionChecker#checkPermission}.
    */
-  void checkPermission(
-      FSPermissionChecker pc, String path, boolean doCheckOwner,
-      FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-      FsAction subAccess, boolean ignoreEmptyDir, boolean resolveLink)
-      throws AccessControlException, UnresolvedLinkException {
+  void checkPermission(FSPermissionChecker pc, INodesInPath iip,
+      boolean doCheckOwner, FsAction ancestorAccess, FsAction parentAccess,
+      FsAction access, FsAction subAccess, boolean ignoreEmptyDir)
+      throws AccessControlException {
     if (!pc.isSuperUser()) {
       readLock();
       try {
-        pc.checkPermission(path, this, doCheckOwner, ancestorAccess,
-            parentAccess, access, subAccess, ignoreEmptyDir, resolveLink);
+        pc.checkPermission(iip, doCheckOwner, ancestorAccess,
+            parentAccess, access, subAccess, ignoreEmptyDir);
       } finally {
         readUnlock();
       }
     }
   }
 
-  HdfsFileStatus getAuditFileInfo(String path, boolean resolveSymlink)
-    throws IOException {
+  HdfsFileStatus getAuditFileInfo(INodesInPath iip)
+      throws IOException {
     return (namesystem.isAuditEnabled() && namesystem.isExternalInvocation())
-      ? getFileInfo(path, resolveSymlink, false, false) : null;
+        ? FSDirStatAndListingOp.getFileInfo(this, iip, false, false) : null;
+  }
+
+  /**
+   * Verify that parent directory of src exists.
+   */
+  void verifyParentDir(INodesInPath iip, String src)
+      throws FileNotFoundException, ParentNotDirectoryException {
+    Path parent = new Path(src).getParent();
+    if (parent != null) {
+      final INode parentNode = iip.getINode(-2);
+      if (parentNode == null) {
+        throw new FileNotFoundException("Parent directory doesn't exist: "
+            + parent);
+      } else if (!parentNode.isDirectory() && !parentNode.isSymlink()) {
+        throw new ParentNotDirectoryException("Parent path is not a directory: "
+            + parent);
+      }
+    }
+  }
+
+  /** Allocate a new inode ID. */
+  long allocateNewInodeId() {
+    return inodeId.nextValue();
+  }
+
+  /** @return the last inode ID. */
+  public long getLastInodeId() {
+    return inodeId.getCurrentValue();
+  }
+
+  /**
+   * Set the last allocated inode id when fsimage or editlog is loaded.
+   */
+  void resetLastInodeId(long newValue) throws IOException {
+    try {
+      inodeId.skipTo(newValue);
+    } catch(IllegalStateException ise) {
+      throw new IOException(ise);
+    }
+  }
+
+  /** Should only be used for tests to reset to any value */
+  void resetLastInodeIdWithoutChecking(long newValue) {
+    inodeId.setCurrentValue(newValue);
   }
 }

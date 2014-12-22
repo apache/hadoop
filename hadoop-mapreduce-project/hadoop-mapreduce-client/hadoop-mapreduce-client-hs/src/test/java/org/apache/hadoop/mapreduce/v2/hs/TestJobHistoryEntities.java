@@ -55,13 +55,18 @@ public class TestJobHistoryEntities {
 
   private final String historyFileName =
       "job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1-SUCCEEDED-default.jhist";
+  private final String historyFileNameZeroReduceTasks =
+    "job_1416424547277_0002-1416424775281-root-TeraGen-1416424785433-2-0-SUCCEEDED-default-1416424779349.jhist";
   private final String confFileName = "job_1329348432655_0001_conf.xml";
   private final Configuration conf = new Configuration();
   private final JobACLsManager jobAclsManager = new JobACLsManager(conf);
   private boolean loadTasks;
   private JobId jobId = MRBuilderUtils.newJobId(1329348432655l, 1, 1);
-  Path fulleHistoryPath =
+  Path fullHistoryPath =
     new Path(this.getClass().getClassLoader().getResource(historyFileName)
+        .getFile());
+  Path fullHistoryPathZeroReduces =
+    new Path(this.getClass().getClassLoader().getResource(historyFileNameZeroReduceTasks)
         .getFile());
   Path fullConfPath =
     new Path(this.getClass().getClassLoader().getResource(confFileName)
@@ -87,7 +92,7 @@ public class TestJobHistoryEntities {
     when(info.getConfFile()).thenReturn(fullConfPath);
     //Re-initialize to verify the delayed load.
     completedJob =
-      new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
+      new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
           info, jobAclsManager);
     //Verify tasks loaded based on loadTask parameter.
     assertEquals(loadTasks, completedJob.tasksLoaded.get());
@@ -106,12 +111,27 @@ public class TestJobHistoryEntities {
     assertEquals(JobState.SUCCEEDED, jobReport.getJobState());
   }
   
+  @Test (timeout=100000)
+  public void testCopmletedJobReportWithZeroTasks() throws Exception {
+    HistoryFileInfo info = mock(HistoryFileInfo.class);
+    when(info.getConfFile()).thenReturn(fullConfPath);
+    completedJob =
+      new CompletedJob(conf, jobId, fullHistoryPathZeroReduces, loadTasks, "user",
+          info, jobAclsManager);
+    JobReport jobReport = completedJob.getReport();
+    // Make sure that the number reduces (completed and total) are equal to zero.
+    assertEquals(0, completedJob.getTotalReduces());
+    assertEquals(0, completedJob.getCompletedReduces());
+    // Verify that the reduce progress is 1.0 (not NaN)
+    assertEquals(1.0, jobReport.getReduceProgress(), 0.001);
+  }
+
   @Test (timeout=10000)
   public void testCompletedTask() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
-      new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
+      new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
           info, jobAclsManager);
     TaskId mt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.MAP);
     TaskId rt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.REDUCE);
@@ -140,7 +160,7 @@ public class TestJobHistoryEntities {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
-      new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
+      new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
           info, jobAclsManager);
     TaskId mt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.MAP);
     TaskId rt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.REDUCE);
@@ -179,7 +199,7 @@ public class TestJobHistoryEntities {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
-      new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
+      new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
           info, jobAclsManager);
     TaskCompletionEvent[] events= completedJob.getMapAttemptCompletionEvents(0,1000);
     assertEquals(10, completedJob.getMapAttemptCompletionEvents(0,10).length);

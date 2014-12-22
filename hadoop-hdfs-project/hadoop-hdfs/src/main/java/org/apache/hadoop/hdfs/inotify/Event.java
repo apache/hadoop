@@ -101,6 +101,7 @@ public abstract class Event {
     private FsPermission perms;
     private String symlinkTarget;
     private boolean overwrite;
+    private long defaultBlockSize;
 
     public static class Builder {
       private INodeType iNodeType;
@@ -112,6 +113,7 @@ public abstract class Event {
       private FsPermission perms;
       private String symlinkTarget;
       private boolean overwrite;
+      private long defaultBlockSize = 0;
 
       public Builder iNodeType(INodeType type) {
         this.iNodeType = type;
@@ -158,6 +160,11 @@ public abstract class Event {
         return this;
       }
 
+      public Builder defaultBlockSize(long defaultBlockSize) {
+        this.defaultBlockSize = defaultBlockSize;
+        return this;
+      }
+
       public CreateEvent build() {
         return new CreateEvent(this);
       }
@@ -174,6 +181,7 @@ public abstract class Event {
       this.perms = b.perms;
       this.symlinkTarget = b.symlinkTarget;
       this.overwrite = b.overwrite;
+      this.defaultBlockSize = b.defaultBlockSize;
     }
 
     public INodeType getiNodeType() {
@@ -219,6 +227,10 @@ public abstract class Event {
     
     public boolean getOverwrite() {
       return overwrite;
+    }
+
+    public long getDefaultBlockSize() {
+      return defaultBlockSize;
     }
   }
 
@@ -398,11 +410,36 @@ public abstract class Event {
     private String dstPath;
     private long timestamp;
 
-    public RenameEvent(String srcPath, String dstPath, long timestamp) {
+    public static class Builder {
+      private String srcPath;
+      private String dstPath;
+      private long timestamp;
+
+      public Builder srcPath(String srcPath) {
+        this.srcPath = srcPath;
+        return this;
+      }
+
+      public Builder dstPath(String dstPath) {
+        this.dstPath = dstPath;
+        return this;
+      }
+
+      public Builder timestamp(long timestamp) {
+        this.timestamp = timestamp;
+        return this;
+      }
+
+      public RenameEvent build() {
+        return new RenameEvent(this);
+      }
+    }
+
+    private RenameEvent(Builder builder) {
       super(EventType.RENAME);
-      this.srcPath = srcPath;
-      this.dstPath = dstPath;
-      this.timestamp = timestamp;
+      this.srcPath = builder.srcPath;
+      this.dstPath = builder.dstPath;
+      this.timestamp = builder.timestamp;
     }
 
     public String getSrcPath() {
@@ -427,9 +464,22 @@ public abstract class Event {
   public static class AppendEvent extends Event {
     private String path;
 
-    public AppendEvent(String path) {
+    public static class Builder {
+      private String path;
+
+      public Builder path(String path) {
+        this.path = path;
+        return this;
+      }
+
+      public AppendEvent build() {
+        return new AppendEvent(this);
+      }
+    }
+
+    private AppendEvent(Builder b) {
       super(EventType.APPEND);
-      this.path = path;
+      this.path = b.path;
     }
 
     public String getPath() {
@@ -444,10 +494,29 @@ public abstract class Event {
     private String path;
     private long timestamp;
 
-    public UnlinkEvent(String path, long timestamp) {
+    public static class Builder {
+      private String path;
+      private long timestamp;
+
+      public Builder path(String path) {
+        this.path = path;
+        return this;
+      }
+
+      public Builder timestamp(long timestamp) {
+        this.timestamp = timestamp;
+        return this;
+      }
+
+      public UnlinkEvent build() {
+        return new UnlinkEvent(this);
+      }
+    }
+
+    private UnlinkEvent(Builder builder) {
       super(EventType.UNLINK);
-      this.path = path;
-      this.timestamp = timestamp;
+      this.path = builder.path;
+      this.timestamp = builder.timestamp;
     }
 
     public String getPath() {

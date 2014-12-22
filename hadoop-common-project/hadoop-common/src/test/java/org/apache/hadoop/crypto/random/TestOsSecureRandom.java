@@ -137,18 +137,4 @@ public class TestOsSecureRandom {
     }
     random.close();
   }
-  
-  @Test(timeout=120000)
-  public void testOsSecureRandomSetConf() throws IOException {
-    Assume.assumeTrue(SystemUtils.IS_OS_LINUX);
-    OsSecureRandom random = new OsSecureRandom();
-    for(int n = 0; n < 10; ++n) {
-      random.setConf(new Configuration());
-      String[] scmd = new String[] {"/bin/sh", "-c", "lsof | wc -l"};
-      ShellCommandExecutor sce = new ShellCommandExecutor(scmd);
-      sce.execute(); 
-      System.out.println("==lsof result " + n + ":");
-      System.out.println(sce.getOutput());
-    }
-  }
 }

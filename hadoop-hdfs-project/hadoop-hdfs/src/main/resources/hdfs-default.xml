@@ -314,7 +314,8 @@
   <name>dfs.namenode.fs-limits.max-directory-items</name>
   <value>1048576</value>
   <description>Defines the maximum number of items that a directory may
-      contain.  A value of 0 will disable the check.</description>
+      contain. Cannot set the property to a value less than 1 or more than
+      6400000.</description>
 </property>
 
 <property>
@@ -2249,6 +2250,14 @@
   <name>dfs.namenode.top.windows.minutes</name>
   <value>1,5,25</value>
   <description>comma separated list of nntop reporting periods in minutes
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.blocks.per.postponedblocks.rescan</name>
+  <value>10000</value>
+  <description>Number of blocks to rescan for each iteration of
+    postponedMisreplicatedBlocks.
   </description>
 </property>
 

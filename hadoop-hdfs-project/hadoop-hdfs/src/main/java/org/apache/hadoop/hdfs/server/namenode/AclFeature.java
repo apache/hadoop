@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.AclEntry;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -31,13 +32,28 @@ public class AclFeature implements INode.Feature {
   public static final ImmutableList<AclEntry> EMPTY_ENTRY_LIST =
     ImmutableList.of();
 
-  private final ImmutableList<AclEntry> entries;
+  private final int [] entries;
 
-  public AclFeature(ImmutableList<AclEntry> entries) {
+  public AclFeature(int[] entries) {
     this.entries = entries;
   }
 
-  public ImmutableList<AclEntry> getEntries() {
-    return entries;
+  /**
+   * Get the number of entries present
+   */
+  int getEntriesSize() {
+    return entries.length;
+  }
+
+  /**
+   * Get the entry at the specified position
+   * @param pos Position of the entry to be obtained
+   * @return integer representation of AclEntry
+   * @throws IndexOutOfBoundsException if pos out of bound
+   */
+  int getEntryAt(int pos) {
+    Preconditions.checkPositionIndex(pos, entries.length,
+        "Invalid position for AclEntry");
+    return entries[pos];
   }
 }

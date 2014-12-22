@@ -234,7 +234,6 @@ public class INodeFile extends INodeWithAdditionalFields
     BlockInfoUnderConstruction ucBlock =
       lastBlock.convertToBlockUnderConstruction(
           BlockUCState.UNDER_CONSTRUCTION, locations);
-    ucBlock.setBlockCollection(this);
     setBlock(numBlocks() - 1, ucBlock);
     return ucBlock;
   }

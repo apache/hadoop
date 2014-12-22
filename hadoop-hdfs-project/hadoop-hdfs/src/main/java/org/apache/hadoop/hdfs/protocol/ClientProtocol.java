@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.inotify.EventsList;
+import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -203,7 +203,8 @@ public interface ClientProtocol {
    * Append to the end of the file. 
    * @param src path of the file being created.
    * @param clientName name of the current client.
-   * @return information about the last partial block if any.
+   * @return wrapper with information about the last partial block and file
+   *    status if any
    * @throws AccessControlException if permission to append file is 
    * denied by the system. As usually on the client side the exception will 
    * be wrapped into {@link org.apache.hadoop.ipc.RemoteException}.
@@ -224,7 +225,7 @@ public interface ClientProtocol {
    * @throws UnsupportedOperationException if append is not supported
    */
   @AtMostOnce
-  public LocatedBlock append(String src, String clientName)
+  public LastBlockWithStatus append(String src, String clientName)
       throws AccessControlException, DSQuotaExceededException,
       FileNotFoundException, SafeModeException, UnresolvedLinkException,
       SnapshotAccessControlException, IOException;
@@ -1407,9 +1408,9 @@ public interface ClientProtocol {
   public long getCurrentEditLogTxid() throws IOException;
 
   /**
-   * Get an ordered list of events corresponding to the edit log transactions
-   * from txid onwards.
+   * Get an ordered list of batches of events corresponding to the edit log
+   * transactions for txids equal to or greater than txid.
    */
   @Idempotent
-  public EventsList getEditsFromTxid(long txid) throws IOException;
+  public EventBatchList getEditsFromTxid(long txid) throws IOException;
 }

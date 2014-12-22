@@ -37,7 +37,7 @@ public class ReplicaNotFoundException extends IOException {
   public final static String NON_EXISTENT_REPLICA =
     "Cannot append to a non-existent replica ";
   public final static String UNEXPECTED_GS_REPLICA =
-    "Cannot append to a replica with unexpeted generation stamp ";
+    "Cannot append to a replica with unexpected generation stamp ";
 
   public ReplicaNotFoundException() {
     super();
