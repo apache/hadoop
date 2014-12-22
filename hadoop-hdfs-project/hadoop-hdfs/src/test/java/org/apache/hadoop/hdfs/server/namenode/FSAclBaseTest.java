@@ -426,7 +426,7 @@ public abstract class FSAclBaseTest {
   }
 
   @Test
-  public void testRemoveDefaultAcl() throws IOException {
+  public void testRemoveDefaultAcl() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(ACCESS, USER, ALL),
@@ -443,10 +443,15 @@ public abstract class FSAclBaseTest {
       aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission((short)010770);
     assertAclFeature(true);
+    // restart of the cluster
+    restartCluster();
+    s = fs.getAclStatus(path);
+    AclEntry[] afterRestart = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(returned, afterRestart);
   }
 
   @Test
-  public void testRemoveDefaultAclOnlyAccess() throws IOException {
+  public void testRemoveDefaultAclOnlyAccess() throws Exception {
     fs.create(path).close();
     fs.setPermission(path, FsPermission.createImmutable((short)0640));
     List<AclEntry> aclSpec = Lists.newArrayList(
@@ -463,10 +468,15 @@ public abstract class FSAclBaseTest {
       aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission((short)010770);
     assertAclFeature(true);
+    // restart of the cluster
+    restartCluster();
+    s = fs.getAclStatus(path);
+    AclEntry[] afterRestart = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(returned, afterRestart);
   }
 
   @Test
-  public void testRemoveDefaultAclOnlyDefault() throws IOException {
+  public void testRemoveDefaultAclOnlyDefault() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(DEFAULT, USER, "foo", ALL));
@@ -477,10 +487,15 @@ public abstract class FSAclBaseTest {
     assertArrayEquals(new AclEntry[] { }, returned);
     assertPermission((short)0750);
     assertAclFeature(false);
+    // restart of the cluster
+    restartCluster();
+    s = fs.getAclStatus(path);
+    AclEntry[] afterRestart = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(returned, afterRestart);
   }
 
   @Test
-  public void testRemoveDefaultAclMinimal() throws IOException {
+  public void testRemoveDefaultAclMinimal() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     fs.removeDefaultAcl(path);
     AclStatus s = fs.getAclStatus(path);
@@ -488,10 +503,15 @@ public abstract class FSAclBaseTest {
     assertArrayEquals(new AclEntry[] { }, returned);
     assertPermission((short)0750);
     assertAclFeature(false);
+    // restart of the cluster
+    restartCluster();
+    s = fs.getAclStatus(path);
+    AclEntry[] afterRestart = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(returned, afterRestart);
   }
 
   @Test
-  public void testRemoveDefaultAclStickyBit() throws IOException {
+  public void testRemoveDefaultAclStickyBit() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)01750));
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(ACCESS, USER, ALL),
@@ -508,6 +528,11 @@ public abstract class FSAclBaseTest {
       aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission((short)011770);
     assertAclFeature(true);
+    // restart of the cluster
+    restartCluster();
+    s = fs.getAclStatus(path);
+    AclEntry[] afterRestart = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(returned, afterRestart);
   }
 
   @Test(expected=FileNotFoundException.class)
@@ -1137,9 +1162,7 @@ public abstract class FSAclBaseTest {
     assertFilePermissionDenied(fsAsDiana, DIANA, bruceFile);
     try {
       conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
-      destroyFileSystems();
       restartCluster();
-      initFileSystems();
       assertFilePermissionGranted(fsAsDiana, DIANA, bruceFile);
     } finally {
       conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
@@ -1404,10 +1427,12 @@ public abstract class FSAclBaseTest {
    * @throws Exception if restart fails
    */
   private void restartCluster() throws Exception {
+    destroyFileSystems();
     shutdown();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(false)
       .build();
     cluster.waitActive();
+    initFileSystems();
   }
 
   /**
