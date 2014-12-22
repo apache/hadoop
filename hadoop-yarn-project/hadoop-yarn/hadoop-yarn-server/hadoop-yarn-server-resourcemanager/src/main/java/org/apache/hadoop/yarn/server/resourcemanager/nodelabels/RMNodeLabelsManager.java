@@ -351,7 +351,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         if (oldLabels.isEmpty()) {
           // update labels
           Label label = labelCollections.get(NO_LABEL);
-          Resources.subtractFrom(label.resource, oldNM.resource);
+          Resources.subtractFrom(label.getResource(), oldNM.resource);
 
           // update queues, all queue can access this node
           for (Queue q : queueCollections.values()) {
@@ -364,7 +364,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
             if (null == label) {
               continue;
             }
-            Resources.subtractFrom(label.resource, oldNM.resource);
+            Resources.subtractFrom(label.getResource(), oldNM.resource);
           }
 
           // update queues, only queue can access this node will be subtract
@@ -383,7 +383,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         if (newLabels.isEmpty()) {
           // update labels
           Label label = labelCollections.get(NO_LABEL);
-          Resources.addTo(label.resource, newNM.resource);
+          Resources.addTo(label.getResource(), newNM.resource);
 
           // update queues, all queue can access this node
           for (Queue q : queueCollections.values()) {
@@ -393,7 +393,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
           // update labels
           for (String labelName : newLabels) {
             Label label = labelCollections.get(labelName);
-            Resources.addTo(label.resource, newNM.resource);
+            Resources.addTo(label.getResource(), newNM.resource);
           }
 
           // update queues, only queue can access this node will be subtract
@@ -414,7 +414,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       if (null == labelCollections.get(label)) {
         return Resources.none();
       }
-      return labelCollections.get(label).resource;
+      return labelCollections.get(label).getResource();
     } finally {
       readLock.unlock();
     }
