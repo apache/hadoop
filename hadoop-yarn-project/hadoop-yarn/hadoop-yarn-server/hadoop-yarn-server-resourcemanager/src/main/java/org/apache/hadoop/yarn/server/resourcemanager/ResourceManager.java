@@ -426,6 +426,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       rmContext.setAMFinishingMonitor(amFinishingMonitor);
       
       RMNodeLabelsManager nlm = createNodeLabelManager();
+      nlm.setRMContext(rmContext);
       addService(nlm);
       rmContext.setNodeLabelManager(nlm);
 

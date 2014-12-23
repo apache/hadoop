@@ -447,4 +447,9 @@ public abstract class AbstractCSQueue implements CSQueue {
   public Map<QueueACL, AccessControlList> getACLs() {
     return acls;
   }
+  
+  @Private
+  public Resource getUsedResourceByLabel(String nodeLabel) {
+    return usedResourcesByNodeLabels.get(nodeLabel);
+  }
 }

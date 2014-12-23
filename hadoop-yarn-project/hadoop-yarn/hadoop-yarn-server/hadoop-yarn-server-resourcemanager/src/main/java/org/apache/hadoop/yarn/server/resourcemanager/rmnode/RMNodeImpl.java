@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -858,9 +859,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   @Override
   public Set<String> getNodeLabels() {
-    if (context.getNodeLabelManager() == null) {
+    RMNodeLabelsManager nlm = context.getNodeLabelManager();
+    if (nlm == null || nlm.getLabelsOnNode(nodeId) == null) {
       return CommonNodeLabelsManager.EMPTY_STRING_SET;
     }
-    return context.getNodeLabelManager().getLabelsOnNode(nodeId);
+    return nlm.getLabelsOnNode(nodeId);
   }
  }
