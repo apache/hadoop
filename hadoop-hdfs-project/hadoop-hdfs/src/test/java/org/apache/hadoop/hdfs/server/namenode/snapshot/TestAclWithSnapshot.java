@@ -23,6 +23,7 @@ import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -39,13 +40,15 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
+import org.apache.hadoop.hdfs.server.namenode.AclFeature;
+import org.apache.hadoop.hdfs.server.namenode.AclStorage;
 import org.apache.hadoop.hdfs.server.namenode.AclTestHelpers;
+import org.apache.hadoop.hdfs.server.namenode.FSAclBaseTest;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -655,6 +658,190 @@ public class TestAclWithSnapshot {
     AclStatus s = hdfs.getAclStatus(new Path(path, ".snapshot"));
     AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
     assertArrayEquals(new AclEntry[] { }, returned);
+  }
+
+  @Test
+  public void testDeDuplication() throws Exception {
+    int startSize = AclStorage.getUniqueAclFeatures().getUniqueElementsSize();
+    // unique default AclEntries for this test
+    List<AclEntry> aclSpec = Lists.newArrayList(
+        aclEntry(ACCESS, USER, "testdeduplicateuser", ALL),
+        aclEntry(ACCESS, GROUP, "testdeduplicategroup", ALL));
+    hdfs.mkdirs(path);
+    hdfs.modifyAclEntries(path, aclSpec);
+    assertEquals("One more ACL feature should be unique", startSize + 1,
+        AclStorage.getUniqueAclFeatures().getUniqueElementsSize());
+    Path subdir = new Path(path, "sub-dir");
+    hdfs.mkdirs(subdir);
+    Path file = new Path(path, "file");
+    hdfs.create(file).close();
+    AclFeature aclFeature;
+    {
+      // create the snapshot with root directory having ACLs should refer to
+      // same ACLFeature without incrementing the reference count
+      aclFeature = FSAclBaseTest.getAclFeature(path, cluster);
+      assertEquals("Reference count should be one before snapshot", 1,
+          aclFeature.getRefCount());
+      Path snapshotPath = SnapshotTestHelper.createSnapshot(hdfs, path,
+          snapshotName);
+      AclFeature snapshotAclFeature = FSAclBaseTest.getAclFeature(snapshotPath,
+          cluster);
+      assertSame(aclFeature, snapshotAclFeature);
+      assertEquals("Reference count should be increased", 2,
+          snapshotAclFeature.getRefCount());
+    }
+    {
+      // deleting the snapshot with root directory having ACLs should not alter
+      // the reference count of the ACLFeature
+      deleteSnapshotWithAclAndVerify(aclFeature, path, startSize);
+    }
+    {
+      hdfs.modifyAclEntries(subdir, aclSpec);
+      aclFeature = FSAclBaseTest.getAclFeature(subdir, cluster);
+      assertEquals("Reference count should be 1", 1, aclFeature.getRefCount());
+      Path snapshotPath = SnapshotTestHelper.createSnapshot(hdfs, path,
+          snapshotName);
+      Path subdirInSnapshot = new Path(snapshotPath, "sub-dir");
+      AclFeature snapshotAcl = FSAclBaseTest.getAclFeature(subdirInSnapshot,
+          cluster);
+      assertSame(aclFeature, snapshotAcl);
+      assertEquals("Reference count should remain same", 1,
+          aclFeature.getRefCount());
+
+      // Delete the snapshot with sub-directory containing the ACLs should not
+      // alter the reference count for AclFeature
+      deleteSnapshotWithAclAndVerify(aclFeature, subdir, startSize);
+    }
+    {
+      hdfs.modifyAclEntries(file, aclSpec);
+      aclFeature = FSAclBaseTest.getAclFeature(file, cluster);
+      assertEquals("Reference count should be 1", 1, aclFeature.getRefCount());
+      Path snapshotPath = SnapshotTestHelper.createSnapshot(hdfs, path,
+          snapshotName);
+      Path fileInSnapshot = new Path(snapshotPath, file.getName());
+      AclFeature snapshotAcl = FSAclBaseTest.getAclFeature(fileInSnapshot,
+          cluster);
+      assertSame(aclFeature, snapshotAcl);
+      assertEquals("Reference count should remain same", 1,
+          aclFeature.getRefCount());
+
+      // Delete the snapshot with contained file having ACLs should not
+      // alter the reference count for AclFeature
+      deleteSnapshotWithAclAndVerify(aclFeature, file, startSize);
+    }
+    {
+      // Modifying the ACLs of root directory of the snapshot should refer new
+      // AclFeature. And old AclFeature should be referenced by snapshot
+      hdfs.modifyAclEntries(path, aclSpec);
+      Path snapshotPath = SnapshotTestHelper.createSnapshot(hdfs, path,
+          snapshotName);
+      AclFeature snapshotAcl = FSAclBaseTest.getAclFeature(snapshotPath,
+          cluster);
+      aclFeature = FSAclBaseTest.getAclFeature(path, cluster);
+      assertEquals("Before modification same ACL should be referenced twice", 2,
+          aclFeature.getRefCount());
+      List<AclEntry> newAcl = Lists.newArrayList(aclEntry(ACCESS, USER,
+          "testNewUser", ALL));
+      hdfs.modifyAclEntries(path, newAcl);
+      aclFeature = FSAclBaseTest.getAclFeature(path, cluster);
+      AclFeature snapshotAclPostModification = FSAclBaseTest.getAclFeature(
+          snapshotPath, cluster);
+      assertSame(snapshotAcl, snapshotAclPostModification);
+      assertNotSame(aclFeature, snapshotAclPostModification);
+      assertEquals("Old ACL feature reference count should be same", 1,
+          snapshotAcl.getRefCount());
+      assertEquals("New ACL feature reference should be used", 1,
+          aclFeature.getRefCount());
+      deleteSnapshotWithAclAndVerify(aclFeature, path, startSize);
+    }
+    {
+      // Modifying the ACLs of sub directory of the snapshot root should refer
+      // new AclFeature. And old AclFeature should be referenced by snapshot
+      hdfs.modifyAclEntries(subdir, aclSpec);
+      Path snapshotPath = SnapshotTestHelper.createSnapshot(hdfs, path,
+          snapshotName);
+      Path subdirInSnapshot = new Path(snapshotPath, "sub-dir");
+      AclFeature snapshotAclFeature = FSAclBaseTest.getAclFeature(
+          subdirInSnapshot, cluster);
+      List<AclEntry> newAcl = Lists.newArrayList(aclEntry(ACCESS, USER,
+          "testNewUser", ALL));
+      hdfs.modifyAclEntries(subdir, newAcl);
+      aclFeature = FSAclBaseTest.getAclFeature(subdir, cluster);
+      assertNotSame(aclFeature, snapshotAclFeature);
+      assertEquals("Reference count should remain same", 1,
+          snapshotAclFeature.getRefCount());
+      assertEquals("New AclFeature should be used", 1, aclFeature.getRefCount());
+
+      deleteSnapshotWithAclAndVerify(aclFeature, subdir, startSize);
+    }
+    {
+      // Modifying the ACLs of file inside the snapshot root should refer new
+      // AclFeature. And old AclFeature should be referenced by snapshot
+      hdfs.modifyAclEntries(file, aclSpec);
+      Path snapshotPath = SnapshotTestHelper.createSnapshot(hdfs, path,
+          snapshotName);
+      Path fileInSnapshot = new Path(snapshotPath, file.getName());
+      AclFeature snapshotAclFeature = FSAclBaseTest.getAclFeature(
+          fileInSnapshot, cluster);
+      List<AclEntry> newAcl = Lists.newArrayList(aclEntry(ACCESS, USER,
+          "testNewUser", ALL));
+      hdfs.modifyAclEntries(file, newAcl);
+      aclFeature = FSAclBaseTest.getAclFeature(file, cluster);
+      assertNotSame(aclFeature, snapshotAclFeature);
+      assertEquals("Reference count should remain same", 1,
+          snapshotAclFeature.getRefCount());
+      deleteSnapshotWithAclAndVerify(aclFeature, file, startSize);
+    }
+    {
+      // deleting the original directory containing dirs and files with ACLs
+      // with snapshot
+      hdfs.delete(path, true);
+      Path dir = new Path(subdir, "dir");
+      hdfs.mkdirs(dir);
+      hdfs.modifyAclEntries(dir, aclSpec);
+      file = new Path(subdir, "file");
+      hdfs.create(file).close();
+      aclSpec.add(aclEntry(ACCESS, USER, "testNewUser", ALL));
+      hdfs.modifyAclEntries(file, aclSpec);
+      AclFeature fileAcl = FSAclBaseTest.getAclFeature(file, cluster);
+      AclFeature dirAcl = FSAclBaseTest.getAclFeature(dir, cluster);
+      Path snapshotPath = SnapshotTestHelper.createSnapshot(hdfs, path,
+          snapshotName);
+      Path dirInSnapshot = new Path(snapshotPath, "sub-dir/dir");
+      AclFeature snapshotDirAclFeature = FSAclBaseTest.getAclFeature(
+          dirInSnapshot, cluster);
+      Path fileInSnapshot = new Path(snapshotPath, "sub-dir/file");
+      AclFeature snapshotFileAclFeature = FSAclBaseTest.getAclFeature(
+          fileInSnapshot, cluster);
+      assertSame(fileAcl, snapshotFileAclFeature);
+      assertSame(dirAcl, snapshotDirAclFeature);
+      hdfs.delete(subdir, true);
+      assertEquals(
+          "Original ACLs references should be maintained for snapshot", 1,
+          snapshotFileAclFeature.getRefCount());
+      assertEquals(
+          "Original ACLs references should be maintained for snapshot", 1,
+          snapshotDirAclFeature.getRefCount());
+      hdfs.deleteSnapshot(path, snapshotName);
+      assertEquals("ACLs should be deleted from snapshot", startSize, AclStorage
+          .getUniqueAclFeatures().getUniqueElementsSize());
+    }
+  }
+
+  private void deleteSnapshotWithAclAndVerify(AclFeature aclFeature,
+      Path pathToCheckAcl, int totalAclFeatures) throws IOException {
+    hdfs.deleteSnapshot(path, snapshotName);
+    AclFeature afterDeleteAclFeature = FSAclBaseTest.getAclFeature(
+        pathToCheckAcl, cluster);
+    assertSame(aclFeature, afterDeleteAclFeature);
+    assertEquals("Reference count should remain same"
+        + " even after deletion of snapshot", 1,
+        afterDeleteAclFeature.getRefCount());
+
+    hdfs.removeAcl(pathToCheckAcl);
+    assertEquals("Reference count should be 0", 0, aclFeature.getRefCount());
+    assertEquals("Unique ACL features should remain same", totalAclFeatures,
+        AclStorage.getUniqueAclFeatures().getUniqueElementsSize());
   }
 
   /**

@@ -373,6 +373,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7560. ACLs removed by removeDefaultAcl() will be back after NameNode
     restart/failover. (Vinayakumar B via cnauroth)
 
+    HDFS-7456. De-duplicate AclFeature instances with same AclEntries do reduce
+    memory footprint of NameNode (vinayakumarb)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
