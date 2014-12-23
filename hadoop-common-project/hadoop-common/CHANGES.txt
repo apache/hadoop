@@ -94,6 +94,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7555. Remove the support of unmanaged connectors in HttpServer2.
     (wheat9)
 
+    HADOOP-11399. Java Configuration file and .xml files should be
+    automatically cross-compared (rchiang via rkanter)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
