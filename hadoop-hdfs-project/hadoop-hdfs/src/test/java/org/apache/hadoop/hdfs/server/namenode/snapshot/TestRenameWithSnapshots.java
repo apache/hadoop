@@ -76,7 +76,7 @@ import org.mockito.Mockito;
 
 /** Testing rename with snapshots. */
 public class TestRenameWithSnapshots {
-  {
+  static {
     SnapshotTestHelper.disableLogs();
   }
   private static final Log LOG = LogFactory.getLog(TestRenameWithSnapshots.class);
@@ -2066,10 +2066,10 @@ public class TestRenameWithSnapshots {
   
   /**
    * This test demonstrates that 
-   * {@link INodeDirectory#removeChild(INode, Snapshot)}
+   * {@link INodeDirectory#removeChild}
    * and 
-   * {@link INodeDirectory#addChild(INode, boolean, Snapshot)}
-   * should use {@link INode#isInLatestSnapshot(Snapshot)} to check if the 
+   * {@link INodeDirectory#addChild}
+   * should use {@link INode#isInLatestSnapshot} to check if the
    * added/removed child should be recorded in snapshots.
    */
   @Test
