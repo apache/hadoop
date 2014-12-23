@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.Arrays;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.hdfs.util.ReferenceCountMap.ReferenceCounter;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -28,9 +31,10 @@ import com.google.common.collect.ImmutableList;
  * Feature that represents the ACLs of the inode.
  */
 @InterfaceAudience.Private
-public class AclFeature implements INode.Feature {
+public class AclFeature implements INode.Feature, ReferenceCounter {
   public static final ImmutableList<AclEntry> EMPTY_ENTRY_LIST =
     ImmutableList.of();
+  private int refCount = 0;
 
   private final int [] entries;
 
@@ -55,5 +59,36 @@ public class AclFeature implements INode.Feature {
     Preconditions.checkPositionIndex(pos, entries.length,
         "Invalid position for AclEntry");
     return entries[pos];
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null) {
+      return false;
+    }
+    if (getClass() != o.getClass()) {
+      return false;
+    }
+    return Arrays.equals(entries, ((AclFeature) o).entries);
+  }
+
+  @Override
+  public int hashCode() {
+    return Arrays.hashCode(entries);
+  }
+
+  @Override
+  public int getRefCount() {
+    return refCount;
+  }
+
+  @Override
+  public int incrementAndGetRefCount() {
+    return ++refCount;
+  }
+
+  @Override
+  public int decrementAndGetRefCount() {
+    return (refCount > 0) ? --refCount : 0;
   }
 }
