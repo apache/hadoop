@@ -2211,13 +2211,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create file" + src);
-      src = dir.resolvePath(pc, src, pathComponents);
-      final INodesInPath iip = dir.getINodesInPath4Write(src);
-      toRemoveBlocks = startFileInternal(pc, iip, permissions, holder,
-          clientMachine, create, overwrite, createParent, replication, 
-          blockSize, isLazyPersist, suite, protocolVersion, edek, logRetryCache);
-      stat = FSDirStatAndListingOp.getFileInfo(dir, src, false,
-          FSDirectory.isReservedRawName(srcArg), true);
+      dir.writeLock();
+      try {
+        src = dir.resolvePath(pc, src, pathComponents);
+        final INodesInPath iip = dir.getINodesInPath4Write(src);
+        toRemoveBlocks = startFileInternal(
+            pc, iip, permissions, holder,
+            clientMachine, create, overwrite,
+            createParent, replication, blockSize,
+            isLazyPersist, suite, protocolVersion, edek,
+            logRetryCache);
+        stat = FSDirStatAndListingOp.getFileInfo(
+            dir, src, false, FSDirectory.isReservedRawName(srcArg), true);
+      } finally {
+        dir.writeUnlock();
+      }
     } catch (StandbyException se) {
       skipSync = true;
       throw se;
@@ -2311,6 +2319,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           List<INode> toRemoveINodes = new ChunkedArrayList<INode>();
           long ret = dir.delete(iip, toRemoveBlocks, toRemoveINodes, now());
           if (ret >= 0) {
+            iip = INodesInPath.replace(iip, iip.length() - 1, null);
             incrDeletedFileCount(ret);
             removePathAndBlocks(src, null, toRemoveINodes, true);
           }
@@ -2326,12 +2335,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       INodeFile newNode = null;
 
       // Always do an implicit mkdirs for parent directory tree.
-      INodesInPath parentIIP = iip.getParentINodesInPath();
-      if (parentIIP != null && (parentIIP = FSDirMkdirOp.mkdirsRecursively(dir,
-          parentIIP, permissions, true, now())) != null) {
-        iip = INodesInPath.append(parentIIP, newNode, iip.getLastLocalName());
-        newNode = dir.addFile(iip, src, permissions, replication, blockSize,
-                              holder, clientMachine);
+      Map.Entry<INodesInPath, String> parent = FSDirMkdirOp
+          .createAncestorDirectories(dir, iip, permissions);
+      if (parent != null) {
+        iip = dir.addFile(parent.getKey(), parent.getValue(), permissions,
+            replication, blockSize, holder, clientMachine);
+        newNode = iip != null ? iip.getLastINode().asFile() : null;
       }
 
       if (newNode == null) {
