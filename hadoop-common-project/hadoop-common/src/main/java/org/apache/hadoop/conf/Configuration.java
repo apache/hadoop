@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.conf;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -178,6 +180,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     LogFactory.getLog("org.apache.hadoop.conf.Configuration.deprecation");
 
   private boolean quietmode = true;
+
+  private static final String DEFAULT_STRING_CHECK =
+    "testingforemptydefaultvalue";
+
+  private boolean allowNullValueProperties = false;
   
   private static class Resource {
     private final Object resource;
@@ -896,7 +903,38 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     return result;
   }
-  
+
+  /**
+   * Set Configuration to allow keys without values during setup.  Intended
+   * for use during testing.
+   *
+   * @param val If true, will allow Configuration to store keys without values
+   */
+  @VisibleForTesting
+  public void setAllowNullValueProperties( boolean val ) {
+    this.allowNullValueProperties = val;
+  }
+
+  /**
+   * Return existence of the <code>name</code> property, but only for
+   * names which have no valid value, usually non-existent or commented
+   * out in XML.
+   *
+   * @param name the property name
+   * @return true if the property <code>name</code> exists without value
+   */
+  @VisibleForTesting
+  public boolean onlyKeyExists(String name) {
+    String[] names = handleDeprecation(deprecationContext.get(), name);
+    for(String n : names) {
+      if ( getProps().getProperty(n,DEFAULT_STRING_CHECK)
+               .equals(DEFAULT_STRING_CHECK) ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * Get the value of the <code>name</code> property as a trimmed <code>String</code>, 
    * <code>null</code> if no such property exists. 
@@ -2327,9 +2365,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     // code.
     Map<String,String> result = new HashMap<String,String>();
     for(Map.Entry<Object,Object> item: getProps().entrySet()) {
-      if (item.getKey() instanceof String && 
+      if (item.getKey() instanceof String &&
           item.getValue() instanceof String) {
-        result.put((String) item.getKey(), (String) item.getValue());
+          result.put((String) item.getKey(), (String) item.getValue());
       }
     }
     return result.entrySet().iterator();
@@ -2535,8 +2573,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   
   private void loadProperty(Properties properties, String name, String attr,
       String value, boolean finalParameter, String[] source) {
-    if (value != null) {
+    if (value != null || allowNullValueProperties) {
       if (!finalParameters.contains(attr)) {
+        if (value==null && allowNullValueProperties) {
+	  value = DEFAULT_STRING_CHECK;
+	}
         properties.setProperty(attr, value);
         updatingResource.put(attr, source);
       } else if (!value.equals(properties.getProperty(attr))) {
