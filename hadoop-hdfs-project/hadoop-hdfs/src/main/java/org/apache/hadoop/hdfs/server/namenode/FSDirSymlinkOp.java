@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 
 import java.io.IOException;
+import java.util.Map;
 
 import static org.apache.hadoop.util.Time.now;
 
@@ -80,40 +81,39 @@ class FSDirSymlinkOp {
     return fsd.getAuditFileInfo(iip);
   }
 
-  static INodeSymlink unprotectedAddSymlink(
-      FSDirectory fsd, INodesInPath iip, long id, String target, long mtime,
-      long atime, PermissionStatus perm)
+  static INodeSymlink unprotectedAddSymlink(FSDirectory fsd, INodesInPath iip,
+      byte[] localName, long id, String target, long mtime, long atime,
+      PermissionStatus perm)
       throws UnresolvedLinkException, QuotaExceededException {
     assert fsd.hasWriteLock();
     final INodeSymlink symlink = new INodeSymlink(id, null, perm, mtime, atime,
         target);
-    return fsd.addINode(iip, symlink) ? symlink : null;
+    symlink.setLocalName(localName);
+    return fsd.addINode(iip, symlink) != null ? symlink : null;
   }
 
   /**
    * Add the given symbolic link to the fs. Record it in the edits log.
    */
-  private static INodeSymlink addSymlink(
-      FSDirectory fsd, String path, INodesInPath iip, String target,
-      PermissionStatus dirPerms, boolean createParent, boolean logRetryCache)
-      throws IOException {
+  private static INodeSymlink addSymlink(FSDirectory fsd, String path,
+      INodesInPath iip, String target, PermissionStatus dirPerms,
+      boolean createParent, boolean logRetryCache) throws IOException {
     final long mtime = now();
+    final byte[] localName = iip.getLastLocalName();
     if (createParent) {
-      INodesInPath parentIIP = iip.getParentINodesInPath();
-      if (parentIIP == null || (parentIIP = FSDirMkdirOp.mkdirsRecursively(
-          fsd,
-          parentIIP, dirPerms, true, mtime)) == null) {
+      Map.Entry<INodesInPath, String> e = FSDirMkdirOp
+          .createAncestorDirectories(fsd, iip, dirPerms);
+      if (e == null) {
         return null;
-      } else {
-        iip = INodesInPath.append(parentIIP, null, iip.getLastLocalName());
       }
+      iip = INodesInPath.append(e.getKey(), null, localName);
     }
     final String userName = dirPerms.getUserName();
     long id = fsd.allocateNewInodeId();
     PermissionStatus perm = new PermissionStatus(
         userName, null, FsPermission.getDefault());
-    INodeSymlink newNode =
-        unprotectedAddSymlink(fsd, iip, id, target, mtime, mtime, perm);
+    INodeSymlink newNode = unprotectedAddSymlink(fsd, iip.getExistingINodes(),
+        localName, id, target, mtime, mtime, perm);
     if (newNode == null) {
       NameNode.stateChangeLog.info("addSymlink: failed to add " + path);
       return null;

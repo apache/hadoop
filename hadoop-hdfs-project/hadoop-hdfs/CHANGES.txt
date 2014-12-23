@@ -219,6 +219,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7530. Allow renaming of encryption zone roots. (Charles Lamb via wang)
 
+    HDFS-7484. Make FSDirectory#addINode take existing INodes as its parameter.
+    (jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

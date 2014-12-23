@@ -348,6 +348,7 @@ public class FSEditLogLoader {
       if (oldFile != null && addCloseOp.overwrite) {
         // This is OP_ADD with overwrite
         fsDir.unprotectedDelete(path, addCloseOp.mtime);
+        iip = INodesInPath.replace(iip, iip.length() - 1, null);
         oldFile = null;
       }
       INodeFile newFile = oldFile;
@@ -359,13 +360,16 @@ public class FSEditLogLoader {
         assert addCloseOp.blocks.length == 0;
 
         // add to the file tree
-        inodeId = getAndUpdateLastInodeId(addCloseOp.inodeId, logVersion,
-            lastInodeId);
-        newFile = fsDir.unprotectedAddFile(
-            inodeId, iip, addCloseOp.permissions, addCloseOp.aclEntries,
-            addCloseOp.xAttrs, replication, addCloseOp.mtime,
-            addCloseOp.atime, addCloseOp.blockSize, true,
-            addCloseOp.clientName, addCloseOp.clientMachine,
+        inodeId = getAndUpdateLastInodeId(addCloseOp.inodeId, logVersion, lastInodeId);
+        newFile = fsDir.addFileForEditLog(inodeId, iip.getExistingINodes(),
+            iip.getLastLocalName(),
+            addCloseOp.permissions,
+            addCloseOp.aclEntries,
+            addCloseOp.xAttrs, replication,
+            addCloseOp.mtime, addCloseOp.atime,
+            addCloseOp.blockSize, true,
+            addCloseOp.clientName,
+            addCloseOp.clientMachine,
             addCloseOp.storagePolicyId);
         iip = INodesInPath.replace(iip, iip.length() - 1, newFile);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, path);
@@ -507,7 +511,7 @@ public class FSEditLogLoader {
       RenameOldOp renameOp = (RenameOldOp)op;
       final String src = renameReservedPathsOnUpgrade(renameOp.src, logVersion);
       final String dst = renameReservedPathsOnUpgrade(renameOp.dst, logVersion);
-      FSDirRenameOp.unprotectedRenameTo(fsDir, src, dst, renameOp.timestamp);
+      FSDirRenameOp.renameForEditLog(fsDir, src, dst, renameOp.timestamp);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(renameOp.rpcClientId, renameOp.rpcCallId);
@@ -529,7 +533,7 @@ public class FSEditLogLoader {
       MkdirOp mkdirOp = (MkdirOp)op;
       inodeId = getAndUpdateLastInodeId(mkdirOp.inodeId, logVersion,
           lastInodeId);
-      FSDirMkdirOp.unprotectedMkdir(fsDir, inodeId,
+      FSDirMkdirOp.mkdirForEditLog(fsDir, inodeId,
           renameReservedPathsOnUpgrade(mkdirOp.path, logVersion),
           mkdirOp.permissions, mkdirOp.aclEntries, mkdirOp.timestamp);
       break;
@@ -569,9 +573,10 @@ public class FSEditLogLoader {
     }
 
     case OP_SET_QUOTA:
-      SetQuotaOp setQuotaOp = (SetQuotaOp)op;
-      FSDirAttrOp.unprotectedSetQuota(fsDir, renameReservedPathsOnUpgrade(
-          setQuotaOp.src, logVersion), setQuotaOp.nsQuota, setQuotaOp.dsQuota);
+      SetQuotaOp setQuotaOp = (SetQuotaOp) op;
+      FSDirAttrOp.unprotectedSetQuota(fsDir,
+          renameReservedPathsOnUpgrade(setQuotaOp.src, logVersion),
+          setQuotaOp.nsQuota, setQuotaOp.dsQuota);
       break;
 
     case OP_TIMES: {
@@ -591,9 +596,9 @@ public class FSEditLogLoader {
       final String path = renameReservedPathsOnUpgrade(symlinkOp.path,
           logVersion);
       final INodesInPath iip = fsDir.getINodesInPath(path, false);
-      FSDirSymlinkOp.unprotectedAddSymlink(fsDir, iip, inodeId, symlinkOp.value,
-                                           symlinkOp.mtime, symlinkOp.atime,
-                                           symlinkOp.permissionStatus);
+      FSDirSymlinkOp.unprotectedAddSymlink(fsDir, iip.getExistingINodes(),
+          iip.getLastLocalName(), inodeId, symlinkOp.value, symlinkOp.mtime,
+          symlinkOp.atime, symlinkOp.permissionStatus);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(symlinkOp.rpcClientId, symlinkOp.rpcCallId);
@@ -602,7 +607,7 @@ public class FSEditLogLoader {
     }
     case OP_RENAME: {
       RenameOp renameOp = (RenameOp)op;
-      FSDirRenameOp.unprotectedRenameTo(fsDir,
+      FSDirRenameOp.renameForEditLog(fsDir,
           renameReservedPathsOnUpgrade(renameOp.src, logVersion),
           renameReservedPathsOnUpgrade(renameOp.dst, logVersion),
           renameOp.timestamp, renameOp.options);
