@@ -809,7 +809,7 @@ public class LeafQueue extends AbstractCSQueue {
     
     // if our queue cannot access this node, just return
     if (!SchedulerUtils.checkQueueAccessToNode(accessibleLabels,
-        labelManager.getLabelsOnNode(node.getNodeID()))) {
+        node.getLabels())) {
       return NULL_ASSIGNMENT;
     }
     
@@ -878,7 +878,7 @@ public class LeafQueue extends AbstractCSQueue {
           
           // Check queue max-capacity limit
           if (!canAssignToThisQueue(clusterResource, required,
-              labelManager.getLabelsOnNode(node.getNodeID()), application, true)) {
+              node.getLabels(), application, true)) {
             return NULL_ASSIGNMENT;
           }
 
@@ -911,7 +911,7 @@ public class LeafQueue extends AbstractCSQueue {
             // Book-keeping 
             // Note: Update headroom to account for current allocation too...
             allocateResource(clusterResource, application, assigned,
-                labelManager.getLabelsOnNode(node.getNodeID()));
+                node.getLabels());
             
             // Don't reset scheduling opportunities for non-local assignments
             // otherwise the app will be delayed for each non-local assignment.
@@ -1561,7 +1561,7 @@ public class LeafQueue extends AbstractCSQueue {
     
     // check if the resource request can access the label
     if (!SchedulerUtils.checkNodeLabelExpression(
-        labelManager.getLabelsOnNode(node.getNodeID()),
+        node.getLabels(),
         request.getNodeLabelExpression())) {
       // this is a reserved container, but we cannot allocate it now according
       // to label not match. This can be caused by node label changed
@@ -1752,8 +1752,7 @@ public class LeafQueue extends AbstractCSQueue {
         // Book-keeping
         if (removed) {
           releaseResource(clusterResource, application,
-              container.getResource(),
-              labelManager.getLabelsOnNode(node.getNodeID()));
+              container.getResource(), node.getLabels());
           LOG.info("completedContainer" +
               " container=" + container +
               " queue=" + this +
@@ -1950,9 +1949,10 @@ public class LeafQueue extends AbstractCSQueue {
     }
     // Careful! Locking order is important! 
     synchronized (this) {
+      FiCaSchedulerNode node =
+          scheduler.getNode(rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, attempt, rmContainer.getContainer()
-          .getResource(), labelManager.getLabelsOnNode(rmContainer
-          .getContainer().getNodeId()));
+          .getResource(), node.getLabels());
     }
     getParent().recoverContainer(clusterResource, attempt, rmContainer);
   }
@@ -1989,9 +1989,10 @@ public class LeafQueue extends AbstractCSQueue {
   public void attachContainer(Resource clusterResource,
       FiCaSchedulerApp application, RMContainer rmContainer) {
     if (application != null) {
+      FiCaSchedulerNode node =
+          scheduler.getNode(rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, application, rmContainer.getContainer()
-          .getResource(), labelManager.getLabelsOnNode(rmContainer
-          .getContainer().getNodeId()));
+          .getResource(), node.getLabels());
       LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
           + " resource=" + rmContainer.getContainer().getResource()
           + " queueMoveIn=" + this + " usedCapacity=" + getUsedCapacity()
@@ -2006,9 +2007,10 @@ public class LeafQueue extends AbstractCSQueue {
   public void detachContainer(Resource clusterResource,
       FiCaSchedulerApp application, RMContainer rmContainer) {
     if (application != null) {
+      FiCaSchedulerNode node =
+          scheduler.getNode(rmContainer.getContainer().getNodeId());
       releaseResource(clusterResource, application, rmContainer.getContainer()
-          .getResource(), labelManager.getLabelsOnNode(rmContainer.getContainer()
-          .getNodeId()));
+          .getResource(), node.getLabels());
       LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
           + " resource=" + rmContainer.getContainer().getResource()
           + " queueMoveOut=" + this + " usedCapacity=" + getUsedCapacity()

@@ -18,23 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-public enum SchedulerEventType {
+import java.util.Map;
+import java.util.Set;
 
-  // Source: Node
-  NODE_ADDED,
-  NODE_REMOVED,
-  NODE_UPDATE,
-  NODE_RESOURCE_UPDATE,
-  NODE_LABELS_UPDATE,
+import org.apache.hadoop.yarn.api.records.NodeId;
 
-  // Source: RMApp
-  APP_ADDED,
-  APP_REMOVED,
+public class NodeLabelsUpdateSchedulerEvent extends SchedulerEvent {
+  private Map<NodeId, Set<String>> nodeToLabels;
 
-  // Source: RMAppAttempt
-  APP_ATTEMPT_ADDED,
-  APP_ATTEMPT_REMOVED,
-
-  // Source: ContainerAllocationExpirer
-  CONTAINER_EXPIRED
+  public NodeLabelsUpdateSchedulerEvent(Map<NodeId, Set<String>> nodeToLabels) {
+    super(SchedulerEventType.NODE_LABELS_UPDATE);
+    this.nodeToLabels = nodeToLabels;
+  }
+  
+  public Map<NodeId, Set<String>> getUpdatedNodeToLabels() {
+    return nodeToLabels;
+  }
 }

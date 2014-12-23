@@ -73,6 +73,7 @@ public class ParentQueue extends AbstractCSQueue {
   private final boolean rootQueue;
   final Comparator<CSQueue> queueComparator;
   volatile int numApplications;
+  private final CapacitySchedulerContext scheduler;
 
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
@@ -80,7 +81,7 @@ public class ParentQueue extends AbstractCSQueue {
   public ParentQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
-    
+    this.scheduler = cs;
     this.queueComparator = cs.getQueueComparator();
 
     this.rootQueue = (parent == null);
@@ -420,10 +421,10 @@ public class ParentQueue extends AbstractCSQueue {
       Resource clusterResource, FiCaSchedulerNode node, boolean needToUnreserve) {
     CSAssignment assignment = 
         new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
+    Set<String> nodeLabels = node.getLabels();
     
     // if our queue cannot access this node, just return
-    if (!SchedulerUtils.checkQueueAccessToNode(accessibleLabels,
-        labelManager.getLabelsOnNode(node.getNodeID()))) {
+    if (!SchedulerUtils.checkQueueAccessToNode(accessibleLabels, nodeLabels)) {
       return assignment;
     }
     
@@ -434,7 +435,6 @@ public class ParentQueue extends AbstractCSQueue {
       }
       
       boolean localNeedToUnreserve = false;
-      Set<String> nodeLabels = labelManager.getLabelsOnNode(node.getNodeID()); 
       
       // Are we over maximum-capacity for this queue?
       if (!canAssignToThisQueue(clusterResource, nodeLabels)) {
@@ -641,7 +641,7 @@ public class ParentQueue extends AbstractCSQueue {
       // Book keeping
       synchronized (this) {
         super.releaseResource(clusterResource, rmContainer.getContainer()
-            .getResource(), labelManager.getLabelsOnNode(node.getNodeID()));
+            .getResource(), node.getLabels());
 
         LOG.info("completedContainer" +
             " queue=" + getQueueName() + 
@@ -703,9 +703,10 @@ public class ParentQueue extends AbstractCSQueue {
     }
     // Careful! Locking order is important! 
     synchronized (this) {
+      FiCaSchedulerNode node =
+          scheduler.getNode(rmContainer.getContainer().getNodeId());
       super.allocateResource(clusterResource, rmContainer.getContainer()
-          .getResource(), labelManager.getLabelsOnNode(rmContainer
-          .getContainer().getNodeId()));
+          .getResource(), node.getLabels());
     }
     if (parent != null) {
       parent.recoverContainer(clusterResource, attempt, rmContainer);
@@ -730,9 +731,10 @@ public class ParentQueue extends AbstractCSQueue {
   public void attachContainer(Resource clusterResource,
       FiCaSchedulerApp application, RMContainer rmContainer) {
     if (application != null) {
+      FiCaSchedulerNode node =
+          scheduler.getNode(rmContainer.getContainer().getNodeId());
       super.allocateResource(clusterResource, rmContainer.getContainer()
-          .getResource(), labelManager.getLabelsOnNode(rmContainer
-          .getContainer().getNodeId()));
+          .getResource(), node.getLabels());
       LOG.info("movedContainer" + " queueMoveIn=" + getQueueName()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
           + getAbsoluteUsedCapacity() + " used=" + usedResources + " cluster="
@@ -748,9 +750,11 @@ public class ParentQueue extends AbstractCSQueue {
   public void detachContainer(Resource clusterResource,
       FiCaSchedulerApp application, RMContainer rmContainer) {
     if (application != null) {
+      FiCaSchedulerNode node =
+          scheduler.getNode(rmContainer.getContainer().getNodeId());
       super.releaseResource(clusterResource,
           rmContainer.getContainer().getResource(),
-          labelManager.getLabelsOnNode(rmContainer.getContainer().getNodeId()));
+          node.getLabels());
       LOG.info("movedContainer" + " queueMoveOut=" + getQueueName()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
           + getAbsoluteUsedCapacity() + " used=" + usedResources + " cluster="
