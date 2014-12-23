@@ -22,8 +22,10 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.AclStorage;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
@@ -147,6 +149,10 @@ public class FileWithSnapshotFeature implements INode.Feature {
         oldDiskspace = file.computeFileSize(true, true) * replication;
       } else if (replication > currentRepl) {  
         oldDiskspace = oldDiskspace / file.getBlockReplication() * replication;
+      }
+      AclFeature aclFeature = removed.getSnapshotINode().getAclFeature();
+      if (aclFeature != null) {
+        AclStorage.removeAclFeature(aclFeature);
       }
     }
     
