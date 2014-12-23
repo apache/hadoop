@@ -500,6 +500,8 @@ public class TestWorkPreservingRMRestart {
     rm1.clearQueueMetrics(app1_2);
     rm1.clearQueueMetrics(app2);
 
+    csConf.set("yarn.scheduler.capacity.root.Default.QueueB.state", "STOPPED");
+
     // Re-start RM
     rm2 = new MockRM(csConf, memStore);
     rm2.start();

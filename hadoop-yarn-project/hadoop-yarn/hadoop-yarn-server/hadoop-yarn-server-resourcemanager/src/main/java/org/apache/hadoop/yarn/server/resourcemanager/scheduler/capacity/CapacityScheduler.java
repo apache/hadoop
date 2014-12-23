@@ -706,11 +706,14 @@ public class CapacityScheduler extends
     try {
       queue.submitApplication(applicationId, user, queueName);
     } catch (AccessControlException ace) {
-      LOG.info("Failed to submit application " + applicationId + " to queue "
-          + queueName + " from user " + user, ace);
-      this.rmContext.getDispatcher().getEventHandler()
-          .handle(new RMAppRejectedEvent(applicationId, ace.toString()));
-      return;
+      // Ignore the exception for recovered app as the app was previously accepted
+      if (!isAppRecovering) {
+        LOG.info("Failed to submit application " + applicationId + " to queue "
+            + queueName + " from user " + user, ace);
+        this.rmContext.getDispatcher().getEventHandler()
+            .handle(new RMAppRejectedEvent(applicationId, ace.toString()));
+        return;
+      }
     }
     // update the metrics
     queue.getMetrics().submitApp(user);
