@@ -144,6 +144,14 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public Resource getUsedResources();
   
   /**
+   * Get the currently utilized resources which allocated at nodes with label
+   * specified
+   * 
+   * @return used resources by the queue and it's children
+   */
+  public Resource getUsedResourceByLabel(String nodeLabel);
+  
+  /**
    * Get the current run-state of the queue
    * @return current run-state
    */
