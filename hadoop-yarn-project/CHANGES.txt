@@ -249,6 +249,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2937. Fixed new findbugs warnings in hadoop-yarn-nodemanager. (Varun Saxena
     via zjshen)
 
+    YARN-2946. Fixed potential deadlock in RMStateStore. (Rohith Sharmaks via
+    jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

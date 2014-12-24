@@ -18,19 +18,34 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-public enum RMStateStoreEventType {
-  STORE_APP_ATTEMPT,
-  STORE_APP,
-  UPDATE_APP,
-  UPDATE_APP_ATTEMPT,
-  REMOVE_APP,
-  FENCED,
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 
-  // Below events should be called synchronously
-  STORE_MASTERKEY,
-  REMOVE_MASTERKEY,
-  STORE_DELEGATION_TOKEN,
-  REMOVE_DELEGATION_TOKEN,
-  UPDATE_DELEGATION_TOKEN,
-  UPDATE_AMRM_TOKEN
+public class RMStateStoreRMDTEvent extends RMStateStoreEvent {
+  private RMDelegationTokenIdentifier rmDTIdentifier;
+  private Long renewDate;
+  private int latestSequenceNumber;
+
+  public RMStateStoreRMDTEvent(RMStateStoreEventType type) {
+    super(type);
+  }
+
+  public RMStateStoreRMDTEvent(RMDelegationTokenIdentifier rmDTIdentifier,
+      Long renewDate, int latestSequenceNumber, RMStateStoreEventType type) {
+    this(type);
+    this.rmDTIdentifier = rmDTIdentifier;
+    this.renewDate = renewDate;
+    this.latestSequenceNumber = latestSequenceNumber;
+  }
+
+  public RMDelegationTokenIdentifier getRmDTIdentifier() {
+    return rmDTIdentifier;
+  }
+
+  public Long getRenewDate() {
+    return renewDate;
+  }
+
+  public int getLatestSequenceNumber() {
+    return latestSequenceNumber;
+  }
 }

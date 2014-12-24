@@ -33,6 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -42,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -329,7 +332,44 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     store.removeApplication(mockApp);
     assertEquals("RMStateStore should have been in fenced state",
             true, store.isFencedState());
- 
+
+    // store RM delegation token;
+    RMDelegationTokenIdentifier dtId1 =
+        new RMDelegationTokenIdentifier(new Text("owner1"),
+            new Text("renewer1"), new Text("realuser1"));
+    Long renewDate1 = new Long(System.currentTimeMillis());
+    int sequenceNumber = 1111;
+    store.storeRMDelegationTokenAndSequenceNumber(dtId1, renewDate1,
+        sequenceNumber);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    store.updateRMDelegationTokenAndSequenceNumber(dtId1, renewDate1,
+        sequenceNumber);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // remove delegation key;
+    store.removeRMDelegationToken(dtId1, sequenceNumber);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // store delegation master key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    store.storeRMDTMasterKey(key);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // remove delegation master key;
+    store.removeRMDTMasterKey(key);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // store or update AMRMToken;
+    store.storeOrUpdateAMRMTokenSecretManager(null, false);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
     store.close();
   }
 }
