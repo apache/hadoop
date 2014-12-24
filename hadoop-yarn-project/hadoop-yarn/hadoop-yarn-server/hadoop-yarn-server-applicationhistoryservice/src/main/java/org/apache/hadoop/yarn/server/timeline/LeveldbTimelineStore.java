@@ -18,28 +18,8 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.readReverseOrderedLong;
-import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.writeReverseOrderedLong;
-import static org.fusesource.leveldbjni.JniDBFactory.bytes;
-
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,30 +33,30 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
+import org.apache.hadoop.yarn.api.records.timeline.*;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
+import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyBuilder;
+import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyParser;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.fusesource.leveldbjni.JniDBFactory;
-import org.iq80.leveldb.DB;
-import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Options;
-import org.iq80.leveldb.ReadOptions;
-import org.iq80.leveldb.WriteBatch;
-import org.iq80.leveldb.WriteOptions;
+import org.iq80.leveldb.*;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.readReverseOrderedLong;
+import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.writeReverseOrderedLong;
+import static org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.prefixMatches;
+import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 
 /**
  * <p>An implementation of an application timeline store backed by leveldb.</p>
@@ -357,102 +337,6 @@ public class LeveldbTimelineStore extends AbstractService
     }
   }
 
-  private static class KeyBuilder {
-    private static final int MAX_NUMBER_OF_KEY_ELEMENTS = 10;
-    private byte[][] b;
-    private boolean[] useSeparator;
-    private int index;
-    private int length;
-
-    public KeyBuilder(int size) {
-      b = new byte[size][];
-      useSeparator = new boolean[size];
-      index = 0;
-      length = 0;
-    }
-
-    public static KeyBuilder newInstance() {
-      return new KeyBuilder(MAX_NUMBER_OF_KEY_ELEMENTS);
-    }
-
-    public KeyBuilder add(String s) {
-      return add(s.getBytes(), true);
-    }
-
-    public KeyBuilder add(byte[] t) {
-      return add(t, false);
-    }
-
-    public KeyBuilder add(byte[] t, boolean sep) {
-      b[index] = t;
-      useSeparator[index] = sep;
-      length += t.length;
-      if (sep) {
-        length++;
-      }
-      index++;
-      return this;
-    }
-
-    public byte[] getBytes() throws IOException {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream(length);
-      for (int i = 0; i < index; i++) {
-        baos.write(b[i]);
-        if (i < index-1 && useSeparator[i]) {
-          baos.write(0x0);
-        }
-      }
-      return baos.toByteArray();
-    }
-
-    public byte[] getBytesForLookup() throws IOException {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream(length);
-      for (int i = 0; i < index; i++) {
-        baos.write(b[i]);
-        if (useSeparator[i]) {
-          baos.write(0x0);
-        }
-      }
-      return baos.toByteArray();
-    }
-  }
-
-  private static class KeyParser {
-    private final byte[] b;
-    private int offset;
-
-    public KeyParser(byte[] b, int offset) {
-      this.b = b;
-      this.offset = offset;
-    }
-
-    public String getNextString() throws IOException {
-      if (offset >= b.length) {
-        throw new IOException(
-            "tried to read nonexistent string from byte array");
-      }
-      int i = 0;
-      while (offset+i < b.length && b[offset+i] != 0x0) {
-        i++;
-      }
-      String s = new String(b, offset, i);
-      offset = offset + i + 1;
-      return s;
-    }
-
-    public long getNextLong() throws IOException {
-      if (offset+8 >= b.length) {
-        throw new IOException("byte array ran out when trying to read long");
-      }
-      long l = readReverseOrderedLong(b, offset);
-      offset += 8;
-      return l;
-    }
-
-    public int getOffset() {
-      return offset;
-    }
-  }
 
   @Override
   public TimelineEntity getEntity(String entityId, String entityType,
@@ -658,18 +542,6 @@ public class LeveldbTimelineStore extends AbstractService
       IOUtils.cleanup(LOG, iterator);
     }
     return events;
-  }
-
-  /**
-   * Returns true if the byte array begins with the specified prefix.
-   */
-  private static boolean prefixMatches(byte[] prefix, int prefixlen,
-      byte[] b) {
-    if (b.length < prefixlen) {
-      return false;
-    }
-    return WritableComparator.compareBytes(prefix, 0, prefixlen, b, 0,
-        prefixlen) == 0;
   }
 
   @Override
