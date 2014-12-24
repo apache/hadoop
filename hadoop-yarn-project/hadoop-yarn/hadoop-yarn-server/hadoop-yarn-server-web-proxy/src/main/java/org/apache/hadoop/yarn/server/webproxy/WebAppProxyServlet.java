@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.ObjectInputStream;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -68,9 +69,9 @@ public class WebAppProxyServlet extends HttpServlet {
   
   public static final String PROXY_USER_COOKIE_NAME = "proxy-user";
 
-  private final List<TrackingUriPlugin> trackingUriPlugins;
+  private transient List<TrackingUriPlugin> trackingUriPlugins;
   private final String rmAppPageUrlBase;
-  private final transient YarnConfiguration conf;
+  private transient YarnConfiguration conf;
 
   private static class _ implements Hamlet._ {
     //Empty
@@ -349,5 +350,14 @@ public class WebAppProxyServlet extends HttpServlet {
     } catch (YarnException e) {
       throw new IOException(e);
     }
+  }
+
+  private void readObject(ObjectInputStream input)
+      throws IOException, ClassNotFoundException {
+    input.defaultReadObject();
+    conf = new YarnConfiguration();
+    this.trackingUriPlugins =
+        conf.getInstances(YarnConfiguration.YARN_TRACKING_URL_GENERATOR,
+            TrackingUriPlugin.class);
   }
 }
