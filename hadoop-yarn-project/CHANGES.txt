@@ -243,6 +243,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2340. Fixed NPE when queue is stopped during RM restart.
     (Rohith Sharmaks via jianhe)
 
+    YARN-2940. Fix new findbugs warnings in rest of the hadoop-yarn components. (Li Lu 
+    via junping_du)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
