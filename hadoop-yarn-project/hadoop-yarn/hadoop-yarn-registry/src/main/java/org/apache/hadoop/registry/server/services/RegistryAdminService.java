@@ -217,9 +217,9 @@ public class RegistryAdminService extends RegistryOperationsService {
 
       String message = String.format(Locale.ENGLISH,
           "Failed to create root paths {%s};" +
-          "\ndiagnostics={%s}" +
-          "\ncurrent registry is:" +
-          "\n{%s}",
+          "%ndiagnostics={%s}" +
+          "%ncurrent registry is:" +
+          "%n{%s}",
           e,
           bindingDiagnosticDetails(),
           dumpRegistryRobustly(true));
