@@ -18,19 +18,29 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-public enum RMStateStoreEventType {
-  STORE_APP_ATTEMPT,
-  STORE_APP,
-  UPDATE_APP,
-  UPDATE_APP_ATTEMPT,
-  REMOVE_APP,
-  FENCED,
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 
-  // Below events should be called synchronously
-  STORE_MASTERKEY,
-  REMOVE_MASTERKEY,
-  STORE_DELEGATION_TOKEN,
-  REMOVE_DELEGATION_TOKEN,
-  UPDATE_DELEGATION_TOKEN,
-  UPDATE_AMRM_TOKEN
+public class RMStateStoreAMRMTokenEvent extends RMStateStoreEvent {
+  private AMRMTokenSecretManagerState amrmTokenSecretManagerState;
+  private boolean isUpdate;
+
+  public RMStateStoreAMRMTokenEvent(RMStateStoreEventType type) {
+    super(type);
+  }
+
+  public RMStateStoreAMRMTokenEvent(
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
+      boolean isUpdate, RMStateStoreEventType type) {
+    this(type);
+    this.amrmTokenSecretManagerState = amrmTokenSecretManagerState;
+    this.isUpdate = isUpdate;
+  }
+
+  public AMRMTokenSecretManagerState getAmrmTokenSecretManagerState() {
+    return amrmTokenSecretManagerState;
+  }
+
+  public boolean isUpdate() {
+    return isUpdate;
+  }
 }

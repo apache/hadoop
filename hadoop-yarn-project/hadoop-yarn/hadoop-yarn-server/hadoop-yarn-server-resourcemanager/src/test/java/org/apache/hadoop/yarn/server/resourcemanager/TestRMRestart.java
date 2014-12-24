@@ -88,7 +88,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreAMRMTokenEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreRMDTEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreRMDTMasterKeyEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -1458,7 +1461,12 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       @Override
       protected void handleStoreEvent(RMStateStoreEvent event) {
         // Block app saving request.
-        while (wait);
+        // Skip if synchronous updation of DTToken
+        if (!(event instanceof RMStateStoreAMRMTokenEvent)
+            && !(event instanceof RMStateStoreRMDTEvent)
+            && !(event instanceof RMStateStoreRMDTMasterKeyEvent)) {
+          while (wait);
+        }
         super.handleStoreEvent(event);
       }
     };

@@ -641,11 +641,7 @@ public class LeveldbRMStateStore extends RMStateStore {
     AMRMTokenSecretManagerState data =
         AMRMTokenSecretManagerState.newInstance(state);
     byte[] stateData = data.getProto().toByteArray();
-    try {
-      db.put(bytes(AMRMTOKEN_SECRET_MANAGER_ROOT), stateData);
-    } catch (DBException e) {
-      notifyStoreOperationFailed(e);
-    }
+    db.put(bytes(AMRMTOKEN_SECRET_MANAGER_ROOT), stateData);
   }
 
   @Override
