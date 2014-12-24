@@ -260,10 +260,9 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         blacklistToAdd.addAll(blacklistAdditions);
         blacklistToRemove.addAll(blacklistRemovals);
         
-        ResourceBlacklistRequest blacklistRequest = 
-            (blacklistToAdd != null) || (blacklistToRemove != null) ? 
+        ResourceBlacklistRequest blacklistRequest =
             ResourceBlacklistRequest.newInstance(blacklistToAdd,
-                blacklistToRemove) : null;
+                blacklistToRemove);
         
         allocateRequest =
             AllocateRequest.newInstance(lastResponseId, progressIndicator,

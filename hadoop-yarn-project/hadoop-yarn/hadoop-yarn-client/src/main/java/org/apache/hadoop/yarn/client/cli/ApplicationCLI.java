@@ -19,7 +19,9 @@ package org.apache.hadoop.yarn.client.cli;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -276,7 +278,8 @@ public class ApplicationCLI extends YarnCLI {
     }
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    PrintWriter appAttemptReportStr = new PrintWriter(baos);
+    PrintWriter appAttemptReportStr = new PrintWriter(
+        new OutputStreamWriter(baos, Charset.forName("UTF-8")));
     if (appAttemptReport != null) {
       appAttemptReportStr.println("Application Attempt Report : ");
       appAttemptReportStr.print("\tApplicationAttempt-Id : ");
@@ -335,7 +338,8 @@ public class ApplicationCLI extends YarnCLI {
     }
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    PrintWriter containerReportStr = new PrintWriter(baos);
+    PrintWriter containerReportStr = new PrintWriter(
+        new OutputStreamWriter(baos, Charset.forName("UTF-8")));
     if (containerReport != null) {
       containerReportStr.println("Container Report : ");
       containerReportStr.print("\tContainer-Id : ");
@@ -376,7 +380,8 @@ public class ApplicationCLI extends YarnCLI {
   private void listApplications(Set<String> appTypes,
       EnumSet<YarnApplicationState> appStates) throws YarnException,
       IOException {
-    PrintWriter writer = new PrintWriter(sysout);
+    PrintWriter writer = new PrintWriter(
+        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
     if (allAppStates) {
       for (YarnApplicationState appState : YarnApplicationState.values()) {
         appStates.add(appState);
@@ -478,7 +483,8 @@ public class ApplicationCLI extends YarnCLI {
     }
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    PrintWriter appReportStr = new PrintWriter(baos);
+    PrintWriter appReportStr = new PrintWriter(
+        new OutputStreamWriter(baos, Charset.forName("UTF-8")));
     if (appReport != null) {
       appReportStr.println("Application Report : ");
       appReportStr.print("\tApplication-Id : ");
@@ -554,7 +560,8 @@ public class ApplicationCLI extends YarnCLI {
    */
   private void listApplicationAttempts(String applicationId) throws YarnException,
       IOException {
-    PrintWriter writer = new PrintWriter(sysout);
+    PrintWriter writer = new PrintWriter(
+        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
 
     List<ApplicationAttemptReport> appAttemptsReport = client
         .getApplicationAttempts(ConverterUtils.toApplicationId(applicationId));
@@ -580,7 +587,8 @@ public class ApplicationCLI extends YarnCLI {
    */
   private void listContainers(String appAttemptId) throws YarnException,
       IOException {
-    PrintWriter writer = new PrintWriter(sysout);
+    PrintWriter writer = new PrintWriter(
+        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
 
     List<ContainerReport> appsReport = client
         .getContainers(ConverterUtils.toApplicationAttemptId(appAttemptId));
