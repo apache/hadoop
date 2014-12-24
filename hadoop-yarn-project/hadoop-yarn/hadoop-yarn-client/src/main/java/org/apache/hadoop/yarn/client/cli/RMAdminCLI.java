@@ -93,9 +93,6 @@ public class RMAdminCLI extends HAAdmin {
                   "ResoureceManager will reload the authorization policy file."))
           .put("-getGroups", new UsageInfo("[username]",
               "Get the groups which given user belongs to."))
-          .put("-help", new UsageInfo("[cmd]",
-              "Displays help for the given command or all commands if none " +
-                  "is specified."))
           .put("-addToClusterNodeLabels",
               new UsageInfo("[label1,label2,label3] (label splitted by \",\")",
                   "add to cluster node labels "))
@@ -184,6 +181,7 @@ public class RMAdminCLI extends HAAdmin {
         }
       }
     }
+    builder.append("   -help" + " [cmd]\n");
   }
 
   private static void printHelp(String cmd, boolean isHAEnabled) {
@@ -199,10 +197,14 @@ public class RMAdminCLI extends HAAdmin {
       " [-refreshAdminAcls]" +
       " [-refreshServiceAcl]" +
       " [-getGroup [username]]" +
-      " [-help [cmd]]");
+      " [[-addToClusterNodeLabels [label1,label2,label3]]" +
+      " [-removeFromClusterNodeLabels [label1,label2,label3]]" +
+      " [-replaceLabelsOnNode [node1:port,label1,label2 node2:port,label1]" +
+      " [-directlyAccessNodeLabelStore]]");
     if (isHAEnabled) {
       appendHAUsage(summary);
     }
+    summary.append(" [-help [cmd]]");
     summary.append("\n");
 
     StringBuilder helpBuilder = new StringBuilder();
@@ -219,6 +221,8 @@ public class RMAdminCLI extends HAAdmin {
         }
       }
     }
+    helpBuilder.append("   -help [cmd]: Displays help for the given command or all commands" +
+        " if none is specified.");
     System.out.println(helpBuilder);
     System.out.println();
     ToolRunner.printGenericCommandUsage(System.out);
