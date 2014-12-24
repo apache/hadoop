@@ -29,6 +29,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -501,7 +502,7 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
           try
           {
             BufferedReader lines = new BufferedReader(
-                new InputStreamReader(stream));
+                new InputStreamReader(stream, Charset.forName("UTF-8")));
             char[] buf = new char[512];
             int nRead;
             while ((nRead = lines.read(buf, 0, buf.length)) > 0) {
@@ -718,7 +719,7 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
        }
        catch(Throwable e) {
          LOG.warn(String.format(
-             "An exception occured during the cleanup of localizer job %s:\n%s", 
+             "An exception occured during the cleanup of localizer job %s:%n%s", 
              localizerPid, 
              org.apache.hadoop.util.StringUtils.stringifyException(e)));
        }
