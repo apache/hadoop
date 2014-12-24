@@ -114,6 +114,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2949. Add documentation for CGroups (Varun Vasudev via junping_du)
 
+    YARN-2970. NodeLabel operations in RMAdmin CLI get missing in help command.
+    (Varun Saxena via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
