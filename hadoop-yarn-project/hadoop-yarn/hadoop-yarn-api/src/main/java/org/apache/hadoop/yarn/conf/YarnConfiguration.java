@@ -1137,7 +1137,7 @@ public class YarnConfiguration extends Configuration {
    * OS environment expansion syntax.
    * </p>
    * <p>
-   * Note: Use {@link DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH} for
+   * Note: Use {@link #DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH} for
    * cross-platform practice i.e. submit an application from a Windows client to
    * a Linux/Unix server or vice versa.
    * </p>
@@ -1365,6 +1365,22 @@ public class YarnConfiguration extends Configuration {
 
   public static final long
       DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS = 1000;
+
+  /** Flag to enable recovery of timeline service */
+  public static final String TIMELINE_SERVICE_RECOVERY_ENABLED =
+      TIMELINE_SERVICE_PREFIX + "recovery.enabled";
+  public static final boolean DEFAULT_TIMELINE_SERVICE_RECOVERY_ENABLED = false;
+
+  /** Timeline service state store class */
+  public static final String TIMELINE_SERVICE_STATE_STORE_CLASS =
+      TIMELINE_SERVICE_PREFIX + "state-store-class";
+
+  public static final String TIMELINE_SERVICE_LEVELDB_STATE_STORE_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "leveldb-state-store.";
+
+  /** Timeline service state store leveldb path */
+  public static final String TIMELINE_SERVICE_LEVELDB_STATE_STORE_PATH =
+      TIMELINE_SERVICE_LEVELDB_STATE_STORE_PREFIX + "path";
 
   // ///////////////////////////////
   // Shared Cache Configs

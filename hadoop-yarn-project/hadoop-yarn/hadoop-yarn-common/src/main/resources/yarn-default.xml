@@ -1378,6 +1378,26 @@
     <value>1000</value>
   </property>
 
+  <property>
+    <description>Enable timeline server to recover state after starting. If
+    true, then yarn.timeline-service.state-store-class must be specified.
+    </description>
+    <name>yarn.timeline-service.recovery.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Store class name for timeline state store.</description>
+    <name>yarn.timeline-service.state-store-class</name>
+    <value>org.apache.hadoop.yarn.server.timeline.recovery.LeveldbTimelineStateStore</value>
+  </property>
+
+  <property>
+    <description>Store file name for leveldb state store.</description>
+    <name>yarn.timeline-service.leveldb-state-store.path</name>
+    <value>${hadoop.tmp.dir}/yarn/timeline</value>
+  </property>
+
   <!--  Shared Cache Configuration -->
   <property>
     <description>Whether the shared cache is enabled</description>
