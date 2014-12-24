@@ -25,7 +25,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Map;
@@ -233,11 +232,11 @@ public class UnmanagedAMLauncher {
     Process amProc = Runtime.getRuntime().exec(amCmd, envAMList.toArray(envAM));
 
     final BufferedReader errReader = 
-        new BufferedReader(new InputStreamReader(
-            amProc.getErrorStream(), Charset.forName("UTF-8")));
+        new BufferedReader(new InputStreamReader(amProc
+                                                 .getErrorStream()));
     final BufferedReader inReader = 
-        new BufferedReader(new InputStreamReader(
-            amProc.getInputStream(), Charset.forName("UTF-8")));
+        new BufferedReader(new InputStreamReader(amProc
+                                                 .getInputStream()));
     
     // read error and input streams as this would free up the buffers
     // free the error stream buffer

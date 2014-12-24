@@ -18,9 +18,7 @@
 package org.apache.hadoop.yarn.client.cli;
 
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.Set;
 
@@ -104,8 +102,7 @@ public class QueueCLI extends YarnCLI {
    */
   private int listQueue(String queueName) throws YarnException, IOException {
     int rc;
-    PrintWriter writer = new PrintWriter(
-        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
+    PrintWriter writer = new PrintWriter(sysout);
 
     QueueInfo queueInfo = client.getQueueInfo(queueName);
     if (queueInfo != null) {
