@@ -592,17 +592,17 @@ public class RegistrySecurity extends AbstractService {
    * Note the semicolon on the last entry
    */
   private static final String JAAS_ENTRY =
-      "%s { \n"
-      + " %s required\n"
+      "%s { %n"
+      + " %s required%n"
       // kerberos module
-      + " keyTab=\"%s\"\n"
-      + " debug=true\n"
-      + " principal=\"%s\"\n"
-      + " useKeyTab=true\n"
-      + " useTicketCache=false\n"
-      + " doNotPrompt=true\n"
-      + " storeKey=true;\n"
-      + "}; \n"
+      + " keyTab=\"%s\"%n"
+      + " debug=true%n"
+      + " principal=\"%s\"%n"
+      + " useKeyTab=true%n"
+      + " useTicketCache=false%n"
+      + " doNotPrompt=true%n"
+      + " storeKey=true;%n"
+      + "}; %n"
       ;
 
   /**
