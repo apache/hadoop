@@ -491,10 +491,7 @@ public class CuratorService extends CompositeService
   public boolean zkPathExists(String path) throws IOException {
     checkServiceLive();
     try {
-      // if zkStat(path) returns without throwing an exception, the return value
-      // is guaranteed to be not null
-      zkStat(path);
-      return true;
+      return zkStat(path) != null;
     } catch (PathNotFoundException e) {
       return false;
     } catch (IOException e) {
