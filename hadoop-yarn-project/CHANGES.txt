@@ -246,6 +246,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2940. Fix new findbugs warnings in rest of the hadoop-yarn components. (Li Lu 
     via junping_du)
 
+    YARN-2937. Fixed new findbugs warnings in hadoop-yarn-nodemanager. (Varun Saxena
+    via zjshen)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
