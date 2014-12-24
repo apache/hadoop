@@ -279,7 +279,10 @@ public class TestRMAdminCLI {
               "yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper" +
               "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
-              " [username]] [-help [cmd]]"));
+              " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]" +
+              " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode " +
+              "[node1:port,label1,label2 node2:port,label1] [-directlyAccessNodeLabelStore]] " +
+              "[-help [cmd]]"));
       assertTrue(dataOut
           .toString()
           .contains(
@@ -358,10 +361,13 @@ public class TestRMAdminCLI {
               "yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper" +
               "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
-              " [username]] [-help [cmd]] [-transitionToActive <serviceId>" + 
-              " [--forceactive]] [-transitionToStandby <serviceId>] [-failover" +
+              " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]" +
+              " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode " +
+              "[node1:port,label1,label2 node2:port,label1] [-directlyAccessNodeLabelStore]] " +
+              "[-transitionToActive <serviceId> [--forceactive]] " + 
+              "[-transitionToStandby <serviceId>] [-failover" +
               " [--forcefence] [--forceactive] <serviceId> <serviceId>] " +
-              "[-getServiceState <serviceId>] [-checkHealth <serviceId>]"));
+              "[-getServiceState <serviceId>] [-checkHealth <serviceId>] [-help [cmd]]"));
     } finally {
       System.setOut(oldOutPrintStream);
       System.setErr(oldErrPrintStream);
