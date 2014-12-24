@@ -624,22 +624,17 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   @Override
   public synchronized void storeOrUpdateAMRMTokenSecretManagerState(
-      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
-      boolean isUpdate){
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState, boolean isUpdate)
+      throws Exception {
     Path nodeCreatePath =
         getNodePath(amrmTokenSecretManagerRoot, AMRMTOKEN_SECRET_MANAGER_NODE);
     AMRMTokenSecretManagerState data =
         AMRMTokenSecretManagerState.newInstance(amrmTokenSecretManagerState);
     byte[] stateData = data.getProto().toByteArray();
-    try {
-      if (isUpdate) {
-        updateFile(nodeCreatePath, stateData);
-      } else {
-        writeFile(nodeCreatePath, stateData);
-      }
-    } catch (Exception ex) {
-      LOG.info("Error storing info for AMRMTokenSecretManager", ex);
-      notifyStoreOperationFailed(ex);
+    if (isUpdate) {
+      updateFile(nodeCreatePath, stateData);
+    } else {
+      writeFile(nodeCreatePath, stateData);
     }
   }
 
