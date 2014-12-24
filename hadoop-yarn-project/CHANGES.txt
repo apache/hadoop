@@ -117,6 +117,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2970. NodeLabel operations in RMAdmin CLI get missing in help command.
     (Varun Saxena via junping_du)
 
+    YARN-2837. Support TimeLine server to recover delegation token when
+    restarting. (Zhijie Shen via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

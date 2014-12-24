@@ -402,4 +402,9 @@
     <Bug pattern="DM_DEFAULT_ENCODING" />
   </Match>
 
+  <!-- Ignore EI_EXPOSE_REP2 in timeline service -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils$KeyParser" />
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
 </FindBugsFilter>
