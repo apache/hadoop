@@ -301,9 +301,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         return ExitCode.TERMINATED.getExitCode();
       }
     } catch (ExitCodeException e) {
-      if (null == shExec) {
-        return -1;
-      }
       int exitCode = shExec.getExitCode();
       LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
       // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was

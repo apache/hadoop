@@ -226,7 +226,7 @@ public abstract class ContainerExecutor implements Configurable {
 
     PrintStream pout = null;
     try {
-      pout = new PrintStream(out);
+      pout = new PrintStream(out, false, "UTF-8");
       sb.write(pout);
     } finally {
       if (out != null) {
