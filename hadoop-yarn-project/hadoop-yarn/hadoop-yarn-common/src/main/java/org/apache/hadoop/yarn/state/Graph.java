@@ -188,10 +188,10 @@ public class Graph {
   }
 
   public void save(String filepath) throws IOException {
-    OutputStreamWriter fout = new OutputStreamWriter(
-        new FileOutputStream(filepath), Charset.forName("UTF-8"));
-    fout.write(generateGraphViz());
-    fout.close();
+    try (OutputStreamWriter fout = new OutputStreamWriter(
+        new FileOutputStream(filepath), Charset.forName("UTF-8"));) {
+      fout.write(generateGraphViz());
+    }
   }
 
   public static List<Edge> combineEdges(List<Edge> edges) {
