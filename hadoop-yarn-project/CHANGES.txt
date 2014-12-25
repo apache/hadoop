@@ -252,6 +252,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2946. Fixed potential deadlock in RMStateStore. (Rohith Sharmaks via
     jianhe)
 
+    YARN-2988. Graph#save() may leak file descriptors. (Ted Yu via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
