@@ -253,6 +253,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7591. hdfs classpath command should support same options as hadoop
     classpath. (Varun Saxena via Arpit Agarwal)
 
+    HDFS-7573. Consolidate the implementation of delete() into a single class.
+    (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
