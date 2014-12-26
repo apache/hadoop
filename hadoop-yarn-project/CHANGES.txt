@@ -120,6 +120,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2837. Support TimeLine server to recover delegation token when
     restarting. (Zhijie Shen via jianhe)
 
+    YARN-2993. Several fixes (missing acl check, error log msg ...) and some 
+    refinement in AdminService. (Yi Liu via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES
