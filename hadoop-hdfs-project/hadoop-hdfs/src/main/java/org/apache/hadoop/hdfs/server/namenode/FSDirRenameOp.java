@@ -281,7 +281,7 @@ class FSDirRenameOp {
     try {
       if (unprotectedRenameTo(fsd, src, dst, srcIIP, dstIIP, mtime,
           collectedBlocks, options)) {
-        fsd.getFSNamesystem().incrDeletedFileCount(1);
+        FSDirDeleteOp.incrDeletedFileCount(1);
       }
     } finally {
       fsd.writeUnlock();
@@ -731,8 +731,7 @@ class FSDirRenameOp {
             dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes,
             true).get(Quota.NAMESPACE) >= 0;
       }
-      fsd.getFSNamesystem().removePathAndBlocks(src, null, removedINodes,
-          false);
+      fsd.getFSNamesystem().removeLeasesAndINodes(src, removedINodes, false);
       return filesDeleted;
     }
 
