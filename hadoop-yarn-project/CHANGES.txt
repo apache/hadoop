@@ -257,6 +257,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2988. Graph#save() may leak file descriptors. (Ted Yu via ozawa)
 
+    YARN-2992. ZKRMStateStore crashes due to session expiry. (Karthik Kambatla
+    via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
