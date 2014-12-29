@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -1108,7 +1109,7 @@ public class ZKRMStateStore extends RMStateStore {
         }
         if (useDefaultFencingScheme) {
           zkClient.addAuthInfo(zkRootNodeAuthScheme,
-              (zkRootNodeUsername + ":" + zkRootNodePassword).getBytes());
+              (zkRootNodeUsername + ":" + zkRootNodePassword).getBytes(Charset.forName("UTF-8")));
         }
       } catch (IOException ioe) {
         // Retry in case of network failures

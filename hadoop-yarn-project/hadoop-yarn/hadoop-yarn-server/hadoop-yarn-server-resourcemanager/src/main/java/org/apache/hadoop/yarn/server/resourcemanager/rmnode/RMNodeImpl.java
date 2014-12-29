@@ -448,6 +448,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     case UNHEALTHY:
       metrics.decrNumUnhealthyNMs();
       break;
+    default:
+      LOG.debug("Unexpected previous node state");    
     }
   }
 
@@ -462,6 +464,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       case UNHEALTHY:
         metrics.decrNumUnhealthyNMs();
         break;
+      default:
+        LOG.debug("Unexpected inital state");
     }
 
     switch (finalState) {
@@ -477,6 +481,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     case UNHEALTHY:
       metrics.incrNumUnhealthyNMs();
       break;
+    default:
+      LOG.debug("Unexpected final state");
     }
   }
 
@@ -583,6 +589,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             case UNHEALTHY:
               ClusterMetrics.getMetrics().decrNumUnhealthyNMs();
               break;
+            default:
+              LOG.debug("Unexpected Rmnode state");
             }
             rmNode.context.getRMNodes().put(newNode.getNodeID(), newNode);
             rmNode.context.getDispatcher().getEventHandler().handle(

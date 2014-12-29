@@ -417,4 +417,36 @@
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sharedcache.SharedCacheUploadService" />
     <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
   </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt" />
+    <Field name="queue" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
+    <Field name="allocConf" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode" />
+    <Field name="numContainers" />
+    <Bug pattern="VO_VOLATILE_INCREMENT" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue" />
+    <Field name="numContainers" />
+    <Bug pattern="VO_VOLATILE_INCREMENT" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue" />
+    <Field name="numApplications" />
+    <Bug pattern="VO_VOLATILE_INCREMENT" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler" />
+    <Method name="recoverContainersOnNode" />
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE" />
+  </Match>
+
 </FindBugsFilter>
