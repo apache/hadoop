@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.yarn.server.timeline.security;
 
-import java.io.FileReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -113,7 +116,9 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
       Reader reader = null;
       try {
         StringBuilder secret = new StringBuilder();
-        reader = new FileReader(signatureSecretFile);
+        reader = new InputStreamReader(new FileInputStream(new File(signatureSecretFile)),
+                                      Charset.forName("UTF-8"));
+
         int c = reader.read();
         while (c > -1) {
           secret.append((char) c);
