@@ -92,6 +92,8 @@ class NodesPage extends RmView {
           rmNodes = this.rm.getRMContext().getInactiveRMNodes().values();
           isInactive = true;
           break;
+        default:
+          LOG.debug("Unexpected state filter for inactive RM node");
         }
       }
       for (RMNode ni : rmNodes) {
