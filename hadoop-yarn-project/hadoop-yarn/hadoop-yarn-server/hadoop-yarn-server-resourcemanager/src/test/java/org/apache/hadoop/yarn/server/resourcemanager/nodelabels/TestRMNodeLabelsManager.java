@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.nodelabels.NodeLabel;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelTestBase;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
@@ -427,5 +429,36 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     } catch (IOException e) {
       Assert.fail("IOException from removeLabelsFromNode " + e);
     }
+  }
+  
+  private void checkNodeLabelInfo(List<NodeLabel> infos, String labelName, int activeNMs, int memory) {
+    for (NodeLabel info : infos) {
+      if (info.getLabelName().equals(labelName)) {
+        Assert.assertEquals(activeNMs, info.getNumActiveNMs());
+        Assert.assertEquals(memory, info.getResource().getMemory());
+        return;
+      }
+    }
+    Assert.fail("Failed to find info has label=" + labelName);
+  }
+  
+  @Test(timeout = 5000)
+  public void testPullRMNodeLabelsInfo() throws IOException {
+    mgr.addToCluserNodeLabels(toSet("x", "y", "z"));
+    mgr.activateNode(NodeId.newInstance("n1", 1), Resource.newInstance(10, 0));
+    mgr.activateNode(NodeId.newInstance("n2", 1), Resource.newInstance(10, 0));
+    mgr.activateNode(NodeId.newInstance("n3", 1), Resource.newInstance(10, 0));
+    mgr.activateNode(NodeId.newInstance("n4", 1), Resource.newInstance(10, 0));
+    mgr.activateNode(NodeId.newInstance("n5", 1), Resource.newInstance(10, 0));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("x"),
+        toNodeId("n2"), toSet("x"), toNodeId("n3"), toSet("y")));
+    
+    // x, y, z and ""
+    List<NodeLabel> infos = mgr.pullRMNodeLabelsInfo();
+    Assert.assertEquals(4, infos.size());
+    checkNodeLabelInfo(infos, RMNodeLabelsManager.NO_LABEL, 2, 20);
+    checkNodeLabelInfo(infos, "x", 2, 20);
+    checkNodeLabelInfo(infos, "y", 1, 10);
+    checkNodeLabelInfo(infos, "z", 0, 0);
   }
 }

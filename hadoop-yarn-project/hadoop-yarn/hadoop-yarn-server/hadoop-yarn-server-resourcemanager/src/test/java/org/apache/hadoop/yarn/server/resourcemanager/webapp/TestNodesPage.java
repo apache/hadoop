@@ -106,4 +106,49 @@ public class TestNodesPage {
             * numberOfActualTableHeaders + numberOfThInMetricsTable)).print(
         "<td");
   }
+  
+  @Test
+  public void testNodesBlockRenderForNodeLabelFilterWithNonEmptyLabel() {
+    NodesBlock nodesBlock = injector.getInstance(NodesBlock.class);
+    nodesBlock.set("node.label", "x");
+    nodesBlock.render();
+    PrintWriter writer = injector.getInstance(PrintWriter.class);
+    WebAppTests.flushOutput(injector);
+
+    Mockito.verify(
+        writer,
+        Mockito.times(numberOfRacks
+            * numberOfActualTableHeaders + numberOfThInMetricsTable)).print(
+        "<td");
+  }
+  
+  @Test
+  public void testNodesBlockRenderForNodeLabelFilterWithEmptyLabel() {
+    NodesBlock nodesBlock = injector.getInstance(NodesBlock.class);
+    nodesBlock.set("node.label", "");
+    nodesBlock.render();
+    PrintWriter writer = injector.getInstance(PrintWriter.class);
+    WebAppTests.flushOutput(injector);
+
+    Mockito.verify(
+        writer,
+        Mockito.times(numberOfRacks * (numberOfNodesPerRack - 1)
+            * numberOfActualTableHeaders + numberOfThInMetricsTable)).print(
+        "<td");
+  }
+  
+  @Test
+  public void testNodesBlockRenderForNodeLabelFilterWithAnyLabel() {
+    NodesBlock nodesBlock = injector.getInstance(NodesBlock.class);
+    nodesBlock.set("node.label", "*");
+    nodesBlock.render();
+    PrintWriter writer = injector.getInstance(PrintWriter.class);
+    WebAppTests.flushOutput(injector);
+
+    Mockito.verify(
+        writer,
+        Mockito.times(numberOfRacks * numberOfNodesPerRack
+            * numberOfActualTableHeaders + numberOfThInMetricsTable)).print(
+        "<td");
+  }
 }
