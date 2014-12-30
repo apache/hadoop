@@ -32,4 +32,5 @@ public interface YarnWebParams {
   String APP_STATE = "app.state";
   String QUEUE_NAME = "queue.name";
   String NODE_STATE = "node.state";
+  String NODE_LABEL = "node.label";
 }
