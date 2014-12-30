@@ -72,8 +72,8 @@ public class CommonNodeLabelsManager extends AbstractService {
 
   protected Dispatcher dispatcher;
 
-  protected ConcurrentMap<String, Label> labelCollections =
-      new ConcurrentHashMap<String, Label>();
+  protected ConcurrentMap<String, NodeLabel> labelCollections =
+      new ConcurrentHashMap<String, NodeLabel>();
   protected ConcurrentMap<String, Host> nodeCollections =
       new ConcurrentHashMap<String, Host>();
 
@@ -81,19 +81,6 @@ public class CommonNodeLabelsManager extends AbstractService {
   protected final WriteLock writeLock;
 
   protected NodeLabelsStore store;
-
-  protected static class Label {
-    private Resource resource;
-
-    protected Label() {
-      this.resource = Resource.newInstance(0, 0);
-    }
-
-    public Resource getResource() {
-      return this.resource;
-    }
-
-  }
 
   /**
    * A <code>Host</code> can have multiple <code>Node</code>s 
@@ -201,7 +188,7 @@ public class CommonNodeLabelsManager extends AbstractService {
   protected void serviceInit(Configuration conf) throws Exception {
     initNodeLabelStore(conf);
     
-    labelCollections.put(NO_LABEL, new Label());
+    labelCollections.put(NO_LABEL, new NodeLabel(NO_LABEL));
   }
 
   protected void initNodeLabelStore(Configuration conf) throws Exception {
@@ -271,7 +258,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     for (String label : labels) {
       // shouldn't overwrite it to avoid changing the Label.resource
       if (this.labelCollections.get(label) == null) {
-        this.labelCollections.put(label, new Label());
+        this.labelCollections.put(label, new NodeLabel(label));
         newLabels.add(label);
       }
     }
