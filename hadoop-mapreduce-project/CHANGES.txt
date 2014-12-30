@@ -238,6 +238,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-6149. Document override log4j.properties in MR job.
+    (Junping Du via harsh)
+
     MAPREDUCE-6194. Bubble up final exception in failures during creation
     of output collectors (Varun Saxena via harsh)
 
