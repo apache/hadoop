@@ -123,6 +123,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2993. Several fixes (missing acl check, error log msg ...) and some 
     refinement in AdminService. (Yi Liu via junping_du)
 
+    YARN-2943. Added node-labels page on RM web UI. (Wangda Tan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

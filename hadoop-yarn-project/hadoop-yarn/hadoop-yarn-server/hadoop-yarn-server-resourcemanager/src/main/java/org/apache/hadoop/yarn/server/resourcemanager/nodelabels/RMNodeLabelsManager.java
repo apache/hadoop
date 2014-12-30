@@ -19,10 +19,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -37,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.nodelabels.NodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -360,8 +363,8 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         // no label in the past
         if (oldLabels.isEmpty()) {
           // update labels
-          Label label = labelCollections.get(NO_LABEL);
-          Resources.subtractFrom(label.getResource(), oldNM.resource);
+          NodeLabel label = labelCollections.get(NO_LABEL);
+          label.removeNode(oldNM.resource);
 
           // update queues, all queue can access this node
           for (Queue q : queueCollections.values()) {
@@ -370,11 +373,11 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         } else {
           // update labels
           for (String labelName : oldLabels) {
-            Label label = labelCollections.get(labelName);
+            NodeLabel label = labelCollections.get(labelName);
             if (null == label) {
               continue;
             }
-            Resources.subtractFrom(label.getResource(), oldNM.resource);
+            label.removeNode(oldNM.resource);
           }
 
           // update queues, only queue can access this node will be subtract
@@ -395,8 +398,8 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         // no label in the past
         if (newLabels.isEmpty()) {
           // update labels
-          Label label = labelCollections.get(NO_LABEL);
-          Resources.addTo(label.getResource(), newNM.resource);
+          NodeLabel label = labelCollections.get(NO_LABEL);
+          label.addNode(newNM.resource);
 
           // update queues, all queue can access this node
           for (Queue q : queueCollections.values()) {
@@ -405,8 +408,8 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         } else {
           // update labels
           for (String labelName : newLabels) {
-            Label label = labelCollections.get(labelName);
-            Resources.addTo(label.getResource(), newNM.resource);
+            NodeLabel label = labelCollections.get(labelName);
+            label.addNode(newNM.resource);
           }
 
           // update queues, only queue can access this node will be subtract
@@ -474,5 +477,22 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
   
   public void setRMContext(RMContext rmContext) {
     this.rmContext = rmContext;
+  }
+
+  public List<NodeLabel> pullRMNodeLabelsInfo() {
+    try {
+      readLock.lock();
+      List<NodeLabel> infos = new ArrayList<NodeLabel>();
+
+      for (Entry<String, NodeLabel> entry : labelCollections.entrySet()) {
+        NodeLabel label = entry.getValue();
+        infos.add(label.getCopy());
+      }
+
+      Collections.sort(infos);
+      return infos;
+    } finally {
+      readLock.unlock();
+    }
   }
 }
