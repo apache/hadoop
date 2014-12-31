@@ -33,8 +33,7 @@ public class NavBlock extends HtmlBlock {
         h3("Cluster").
         ul().
           li().a(url("cluster"), "About")._().
-          li().a(url("nodes"), "Nodes")._().
-          li().a(url("nodelabels"), "Node Labels")._();
+          li().a(url("nodes"), "Nodes")._();
     UL<LI<UL<DIV<Hamlet>>>> subAppsList = mainList.
           li().a(url("apps"), "Applications").
             ul();
