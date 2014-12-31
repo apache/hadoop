@@ -827,6 +827,14 @@ public class ClientRMService extends AbstractService implements
   @Override
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
       throws YarnException {
+    UserGroupInformation callerUGI;
+    try {
+      callerUGI = UserGroupInformation.getCurrentUser();
+    } catch (IOException ie) {
+      LOG.info("Error getting UGI ", ie);
+      throw RPCUtil.getRemoteException(ie);
+    }
+
     GetQueueInfoResponse response =
       recordFactory.newRecordInstance(GetQueueInfoResponse.class);
     try {
@@ -841,7 +849,16 @@ public class ClientRMService extends AbstractService implements
         appReports = new ArrayList<ApplicationReport>(apps.size());
         for (ApplicationAttemptId app : apps) {
           RMApp rmApp = rmContext.getRMApps().get(app.getApplicationId());
-          appReports.add(rmApp.createAndGetApplicationReport(null, true));
+          if (rmApp != null) {
+            // Check if user is allowed access to this app
+            if (!checkAccess(callerUGI, rmApp.getUser(),
+                ApplicationAccessType.VIEW_APP, rmApp)) {
+              continue;
+            }
+            appReports.add(
+                rmApp.createAndGetApplicationReport(
+                    callerUGI.getUserName(), true));
+          }          
         }
       }
       queueInfo.setApplications(appReports);
