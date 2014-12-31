@@ -104,7 +104,7 @@ public class ReservationSystemTestUtil {
         .assertTrue(newPlan.getSharingPolicy() instanceof CapacityOverTimePolicy);
   }
 
-  static void setupFSAllocationFile(String allocationFile)
+  public static void setupFSAllocationFile(String allocationFile)
       throws IOException {
     PrintWriter out = new PrintWriter(new FileWriter(allocationFile));
     out.println("<?xml version=\"1.0\"?>");
@@ -130,7 +130,7 @@ public class ReservationSystemTestUtil {
     out.close();
   }
 
-  static void updateFSAllocationFile(String allocationFile)
+  public static void updateFSAllocationFile(String allocationFile)
       throws IOException {
     PrintWriter out = new PrintWriter(new FileWriter(allocationFile));
     out.println("<?xml version=\"1.0\"?>");
