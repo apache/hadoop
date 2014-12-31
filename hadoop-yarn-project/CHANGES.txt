@@ -38,6 +38,7 @@ Release 2.7.0 - UNRELEASED
     YARN-2738. [YARN-2574] Add FairReservationSystem for FairScheduler. 
     (Anubhav Dhoot via kasha)
 
+
   IMPROVEMENTS
 
     YARN-2950. Change message to mandate, not suggest JS requirement on UI.
@@ -124,6 +125,10 @@ Release 2.7.0 - UNRELEASED
     refinement in AdminService. (Yi Liu via junping_du)
 
     YARN-2943. Added node-labels page on RM web UI. (Wangda Tan via jianhe)
+
+    YARN-2998. Abstract out scheduler independent PlanFollower components. 
+    (Anubhav Dhoot via kasha)
+
 
   OPTIMIZATIONS
 
