@@ -141,6 +141,8 @@ Trunk (Unreleased)
     HADOOP-11352 Clean up test-patch.sh to disable "+1 contrib tests"
     (Akira AJISAKA via stevel)
 
+    HADOOP-10788. Rewrite kms to use new shell framework (John Smith via aw)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
