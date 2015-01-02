@@ -55,7 +55,9 @@ public class TestShellBasedIdMapping {
         "uid 13 302\n" +
         "gid\t11\t201\n" + // Tabs instead of spaces.
         "\n" + // Entirely empty line.
-        "gid 12 202";
+        "gid 12 202\n" +
+        "uid 4294967294 123\n" +
+        "gid 4294967295 321";
     OutputStream out = new FileOutputStream(tempStaticMapFile);
     out.write(staticMapFileContents.getBytes());
     out.close();
@@ -71,6 +73,10 @@ public class TestShellBasedIdMapping {
     assertEquals(10000, (int)parsedMap.uidMapping.get(10001));
     // Ensure pass-through of unmapped IDs works.
     assertEquals(1000, (int)parsedMap.uidMapping.get(1000));
+    
+    assertEquals(-2, (int)parsedMap.uidMapping.get(123));
+    assertEquals(-1, (int)parsedMap.gidMapping.get(321));
+    
   }
   
   @Test

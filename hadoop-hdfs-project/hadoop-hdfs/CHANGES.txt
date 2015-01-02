@@ -379,6 +379,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7456. De-duplicate AclFeature instances with same AclEntries do reduce
     memory footprint of NameNode (vinayakumarb)
 
+    HDFS-7563. NFS gateway parseStaticMap NumberFormatException 
+    (Yongjun Zhang via brandonli)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
