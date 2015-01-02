@@ -34,6 +34,8 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Dispatches {@link Event}s in a separate thread. Currently only single thread
  * does that. Potentially there could be multiple channels for each event type
@@ -281,5 +283,10 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
         System.exit(-1);
       }
     };
+  }
+
+  @VisibleForTesting
+  protected boolean isDrained() {
+    return this.drained;
   }
 }
