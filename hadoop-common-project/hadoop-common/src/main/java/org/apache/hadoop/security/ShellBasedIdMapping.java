@@ -578,8 +578,8 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
         // We know the line is fine to parse without error checking like this
         // since it matched the regex above.
         String firstComponent = lineMatcher.group(1);
-        int remoteId = Integer.parseInt(lineMatcher.group(2));
-        int localId = Integer.parseInt(lineMatcher.group(3));
+        int remoteId = parseId(lineMatcher.group(2));
+        int localId = parseId(lineMatcher.group(3));
         if (firstComponent.equals("uid")) {
           uidMapping.put(localId, remoteId);
         } else {
