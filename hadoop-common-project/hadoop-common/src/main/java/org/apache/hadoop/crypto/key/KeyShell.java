@@ -47,7 +47,7 @@ public class KeyShell extends Configured implements Tool {
       "   [" + ListCommand.USAGE + "]\n";
   private static final String LIST_METADATA = "keyShell.list.metadata";
 
-  private boolean interactive = false;
+  private boolean interactive = true;
   private Command command = null;
 
   /** allows stdout to be captured if necessary */
@@ -169,8 +169,8 @@ public class KeyShell extends Configured implements Tool {
         getConf().set(KeyProviderFactory.KEY_PROVIDER_PATH, args[++i]);
       } else if ("-metadata".equals(args[i])) {
         getConf().setBoolean(LIST_METADATA, true);
-      } else if ("-i".equals(args[i]) || ("-interactive".equals(args[i]))) {
-        interactive = true;
+      } else if ("-f".equals(args[i]) || ("-force".equals(args[i]))) {
+        interactive = false;
       } else if ("-help".equals(args[i])) {
         printKeyShellUsage();
         return 1;
@@ -367,11 +367,13 @@ public class KeyShell extends Configured implements Tool {
   }
 
   private class DeleteCommand extends Command {
-    public static final String USAGE = "delete <keyname> [-provider <provider>] [-help]";
+    public static final String USAGE =
+        "delete <keyname> [-provider <provider>] [-f] [-help]";
     public static final String DESC =
         "The delete subcommand deletes all versions of the key\n" +
         "specified by the <keyname> argument from within the\n" +
-        "provider specified -provider.";
+        "provider specified -provider. The command asks for\n" +
+        "user confirmation unless -f is specified.";
 
     String keyName = null;
     boolean cont = true;
@@ -397,10 +399,10 @@ public class KeyShell extends Configured implements Tool {
         try {
           cont = ToolRunner
               .confirmPrompt("You are about to DELETE all versions of "
-                  + " key: " + keyName + " from KeyProvider "
-                  + provider + ". Continue?:");
+                  + " key " + keyName + " from KeyProvider "
+                  + provider + ". Continue? ");
           if (!cont) {
-            out.println("Nothing has been be deleted.");
+            out.println(keyName + " has not been deleted.");
           }
           return cont;
         } catch (IOException e) {

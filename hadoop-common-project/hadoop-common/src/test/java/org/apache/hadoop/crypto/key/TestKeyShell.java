@@ -75,7 +75,8 @@ public class TestKeyShell {
   private void deleteKey(KeyShell ks, String keyName) throws Exception {
     int rc;
     outContent.reset();
-    final String[] delArgs = {"delete", keyName, "-provider", jceksProvider};
+    final String[] delArgs =
+        {"delete", keyName, "-f", "-provider", jceksProvider};
     rc = ks.run(delArgs);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains(keyName + " has been " +
