@@ -44,7 +44,7 @@ public class CredentialShell extends Configured implements Tool {
       "   [" + DeleteCommand.USAGE + "]\n" +
       "   [" + ListCommand.USAGE + "]\n";
 
-  private boolean interactive = false;
+  private boolean interactive = true;
   private Command command = null;
 
   /** allows stdout to be captured if necessary */
@@ -116,8 +116,8 @@ public class CredentialShell extends Configured implements Tool {
         userSuppliedProvider = true;
         getConf().set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, 
             args[++i]);
-      } else if (args[i].equals("-i") || (args[i].equals("-interactive"))) {
-        interactive = true;
+      } else if (args[i].equals("-f") || (args[i].equals("-force"))) {
+        interactive = false;
       } else if (args[i].equals("-v") || (args[i].equals("-value"))) {
         value = args[++i];
       } else if (args[i].equals("-help")) {
@@ -236,11 +236,13 @@ public class CredentialShell extends Configured implements Tool {
   }
 
   private class DeleteCommand extends Command {
-    public static final String USAGE = "delete <alias> [-provider] [-help]";
+    public static final String USAGE =
+        "delete <alias> [-provider] [-f] [-help]";
     public static final String DESC =
-        "The delete subcommand deletes the credenital\n" +
+        "The delete subcommand deletes the credential\n" +
         "specified as the <alias> argument from within the provider\n" +
-        "indicated through the -provider argument";
+        "indicated through the -provider argument. The command asks for\n" +
+        "confirmation unless the -f option is specified.";
 
     String alias = null;
     boolean cont = true;
@@ -267,9 +269,9 @@ public class CredentialShell extends Configured implements Tool {
       if (interactive) {
         try {
           cont = ToolRunner
-              .confirmPrompt("You are about to DELETE the credential: " + 
+              .confirmPrompt("You are about to DELETE the credential " +
                   alias + " from CredentialProvider " + provider.toString() +
-                  ". Continue?:");
+                  ". Continue? ");
           if (!cont) {
             out.println("Nothing has been deleted.");
           }
@@ -293,7 +295,7 @@ public class CredentialShell extends Configured implements Tool {
           provider.flush();
           printProviderWritten();
         } catch (IOException e) {
-          out.println(alias + "has NOT been deleted.");
+          out.println(alias + " has NOT been deleted.");
           throw e;
         }
       }

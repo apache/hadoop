@@ -47,6 +47,7 @@ public class TestCredShell {
     System.setOut(new PrintStream(outContent));
     System.setErr(new PrintStream(errContent));
     final Path jksPath = new Path(tmpDir.toString(), "keystore.jceks");
+    new File(jksPath.toString()).delete();
     jceksProvider = "jceks://file" + jksPath.toUri();
   }
   
@@ -71,7 +72,7 @@ public class TestCredShell {
     assertTrue(outContent.toString().contains("credential1"));
 
     outContent.reset();
-    String[] args4 = {"delete", "credential1", "-provider",
+    String[] args4 = {"delete", "credential1", "-f", "-provider",
         jceksProvider};
     rc = cs.run(args4);
     assertEquals(0, rc);
@@ -113,7 +114,7 @@ public class TestCredShell {
     assertTrue(outContent.toString().contains("WARNING: you are modifying a " +
     		"transient provider."));
 
-    String[] args2 = {"delete", "credential1", "-provider", "user:///"};
+    String[] args2 = {"delete", "credential1", "-f", "-provider", "user:///"};
     rc = cs.run(args2);
     assertEquals(outContent.toString(), 0, rc);
     assertTrue(outContent.toString().contains("credential1 has been successfully " +
@@ -167,7 +168,7 @@ public class TestCredShell {
     assertTrue(outContent.toString().contains("credential1 has been successfully " +
         "created."));
     
-    String[] args2 = {"delete", "credential1", "-provider",
+    String[] args2 = {"delete", "credential1", "-f", "-provider",
         jceksProvider};
     rc = shell.run(args2);
     assertEquals(0, rc);
