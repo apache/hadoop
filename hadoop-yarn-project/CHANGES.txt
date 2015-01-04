@@ -276,6 +276,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2991. Fixed DrainDispatcher to reuse the draining code path in
     AsyncDispatcher. (Rohith Sharmaks via zjshen)
 
+    YARN-2922. ConcurrentModificationException in CapacityScheduler's LeafQueue.
+    (Rohith Sharmaks via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
