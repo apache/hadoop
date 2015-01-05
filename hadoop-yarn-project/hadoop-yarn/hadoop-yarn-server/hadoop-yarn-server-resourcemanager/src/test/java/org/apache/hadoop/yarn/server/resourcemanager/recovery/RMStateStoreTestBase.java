@@ -411,16 +411,15 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     RMDelegationTokenIdentifier dtId1 =
         new RMDelegationTokenIdentifier(new Text("owner1"),
           new Text("renewer1"), new Text("realuser1"));
+    int sequenceNumber = 1111;
+    dtId1.setSequenceNumber(sequenceNumber);
     byte[] tokenBeforeStore = dtId1.getBytes();
     Long renewDate1 = new Long(System.currentTimeMillis());
-    int sequenceNumber = 1111;
-    store.storeRMDelegationTokenAndSequenceNumber(dtId1, renewDate1,
-      sequenceNumber);
+    store.storeRMDelegationToken(dtId1, renewDate1);
     modifyRMDelegationTokenState();
     Map<RMDelegationTokenIdentifier, Long> token1 =
         new HashMap<RMDelegationTokenIdentifier, Long>();
     token1.put(dtId1, renewDate1);
-
     // store delegation key;
     DelegationKey key = new DelegationKey(1234, 4321 , "keyBytes".getBytes());
     HashSet<DelegationKey> keySet = new HashSet<DelegationKey>();
@@ -440,9 +439,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
 
     // update RM delegation token;
     renewDate1 = new Long(System.currentTimeMillis());
-    ++sequenceNumber;
-    store.updateRMDelegationTokenAndSequenceNumber(
-        dtId1, renewDate1, sequenceNumber);
+    store.updateRMDelegationToken(dtId1, renewDate1);
     token1.put(dtId1, renewDate1);
 
     RMDTSecretManagerState updateSecretManagerState =
@@ -463,7 +460,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
         noKeySecretManagerState.getDTSequenceNumber());
 
     // check to delete delegationToken
-    store.removeRMDelegationToken(dtId1, sequenceNumber);
+    store.removeRMDelegationToken(dtId1);
     RMDTSecretManagerState noKeyAndTokenSecretManagerState =
         store.loadState().getRMDTSecretManagerState();
     token1.clear();
