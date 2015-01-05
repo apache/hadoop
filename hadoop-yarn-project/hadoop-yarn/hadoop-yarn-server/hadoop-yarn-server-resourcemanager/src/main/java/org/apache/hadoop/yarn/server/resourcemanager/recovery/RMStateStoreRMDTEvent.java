@@ -23,18 +23,16 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 public class RMStateStoreRMDTEvent extends RMStateStoreEvent {
   private RMDelegationTokenIdentifier rmDTIdentifier;
   private Long renewDate;
-  private int latestSequenceNumber;
 
   public RMStateStoreRMDTEvent(RMStateStoreEventType type) {
     super(type);
   }
 
   public RMStateStoreRMDTEvent(RMDelegationTokenIdentifier rmDTIdentifier,
-      Long renewDate, int latestSequenceNumber, RMStateStoreEventType type) {
+      Long renewDate, RMStateStoreEventType type) {
     this(type);
     this.rmDTIdentifier = rmDTIdentifier;
     this.renewDate = renewDate;
-    this.latestSequenceNumber = latestSequenceNumber;
   }
 
   public RMDelegationTokenIdentifier getRmDTIdentifier() {
@@ -43,9 +41,5 @@ public class RMStateStoreRMDTEvent extends RMStateStoreEvent {
 
   public Long getRenewDate() {
     return renewDate;
-  }
-
-  public int getLatestSequenceNumber() {
-    return latestSequenceNumber;
   }
 }

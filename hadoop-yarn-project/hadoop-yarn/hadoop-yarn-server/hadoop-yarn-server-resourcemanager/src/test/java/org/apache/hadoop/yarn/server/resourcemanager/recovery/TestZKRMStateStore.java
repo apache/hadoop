@@ -337,20 +337,18 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     RMDelegationTokenIdentifier dtId1 =
         new RMDelegationTokenIdentifier(new Text("owner1"),
             new Text("renewer1"), new Text("realuser1"));
-    Long renewDate1 = new Long(System.currentTimeMillis());
-    int sequenceNumber = 1111;
-    store.storeRMDelegationTokenAndSequenceNumber(dtId1, renewDate1,
-        sequenceNumber);
+    Long renewDate1 = new Long(System.currentTimeMillis()); 
+    dtId1.setSequenceNumber(1111);
+    store.storeRMDelegationToken(dtId1, renewDate1);
     assertEquals("RMStateStore should have been in fenced state", true,
         store.isFencedState());
 
-    store.updateRMDelegationTokenAndSequenceNumber(dtId1, renewDate1,
-        sequenceNumber);
+    store.updateRMDelegationToken(dtId1, renewDate1);
     assertEquals("RMStateStore should have been in fenced state", true,
         store.isFencedState());
 
     // remove delegation key;
-    store.removeRMDelegationToken(dtId1, sequenceNumber);
+    store.removeRMDelegationToken(dtId1);
     assertEquals("RMStateStore should have been in fenced state", true,
         store.isFencedState());
 
