@@ -382,6 +382,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7563. NFS gateway parseStaticMap NumberFormatException 
     (Yongjun Zhang via brandonli)
 
+    HDFS-7572. TestLazyPersistFiles#testDnRestartWithSavedReplicas is flaky on
+    Windows. (Arpit Agarwal via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
