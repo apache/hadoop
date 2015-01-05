@@ -698,12 +698,11 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected synchronized void storeRMDelegationTokenAndSequenceNumberState(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
+  protected synchronized void storeRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
     ArrayList<Op> opList = new ArrayList<Op>();
-    addStoreOrUpdateOps(
-        opList, rmDTIdentifier, renewDate, latestSequenceNumber, false);
+    addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, false);
     doMultiWithRetries(opList);
   }
 
@@ -727,29 +726,27 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected synchronized void updateRMDelegationTokenAndSequenceNumberInternal(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
+  protected synchronized void updateRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
     ArrayList<Op> opList = new ArrayList<Op>();
     String nodeRemovePath =
         getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
             + rmDTIdentifier.getSequenceNumber());
     if (existsWithRetries(nodeRemovePath, true) == null) {
       // in case znode doesn't exist
-      addStoreOrUpdateOps(
-          opList, rmDTIdentifier, renewDate, latestSequenceNumber, false);
+      addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, false);
       LOG.debug("Attempted to update a non-existing znode " + nodeRemovePath);
     } else {
       // in case znode exists
-      addStoreOrUpdateOps(
-          opList, rmDTIdentifier, renewDate, latestSequenceNumber, true);
+      addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, true);
     }
     doMultiWithRetries(opList);
   }
 
   private void addStoreOrUpdateOps(ArrayList<Op> opList,
       RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber, boolean isUpdate) throws Exception {
+      boolean isUpdate) throws Exception {
     // store RM delegation token
     String nodeCreatePath =
         getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
@@ -769,16 +766,15 @@ public class ZKRMStateStore extends RMStateStore {
       } else {
         opList.add(Op.create(nodeCreatePath, identifierData.toByteArray(), zkAcl,
             CreateMode.PERSISTENT));
+        // Update Sequence number only while storing DT
+        seqOut.writeInt(rmDTIdentifier.getSequenceNumber());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug((isUpdate ? "Storing " : "Updating ") +
+                    dtSequenceNumberPath + ". SequenceNumber: "
+                    + rmDTIdentifier.getSequenceNumber());
+        }
+        opList.add(Op.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1));
       }
-
-
-     seqOut.writeInt(latestSequenceNumber);
-     if (LOG.isDebugEnabled()) {
-        LOG.debug((isUpdate ? "Storing " : "Updating ") + dtSequenceNumberPath +
-            ". SequenceNumber: " + latestSequenceNumber);
-      }
-
-     opList.add(Op.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1));
     } finally {
       seqOs.close();
     }

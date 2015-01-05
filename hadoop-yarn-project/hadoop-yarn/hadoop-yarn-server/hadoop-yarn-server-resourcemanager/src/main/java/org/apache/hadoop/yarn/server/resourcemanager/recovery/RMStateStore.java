@@ -296,9 +296,8 @@ public abstract class RMStateStore extends AbstractService {
       RMStateStoreRMDTEvent dtEvent = (RMStateStoreRMDTEvent) event;
       try {
         LOG.info("Storing RMDelegationToken and SequenceNumber");
-        store.storeRMDelegationTokenAndSequenceNumberState(
-            dtEvent.getRmDTIdentifier(), dtEvent.getRenewDate(),
-            dtEvent.getLatestSequenceNumber());
+        store.storeRMDelegationTokenState(
+            dtEvent.getRmDTIdentifier(), dtEvent.getRenewDate());
       } catch (Exception e) {
         LOG.error("Error While Storing RMDelegationToken and SequenceNumber ",
             e);
@@ -341,9 +340,8 @@ public abstract class RMStateStore extends AbstractService {
       RMStateStoreRMDTEvent dtEvent = (RMStateStoreRMDTEvent) event;
       try {
         LOG.info("Updating RMDelegationToken and SequenceNumber");
-        store.updateRMDelegationTokenAndSequenceNumberInternal(
-            dtEvent.getRmDTIdentifier(), dtEvent.getRenewDate(),
-            dtEvent.getLatestSequenceNumber());
+        store.updateRMDelegationTokenState(
+            dtEvent.getRmDTIdentifier(), dtEvent.getRenewDate());
       } catch (Exception e) {
         LOG.error("Error While Updating RMDelegationToken and SequenceNumber ",
             e);
@@ -672,11 +670,10 @@ public abstract class RMStateStore extends AbstractService {
    * RMDTSecretManager call this to store the state of a delegation token
    * and sequence number
    */
-  public void storeRMDelegationTokenAndSequenceNumber(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) {
+  public void storeRMDelegationToken(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate) {
     handleStoreEvent(new RMStateStoreRMDTEvent(rmDTIdentifier, renewDate,
-        latestSequenceNumber, RMStateStoreEventType.STORE_DELEGATION_TOKEN));
+        RMStateStoreEventType.STORE_DELEGATION_TOKEN));
   }
 
   /**
@@ -684,17 +681,17 @@ public abstract class RMStateStore extends AbstractService {
    * Derived classes must implement this method to store the state of
    * RMDelegationToken and sequence number
    */
-  protected abstract void storeRMDelegationTokenAndSequenceNumberState(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception;
+  protected abstract void storeRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception;
 
   /**
    * RMDTSecretManager call this to remove the state of a delegation token
    */
   public void removeRMDelegationToken(
-      RMDelegationTokenIdentifier rmDTIdentifier, int sequenceNumber) {
+      RMDelegationTokenIdentifier rmDTIdentifier) {
     handleStoreEvent(new RMStateStoreRMDTEvent(rmDTIdentifier, null,
-        sequenceNumber, RMStateStoreEventType.REMOVE_DELEGATION_TOKEN));
+        RMStateStoreEventType.REMOVE_DELEGATION_TOKEN));
   }
 
   /**
@@ -708,11 +705,10 @@ public abstract class RMStateStore extends AbstractService {
    * RMDTSecretManager call this to update the state of a delegation token
    * and sequence number
    */
-  public void updateRMDelegationTokenAndSequenceNumber(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) {
+  public void updateRMDelegationToken(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate) {
     handleStoreEvent(new RMStateStoreRMDTEvent(rmDTIdentifier, renewDate,
-        latestSequenceNumber, RMStateStoreEventType.UPDATE_DELEGATION_TOKEN));
+        RMStateStoreEventType.UPDATE_DELEGATION_TOKEN));
   }
 
   /**
@@ -720,9 +716,9 @@ public abstract class RMStateStore extends AbstractService {
    * Derived classes must implement this method to update the state of
    * RMDelegationToken and sequence number
    */
-  protected abstract void updateRMDelegationTokenAndSequenceNumberInternal(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception;
+  protected abstract void updateRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception;
 
   /**
    * RMDTSecretManager call this to store the state of a master key

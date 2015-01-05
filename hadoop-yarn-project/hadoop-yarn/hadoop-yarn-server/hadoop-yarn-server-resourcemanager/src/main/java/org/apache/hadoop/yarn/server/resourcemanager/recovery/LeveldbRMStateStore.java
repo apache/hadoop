@@ -544,31 +544,30 @@ public class LeveldbRMStateStore extends RMStateStore {
       throw new IOException(e);
     }
   }
-
-  @Override
-  protected void storeRMDelegationTokenAndSequenceNumberState(
-      RMDelegationTokenIdentifier tokenId, Long renewDate,
-      int latestSequenceNumber) throws IOException {
+  
+  private void storeOrUpdateRMDT(RMDelegationTokenIdentifier tokenId,
+      Long renewDate, boolean isUpdate) throws IOException {
     String tokenKey = getRMDTTokenNodeKey(tokenId);
     RMDelegationTokenIdentifierData tokenData =
         new RMDelegationTokenIdentifierData(tokenId, renewDate);
-    ByteArrayOutputStream bs = new ByteArrayOutputStream();
-    DataOutputStream ds = new DataOutputStream(bs);
-    try {
-      ds.writeInt(latestSequenceNumber);
-    } finally {
-      ds.close();
-    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Storing token to " + tokenKey);
-      LOG.debug("Storing " + latestSequenceNumber + " to "
-          + RM_DT_SEQUENCE_NUMBER_KEY);
     }
     try {
       WriteBatch batch = db.createWriteBatch();
       try {
         batch.put(bytes(tokenKey), tokenData.toByteArray());
-        batch.put(bytes(RM_DT_SEQUENCE_NUMBER_KEY), bs.toByteArray());
+        if(!isUpdate) {
+          ByteArrayOutputStream bs = new ByteArrayOutputStream();
+          try (DataOutputStream ds = new DataOutputStream(bs)) {
+            ds.writeInt(tokenId.getSequenceNumber());
+          }
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Storing " + tokenId.getSequenceNumber() + " to "
+                + RM_DT_SEQUENCE_NUMBER_KEY);   
+          }
+          batch.put(bytes(RM_DT_SEQUENCE_NUMBER_KEY), bs.toByteArray());
+        }
         db.write(batch);
       } finally {
         batch.close();
@@ -579,11 +578,17 @@ public class LeveldbRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateRMDelegationTokenAndSequenceNumberInternal(
-      RMDelegationTokenIdentifier tokenId, Long renewDate,
-      int latestSequenceNumber) throws IOException {
-    storeRMDelegationTokenAndSequenceNumberState(tokenId, renewDate,
-        latestSequenceNumber);
+  protected void storeRMDelegationTokenState(
+      RMDelegationTokenIdentifier tokenId, Long renewDate)
+      throws IOException {
+    storeOrUpdateRMDT(tokenId, renewDate, false);
+  }
+
+  @Override
+  protected void updateRMDelegationTokenState(
+      RMDelegationTokenIdentifier tokenId, Long renewDate)
+      throws IOException {
+    storeOrUpdateRMDT(tokenId, renewDate, true);
   }
 
   @Override

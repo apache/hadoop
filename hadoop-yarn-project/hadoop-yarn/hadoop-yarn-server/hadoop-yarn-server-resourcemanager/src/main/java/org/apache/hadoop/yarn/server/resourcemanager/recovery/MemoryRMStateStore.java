@@ -149,23 +149,30 @@ public class MemoryRMStateStore extends RMStateStore {
     }
   }
 
-  @Override
-  public synchronized void storeRMDelegationTokenAndSequenceNumberState(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
+  private void storeOrUpdateRMDT(RMDelegationTokenIdentifier rmDTIdentifier,
+      Long renewDate, boolean isUpdate) throws Exception {
     Map<RMDelegationTokenIdentifier, Long> rmDTState =
         state.rmSecretManagerState.getTokenState();
     if (rmDTState.containsKey(rmDTIdentifier)) {
       IOException e = new IOException("RMDelegationToken: " + rmDTIdentifier
-              + "is already stored.");
+          + "is already stored.");
       LOG.info("Error storing info for RMDelegationToken: " + rmDTIdentifier, e);
       throw e;
     }
     rmDTState.put(rmDTIdentifier, renewDate);
-    state.rmSecretManagerState.dtSequenceNumber = latestSequenceNumber;
+    if(!isUpdate) {
+      state.rmSecretManagerState.dtSequenceNumber = 
+          rmDTIdentifier.getSequenceNumber();
+    }
     LOG.info("Store RMDT with sequence number "
-        + rmDTIdentifier.getSequenceNumber()
-        + ". And the latest sequence number is " + latestSequenceNumber);
+             + rmDTIdentifier.getSequenceNumber());
+  }
+
+  @Override
+  public synchronized void storeRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
+    storeOrUpdateRMDT(rmDTIdentifier, renewDate, false);
   }
 
   @Override
@@ -179,12 +186,11 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateRMDelegationTokenAndSequenceNumberInternal(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
+  protected void updateRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
     removeRMDelegationTokenState(rmDTIdentifier);
-    storeRMDelegationTokenAndSequenceNumberState(
-        rmDTIdentifier, renewDate, latestSequenceNumber);
+    storeOrUpdateRMDT(rmDTIdentifier, renewDate, true);
     LOG.info("Update RMDT with sequence number "
         + rmDTIdentifier.getSequenceNumber());
   }
