@@ -633,6 +633,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     LOG.info("Restarting the DataNode");
     cluster.restartDataNode(0, true);
     cluster.waitActive();
+    triggerBlockReport();
 
     // Ensure that the replica is now on persistent storage.
     ensureFileReplicasOnStorageType(path1, DEFAULT);
