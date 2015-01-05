@@ -58,8 +58,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     }
   }
 
-  @Override
-  protected Configuration createConfiguration() {
+  public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, StubbedFairScheduler.class,
         ResourceScheduler.class);

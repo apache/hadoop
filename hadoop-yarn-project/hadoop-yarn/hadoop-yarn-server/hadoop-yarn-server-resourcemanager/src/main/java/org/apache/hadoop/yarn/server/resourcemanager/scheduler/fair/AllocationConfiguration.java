@@ -207,6 +207,10 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
     ResourceWeights weight = queueWeights.get(queue);
     return (weight == null) ? ResourceWeights.NEUTRAL : weight;
   }
+
+  public void setQueueWeight(String queue, ResourceWeights weight) {
+    queueWeights.put(queue, weight);
+  }
   
   public int getUserMaxApps(String user) {
     Integer maxApps = userMaxApps.get(user);
@@ -322,5 +326,15 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   @Override
   public long getEnforcementWindow(String queue) {
     return globalReservationQueueConfig.getEnforcementWindowMsec();
+  }
+
+  @VisibleForTesting
+  public void setReservationWindow(long window) {
+    globalReservationQueueConfig.setReservationWindow(window);
+  }
+
+  @VisibleForTesting
+  public void setAverageCapacity(int avgCapacity) {
+    globalReservationQueueConfig.setAverageCapacity(avgCapacity);
   }
 }

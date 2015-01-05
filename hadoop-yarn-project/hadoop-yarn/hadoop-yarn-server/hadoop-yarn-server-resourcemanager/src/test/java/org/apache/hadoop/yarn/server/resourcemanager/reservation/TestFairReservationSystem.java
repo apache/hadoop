@@ -18,14 +18,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerTestBase;
@@ -38,15 +35,16 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import static org.mockito.Mockito.when;
-
-public class TestFairReservationSystem extends FairSchedulerTestBase {
-  private final static String ALLOC_FILE = new File(TEST_DIR,
+public class TestFairReservationSystem {
+  private final static String ALLOC_FILE = new File(FairSchedulerTestBase.
+    TEST_DIR,
       TestFairReservationSystem.class.getName() + ".xml").getAbsolutePath();
+  private Configuration conf;
+  private FairScheduler scheduler;
+  private FairSchedulerTestBase testHelper = new FairSchedulerTestBase();
 
-  @Override
   protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
+    Configuration conf = testHelper.createConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
         ResourceScheduler.class);
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
@@ -60,10 +58,6 @@ public class TestFairReservationSystem extends FairSchedulerTestBase {
 
   @After
   public void teardown() {
-    if (resourceManager != null) {
-      resourceManager.stop();
-      resourceManager = null;
-    }
     conf = null;
   }
 
@@ -75,7 +69,8 @@ public class TestFairReservationSystem extends FairSchedulerTestBase {
     
     // Setup
     RMContext mockRMContext = testUtil.createRMContext(conf);
-    setupFairScheduler(testUtil, mockRMContext);
+    scheduler = ReservationSystemTestUtil.setupFairScheduler(testUtil,
+        mockRMContext, conf, 10);
 
     FairReservationSystem reservationSystem = new FairReservationSystem();
     reservationSystem.setRMContext(mockRMContext);
@@ -97,14 +92,15 @@ public class TestFairReservationSystem extends FairSchedulerTestBase {
     ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
 
     // Setup
-    RMContext mockContext = testUtil.createRMContext(conf);
-    setupFairScheduler(testUtil, mockContext);
+    RMContext mockRMContext = testUtil.createRMContext(conf);
+    scheduler = ReservationSystemTestUtil.setupFairScheduler(testUtil,
+        mockRMContext, conf, 10);
 
     FairReservationSystem reservationSystem = new FairReservationSystem();
-    reservationSystem.setRMContext(mockContext);
+    reservationSystem.setRMContext(mockRMContext);
 
     try {
-      reservationSystem.reinitialize(scheduler.getConf(), mockContext);
+      reservationSystem.reinitialize(scheduler.getConf(), mockRMContext);
     } catch (YarnException e) {
       Assert.fail(e.getMessage());
     }
@@ -116,10 +112,10 @@ public class TestFairReservationSystem extends FairSchedulerTestBase {
 
     // Dynamically add a plan
     ReservationSystemTestUtil.updateFSAllocationFile(ALLOC_FILE);
-    scheduler.reinitialize(conf, mockContext);
+    scheduler.reinitialize(conf, mockRMContext);
 
     try {
-      reservationSystem.reinitialize(conf, mockContext);
+      reservationSystem.reinitialize(conf, mockRMContext);
     } catch (YarnException e) {
       Assert.fail(e.getMessage());
     }
@@ -129,23 +125,4 @@ public class TestFairReservationSystem extends FairSchedulerTestBase {
         (reservationSystem, newQueue);
   }
 
-  private void setupFairScheduler(ReservationSystemTestUtil testUtil,
-      RMContext rmContext) throws
-      IOException {
-
-    scheduler = new FairScheduler();
-    scheduler.setRMContext(rmContext);
-
-    int numContainers = 10;
-    when(rmContext.getScheduler()).thenReturn(scheduler);
-
-    scheduler.init(conf);
-    scheduler.start();
-    scheduler.reinitialize(conf, rmContext);
-
-    Resource resource = testUtil.calculateClusterResource(numContainers);
-    RMNode node1 = MockNodes.newNodeInfo(1, resource, 1, "127.0.0.1");
-    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
-    scheduler.handle(nodeEvent1);
-  }
 }

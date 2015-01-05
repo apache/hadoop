@@ -26,7 +26,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.Plan
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 
 import org.apache.hadoop.yarn.util.Clock;
@@ -99,7 +98,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
 
     // create the default reservation queue if it doesnt exist
     String defReservationId = getReservationIdFromQueueName(planQueueName) +
-        PlanQueue.DEFAULT_QUEUE_SUFFIX;
+        ReservationConstants.DEFAULT_QUEUE_SUFFIX;
     String defReservationQueue = getReservationQueueName(planQueueName,
         defReservationId);
     createDefaultReservationQueue(planQueueName, planQueue,
