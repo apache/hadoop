@@ -454,5 +454,53 @@ public class TestGroupsCaching {
     }
 
     assertEquals(startingRequestCount + 1, FakeGroupMapping.getRequestCount());
+  }  
+
+  @Test
+  public void testNegativeCacheEntriesExpire() throws Exception {
+    conf.setLong(
+       CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_NEGATIVE_CACHE_SECS, 2);
+    FakeTimer timer = new FakeTimer();
+    // Ensure that stale entries are removed from negative cache every 2 seconds
+    Groups groups = new Groups(conf, timer);
+    groups.cacheGroupsAdd(Arrays.asList(myGroups));
+    groups.refresh();
+    // Add both these users to blacklist so that they
+    // can be added to negative cache
+    FakeGroupMapping.addToBlackList("user1");
+    FakeGroupMapping.addToBlackList("user2");
+
+    // Put user1 in negative cache.
+    try {
+      groups.getGroups("user1");
+      fail("Did not throw IOException : Failed to obtain groups" +
+            " from FakeGroupMapping.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("No groups found for user", e);
+    }
+    // Check if user1 exists in negative cache
+    assertTrue(groups.getNegativeCache().contains("user1"));
+
+    // Advance fake timer
+    timer.advance(1000);
+    // Put user2 in negative cache
+    try {
+      groups.getGroups("user2");
+      fail("Did not throw IOException : Failed to obtain groups" +
+            " from FakeGroupMapping.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("No groups found for user", e);
+    }
+    // Check if user2 exists in negative cache
+    assertTrue(groups.getNegativeCache().contains("user2"));
+
+    // Advance timer. Only user2 should be present in negative cache.
+    timer.advance(1100);
+    assertFalse(groups.getNegativeCache().contains("user1"));
+    assertTrue(groups.getNegativeCache().contains("user2"));
+
+    // Advance timer. Even user2 should not be present in negative cache.
+    timer.advance(1000);
+    assertFalse(groups.getNegativeCache().contains("user2"));
   }
 }

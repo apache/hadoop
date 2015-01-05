@@ -23,12 +23,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -60,14 +62,13 @@ public class Groups {
   private final GroupMappingServiceProvider impl;
 
   private final LoadingCache<String, List<String>> cache;
-  private final ConcurrentHashMap<String, Long> negativeCacheMask =
-    new ConcurrentHashMap<String, Long>();
   private final Map<String, List<String>> staticUserToGroupsMap =
       new HashMap<String, List<String>>();
   private final long cacheTimeout;
   private final long negativeCacheTimeout;
   private final long warningDeltaMs;
   private final Timer timer;
+  private Set<String> negativeCache;
 
   public Groups(Configuration conf) {
     this(conf, new Timer());
@@ -99,10 +100,23 @@ public class Groups {
       .expireAfterWrite(10 * cacheTimeout, TimeUnit.MILLISECONDS)
       .build(new GroupCacheLoader());
 
+    if(negativeCacheTimeout > 0) {
+      Cache<String, Boolean> tempMap = CacheBuilder.newBuilder()
+        .expireAfterWrite(negativeCacheTimeout, TimeUnit.MILLISECONDS)
+        .ticker(new TimerToTickerAdapter(timer))
+        .build();
+      negativeCache = Collections.newSetFromMap(tempMap.asMap());
+    }
+
     if(LOG.isDebugEnabled())
       LOG.debug("Group mapping impl=" + impl.getClass().getName() + 
           "; cacheTimeout=" + cacheTimeout + "; warningDeltaMs=" +
           warningDeltaMs);
+  }
+  
+  @VisibleForTesting
+  Set<String> getNegativeCache() {
+    return negativeCache;
   }
 
   /*
@@ -159,13 +173,8 @@ public class Groups {
 
     // Check the negative cache first
     if (isNegativeCacheEnabled()) {
-      Long expirationTime = negativeCacheMask.get(user);
-      if (expirationTime != null) {
-        if (timer.monotonicNow() < expirationTime) {
-          throw noGroupsForUser(user);
-        } else {
-          negativeCacheMask.remove(user, expirationTime);
-        }
+      if (negativeCache.contains(user)) {
+        throw noGroupsForUser(user);
       }
     }
 
@@ -212,8 +221,7 @@ public class Groups {
 
       if (groups.isEmpty()) {
         if (isNegativeCacheEnabled()) {
-          long expirationTime = timer.monotonicNow() + negativeCacheTimeout;
-          negativeCacheMask.put(user, expirationTime);
+          negativeCache.add(user);
         }
 
         // We throw here to prevent Cache from retaining an empty group
@@ -252,7 +260,9 @@ public class Groups {
       LOG.warn("Error refreshing groups cache", e);
     }
     cache.invalidateAll();
-    negativeCacheMask.clear();
+    if(isNegativeCacheEnabled()) {
+      negativeCache.clear();
+    }
   }
 
   /**
