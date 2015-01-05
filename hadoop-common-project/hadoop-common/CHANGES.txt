@@ -344,6 +344,8 @@ Trunk (Unreleased)
 
     HADOOP-11397. Can't override HADOOP_IDENT_STRING (Kengo Seki via aw)
 
+    HADOOP-10908. Common needs updates for shell rewrite (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
