@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -66,6 +65,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -1419,7 +1419,7 @@ public class CapacityScheduler extends
       queueName = resQName;
     } else {
       // use the default child queue of the plan for unreserved apps
-      queueName = queueName + PlanQueue.DEFAULT_QUEUE_SUFFIX;
+      queueName = queueName + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
     }
     return queueName;
   }
@@ -1583,7 +1583,7 @@ public class CapacityScheduler extends
     CSQueue dest = getQueue(targetQueueName);
     if (dest != null && dest instanceof PlanQueue) {
       // use the default child reservation queue of the plan
-      targetQueueName = targetQueueName + PlanQueue.DEFAULT_QUEUE_SUFFIX;
+      targetQueueName = targetQueueName + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
     }
     return targetQueueName;
   }
