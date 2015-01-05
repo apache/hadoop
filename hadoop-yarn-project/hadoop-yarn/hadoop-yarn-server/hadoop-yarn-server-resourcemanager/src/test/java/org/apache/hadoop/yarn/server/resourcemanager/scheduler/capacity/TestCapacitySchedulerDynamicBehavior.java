@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -217,7 +218,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     assertEquals(1, appsInRoot.size());
 
     // create the default reservation queue
-    String defQName = "a" + PlanQueue.DEFAULT_QUEUE_SUFFIX;
+    String defQName = "a" + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
     ReservationQueue defQ =
         new ReservationQueue(scheduler, defQName,
             (PlanQueue) scheduler.getQueue("a"));

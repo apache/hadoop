@@ -204,6 +204,8 @@ public abstract class AbstractReservationSystem extends AbstractService
     // currently only capacity scheduler is supported
     if (scheduler instanceof CapacityScheduler) {
       return CapacitySchedulerPlanFollower.class.getName();
+    } else if (scheduler instanceof FairScheduler) {
+      return FairSchedulerPlanFollower.class.getName();
     }
     return null;
   }
