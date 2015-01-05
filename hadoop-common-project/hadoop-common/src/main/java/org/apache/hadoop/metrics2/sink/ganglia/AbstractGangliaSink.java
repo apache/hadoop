@@ -21,6 +21,7 @@ package org.apache.hadoop.metrics2.sink.ganglia;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -257,6 +258,12 @@ public abstract class AbstractGangliaSink implements MetricsSink {
   protected void emitToGangliaHosts() throws IOException {
     try {
       for (SocketAddress socketAddress : metricsServers) {
+        if (socketAddress == null || !(socketAddress instanceof InetSocketAddress))
+          throw new IllegalArgumentException("Unsupported Address type");
+        InetSocketAddress inetAddress = (InetSocketAddress)socketAddress;
+        if(inetAddress.isUnresolved()) {
+          throw new UnknownHostException("Unresolved host: " + inetAddress);
+        }
         DatagramPacket packet =
           new DatagramPacket(buffer, offset, socketAddress);
         datagramSocket.send(packet);
