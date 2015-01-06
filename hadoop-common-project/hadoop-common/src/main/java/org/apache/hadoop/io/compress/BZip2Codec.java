@@ -225,7 +225,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
     // ........................................^^[We align at wrong position!]
     // ...........................................................^^[While this pos is correct]
 
-    if (in.getPos() <= start) {
+    if (in.getPos() < start) {
       ((Seekable)seekableIn).seek(start);
       in = new BZip2CompressionInputStream(seekableIn, start, end, readMode);
     }

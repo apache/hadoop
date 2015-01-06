@@ -106,6 +106,27 @@ public class TestLineRecordReader {
     testSplitRecords("blockEndingInCRThenLF.txt.bz2", 136498);
   }
 
+  //This test ensures record reader doesn't lose records when it starts
+  //exactly at the starting byte of a bz2 compressed block
+  @Test
+  public void testBzip2SplitStartAtBlockMarker() throws IOException {
+    //136504 in blockEndingInCR.txt.bz2 is the byte at which the bz2 block ends
+    //In the following test cases record readers should iterate over all the records
+    //and should not miss any record.
+
+    //Start next split at just the start of the block.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136504);
+
+    //Start next split a byte forward in next block.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136505);
+
+    //Start next split 3 bytes forward in next block.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136508);
+
+    //Start next split 10 bytes from behind the end marker.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136494);
+  }
+
   // Use the LineRecordReader to read records from the file
   public ArrayList<String> readRecords(URL testFileUrl, int splitSize)
       throws IOException {
