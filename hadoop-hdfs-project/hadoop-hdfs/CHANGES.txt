@@ -385,6 +385,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7572. TestLazyPersistFiles#testDnRestartWithSavedReplicas is flaky on
     Windows. (Arpit Agarwal via cnauroth)
 
+    HDFS-7583. Fix findbug in TransferFsImage.java (vinayakumarb)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
