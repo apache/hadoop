@@ -92,6 +92,15 @@ function hadoop_find_confdir
   hadoop_debug "HADOOP_CONF_DIR=${HADOOP_CONF_DIR}"
 }
 
+function hadoop_verify_confdir
+{
+  # Check only log4j.properties by default.
+  # --loglevel does not work without logger settings in log4j.log4j.properties.
+  if [[ ! -f "${HADOOP_CONF_DIR}/log4j.properties" ]]; then
+    hadoop_error "WARNING: log4j.properties is not found. HADOOP_CONF_DIR may be incomplete."
+  fi
+}
+
 function hadoop_exec_hadoopenv
 {
   # NOTE: This function is not user replaceable.
