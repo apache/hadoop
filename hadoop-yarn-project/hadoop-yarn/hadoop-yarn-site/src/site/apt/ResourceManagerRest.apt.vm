@@ -2595,7 +2595,7 @@ Server: Jetty(6.1.26)
 
 +---+
 HTTP/1.1 202 Accepted
-Content-Type: application/json
+Content-Type: application/xml
 Content-Length: 794
 Location: http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003
 Server: Jetty(6.1.26)
@@ -2664,8 +2664,6 @@ Server: Jetty(6.1.26)
 
 +---+
 HTTP/1.1 403 Unauthorized
-Content-Type: application/json
-Transfer-Encoding: chunked
 Server: Jetty(6.1.26)
 +---+
 
@@ -2707,6 +2705,161 @@ Server: Jetty(6.1.26)
 </RemoteException>
 +---+
 
+
+* Cluster Application Queue API
+
+  With the application queue API, you can query the queue of a submitted app as well move a running app to another queue using a PUT request specifying the target queue. To perform the PUT operation, authentication has to be setup for the RM web services. In addition, you must be authorized to move the app. Currently you can only move the app if you're using the Capacity scheduler or the Fair scheduler.
+
+  Please note that in order to move an app, you must have an authentication filter setup for the HTTP interface. The functionality requires that a username is set in the HttpServletRequest. If no filter is setup, the response will be an "UNAUTHORIZED" response.
+
+  This feature is currently in the alpha stage and may change in the future.
+
+** URI
+
+-----
+  * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/queue
+-----
+
+** HTTP Operations Supported
+
+------
+  * GET
+  * PUT
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of <appqueue> object
+
+  When you make a request for the state of an app, the information returned has the following fields
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| queue         | string       | The application queue         |
+*---------------+--------------+--------------------------------+
+
+
+** Response Examples
+
+  <<JSON responses>>
+
+  HTTP Request
+
+-----
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/queue
+-----
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "queue":"default"
+}
++---+
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/queue
+----
+
+  Request Body:
+
++---+
+{
+  "queue":"test"
+}
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+  "queue":"test"
+}
++---+
+
+  <<XML responses>>
+
+  HTTP Request
+
+-----
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/queue
+-----
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/xml
+Content-Length: 98
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appqueue>
+  <queue>default</queue>
+</appqueue>
++---+
+
+  HTTP Request
+
+-----
+  PUT http://<rm http address:port>/ws/v1/cluster/apps/application_1399397633663_0003/queue
+----
+
+  Request Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appqueue>
+  <queue>test</queue>
+</appqueue>
++---+
+
+  Response Header:
+
++---+
+HTTP/1.1 200 OK
+Content-Type: application/xml
+Content-Length: 95
+Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appqueue>
+  <queue>test</queue>
+</appqueue>
++---+
 
 * Cluster {Delegation Tokens API}
 

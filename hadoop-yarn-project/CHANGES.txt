@@ -41,6 +41,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2881. [YARN-2574] Implement PlanFollower for FairScheduler. 
     (Anubhav Dhoot via kasha)
 
+    YARN-2427. Added the API of moving apps between queues in RM web services.
+    (Varun Vasudev via zjshen)
+
   IMPROVEMENTS
 
     YARN-2950. Change message to mandate, not suggest JS requirement on UI.
