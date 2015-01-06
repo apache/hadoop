@@ -290,7 +290,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
     return true;
   }
 
-  private void initStaticMapping() throws IOException {
+  private synchronized void initStaticMapping() throws IOException {
     staticMapping = new StaticMapping(
         new HashMap<Integer, Integer>(), new HashMap<Integer, Integer>());
     if (staticMappingFile.exists()) {
