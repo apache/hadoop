@@ -1064,7 +1064,9 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     public void process(WatchedEvent event) {
       hasReceivedEvent.countDown();
       try {
-        hasSetZooKeeper.await(zkSessionTimeout, TimeUnit.MILLISECONDS);
+        if (!hasSetZooKeeper.await(zkSessionTimeout, TimeUnit.MILLISECONDS)) {
+          LOG.debug("Event received with stale zk");
+        }
         ActiveStandbyElector.this.processWatchEvent(
             zk, event);
       } catch (Throwable t) {

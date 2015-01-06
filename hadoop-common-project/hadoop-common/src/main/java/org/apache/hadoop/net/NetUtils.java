@@ -288,7 +288,7 @@ public class NetUtils {
       try {
         fqHost = SecurityUtil.getByName(host).getHostName();
         // slight race condition, but won't hurt
-        canonicalizedHostCache.put(host, fqHost);
+        canonicalizedHostCache.putIfAbsent(host, fqHost);
       } catch (UnknownHostException e) {
         fqHost = host;
       }
