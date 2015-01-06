@@ -287,6 +287,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2958. Made RMStateStore not update the last sequence number when updating the
     delegation token. (Varun Saxena via zjshen)
 
+    YARN-2978. Fixed potential NPE while getting queue info. (Varun Saxena via
+    jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

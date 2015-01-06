@@ -65,7 +65,6 @@ public abstract class AbstractCSQueue implements CSQueue {
   RMNodeLabelsManager labelManager;
   String defaultLabelExpression;
   Resource usedResources = Resources.createResource(0, 0);
-  QueueInfo queueInfo;
   Map<String, Float> absoluteCapacityByNodeLabels;
   Map<String, Float> capacitiyByNodeLabels;
   Map<String, Resource> usedResourcesByNodeLabels = new HashMap<String, Resource>();
@@ -87,7 +86,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.parent = parent;
     this.queueName = queueName;
     this.resourceCalculator = cs.getResourceCalculator();
-    this.queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
     
     // must be called after parent and queueName is set
     this.metrics = old != null ? old.getMetrics() :
@@ -99,9 +97,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.accessibleLabels = cs.getConfiguration().getAccessibleNodeLabels(getQueuePath());
     this.defaultLabelExpression = cs.getConfiguration()
         .getDefaultNodeLabelExpression(getQueuePath());
-    
-    this.queueInfo.setQueueName(queueName);
-    
+
     // inherit from parent if labels not set
     if (this.accessibleLabels == null && parent != null) {
       this.accessibleLabels = parent.getAccessibleNodeLabels();
@@ -280,12 +276,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.capacitiyByNodeLabels = new HashMap<String, Float>(nodeLabelCapacities);
     this.maxCapacityByNodeLabels =
         new HashMap<String, Float>(maximumNodeLabelCapacities);
-    
-    this.queueInfo.setAccessibleNodeLabels(this.accessibleLabels);
-    this.queueInfo.setCapacity(this.capacity);
-    this.queueInfo.setMaximumCapacity(this.maximumCapacity);
-    this.queueInfo.setQueueState(this.state);
-    this.queueInfo.setDefaultNodeLabelExpression(this.defaultLabelExpression);
 
     // Update metrics
     CSQueueUtils.updateQueueStatistics(
@@ -328,6 +318,18 @@ public abstract class AbstractCSQueue implements CSQueue {
         absoluteCapacityByNodeLabels, absoluteCapacityByNodeLabels);
     
     this.reservationsContinueLooking = reservationContinueLooking;
+  }
+  
+  protected QueueInfo getQueueInfo() {
+    QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
+    queueInfo.setQueueName(queueName);
+    queueInfo.setAccessibleNodeLabels(accessibleLabels);
+    queueInfo.setCapacity(capacity);
+    queueInfo.setMaximumCapacity(maximumCapacity);
+    queueInfo.setQueueState(state);
+    queueInfo.setDefaultNodeLabelExpression(defaultLabelExpression);
+    queueInfo.setCurrentCapacity(getUsedCapacity());
+    return queueInfo;
   }
   
   @Private
