@@ -130,6 +130,7 @@ public class TestFifoScheduler {
       Assert.fail("NPE when allocating container on node but "
           + "forget to set off-switch request should be handled");
     }
+    rm.stop();
   }
 
   @Test

@@ -81,6 +81,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -117,6 +118,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
@@ -696,7 +698,7 @@ public class RMWebServices {
       app = getRMAppForAppId(appId);
     } catch (NotFoundException e) {
       RMAuditLogger.logFailure(userName, AuditConstants.KILL_APP_REQUEST,
-        "UNKNOWN", "RMWebService", "Trying to kill/move an absent application "
+        "UNKNOWN", "RMWebService", "Trying to kill an absent application "
             + appId);
       throw e;
     }
@@ -942,6 +944,126 @@ public class RMWebServices {
       return Response.status(Status.ACCEPTED).entity(ret)
         .header(HttpHeaders.LOCATION, hsr.getRequestURL()).build();
     }
+    return Response.status(Status.OK).entity(ret).build();
+  }
+
+  @GET
+  @Path("/apps/{appid}/queue")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public AppQueue getAppQueue(@Context HttpServletRequest hsr,
+      @PathParam("appid") String appId) throws AuthorizationException {
+    init();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    String userName = "UNKNOWN-USER";
+    if (callerUGI != null) {
+      userName = callerUGI.getUserName();
+    }
+    RMApp app = null;
+    try {
+      app = getRMAppForAppId(appId);
+    } catch (NotFoundException e) {
+      RMAuditLogger.logFailure(userName, AuditConstants.KILL_APP_REQUEST,
+        "UNKNOWN", "RMWebService",
+        "Trying to get state of an absent application " + appId);
+      throw e;
+    }
+
+    AppQueue ret = new AppQueue();
+    ret.setQueue(app.getQueue());
+
+    return ret;
+  }
+
+  @PUT
+  @Path("/apps/{appid}/queue")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response updateAppQueue(AppQueue targetQueue,
+      @Context HttpServletRequest hsr, @PathParam("appid") String appId)
+      throws AuthorizationException, YarnException, InterruptedException,
+      IOException {
+
+    init();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      String msg = "Unable to obtain user name, user not authenticated";
+      throw new AuthorizationException(msg);
+    }
+
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
+    }
+
+    String userName = callerUGI.getUserName();
+    RMApp app = null;
+    try {
+      app = getRMAppForAppId(appId);
+    } catch (NotFoundException e) {
+      RMAuditLogger.logFailure(userName, AuditConstants.KILL_APP_REQUEST,
+        "UNKNOWN", "RMWebService", "Trying to move an absent application "
+            + appId);
+      throw e;
+    }
+
+    if (!app.getQueue().equals(targetQueue.getQueue())) {
+      // user is attempting to change queue.
+      return moveApp(app, callerUGI, targetQueue.getQueue());
+    }
+
+    AppQueue ret = new AppQueue();
+    ret.setQueue(app.getQueue());
+
+    return Response.status(Status.OK).entity(ret).build();
+  }
+
+  protected Response moveApp(RMApp app, UserGroupInformation callerUGI,
+      String targetQueue) throws IOException, InterruptedException {
+
+    if (app == null) {
+      throw new IllegalArgumentException("app cannot be null");
+    }
+    String userName = callerUGI.getUserName();
+    final ApplicationId appid = app.getApplicationId();
+    final String reqTargetQueue = targetQueue;
+    try {
+      callerUGI
+        .doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws IOException,
+              YarnException {
+            MoveApplicationAcrossQueuesRequest req =
+                MoveApplicationAcrossQueuesRequest.newInstance(appid,
+                  reqTargetQueue);
+            rm.getClientRMService().moveApplicationAcrossQueues(req);
+            return null;
+          }
+        });
+    } catch (UndeclaredThrowableException ue) {
+      // if the root cause is a permissions issue
+      // bubble that up to the user
+      if (ue.getCause() instanceof YarnException) {
+        YarnException ye = (YarnException) ue.getCause();
+        if (ye.getCause() instanceof AccessControlException) {
+          String appId = app.getApplicationId().toString();
+          String msg =
+              "Unauthorized attempt to move appid " + appId
+                  + " by remote user " + userName;
+          return Response.status(Status.FORBIDDEN).entity(msg).build();
+        } else if (ye.getMessage().startsWith("App in")
+            && ye.getMessage().endsWith("state cannot be moved.")) {
+          return Response.status(Status.BAD_REQUEST).entity(ye.getMessage())
+            .build();
+        } else {
+          throw ue;
+        }
+      } else {
+        throw ue;
+      }
+    }
+
+    AppQueue ret = new AppQueue();
+    ret.setQueue(app.getQueue());
     return Response.status(Status.OK).entity(ret).build();
   }
 
