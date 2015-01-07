@@ -1232,7 +1232,7 @@ public class FairScheduler extends
     }
   }
 
-  private String resolveReservationQueueName(String queueName,
+  private synchronized String resolveReservationQueueName(String queueName,
       ApplicationId applicationId, ReservationId reservationID) {
     FSQueue queue = queueMgr.getQueue(queueName);
     if ((queue == null) || !allocConf.isReservable(queue.getQueueName())) {
