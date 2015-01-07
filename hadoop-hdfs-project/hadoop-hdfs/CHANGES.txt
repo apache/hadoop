@@ -387,6 +387,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7583. Fix findbug in TransferFsImage.java (vinayakumarb)
 
+    HDFS-7564. NFS gateway dynamically reload UID/GID mapping file /etc/nfs.map
+    (Yongjun Zhang via brandonli)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
