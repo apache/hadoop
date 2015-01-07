@@ -189,8 +189,8 @@ public abstract class AbstractYarnScheduler
     }
   }
 
-  protected void containerLaunchedOnNode(ContainerId containerId,
-                                         SchedulerNode node) {
+  protected synchronized void containerLaunchedOnNode(
+      ContainerId containerId, SchedulerNode node) {
     // Get the application for the finished container
     SchedulerApplicationAttempt application = getCurrentAttemptForContainer
         (containerId);
