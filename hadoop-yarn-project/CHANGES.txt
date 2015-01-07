@@ -293,6 +293,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2978. Fixed potential NPE while getting queue info. (Varun Saxena via
     jianhe)
 
+    YARN-2230. Fixed few configs description in yarn-default.xml. (Vijay Bhat
+    via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

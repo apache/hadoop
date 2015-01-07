@@ -229,32 +229,32 @@
 
   <property>
     <description>The minimum allocation for every container request at the RM,
-    in MBs. Memory requests lower than this won't take effect,
-    and the specified value will get allocated at minimum.</description>
+    in MBs. Memory requests lower than this will throw a
+    InvalidResourceRequestException.</description>
     <name>yarn.scheduler.minimum-allocation-mb</name>
     <value>1024</value>
   </property>
 
   <property>
     <description>The maximum allocation for every container request at the RM,
-    in MBs. Memory requests higher than this won't take effect,
-    and will get capped to this value.</description>
+    in MBs. Memory requests higher than this will throw a
+    InvalidResourceRequestException.</description>
     <name>yarn.scheduler.maximum-allocation-mb</name>
     <value>8192</value>
   </property>
 
   <property>
     <description>The minimum allocation for every container request at the RM,
-    in terms of virtual CPU cores. Requests lower than this won't take effect,
-    and the specified value will get allocated the minimum.</description>
+    in terms of virtual CPU cores. Requests lower than this will throw a
+    InvalidResourceRequestException.</description>
     <name>yarn.scheduler.minimum-allocation-vcores</name>
     <value>1</value>
   </property>
 
   <property>
     <description>The maximum allocation for every container request at the RM,
-    in terms of virtual CPU cores. Requests higher than this won't take effect,
-    and will get capped to this value.</description>
+    in terms of virtual CPU cores. Requests higher than this will throw a
+    InvalidResourceRequestException.</description>
     <name>yarn.scheduler.maximum-allocation-vcores</name>
     <value>32</value>
   </property>
