@@ -30,9 +30,6 @@ Release 2.7.0 - UNRELEASED
     YARN-2765. Added leveldb-based implementation for RMStateStore. (Jason Lowe
     via jianhe)
 
-    YARN-2880. Added a test to make sure node labels will be recovered
-    if RM restart is enabled. (Rohith Sharmaks via jianhe)
-
     YARN-2203. [YARN-1492] Web UI for cache manager. (Chris Trezzo via kasha)
 
     YARN-2738. [YARN-2574] Add FairReservationSystem for FairScheduler. 
@@ -137,6 +134,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2360. Fair Scheduler: Display dynamic fair share for queues on the 
     scheduler page. (Ashwin Shankar and Wei Yan via kasha)
 
+    YARN-2880. Added a test to make sure node labels will be recovered
+    if RM restart is enabled. (Rohith Sharmaks via jianhe)
 
   OPTIMIZATIONS
 
