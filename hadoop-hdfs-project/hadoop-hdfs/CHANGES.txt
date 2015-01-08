@@ -399,6 +399,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7589. Break the dependency between libnative_mini_dfs and libhdfs.
     (Zhanwei Wang via cnauroth)
 
+    HDFS-7579. Improve log reporting during block report rpc failure.
+    (Charles Lamb via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -52,4 +52,12 @@ public abstract class ServerCommand {
   public int getAction() {
     return this.action;
   }
+
+  public String toString() {
+    final StringBuilder sb = new StringBuilder();
+    sb.append(getClass().getSimpleName());
+    sb.append("/");
+    sb.append(action);
+    return sb.toString();
+  }
 }
