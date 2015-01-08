@@ -17,8 +17,6 @@
  */
 
 #include "exception.h"
-#include "hdfs.h"
-#include "hdfs_test.h"
 #include "jni_helper.h"
 #include "native_mini_dfs.h"
 #include "platform.h"
@@ -31,6 +29,10 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#ifndef EINTERNAL
+#define EINTERNAL 255
+#endif
 
 #define MINIDFS_CLUSTER_BUILDER "org/apache/hadoop/hdfs/MiniDFSCluster$Builder"
 #define MINIDFS_CLUSTER "org/apache/hadoop/hdfs/MiniDFSCluster"
@@ -51,6 +53,25 @@ struct NativeMiniDfsCluster {
      */
     char domainSocketPath[PATH_MAX];
 };
+
+static int hdfsDisableDomainSocketSecurity(void)
+{
+    jthrowable jthr;
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+    jthr = invokeMethod(env, NULL, STATIC, NULL,
+            "org/apache/hadoop/net/unix/DomainSocket",
+            "disableBindPathValidation", "()V");
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "DomainSocket#disableBindPathValidation");
+        return -1;
+    }
+    return 0;
+}
 
 static jthrowable nmdConfigureShortCircuit(JNIEnv *env,
               struct NativeMiniDfsCluster *cl, jobject cobj)
@@ -345,29 +366,10 @@ error_dlr_nn:
     return ret;
 }
 
-int nmdConfigureHdfsBuilder(struct NativeMiniDfsCluster *cl,
-                            struct hdfsBuilder *bld)
-{
-    int ret;
-    tPort port;
-
-    hdfsBuilderSetNameNode(bld, "localhost");
-    port = (tPort)nmdGetNameNodePort(cl);
-    if (port < 0) {
-      fprintf(stderr, "nmdGetNameNodePort failed with error %d\n", -port);
-      return EIO;
-    }
-    hdfsBuilderSetNameNodePort(bld, port);
+const char *hdfsGetDomainSocketPath(const struct NativeMiniDfsCluster *cl) {
     if (cl->domainSocketPath[0]) {
-      ret = hdfsBuilderConfSetStr(bld, "dfs.client.read.shortcircuit", "true");
-      if (ret) {
-          return ret;
-      }
-      ret = hdfsBuilderConfSetStr(bld, "dfs.domain.socket.path",
-                            cl->domainSocketPath);
-      if (ret) {
-          return ret;
-      }
+        return cl->domainSocketPath;
     }
-    return 0;
+
+    return NULL;
 }
