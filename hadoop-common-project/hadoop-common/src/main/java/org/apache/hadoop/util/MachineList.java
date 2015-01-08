@@ -45,6 +45,7 @@ import com.google.common.net.InetAddresses;
 public class MachineList {
   
   public static final Log LOG = LogFactory.getLog(MachineList.class);
+  public static final String WILDCARD_VALUE = "*";
 
   /**
    * InetAddressFactory is used to obtain InetAddress from host.
@@ -91,7 +92,7 @@ public class MachineList {
   public MachineList(Collection<String> hostEntries, InetAddressFactory addressFactory) {
     this.addressFactory = addressFactory;
     if (hostEntries != null) {
-      if ((hostEntries.size() == 1) && (hostEntries.contains("*"))) {
+      if ((hostEntries.size() == 1) && (hostEntries.contains(WILDCARD_VALUE))) {
         all = true; 
         ipAddresses = null; 
         hostNames = null; 
