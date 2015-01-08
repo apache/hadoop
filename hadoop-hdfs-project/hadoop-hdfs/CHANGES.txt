@@ -390,6 +390,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7564. NFS gateway dynamically reload UID/GID mapping file /etc/nfs.map
     (Yongjun Zhang via brandonli)
 
+    HDFS-7561. TestFetchImage should write fetched-image-dir under target.
+    (Liang Xie via shv)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
