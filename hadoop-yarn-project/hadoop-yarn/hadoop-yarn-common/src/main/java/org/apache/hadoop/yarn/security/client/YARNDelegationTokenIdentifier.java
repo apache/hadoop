@@ -64,19 +64,41 @@ public abstract class YARNDelegationTokenIdentifier extends
     setMasterKeyId(builder.getMasterKeyId());
   }
 
+  private void setBuilderFields() {
+    if (builder.getOwner() != null &&
+        !builder.getOwner().equals(getOwner().toString())) {
+      builder.setOwner(getOwner().toString());
+    }
+    if (builder.getRenewer() != null &&
+        !builder.getRenewer().equals(getRenewer().toString())) { 
+      builder.setRenewer(getRenewer().toString());
+    }
+    if (builder.getRealUser() != null &&
+        !builder.getRealUser().equals(getRealUser().toString())) {
+      builder.setRealUser(getRealUser().toString());
+    }
+    if (builder.getIssueDate() != getIssueDate()) {
+      builder.setIssueDate(getIssueDate());
+    }
+    if (builder.getMaxDate() != getMaxDate()) {
+      builder.setMaxDate(getMaxDate());
+    }
+    if (builder.getSequenceNumber() != getSequenceNumber()) {
+      builder.setSequenceNumber(getSequenceNumber());
+    }
+    if (builder.getMasterKeyId() != getMasterKeyId()) {
+      builder.setMasterKeyId(getMasterKeyId());
+    }
+  }
+
   @Override
   public synchronized void write(DataOutput out) throws IOException {
-    builder.setOwner(getOwner().toString());
-    builder.setRenewer(getRenewer().toString());
-    builder.setRealUser(getRealUser().toString());
-    builder.setIssueDate(getIssueDate());
-    builder.setMaxDate(getMaxDate());
-    builder.setSequenceNumber(getSequenceNumber());
-    builder.setMasterKeyId(getMasterKeyId());
+    setBuilderFields();
     builder.build().writeTo((DataOutputStream) out);
   }
 
   public YARNDelegationTokenIdentifierProto getProto() {
+    setBuilderFields();
     return builder.build();
   }
 }
