@@ -396,6 +396,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7561. TestFetchImage should write fetched-image-dir under target.
     (Liang Xie via shv)
 
+    HDFS-7589. Break the dependency between libnative_mini_dfs and libhdfs.
+    (Zhanwei Wang via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
