@@ -21,6 +21,8 @@ import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
+
 import org.apache.hadoop.fs.ChecksumException;
 import org.junit.Test;
 
@@ -145,19 +147,19 @@ public class TestDataChecksum {
     Harness h = new Harness(checksum, dataLength, true);
 
     for (int i = 0; i < NUM_RUNS; i++) {
-      StopWatch s = new StopWatch().start();
+      Stopwatch s = new Stopwatch().start();
       // calculate real checksum, make sure it passes
       checksum.calculateChunkedSums(h.dataBuf, h.checksumBuf);
       s.stop();
       System.err.println("Calculate run #" + i + ": " +
-                         s.now(TimeUnit.MICROSECONDS) + "us");
+                         s.elapsedTime(TimeUnit.MICROSECONDS) + "us");
 
-      s = new StopWatch().start();
+      s = new Stopwatch().start();
       // calculate real checksum, make sure it passes
       checksum.verifyChunkedSums(h.dataBuf, h.checksumBuf, "fake file", 0);
       s.stop();
       System.err.println("Verify run #" + i + ": " +
-                         s.now(TimeUnit.MICROSECONDS) + "us");
+                         s.elapsedTime(TimeUnit.MICROSECONDS) + "us");
     }
   }
 

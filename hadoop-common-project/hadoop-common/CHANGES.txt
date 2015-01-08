@@ -146,9 +146,6 @@ Trunk (Unreleased)
     HADOOP-11058. Missing HADOOP_CONF_DIR generates strange results
     (Masatake Iwasaki via aw)
 
-    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
-    (ozawa)
-
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

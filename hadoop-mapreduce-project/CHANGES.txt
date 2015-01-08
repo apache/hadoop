@@ -92,9 +92,6 @@ Trunk (Unreleased)
     MAPREDUCE-6013. [post-HADOOP-9902] mapred version is missing (Akira AJISAKA
     via aw)
 
-    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
-    (ozawa)
-
   BUG FIXES
 
     MAPREDUCE-6191. Improve clearing stale state of Java serialization

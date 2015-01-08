@@ -27,7 +27,6 @@ import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -39,6 +38,8 @@ import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
 import org.apache.hadoop.hdfs.qjournal.client.IPCLoggerChannel;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
+import org.apache.hadoop.hdfs.qjournal.server.Journal;
+import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -47,12 +48,12 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.StopWatch;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 
@@ -319,11 +320,11 @@ public class TestJournalNode {
     ch.setEpoch(1);
     ch.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION).get();
     
-    StopWatch sw = new StopWatch().start();
+    Stopwatch sw = new Stopwatch().start();
     for (int i = 1; i < numEdits; i++) {
       ch.sendEdits(1L, i, 1, data).get();
     }
-    long time = sw.now(TimeUnit.MILLISECONDS);
+    long time = sw.elapsedMillis();
     
     System.err.println("Wrote " + numEdits + " batches of " + editsSize +
         " bytes in " + time + "ms");
