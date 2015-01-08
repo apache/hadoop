@@ -65,11 +65,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.Ranges;
 import com.google.protobuf.TextFormat;
-import org.apache.hadoop.util.StopWatch;
 
 /**
  * A JournalNode can manage journals for several clusters at once.
@@ -374,20 +374,15 @@ public class Journal implements Closeable {
     
     curSegment.writeRaw(records, 0, records.length);
     curSegment.setReadyToFlush();
-    StopWatch sw = new StopWatch();
+    Stopwatch sw = new Stopwatch();
     sw.start();
     curSegment.flush(shouldFsync);
     sw.stop();
-
-    long nanoSeconds = sw.now();
-    metrics.addSync(
-        TimeUnit.MICROSECONDS.convert(nanoSeconds, TimeUnit.NANOSECONDS));
-    long milliSeconds = TimeUnit.MILLISECONDS.convert(
-        nanoSeconds, TimeUnit.NANOSECONDS);
-
-    if (milliSeconds > WARN_SYNC_MILLIS_THRESHOLD) {
+    
+    metrics.addSync(sw.elapsedTime(TimeUnit.MICROSECONDS));
+    if (sw.elapsedTime(TimeUnit.MILLISECONDS) > WARN_SYNC_MILLIS_THRESHOLD) {
       LOG.warn("Sync of transaction range " + firstTxnId + "-" + lastTxnId +
-               " took " + milliSeconds + "ms");
+               " took " + sw.elapsedTime(TimeUnit.MILLISECONDS) + "ms");
     }
 
     if (isLagging) {

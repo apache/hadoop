@@ -21,10 +21,11 @@ import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.google.common.base.Stopwatch;
 
 public class TestChunkedArrayList {
 
@@ -70,24 +71,24 @@ public class TestChunkedArrayList {
       System.gc();
       {
         ArrayList<String> arrayList = new ArrayList<String>();
-        StopWatch sw = new StopWatch();
+        Stopwatch sw = new Stopwatch();
         sw.start();
         for (int i = 0; i < numElems; i++) {
           arrayList.add(obj);
         }
-        System.out.println("       ArrayList " + sw.now(TimeUnit.MILLISECONDS));
+        System.out.println("       ArrayList " + sw.elapsedMillis());
       }
       
       // test ChunkedArrayList
       System.gc();
       {
         ChunkedArrayList<String> chunkedList = new ChunkedArrayList<String>();
-        StopWatch sw = new StopWatch();
+        Stopwatch sw = new Stopwatch();
         sw.start();
         for (int i = 0; i < numElems; i++) {
           chunkedList.add(obj);
         }
-        System.out.println("ChunkedArrayList " + sw.now(TimeUnit.MILLISECONDS));
+        System.out.println("ChunkedArrayList " + sw.elapsedMillis());
       }
     }
   }
