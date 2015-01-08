@@ -159,6 +159,31 @@ security.ha.service.protocol.acl      | ACL for HAService protocol used by HAAdm
    the ability to refresh the service-level authorization configuration to
    certain users/groups.
 
+  ** Access Control using list of ip addresses, host names and ip ranges
+
+   Access to a service can be controlled based on the ip address of the client accessing
+   the service. It is possible to restrict access to a service from a set of machines by
+   specifying a list of ip addresses, host names and ip ranges. The property name for each service
+   is derived from the corresponding acl's property name. If the property name of acl is
+   security.client.protocol.acl, property name for the hosts list will be
+   security.client.protocol.hosts.
+
+   If hosts list is not defined for a service, the value of
+   <<<security.service.authorization.default.hosts>>> is applied. If
+   <<<security.service.authorization.default.hosts>>> is not defined, <<<*>>>  is applied.
+
+   It is possible to specify a blocked list of hosts. Only those machines which are in the
+   hosts list, but not in the blocked hosts list will be granted access to the service. The property
+   name is derived by suffixing with ".blocked".
+
+   Example: The property name of blocked hosts list for <<<security.client.protocol.hosts>>
+   will be <<<security.client.protocol.hosts.blocked>>>
+
+   If blocked hosts list is not defined for a service, the value of
+   <<<security.service.authorization.default.hosts.blocked>>> is applied. If
+   <<<security.service.authorization.default.hosts.blocked>>> is not defined,
+   empty blocked hosts list is applied.
+
 ** Examples
 
    Allow only users <<<alice>>>, <<<bob>>> and users in the <<<mapreduce>>> group to submit
