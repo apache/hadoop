@@ -18,9 +18,9 @@
 package org.apache.hadoop.mapred.nativetask.kvtest;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Longs;
 
 import org.apache.commons.logging.Log;
@@ -36,6 +36,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.StopWatch;
 
 public class KVJob {
   public static final String INPUTPATH = "nativetask.kvtest.inputfile.path";
@@ -93,9 +94,10 @@ public class KVJob {
       final TestInputFile testfile = new TestInputFile(Integer.valueOf(conf.get(
           TestConstants.FILESIZE_KEY, "1000")),
           keyclass.getName(), valueclass.getName(), conf);
-      Stopwatch sw = new Stopwatch().start();
+      StopWatch sw = new StopWatch().start();
       testfile.createSequenceTestFile(inputpath);
-      LOG.info("Created test file " + inputpath + " in " + sw.elapsedMillis() + "ms");
+      LOG.info("Created test file " + inputpath + " in "
+          + sw.now(TimeUnit.MILLISECONDS) + "ms");
     }
     job.setInputFormatClass(SequenceFileInputFormat.class);
     FileInputFormat.addInputPath(job, new Path(inputpath));
