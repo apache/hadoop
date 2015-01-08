@@ -91,15 +91,16 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  public void storeApplicationStateInternal(
+  public synchronized void storeApplicationStateInternal(
       ApplicationId appId, ApplicationStateData appState)
       throws Exception {
     state.appState.put(appId, appState);
   }
 
   @Override
-  public void updateApplicationStateInternal(ApplicationId appId,
-      ApplicationStateData appState) throws Exception {
+  public synchronized void updateApplicationStateInternal(
+      ApplicationId appId, ApplicationStateData appState) 
+      throws Exception {
     LOG.info("Updating final state " + appState.getState() + " for app: "
         + appId);
     if (state.appState.get(appId) != null) {
@@ -186,7 +187,7 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateRMDelegationTokenState(
+  protected synchronized void updateRMDelegationTokenState(
       RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
       throws Exception {
     removeRMDelegationTokenState(rmDTIdentifier);
@@ -237,7 +238,7 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  public void storeOrUpdateAMRMTokenSecretManagerState(
+  public synchronized void storeOrUpdateAMRMTokenSecretManagerState(
       AMRMTokenSecretManagerState amrmTokenSecretManagerState,
       boolean isUpdate) {
     if (amrmTokenSecretManagerState != null) {

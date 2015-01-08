@@ -137,6 +137,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2880. Added a test to make sure node labels will be recovered
     if RM restart is enabled. (Rohith Sharmaks via jianhe)
 
+    YARN-2996. Improved synchronization and I/O operations of FS- and Mem-
+    RMStateStore. (Yi Liu via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
