@@ -23,6 +23,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6046. Change the class name for logs in RMCommunicator
     (Sahil Takiar via devaraj)
 
+    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
+    (ozawa)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 

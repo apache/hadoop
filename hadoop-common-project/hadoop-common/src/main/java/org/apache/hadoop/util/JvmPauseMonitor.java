@@ -22,6 +22,7 @@ import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -172,7 +172,7 @@ public class JvmPauseMonitor {
   private class Monitor implements Runnable {
     @Override
     public void run() {
-      Stopwatch sw = new Stopwatch();
+      StopWatch sw = new StopWatch();
       Map<String, GcTimes> gcTimesBeforeSleep = getGcTimes();
       while (shouldRun) {
         sw.reset().start();
@@ -181,7 +181,7 @@ public class JvmPauseMonitor {
         } catch (InterruptedException ie) {
           return;
         }
-        long extraSleepTime = sw.elapsedMillis() - SLEEP_INTERVAL_MS;
+        long extraSleepTime = sw.now(TimeUnit.MILLISECONDS) - SLEEP_INTERVAL_MS;
         Map<String, GcTimes> gcTimesAfterSleep = getGcTimes();
 
         if (extraSleepTime > warnThresholdMs) {

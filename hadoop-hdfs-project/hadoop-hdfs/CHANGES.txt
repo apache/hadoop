@@ -222,6 +222,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7484. Make FSDirectory#addINode take existing INodes as its parameter.
     (jing9)
 
+    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
+    (ozawa)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
