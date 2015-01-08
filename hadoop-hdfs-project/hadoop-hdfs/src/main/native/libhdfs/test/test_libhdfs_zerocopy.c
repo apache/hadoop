@@ -201,6 +201,37 @@ static int createZeroCopyTestFile(hdfsFS fs, char *testFileName,
     return 0;
 }
 
+static int nmdConfigureHdfsBuilder(struct NativeMiniDfsCluster *cl,
+                            struct hdfsBuilder *bld) {
+    int ret;
+    tPort port;
+    const char *domainSocket;
+
+    hdfsBuilderSetNameNode(bld, "localhost");
+    port = (tPort) nmdGetNameNodePort(cl);
+    if (port < 0) {
+      fprintf(stderr, "nmdGetNameNodePort failed with error %d\n", -port);
+      return EIO;
+    }
+    hdfsBuilderSetNameNodePort(bld, port);
+
+    domainSocket = hdfsGetDomainSocketPath(cl);
+
+    if (domainSocket) {
+      ret = hdfsBuilderConfSetStr(bld, "dfs.client.read.shortcircuit", "true");
+      if (ret) {
+        return ret;
+      }
+      ret = hdfsBuilderConfSetStr(bld, "dfs.domain.socket.path",
+                                  domainSocket);
+      if (ret) {
+        return ret;
+      }
+    }
+    return 0;
+}
+
+
 /**
  * Test that we can write a file with libhdfs and then read it back
  */
