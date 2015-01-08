@@ -32,11 +32,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.metrics2.util.SampleQuantiles;
+import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
-
-import com.google.common.base.Stopwatch;
 
 /**
  * This class tests hflushing concurrently from many threads.
@@ -100,10 +99,10 @@ public class TestMultiThreadedHflush {
     }
 
     private void doAWrite() throws IOException {
-      Stopwatch sw = new Stopwatch().start();
+      StopWatch sw = new StopWatch().start();
       stm.write(toWrite);
       stm.hflush();
-      long micros = sw.elapsedTime(TimeUnit.MICROSECONDS);
+      long micros = sw.now(TimeUnit.MICROSECONDS);
       quantiles.insert(micros);
     }
   }
@@ -276,12 +275,12 @@ public class TestMultiThreadedHflush {
       int replication = conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
           DFSConfigKeys.DFS_REPLICATION_DEFAULT);
       
-      Stopwatch sw = new Stopwatch().start();
+      StopWatch sw = new StopWatch().start();
       test.doMultithreadedWrites(conf, p, numThreads, writeSize, numWrites,
           replication);
       sw.stop();
   
-      System.out.println("Finished in " + sw.elapsedMillis() + "ms");
+      System.out.println("Finished in " + sw.now(TimeUnit.MILLISECONDS) + "ms");
       System.out.println("Latency quantiles (in microseconds):\n" +
           test.quantiles);
       return 0;

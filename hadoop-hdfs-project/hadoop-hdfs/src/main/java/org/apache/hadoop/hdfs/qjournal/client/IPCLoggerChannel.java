@@ -52,10 +52,10 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.StopWatch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -143,7 +143,7 @@ public class IPCLoggerChannel implements AsyncLogger {
   /**
    * Stopwatch which starts counting on each heartbeat that is sent
    */
-  private final Stopwatch lastHeartbeatStopwatch = new Stopwatch();
+  private final StopWatch lastHeartbeatStopwatch = new StopWatch();
   
   private static final long HEARTBEAT_INTERVAL_MILLIS = 1000;
 
@@ -463,8 +463,8 @@ public class IPCLoggerChannel implements AsyncLogger {
    * written.
    */
   private void heartbeatIfNecessary() throws IOException {
-    if (lastHeartbeatStopwatch.elapsedMillis() > HEARTBEAT_INTERVAL_MILLIS ||
-        !lastHeartbeatStopwatch.isRunning()) {
+    if (lastHeartbeatStopwatch.now(TimeUnit.MILLISECONDS)
+        > HEARTBEAT_INTERVAL_MILLIS || !lastHeartbeatStopwatch.isRunning()) {
       try {
         getProxy().heartbeat(createReqInfo());
       } finally {
