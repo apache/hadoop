@@ -299,6 +299,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3010. Fixed findbugs warning in AbstractYarnScheduler. (Yi Liu via
     jianhe)
 
+    YARN-2936. Changed YARNDelegationTokenIdentifier to set proto fields on
+    getProto method. (Varun Saxena via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
