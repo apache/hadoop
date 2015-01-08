@@ -610,14 +610,14 @@ public class TestNodeStatusUpdater {
           <ContainerId>();
       try {
         if (heartBeatID == 0) {
-          Assert.assertEquals(request.getNodeStatus().getContainersStatuses()
-            .size(), 0);
-          Assert.assertEquals(context.getContainers().size(), 0);
+          Assert.assertEquals(0, request.getNodeStatus().getContainersStatuses()
+            .size());
+          Assert.assertEquals(0, context.getContainers().size());
         } else if (heartBeatID == 1) {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          Assert.assertEquals(statuses.size(), 2);
-          Assert.assertEquals(context.getContainers().size(), 2);
+          Assert.assertEquals(2, statuses.size());
+          Assert.assertEquals(2, context.getContainers().size());
 
           boolean container2Exist = false, container3Exist = false;
           for (ContainerStatus status : statuses) {
@@ -643,8 +643,16 @@ public class TestNodeStatusUpdater {
         } else if (heartBeatID == 2 || heartBeatID == 3) {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          Assert.assertEquals(statuses.size(), 4);
-          Assert.assertEquals(context.getContainers().size(), 4);
+          if (heartBeatID == 2) {
+            // NM should send completed containers again, since the last
+            // heartbeat is lost.
+            Assert.assertEquals(4, statuses.size());
+          } else {
+            // NM should not send completed containers again, since the last
+            // heartbeat is successful.
+            Assert.assertEquals(2, statuses.size());
+          }
+          Assert.assertEquals(4, context.getContainers().size());
 
           boolean container2Exist = false, container3Exist = false,
               container4Exist = false, container5Exist = false;
@@ -674,8 +682,14 @@ public class TestNodeStatusUpdater {
               container5Exist = true;
             }
           }
-          Assert.assertTrue(container2Exist && container3Exist
-              && container4Exist && container5Exist);
+          if (heartBeatID == 2) {
+            Assert.assertTrue(container2Exist && container3Exist
+                && container4Exist && container5Exist);
+          } else {
+            // NM do not send completed containers again
+            Assert.assertTrue(container2Exist && !container3Exist
+                && container4Exist && !container5Exist);
+          }
 
           if (heartBeatID == 3) {
             finishedContainersPulledByAM.add(containerStatus3.getContainerId());
@@ -683,8 +697,9 @@ public class TestNodeStatusUpdater {
         } else if (heartBeatID == 4) {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          Assert.assertEquals(statuses.size(), 3);
-          Assert.assertEquals(context.getContainers().size(), 3);
+          Assert.assertEquals(2, statuses.size());
+          // Container 3 is acked by AM, hence removed from context
+          Assert.assertEquals(3, context.getContainers().size());
 
           boolean container3Exist = false;
           for (ContainerStatus status : statuses) {
@@ -917,13 +932,14 @@ public class TestNodeStatusUpdater {
     nodeStatusUpdater.removeOrTrackCompletedContainersFromContext(ackedContainers);
 
     Set<ContainerId> containerIdSet = new HashSet<ContainerId>();
-    for (ContainerStatus status : nodeStatusUpdater.getContainerStatuses()) {
+    List<ContainerStatus> containerStatuses = nodeStatusUpdater.getContainerStatuses();
+    for (ContainerStatus status : containerStatuses) {
       containerIdSet.add(status.getContainerId());
     }
 
-    Assert.assertTrue(nodeStatusUpdater.getContainerStatuses().size() == 1);
+    Assert.assertEquals(1, containerStatuses.size());
     // completed container is removed;
-    Assert.assertFalse(containerIdSet.contains(anyCompletedContainer));
+    Assert.assertFalse(containerIdSet.contains(cId));
     // running container is not removed;
     Assert.assertTrue(containerIdSet.contains(runningContainerId));
   }
@@ -967,15 +983,15 @@ public class TestNodeStatusUpdater {
 
     when(application.getApplicationState()).thenReturn(
         ApplicationState.FINISHING_CONTAINERS_WAIT);
-    // The completed container will be sent one time. Then we will delete it.
+    // The completed container will be saved in case of lost heartbeat.
     Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
-    Assert.assertEquals(0, nodeStatusUpdater.getContainerStatuses().size());
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
 
     nm.getNMContext().getContainers().put(cId, anyCompletedContainer);
     nm.getNMContext().getApplications().remove(appId);
-    // The completed container will be sent one time. Then we will delete it.
+    // The completed container will be saved in case of lost heartbeat.
     Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
-    Assert.assertEquals(0, nodeStatusUpdater.getContainerStatuses().size());
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
   }
 
   @Test
