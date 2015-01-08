@@ -14,6 +14,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7531. Improve the concurrent access on FsVolumeList (Lei Xu via Colin
     P. McCabe)
 
+    HDFS-7579. Improve log reporting during block report rpc failure.
+    (Charles Lamb via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
