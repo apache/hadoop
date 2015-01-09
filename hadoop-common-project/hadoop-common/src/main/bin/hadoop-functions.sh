@@ -562,8 +562,10 @@ function hadoop_os_tricks
 {
   local bindv6only
 
-  # some OSes have special needs. here's some out of the box
-  # examples for OS X and Linux. Vendors, replace this with your special sauce.
+  # Some OSes have special needs.  Here's some out of the box examples for OS X,
+  # Linux and Windows on Cygwin.
+  # Vendors, replace this with your special sauce.
+  HADOOP_IS_CYGWIN=false
   case ${HADOOP_OS_TYPE} in
     Darwin)
       if [[ -z "${JAVA_HOME}" ]]; then
@@ -594,6 +596,10 @@ function hadoop_os_tricks
       # down to prevent vmem explosion.
       export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
     ;;
+    CYGWIN*)
+      # Flag that we're running on Cygwin to trigger path translation later.
+      HADOOP_IS_CYGWIN=true
+    ;;
   esac
 }
 
@@ -621,6 +627,7 @@ function hadoop_java_setup
 function hadoop_finalize_libpaths
 {
   if [[ -n "${JAVA_LIBRARY_PATH}" ]]; then
+    hadoop_translate_cygwin_path JAVA_LIBRARY_PATH
     hadoop_add_param HADOOP_OPTS java.library.path \
     "-Djava.library.path=${JAVA_LIBRARY_PATH}"
     export LD_LIBRARY_PATH
@@ -652,14 +659,34 @@ function hadoop_finalize_hadoop_heap
   fi
 }
 
+# Accepts a variable name.  If running on Cygwin, sets the variable value to the
+# equivalent translated Windows path by running the cygpath utility.  If the
+# second argument is true, then the variable is treated as a path list.
+function hadoop_translate_cygwin_path
+{
+  if [[ "${HADOOP_IS_CYGWIN}" = "true" ]]; then
+    if [[ "$2" = "true" ]]; then
+      #shellcheck disable=SC2016
+      eval "$1"='$(cygpath -p -w "${!1}" 2>/dev/null)'
+    else
+      #shellcheck disable=SC2016
+      eval "$1"='$(cygpath -w "${!1}" 2>/dev/null)'
+    fi
+  fi
+}
+
 #
 # fill in any last minute options that might not have been defined yet
 #
 function hadoop_finalize_hadoop_opts
 {
+  hadoop_translate_cygwin_path HADOOP_LOG_DIR
   hadoop_add_param HADOOP_OPTS hadoop.log.dir "-Dhadoop.log.dir=${HADOOP_LOG_DIR}"
   hadoop_add_param HADOOP_OPTS hadoop.log.file "-Dhadoop.log.file=${HADOOP_LOGFILE}"
-  hadoop_add_param HADOOP_OPTS hadoop.home.dir "-Dhadoop.home.dir=${HADOOP_PREFIX}"
+  HADOOP_HOME=${HADOOP_PREFIX}
+  hadoop_translate_cygwin_path HADOOP_HOME
+  export HADOOP_HOME
+  hadoop_add_param HADOOP_OPTS hadoop.home.dir "-Dhadoop.home.dir=${HADOOP_HOME}"
   hadoop_add_param HADOOP_OPTS hadoop.id.str "-Dhadoop.id.str=${HADOOP_IDENT_STRING}"
   hadoop_add_param HADOOP_OPTS hadoop.root.logger "-Dhadoop.root.logger=${HADOOP_ROOT_LOGGER}"
   hadoop_add_param HADOOP_OPTS hadoop.policy.file "-Dhadoop.policy.file=${HADOOP_POLICYFILE}"
@@ -673,6 +700,7 @@ function hadoop_finalize_classpath
   # user classpath gets added at the last minute. this allows
   # override of CONF dirs and more
   hadoop_add_to_classpath_userpath
+  hadoop_translate_cygwin_path CLASSPATH true
 }
 
 function hadoop_finalize_catalina_opts
@@ -702,6 +730,13 @@ function hadoop_finalize
   hadoop_finalize_libpaths
   hadoop_finalize_hadoop_heap
   hadoop_finalize_hadoop_opts
+
+  hadoop_translate_cygwin_path HADOOP_PREFIX
+  hadoop_translate_cygwin_path HADOOP_CONF_DIR
+  hadoop_translate_cygwin_path HADOOP_COMMON_HOME
+  hadoop_translate_cygwin_path HADOOP_HDFS_HOME
+  hadoop_translate_cygwin_path HADOOP_YARN_HOME
+  hadoop_translate_cygwin_path HADOOP_MAPRED_HOME
 }
 
 function hadoop_exit_with_usage

@@ -466,6 +466,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
     (ozawa)
 
+    HADOOP-11464. Reinstate support for launching Hadoop processes on Windows
+    using Cygwin. (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
