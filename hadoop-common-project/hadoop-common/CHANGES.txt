@@ -1,5 +1,20 @@
 Hadoop Change Log
 
+Release 2.2.2 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-10110. hadoop-auth has a build break due to missing dependency
+    (Chuan Liu via jeagles)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
