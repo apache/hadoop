@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 2.2.2 - Unreleased
+Release 2.2.1 - Unreleased
 
   INCOMPATIBLE CHANGES
 
