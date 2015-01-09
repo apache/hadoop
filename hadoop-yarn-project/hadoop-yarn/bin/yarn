@@ -55,6 +55,12 @@ bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+
+cygwin=false
+case "$(uname)" in
+CYGWIN*) cygwin=true;;
+esac
+
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/yarn-config.sh
 
@@ -202,6 +208,9 @@ unset IFS
 
 # figure out which class to run
 if [ "$COMMAND" = "classpath" ] ; then
+  if $cygwin; then
+    CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
+  fi
   echo $CLASSPATH
   exit
 elif [ "$COMMAND" = "rmadmin" ] ; then
@@ -281,15 +290,36 @@ else
   CLASS=$COMMAND
 fi
 
+# cygwin path translation
+if $cygwin; then
+  CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
+  HADOOP_LOG_DIR=$(cygpath -w "$HADOOP_LOG_DIR" 2>/dev/null)
+  HADOOP_PREFIX=$(cygpath -w "$HADOOP_PREFIX" 2>/dev/null)
+  HADOOP_CONF_DIR=$(cygpath -w "$HADOOP_CONF_DIR" 2>/dev/null)
+  HADOOP_COMMON_HOME=$(cygpath -w "$HADOOP_COMMON_HOME" 2>/dev/null)
+  HADOOP_HDFS_HOME=$(cygpath -w "$HADOOP_HDFS_HOME" 2>/dev/null)
+  HADOOP_YARN_HOME=$(cygpath -w "$HADOOP_YARN_HOME" 2>/dev/null)
+  HADOOP_MAPRED_HOME=$(cygpath -w "$HADOOP_MAPRED_HOME" 2>/dev/null)
+  YARN_LOG_DIR=$(cygpath -w "$YARN_LOG_DIR" 2>/dev/null)
+fi
+
 YARN_OPTS="$YARN_OPTS -Dhadoop.log.dir=$YARN_LOG_DIR"
 YARN_OPTS="$YARN_OPTS -Dyarn.log.dir=$YARN_LOG_DIR"
 YARN_OPTS="$YARN_OPTS -Dhadoop.log.file=$YARN_LOGFILE"
 YARN_OPTS="$YARN_OPTS -Dyarn.log.file=$YARN_LOGFILE"
 YARN_OPTS="$YARN_OPTS -Dyarn.home.dir=$HADOOP_YARN_HOME"
-YARN_OPTS="$YARN_OPTS -Dhadoop.home.dir=$HADOOP_YARN_HOME"
+HADOOP_HOME=$HADOOP_PREFIX
+if $cygwin; then
+  HADOOP_HOME=$(cygpath -w "$HADOOP_HOME" 2>/dev/null)
+fi
+export HADOOP_HOME
+YARN_OPTS="$YARN_OPTS -Dhadoop.home.dir=$HADOOP_HOME"
 YARN_OPTS="$YARN_OPTS -Dhadoop.root.logger=${YARN_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}"
 YARN_OPTS="$YARN_OPTS -Dyarn.root.logger=${YARN_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
+  if $cygwin; then
+    JAVA_LIBRARY_PATH=$(cygpath -w "$JAVA_LIBRARY_PATH" 2>/dev/null)
+  fi
   YARN_OPTS="$YARN_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
 fi  
 

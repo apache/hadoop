@@ -22,6 +22,12 @@ bin=`dirname ${bin}`
 bin=`cd "$bin"; pwd`
  
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+
+cygwin=false
+case "$(uname)" in
+CYGWIN*) cygwin=true;;
+esac
+
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/hadoop-config.sh
 
@@ -125,6 +131,9 @@ case $COMMAND in
     elif [ "$COMMAND" = "classpath" ] ; then
       if [ "$#" -eq 1 ]; then
         # No need to bother starting up a JVM for this simple case.
+        if $cygwin; then
+          CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
+        fi
         echo $CLASSPATH
         exit
       else
@@ -137,6 +146,19 @@ case $COMMAND in
     else
       CLASS=$COMMAND
     fi
+
+    # cygwin path translation
+    if $cygwin; then
+      CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
+      HADOOP_LOG_DIR=$(cygpath -w "$HADOOP_LOG_DIR" 2>/dev/null)
+      HADOOP_PREFIX=$(cygpath -w "$HADOOP_PREFIX" 2>/dev/null)
+      HADOOP_CONF_DIR=$(cygpath -w "$HADOOP_CONF_DIR" 2>/dev/null)
+      HADOOP_COMMON_HOME=$(cygpath -w "$HADOOP_COMMON_HOME" 2>/dev/null)
+      HADOOP_HDFS_HOME=$(cygpath -w "$HADOOP_HDFS_HOME" 2>/dev/null)
+      HADOOP_YARN_HOME=$(cygpath -w "$HADOOP_YARN_HOME" 2>/dev/null)
+      HADOOP_MAPRED_HOME=$(cygpath -w "$HADOOP_MAPRED_HOME" 2>/dev/null)
+    fi
+
     shift
     
     # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS

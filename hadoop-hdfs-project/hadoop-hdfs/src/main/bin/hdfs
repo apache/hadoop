@@ -30,6 +30,12 @@ bin=`dirname ${bin}`
 bin=`cd "$bin" > /dev/null; pwd`
 
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+
+cygwin=false
+case "$(uname)" in
+CYGWIN*) cygwin=true;;
+esac
+
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/hdfs-config.sh
 
@@ -203,6 +209,18 @@ elif [ "$COMMAND" = "debug" ]; then
   CLASS=org.apache.hadoop.hdfs.tools.DebugAdmin
 else
   CLASS="$COMMAND"
+fi
+
+# cygwin path translation
+if $cygwin; then
+  CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
+  HADOOP_LOG_DIR=$(cygpath -w "$HADOOP_LOG_DIR" 2>/dev/null)
+  HADOOP_PREFIX=$(cygpath -w "$HADOOP_PREFIX" 2>/dev/null)
+  HADOOP_CONF_DIR=$(cygpath -w "$HADOOP_CONF_DIR" 2>/dev/null)
+  HADOOP_COMMON_HOME=$(cygpath -w "$HADOOP_COMMON_HOME" 2>/dev/null)
+  HADOOP_HDFS_HOME=$(cygpath -w "$HADOOP_HDFS_HOME" 2>/dev/null)
+  HADOOP_YARN_HOME=$(cygpath -w "$HADOOP_YARN_HOME" 2>/dev/null)
+  HADOOP_MAPRED_HOME=$(cygpath -w "$HADOOP_MAPRED_HOME" 2>/dev/null)
 fi
 
 export CLASSPATH=$CLASSPATH
