@@ -225,6 +225,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
     (ozawa)
 
+    HADOOP-11470. Remove some uses of obsolete guava APIs from the hadoop
+    codebase. (Sangjin Lee via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
