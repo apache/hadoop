@@ -17,6 +17,9 @@
  */
 
 #include <string.h>
+#ifdef _WIN32
+#define strerror_r(errnum, buf, buflen) strerror_s((buf), (buflen), (errnum))
+#endif
 
 int main()
 {

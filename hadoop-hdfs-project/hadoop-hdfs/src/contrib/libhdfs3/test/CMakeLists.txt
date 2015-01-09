@@ -19,7 +19,15 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 SET(TEST_WORKING_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data/)
-ADD_DEFINITIONS(-DGTEST_LANG_CXX11=0 -Dprivate=public -Dprotected=public -DDATA_DIR="${TEST_WORKING_DIR}/")
+
+IF(MSVC)
+    # in Windows, redefine private = public, protected = public cause
+    # a serious linking curse. Hence this preprocessor symbol.
+    # In the future, we may want to get rid of this definition even for MacOS and Linux.
+    ADD_DEFINITIONS(-DGTEST_LANG_CXX11=0 -D_WIN_TEST_ -DDATA_DIR="${TEST_WORKING_DIR}/")
+ELSE(MSVC)
+    ADD_DEFINITIONS(-DGTEST_LANG_CXX11=0 -Dprivate=public -Dprotected=public -DDATA_DIR="${TEST_WORKING_DIR}/")
+ENDIF(MSVC)
 
 ADD_SUBDIRECTORY(function)
 ADD_SUBDIRECTORY(unit)
