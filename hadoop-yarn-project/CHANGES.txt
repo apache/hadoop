@@ -32,6 +32,8 @@ Trunk - Unreleased
 
     YARN-2525. yarn logs command gives error on trunk (Akira AJISAKA via aw)
 
+    YARN-3002. YARN documentation needs updating post-shell rewrite (aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
