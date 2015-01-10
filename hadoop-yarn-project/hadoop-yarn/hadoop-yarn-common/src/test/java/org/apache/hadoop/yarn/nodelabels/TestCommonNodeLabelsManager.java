@@ -281,4 +281,42 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("n1"), toSet("  p2 ")));
     Assert.assertTrue(mgr.getNodeLabels().isEmpty());
   }
+  
+  @Test(timeout = 5000)
+  public void testReplaceLabelsOnHostsShouldUpdateNodesBelongTo()
+      throws IOException {
+    mgr.addToCluserNodeLabels(toSet("p1", "p2", "p3"));
+    mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p1", "p2")));
+    assertMapEquals(
+        mgr.getNodeLabels(),
+        ImmutableMap.of(toNodeId("n1"), toSet("p1", "p2")));
+    
+    // Replace labels on n1:1 to P2
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p2"),
+        toNodeId("n1:2"), toSet("p2")));
+    assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
+        toSet("p1", "p2"), toNodeId("n1:1"), toSet("p2"), toNodeId("n1:2"),
+        toSet("p2")));
+    
+    // Replace labels on n1 to P1, both n1:1/n1 will be P1 now
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1")));
+    assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
+        toSet("p1"), toNodeId("n1:1"), toSet("p1"), toNodeId("n1:2"),
+        toSet("p1")));
+    
+    // Set labels on n1:1 to P2 again to verify if add/remove works
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p2")));
+    
+    // Add p3 to n1, should makes n1:1 to be p2/p3, and n1:2 to be p1/p3
+    mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p3")));
+    assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
+        toSet("p1", "p3"), toNodeId("n1:1"), toSet("p2", "p3"),
+        toNodeId("n1:2"), toSet("p1", "p3")));
+    
+    // Remove P3 from n1, should makes n1:1 to be p2, and n1:2 to be p1
+    mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("n1"), toSet("p3")));
+    assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
+        toSet("p1"), toNodeId("n1:1"), toSet("p2"), toNodeId("n1:2"),
+        toSet("p1")));
+  }
 }
