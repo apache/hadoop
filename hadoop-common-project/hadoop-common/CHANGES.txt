@@ -128,6 +128,9 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP 11400. GraphiteSink does not reconnect to Graphite after 'broken pipe' 
+    (Kamil Gorlo via raviprak)
+
     HADOOP-11236. NFS: Fix javadoc warning in RpcProgram.java (Abhiraj Butala via harsh)
 
     HADOOP-11166. Remove ulimit from test-patch.sh. (wang)
