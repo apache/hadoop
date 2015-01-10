@@ -36,29 +36,47 @@ MapReduce NextGen aka YARN aka MRv2
   library and is tasked with negotiating resources from the ResourceManager and 
   working with the NodeManager(s) to execute and monitor the tasks.
 
-  More details are available in the {{{./YARN.html}YARN}}
-  document.
+  More details are available in the {{{./YARN.html}Architecture}} document.
 
-* Documentation
 
-  * {{{./YARN.html}NextGen MapReduce}}
-  
-  * {{{./WritingYarnApplications.html}Writing YARN Applications}}
+Documentation Index
 
+* YARN
+
+  * {{{./YARN.html}YARN Architecture}}
+ 
   * {{{./CapacityScheduler.html}Capacity Scheduler}}
-
+ 
   * {{{./FairScheduler.html}Fair Scheduler}}
-
+ 
+  * {{{./ResourceManagerRestart.htaml}ResourceManager Restart}}
+ 
+  * {{{./ResourceManagerHA.html}ResourceManager HA}}
+ 
   * {{{./WebApplicationProxy.html}Web Application Proxy}}
-
+ 
   * {{{./TimelineServer.html}YARN Timeline Server}}
-  
-  * {{{./SecureContainer.html}YARN Secure Containers}}
-
-  * {{{../../hadoop-project-dist/hadoop-common/CLIMiniCluster.html}CLI MiniCluster}}
-
-  * {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html}Backward Compatibility between Apache Hadoop 1.x and 2.x for MapReduce}}
-
-  * {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/EncryptedShuffle.html}Encrypted Shuffle}}
-
+ 
+  * {{{./WritingYarnApplications.html}Writing YARN Applications}}
+ 
+  * {{{./YarnCommands.html}YARN Commands}}
+ 
+  * {{{hadoop-sls/SchedulerLoadSimulator.html}Scheduler Load Simulator}}
+ 
+  * {{{./NodeManagerRestart.html}NodeManager Restart}}
+ 
+  * {{{./DockerContainerExecutor.html}DockerContainerExecutor}}
+ 
+  * {{{./NodeManagerCGroups.html}Using CGroups}}
+ 
+  * {{{./SecureContainer.html}Secure Containers}}
+ 
   * {{{./registry/index.html}Registry}}
+
+* YARN REST APIs
+
+  * {{{./WebServicesIntro.html}Introduction}}
+
+  * {{{./ResourceManagerRest.html}Resource Manager}}
+
+  * {{{./NodeManagerRest.html}Node Manager}}
