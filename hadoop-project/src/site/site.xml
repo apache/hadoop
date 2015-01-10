@@ -113,6 +113,7 @@
     </menu>
 
     <menu name="YARN" inherit="top">
+      <item name="Overview" href="hadoop-yarn/hadoop-yarn-site/index.html"/>
       <item name="YARN Architecture" href="hadoop-yarn/hadoop-yarn-site/YARN.html"/>
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
       <item name="Fair Scheduler" href="hadoop-yarn/hadoop-yarn-site/FairScheduler.html"/>
@@ -126,6 +127,8 @@
       <item name="NodeManager Restart" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRestart.html"/>
       <item name="DockerContainerExecutor" href="hadoop-yarn/hadoop-yarn-site/DockerContainerExecutor.html"/>
       <item name="Using CGroups" href="hadoop-yarn/hadoop-yarn-site/NodeManagerCGroups.html"/>
+      <item name="Secure Containers" href="hadoop-yarn/hadoop-yarn-site/SecureContainer.html"/>
+      <item name="Registry" href="hadoop-yarn/hadoop-yarn-site/registry/index.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
