@@ -416,6 +416,46 @@ public class DatanodeDescriptor extends DatanodeInfo {
     if (checkFailedStorages) {
       updateFailedStorage(failedStorageInfos);
     }
+
+    if (storageMap.size() != reports.length) {
+      pruneStorageMap(reports);
+    }
+  }
+
+  /**
+   * Remove stale storages from storageMap. We must not remove any storages
+   * as long as they have associated block replicas.
+   */
+  private void pruneStorageMap(final StorageReport[] reports) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Number of storages reported in heartbeat=" + reports.length +
+                    "; Number of storages in storageMap=" + storageMap.size());
+    }
+
+    HashMap<String, DatanodeStorageInfo> excessStorages;
+
+    synchronized (storageMap) {
+      // Init excessStorages with all known storages.
+      excessStorages = new HashMap<String, DatanodeStorageInfo>(storageMap);
+
+      // Remove storages that the DN reported in the heartbeat.
+      for (final StorageReport report : reports) {
+        excessStorages.remove(report.getStorage().getStorageID());
+      }
+
+      // For each remaining storage, remove it if there are no associated
+      // blocks.
+      for (final DatanodeStorageInfo storageInfo : excessStorages.values()) {
+        if (storageInfo.numBlocks() == 0) {
+          storageMap.remove(storageInfo.getStorageID());
+          LOG.info("Removed storage " + storageInfo + " from DataNode" + this);
+        } else if (LOG.isDebugEnabled()) {
+          // This can occur until all block reports are received.
+          LOG.debug("Deferring removal of stale storage " + storageInfo +
+                        " with " + storageInfo.numBlocks() + " blocks");
+        }
+      }
+    }
   }
 
   private void updateFailedStorage(
@@ -747,8 +787,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
         // For backwards compatibility, make sure that the type and
         // state are updated. Some reports from older datanodes do
         // not include these fields so we may have assumed defaults.
-        // This check can be removed in the next major release after
-        // 2.4.
         storage.updateFromStorage(s);
         storageMap.put(storage.getStorageID(), storage);
       }
