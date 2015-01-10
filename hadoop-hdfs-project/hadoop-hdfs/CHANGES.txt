@@ -228,6 +228,8 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11470. Remove some uses of obsolete guava APIs from the hadoop
     codebase. (Sangjin Lee via Colin P. McCabe)
 
+    HDFS-7182. JMX metrics aren't accessible when NN is busy. (Ming Ma via jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
