@@ -421,7 +421,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private String nameserviceId;
 
-  private RollingUpgradeInfo rollingUpgradeInfo = null;
+  private volatile RollingUpgradeInfo rollingUpgradeInfo = null;
   /**
    * A flag that indicates whether the checkpointer should checkpoint a rollback
    * fsimage. The edit log tailer sets this flag. The checkpoint will create a
@@ -8355,16 +8355,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override  // NameNodeMXBean
   public RollingUpgradeInfo.Bean getRollingUpgradeStatus() {
-    readLock();
-    try {
-      RollingUpgradeInfo upgradeInfo = getRollingUpgradeInfo();
-      if (upgradeInfo != null) {
-        return new RollingUpgradeInfo.Bean(upgradeInfo);
-      }
-      return null;
-    } finally {
-      readUnlock();
+    RollingUpgradeInfo upgradeInfo = getRollingUpgradeInfo();
+    if (upgradeInfo != null) {
+      return new RollingUpgradeInfo.Bean(upgradeInfo);
     }
+    return null;
   }
 
   /** Is rolling upgrade in progress? */

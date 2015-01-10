@@ -17,6 +17,8 @@ Release 2.6.1 - UNRELEASED
     HDFS-7579. Improve log reporting during block report rpc failure.
     (Charles Lamb via cnauroth)
 
+    HDFS-7182. JMX metrics aren't accessible when NN is busy. (Ming Ma via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
