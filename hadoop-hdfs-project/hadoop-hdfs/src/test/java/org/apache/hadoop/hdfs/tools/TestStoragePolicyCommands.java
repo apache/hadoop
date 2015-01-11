@@ -15,12 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.tools;
 
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.junit.After;
@@ -28,7 +32,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Test storage policy related DFSAdmin commands
+ * Test StoragePolicyAdmin commands
  */
 public class TestStoragePolicyCommands {
   private static final short REPL = 1;
@@ -37,7 +41,7 @@ public class TestStoragePolicyCommands {
   private static Configuration conf;
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem fs;
-  
+
   @Before
   public void clusterSetUp() throws IOException {
     conf = new HdfsConfiguration();
@@ -48,10 +52,10 @@ public class TestStoragePolicyCommands {
 
   @After
   public void clusterShutdown() throws IOException{
-    if(fs != null){
+    if(fs != null) {
       fs.close();
     }
-    if(cluster != null){
+    if(cluster != null) {
       cluster.shutdown();
     }
   }
@@ -62,27 +66,28 @@ public class TestStoragePolicyCommands {
     final Path bar = new Path(foo, "bar");
     DFSTestUtil.createFile(fs, bar, SIZE, REPL, 0);
 
-    DFSTestUtil.DFSAdminRun("-getStoragePolicy /foo", 0,
-        "The storage policy of " + foo.toString() + " is unspecified", conf);
-    DFSTestUtil.DFSAdminRun("-getStoragePolicy /foo/bar", 0,
-        "The storage policy of " + bar.toString() + " is unspecified", conf);
+    final StoragePolicyAdmin admin = new StoragePolicyAdmin(conf);
+    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /foo", 0,
+        "The storage policy of " + foo.toString() + " is unspecified");
+    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /foo/bar", 0,
+        "The storage policy of " + bar.toString() + " is unspecified");
 
-    DFSTestUtil.DFSAdminRun("-setStoragePolicy /foo WARM", 0,
-        "Set storage policy WARM on " + foo.toString(), conf);
-    DFSTestUtil.DFSAdminRun("-setStoragePolicy /foo/bar COLD", 0,
-        "Set storage policy COLD on " + bar.toString(), conf);
-    DFSTestUtil.DFSAdminRun("-setStoragePolicy /fooz WARM", -1,
-        "File/Directory does not exist: /fooz", conf);
+    DFSTestUtil.toolRun(admin, "-setStoragePolicy -path /foo -policy WARM", 0,
+        "Set storage policy WARM on " + foo.toString());
+    DFSTestUtil.toolRun(admin, "-setStoragePolicy -path /foo/bar -policy COLD",
+        0, "Set storage policy COLD on " + bar.toString());
+    DFSTestUtil.toolRun(admin, "-setStoragePolicy -path /fooz -policy WARM",
+        2, "File/Directory does not exist: /fooz");
 
     final BlockStoragePolicySuite suite = BlockStoragePolicySuite
         .createDefaultSuite();
     final BlockStoragePolicy warm = suite.getPolicy("WARM");
     final BlockStoragePolicy cold = suite.getPolicy("COLD");
-    DFSTestUtil.DFSAdminRun("-getStoragePolicy /foo", 0,
-        "The storage policy of " + foo.toString() + ":\n" + warm, conf);
-    DFSTestUtil.DFSAdminRun("-getStoragePolicy /foo/bar", 0,
-        "The storage policy of " + bar.toString() + ":\n" + cold, conf);
-    DFSTestUtil.DFSAdminRun("-getStoragePolicy /fooz", -1,
-        "File/Directory does not exist: /fooz", conf);
+    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /foo", 0,
+        "The storage policy of " + foo.toString() + ":\n" + warm);
+    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /foo/bar", 0,
+        "The storage policy of " + bar.toString() + ":\n" + cold);
+    DFSTestUtil.toolRun(admin, "-getStoragePolicy -path /fooz", 2,
+        "File/Directory does not exist: /fooz");
   }
 }
