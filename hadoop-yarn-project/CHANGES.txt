@@ -143,6 +143,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2956. Added missing links in YARN documentation. (Masatake Iwasaki via
     jianhe)
 
+    YARN-2957. Create unit test to automatically compare YarnConfiguration
+    and yarn-default.xml. (rchiang via rkanter)
+
   OPTIMIZATIONS
 
   BUG FIXES
