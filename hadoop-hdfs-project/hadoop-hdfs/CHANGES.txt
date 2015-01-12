@@ -416,6 +416,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7596. NameNode should prune dead storages from storageMap.
     (Arpit Agarwal via cnauroth)
 
+    HDFS-7533. Datanode sometimes does not shutdown on receiving upgrade
+    shutdown command (Eric Payne via kihwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
