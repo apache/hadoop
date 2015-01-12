@@ -576,23 +576,23 @@ public abstract class AbstractYarnScheduler
     writeLock.lock();
     try {
       if (add) { // added node
-        int nodeMemory = node.getAvailableResource().getMemory();
+        int nodeMemory = node.getTotalResource().getMemory();
         if (nodeMemory > maxNodeMemory) {
           maxNodeMemory = nodeMemory;
           maximumAllocation.setMemory(Math.min(
               configuredMaximumAllocation.getMemory(), maxNodeMemory));
         }
-        int nodeVCores = node.getAvailableResource().getVirtualCores();
+        int nodeVCores = node.getTotalResource().getVirtualCores();
         if (nodeVCores > maxNodeVCores) {
           maxNodeVCores = nodeVCores;
           maximumAllocation.setVirtualCores(Math.min(
               configuredMaximumAllocation.getVirtualCores(), maxNodeVCores));
         }
       } else {  // removed node
-        if (maxNodeMemory == node.getAvailableResource().getMemory()) {
+        if (maxNodeMemory == node.getTotalResource().getMemory()) {
           maxNodeMemory = -1;
         }
-        if (maxNodeVCores == node.getAvailableResource().getVirtualCores()) {
+        if (maxNodeVCores == node.getTotalResource().getVirtualCores()) {
           maxNodeVCores = -1;
         }
         // We only have to iterate through the nodes if the current max memory
@@ -600,12 +600,12 @@ public abstract class AbstractYarnScheduler
         if (maxNodeMemory == -1 || maxNodeVCores == -1) {
           for (Map.Entry<NodeId, N> nodeEntry : nodes.entrySet()) {
             int nodeMemory =
-                nodeEntry.getValue().getAvailableResource().getMemory();
+                nodeEntry.getValue().getTotalResource().getMemory();
             if (nodeMemory > maxNodeMemory) {
               maxNodeMemory = nodeMemory;
             }
             int nodeVCores =
-                nodeEntry.getValue().getAvailableResource().getVirtualCores();
+                nodeEntry.getValue().getTotalResource().getVirtualCores();
             if (nodeVCores > maxNodeVCores) {
               maxNodeVCores = nodeVCores;
             }
