@@ -1618,9 +1618,13 @@ public class DataNode extends ReconfigurableBase
     // in order to avoid any further acceptance of requests, but the peers
     // for block writes are not closed until the clients are notified.
     if (dataXceiverServer != null) {
-      xserver.sendOOBToPeers();
-      ((DataXceiverServer) this.dataXceiverServer.getRunnable()).kill();
-      this.dataXceiverServer.interrupt();
+      try {
+        xserver.sendOOBToPeers();
+        ((DataXceiverServer) this.dataXceiverServer.getRunnable()).kill();
+        this.dataXceiverServer.interrupt();
+      } catch (Throwable e) {
+        // Ignore, since the out of band messaging is advisory.
+      }
     }
 
     // Interrupt the checkDiskErrorThread and terminate it.
