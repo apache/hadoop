@@ -464,3 +464,46 @@ HDFS Commands Guide
 | -geteditsize         | Prints the number of uncheckpointed transactions on
                        | the NameNode.
 *----------------------+------------------------------------------------------+
+
+* Debug Commands
+
+   Useful commands to help administrators debug HDFS issues, like validating
+   block files and calling recoverLease.
+
+** <<<verify>>>
+
+   Verify HDFS metadata and block files.  If a block file is specified, we
+   will verify that the checksums in the metadata file match the block
+   file.
+
+   Usage: <<<hdfs dfs verify [-meta <metadata-file>] [-block <block-file>]>>>
+
+*------------------------+----------------------------------------------------+
+|| COMMAND_OPTION        | Description
+*------------------------+----------------------------------------------------+
+| -meta <metadata-file>  | Absolute path for the metadata file on the local file
+|                        | system of the data node.
+*------------------------+----------------------------------------------------+
+| -block <block-file>    | Optional parameter to specify the absolute path for
+|                        | the block file on the local file system of the data
+|                        | node.
+*------------------------+----------------------------------------------------+
+
+
+
+** <<<recoverLease>>>
+
+   Recover the lease on the specified path.  The path must reside on an
+   HDFS filesystem.  The default number of retries is 1.
+
+   Usage: <<<hdfs dfs recoverLease [-path <path>] [-retries <num-retries>]>>>
+
+*-------------------------------+--------------------------------------------+
+|| COMMAND_OPTION               || Description
+*-------------------------------+---------------------------------------------+
+| [-path <path>]                | HDFS path for which to recover the lease.
+*-------------------------------+---------------------------------------------+
+| [-retries <num-retries>]      | Number of times the client will retry calling
+|                               | recoverLease. The default number of retries
+|                               | is 1.
+*-------------------------------+---------------------------------------------+
