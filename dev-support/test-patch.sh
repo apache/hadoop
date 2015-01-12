@@ -992,7 +992,6 @@ if [[ $JENKINS == "true" || $RUN_TESTS == "true" ]] ; then
   runTests
   (( RESULT = RESULT + $? ))
 fi
-(( RESULT = RESULT + $? ))
 JIRA_COMMENT_FOOTER="Test results: $BUILD_URL/testReport/
 $JIRA_COMMENT_FOOTER"
 
