@@ -61,6 +61,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7225. Remove stale block invalidation work when DN re-registers with
     different UUID. (Zhe Zhang and Andrew Wang)
 
+    HDFS-7533. Datanode sometimes does not shutdown on receiving upgrade
+    shutdown command (Eric Payne via kihwal)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

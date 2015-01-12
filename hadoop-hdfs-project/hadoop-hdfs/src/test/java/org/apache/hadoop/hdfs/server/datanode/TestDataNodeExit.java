@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
@@ -32,6 +33,7 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /** 
  * Tests if DataNode process exits if all Block Pool services exit. 
@@ -87,5 +89,19 @@ public class TestDataNodeExit {
     assertTrue("DataNode should not exit", dn.isDatanodeUp());
     stopBPServiceThreads(2, dn);
     assertFalse("DataNode should exit", dn.isDatanodeUp());
+  }
+
+  @Test
+  public void testSendOOBToPeers() throws Exception {
+    DataNode dn = cluster.getDataNodes().get(0);
+    DataXceiverServer spyXserver = Mockito.spy(dn.getXferServer());
+    NullPointerException e = new NullPointerException();
+    Mockito.doThrow(e).when(spyXserver).sendOOBToPeers();
+    dn.xserver = spyXserver;
+    try {
+      dn.shutdown();
+    } catch (Throwable t) {
+      fail("DataNode shutdown should not have thrown exception " + t);
+    }
   }
 }
