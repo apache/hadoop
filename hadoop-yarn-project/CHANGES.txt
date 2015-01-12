@@ -313,6 +313,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3014. Replaces labels on a host should update all NM's labels on that
     host. (Wangda Tan via jianhe)
 
+    YARN-3027. Scheduler should use totalAvailable resource from node instead of
+    availableResource for maxAllocation. (adhoot via rkanter)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
