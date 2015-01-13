@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.tools;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -38,37 +37,11 @@ import java.util.List;
  * This class implements block storage policy operations.
  */
 public class StoragePolicyAdmin extends Configured implements Tool {
-  private static final int MAX_LINE_WIDTH = 80;
 
   public static void main(String[] argsArray) throws Exception {
     final StoragePolicyAdmin admin = new StoragePolicyAdmin(new
         Configuration());
     System.exit(admin.run(argsArray));
-  }
-
-  private static DistributedFileSystem getDFS(Configuration conf)
-      throws IOException {
-    final FileSystem fs = FileSystem.get(conf);
-    if (!(fs instanceof DistributedFileSystem)) {
-      throw new IllegalArgumentException("FileSystem " + fs.getUri() +
-          " is not an HDFS file system");
-    }
-    return (DistributedFileSystem) fs;
-  }
-
-  /**
-   * NN exceptions contain the stack trace as part of the exception message.
-   * When it's a known error, pretty-print the error and squish the stack trace.
-   */
-  private static String prettifyException(Exception e) {
-    return e.getClass().getSimpleName() + ": " +
-        e.getLocalizedMessage().split("\n")[0];
-  }
-
-  private static TableListing getOptionDescriptionListing() {
-    return new TableListing.Builder()
-        .addField("").addField("", true)
-        .wrapWidth(MAX_LINE_WIDTH).hideHeaders().build();
   }
 
   public StoragePolicyAdmin(Configuration conf) {
@@ -78,37 +51,32 @@ public class StoragePolicyAdmin extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     if (args.length == 0) {
-      printUsage(false);
+      AdminHelper.printUsage(false, "storagepolicies", COMMANDS);
       return 1;
     }
-    final Command command = determineCommand(args[0]);
+    final AdminHelper.Command command = AdminHelper.determineCommand(args[0],
+        COMMANDS);
     if (command == null) {
       System.err.println("Can't understand command '" + args[0] + "'");
       if (!args[0].startsWith("-")) {
         System.err.println("Command names must start with dashes.");
       }
-      printUsage(false);
+      AdminHelper.printUsage(false, "storagepolicies", COMMANDS);
       return 1;
     }
-    final List<String> argsList = new LinkedList<String>();
+    final List<String> argsList = new LinkedList<>();
     argsList.addAll(Arrays.asList(args).subList(1, args.length));
     try {
       return command.run(getConf(), argsList);
     } catch (IllegalArgumentException e) {
-      System.err.println(prettifyException(e));
+      System.err.println(AdminHelper.prettifyException(e));
       return -1;
     }
   }
 
-  interface Command {
-    String getName();
-    String getShortUsage();
-    String getLongUsage();
-    int run(Configuration conf, List<String> args) throws IOException;
-  }
-
   /** Command to list all the existing storage policies */
-  private static class ListStoragePoliciesCommand implements Command {
+  private static class ListStoragePoliciesCommand
+      implements AdminHelper.Command {
     @Override
     public String getName() {
       return "-listPolicies";
@@ -127,7 +95,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
 
     @Override
     public int run(Configuration conf, List<String> args) throws IOException {
-      final DistributedFileSystem dfs = getDFS(conf);
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         BlockStoragePolicy[] policies = dfs.getStoragePolicies();
         System.out.println("Block Storage Policies:");
@@ -137,7 +105,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
           }
         }
       } catch (IOException e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       return 0;
@@ -145,7 +113,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
   }
 
   /** Command to get the storage policy of a file/directory */
-  private static class GetStoragePolicyCommand implements Command {
+  private static class GetStoragePolicyCommand implements AdminHelper.Command {
     @Override
     public String getName() {
       return "-getStoragePolicy";
@@ -158,7 +126,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      final TableListing listing = getOptionDescriptionListing();
+      final TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<path>",
           "The path of the file/directory for getting the storage policy");
       return getShortUsage() + "\n" +
@@ -175,7 +143,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
         return 1;
       }
 
-      final DistributedFileSystem dfs = getDFS(conf);
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         HdfsFileStatus status = dfs.getClient().getFileInfo(path);
         if (status == null) {
@@ -195,7 +163,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
           }
         }
       } catch (Exception e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       System.err.println("Cannot identify the storage policy for " + path);
@@ -204,7 +172,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
   }
 
   /** Command to set the storage policy to a file/directory */
-  private static class SetStoragePolicyCommand implements Command {
+  private static class SetStoragePolicyCommand implements AdminHelper.Command {
     @Override
     public String getName() {
       return "-setStoragePolicy";
@@ -217,7 +185,7 @@ public class StoragePolicyAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      TableListing listing = getOptionDescriptionListing();
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<path>", "The path of the file/directory to set storage" +
           " policy");
       listing.addRow("<policy>", "The name of the block storage policy");
@@ -243,97 +211,21 @@ public class StoragePolicyAdmin extends Configured implements Tool {
         return 1;
       }
 
-      final DistributedFileSystem dfs = getDFS(conf);
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         dfs.setStoragePolicy(new Path(path), policyName);
         System.out.println("Set storage policy " + policyName + " on " + path);
       } catch (Exception e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       return 0;
     }
   }
 
-  private static class HelpCommand implements Command {
-    @Override
-    public String getName() {
-      return "-help";
-    }
-
-    @Override
-    public String getShortUsage() {
-      return "[-help <command-name>]\n";
-    }
-
-    @Override
-    public String getLongUsage() {
-      final TableListing listing = getOptionDescriptionListing();
-      listing.addRow("<command-name>", "The command for which to get " +
-          "detailed help. If no command is specified, print detailed help for " +
-          "all commands");
-      return getShortUsage() + "\n" +
-          "Get detailed help about a command.\n\n" +
-          listing.toString();
-    }
-
-    @Override
-    public int run(Configuration conf, List<String> args) throws IOException {
-      if (args.size() == 0) {
-        for (Command command : COMMANDS) {
-          System.err.println(command.getLongUsage());
-        }
-        return 0;
-      }
-      if (args.size() != 1) {
-        System.out.println("You must give exactly one argument to -help.");
-        return 0;
-      }
-      final String commandName = args.get(0);
-      // prepend a dash to match against the command names
-      final Command command = determineCommand("-" + commandName);
-      if (command == null) {
-        System.err.print("Unknown command '" + commandName + "'.\n");
-        System.err.print("Valid help command names are:\n");
-        String separator = "";
-        for (Command c : COMMANDS) {
-          System.err.print(separator + c.getName().substring(1));
-          separator = ", ";
-        }
-        System.err.print("\n");
-        return 1;
-      }
-      System.err.print(command.getLongUsage());
-      return 0;
-    }
-  }
-
-  private static final Command[] COMMANDS = {
+  private static final AdminHelper.Command[] COMMANDS = {
       new ListStoragePoliciesCommand(),
       new SetStoragePolicyCommand(),
-      new GetStoragePolicyCommand(),
-      new HelpCommand()
+      new GetStoragePolicyCommand()
   };
-
-  private static void printUsage(boolean longUsage) {
-    System.err.println(
-        "Usage: bin/hdfs storagepolicies [COMMAND]");
-    for (Command command : COMMANDS) {
-      if (longUsage) {
-        System.err.print(command.getLongUsage());
-      } else {
-        System.err.print("          " + command.getShortUsage());
-      }
-    }
-    System.err.println();
-  }
-
-  private static Command determineCommand(String commandName) {
-    for (Command COMMAND : COMMANDS) {
-      if (COMMAND.getName().equals(commandName)) {
-        return COMMAND;
-      }
-    }
-    return null;
-  }
 }

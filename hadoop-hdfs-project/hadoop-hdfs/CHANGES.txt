@@ -239,6 +239,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7598. Remove dependency on old version of guava in
     TestDFSClientCache#testEviction. (Sangjin Lee via Colin P. McCabe)
 
+    HDFS-7600. Refine hdfs admin classes to reuse common code. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
