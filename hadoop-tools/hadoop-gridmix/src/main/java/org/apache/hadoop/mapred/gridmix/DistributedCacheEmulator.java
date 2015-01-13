@@ -41,6 +41,7 @@ import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -111,6 +112,8 @@ class DistributedCacheEmulator {
   boolean generateDistCacheData = false;
 
   Configuration conf; // gridmix configuration
+
+  private static final Charset charsetUTF8 = Charset.forName("UTF-8");
 
   // Pseudo local file system where local FS based distributed cache files are
   // created by gridmix.
@@ -436,9 +439,10 @@ class DistributedCacheEmulator {
     for (Iterator it = dcFiles.iterator(); it.hasNext();) {
       Map.Entry entry = (Map.Entry)it.next();
       LongWritable fileSize =
-          new LongWritable(Long.valueOf(entry.getValue().toString()));
+          new LongWritable(Long.parseLong(entry.getValue().toString()));
       BytesWritable filePath =
-          new BytesWritable(entry.getKey().toString().getBytes());
+          new BytesWritable(
+          entry.getKey().toString().getBytes(charsetUTF8));
 
       byteCount += fileSize.get();
       bytesSync += fileSize.get();
@@ -515,7 +519,7 @@ class DistributedCacheEmulator {
             // local FS based distributed cache file.
             // Create this file on the pseudo local FS.
             String fileId = MD5Hash.digest(files[i] + timeStamps[i]).toString();
-            long fileSize = Long.valueOf(fileSizes[i]);
+            long fileSize = Long.parseLong(fileSizes[i]);
             Path mappedLocalFilePath =
                 PseudoLocalFs.generateFilePath(fileId, fileSize)
                     .makeQualified(pseudoLocalFs.getUri(),

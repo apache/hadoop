@@ -124,7 +124,7 @@ class PseudoLocalFs extends FileSystem {
     } else {
       String[] parts = path.toUri().getPath().split("\\.");
       try {
-        fileSize = Long.valueOf(parts[parts.length - 1]);
+        fileSize = Long.parseLong(parts[parts.length - 1]);
         valid = (fileSize >= 0);
       } catch (NumberFormatException e) {
         valid = false;

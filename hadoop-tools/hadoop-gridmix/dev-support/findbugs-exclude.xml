@@ -30,4 +30,11 @@
     <Bug pattern="REC_CATCH_EXCEPTION"/>
     <Bug code="REC"/>
   </Match>
+
+  <!-- This has been done knowingly and meant to fool JVM so that it doesn't optimize code -->
+  <Match>
+    <Class name="org.apache.hadoop.mapred.gridmix.emulators.resourceusage.CumulativeCpuUsageEmulatorPlugin$DefaultCpuUsageEmulator"/>
+    <Field name="returnValue"/>
+    <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"/>
+  </Match>
 </FindBugsFilter>
