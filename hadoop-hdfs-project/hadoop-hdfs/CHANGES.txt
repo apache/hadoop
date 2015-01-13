@@ -422,6 +422,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7533. Datanode sometimes does not shutdown on receiving upgrade
     shutdown command (Eric Payne via kihwal)
 
+    HDFS-5445. PacketReceiver populates the packetLen field in PacketHeader
+    incorrectly (Jonathan Mace via Colin P. McCabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
