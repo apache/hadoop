@@ -127,6 +127,8 @@ public class FairScheduler extends
   
   private static final ResourceCalculator RESOURCE_CALCULATOR =
       new DefaultResourceCalculator();
+  private static final ResourceCalculator DOMINANT_RESOURCE_CALCULATOR =
+      new DominantResourceCalculator();
   
   // Value that container assignment methods return when a container is
   // reserved
@@ -878,7 +880,8 @@ public class FairScheduler extends
 
   @Override
   public Allocation allocate(ApplicationAttemptId appAttemptId,
-      List<ResourceRequest> ask, List<ContainerId> release, List<String> blacklistAdditions, List<String> blacklistRemovals) {
+      List<ResourceRequest> ask, List<ContainerId> release,
+      List<String> blacklistAdditions, List<String> blacklistRemovals) {
 
     // Make sure this application exists
     FSAppAttempt application = getSchedulerApp(appAttemptId);
@@ -889,7 +892,7 @@ public class FairScheduler extends
     }
 
     // Sanity check
-    SchedulerUtils.normalizeRequests(ask, new DominantResourceCalculator(),
+    SchedulerUtils.normalizeRequests(ask, DOMINANT_RESOURCE_CALCULATOR,
         clusterResource, minimumAllocation, getMaximumResourceCapability(),
         incrAllocation);
 
