@@ -418,7 +418,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @return the ID of storage that stores the block
    */
   public String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
-      long recoveryId, long newLength) throws IOException;
+      long recoveryId, long newBlockId, long newLength) throws IOException;
 
   /**
    * add new block pool ID

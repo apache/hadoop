@@ -270,6 +270,7 @@ message SnapshotDiffSection {
     optional uint64 fileSize = 2;
     optional bytes name = 3;
     optional INodeSection.INodeFile snapshotCopy = 4;
+    repeated BlockProto blocks = 5;
   }
 
   message DiffEntry {

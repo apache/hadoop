@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -1433,26 +1432,37 @@ public class DatanodeManager {
                 recoveryLocations.add(storages[i]);
               }
             }
+            // If we are performing a truncate recovery than set recovery fields
+            // to old block.
+            boolean truncateRecovery = b.getTruncateBlock() != null;
+            boolean copyOnTruncateRecovery = truncateRecovery &&
+                b.getTruncateBlock().getBlockId() != b.getBlockId();
+            ExtendedBlock primaryBlock = (copyOnTruncateRecovery) ?
+                new ExtendedBlock(blockPoolId, b.getTruncateBlock()) :
+                new ExtendedBlock(blockPoolId, b);
             // If we only get 1 replica after eliminating stale nodes, then choose all
             // replicas for recovery and let the primary data node handle failures.
+            DatanodeInfo[] recoveryInfos;
             if (recoveryLocations.size() > 1) {
               if (recoveryLocations.size() != storages.length) {
                 LOG.info("Skipped stale nodes for recovery : " +
                     (storages.length - recoveryLocations.size()));
               }
-              boolean isTruncate = b.getBlockUCState().equals(
-                  HdfsServerConstants.BlockUCState.BEING_TRUNCATED);
-              brCommand.add(new RecoveringBlock(
-                  new ExtendedBlock(blockPoolId, b),
-                  DatanodeStorageInfo.toDatanodeInfos(recoveryLocations),
-                  b.getBlockRecoveryId(), isTruncate));
+              recoveryInfos =
+                  DatanodeStorageInfo.toDatanodeInfos(recoveryLocations);
             } else {
               // If too many replicas are stale, then choose all replicas to participate
               // in block recovery.
-              brCommand.add(new RecoveringBlock(
-                  new ExtendedBlock(blockPoolId, b),
-                  DatanodeStorageInfo.toDatanodeInfos(storages),
-                  b.getBlockRecoveryId()));
+              recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(storages);
+            }
+            if(truncateRecovery) {
+              Block recoveryBlock = (copyOnTruncateRecovery) ? b :
+                  b.getTruncateBlock();
+              brCommand.add(new RecoveringBlock(primaryBlock, recoveryInfos,
+                                                recoveryBlock));
+            } else {
+              brCommand.add(new RecoveringBlock(primaryBlock, recoveryInfos,
+                                                b.getBlockRecoveryId()));
             }
           }
           return new DatanodeCommand[] { brCommand };

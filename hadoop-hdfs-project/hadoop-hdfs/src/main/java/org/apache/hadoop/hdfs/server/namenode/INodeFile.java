@@ -24,7 +24,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -304,6 +306,11 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public void recordModification(final int latestSnapshotId)
       throws QuotaExceededException {
+    recordModification(latestSnapshotId, false);
+  }
+
+  public void recordModification(final int latestSnapshotId, boolean withBlocks)
+      throws QuotaExceededException {
     if (isInLatestSnapshot(latestSnapshotId)
         && !shouldRecordInSrcSnapshot(latestSnapshotId)) {
       // the file is in snapshot, create a snapshot feature if it does not have
@@ -312,10 +319,10 @@ public class INodeFile extends INodeWithAdditionalFields
         sf = addSnapshotFeature(null);
       }
       // record self in the diff list if necessary
-      sf.getDiffs().saveSelf2Snapshot(latestSnapshotId, this, null);
+      sf.getDiffs().saveSelf2Snapshot(latestSnapshotId, this, null, withBlocks);
     }
   }
-  
+
   public FileDiffList getDiffs() {
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
     if (sf != null) {
@@ -415,6 +422,20 @@ public class INodeFile extends INodeWithAdditionalFields
     return this.blocks;
   }
 
+  /** @return blocks of the file corresponding to the snapshot. */
+  public BlockInfo[] getBlocks(int snapshot) {
+    if(snapshot == CURRENT_STATE_ID || getDiffs() == null)
+      return getBlocks();
+    FileDiff diff = getDiffs().getDiffById(snapshot);
+    BlockInfo[] snapshotBlocks = diff == null ? getBlocks() : diff.getBlocks();
+    if(snapshotBlocks != null)
+      return snapshotBlocks;
+    // Blocks are not in the current snapshot
+    // Find next snapshot with blocks present or return current file blocks
+    snapshotBlocks = getDiffs().findLaterSnapshotBlocks(diff.getSnapshotId());
+    return (snapshotBlocks == null) ? getBlocks() : snapshotBlocks;
+  }
+
   void updateBlockCollection() {
     if (blocks != null) {
       for(BlockInfo b : blocks) {
@@ -509,13 +530,13 @@ public class INodeFile extends INodeWithAdditionalFields
     }
     clear();
     removedINodes.add(this);
-    
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
+      sf.getDiffs().destroyAndCollectSnapshotBlocks(collectedBlocks);
       sf.clearDiffs();
     }
   }
-  
+
   @Override
   public String getName() {
     // Get the full path name of this inode.
@@ -554,39 +575,23 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public final ContentSummaryComputationContext computeContentSummary(
       final ContentSummaryComputationContext summary) {
-    computeContentSummary4Snapshot(summary.getCounts());
-    computeContentSummary4Current(summary.getCounts());
-    return summary;
-  }
-
-  private void computeContentSummary4Snapshot(final Content.Counts counts) {
-    // file length and diskspace only counted for the latest state of the file
-    // i.e. either the current state or the last snapshot
+    final Content.Counts counts = summary.getCounts();
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
-    if (sf != null) {
+    if (sf == null) {
+      counts.add(Content.LENGTH, computeFileSize());
+      counts.add(Content.FILE, 1);
+    } else {
       final FileDiffList diffs = sf.getDiffs();
       final int n = diffs.asList().size();
       counts.add(Content.FILE, n);
       if (n > 0 && sf.isCurrentFileDeleted()) {
         counts.add(Content.LENGTH, diffs.getLast().getFileSize());
-      }
-
-      if (sf.isCurrentFileDeleted()) {
-        final long lastFileSize = diffs.getLast().getFileSize();
-        counts.add(Content.DISKSPACE, lastFileSize * getBlockReplication());
+      } else {
+        counts.add(Content.LENGTH, computeFileSize());
       }
     }
-  }
-
-  private void computeContentSummary4Current(final Content.Counts counts) {
-    FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
-    if (sf != null && sf.isCurrentFileDeleted()) {
-      return;
-    }
-
-    counts.add(Content.LENGTH, computeFileSize());
-    counts.add(Content.FILE, 1);
     counts.add(Content.DISKSPACE, diskspaceConsumed());
+    return summary;
   }
 
   /** The same as computeFileSize(null). */
@@ -651,9 +656,36 @@ public class INodeFile extends INodeWithAdditionalFields
     return size;
   }
 
+  /**
+   * Compute size consumed by all blocks of the current file,
+   * including blocks in its snapshots.
+   * Use preferred block size for the last block if it is under construction.
+   */
   public final long diskspaceConsumed() {
-    // use preferred block size for the last block if it is under construction
-    return computeFileSize(true, true) * getBlockReplication();
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if(sf == null) {
+      return computeFileSize(true, true) * getBlockReplication();
+    }
+
+    // Collect all distinct blocks
+    long size = 0;
+    Set<Block> allBlocks = new HashSet<Block>(Arrays.asList(getBlocks()));
+    List<FileDiff> diffs = sf.getDiffs().asList();
+    for(FileDiff diff : diffs) {
+      BlockInfo[] diffBlocks = diff.getBlocks();
+      if (diffBlocks != null) {
+        allBlocks.addAll(Arrays.asList(diffBlocks));
+      }
+    }
+    for(Block block : allBlocks) {
+      size += block.getNumBytes();
+    }
+    // check if the last block is under construction
+    BlockInfo lastBlock = getLastBlock();
+    if(lastBlock != null && lastBlock instanceof BlockInfoUnderConstruction) {
+      size += getPreferredBlockSize() - lastBlock.getNumBytes();
+    }
+    return size * getBlockReplication();
   }
 
   public final long diskspaceConsumed(int lastSnapshotId) {
@@ -706,7 +738,7 @@ public class INodeFile extends INodeWithAdditionalFields
     final BlockInfo[] oldBlocks = getBlocks();
     if (oldBlocks == null)
       return 0;
-    //find the minimum n such that the size of the first n blocks > max
+    // find the minimum n such that the size of the first n blocks > max
     int n = 0;
     long size = 0;
     for(; n < oldBlocks.length && max > size; n++) {
@@ -716,16 +748,8 @@ public class INodeFile extends INodeWithAdditionalFields
       return size;
 
     // starting from block n, the data is beyond max.
-    // resize the array.  
-    final BlockInfo[] newBlocks;
-    if (n == 0) {
-      newBlocks = BlockInfo.EMPTY_ARRAY;
-    } else {
-      newBlocks = new BlockInfo[n];
-      System.arraycopy(oldBlocks, 0, newBlocks, 0, n);
-    }
-    // set new blocks
-    setBlocks(newBlocks);
+    // resize the array.
+    truncateBlocksTo(n);
 
     // collect the blocks beyond max
     if (collectedBlocks != null) {
@@ -734,5 +758,68 @@ public class INodeFile extends INodeWithAdditionalFields
       }
     }
     return size;
+  }
+
+  void truncateBlocksTo(int n) {
+    final BlockInfo[] newBlocks;
+    if (n == 0) {
+      newBlocks = BlockInfo.EMPTY_ARRAY;
+    } else {
+      newBlocks = new BlockInfo[n];
+      System.arraycopy(getBlocks(), 0, newBlocks, 0, n);
+    }
+    // set new blocks
+    setBlocks(newBlocks);
+  }
+
+  public void collectBlocksBeyondSnapshot(BlockInfo[] snapshotBlocks,
+                                          BlocksMapUpdateInfo collectedBlocks) {
+    BlockInfo[] oldBlocks = getBlocks();
+    if(snapshotBlocks == null || oldBlocks == null)
+      return;
+    // Skip blocks in common between the file and the snapshot
+    int n = 0;
+    while(n < oldBlocks.length && n < snapshotBlocks.length &&
+          oldBlocks[n] == snapshotBlocks[n]) {
+      n++;
+    }
+    truncateBlocksTo(n);
+    // Collect the remaining blocks of the file
+    while(n < oldBlocks.length) {
+      collectedBlocks.addDeleteBlock(oldBlocks[n++]);
+    }
+  }
+
+  /** Exclude blocks collected for deletion that belong to a snapshot. */
+  void excludeSnapshotBlocks(int snapshotId,
+                             BlocksMapUpdateInfo collectedBlocks) {
+    if(collectedBlocks == null || collectedBlocks.getToDeleteList().isEmpty())
+      return;
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if(sf == null)
+      return;
+    BlockInfo[] snapshotBlocks = 
+        getDiffs().findEarlierSnapshotBlocks(snapshotId);
+    if(snapshotBlocks == null)
+      return;
+    List<Block> toDelete = collectedBlocks.getToDeleteList();
+    for(Block blk : snapshotBlocks) {
+      if(toDelete.contains(blk))
+        collectedBlocks.removeDeleteBlock(blk);
+    }
+  }
+
+  /**
+   * @return true if the block is contained in a snapshot or false otherwise.
+   */
+  boolean isBlockInLatestSnapshot(BlockInfo block) {
+    FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
+    if (sf == null || sf.getDiffs() == null)
+      return false;
+    BlockInfo[] snapshotBlocks =
+        getDiffs().findEarlierSnapshotBlocks(getDiffs().getLastSnapshotId());
+    if(snapshotBlocks == null)
+      return false;
+    return Arrays.asList(snapshotBlocks).contains(block);
   }
 }

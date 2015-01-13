@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -902,13 +903,14 @@ public class FSEditLog implements LogsPurgeable {
    * Add truncate file record to edit log
    */
   void logTruncate(String src, String clientName, String clientMachine,
-                   long size, long timestamp) {
+                   long size, long timestamp, Block truncateBlock) {
     TruncateOp op = TruncateOp.getInstance(cache.get())
       .setPath(src)
       .setClientName(clientName)
       .setClientMachine(clientMachine)
       .setNewLength(size)
-      .setTimestamp(timestamp);
+      .setTimestamp(timestamp)
+      .setTruncateBlock(truncateBlock);
     logEdit(op);
   }
 

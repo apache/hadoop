@@ -1239,7 +1239,7 @@ public class TestReplicationPolicy {
     when(mbc.setLastBlock((BlockInfo) any(), (DatanodeStorageInfo[]) any()))
     .thenReturn(ucBlock);
 
-    bm.convertLastBlockToUnderConstruction(mbc);
+    bm.convertLastBlockToUnderConstruction(mbc, 0L);
 
     // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
     // from QUEUE_VERY_UNDER_REPLICATED.

@@ -76,8 +76,8 @@ public class InterDatanodeProtocolServerSideTranslatorPB implements
     final String storageID;
     try {
       storageID = impl.updateReplicaUnderRecovery(
-          PBHelper.convert(request.getBlock()),
-          request.getRecoveryId(), request.getNewLength());
+          PBHelper.convert(request.getBlock()), request.getRecoveryId(),
+          request.getNewBlockId(), request.getNewLength());
     } catch (IOException e) {
       throw new ServiceException(e);
     }

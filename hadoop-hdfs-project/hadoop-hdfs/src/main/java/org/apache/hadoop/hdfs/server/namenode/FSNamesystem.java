@@ -1837,8 +1837,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             : dir.getFileEncryptionInfo(inode, iip.getPathSnapshotId(), iip);
 
     final LocatedBlocks blocks = blockManager.createLocatedBlocks(
-        inode.getBlocks(), fileSize, isUc, offset, length, needBlockToken,
-        iip.isSnapshot(), feInfo);
+        inode.getBlocks(iip.getPathSnapshotId()), fileSize,
+        isUc, offset, length, needBlockToken, iip.isSnapshot(), feInfo);
 
     // Set caching information for the located blocks.
     for (LocatedBlock lb : blocks.getLocatedBlocks()) {
@@ -1912,7 +1912,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Truncation at block boundary is atomic, otherwise it requires
    * block recovery to truncate the last block of the file.
    *
-   * @return true if and client does not need to wait for block recovery,
+   * @return true if client does not need to wait for block recovery,
    * false if client needs to wait for block recovery.
    */
   boolean truncate(String src, long newLength,
@@ -1974,44 +1974,119 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       dir.checkPathAccess(pc, iip, FsAction.WRITE);
     }
     INodeFile file = iip.getLastINode().asFile();
-    // Data will be lost after truncate occurs so it cannot support snapshots.
-    if(file.isInLatestSnapshot(iip.getLatestSnapshotId()))
-      throw new HadoopIllegalArgumentException(
-          "Cannot truncate file with snapshot.");
     // Opening an existing file for write. May need lease recovery.
     recoverLeaseInternal(iip, src, clientName, clientMachine, false);
-    // Refresh INode as the file could have been closed
-    iip = dir.getINodesInPath4Write(src, true);
     file = INodeFile.valueOf(iip.getLastINode(), src);
     // Truncate length check.
     long oldLength = file.computeFileSize();
-    if(oldLength == newLength)
+    if(oldLength == newLength) {
       return true;
-    if(oldLength < newLength)
+    }
+    if(oldLength < newLength) {
       throw new HadoopIllegalArgumentException(
           "Cannot truncate to a larger file size. Current size: " + oldLength +
               ", truncate size: " + newLength + ".");
+    }
     // Perform INodeFile truncation.
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     boolean onBlockBoundary = dir.truncate(iip, newLength,
                                            collectedBlocks, mtime);
-
+    Block truncateBlock = null;
     if(! onBlockBoundary) {
       // Open file for write, but don't log into edits
-      prepareFileForWrite(src, iip, clientName, clientMachine, false, false);
-      file = INodeFile.valueOf(dir.getINode4Write(src), src);
-      initializeBlockRecovery(file);
+      long lastBlockDelta = file.computeFileSize() - newLength;
+      assert lastBlockDelta > 0 : "delta is 0 only if on block bounday";
+      truncateBlock = prepareFileForTruncate(iip, clientName, clientMachine,
+          lastBlockDelta, null);
     }
-    getEditLog().logTruncate(src, clientName, clientMachine, newLength, mtime);
+    getEditLog().logTruncate(src, clientName, clientMachine, newLength, mtime,
+        truncateBlock);
     removeBlocks(collectedBlocks);
     return onBlockBoundary;
   }
 
-  void initializeBlockRecovery(INodeFile inodeFile) throws IOException {
-    BlockInfo lastBlock = inodeFile.getLastBlock();
-    long recoveryId = nextGenerationStamp(blockIdManager.isLegacyBlock(lastBlock));
-    ((BlockInfoUnderConstruction)lastBlock).initializeBlockRecovery(
-        BlockUCState.BEING_TRUNCATED, recoveryId);
+  /**
+   * Convert current INode to UnderConstruction.
+   * Recreate lease.
+   * Create new block for the truncated copy.
+   * Schedule truncation of the replicas.
+   *
+   * @return the returned block will be written to editLog and passed back into
+   * this method upon loading.
+   */
+  Block prepareFileForTruncate(INodesInPath iip,
+                               String leaseHolder,
+                               String clientMachine,
+                               long lastBlockDelta,
+                               Block newBlock)
+      throws IOException {
+    INodeFile file = iip.getLastINode().asFile();
+    String src = iip.getPath();
+    file.recordModification(iip.getLatestSnapshotId());
+    file.toUnderConstruction(leaseHolder, clientMachine);
+    assert file.isUnderConstruction() : "inode should be under construction.";
+    leaseManager.addLease(
+        file.getFileUnderConstructionFeature().getClientName(), src);
+    boolean shouldRecoverNow = (newBlock == null);
+    BlockInfo oldBlock = file.getLastBlock();
+    boolean shouldCopyOnTruncate = shouldCopyOnTruncate(file, oldBlock);
+    if(newBlock == null) {
+      newBlock = (shouldCopyOnTruncate) ? createNewBlock() :
+          new Block(oldBlock.getBlockId(), oldBlock.getNumBytes(),
+              nextGenerationStamp(blockIdManager.isLegacyBlock(oldBlock)));
+    }
+
+    BlockInfoUnderConstruction truncatedBlockUC;
+    if(shouldCopyOnTruncate) {
+      // Add new truncateBlock into blocksMap and
+      // use oldBlock as a source for copy-on-truncate recovery
+      truncatedBlockUC = new BlockInfoUnderConstruction(newBlock,
+          file.getBlockReplication());
+      truncatedBlockUC.setNumBytes(oldBlock.getNumBytes() - lastBlockDelta);
+      truncatedBlockUC.setTruncateBlock(oldBlock);
+      file.setLastBlock(truncatedBlockUC, blockManager.getStorages(oldBlock));
+      getBlockManager().addBlockCollection(truncatedBlockUC, file);
+
+      NameNode.stateChangeLog.info("BLOCK* prepareFileForTruncate: "
+          + "Scheduling copy-on-truncate to new size "
+          + truncatedBlockUC.getNumBytes() + " new block " + newBlock
+          + " old block " + truncatedBlockUC.getTruncateBlock());
+    } else {
+      // Use new generation stamp for in-place truncate recovery
+      blockManager.convertLastBlockToUnderConstruction(file, lastBlockDelta);
+      oldBlock = file.getLastBlock();
+      assert !oldBlock.isComplete() : "oldBlock should be under construction";
+      truncatedBlockUC = (BlockInfoUnderConstruction) oldBlock;
+      truncatedBlockUC.setTruncateBlock(new Block(oldBlock));
+      truncatedBlockUC.getTruncateBlock().setNumBytes(
+          oldBlock.getNumBytes() - lastBlockDelta);
+      truncatedBlockUC.getTruncateBlock().setGenerationStamp(
+          newBlock.getGenerationStamp());
+
+      NameNode.stateChangeLog.debug("BLOCK* prepareFileForTruncate: "
+          + "Scheduling in-place block truncate to new size "
+          + truncatedBlockUC.getTruncateBlock().getNumBytes()
+          + " block=" + truncatedBlockUC);
+    }
+    if(shouldRecoverNow)
+      truncatedBlockUC.initializeBlockRecovery(newBlock.getGenerationStamp());
+
+    // update the quota: use the preferred block size for UC block
+    final long diff =
+        file.getPreferredBlockSize() - truncatedBlockUC.getNumBytes();
+    dir.updateSpaceConsumed(iip, 0, diff * file.getBlockReplication());
+    return newBlock;
+  }
+
+  /**
+   * Defines if a replica needs to be copied on truncate or
+   * can be truncated in place.
+   */
+  boolean shouldCopyOnTruncate(INodeFile file, BlockInfo blk) {
+    if(!isUpgradeFinalized()) {
+      return true;
+    }
+    return file.isBlockInLatestSnapshot(blk);
   }
 
   /**
@@ -2598,7 +2673,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     leaseManager.addLease(
         file.getFileUnderConstructionFeature().getClientName(), src);
     
-    LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(file);
+    LocatedBlock ret =
+        blockManager.convertLastBlockToUnderConstruction(file, 0);
     if (ret != null) {
       // update the quota: use the preferred block size for UC block
       final long diff = file.getPreferredBlockSize() - ret.getBlockSize();
@@ -2661,7 +2737,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return false;
   }
 
-  private void recoverLeaseInternal(INodesInPath iip,
+  void recoverLeaseInternal(INodesInPath iip,
       String src, String holder, String clientMachine, boolean force)
       throws IOException {
     assert hasWriteLock();
@@ -2723,8 +2799,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         } else {
           final BlockInfo lastBlock = file.getLastBlock();
           if (lastBlock != null
-              && (lastBlock.getBlockUCState() == BlockUCState.UNDER_RECOVERY ||
-                 lastBlock.getBlockUCState() == BlockUCState.BEING_TRUNCATED)) {
+              && lastBlock.getBlockUCState() == BlockUCState.UNDER_RECOVERY) {
             throw new RecoveryInProgressException("Recovery in progress, file ["
                 + src + "], " + "lease owner [" + lease.getHolder() + "]");
           } else {
@@ -3942,8 +4017,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw new AlreadyBeingCreatedException(message);
     case UNDER_CONSTRUCTION:
     case UNDER_RECOVERY:
-    case BEING_TRUNCATED:
       final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)lastBlock;
+      // determine if last block was intended to be truncated
+      Block recoveryBlock = uc.getTruncateBlock();
+      boolean truncateRecovery = recoveryBlock != null;
+      boolean copyOnTruncate = truncateRecovery &&
+          recoveryBlock.getBlockId() != uc.getBlockId();
+      assert !copyOnTruncate ||
+          recoveryBlock.getBlockId() < uc.getBlockId() &&
+          recoveryBlock.getGenerationStamp() < uc.getGenerationStamp() &&
+          recoveryBlock.getNumBytes() > uc.getNumBytes() :
+            "wrong recoveryBlock";
+
       // setup the last block locations from the blockManager if not known
       if (uc.getNumExpectedLocations() == 0) {
         uc.setExpectedLocations(blockManager.getStorages(lastBlock));
@@ -3964,9 +4049,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // start recovery of the last block for this file
       long blockRecoveryId = nextGenerationStamp(blockIdManager.isLegacyBlock(uc));
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile);
-      if (uc.getBlockUCState() != BlockUCState.BEING_TRUNCATED) {
-        uc.initializeBlockRecovery(blockRecoveryId);
+      if(copyOnTruncate) {
+        uc.setGenerationStamp(blockRecoveryId);
+      } else if(truncateRecovery) {
+        recoveryBlock.setGenerationStamp(blockRecoveryId);
       }
+      uc.initializeBlockRecovery(blockRecoveryId);
       leaseManager.renewLease(lease);
       // Cannot close file right now, since the last block requires recovery.
       // This may potentially cause infinite loop in lease recovery
@@ -4076,11 +4164,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return true;
   }
 
-  void commitBlockSynchronization(ExtendedBlock lastblock,
+  void commitBlockSynchronization(ExtendedBlock oldBlock,
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets,
       String[] newtargetstorages) throws IOException {
-    LOG.info("commitBlockSynchronization(lastblock=" + lastblock
+    LOG.info("commitBlockSynchronization(oldBlock=" + oldBlock
              + ", newgenerationstamp=" + newgenerationstamp
              + ", newlength=" + newlength
              + ", newtargets=" + Arrays.asList(newtargets)
@@ -4099,17 +4187,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkNameNodeSafeMode(
           "Cannot commitBlockSynchronization while in safe mode");
       final BlockInfo storedBlock = getStoredBlock(
-          ExtendedBlock.getLocalBlock(lastblock));
+          ExtendedBlock.getLocalBlock(oldBlock));
       if (storedBlock == null) {
         if (deleteblock) {
           // This may be a retry attempt so ignore the failure
           // to locate the block.
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Block (=" + lastblock + ") not found");
+            LOG.debug("Block (=" + oldBlock + ") not found");
           }
           return;
         } else {
-          throw new IOException("Block (=" + lastblock + ") not found");
+          throw new IOException("Block (=" + oldBlock + ") not found");
         }
       }
       //
@@ -4136,34 +4224,40 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             + iFile.getFullPathName() + ", likely due to delayed block"
             + " removal");
       }
-      if (!iFile.isUnderConstruction() || storedBlock.isComplete()) {
+      if ((!iFile.isUnderConstruction() || storedBlock.isComplete()) &&
+          iFile.getLastBlock().isComplete()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Unexpected block (=" + lastblock
+          LOG.debug("Unexpected block (=" + oldBlock
                     + ") since the file (=" + iFile.getLocalName()
                     + ") is not under construction");
         }
         return;
       }
 
-      long recoveryId =
-        ((BlockInfoUnderConstruction)storedBlock).getBlockRecoveryId();
+      BlockInfoUnderConstruction truncatedBlock =
+          (BlockInfoUnderConstruction) iFile.getLastBlock();
+      long recoveryId = truncatedBlock.getBlockRecoveryId();
+      boolean copyTruncate =
+          truncatedBlock.getBlockId() != storedBlock.getBlockId();
       if(recoveryId != newgenerationstamp) {
         throw new IOException("The recovery id " + newgenerationstamp
                               + " does not match current recovery id "
-                              + recoveryId + " for block " + lastblock); 
+                              + recoveryId + " for block " + oldBlock);
       }
 
       if (deleteblock) {
-        Block blockToDel = ExtendedBlock.getLocalBlock(lastblock);
+        Block blockToDel = ExtendedBlock.getLocalBlock(oldBlock);
         boolean remove = iFile.removeLastBlock(blockToDel);
         if (remove) {
-          blockManager.removeBlockFromMap(storedBlock);
+          blockManager.removeBlock(storedBlock);
         }
       }
       else {
         // update last block
-        storedBlock.setGenerationStamp(newgenerationstamp);
-        storedBlock.setNumBytes(newlength);
+        if(!copyTruncate) {
+          storedBlock.setGenerationStamp(newgenerationstamp);
+          storedBlock.setNumBytes(newlength);
+        }
 
         // find the DatanodeDescriptor objects
         // There should be no locations in the blockManager till now because the
@@ -4193,7 +4287,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             DatanodeStorageInfo storageInfo =
                 trimmedTargets.get(i).getStorageInfo(trimmedStorages.get(i));
             if (storageInfo != null) {
-              storageInfo.addBlock(storedBlock);
+              if(copyTruncate) {
+                storageInfo.addBlock(truncatedBlock);
+              } else {
+                storageInfo.addBlock(storedBlock);
+              }
             }
           }
         }
@@ -4203,11 +4301,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             blockManager.getDatanodeManager().getDatanodeStorageInfos(
                 trimmedTargets.toArray(new DatanodeID[trimmedTargets.size()]),
                 trimmedStorages.toArray(new String[trimmedStorages.size()]));
-        iFile.setLastBlock(storedBlock, trimmedStorageInfos);
+        if(copyTruncate) {
+          iFile.setLastBlock(truncatedBlock, trimmedStorageInfos);
+        } else {
+          iFile.setLastBlock(storedBlock, trimmedStorageInfos);
+        }
       }
 
       if (closeFile) {
-        src = closeFileCommitBlocks(iFile, storedBlock);
+        if(copyTruncate) {
+          src = closeFileCommitBlocks(iFile, truncatedBlock);
+          if(!iFile.isBlockInLatestSnapshot(storedBlock)) {
+            blockManager.removeBlock(storedBlock);
+          }
+        } else {
+          src = closeFileCommitBlocks(iFile, storedBlock);
+        }
       } else {
         // If this commit does not want to close the file, persist blocks
         src = iFile.getFullPathName();
@@ -4218,13 +4327,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     getEditLog().logSync();
     if (closeFile) {
-      LOG.info("commitBlockSynchronization(newblock=" + lastblock
+      LOG.info("commitBlockSynchronization(oldBlock=" + oldBlock
           + ", file=" + src
           + ", newgenerationstamp=" + newgenerationstamp
           + ", newlength=" + newlength
           + ", newtargets=" + Arrays.asList(newtargets) + ") successful");
     } else {
-      LOG.info("commitBlockSynchronization(" + lastblock + ") successful");
+      LOG.info("commitBlockSynchronization(" + oldBlock + ") successful");
     }
   }
 
