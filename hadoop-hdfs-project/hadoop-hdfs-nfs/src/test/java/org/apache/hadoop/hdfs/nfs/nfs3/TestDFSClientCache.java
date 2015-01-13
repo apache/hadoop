@@ -39,7 +39,7 @@ public class TestDFSClientCache {
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost");
 
     // Only one entry will be in the cache
-    final int MAX_CACHE_SIZE = 2;
+    final int MAX_CACHE_SIZE = 1;
 
     DFSClientCache cache = new DFSClientCache(conf, MAX_CACHE_SIZE);
 
@@ -50,7 +50,8 @@ public class TestDFSClientCache {
 
     cache.getDfsClient("test2");
     assertTrue(isDfsClientClose(c1));
-    assertEquals(MAX_CACHE_SIZE - 1, cache.clientCache.size());
+    assertTrue("cache size should be the max size or less",
+        cache.clientCache.size() <= MAX_CACHE_SIZE);
   }
 
   @Test
