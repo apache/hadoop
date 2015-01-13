@@ -26,6 +26,10 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
     (ozawa)
 
+    MAPREDUCE-6173. Document the configuration of deploying MR over distributed
+    cache with enabling wired encryption at the same time. 
+    (Junping Du via xgong)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
