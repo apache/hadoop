@@ -51,10 +51,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationRequestInterpreterProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationAttemptStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 
 import com.google.protobuf.ByteString;
-
-import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 
 @Private
 @Unstable

@@ -77,7 +77,7 @@ public class TestRenameWhileOpen {
       FSEditLog spyLog =
           spy(cluster.getNameNode().getFSImage().getEditLog());
       doNothing().when(spyLog).endCurrentLogSegment(Mockito.anyBoolean());
-      cluster.getNameNode().getFSImage().setEditLogForTesting(spyLog);
+      DFSTestUtil.setEditLogForTesting(cluster.getNamesystem(), spyLog);
 
       final int nnport = cluster.getNameNodePort();
 

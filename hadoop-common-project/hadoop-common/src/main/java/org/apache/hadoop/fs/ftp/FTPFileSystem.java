@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.URI;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.net.ftp.FTP;
@@ -101,17 +102,12 @@ public class FTPFileSystem extends FileSystem {
     if (userAndPassword == null) {
       userAndPassword = (conf.get("fs.ftp.user." + host, null) + ":" + conf
           .get("fs.ftp.password." + host, null));
-      if (userAndPassword == null) {
-        throw new IOException("Invalid user/passsword specified");
-      }
     }
     String[] userPasswdInfo = userAndPassword.split(":");
+    Preconditions.checkState(userPasswdInfo.length > 1,
+                             "Invalid username / password");
     conf.set(FS_FTP_USER_PREFIX + host, userPasswdInfo[0]);
-    if (userPasswdInfo.length > 1) {
-      conf.set(FS_FTP_PASSWORD_PREFIX + host, userPasswdInfo[1]);
-    } else {
-      conf.set(FS_FTP_PASSWORD_PREFIX + host, null);
-    }
+    conf.set(FS_FTP_PASSWORD_PREFIX + host, userPasswdInfo[1]);
     setConf(conf);
     this.uri = uri;
   }
@@ -293,7 +289,8 @@ public class FTPFileSystem extends FileSystem {
    */
   private boolean exists(FTPClient client, Path file) throws IOException {
     try {
-      return getFileStatus(client, file) != null;
+      getFileStatus(client, file);
+      return true;
     } catch (FileNotFoundException fnfe) {
       return false;
     }
@@ -333,10 +330,8 @@ public class FTPFileSystem extends FileSystem {
     if (dirEntries != null && dirEntries.length > 0 && !(recursive)) {
       throw new IOException("Directory: " + file + " is not empty.");
     }
-    if (dirEntries != null) {
-      for (int i = 0; i < dirEntries.length; i++) {
-        delete(client, new Path(absolute, dirEntries[i].getPath()), recursive);
-      }
+    for (FileStatus dirEntry : dirEntries) {
+      delete(client, new Path(absolute, dirEntry.getPath()), recursive);
     }
     return client.removeDirectory(pathName);
   }

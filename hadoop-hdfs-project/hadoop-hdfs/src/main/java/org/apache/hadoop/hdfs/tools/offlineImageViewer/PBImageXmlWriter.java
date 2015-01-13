@@ -21,7 +21,7 @@ import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
+import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,10 +49,10 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hdfs.util.XMLUtils;
+import org.apache.hadoop.util.LimitInputStream;
 
 import com.google.common.collect.Lists;
-import com.google.common.io.LimitInputStream;
 
 /**
  * PBImageXmlWriter walks over an fsimage structure and writes out
@@ -61,10 +61,10 @@ import com.google.common.io.LimitInputStream;
 @InterfaceAudience.Private
 public final class PBImageXmlWriter {
   private final Configuration conf;
-  private final PrintWriter out;
+  private final PrintStream out;
   private String[] stringTable;
 
-  public PBImageXmlWriter(Configuration conf, PrintWriter out) {
+  public PBImageXmlWriter(Configuration conf, PrintStream out) {
     this.conf = conf;
     this.out = out;
   }
@@ -75,9 +75,7 @@ public final class PBImageXmlWriter {
     }
 
     FileSummary summary = FSImageUtil.loadSummary(file);
-    FileInputStream fin = null;
-    try {
-      fin = new FileInputStream(file.getFD());
+    try (FileInputStream fin = new FileInputStream(file.getFD())) {
       out.print("<?xml version=\"1.0\"?>\n<fsimage>");
 
       ArrayList<FileSummary.Section> sections = Lists.newArrayList(summary
@@ -139,8 +137,6 @@ public final class PBImageXmlWriter {
         }
       }
       out.print("</fsimage>\n");
-    } finally {
-      IOUtils.cleanup(null, fin);
     }
   }
 
@@ -410,7 +406,8 @@ public final class PBImageXmlWriter {
   }
 
   private PBImageXmlWriter o(final String e, final Object v) {
-    out.print("<" + e + ">" + v + "</" + e + ">");
+    out.print("<" + e + ">" +
+        XMLUtils.mangleXmlString(v.toString(), true) + "</" + e + ">");
     return this;
   }
 }

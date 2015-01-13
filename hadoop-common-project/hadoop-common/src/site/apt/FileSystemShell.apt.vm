@@ -45,46 +45,62 @@ bin/hadoop fs <args>
    Differences are described with each of the commands. Error information is
    sent to stderr and the output is sent to stdout.
 
-appendToFile
+   If HDFS is being used, <<<hdfs dfs>>> is a synonym.
 
-      Usage: <<<hdfs dfs -appendToFile <localsrc> ... <dst> >>>
+   See the {{{./CommandsManual.html}Commands Manual}} for generic shell options.
+
+* appendToFile
+
+      Usage: <<<hadoop fs -appendToFile <localsrc> ... <dst> >>>
 
       Append single src, or multiple srcs from local file system to the
       destination file system. Also reads input from stdin and appends to
       destination file system.
 
-        * <<<hdfs dfs -appendToFile localfile /user/hadoop/hadoopfile>>>
+        * <<<hadoop fs -appendToFile localfile /user/hadoop/hadoopfile>>>
 
-        * <<<hdfs dfs -appendToFile localfile1 localfile2 /user/hadoop/hadoopfile>>>
+        * <<<hadoop fs -appendToFile localfile1 localfile2 /user/hadoop/hadoopfile>>>
 
-        * <<<hdfs dfs -appendToFile localfile hdfs://nn.example.com/hadoop/hadoopfile>>>
+        * <<<hadoop fs -appendToFile localfile hdfs://nn.example.com/hadoop/hadoopfile>>>
 
-        * <<<hdfs dfs -appendToFile - hdfs://nn.example.com/hadoop/hadoopfile>>>
+        * <<<hadoop fs -appendToFile - hdfs://nn.example.com/hadoop/hadoopfile>>>
           Reads the input from stdin.
 
       Exit Code:
 
       Returns 0 on success and 1 on error.
 
-cat
+* cat
 
-   Usage: <<<hdfs dfs -cat URI [URI ...]>>>
+   Usage: <<<hadoop fs -cat URI [URI ...]>>>
 
    Copies source paths to stdout.
 
    Example:
 
-     * <<<hdfs dfs -cat hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2>>>
+     * <<<hadoop fs -cat hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2>>>
 
-     * <<<hdfs dfs -cat file:///file3 /user/hadoop/file4>>>
+     * <<<hadoop fs -cat file:///file3 /user/hadoop/file4>>>
 
    Exit Code:
 
    Returns 0 on success and -1 on error.
 
-chgrp
+* checksum
 
-   Usage: <<<hdfs dfs -chgrp [-R] GROUP URI [URI ...]>>>
+  Usage: <<<hadoop fs -checksum URI>>>
+
+  Returns the checksum information of a file.
+
+  Example:
+
+    * <<<hadoop fs -checksum hdfs://nn1.example.com/file1>>>
+
+    * <<<hadoop fs -checksum file:///etc/hosts>>>
+
+* chgrp
+
+   Usage: <<<hadoop fs -chgrp [-R] GROUP URI [URI ...]>>>
 
    Change group association of files. The user must be the owner of files, or
    else a super-user. Additional information is in the
@@ -94,9 +110,9 @@ chgrp
 
      * The -R option will make the change recursively through the directory structure.
 
-chmod
+* chmod
 
-   Usage: <<<hdfs dfs -chmod [-R] <MODE[,MODE]... | OCTALMODE> URI [URI ...]>>>
+   Usage: <<<hadoop fs -chmod [-R] <MODE[,MODE]... | OCTALMODE> URI [URI ...]>>>
 
    Change the permissions of files. With -R, make the change recursively
    through the directory structure. The user must be the owner of the file, or
@@ -107,9 +123,9 @@ chmod
 
      * The -R option will make the change recursively through the directory structure.
 
-chown
+* chown
 
-   Usage: <<<hdfs dfs -chown [-R] [OWNER][:[GROUP]] URI [URI ]>>>
+   Usage: <<<hadoop fs -chown [-R] [OWNER][:[GROUP]] URI [URI ]>>>
 
    Change the owner of files. The user must be a super-user. Additional information
    is in the {{{../hadoop-hdfs/HdfsPermissionsGuide.html}Permissions Guide}}.
@@ -118,9 +134,9 @@ chown
 
      * The -R option will make the change recursively through the directory structure.
 
-copyFromLocal
+* copyFromLocal
 
-   Usage: <<<hdfs dfs -copyFromLocal <localsrc> URI>>>
+   Usage: <<<hadoop fs -copyFromLocal <localsrc> URI>>>
 
    Similar to put command, except that the source is restricted to a local
    file reference.
@@ -129,16 +145,16 @@ copyFromLocal
 
      * The -f option will overwrite the destination if it already exists.
 
-copyToLocal
+* copyToLocal
 
-   Usage: <<<hdfs dfs -copyToLocal [-ignorecrc] [-crc] URI <localdst> >>>
+   Usage: <<<hadoop fs -copyToLocal [-ignorecrc] [-crc] URI <localdst> >>>
 
    Similar to get command, except that the destination is restricted to a
    local file reference.
 
-count
+* count
 
-   Usage: <<<hdfs dfs -count [-q] [-h] <paths> >>>
+   Usage: <<<hadoop fs -count [-q] [-h] <paths> >>>
 
    Count the number of directories, files and bytes under the paths that match
    the specified file pattern.  The output columns with -count are: DIR_COUNT,
@@ -151,19 +167,19 @@ count
 
    Example:
 
-     * <<<hdfs dfs -count hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2>>>
+     * <<<hadoop fs -count hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2>>>
 
-     * <<<hdfs dfs -count -q hdfs://nn1.example.com/file1>>>
+     * <<<hadoop fs -count -q hdfs://nn1.example.com/file1>>>
 
-     * <<<hdfs dfs -count -q -h hdfs://nn1.example.com/file1>>>
+     * <<<hadoop fs -count -q -h hdfs://nn1.example.com/file1>>>
 
    Exit Code:
 
    Returns 0 on success and -1 on error.
 
-cp
+* cp
 
-   Usage: <<<hdfs dfs -cp [-f] [-p | -p[topax]] URI [URI ...] <dest> >>>
+   Usage: <<<hadoop fs -cp [-f] [-p | -p[topax]] URI [URI ...] <dest> >>>
 
    Copy files from source to destination. This command allows multiple sources
    as well in which case the destination must be a directory.
@@ -177,7 +193,7 @@ cp
     Options:
 
       * The -f option will overwrite the destination if it already exists.
-      
+
       * The -p option will preserve file attributes [topx] (timestamps,
         ownership, permission, ACL, XAttr). If -p is specified with no <arg>,
         then preserves timestamps, ownership, permission. If -pa is specified,
@@ -187,17 +203,41 @@ cp
 
    Example:
 
-     * <<<hdfs dfs -cp /user/hadoop/file1 /user/hadoop/file2>>>
+     * <<<hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2>>>
 
-     * <<<hdfs dfs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir>>>
+     * <<<hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir>>>
 
    Exit Code:
 
    Returns 0 on success and -1 on error.
 
-du
+* createSnapshot
 
-   Usage: <<<hdfs dfs -du [-s] [-h] URI [URI ...]>>>
+  See {{{../hadoop-hdfs/HdfsSnapshots.html}HDFS Snapshots Guide}}.
+
+
+* deleteSnapshot
+
+  See {{{../hadoop-hdfs/HdfsSnapshots.html}HDFS Snapshots Guide}}.
+
+* df
+
+   Usage: <<<hadoop fs -df [-h] URI [URI ...]>>>
+
+   Displays free space.
+
+   Options:
+
+     * The -h option will format file sizes in a "human-readable" fashion (e.g
+       64.0m instead of 67108864)
+
+   Example:
+
+     * <<<hadoop dfs -df /user/hadoop/dir1>>>
+
+* du
+
+   Usage: <<<hadoop fs -du [-s] [-h] URI [URI ...]>>>
 
    Displays sizes of files and directories contained in the given directory or
    the length of a file in case its just a file.
@@ -212,29 +252,72 @@ du
 
    Example:
 
-    * hdfs dfs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://nn.example.com/user/hadoop/dir1
+    * <<<hadoop fs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://nn.example.com/user/hadoop/dir1>>>
 
    Exit Code:
    Returns 0 on success and -1 on error.
 
-dus
+* dus
 
-   Usage: <<<hdfs dfs -dus <args> >>>
+   Usage: <<<hadoop fs -dus <args> >>>
 
    Displays a summary of file lengths.
 
-   <<Note:>> This command is deprecated. Instead use <<<hdfs dfs -du -s>>>.
+   <<Note:>> This command is deprecated. Instead use <<<hadoop fs -du -s>>>.
 
-expunge
+* expunge
 
-   Usage: <<<hdfs dfs -expunge>>>
+   Usage: <<<hadoop fs -expunge>>>
 
    Empty the Trash. Refer to the {{{../hadoop-hdfs/HdfsDesign.html}
    HDFS Architecture Guide}} for more information on the Trash feature.
 
-get
+* find
 
-   Usage: <<<hdfs dfs -get [-ignorecrc] [-crc] <src> <localdst> >>>
+   Usage: <<<hadoop fs -find <path> ... <expression> ... >>>
+
+   Finds all files that match the specified expression and applies selected
+   actions to them. If no <path> is specified then defaults to the current
+   working directory. If no expression is specified then defaults to -print.
+
+   The following primary expressions are recognised:
+
+     * -name pattern \
+       -iname pattern
+
+       Evaluates as true if the basename of the file matches the pattern using
+       standard file system globbing. If -iname is used then the match is case
+       insensitive.
+
+     * -print \
+       -print0
+
+       Always evaluates to true. Causes the current pathname to be written to
+       standard output. If the -print0 expression is used then an ASCII NULL
+       character is appended.
+
+   The following operators are recognised:
+
+     * expression -a expression \
+       expression -and expression \
+       expression expression
+
+       Logical AND operator for joining two expressions. Returns true if both
+       child expressions return true. Implied by the juxtaposition of two
+       expressions and so does not need to be explicitly specified. The second
+       expression will not be applied if the first fails.
+
+   Example:
+
+   <<<hadoop fs -find / -name test -print>>>
+
+   Exit Code:
+
+     Returns 0 on success and -1 on error.
+
+* get
+
+   Usage: <<<hadoop fs -get [-ignorecrc] [-crc] <src> <localdst> >>>
 
    Copy files to the local file system. Files that fail the CRC check may be
    copied with the -ignorecrc option. Files and CRCs may be copied using the
@@ -242,17 +325,17 @@ get
 
    Example:
 
-     * <<<hdfs dfs -get /user/hadoop/file localfile>>>
+     * <<<hadoop fs -get /user/hadoop/file localfile>>>
 
-     * <<<hdfs dfs -get hdfs://nn.example.com/user/hadoop/file localfile>>>
+     * <<<hadoop fs -get hdfs://nn.example.com/user/hadoop/file localfile>>>
 
    Exit Code:
 
    Returns 0 on success and -1 on error.
 
-getfacl
+* getfacl
 
-   Usage: <<<hdfs dfs -getfacl [-R] <path> >>>
+   Usage: <<<hadoop fs -getfacl [-R] <path> >>>
 
    Displays the Access Control Lists (ACLs) of files and directories. If a
    directory has a default ACL, then getfacl also displays the default ACL.
@@ -265,17 +348,17 @@ getfacl
 
    Examples:
 
-     * <<<hdfs dfs -getfacl /file>>>
+     * <<<hadoop fs -getfacl /file>>>
 
-     * <<<hdfs dfs -getfacl -R /dir>>>
+     * <<<hadoop fs -getfacl -R /dir>>>
 
    Exit Code:
 
    Returns 0 on success and non-zero on error.
 
-getfattr
+* getfattr
 
-   Usage: <<<hdfs dfs -getfattr [-R] {-n name | -d} [-e en] <path> >>>
+   Usage: <<<hadoop fs -getfattr [-R] {-n name | -d} [-e en] <path> >>>
 
    Displays the extended attribute names and values (if any) for a file or
    directory.
@@ -294,26 +377,32 @@ getfattr
 
    Examples:
 
-     * <<<hdfs dfs -getfattr -d /file>>>
+     * <<<hadoop fs -getfattr -d /file>>>
 
-     * <<<hdfs dfs -getfattr -R -n user.myAttr /dir>>>
+     * <<<hadoop fs -getfattr -R -n user.myAttr /dir>>>
 
    Exit Code:
 
    Returns 0 on success and non-zero on error.
 
-getmerge
+* getmerge
 
-   Usage: <<<hdfs dfs -getmerge <src> <localdst> [addnl]>>>
+   Usage: <<<hadoop fs -getmerge <src> <localdst> [addnl]>>>
 
    Takes a source directory and a destination file as input and concatenates
    files in src into the destination local file. Optionally addnl can be set to
    enable adding a newline character at the
    end of each file.
 
-ls
+* help
 
-   Usage: <<<hdfs dfs -ls [-R] <args> >>>
+   Usage: <<<hadoop fs -help>>>
+
+   Return usage output.
+
+* ls
+
+   Usage: <<<hadoop fs -ls [-R] <args> >>>
 
    Options:
 
@@ -334,23 +423,23 @@ permissions userid groupid modification_date modification_time dirname
 
    Example:
 
-     * <<<hdfs dfs -ls /user/hadoop/file1>>>
+     * <<<hadoop fs -ls /user/hadoop/file1>>>
 
    Exit Code:
 
    Returns 0 on success and -1 on error.
 
-lsr
+* lsr
 
-   Usage: <<<hdfs dfs -lsr <args> >>>
+   Usage: <<<hadoop fs -lsr <args> >>>
 
    Recursive version of ls.
 
-   <<Note:>> This command is deprecated. Instead use <<<hdfs dfs -ls -R>>>
+   <<Note:>> This command is deprecated. Instead use <<<hadoop fs -ls -R>>>
 
-mkdir
+* mkdir
 
-   Usage: <<<hdfs dfs -mkdir [-p] <paths> >>>
+   Usage: <<<hadoop fs -mkdir [-p] <paths> >>>
 
    Takes path uri's as argument and creates directories.
 
@@ -360,30 +449,30 @@ mkdir
 
    Example:
 
-     * <<<hdfs dfs -mkdir /user/hadoop/dir1 /user/hadoop/dir2>>>
+     * <<<hadoop fs -mkdir /user/hadoop/dir1 /user/hadoop/dir2>>>
 
-     * <<<hdfs dfs -mkdir hdfs://nn1.example.com/user/hadoop/dir hdfs://nn2.example.com/user/hadoop/dir>>>
+     * <<<hadoop fs -mkdir hdfs://nn1.example.com/user/hadoop/dir hdfs://nn2.example.com/user/hadoop/dir>>>
 
    Exit Code:
 
    Returns 0 on success and -1 on error.
 
-moveFromLocal
+* moveFromLocal
 
-   Usage: <<<hdfs dfs -moveFromLocal <localsrc> <dst> >>>
+   Usage: <<<hadoop fs -moveFromLocal <localsrc> <dst> >>>
 
    Similar to put command, except that the source localsrc is deleted after
    it's copied.
 
-moveToLocal
+* moveToLocal
 
-   Usage: <<<hdfs dfs -moveToLocal [-crc] <src> <dst> >>>
+   Usage: <<<hadoop fs -moveToLocal [-crc] <src> <dst> >>>
 
    Displays a "Not implemented yet" message.
 
-mv
+* mv
 
-   Usage: <<<hdfs dfs -mv URI [URI ...] <dest> >>>
+   Usage: <<<hadoop fs -mv URI [URI ...] <dest> >>>
 
    Moves files from source to destination. This command allows multiple sources
    as well in which case the destination needs to be a directory. Moving files
@@ -391,38 +480,42 @@ mv
 
    Example:
 
-     * <<<hdfs dfs -mv /user/hadoop/file1 /user/hadoop/file2>>>
+     * <<<hadoop fs -mv /user/hadoop/file1 /user/hadoop/file2>>>
 
-     * <<<hdfs dfs -mv hdfs://nn.example.com/file1 hdfs://nn.example.com/file2 hdfs://nn.example.com/file3 hdfs://nn.example.com/dir1>>>
+     * <<<hadoop fs -mv hdfs://nn.example.com/file1 hdfs://nn.example.com/file2 hdfs://nn.example.com/file3 hdfs://nn.example.com/dir1>>>
 
    Exit Code:
 
    Returns 0 on success and -1 on error.
 
-put
+* put
 
-   Usage: <<<hdfs dfs -put <localsrc> ... <dst> >>>
+   Usage: <<<hadoop fs -put <localsrc> ... <dst> >>>
 
    Copy single src, or multiple srcs from local file system to the destination
    file system. Also reads input from stdin and writes to destination file
    system.
 
-     * <<<hdfs dfs -put localfile /user/hadoop/hadoopfile>>>
+     * <<<hadoop fs -put localfile /user/hadoop/hadoopfile>>>
 
-     * <<<hdfs dfs -put localfile1 localfile2 /user/hadoop/hadoopdir>>>
+     * <<<hadoop fs -put localfile1 localfile2 /user/hadoop/hadoopdir>>>
 
-     * <<<hdfs dfs -put localfile hdfs://nn.example.com/hadoop/hadoopfile>>>
+     * <<<hadoop fs -put localfile hdfs://nn.example.com/hadoop/hadoopfile>>>
 
-     * <<<hdfs dfs -put - hdfs://nn.example.com/hadoop/hadoopfile>>>
+     * <<<hadoop fs -put - hdfs://nn.example.com/hadoop/hadoopfile>>>
        Reads the input from stdin.
 
    Exit Code:
 
    Returns 0 on success and -1 on error.
 
-rm
+* renameSnapshot
 
-   Usage: <<<hdfs dfs -rm [-f] [-r|-R] [-skipTrash] URI [URI ...]>>>
+  See {{{../hadoop-hdfs/HdfsSnapshots.html}HDFS Snapshots Guide}}.
+
+* rm
+
+   Usage: <<<hadoop fs -rm [-f] [-r|-R] [-skipTrash] URI [URI ...]>>>
 
    Delete files specified as args.
 
@@ -441,23 +534,37 @@ rm
 
    Example:
 
-     * <<<hdfs dfs -rm hdfs://nn.example.com/file /user/hadoop/emptydir>>>
+     * <<<hadoop fs -rm hdfs://nn.example.com/file /user/hadoop/emptydir>>>
 
    Exit Code:
 
    Returns 0 on success and -1 on error.
 
-rmr
+* rmdir
 
-   Usage: <<<hdfs dfs -rmr [-skipTrash] URI [URI ...]>>>
+   Usage: <<<hadoop fs -rmdir [--ignore-fail-on-non-empty] URI [URI ...]>>>
+
+   Delete a directory.
+
+   Options:
+
+     * --ignore-fail-on-non-empty: When using wildcards, do not fail if a directory still contains files.
+
+   Example:
+
+     * <<<hadoop fs -rmdir /user/hadoop/emptydir>>>
+
+* rmr
+
+   Usage: <<<hadoop fs -rmr [-skipTrash] URI [URI ...]>>>
 
    Recursive version of delete.
 
-   <<Note:>> This command is deprecated. Instead use <<<hdfs dfs -rm -r>>>
+   <<Note:>> This command is deprecated. Instead use <<<hadoop fs -rm -r>>>
 
-setfacl
+* setfacl
 
-   Usage: <<<hdfs dfs -setfacl [-R] [{-b|-k} {-m|-x <acl_spec>} <path>]|[--set <acl_spec> <path>] >>>
+   Usage: <<<hadoop fs -setfacl [-R] [{-b|-k} {-m|-x <acl_spec>} <path>]|[--set <acl_spec> <path>] >>>
 
    Sets Access Control Lists (ACLs) of files and directories.
 
@@ -485,27 +592,27 @@ setfacl
 
    Examples:
 
-      * <<<hdfs dfs -setfacl -m user:hadoop:rw- /file>>>
+      * <<<hadoop fs -setfacl -m user:hadoop:rw- /file>>>
 
-      * <<<hdfs dfs -setfacl -x user:hadoop /file>>>
+      * <<<hadoop fs -setfacl -x user:hadoop /file>>>
 
-      * <<<hdfs dfs -setfacl -b /file>>>
+      * <<<hadoop fs -setfacl -b /file>>>
 
-      * <<<hdfs dfs -setfacl -k /dir>>>
+      * <<<hadoop fs -setfacl -k /dir>>>
 
-      * <<<hdfs dfs -setfacl --set user::rw-,user:hadoop:rw-,group::r--,other::r-- /file>>>
+      * <<<hadoop fs -setfacl --set user::rw-,user:hadoop:rw-,group::r--,other::r-- /file>>>
 
-      * <<<hdfs dfs -setfacl -R -m user:hadoop:r-x /dir>>>
+      * <<<hadoop fs -setfacl -R -m user:hadoop:r-x /dir>>>
 
-      * <<<hdfs dfs -setfacl -m default:user:hadoop:r-x /dir>>>
+      * <<<hadoop fs -setfacl -m default:user:hadoop:r-x /dir>>>
 
    Exit Code:
 
    Returns 0 on success and non-zero on error.
 
-setfattr
+* setfattr
 
-   Usage: <<<hdfs dfs -setfattr {-n name [-v value] | -x name} <path> >>>
+   Usage: <<<hadoop fs -setfattr {-n name [-v value] | -x name} <path> >>>
 
    Sets an extended attribute name and value for a file or directory.
 
@@ -523,19 +630,19 @@ setfattr
 
    Examples:
 
-      * <<<hdfs dfs -setfattr -n user.myAttr -v myValue /file>>>
+      * <<<hadoop fs -setfattr -n user.myAttr -v myValue /file>>>
 
-      * <<<hdfs dfs -setfattr -n user.noValue /file>>>
+      * <<<hadoop fs -setfattr -n user.noValue /file>>>
 
-      * <<<hdfs dfs -setfattr -x user.myAttr /file>>>
+      * <<<hadoop fs -setfattr -x user.myAttr /file>>>
 
    Exit Code:
 
    Returns 0 on success and non-zero on error.
 
-setrep
+* setrep
 
-   Usage: <<<hdfs dfs -setrep [-R] [-w] <numReplicas> <path> >>>
+   Usage: <<<hadoop fs -setrep [-R] [-w] <numReplicas> <path> >>>
 
    Changes the replication factor of a file. If <path> is a directory then
    the command recursively changes the replication factor of all files under
@@ -550,28 +657,28 @@ setrep
 
    Example:
 
-     * <<<hdfs dfs -setrep -w 3 /user/hadoop/dir1>>>
+     * <<<hadoop fs -setrep -w 3 /user/hadoop/dir1>>>
 
    Exit Code:
 
    Returns 0 on success and -1 on error.
 
-stat
+* stat
 
-   Usage: <<<hdfs dfs -stat URI [URI ...]>>>
+   Usage: <<<hadoop fs -stat URI [URI ...]>>>
 
    Returns the stat information on the path.
 
    Example:
 
-     * <<<hdfs dfs -stat path>>>
+     * <<<hadoop fs -stat path>>>
 
    Exit Code:
    Returns 0 on success and -1 on error.
 
-tail
+* tail
 
-   Usage: <<<hdfs dfs -tail [-f] URI>>>
+   Usage: <<<hadoop fs -tail [-f] URI>>>
 
    Displays last kilobyte of the file to stdout.
 
@@ -581,43 +688,54 @@ tail
 
    Example:
 
-     * <<<hdfs dfs -tail pathname>>>
+     * <<<hadoop fs -tail pathname>>>
 
    Exit Code:
    Returns 0 on success and -1 on error.
 
-test
+* test
 
-   Usage: <<<hdfs dfs -test -[ezd] URI>>>
+   Usage: <<<hadoop fs -test -[defsz] URI>>>
 
    Options:
 
-     * The -e option will check to see if the file exists, returning 0 if true.
+     * -d: f the path is a directory, return 0.
 
-     * The -z option will check to see if the file is zero length, returning 0 if true.
+     * -e: if the path exists, return 0.
 
-     * The -d option will check to see if the path is directory, returning 0 if true.
+     * -f: if the path is a file, return 0.
+
+     * -s: if the path is not empty, return 0.
+
+     * -z: if the file is zero length, return 0.
 
    Example:
 
-     * <<<hdfs dfs -test -e filename>>>
+     * <<<hadoop fs -test -e filename>>>
 
-text
+* text
 
-   Usage: <<<hdfs dfs -text <src> >>>
+   Usage: <<<hadoop fs -text <src> >>>
 
    Takes a source file and outputs the file in text format. The allowed formats
    are zip and TextRecordInputStream.
 
-touchz
+* touchz
 
-   Usage: <<<hdfs dfs -touchz URI [URI ...]>>>
+   Usage: <<<hadoop fs -touchz URI [URI ...]>>>
 
    Create a file of zero length.
 
    Example:
 
-     * <<<hdfs dfs -touchz pathname>>>
+     * <<<hadoop fs -touchz pathname>>>
 
    Exit Code:
    Returns 0 on success and -1 on error.
+
+
+* usage
+
+   Usage: <<<hadoop fs -usage command>>>
+
+   Return the help for an individual command.

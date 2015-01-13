@@ -18,8 +18,9 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-6581. Support writing to a single replica in RAM. (See breakdown of
-    tasks below for features and contributors).
+    HDFS-3107. Introduce truncate. (Plamen Jeliazkov via shv)
+
+    HDFS-7056. Snapshot support for truncate. (Plamen Jeliazkov and shv)
 
   IMPROVEMENTS
 
@@ -37,9 +38,6 @@ Trunk (Unreleased)
 
     HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal Lee
     via jitendra)
-
-    HDFS-2486. Remove unnecessary priority level checks in
-    UnderReplicatedBlocks.  (Uma Maheswara Rao G via szetszwo)
 
     HDFS-2878. Fix TestBlockRecovery and move it back into main test directory.
     (todd)
@@ -127,8 +125,6 @@ Trunk (Unreleased)
     HDFS-6228. comments typo fix for FsDatasetImpl.java (zhaoyunjiong via umamahesh)
 
     HDFS-6246. Remove 'dfs.support.append' flag from trunk code. (umamahesh)
-
-    HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
 
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
@@ -249,9 +245,6 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
-    HDFS-6657. Remove link to 'Legacy UI' in trunk's Namenode UI.
-    (Vinayakumar B via wheat 9)
-
     HDFS-6694. TestPipelinesFailover.testPipelineRecoveryStress tests fail
     intermittently with various symptoms - debugging patch. (Yongjun Zhang via
     Arpit Agarwal)
@@ -261,104 +254,441 @@ Trunk (Unreleased)
 
     HDFS-6981. Fix DN upgrade with layout version change. (Arpit Agarwal)
 
-  BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
+    HDFS-7204. balancer doesn't run as a daemon (aw)
 
-    HDFS-6921. Add LazyPersist flag to FileStatus. (Arpit Agarwal)
+    HDFS-7319. Remove dead link to HFTP documentation from index.xml.
+    (Masatake Iwasaki via wheat9)
 
-    HDFS-6924. Add new RAM_DISK storage type. (Arpit Agarwal)
-
-    HDFS-6922. Add LazyPersist flag to INodeFile, save it in FsImage and
-    edit logs. (Arpit Agarwal)
-  
-    HDFS-6923. Propagate LazyPersist flag to DNs via DataTransferProtocol.
-    (Arpit Agarwal)
-
-    HDFS-6925. DataNode should attempt to place replicas on transient storage
-    first if lazyPersist flag is received. (Arpit Agarwal)
-
-    HDFS-6926. DN support for saving replicas to persistent storage and
-    evicting in-memory replicas. (Arpit Agarwal)
-
-    HDFS-6927. Initial unit tests for lazy persist files. (Arpit Agarwal)
-
-    HDFS-6929. NN periodically unlinks lazy persist files with missing
-    replicas from namespace. (Arpit Agarwal)
-
-    HDFS-6928. 'hdfs put' command should accept lazyPersist flag for testing.
-    (Arpit Agarwal)
-
-    HDFS-6960. Bugfix in LazyWriter, fix test case and some refactoring.
-    (Arpit Agarwal)
-
-    HDFS-6931. Move lazily persisted replicas to finalized directory on DN
-    startup. (Arpit Agarwal)
-
-    HDFS-6950. Add Additional unit tests for HDFS-6581. (Xiaoyu Yao via
-    Arpit Agarwal)
-
-    HDFS-6930. Improve replica eviction from RAM disk. (Arpit Agarwal)
-
-    HDFS-6977. Delete all copies when a block is deleted from the block space.
-    (Arpit Agarwal)
-
-    HDFS-6991. Notify NN of evicted block before deleting it from RAM disk.
-    (Arpit Agarwal)
-
-    HDFS-6978. Directory scanner should correctly reconcile blocks on RAM
-    disk. (Arpit Agarwal)
-
-    HDFS-7066. LazyWriter#evictBlocks misses a null check for replicaState.
-    (Xiaoyu Yao via Arpit Agarwal)
-
-    HDFS-7064. Fix unit test failures in HDFS-6581 branch. (Xiaoyu Yao via
-    Arpit Agarwal)
-
-    HDFS-6581. Few more unit test fixes for HDFS-6581. (Arpit Agarwal)
-
-    HDFS-7080. Fix finalize and upgrade unit test failures. (Arpit Agarwal)
-
-    HDFS-7084. FsDatasetImpl#copyBlockFiles debug log can be improved.
-    (Xiaoyu Yao via Arpit Agarwal)
-
-    HDFS-7091. Add forwarding constructor for INodeFile for existing callers.
-    (Arpit Agarwal)
-
-    HDFS-7100. Make eviction scheme pluggable. (Arpit Agarwal)
-
-    HDFS-7108. Fix unit test failures in SimulatedFsDataset. (Arpit Agarwal)
-
-    HDFS-7071. Updated editsStored and editsStored.xml to bump layout
-    version and add LazyPersist flag. (Xiaoyu Yao and Arpit Agarwal via
-    Arpit Agarwal)
-    
-    HDFS-6990. Add unit test for evict/delete RAM_DISK block with open
-    handle. (Xiaoyu Yao via Arpit Agarwal)
-
-    HDFS-7143. Fix findbugs warnings in HDFS-6581 branch. (szetszwo via
-    Arpit Agarwal)
-
-    HDFS-6932. Balancer and Mover tools should ignore replicas on RAM_DISK.
-    (Xiaoyu Yao via Arpit Agarwal)
-
-    HDFS-7144. Fix findbugs warnings in RamDiskReplicaTracker. (szetszwo via
-    Arpit Agarwal)
-
-    HDFS-7155. Bugfix in createLocatedFileStatus caused by bad merge.
-    (Arpit Agarwal)
-
-    HDFS-7153. Add storagePolicy to NN edit log during file creation.
-    (Arpit Agarwal)
-
-    HDFS-7159. Use block storage policy to set lazy persist preference.
-    (Arpit Agarwal)
-
-    HDFS-7129. Metrics to track usage of memory for writes. (Xiaoyu Yao
-    via Arpit Agarwal)
-
-    HDFS-7171. Fix Jenkins failures in HDFS-6581 branch. (Arpit Agarwal)
-
+    HDFS-7407. Minor typo in privileged pid/out/log names (aw)
 
 Release 2.7.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+    
+    HDFS-7278. Add a command that allows sysadmins to manually trigger full
+    block reports from a DN (cmccabe)
+
+    HDFS-6663. Admin command to track file and locations from block id.
+    (Chen He via kihwal)
+
+    HDFS-6982. nntop: top­-like tool for name node users.
+    (Maysam Yabandeh via wang)
+
+    HDFS-7424. Add web UI for NFS gateway (brandonli)
+    
+    HDFS-7449. Add metrics to NFS gateway (brandonli)
+
+  IMPROVEMENTS
+
+    HDFS-7055. Add tracing to DFSInputStream (cmccabe)
+
+    HDFS-7186. Document the "hadoop trace" command. (Masatake Iwasaki via Colin
+    P. McCabe)
+
+    HDFS-7202. Should be able to omit package name of SpanReceiver on "hadoop
+    trace -add" (iwasakims via cmccabe)
+
+    HDFS-7026. Introduce a string constant for "Failed to obtain user group
+    info...". (Yongjun Zhang via atm)
+
+    HDFS-7209. Populate EDEK cache when creating encryption zone. (Yi Liu via wang)
+
+    HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
+
+    HDFS-7266. HDFS Peercache enabled check should not lock on object (awang
+    via cmccabe)
+
+    HDFS-7254. Add documentation for hot swaping DataNode drives (Lei Xu via
+    Colin P. McCabe)
+
+    HDFS-6877. Avoid calling checkDisk when an HDFS volume is removed during a
+    write. (Lei Xu via Colin P. McCabe)
+
+    HDFS-2486. Remove unnecessary priority level checks in
+    UnderReplicatedBlocks.  (Uma Maheswara Rao G via szetszwo)
+
+    HDFS-6824. Additional user documentation for HDFS encryption. (wang)
+
+    HDFS-7165. Separate block metrics for files with replication count 1.
+    (Zhe Zhang via wang)
+
+    HDFS-7222. Expose DataNode network errors as a metric. (Charles Lamb via wang)
+
+    HDFS-7257. Add the time of last HA state transition to NN's /jmx page.
+    (Charles Lamb via wheat9)
+
+    HDFS-7223. Tracing span description of IPC client is too long (iwasakims
+    via cmccabe)
+
+    HDFS-7283. Bump DataNode OOM log from WARN to ERROR.
+    (Stephen Chu via wheat9)
+
+    HDFS-5928. Show namespace and namenode ID on NN dfshealth page.
+    (Siqi Li via wheat9)
+
+    HDFS-7213. processIncrementalBlockReport performance degradation.
+    (Eric Payne via kihwal)
+
+    HDFS-7280. Use netty 4 in WebImageViewer. (wheat9)
+
+    HDFS-3342. SocketTimeoutException in BlockSender.sendChunks could
+    have a better error message. (Yongjun Zhang via wang)
+
+    HDFS-7035. Make adding a new data directory to the DataNode an atomic
+    operation and improve error handling (Lei Xu via Colin P. McCabe)
+    
+    HDFS-6917. Add an hdfs debug command to validate blocks, call recoverlease,
+    etc. (cmccabe)
+
+    HDFS-7356. Use DirectoryListing.hasMore() directly in nfs. (Li Lu via jing9)
+
+    HDFS-7357. FSNamesystem.checkFileProgress should log file path.
+    (Tsz Wo Nicholas Sze via wheat9)
+
+    HDFS-7335. Redundant checkOperation() in FSN.analyzeFileState().
+    (Milan Desai via shv)
+
+    HDFS-7333. Improve logging in Storage.tryLock(). (shv)
+
+    HDFS-7361. TestCheckpoint fails after change of log message related to
+    locking violation. (shv)
+
+    HDFS-7329. Improve logging when MiniDFSCluster fails to start.
+    (Byron Wong via shv)
+
+    HDFS-7336. Unused member DFSInputStream.buffersize. (Milan Desai via shv)
+
+    HDFS-7365. Remove hdfs.server.blockmanagement.MutableBlockCollection.
+    (Li Lu via wheat9)
+
+    HDFS-7381. Decouple the management of block id and gen stamps from
+    FSNamesystem. (wheat9)
+
+    HDFS-7375. Move FSClusterStats to o.a.h.h.hdfs.server.blockmanagement.
+    (wheat9)
+
+    HDFS-7386. Replace check "port number < 1024" with shared isPrivilegedPort
+    method. (Yongjun Zhang via cnauroth)
+
+    HDFS-7394. Log at INFO level, not WARN level, when InvalidToken is seen in
+    ShortCircuitCache (Keith Pak via Colin P. McCabe)
+
+    HDFS-7279. Use netty to implement DatanodeWebHdfsMethods. (wheat9)
+
+    HDFS-7404. Remove o.a.h.hdfs.server.datanode.web.resources.
+    (Li Lu via wheat9)
+
+    HDFS-7398. Reset cached thread-local FSEditLogOp's on every
+    FSEditLog#logEdit. (Gera Shegalov via cnauroth)
+
+    HDFS-7409. Allow dead nodes to finish decommissioning if all files are
+    fully replicated. (wang)
+
+    HDFS-7413. Some unit tests should use NameNodeProtocols instead of
+    FSNameSystem. (wheat9)
+
+    HDFS-7415. Move FSNameSystem.resolvePath() to FSDirectory. (wheat9)
+
+    HDFS-7420. Delegate permission checks to FSDirectory. (wheat9)
+
+    HDFS-7331. Add Datanode network counts to datanode jmx page. (Charles Lamb
+    via atm)
+
+    HDFS-7412. Move RetryCache to NameNodeRpcServer. (wheat9)
+
+    HDFS-7419. Improve error messages for DataNode hot swap drive feature (Lei
+    Xu via Colin P. Mccabe)
+
+    HDFS-7436. Consolidate implementation of concat(). (wheat9)
+
+    HDFS-7440. Consolidate snapshot related operations in a single class.
+    (wheat9)
+
+    HDFS-6803 Document DFSClient#DFSInputStream expectations reading and preading
+    in concurrent context. (stack via stevel)
+
+    HDFS-7310. Mover can give first priority to local DN if it has target storage type 
+    available in local DN. (Vinayakumar B via umamahesh)
+
+    HDFS-7210. Avoid two separate RPC's namenode.append() and namenode.getFileInfo() 
+    for an append call from DFSClient. (Vinayakumar B via umamahesh)
+
+    HDFS-7450. Consolidate the implementation of GetFileInfo(), GetListings() and
+    GetContentSummary() into a single class. (wheat9)
+
+    HDFS-7438. Consolidate the implementation of rename() into a single class.
+    (wheat9)
+
+    HDFS-7462. Consolidate implementation of mkdirs() into a single class.
+    (wheat9)
+
+    HDFS-7446. HDFS inotify should have the ability to determine what txid it
+    has read up to (cmccabe)
+
+    HDFS-6735. A minor optimization to avoid pread() be blocked by read()
+    inside the same DFSInputStream (Lars Hofhansl via stack)
+    
+    HDFS-7458. Add description to the nfs ports in core-site.xml used by nfs
+    test to avoid confusion (Yongjun Zhang via brandonli)
+
+    HDFS-7468. Moving verify* functions to corresponding classes.
+    (Li Lu via wheat9)
+
+    HDFS-7478. Move org.apache.hadoop.hdfs.server.namenode.NNConf to
+    FSNamesystem. (Li Lu via wheat9)
+
+    HDFS-7474. Avoid resolving path in FSPermissionChecker. (jing9)
+
+    HDFS-7459. Consolidate cache-related implementation in FSNamesystem into
+    a single class. (wheat9)
+
+    HDFS-7476. Consolidate ACL-related operations to a single class.
+    (wheat9 via cnauroth)
+
+    HDFS-7384. 'getfacl' command and 'getAclStatus' output should be in sync.
+    (Vinayakumar B via cnauroth)
+
+    HDFS-7486. Consolidate XAttr-related implementation into a single class.
+    (wheat9)
+
+    HDFS-7498. Simplify the logic in INodesInPath. (jing9)
+
+    HDFS-7463. Simplify FSNamesystem#getBlockLocationsUpdateTimes. (wheat9)
+
+    HDFS-7509. Avoid resolving path multiple times. (jing9)
+
+    HDFS-7426. Change nntop JMX format to be a JSON blob. (wang)
+
+    HDFS-7513. HDFS inotify: add defaultBlockSize to CreateEvent (cmccabe)
+
+    HDFS-7536. Remove unused CryptoCodec in org.apache.hadoop.fs.Hdfs.
+    (Yi Liu via wheat9)
+
+    HDFS-7528. Consolidate symlink-related implementation into a single class.
+    (wheat9)
+
+    HDFS-7531. Improve the concurrent access on FsVolumeList (Lei Xu via Colin
+    P. McCabe)
+
+    HDFS-7373. Clean up temporary files after fsimage transfer failures.
+    (kihwal)
+
+    HDFS-7543. Avoid path resolution when getting FileStatus for audit logs.
+    (wheat9)
+
+    HDFS-7530. Allow renaming of encryption zone roots. (Charles Lamb via wang)
+
+    HDFS-7484. Make FSDirectory#addINode take existing INodes as its parameter.
+    (jing9)
+
+    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
+    (ozawa)
+
+    HADOOP-11470. Remove some uses of obsolete guava APIs from the hadoop
+    codebase. (Sangjin Lee via Colin P. McCabe)
+
+    HDFS-7182. JMX metrics aren't accessible when NN is busy. (Ming Ma via jing9)
+
+    HDFS-7323. Move the get/setStoragePolicy commands out from dfsadmin.
+    (jing9 via yliu)
+
+    HDFS-7326: Add documentation for hdfs debug commands (Vijay Bhat via Colin
+    P. McCabe)
+
+    HDFS-7598. Remove dependency on old version of guava in
+    TestDFSClientCache#testEviction. (Sangjin Lee via Colin P. McCabe)
+
+    HDFS-7600. Refine hdfs admin classes to reuse common code. (jing9)
+
+  OPTIMIZATIONS
+
+    HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
+    (Vinayakumar B via wheat9)
+
+  BUG FIXES
+
+    HDFS-6741. Improve permission denied message when
+    FSPermissionChecker#checkOwner fails (Stephen Chu and harsh).
+
+    HDFS-6538. Comment format error in ShortCircuitRegistry javadoc.
+    (David Luo via harsh).
+
+    HDFS-7194. Fix findbugs "inefficient new String constructor" warning in
+    DFSClient#PATH (yzhang via cmccabe)
+
+    HDFS-7198. Fix or suppress findbugs "unchecked conversion" warning in
+    DFSClient#getPathTraceScope (cmccabe)
+
+    HDFS-6657. Remove link to 'Legacy UI' in trunk's Namenode UI.
+    (Vinayakumar B via wheat)
+
+    HDFS-7201. Fix typos in hdfs-default.xml. (Dawson Choong via wheat9)
+
+    HDFS-7190. Bad use of Preconditions in startFileInternal().
+    (Dawson Choong via wheat9)
+
+    HDFS-7242. Code improvement for FSN#checkUnreadableBySuperuser.
+    (Yi Liu via vinayakumarb)
+
+    HDFS-7252. small refinement to the use of isInAnEZ in FSNamesystem.
+    (Yi Liu via vinayakumarb)
+
+    HDFS-7277. Remove explicit dependency on netty 3.2 in BKJournal. (wheat9)
+
+    HDFS-7232. Populate hostname in httpfs audit log (Zoran Dimitrijevic
+    via aw)
+
+    HDFS-7258. CacheReplicationMonitor rescan schedule log should use DEBUG
+    level instead of INFO level. (Xiaoyu Yao via wheat9)
+
+    HDFS-7282. Fix intermittent TestShortCircuitCache and
+    TestBlockReaderFactory failures resulting from TemporarySocketDirectory GC.
+    (Jinghui Wang via Colin Patrick McCabe)
+
+    HDFS-7301. TestMissingBlocksAlert should use MXBeans instead of old web UI.
+    (Zhe Zhang via wheat9)
+
+    HDFS-7235. DataNode#transferBlock should report blocks that don't exist
+    using reportBadBlock (yzhang via cmccabe)
+
+    HDFS-7263. Snapshot read can reveal future bytes for appended files.
+    (Tao Luo via shv)
+
+    HDFS-7315. DFSTestUtil.readFileBuffer opens extra FSDataInputStream.
+    (Plamen Jeliazkov via wheat9)
+
+    HDFS-7324. haadmin command usage prints incorrect command name.
+    (Brahma Reddy Battula via suresh)
+
+    HDFS-7366. BlockInfo should take replication as an short in the constructor.
+    (Li Lu via wheat9)
+
+    HDFS-7389. Named user ACL cannot stop the user from accessing the FS entity.
+    (Vinayakumar B via cnauroth)
+
+    HDFS-6938. Cleanup javac warnings in FSNamesystem (Charles Lamb via wheat9)
+
+    HDFS-7358. Clients may get stuck waiting when using ByteArrayManager.
+    (szetszwo)
+
+    HDFS-7395. BlockIdManager#clear() bails out when resetting the
+    GenerationStampV1Limit. (wheat9)
+
+    HDFS-7399. Lack of synchronization in
+    DFSOutputStream#Packet#getLastByteOffsetBlock() (vinayakumarb)
+
+    HDFS-7146. NFS ID/Group lookup requires SSSD enumeration on the server
+    (Yongjun Zhang via brandonli)
+
+    HDFS-7406. SimpleHttpProxyHandler puts incorrect "Connection: Close"
+    header. (wheat9)
+
+    HDFS-7225. Remove stale block invalidation work when DN re-registers with
+    different UUID. (Zhe Zhang and Andrew Wang)
+
+    HDFS-7374. Allow decommissioning of dead DataNodes. (Zhe Zhang)
+
+    HDFS-7403. Inaccurate javadoc of BlockUCState#COMPLETE state. (
+    Yongjun Zhang via yliu)
+
+    HDFS-7303. NN UI fails to distinguish datanodes on the same host.
+    (Benoy Antony via wheat9)
+
+    HDFS-7097. Allow block reports to be processed during checkpointing on
+    standby name node. (kihwal via wang)
+
+    HDFS-7444. convertToBlockUnderConstruction should preserve BlockCollection.
+    (wheat9)
+
+    HDFS-7448 TestBookKeeperHACheckpoints fails in trunk build
+    (Akira Ajisaka via stevel)
+
+    HDFS-7472. Fix typo in message of ReplicaNotFoundException.
+    (Masatake Iwasaki via wheat9)
+
+    HDFS-7473. Document setting dfs.namenode.fs-limits.max-directory-items to 0
+    is invalid. (Akira AJISAKA via cnauroth)
+
+    HDFS-7481. Add ACL indicator to the "Permission Denied" exception.
+    (vinayakumarb)
+
+    HDFS-7502. Fix findbugs warning in hdfs-nfs project.
+    (Brandon Li via wheat9)
+
+    HDFS-5578. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags
+    in doc comments. (Andrew Purtell via wheat9)
+
+    HDFS-7475. Make TestLazyPersistFiles#testLazyPersistBlocksAreSaved
+    deterministic. (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7515. Fix new findbugs warnings in hadoop-hdfs. (wheat9)
+
+    HDFS-7497. Inconsistent report of decommissioning DataNodes between
+    dfsadmin and NameNode webui. (Yongjun Zhang via wang)
+
+    HDFS-7517. Remove redundant non-null checks in FSNamesystem#
+    getBlockLocations. (wheat9)
+
+    HDFS-7514. TestTextCommand fails on Windows. (Arpit Agarwal)
+
+    HDFS-7506. Consolidate implementation of setting inode attributes into a
+    single class. (wheat9)
+    
+    HDFS-7516. Fix findbugs warnings in hdfs-nfs project. (brandonli)
+
+    HDFS-6425. Large postponedMisreplicatedBlocks has impact on blockReport
+    latency. (Ming Ma via kihwal)
+
+    HDFS-7494. Checking of closed in DFSInputStream#pread() should be protected
+    by synchronization (Ted Yu via Colin P. McCabe)
+
+    HDFS-7431. log message for InvalidMagicNumberException may be incorrect.
+    (Yi Liu via cnauroth)
+
+    HDFS-7552. Change FsVolumeList toString() to fix
+    TestDataNodeVolumeFailureToleration (Liang Xie via Colin P. McCabe)
+
+    HDFS-7557. Fix spacing for a few keys in DFSConfigKeys.java 
+    (Colin P.McCabe)
+
+    HDFS-7560. ACLs removed by removeDefaultAcl() will be back after NameNode
+    restart/failover. (Vinayakumar B via cnauroth)
+
+    HDFS-7456. De-duplicate AclFeature instances with same AclEntries do reduce
+    memory footprint of NameNode (vinayakumarb)
+
+    HDFS-7563. NFS gateway parseStaticMap NumberFormatException 
+    (Yongjun Zhang via brandonli)
+
+    HDFS-7572. TestLazyPersistFiles#testDnRestartWithSavedReplicas is flaky on
+    Windows. (Arpit Agarwal via cnauroth)
+
+    HDFS-7583. Fix findbug in TransferFsImage.java (vinayakumarb)
+
+    HDFS-7564. NFS gateway dynamically reload UID/GID mapping file /etc/nfs.map
+    (Yongjun Zhang via brandonli)
+
+    HDFS-7561. TestFetchImage should write fetched-image-dir under target.
+    (Liang Xie via shv)
+
+    HDFS-7589. Break the dependency between libnative_mini_dfs and libhdfs.
+    (Zhanwei Wang via cnauroth)
+
+    HDFS-7579. Improve log reporting during block report rpc failure.
+    (Charles Lamb via cnauroth)
+
+    HDFS-7596. NameNode should prune dead storages from storageMap.
+    (Arpit Agarwal via cnauroth)
+
+    HDFS-7533. Datanode sometimes does not shutdown on receiving upgrade
+    shutdown command (Eric Payne via kihwal)
+
+    HDFS-5445. PacketReceiver populates the packetLen field in PacketHeader
+    incorrectly (Jonathan Mace via Colin P. McCabe)
+
+Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -366,16 +696,26 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
-    HDFS-7055. Add tracing to DFSInputStream (cmccabe)
-
   OPTIMIZATIONS
 
   BUG FIXES
-    
-    HDFS-7194. Fix findbugs "inefficient new String constructor" warning in
-    DFSClient#PATH (yzhang via cmccabe)
 
-Release 2.6.0 - UNRELEASED
+    HDFS-7425. NameNode block deletion logging uses incorrect appender.
+    (cnauroth)
+
+    HDFS-4882. Prevent the Namenode's LeaseManager from looping forever in
+    checkLeases (Ravi Prakash via Colin P. McCabe)
+
+    HDFS-7489. Incorrect locking in FsVolumeList#checkDirs can hang datanodes
+    (Noah Lorang via Colin P. McCabe)
+
+    HDFS-7503. Namenode restart after large deletions can cause slow
+    processReport. (Arpit Agarwal)
+
+    HDFS-7443. Datanode upgrade to BLOCKID_BASED_LAYOUT fails if duplicate
+    block files are present in the same volume (cmccabe)
+
+Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
 
@@ -383,6 +723,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6584. Support archival storage.  (See breakdown of tasks below for
     features and contributors)
+
+    HDFS-6581. Support writing to a single replica in RAM. (See breakdown of
+    tasks below for features and contributors).
 
   IMPROVEMENTS
 
@@ -557,6 +900,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6959. Make the HDFS home directory location customizable. (yzhang via
     cmccabe)
 
+    HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
+    directory. (Jing Zhao via wheat9)
+
     HDFS-6886. Use single editlog record for creating file + overwrite. (Yi Liu
     via jing9)
 
@@ -652,6 +998,36 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7169. Add SE_BAD_FIELD to findbugsExcludeFile.xml.  (szetszwo)
 
+    HDFS-7217. Better batching of IBRs. (kihwal)
+
+    HDFS-7195. Update user doc of secure mode about Datanodes don't require root
+    or jsvc. (cnauroth)
+
+    HDFS-7228. Add an SSD policy into the default BlockStoragePolicySuite.
+    (jing9)
+
+    HDFS-6904. YARN unable to renew delegation token fetched via webhdfs 
+    due to incorrect service port. (jitendra)
+
+    HDFS-6988. Improve HDFS-6581 eviction configuration (Xiaoyu Yao via Colin
+    P. McCabe)
+
+    HDFS-7230. Add rolling downgrade documentation. (szetszwo via jing9)
+
+    HDFS-6385. Show when block deletion will start after NameNode startup in
+    WebUI. (cnauroth)
+
+    HDFS-7313. Support optional configuration of AES cipher suite on
+    DataTransferProtocol. (cnauroth)
+
+    HDFS-7276. Limit the number of byte arrays used by DFSOutputStream and
+    provide a mechanism for recycling arrays. (szetszwo)
+
+    HDFS-7233. NN logs unnecessary org.apache.hadoop.hdfs.protocol.UnresolvedPathException.
+    (Rushabh S Shah via jing9)
+
+    HDFS-7221. TestDNFencingWithReplication fails consistently. (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -665,7 +1041,12 @@ Release 2.6.0 - UNRELEASED
     HDFS-7122. Use of ThreadLocal<Random> results in poor block placement.
     (wang)
 
+    HDFS-6606. Optimize HDFS Encrypted Transport performance. (yliu)
+
   BUG FIXES
+
+    HDFS-7309. XMLUtils.mangleXmlString doesn't seem to handle less than sign
+    (Colin Patrick McCabe via raviprak)
 
     HDFS-6823. dfs.web.authentication.kerberos.principal shows up in logs for 
     insecure HDFS (Allen Wittenauer via raviprak)
@@ -794,13 +1175,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6892. Add XDR packaging method for each NFS request (brandonli)
 
-    HDFS-6938. Cleanup javac warnings in FSNamesystem (Charles Lamb via wheat9)
-
     HDFS-6902. FileWriter should be closed in finally block in
     BlockReceiver#receiveBlock() (Tsuyoshi OZAWA via Colin Patrick McCabe)
-
-    HDFS-6800. Support Datanode layout changes with rolling upgrade.
-    (James Thomas via Arpit Agarwal)
 
     HDFS-6972. TestRefreshUserMappings.testRefreshSuperUserGroupsConfiguration
     doesn't decode url correctly. (Yongjun Zhang via wang)
@@ -831,6 +1207,11 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6951. Correctly persist raw namespace xattrs to edit log and fsimage.
     (clamb via wang)
+
+    HDFS-6800. Support Datanode layout changes with rolling upgrade.
+    (James Thomas via Arpit Agarwal)
+
+    HDFS-6981. Fix DN upgrade with layout version change. (Arpit Agarwal)
 
     HDFS-6506. Newly moved block replica been invalidated and deleted in
     TestBalancer. (Binglin Chang via cnauroth)
@@ -881,13 +1262,16 @@ Release 2.6.0 - UNRELEASED
     HDFS-7132. hdfs namenode -metadataVersion command does not honor
     configured name dirs. (Charles Lamb via wang)
 
+    HDFS-7049. TestByteRangeInputStream.testPropagatedClose fails and throw
+    NPE on branch-2. (Juan Yu via wheat9)
+
     HDFS-7148. TestEncryptionZones#testIsEncryptedMethod fails on branch-2
     after archival storage merge. (wang)
 
     HDFS-7157. Using Time.now() for recording start/end time of reconfiguration
     tasks (Lei Xu via cmccabe)
 
-    HDFS-6664. HDFS permissions guide documentation states incorrect default 
+    HDFS-6664. HDFS permissions guide documentation states incorrect default
     group mapping class. (Ray Chiang via aw)
 
     HDFS-4227. Document dfs.namenode.resource.*  (Daisuke Kobayashi via aw)
@@ -912,6 +1296,72 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7181. Remove incorrect precondition check on key length in
     FileEncryptionInfo. (wang)
+
+    HDFS-7203. Concurrent appending to the same file can cause data corruption
+    (kihwal)
+
+    HDFS-7236. Fix TestOpenFilesWithSnapshot#testOpenFilesWithMultipleSnapshots.
+    (Yongjun Zhang via jing9)
+
+    HDFS-6544. Broken Link for GFS in package.html. (Suraj Nayak M via wheat9)
+
+    HDFS-7237. The command "hdfs namenode -rollingUpgrade" throws
+    ArrayIndexOutOfBoundsException.  (szetszwo)
+
+    HDFS-7185. The active NameNode will not accept an fsimage sent from the
+    standby during rolling upgrade. (jing9)
+
+    HDFS-7208. NN doesn't schedule replication when a DN storage fails.
+    (Ming Ma via szetszwo)
+
+    HDFS-5089. When a LayoutVersion support SNAPSHOT, it must support
+    FSIMAGE_NAME_OPTIMIZATION.  (szetszwo)
+
+    HDFS-7260. Change DFSOutputStream.MAX_PACKETS to be configurable. (szetszwo)
+
+    HDFS-7259. Unresponseive NFS mount point due to deferred COMMIT response.
+    (brandonli)
+
+    HDFS-7215.Add JvmPauseMonitor to NFS gateway (brandonli)
+
+    HDFS-7180. NFSv3 gateway frequently gets stuck due to GC (brandonli)
+
+    HDFS-7243. HDFS concat operation should not be allowed in Encryption Zone.
+    (clamb via yliu)
+
+    HADOOP-11233. hadoop.security.kms.client.encrypted.key.cache.expiry
+    property spelled wrong in core-default. (Stephen Chu via yliu)
+
+    HDFS-7218. FSNamesystem ACL operations should write to audit log on
+    failure. (clamb via yliu)
+
+    HDFS-7199. DFSOutputStream should not silently drop data if DataStreamer
+    crashes with an unchecked exception (rushabhs via cmccabe)
+
+    HDFS-7383. DataNode.requestShortCircuitFdsForRead may throw
+    NullPointerException. (szetszwo via suresh)
+
+    HDFS-7147. Update archival storage user documentation.
+    (Tsz Wo Nicholas Sze via wheat9)
+
+    HDFS-7340. Make rollingUpgrade start/finalize idempotent. (jing9)
+
+    HDFS-7334. Fix periodic failures of TestCheckpoint
+    #testTooManyEditReplayFailures. (Charles Lamb via wheat9)
+
+    HDFS-7355. TestDataNodeVolumeFailure#testUnderReplicationAfterVolFailure
+    fails on Windows, because we cannot deny access to the file owner.
+    (Chris Nauroth via wheat9)
+
+    HDFS-7367. HDFS short-circuit read cannot negotiate shared memory slot and
+    file descriptors when SASL is enabled on DataTransferProtocol.
+    (Chris Nauroth via wheat9)
+
+    HDFS-7364. Balancer always shows zero Bytes Already Moved.
+    (Tsz Wo Nicholas Sze via jing9)
+
+    HDFS-7379. TestBalancer#testBalancerWithRamDisk creates test files
+    incorrectly. (Xiaoyu Yao via wheat9)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
@@ -1063,6 +1513,17 @@ Release 2.6.0 - UNRELEASED
     HDFS-6995. Block should be placed in the client's 'rack-local' node
     if 'client-local' node is not available (vinayakumarb)
 
+    HDFS-7128. Decommission slows way down when it gets towards the end.
+    (Ming Ma via cnauroth)
+
+    HDFS-7287. The OfflineImageViewer (OIV) can output invalid XML depending on
+    the filename (Ravi Prakash via Colin P. McCabe)
+
+    HDFS-7300. The getMaxNodesPerRack() method in BlockPlacementPolicyDefault
+    is flawed (kihwal)
+
+    HDFS-7305. NPE seen in wbhdfs FS while running SLive. (jing9)
+
   BREAKDOWN OF HDFS-6584 ARCHIVAL STORAGE
 
     HDFS-6677. Change INodeFile and FSImage to support storage policy ID.
@@ -1148,6 +1609,151 @@ Release 2.6.0 - UNRELEASED
     (jing9)
 
     HDFS-7167. NPE while running Mover if the given path is for a file. (jing9)
+
+    HDFS-7154. Fix returning value of starting reconfiguration task (Lei Xu via
+    Colin P. McCabe)
+
+  BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
+
+    HDFS-6921. Add LazyPersist flag to FileStatus. (Arpit Agarwal)
+
+    HDFS-6924. Add new RAM_DISK storage type. (Arpit Agarwal)
+
+    HDFS-6922. Add LazyPersist flag to INodeFile, save it in FsImage and
+    edit logs. (Arpit Agarwal)
+
+    HDFS-6923. Propagate LazyPersist flag to DNs via DataTransferProtocol.
+    (Arpit Agarwal)
+
+    HDFS-6925. DataNode should attempt to place replicas on transient storage
+    first if lazyPersist flag is received. (Arpit Agarwal)
+
+    HDFS-6926. DN support for saving replicas to persistent storage and
+    evicting in-memory replicas. (Arpit Agarwal)
+
+    HDFS-6927. Initial unit tests for lazy persist files. (Arpit Agarwal)
+
+    HDFS-6929. NN periodically unlinks lazy persist files with missing
+    replicas from namespace. (Arpit Agarwal)
+
+    HDFS-6928. 'hdfs put' command should accept lazyPersist flag for testing.
+    (Arpit Agarwal)
+
+    HDFS-6960. Bugfix in LazyWriter, fix test case and some refactoring.
+    (Arpit Agarwal)
+
+    HDFS-6931. Move lazily persisted replicas to finalized directory on DN
+    startup. (Arpit Agarwal)
+
+    HDFS-6950. Add Additional unit tests for HDFS-6581. (Xiaoyu Yao via
+    Arpit Agarwal)
+
+    HDFS-6930. Improve replica eviction from RAM disk. (Arpit Agarwal)
+
+    HDFS-6977. Delete all copies when a block is deleted from the block space.
+    (Arpit Agarwal)
+
+    HDFS-6991. Notify NN of evicted block before deleting it from RAM disk.
+    (Arpit Agarwal)
+
+    HDFS-6978. Directory scanner should correctly reconcile blocks on RAM
+    disk. (Arpit Agarwal)
+
+    HDFS-7066. LazyWriter#evictBlocks misses a null check for replicaState.
+    (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7064. Fix unit test failures in HDFS-6581 branch. (Xiaoyu Yao via
+    Arpit Agarwal)
+
+    HDFS-6581. Few more unit test fixes for HDFS-6581. (Arpit Agarwal)
+
+    HDFS-7080. Fix finalize and upgrade unit test failures. (Arpit Agarwal)
+
+    HDFS-7084. FsDatasetImpl#copyBlockFiles debug log can be improved.
+    (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7091. Add forwarding constructor for INodeFile for existing callers.
+    (Arpit Agarwal)
+
+    HDFS-7100. Make eviction scheme pluggable. (Arpit Agarwal)
+
+    HDFS-7108. Fix unit test failures in SimulatedFsDataset. (Arpit Agarwal)
+
+    HDFS-7071. Updated editsStored and editsStored.xml to bump layout
+    version and add LazyPersist flag. (Xiaoyu Yao and Arpit Agarwal via
+    Arpit Agarwal)
+
+    HDFS-6990. Add unit test for evict/delete RAM_DISK block with open
+    handle. (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7143. Fix findbugs warnings in HDFS-6581 branch. (szetszwo via
+    Arpit Agarwal)
+
+    HDFS-6932. Balancer and Mover tools should ignore replicas on RAM_DISK.
+    (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7144. Fix findbugs warnings in RamDiskReplicaTracker. (szetszwo via
+    Arpit Agarwal)
+
+    HDFS-7155. Bugfix in createLocatedFileStatus caused by bad merge.
+    (Arpit Agarwal)
+
+    HDFS-7153. Add storagePolicy to NN edit log during file creation.
+    (Arpit Agarwal)
+
+    HDFS-7159. Use block storage policy to set lazy persist preference.
+    (Arpit Agarwal)
+
+    HDFS-7129. Metrics to track usage of memory for writes. (Xiaoyu Yao
+    via Arpit Agarwal)
+
+    HDFS-7171. Fix Jenkins failures in HDFS-6581 branch. (Arpit Agarwal)
+
+    HDFS-7112. LazyWriter should use either async IO or one thread per physical
+    disk. (Xiaoyu Yao via cnauroth)
+
+    HDFS-7090. Use unbuffered writes when persisting in-memory replicas.
+    (Xiaoyu Yao via cnauroth)
+
+    HDFS-6934. Move checksum computation off the hot path when writing to RAM
+    disk. (cnauroth)
+
+    HDFS-7291. Persist in-memory replicas with appropriate unbuffered copy API
+    on POSIX and Windows. (Xiaoyu Yao via cnauroth)
+
+    HDFS-7328. TestTraceAdmin assumes Unix line endings. (cnauroth)
+
+    HDFS-7359. NameNode in secured HA cluster fails to start if
+    dfs.namenode.secondary.http-address cannot be interpreted as a network
+    address. (cnauroth)
+
+    HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
+
+    HDFS-7382. DataNode in secure mode may throw NullPointerException if client
+    connects before DataNode registers itself with NameNode. (cnauroth)
+
+    HDFS-7387. NFS may only do partial commit due to a race between COMMIT and write
+    (brandonli)
+
+    HDFS-7391. Renable SSLv2Hello in HttpFS. (rkanter via acmurthy)
+
+    HDFS-7385. ThreadLocal used in FSEditLog class causes FSImage permission mess
+    up. (jiangyu via cnauroth)
+
+Release 2.5.2 - 2014-11-19
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-7274. Disable SSLv3 in HttpFS. (Robert Kanter via kasha)
+
 
 Release 2.5.1 - 2014-09-05
 

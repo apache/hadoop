@@ -166,8 +166,6 @@ public interface MRJobConfig {
 
   public static final String PRESERVE_FILES_PATTERN = "mapreduce.task.files.preserve.filepattern";
 
-  public static final String TASK_TEMP_DIR = "mapreduce.task.tmp.dir";
-
   public static final String TASK_DEBUGOUT_LINES = "mapreduce.task.debugout.lines";
 
   public static final String RECORDS_BEFORE_PROGRESS = "mapreduce.task.merge.progress.records";
@@ -177,12 +175,17 @@ public interface MRJobConfig {
   public static final String TASK_ATTEMPT_ID = "mapreduce.task.attempt.id";
 
   public static final String TASK_ISMAP = "mapreduce.task.ismap";
+  public static final boolean DEFAULT_TASK_ISMAP = true;
 
   public static final String TASK_PARTITION = "mapreduce.task.partition";
 
   public static final String TASK_PROFILE = "mapreduce.task.profile";
 
   public static final String TASK_PROFILE_PARAMS = "mapreduce.task.profile.params";
+
+  public static final String DEFAULT_TASK_PROFILE_PARAMS =
+      "-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,"
+          + "verbose=n,file=%s";
 
   public static final String NUM_MAP_PROFILES = "mapreduce.task.profile.maps";
 
@@ -378,6 +381,11 @@ public interface MRJobConfig {
     "mapreduce.job.ubertask.maxreduces";
   public static final String JOB_UBERTASK_MAXBYTES =
     "mapreduce.job.ubertask.maxbytes";
+
+  public static final String MAPREDUCE_JOB_EMIT_TIMELINE_DATA =
+    "mapreduce.job.emit-timeline-data";
+  public static final boolean DEFAULT_MAPREDUCE_JOB_EMIT_TIMELINE_DATA =
+      false;
 
   public static final String MR_PREFIX = "yarn.app.mapreduce.";
 
@@ -614,7 +622,12 @@ public interface MRJobConfig {
   
   public static final String MR_AM_ADMIN_USER_ENV =
       MR_AM_PREFIX + "admin.user.env";
-  
+
+  public static final String MR_AM_PROFILE = MR_AM_PREFIX + "profile";
+  public static final boolean DEFAULT_MR_AM_PROFILE = false;
+  public static final String MR_AM_PROFILE_PARAMS = MR_AM_PREFIX
+      + "profile.params";
+
   public static final String MAPRED_MAP_ADMIN_JAVA_OPTS =
       "mapreduce.admin.map.child.java.opts";
 
@@ -716,6 +729,9 @@ public interface MRJobConfig {
    */
   public static final String MAPREDUCE_APPLICATION_CLASSPATH = 
       "mapreduce.application.classpath";
+  
+  public static final String MAPREDUCE_JOB_LOG4J_PROPERTIES_FILE = 
+      "mapreduce.job.log4j-properties-file";
 
   /**
    * Path to MapReduce framework archive
@@ -756,6 +772,18 @@ public interface MRJobConfig {
       MR_PREFIX + "task.container.log.backups";
   public static final int DEFAULT_TASK_LOG_BACKUPS = 0; // don't roll
 
+  public static final String REDUCE_SEPARATE_SHUFFLE_LOG =
+      MR_PREFIX + "shuffle.log.separate";
+  public static final boolean DEFAULT_REDUCE_SEPARATE_SHUFFLE_LOG = true;
+
+  public static final String SHUFFLE_LOG_BACKUPS =
+      MR_PREFIX + "shuffle.log.backups";
+  public static final int DEFAULT_SHUFFLE_LOG_BACKUPS = 0; // don't roll
+
+  public static final String SHUFFLE_LOG_KB =
+      MR_PREFIX + "shuffle.log.limit.kb";
+  public static final long DEFAULT_SHUFFLE_LOG_KB = 0L;
+
   public static final String WORKFLOW_NAME = "mapreduce.workflow.name";
   
   public static final String WORKFLOW_NODE_NAME =
@@ -795,4 +823,5 @@ public interface MRJobConfig {
       "mapreduce.job.encrypted-intermediate-data.buffer.kb";
   public static final int DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_BUFFER_KB =
           128;
+
 }

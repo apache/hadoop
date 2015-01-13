@@ -20,6 +20,7 @@ package org.apache.hadoop.streaming;
 
 import java.io.*;
 import java.net.InetAddress;
+import java.nio.charset.Charset;
 import java.util.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -62,7 +63,8 @@ public class Environment extends Properties {
     // Read the environment variables
 
     Process pid = Runtime.getRuntime().exec(command);
-    BufferedReader in = new BufferedReader(new InputStreamReader(pid.getInputStream()));
+    BufferedReader in = new BufferedReader(
+        new InputStreamReader(pid.getInputStream(), Charset.forName("UTF-8")));
     try {
       while (true) {
         String line = in.readLine();

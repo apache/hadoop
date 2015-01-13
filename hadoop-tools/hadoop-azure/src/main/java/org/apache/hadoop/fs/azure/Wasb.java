@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegateToFileSystem;
 
-
 /**
  * WASB implementation of AbstractFileSystem.
  * This impl delegates to the old FileSystem

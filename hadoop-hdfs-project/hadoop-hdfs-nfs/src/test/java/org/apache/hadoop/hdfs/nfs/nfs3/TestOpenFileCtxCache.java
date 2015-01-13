@@ -28,8 +28,8 @@ import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.CommitCtx;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
-import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
+import org.apache.hadoop.security.ShellBasedIdMapping;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -49,15 +49,15 @@ public class TestOpenFileCtxCache {
     Mockito.when(fos.getPos()).thenReturn((long) 0);
 
     OpenFileCtx context1 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup(new NfsConfiguration()));
+        dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));
     OpenFileCtx context2 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup(new NfsConfiguration()));
+        dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));
     OpenFileCtx context3 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup(new NfsConfiguration()));
+        dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));
     OpenFileCtx context4 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup(new NfsConfiguration()));
+        dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));
     OpenFileCtx context5 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup(new NfsConfiguration()));
+        dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));
 
     OpenFileCtxCache cache = new OpenFileCtxCache(conf, 10 * 60 * 100);
 
@@ -108,13 +108,13 @@ public class TestOpenFileCtxCache {
     Mockito.when(fos.getPos()).thenReturn((long) 0);
 
     OpenFileCtx context1 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup(new NfsConfiguration()));
+        dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));
     OpenFileCtx context2 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup(new NfsConfiguration()));
+        dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));
     OpenFileCtx context3 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup(new NfsConfiguration()));
+        dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));
     OpenFileCtx context4 = new OpenFileCtx(fos, attr, "/dumpFilePath",
-        dfsClient, new IdUserGroup(new NfsConfiguration()));
+        dfsClient, new ShellBasedIdMapping(new NfsConfiguration()));
 
     OpenFileCtxCache cache = new OpenFileCtxCache(conf, 10 * 60 * 100);
 

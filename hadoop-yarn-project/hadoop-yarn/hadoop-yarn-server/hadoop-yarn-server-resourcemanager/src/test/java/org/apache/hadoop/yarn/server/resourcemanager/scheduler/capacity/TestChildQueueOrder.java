@@ -99,6 +99,7 @@ public class TestChildQueueOrder {
     thenReturn(CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).
     thenReturn(resourceComparator);
+    when(csContext.getRMContext()).thenReturn(rmContext);
   }
 
   private FiCaSchedulerApp getMockApplication(int appId, String user) {
@@ -132,11 +133,11 @@ public class TestChildQueueOrder {
         final Resource allocatedResource = Resources.createResource(allocation);
         if (queue instanceof ParentQueue) {
           ((ParentQueue)queue).allocateResource(clusterResource, 
-              allocatedResource);
+              allocatedResource, null);
         } else {
           FiCaSchedulerApp app1 = getMockApplication(0, "");
           ((LeafQueue)queue).allocateResource(clusterResource, app1, 
-              allocatedResource);
+              allocatedResource, null);
         }
 
         // Next call - nothing

@@ -64,6 +64,7 @@ import org.apache.hadoop.security.SaslPropertiesResolver;
  */
 @InterfaceAudience.Private
 public class DNConf {
+  final Configuration conf;
   final int socketTimeout;
   final int socketWriteTimeout;
   final int socketKeepaliveTimeout;
@@ -100,6 +101,7 @@ public class DNConf {
   final long maxLockedMemory;
 
   public DNConf(Configuration conf) {
+    this.conf = conf;
     socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
         HdfsServerConstants.READ_TIMEOUT);
     socketWriteTimeout = conf.getInt(DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
@@ -196,6 +198,15 @@ public class DNConf {
   // We get minimumNameNodeVersion via a method so it can be mocked out in tests.
   String getMinimumNameNodeVersion() {
     return this.minimumNameNodeVersion;
+  }
+  
+  /**
+   * Returns the configuration.
+   * 
+   * @return Configuration the configuration
+   */
+  public Configuration getConf() {
+    return conf;
   }
 
   /**

@@ -18,6 +18,7 @@
 package org.apache.hadoop.crypto.key.kms;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -26,8 +27,10 @@ import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -48,6 +51,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -68,6 +72,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -76,6 +81,8 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     KeyProviderDelegationTokenExtension.DelegationTokenExtension {
+
+  private static final String INVALID_SIGNATURE = "Invalid signature";
 
   private static final String ANONYMOUS_REQUESTS_DISALLOWED = "Anonymous requests are disallowed";
 
@@ -203,7 +210,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   }
 
   private static void writeJson(Map map, OutputStream os) throws IOException {
-    Writer writer = new OutputStreamWriter(os);
+    Writer writer = new OutputStreamWriter(os, Charsets.UTF_8);
     ObjectMapper jsonMapper = new ObjectMapper();
     jsonMapper.writerWithDefaultPrettyPrinter().writeValue(writer, map);
   }
@@ -247,8 +254,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private SSLFactory sslFactory;
   private ConnectionConfigurator configurator;
   private DelegationTokenAuthenticatedURL.Token authToken;
-  private UserGroupInformation loginUgi;
   private final int authRetry;
+  private final UserGroupInformation actualUgi;
 
   @Override
   public String toString() {
@@ -332,7 +339,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
                     KMS_CLIENT_ENC_KEY_CACHE_NUM_REFILL_THREADS_DEFAULT),
             new EncryptedQueueRefiller());
     authToken = new DelegationTokenAuthenticatedURL.Token();
-    loginUgi = UserGroupInformation.getCurrentUser();
+    actualUgi =
+        (UserGroupInformation.getCurrentUser().getAuthenticationMethod() ==
+        UserGroupInformation.AuthenticationMethod.PROXY) ? UserGroupInformation
+            .getCurrentUser().getRealUser() : UserGroupInformation
+            .getCurrentUser();
   }
 
   private String createServiceURL(URL url) throws IOException {
@@ -403,7 +414,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
                               ? currentUgi.getShortUserName() : null;
 
       // creating the HTTP connection using the current UGI at constructor time
-      conn = loginUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
+      conn = actualUgi.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
         @Override
         public HttpURLConnection run() throws Exception {
           DelegationTokenAuthenticatedURL authUrl =
@@ -445,7 +456,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       throw ex;
     }
     if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
-        && conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED))
+        && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED) ||
+            conn.getResponseMessage().contains(INVALID_SIGNATURE)))
         || conn.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
       // Ideally, this should happen only when there is an Authentication
       // failure. Unfortunately, the AuthenticationFilter returns 403 when it
@@ -453,8 +465,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       // WWW-Authenticate header as well)..
       KMSClientProvider.this.authToken =
           new DelegationTokenAuthenticatedURL.Token();
-      KMSClientProvider.this.loginUgi =
-          UserGroupInformation.getCurrentUser();
       if (authRetryCount > 0) {
         String contentType = conn.getRequestProperty(CONTENT_TYPE);
         String requestMethod = conn.getRequestMethod();
@@ -471,9 +481,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       // Ignore the AuthExceptions.. since we are just using the method to
       // extract and set the authToken.. (Workaround till we actually fix
       // AuthenticatedURL properly to set authToken post initialization)
-    } finally {
-      KMSClientProvider.this.loginUgi =
-          UserGroupInformation.getCurrentUser();
     }
     HttpExceptionUtils.validateResponse(conn, expectedResponse);
     if (APPLICATION_JSON_MIME.equalsIgnoreCase(conn.getContentType())
@@ -770,25 +777,61 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     encKeyVersionQueue.drain(keyName);
   }
 
+  @VisibleForTesting
+  public int getEncKeyQueueSize(String keyName) throws IOException {
+    try {
+      return encKeyVersionQueue.getSize(keyName);
+    } catch (ExecutionException e) {
+      throw new IOException(e);
+    }
+  }
+
   @Override
   public Token<?>[] addDelegationTokens(String renewer,
       Credentials credentials) throws IOException {
-    Token<?>[] tokens;
-    URL url = createURL(null, null, null, null);
-    DelegationTokenAuthenticatedURL authUrl =
-        new DelegationTokenAuthenticatedURL(configurator);
-    try {
-      Token<?> token = authUrl.getDelegationToken(url, authToken, renewer);
-      if (token != null) {
-        credentials.addToken(token.getService(), token);
-        tokens = new Token<?>[] { token };
-      } else {
-        throw new IOException("Got NULL as delegation token");
+    Token<?>[] tokens = null;
+    Text dtService = getDelegationTokenService();
+    Token<?> token = credentials.getToken(dtService);
+    if (token == null) {
+      URL url = createURL(null, null, null, null);
+      DelegationTokenAuthenticatedURL authUrl =
+          new DelegationTokenAuthenticatedURL(configurator);
+      try {
+        token = authUrl.getDelegationToken(url, authToken, renewer);
+        if (token != null) {
+          credentials.addToken(token.getService(), token);
+          tokens = new Token<?>[] { token };
+        } else {
+          throw new IOException("Got NULL as delegation token");
+        }
+      } catch (AuthenticationException ex) {
+        throw new IOException(ex);
       }
-    } catch (AuthenticationException ex) {
-      throw new IOException(ex);
     }
     return tokens;
   }
+  
+  private Text getDelegationTokenService() throws IOException {
+    URL url = new URL(kmsUrl);
+    InetSocketAddress addr = new InetSocketAddress(url.getHost(),
+        url.getPort());
+    Text dtService = SecurityUtil.buildTokenService(addr);
+    return dtService;
+  }
 
+  /**
+   * Shutdown valueQueue executor threads
+   */
+  @Override
+  public void close() throws IOException {
+    try {
+      encKeyVersionQueue.shutdown();
+    } catch (Exception e) {
+      throw new IOException(e);
+    } finally {
+      if (sslFactory != null) {
+        sslFactory.destroy();
+      }
+    }
+  }
 }

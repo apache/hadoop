@@ -146,6 +146,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       throws IOException {
     ArrayList<RecoveredContainerState> containers =
         new ArrayList<RecoveredContainerState>();
+    ArrayList<ContainerId> containersToRemove =
+              new ArrayList<ContainerId>();
     LeveldbIterator iter = null;
     try {
       iter = new LeveldbIterator(db);
@@ -165,13 +167,33 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         ContainerId containerId = ConverterUtils.toContainerId(
             key.substring(CONTAINERS_KEY_PREFIX.length(), idEndPos));
         String keyPrefix = key.substring(0, idEndPos+1);
-        containers.add(loadContainerState(containerId, iter, keyPrefix));
+        RecoveredContainerState rcs = loadContainerState(containerId,
+            iter, keyPrefix);
+        // Don't load container without StartContainerRequest
+        if (rcs.startRequest != null) {
+          containers.add(rcs);
+        } else {
+          containersToRemove.add(containerId);
+        }
       }
     } catch (DBException e) {
       throw new IOException(e);
     } finally {
       if (iter != null) {
         iter.close();
+      }
+    }
+
+    // remove container without StartContainerRequest
+    for (ContainerId containerId : containersToRemove) {
+      LOG.warn("Remove container " + containerId +
+          " with incomplete records");
+      try {
+        removeContainer(containerId);
+        // TODO: kill and cleanup the leaked container
+      } catch (IOException e) {
+        LOG.error("Unable to remove container " + containerId +
+            " in store", e);
       }
     }
 
@@ -885,9 +907,9 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   Version loadVersion() throws IOException {
     byte[] data = db.get(bytes(DB_SCHEMA_VERSION_KEY));
-    // if version is not stored previously, treat it as 1.0.
+    // if version is not stored previously, treat it as CURRENT_VERSION_INFO.
     if (data == null || data.length == 0) {
-      return Version.newInstance(1, 0);
+      return getCurrentVersion();
     }
     Version version =
         new VersionPBImpl(VersionProto.parseFrom(data));

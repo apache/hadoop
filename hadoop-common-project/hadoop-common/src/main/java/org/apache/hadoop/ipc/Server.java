@@ -69,6 +69,7 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -182,7 +183,7 @@ public abstract class Server {
    * and send back a nicer response.
    */
   private static final ByteBuffer HTTP_GET_BYTES = ByteBuffer.wrap(
-      "GET ".getBytes());
+      "GET ".getBytes(Charsets.UTF_8));
   
   /**
    * An HTTP response to send back if we detect an HTTP request to our IPC
@@ -665,7 +666,7 @@ public abstract class Server {
         assert !running;
         readSelector.wakeup();
         try {
-          join();
+          super.join();
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
         }
@@ -1119,7 +1120,8 @@ public abstract class Server {
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
     private LinkedList<Call> responseQueue;
-    private volatile int rpcCount = 0; // number of outstanding rpcs
+    // number of outstanding rpcs
+    private AtomicInteger rpcCount = new AtomicInteger();
     private long lastContact;
     private int dataLength;
     private Socket socket;
@@ -1207,17 +1209,17 @@ public abstract class Server {
 
     /* Return true if the connection has no outstanding rpc */
     private boolean isIdle() {
-      return rpcCount == 0;
+      return rpcCount.get() == 0;
     }
     
     /* Decrement the outstanding RPC count */
     private void decRpcCount() {
-      rpcCount--;
+      rpcCount.decrementAndGet();
     }
     
     /* Increment the outstanding RPC count */
     private void incRpcCount() {
-      rpcCount++;
+      rpcCount.incrementAndGet();
     }
     
     private UserGroupInformation getAuthorizedUgi(String authorizedId)
@@ -1708,7 +1710,7 @@ public abstract class Server {
     private void setupHttpRequestOnIpcPortResponse() throws IOException {
       Call fakeCall = new Call(0, RpcConstants.INVALID_RETRY_COUNT, null, this);
       fakeCall.setResponse(ByteBuffer.wrap(
-          RECEIVED_HTTP_REQ_RESPONSE.getBytes()));
+          RECEIVED_HTTP_REQ_RESPONSE.getBytes(Charsets.UTF_8)));
       responder.doRespond(fakeCall);
     }
 
@@ -2068,9 +2070,9 @@ public abstract class Server {
         LOG.debug("Ignoring socket shutdown exception", e);
       }
       if (channel.isOpen()) {
-        try {channel.close();} catch(Exception e) {}
+        IOUtils.cleanup(null, channel);
       }
-      try {socket.close();} catch(Exception e) {}
+      IOUtils.cleanup(null, socket);
     }
   }
 

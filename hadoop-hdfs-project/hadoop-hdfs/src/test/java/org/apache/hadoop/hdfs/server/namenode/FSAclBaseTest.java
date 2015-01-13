@@ -25,7 +25,9 @@ import static org.junit.Assert.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -40,6 +42,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -65,6 +68,9 @@ public abstract class FSAclBaseTest {
   private static final UserGroupInformation SUPERGROUP_MEMBER =
     UserGroupInformation.createUserForTesting("super", new String[] {
       DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT });
+  // group member
+  private static final UserGroupInformation BOB = UserGroupInformation
+      .createUserForTesting("bob", new String[] { "groupY", "groupZ" });
 
   protected static MiniDFSCluster cluster;
   protected static Configuration conf;
@@ -74,7 +80,13 @@ public abstract class FSAclBaseTest {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  private FileSystem fs, fsAsBruce, fsAsDiana, fsAsSupergroupMember;
+  private FileSystem fs, fsAsBruce, fsAsDiana, fsAsSupergroupMember, fsAsBob;
+
+  protected static void startCluster() throws IOException {
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+  }
 
   @AfterClass
   public static void shutdown() {
@@ -93,7 +105,7 @@ public abstract class FSAclBaseTest {
   @After
   public void destroyFileSystems() {
     IOUtils.cleanup(null, fs, fsAsBruce, fsAsDiana, fsAsSupergroupMember);
-    fs = fsAsBruce = fsAsDiana = fsAsSupergroupMember = null;
+    fs = fsAsBruce = fsAsDiana = fsAsSupergroupMember = fsAsBob = null;
   }
 
   @Test
@@ -423,7 +435,7 @@ public abstract class FSAclBaseTest {
   }
 
   @Test
-  public void testRemoveDefaultAcl() throws IOException {
+  public void testRemoveDefaultAcl() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(ACCESS, USER, ALL),
@@ -440,10 +452,15 @@ public abstract class FSAclBaseTest {
       aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission((short)010770);
     assertAclFeature(true);
+    // restart of the cluster
+    restartCluster();
+    s = fs.getAclStatus(path);
+    AclEntry[] afterRestart = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(returned, afterRestart);
   }
 
   @Test
-  public void testRemoveDefaultAclOnlyAccess() throws IOException {
+  public void testRemoveDefaultAclOnlyAccess() throws Exception {
     fs.create(path).close();
     fs.setPermission(path, FsPermission.createImmutable((short)0640));
     List<AclEntry> aclSpec = Lists.newArrayList(
@@ -460,10 +477,15 @@ public abstract class FSAclBaseTest {
       aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission((short)010770);
     assertAclFeature(true);
+    // restart of the cluster
+    restartCluster();
+    s = fs.getAclStatus(path);
+    AclEntry[] afterRestart = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(returned, afterRestart);
   }
 
   @Test
-  public void testRemoveDefaultAclOnlyDefault() throws IOException {
+  public void testRemoveDefaultAclOnlyDefault() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(DEFAULT, USER, "foo", ALL));
@@ -474,10 +496,15 @@ public abstract class FSAclBaseTest {
     assertArrayEquals(new AclEntry[] { }, returned);
     assertPermission((short)0750);
     assertAclFeature(false);
+    // restart of the cluster
+    restartCluster();
+    s = fs.getAclStatus(path);
+    AclEntry[] afterRestart = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(returned, afterRestart);
   }
 
   @Test
-  public void testRemoveDefaultAclMinimal() throws IOException {
+  public void testRemoveDefaultAclMinimal() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     fs.removeDefaultAcl(path);
     AclStatus s = fs.getAclStatus(path);
@@ -485,10 +512,15 @@ public abstract class FSAclBaseTest {
     assertArrayEquals(new AclEntry[] { }, returned);
     assertPermission((short)0750);
     assertAclFeature(false);
+    // restart of the cluster
+    restartCluster();
+    s = fs.getAclStatus(path);
+    AclEntry[] afterRestart = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(returned, afterRestart);
   }
 
   @Test
-  public void testRemoveDefaultAclStickyBit() throws IOException {
+  public void testRemoveDefaultAclStickyBit() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)01750));
     List<AclEntry> aclSpec = Lists.newArrayList(
       aclEntry(ACCESS, USER, ALL),
@@ -505,6 +537,11 @@ public abstract class FSAclBaseTest {
       aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
     assertPermission((short)011770);
     assertAclFeature(true);
+    // restart of the cluster
+    restartCluster();
+    s = fs.getAclStatus(path);
+    AclEntry[] afterRestart = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(returned, afterRestart);
   }
 
   @Test(expected=FileNotFoundException.class)
@@ -824,8 +861,8 @@ public abstract class FSAclBaseTest {
     fs.setPermission(path,
       new FsPermissionExtension(FsPermission.
           createImmutable((short)0755), true, true));
-    INode inode = cluster.getNamesystem().getFSDirectory().getNode(
-      path.toUri().getPath(), false);
+    INode inode = cluster.getNamesystem().getFSDirectory().getINode(
+        path.toUri().getPath(), false);
     assertNotNull(inode);
     FsPermission perm = inode.getFsPermission();
     assertNotNull(perm);
@@ -1134,9 +1171,7 @@ public abstract class FSAclBaseTest {
     assertFilePermissionDenied(fsAsDiana, DIANA, bruceFile);
     try {
       conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
-      destroyFileSystems();
       restartCluster();
-      initFileSystems();
       assertFilePermissionGranted(fsAsDiana, DIANA, bruceFile);
     } finally {
       conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
@@ -1283,6 +1318,262 @@ public abstract class FSAclBaseTest {
     } catch (FileNotFoundException e) {
       // expected
     }
+
+    // Add a named group entry with only READ access
+    fsAsBruce.modifyAclEntries(p1, Lists.newArrayList(
+        aclEntry(ACCESS, GROUP, "groupY", READ)));
+    // Now bob should have read access, but not write
+    fsAsBob.access(p1, READ);
+    try {
+      fsAsBob.access(p1, WRITE);
+      fail("The access call should have failed.");
+    } catch (AccessControlException e) {
+      // expected;
+    }
+
+    // Add another named group entry with WRITE access
+    fsAsBruce.modifyAclEntries(p1, Lists.newArrayList(
+        aclEntry(ACCESS, GROUP, "groupZ", WRITE)));
+    // Now bob should have write access
+    fsAsBob.access(p1, WRITE);
+
+    // Add a named user entry to deny bob
+    fsAsBruce.modifyAclEntries(p1,
+        Lists.newArrayList(aclEntry(ACCESS, USER, "bob", NONE)));
+
+    try {
+      fsAsBob.access(p1, READ);
+      fail("The access call should have failed.");
+    } catch (AccessControlException e) {
+      // expected;
+    }
+  }
+
+  @Test
+  public void testEffectiveAccess() throws Exception {
+    Path p1 = new Path("/testEffectiveAccess");
+    fs.mkdirs(p1);
+    // give all access at first
+    fs.setPermission(p1, FsPermission.valueOf("-rwxrwxrwx"));
+    AclStatus aclStatus = fs.getAclStatus(p1);
+    assertEquals("Entries should be empty", 0, aclStatus.getEntries().size());
+    assertEquals("Permission should be carried by AclStatus",
+        fs.getFileStatus(p1).getPermission(), aclStatus.getPermission());
+
+    // Add a named entries with all access
+    fs.modifyAclEntries(p1, Lists.newArrayList(
+        aclEntry(ACCESS, USER, "bruce", ALL),
+        aclEntry(ACCESS, GROUP, "groupY", ALL)));
+    aclStatus = fs.getAclStatus(p1);
+    assertEquals("Entries should contain owner group entry also", 3, aclStatus
+        .getEntries().size());
+
+    // restrict the access
+    fs.setPermission(p1, FsPermission.valueOf("-rwxr-----"));
+    // latest permissions should be reflected as effective permission
+    aclStatus = fs.getAclStatus(p1);
+    List<AclEntry> entries = aclStatus.getEntries();
+    for (AclEntry aclEntry : entries) {
+      if (aclEntry.getName() != null || aclEntry.getType() == GROUP) {
+        assertEquals(FsAction.ALL, aclEntry.getPermission());
+        assertEquals(FsAction.READ, aclStatus.getEffectivePermission(aclEntry));
+      }
+    }
+    fsAsBruce.access(p1, READ);
+    try {
+      fsAsBruce.access(p1, WRITE);
+      fail("Access should not be given");
+    } catch (AccessControlException e) {
+      // expected
+    }
+    fsAsBob.access(p1, READ);
+    try {
+      fsAsBob.access(p1, WRITE);
+      fail("Access should not be given");
+    } catch (AccessControlException e) {
+      // expected
+    }
+  }
+
+  /**
+   * Verify the de-duplication of AclFeatures with same entries.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testDeDuplication() throws Exception {
+    // This test needs to verify the count of the references which is held by
+    // static data structure. So shutting down entire cluster to get the fresh
+    // data.
+    shutdown();
+    AclStorage.getUniqueAclFeatures().clear();
+    startCluster();
+    setUp();
+    int currentSize = 0;
+    Path p1 = new Path("/testDeduplication");
+    {
+      // unique default AclEntries for this test
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(DEFAULT, USER, "testdeduplicateuser", ALL),
+          aclEntry(DEFAULT, GROUP, "testdeduplicategroup", ALL));
+      fs.mkdirs(p1);
+      fs.modifyAclEntries(p1, aclSpec);
+      assertEquals("One more ACL feature should be unique", currentSize + 1,
+          AclStorage.getUniqueAclFeatures().getUniqueElementsSize());
+      currentSize++;
+    }
+    Path child1 = new Path(p1, "child1");
+    AclFeature child1AclFeature;
+    {
+      // new child dir should copy entries from its parent.
+      fs.mkdirs(child1);
+      assertEquals("One more ACL feature should be unique", currentSize + 1,
+          AclStorage.getUniqueAclFeatures().getUniqueElementsSize());
+      child1AclFeature = getAclFeature(child1, cluster);
+      assertEquals("Reference count should be 1", 1,
+          child1AclFeature.getRefCount());
+      currentSize++;
+    }
+    Path child2 = new Path(p1, "child2");
+    {
+      // new child dir should copy entries from its parent. But all entries are
+      // same as its sibling without any more acl changes.
+      fs.mkdirs(child2);
+      assertEquals("existing AclFeature should be re-used", currentSize,
+          AclStorage.getUniqueAclFeatures().getUniqueElementsSize());
+      AclFeature child2AclFeature = getAclFeature(child1, cluster);
+      assertSame("Same Aclfeature should be re-used", child1AclFeature,
+          child2AclFeature);
+      assertEquals("Reference count should be 2", 2,
+          child2AclFeature.getRefCount());
+    }
+    {
+      // modification of ACL on should decrement the original reference count
+      // and increase new one.
+      List<AclEntry> aclSpec = Lists.newArrayList(aclEntry(ACCESS, USER,
+          "user1", ALL));
+      fs.modifyAclEntries(child1, aclSpec);
+      AclFeature modifiedAclFeature = getAclFeature(child1, cluster);
+      assertEquals("Old Reference count should be 1", 1,
+          child1AclFeature.getRefCount());
+      assertEquals("New Reference count should be 1", 1,
+          modifiedAclFeature.getRefCount());
+
+      // removing the new added ACL entry should refer to old ACLfeature
+      AclEntry aclEntry = new AclEntry.Builder().setScope(ACCESS).setType(USER)
+          .setName("user1").build();
+      fs.removeAclEntries(child1, Lists.newArrayList(aclEntry));
+      assertEquals("Old Reference count should be 2 again", 2,
+          child1AclFeature.getRefCount());
+      assertEquals("New Reference count should be 0", 0,
+          modifiedAclFeature.getRefCount());
+    }
+    {
+      // verify the reference count on deletion of Acls
+      fs.removeAcl(child2);
+      assertEquals("Reference count should be 1", 1,
+          child1AclFeature.getRefCount());
+    }
+    {
+      // verify the reference count on deletion of dir with ACL
+      fs.delete(child1, true);
+      assertEquals("Reference count should be 0", 0,
+          child1AclFeature.getRefCount());
+    }
+
+    Path file1 = new Path(p1, "file1");
+    Path file2 = new Path(p1, "file2");
+    AclFeature fileAclFeature;
+    {
+      // Using same reference on creation of file
+      fs.create(file1).close();
+      fileAclFeature = getAclFeature(file1, cluster);
+      assertEquals("Reference count should be 1", 1,
+          fileAclFeature.getRefCount());
+      fs.create(file2).close();
+      assertEquals("Reference count should be 2", 2,
+          fileAclFeature.getRefCount());
+    }
+    {
+      // modifying ACLs on file should decrease the reference count on old
+      // instance and increase on the new instance
+      List<AclEntry> aclSpec = Lists.newArrayList(aclEntry(ACCESS, USER,
+          "user1", ALL));
+      // adding new ACL entry
+      fs.modifyAclEntries(file1, aclSpec);
+      AclFeature modifiedFileAcl = getAclFeature(file1, cluster);
+      assertEquals("Old Reference count should be 1", 1,
+          fileAclFeature.getRefCount());
+      assertEquals("New Reference count should be 1", 1,
+          modifiedFileAcl.getRefCount());
+
+      // removing the new added ACL entry should refer to old ACLfeature
+      AclEntry aclEntry = new AclEntry.Builder().setScope(ACCESS).setType(USER)
+          .setName("user1").build();
+      fs.removeAclEntries(file1, Lists.newArrayList(aclEntry));
+      assertEquals("Old Reference count should be 2", 2,
+          fileAclFeature.getRefCount());
+      assertEquals("New Reference count should be 0", 0,
+          modifiedFileAcl.getRefCount());
+    }
+    {
+      // reference count should be decreased on deletion of files with ACLs
+      fs.delete(file2, true);
+      assertEquals("Reference count should be decreased on delete of the file",
+          1, fileAclFeature.getRefCount());
+      fs.delete(file1, true);
+      assertEquals("Reference count should be decreased on delete of the file",
+          0, fileAclFeature.getRefCount());
+
+      // On reference count reaches 0 instance should be removed from map
+      fs.create(file1).close();
+      AclFeature newFileAclFeature = getAclFeature(file1, cluster);
+      assertNotSame("Instance should be different on reference count 0",
+          fileAclFeature, newFileAclFeature);
+      fileAclFeature = newFileAclFeature;
+    }
+    Map<AclFeature, Integer> restartRefCounter = new HashMap<>();
+    // Restart the Namenode to check the references.
+    // Here reference counts will not be same after restart because, while
+    // shutting down namenode will not call any removal of AclFeature.
+    // However this is applicable only in case of tests as in real-cluster JVM
+    // itself will be new.
+    List<AclFeature> entriesBeforeRestart = AclStorage.getUniqueAclFeatures()
+        .getEntries();
+    {
+      //restart by loading edits
+      for (AclFeature aclFeature : entriesBeforeRestart) {
+        restartRefCounter.put(aclFeature, aclFeature.getRefCount());
+      }
+      cluster.restartNameNode(true);
+      List<AclFeature> entriesAfterRestart = AclStorage.getUniqueAclFeatures()
+          .getEntries();
+      assertEquals("Entries before and after should be same",
+          entriesBeforeRestart, entriesAfterRestart);
+      for (AclFeature aclFeature : entriesAfterRestart) {
+        int before = restartRefCounter.get(aclFeature);
+        assertEquals("ReferenceCount After Restart should be doubled",
+            before * 2, aclFeature.getRefCount());
+      }
+    }
+    {
+      //restart by loading fsimage
+      cluster.getNameNodeRpc()
+          .setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+      cluster.getNameNodeRpc().saveNamespace();
+      cluster.getNameNodeRpc()
+          .setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
+      cluster.restartNameNode(true);
+      List<AclFeature> entriesAfterRestart = AclStorage.getUniqueAclFeatures()
+          .getEntries();
+      assertEquals("Entries before and after should be same",
+          entriesBeforeRestart, entriesAfterRestart);
+      for (AclFeature aclFeature : entriesAfterRestart) {
+        int before = restartRefCounter.get(aclFeature);
+        assertEquals("ReferenceCount After 2 Restarts should be tripled",
+            before * 3, aclFeature.getRefCount());
+      }
+    }
   }
 
   /**
@@ -1316,6 +1607,7 @@ public abstract class FSAclBaseTest {
     fs = createFileSystem();
     fsAsBruce = createFileSystem(BRUCE);
     fsAsDiana = createFileSystem(DIANA);
+    fsAsBob = createFileSystem(BOB);
     fsAsSupergroupMember = createFileSystem(SUPERGROUP_MEMBER);
   }
 
@@ -1325,10 +1617,12 @@ public abstract class FSAclBaseTest {
    * @throws Exception if restart fails
    */
   private void restartCluster() throws Exception {
+    destroyFileSystems();
     shutdown();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(false)
       .build();
     cluster.waitActive();
+    initFileSystems();
   }
 
   /**
@@ -1353,21 +1647,30 @@ public abstract class FSAclBaseTest {
    */
   private static void assertAclFeature(Path pathToCheck,
       boolean expectAclFeature) throws IOException {
-    INode inode = cluster.getNamesystem().getFSDirectory()
-      .getNode(pathToCheck.toUri().getPath(), false);
-    assertNotNull(inode);
-    AclFeature aclFeature = inode.getAclFeature();
+    AclFeature aclFeature = getAclFeature(pathToCheck, cluster);
     if (expectAclFeature) {
       assertNotNull(aclFeature);
       // Intentionally capturing a reference to the entries, not using nested
       // calls.  This way, we get compile-time enforcement that the entries are
       // stored in an ImmutableList.
-      ImmutableList<AclEntry> entries = aclFeature.getEntries();
-      assertNotNull(entries);
+      ImmutableList<AclEntry> entries = AclStorage
+          .getEntriesFromAclFeature(aclFeature);
       assertFalse(entries.isEmpty());
     } else {
       assertNull(aclFeature);
     }
+  }
+
+  /**
+   * Get AclFeature for the path
+   */
+  public static AclFeature getAclFeature(Path pathToCheck,
+      MiniDFSCluster cluster) throws IOException {
+    INode inode = cluster.getNamesystem().getFSDirectory()
+        .getINode(pathToCheck.toUri().getPath(), false);
+    assertNotNull(inode);
+    AclFeature aclFeature = inode.getAclFeature();
+    return aclFeature;
   }
 
   /**

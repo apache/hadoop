@@ -33,6 +33,7 @@ import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.io.nativeio.NativeIO;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -53,12 +54,14 @@ public class TestSocketIOWithTimeout {
 
   private MultithreadedTestUtil.TestContext ctx = new TestContext();
   
+  private static final int PAGE_SIZE = (int) NativeIO.POSIX.getCacheManipulator().getOperatingSystemPageSize();
+
   private void doIO(InputStream in, OutputStream out,
       int expectedTimeout) throws IOException {
     /* Keep on writing or reading until we get SocketTimeoutException.
      * It expects this exception to occur within 100 millis of TIMEOUT.
      */
-    byte buf[] = new byte[4192];
+    byte buf[] = new byte[PAGE_SIZE + 19];
     
     while (true) {
       long start = Time.now();
@@ -151,7 +154,7 @@ public class TestSocketIOWithTimeout {
       // simulate a partial write scenario.  Attempts were made to switch the
       // test from using a pipe to a network socket and also to use larger and
       // larger buffers in doIO.  Nothing helped the situation though.
-      if (!Shell.WINDOWS && !Shell.PPC_64) {
+      if (!Shell.WINDOWS) {
         try {
           out.write(1);
           fail("Did not throw");

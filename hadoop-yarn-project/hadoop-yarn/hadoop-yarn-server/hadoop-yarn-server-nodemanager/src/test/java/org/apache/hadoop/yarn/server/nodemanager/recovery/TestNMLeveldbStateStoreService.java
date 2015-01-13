@@ -226,7 +226,7 @@ public class TestNMLeveldbStateStoreService {
     ApplicationId appId = ApplicationId.newInstance(1234, 3);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 4);
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, 5);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 5);
     LocalResource lrsrc = LocalResource.newInstance(
         URL.newInstance("hdfs", "somehost", 12345, "/some/path/to/rsrc"),
         LocalResourceType.FILE, LocalResourceVisibility.APPLICATION, 123L,
@@ -273,6 +273,13 @@ public class TestNMLeveldbStateStoreService {
     assertEquals(false, rcs.getKilled());
     assertEquals(containerReq, rcs.getStartRequest());
     assertTrue(rcs.getDiagnostics().isEmpty());
+
+    // store a new container record without StartContainerRequest
+    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 6);
+    stateStore.storeContainerLaunched(containerId1);
+    recoveredContainers = stateStore.loadContainersState();
+    // check whether the new container record is discarded
+    assertEquals(1, recoveredContainers.size());
 
     // launch the container, add some diagnostics, and verify recovered
     StringBuilder diags = new StringBuilder();

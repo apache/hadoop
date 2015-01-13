@@ -77,11 +77,7 @@ public class ContainerLogsUtils {
     List<String> logDirs = dirsHandler.getLogDirs();
     List<File> containerLogDirs = new ArrayList<File>(logDirs.size());
     for (String logDir : logDirs) {
-      try {
-        logDir = new URI(logDir).getPath();
-      } catch (URISyntaxException e) {
-        throw new YarnException("Internal error", e);
-      }
+      logDir = new File(logDir).toURI().getPath();
       String appIdStr = ConverterUtils.toString(containerId
           .getApplicationAttemptId().getApplicationId());
       File appLogDir = new File(logDir, appIdStr);
@@ -109,11 +105,9 @@ public class ContainerLogsUtils {
           application.getAppId().toString(), containerId.toString());
       Path logPath = dirsHandler.getLogPathToRead(
           relativeContainerLogDir + Path.SEPARATOR + fileName);
-      URI logPathURI = new URI(logPath.toString());
+      URI logPathURI = new File(logPath.toString()).toURI();
       File logFile = new File(logPathURI.getPath());
       return logFile;
-    } catch (URISyntaxException e) {
-      throw new YarnException("Internal error", e);
     } catch (IOException e) {
       LOG.warn("Failed to find log file", e);
       throw new NotFoundException("Cannot find this log on the local disk.");

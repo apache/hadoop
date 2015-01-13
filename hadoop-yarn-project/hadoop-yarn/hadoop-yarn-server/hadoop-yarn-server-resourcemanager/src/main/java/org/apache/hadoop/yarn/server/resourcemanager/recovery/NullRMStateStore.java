@@ -71,15 +71,15 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void removeApplicationStateInternal(ApplicationState appState)
+  protected void removeApplicationStateInternal(ApplicationStateData appState)
       throws Exception {
     // Do nothing
   }
 
   @Override
-  public void storeRMDelegationTokenAndSequenceNumberState(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
+  public void storeRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
     // Do nothing
   }
 
@@ -90,9 +90,9 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateRMDelegationTokenAndSequenceNumberInternal(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
+  protected void updateRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
     // Do nothing
   }
 

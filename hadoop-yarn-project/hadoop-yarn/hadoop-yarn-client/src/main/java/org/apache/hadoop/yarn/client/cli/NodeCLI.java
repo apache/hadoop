@@ -19,7 +19,11 @@ package org.apache.hadoop.yarn.client.cli;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +35,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -138,7 +143,8 @@ public class NodeCLI extends YarnCLI {
    */
   private void listClusterNodes(Set<NodeState> nodeStates) 
             throws YarnException, IOException {
-    PrintWriter writer = new PrintWriter(sysout);
+    PrintWriter writer = new PrintWriter(
+        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
     List<NodeReport> nodesReport = client.getNodeReports(
                                        nodeStates.toArray(new NodeState[0]));
     writer.println("Total Nodes:" + nodesReport.size());
@@ -164,7 +170,8 @@ public class NodeCLI extends YarnCLI {
     List<NodeReport> nodesReport = client.getNodeReports();
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    PrintWriter nodeReportStr = new PrintWriter(baos);
+    PrintWriter nodeReportStr = new PrintWriter(
+        new OutputStreamWriter(baos, Charset.forName("UTF-8")));
     NodeReport nodeReport = null;
     for (NodeReport report : nodesReport) {
       if (!report.getNodeId().equals(nodeId)) {
@@ -199,6 +206,13 @@ public class NodeCLI extends YarnCLI {
           : (nodeReport.getUsed().getVirtualCores() + " vcores"));
       nodeReportStr.print("\tCPU-Capacity : ");
       nodeReportStr.println(nodeReport.getCapability().getVirtualCores() + " vcores");
+      nodeReportStr.print("\tNode-Labels : ");
+      
+      // Create a List for node labels since we need it get sorted
+      List<String> nodeLabelsList =
+          new ArrayList<String>(report.getNodeLabels());
+      Collections.sort(nodeLabelsList);
+      nodeReportStr.println(StringUtils.join(nodeLabelsList.iterator(), ','));
     }
 
     if (nodeReport == null) {

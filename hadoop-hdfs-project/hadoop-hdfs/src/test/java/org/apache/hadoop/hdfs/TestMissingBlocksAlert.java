@@ -77,7 +77,6 @@ public class TestMissingBlocksAlert {
       Path corruptFile = new Path("/testMissingBlocks/corruptFile");
       DFSTestUtil.createFile(dfs, corruptFile, fileLen, (short)3, 0);
 
-
       // Corrupt the block
       ExtendedBlock block = DFSTestUtil.getFirstBlock(dfs, corruptFile);
       assertTrue(TestDatanodeBlockScanner.corruptReplica(block, 0));
@@ -120,6 +119,24 @@ public class TestMissingBlocksAlert {
 
       Assert.assertEquals(0, (long)(Long) mbs.getAttribute(mxbeanName,
               "NumberOfMissingBlocks"));
+
+      Path replOneFile = new Path("/testMissingBlocks/replOneFile");
+      DFSTestUtil.createFile(dfs, replOneFile, fileLen, (short)1, 0);
+      ExtendedBlock replOneBlock = DFSTestUtil.getFirstBlock(
+          dfs, replOneFile);
+      assertTrue(TestDatanodeBlockScanner.corruptReplica(
+          replOneBlock, 0));
+
+      // read the file so that the corrupt block is reported to NN
+      in = dfs.open(replOneFile);
+      try {
+        in.readFully(new byte[fileLen]);
+      } catch (ChecksumException ignored) { // checksum error is expected.
+      }
+      in.close();
+      assertEquals(1, dfs.getMissingReplOneBlocksCount());
+      Assert.assertEquals(1, (long)(Long) mbs.getAttribute(mxbeanName,
+          "NumberOfMissingBlocksWithReplicationFactorOne"));
     } finally {
       if (cluster != null) {
         cluster.shutdown();

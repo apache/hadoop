@@ -35,6 +35,9 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 
 @Unstable
 public class RMAuthenticationFilterInitializer extends FilterInitializer {
@@ -58,11 +61,18 @@ public class RMAuthenticationFilterInitializer extends FilterInitializer {
     // setting the cookie path to root '/' so it is used for all resources.
     filterConfig.put(AuthenticationFilter.COOKIE_PATH, cookiePath);
 
+    // Before conf object is passed in, RM has already processed it and used RM
+    // specific configs to overwrite hadoop common ones. Hence we just need to
+    // source hadoop.proxyuser configs here.
     for (Map.Entry<String, String> entry : conf) {
-      String name = entry.getKey();
-      if (name.startsWith(configPrefix)) {
-        String value = conf.get(name);
-        name = name.substring(configPrefix.length());
+      String propName = entry.getKey();
+      if (propName.startsWith(configPrefix)) {
+        String value = conf.get(propName);
+        String name = propName.substring(configPrefix.length());
+        filterConfig.put(name, value);
+      } else if (propName.startsWith(ProxyUsers.CONF_HADOOP_PROXYUSER)) {
+        String value = conf.get(propName);
+        String name = propName.substring("hadoop.".length());
         filterConfig.put(name, value);
       }
     }
@@ -107,6 +117,10 @@ public class RMAuthenticationFilterInitializer extends FilterInitializer {
       }
       filterConfig.put(KerberosAuthenticationHandler.PRINCIPAL, principal);
     }
+
+    filterConfig.put(DelegationTokenAuthenticationHandler.TOKEN_KIND,
+        RMDelegationTokenIdentifier.KIND_NAME.toString());
+
     return filterConfig;
   }
 

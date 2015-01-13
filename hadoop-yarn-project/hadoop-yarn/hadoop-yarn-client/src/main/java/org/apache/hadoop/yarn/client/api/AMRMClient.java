@@ -105,6 +105,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     final List<String> racks;
     final Priority priority;
     final boolean relaxLocality;
+    final String nodeLabelsExpression;
     
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints and
@@ -124,9 +125,9 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
      */
     public ContainerRequest(Resource capability, String[] nodes,
         String[] racks, Priority priority) {
-      this(capability, nodes, racks, priority, true);
+      this(capability, nodes, racks, priority, true, null);
     }
-          
+    
     /**
      * Instantiates a {@link ContainerRequest} with the given constraints.
      * 
@@ -147,6 +148,32 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
      */
     public ContainerRequest(Resource capability, String[] nodes,
         String[] racks, Priority priority, boolean relaxLocality) {
+      this(capability, nodes, racks, priority, relaxLocality, null);
+    }
+          
+    /**
+     * Instantiates a {@link ContainerRequest} with the given constraints.
+     * 
+     * @param capability
+     *          The {@link Resource} to be requested for each container.
+     * @param nodes
+     *          Any hosts to request that the containers are placed on.
+     * @param racks
+     *          Any racks to request that the containers are placed on. The
+     *          racks corresponding to any hosts requested will be automatically
+     *          added to this list.
+     * @param priority
+     *          The priority at which to request the containers. Higher
+     *          priorities have lower numerical values.
+     * @param relaxLocality
+     *          If true, containers for this request may be assigned on hosts
+     *          and racks other than the ones explicitly requested.
+     * @param nodeLabelsExpression
+     *          Set node labels to allocate resource
+     */
+    public ContainerRequest(Resource capability, String[] nodes,
+        String[] racks, Priority priority, boolean relaxLocality,
+        String nodeLabelsExpression) {
       // Validate request
       Preconditions.checkArgument(capability != null,
           "The Resource to be requested for each container " +
@@ -163,6 +190,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
       this.racks = (racks != null ? ImmutableList.copyOf(racks) : null);
       this.priority = priority;
       this.relaxLocality = relaxLocality;
+      this.nodeLabelsExpression = nodeLabelsExpression;
     }
     
     public Resource getCapability() {
@@ -183,6 +211,10 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
     
     public boolean getRelaxLocality() {
       return relaxLocality;
+    }
+    
+    public String getNodeLabelExpression() {
+      return nodeLabelsExpression;
     }
     
     public String toString() {

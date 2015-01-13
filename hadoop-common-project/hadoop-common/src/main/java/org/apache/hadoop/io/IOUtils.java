@@ -23,6 +23,12 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.DirectoryStream;
+import java.nio.file.DirectoryIteratorException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ChunkedArrayList;
 
 /**
  * An utility class for I/O related functionality. 
@@ -312,5 +319,34 @@ public class IOUtils {
     do {
       offset += fc.write(buf, offset);
     } while (buf.remaining() > 0);
+  }
+
+  /**
+   * Return the complete list of files in a directory as strings.<p/>
+   *
+   * This is better than File#listDir because it does not ignore IOExceptions.
+   *
+   * @param dir              The directory to list.
+   * @param filter           If non-null, the filter to use when listing
+   *                         this directory.
+   * @return                 The list of files in the directory.
+   *
+   * @throws IOException     On I/O error
+   */
+  public static List<String> listDirectory(File dir, FilenameFilter filter)
+      throws IOException {
+    ArrayList<String> list = new ArrayList<String> ();
+    try (DirectoryStream<Path> stream =
+             Files.newDirectoryStream(dir.toPath())) {
+      for (Path entry: stream) {
+        String fileName = entry.getFileName().toString();
+        if ((filter == null) || filter.accept(dir, fileName)) {
+          list.add(fileName);
+        }
+      }
+    } catch (DirectoryIteratorException e) {
+      throw e.getCause();
+    }
+    return list;
   }
 }

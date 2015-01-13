@@ -20,10 +20,13 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -79,19 +82,23 @@ public abstract class ContainerExecutor implements Configurable {
   public abstract void init() throws IOException;
 
   /**
-   * On Windows the ContainerLaunch creates a temporary empty jar to workaround the CLASSPATH length
-   * In a  secure cluster this jar must be localized so that the container has access to it
+   * On Windows the ContainerLaunch creates a temporary special jar manifest of 
+   * other jars to workaround the CLASSPATH length. In a  secure cluster this 
+   * jar must be localized so that the container has access to it. 
    * This function localizes on-demand the jar.
    * 
    * @param classPathJar
    * @param owner
    * @throws IOException
    */
-  public void localizeClasspathJar(Path classPathJar, String owner) throws IOException {
-    // For the default container this is a no-op
-    // The WindowsSecureContainerExecutor overrides this
+  public Path localizeClasspathJar(Path classPathJar, Path pwd, String owner) 
+      throws IOException {
+    // Non-secure executor simply use the classpath created 
+    // in the NM fprivate folder
+    return classPathJar;
   }
-
+  
+  
   /**
    * Prepare the environment for containers in this application to execute.
    * For $x in local.dirs
@@ -105,14 +112,13 @@ public abstract class ContainerExecutor implements Configurable {
    * @param appId id of the application
    * @param nmPrivateContainerTokens path to localized credentials, rsrc by NM
    * @param nmAddr RPC address to contact NM
-   * @param localDirs nm-local-dirs
-   * @param logDirs nm-log-dirs
+   * @param dirsHandler NM local dirs service, for nm-local-dirs and nm-log-dirs
    * @throws IOException For most application init failures
    * @throws InterruptedException If application init thread is halted by NM
    */
   public abstract void startLocalizer(Path nmPrivateContainerTokens,
       InetSocketAddress nmAddr, String user, String appId, String locId,
-      List<String> localDirs, List<String> logDirs)
+      LocalDirsHandlerService dirsHandler)
     throws IOException, InterruptedException;
 
 
@@ -132,8 +138,8 @@ public abstract class ContainerExecutor implements Configurable {
    */
   public abstract int launchContainer(Container container,
       Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
-      String user, String appId, Path containerWorkDir, List<String> localDirs,
-      List<String> logDirs) throws IOException;
+      String user, String appId, Path containerWorkDir, 
+      List<String> localDirs, List<String> logDirs) throws IOException;
 
   public abstract boolean signalContainer(String user, String pid,
       Signal signal)
@@ -153,9 +159,10 @@ public abstract class ContainerExecutor implements Configurable {
    * @param containerId The ID of the container to reacquire
    * @return The exit code of the pre-existing container
    * @throws IOException
+   * @throws InterruptedException 
    */
   public int reacquireContainer(String user, ContainerId containerId)
-      throws IOException {
+      throws IOException, InterruptedException {
     Path pidPath = getPidFilePath(containerId);
     if (pidPath == null) {
       LOG.warn(containerId + " is not active, returning terminated error");
@@ -169,13 +176,8 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     LOG.info("Reacquiring " + containerId + " with pid " + pid);
-    try {
-      while(isContainerProcessAlive(user, pid)) {
-        Thread.sleep(1000);
-      }
-    } catch (InterruptedException e) {
-      throw new IOException("Interrupted while waiting for process " + pid
-          + " to exit", e);
+    while(isContainerProcessAlive(user, pid)) {
+      Thread.sleep(1000);
     }
 
     // wait for exit code file to appear
@@ -188,12 +190,9 @@ public abstract class ContainerExecutor implements Configurable {
         LOG.info(containerId + " was deactivated");
         return ExitCode.TERMINATED.getExitCode();
       }
-      try {
-        Thread.sleep(sleepMsec);
-      } catch (InterruptedException e) {
-        throw new IOException(
-            "Interrupted while waiting for exit code from " + containerId, e);
-      }
+      
+      Thread.sleep(sleepMsec);
+      
       msecLeft -= sleepMsec;
     }
     if (msecLeft < 0) {
@@ -205,6 +204,34 @@ public abstract class ContainerExecutor implements Configurable {
       return Integer.parseInt(FileUtils.readFileToString(file).trim());
     } catch (NumberFormatException e) {
       throw new IOException("Error parsing exit code from pid " + pid, e);
+    }
+  }
+
+  public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException{
+    ContainerLaunch.ShellScriptBuilder sb = ContainerLaunch.ShellScriptBuilder.create();
+    if (environment != null) {
+      for (Map.Entry<String,String> env : environment.entrySet()) {
+        sb.env(env.getKey().toString(), env.getValue().toString());
+      }
+    }
+    if (resources != null) {
+      for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
+        for (String linkName : entry.getValue()) {
+          sb.symlink(entry.getKey(), new Path(linkName));
+        }
+      }
+    }
+
+    sb.command(command);
+
+    PrintStream pout = null;
+    try {
+      pout = new PrintStream(out, false, "UTF-8");
+      sb.write(pout);
+    } finally {
+      if (out != null) {
+        out.close();
+      }
     }
   }
 

@@ -56,7 +56,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -219,10 +218,10 @@ public class TestBlockRecovery {
     syncList.add(record1);
     syncList.add(record2);
     
-    when(dn1.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(), 
-        anyLong())).thenReturn("storage1");
-    when(dn2.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(), 
-        anyLong())).thenReturn("storage2");
+    when(dn1.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(),
+        anyLong(), anyLong())).thenReturn("storage1");
+    when(dn2.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(),
+        anyLong(), anyLong())).thenReturn("storage2");
     dn.syncBlock(rBlock, syncList);
   }
   
@@ -245,8 +244,10 @@ public class TestBlockRecovery {
     InterDatanodeProtocol dn2 = mock(InterDatanodeProtocol.class);
 
     testSyncReplicas(replica1, replica2, dn1, dn2, REPLICA_LEN1);
-    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, REPLICA_LEN1);
-    verify(dn2).updateReplicaUnderRecovery(block, RECOVERY_ID, REPLICA_LEN1);    
+    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID,
+        REPLICA_LEN1);
+    verify(dn2).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID,
+        REPLICA_LEN1);
 
     // two finalized replicas have different length
     replica1 = new ReplicaRecoveryInfo(BLOCK_ID, 
@@ -284,8 +285,10 @@ public class TestBlockRecovery {
     InterDatanodeProtocol dn2 = mock(InterDatanodeProtocol.class);
 
     testSyncReplicas(replica1, replica2, dn1, dn2, REPLICA_LEN1);
-    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, REPLICA_LEN1);
-    verify(dn2).updateReplicaUnderRecovery(block, RECOVERY_ID, REPLICA_LEN1);
+    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID,
+        REPLICA_LEN1);
+    verify(dn2).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID,
+        REPLICA_LEN1);
     
     // rbw replica has a different length from the finalized one
     replica1 = new ReplicaRecoveryInfo(BLOCK_ID, 
@@ -297,9 +300,10 @@ public class TestBlockRecovery {
     dn2 = mock(InterDatanodeProtocol.class);
 
     testSyncReplicas(replica1, replica2, dn1, dn2, REPLICA_LEN1);
-    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, REPLICA_LEN1);
+    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID,
+        REPLICA_LEN1);
     verify(dn2, never()).updateReplicaUnderRecovery(
-        block, RECOVERY_ID, REPLICA_LEN1);
+        block, RECOVERY_ID, BLOCK_ID, REPLICA_LEN1);
   }
   
   /**
@@ -323,9 +327,10 @@ public class TestBlockRecovery {
     InterDatanodeProtocol dn2 = mock(InterDatanodeProtocol.class);
 
     testSyncReplicas(replica1, replica2, dn1, dn2, REPLICA_LEN1);
-    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, REPLICA_LEN1);
+    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID,
+        REPLICA_LEN1);
     verify(dn2, never()).updateReplicaUnderRecovery(
-        block, RECOVERY_ID, REPLICA_LEN1);
+        block, RECOVERY_ID, BLOCK_ID, REPLICA_LEN1);
     
     // rbw replica has a different length from the finalized one
     replica1 = new ReplicaRecoveryInfo(BLOCK_ID, 
@@ -337,9 +342,10 @@ public class TestBlockRecovery {
     dn2 = mock(InterDatanodeProtocol.class);
 
     testSyncReplicas(replica1, replica2, dn1, dn2, REPLICA_LEN1);
-    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, REPLICA_LEN1);
+    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID,
+        REPLICA_LEN1);
     verify(dn2, never()).updateReplicaUnderRecovery(
-        block, RECOVERY_ID, REPLICA_LEN1);
+        block, RECOVERY_ID, BLOCK_ID, REPLICA_LEN1);
   }
   
   /**
@@ -362,8 +368,8 @@ public class TestBlockRecovery {
 
     long minLen = Math.min(REPLICA_LEN1, REPLICA_LEN2);
     testSyncReplicas(replica1, replica2, dn1, dn2, minLen);
-    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, minLen);
-    verify(dn2).updateReplicaUnderRecovery(block, RECOVERY_ID, minLen);    
+    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID, minLen);
+    verify(dn2).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID, minLen);
   }
   
   /**
@@ -385,9 +391,9 @@ public class TestBlockRecovery {
     InterDatanodeProtocol dn2 = mock(InterDatanodeProtocol.class);
 
     testSyncReplicas(replica1, replica2, dn1, dn2, REPLICA_LEN1);
-    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, REPLICA_LEN1);
+    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID, REPLICA_LEN1);
     verify(dn2, never()).updateReplicaUnderRecovery(
-        block, RECOVERY_ID, REPLICA_LEN1);    
+        block, RECOVERY_ID, BLOCK_ID, REPLICA_LEN1);
   }
   
   /**
@@ -411,8 +417,8 @@ public class TestBlockRecovery {
     long minLen = Math.min(REPLICA_LEN1, REPLICA_LEN2);
     testSyncReplicas(replica1, replica2, dn1, dn2, minLen);
     
-    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, minLen);
-    verify(dn2).updateReplicaUnderRecovery(block, RECOVERY_ID, minLen);    
+    verify(dn1).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID, minLen);
+    verify(dn2).updateReplicaUnderRecovery(block, RECOVERY_ID, BLOCK_ID, minLen);
   }  
 
   private Collection<RecoveringBlock> initRecoveringBlocks() throws IOException {
@@ -513,7 +519,7 @@ public class TestBlockRecovery {
     }
     DataNode spyDN = spy(dn);
     doThrow(new IOException()).when(spyDN).updateReplicaUnderRecovery(
-        block, RECOVERY_ID, block.getNumBytes());
+        block, RECOVERY_ID, BLOCK_ID, block.getNumBytes());
     try {
       spyDN.syncBlock(rBlock, initBlockRecords(spyDN));
       fail("Sync should fail");
@@ -634,7 +640,8 @@ public class TestBlockRecovery {
           recoveryInitResult.get());
       
       dataNode.updateReplicaUnderRecovery(block.getBlock(), block.getBlock()
-          .getGenerationStamp() + 1, block.getBlockSize());
+          .getGenerationStamp() + 1, block.getBlock().getBlockId(),
+          block.getBlockSize());
     } finally {
       if (null != cluster) {
         cluster.shutdown();

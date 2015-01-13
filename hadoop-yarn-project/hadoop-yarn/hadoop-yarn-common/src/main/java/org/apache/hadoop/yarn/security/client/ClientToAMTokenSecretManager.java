@@ -36,9 +36,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 @Evolving
 public class ClientToAMTokenSecretManager extends
     BaseClientToAMTokenSecretManager {
+  private static final int MASTER_KEY_WAIT_MSEC = 10 * 1000;
 
   // Only one master-key for AM
-  private SecretKey masterKey;
+  private volatile SecretKey masterKey;
 
   public ClientToAMTokenSecretManager(
       ApplicationAttemptId applicationAttemptID, byte[] key) {
@@ -52,12 +53,32 @@ public class ClientToAMTokenSecretManager extends
   }
 
   @Override
+  public byte[] retrievePassword(ClientToAMTokenIdentifier identifier)
+      throws InvalidToken {
+    if (this.masterKey == null) {
+      synchronized (this) {
+        while (masterKey == null) {
+          try {
+            wait(MASTER_KEY_WAIT_MSEC);
+            break;
+          } catch (InterruptedException e) {
+          }
+        }
+      }
+    }
+    return super.retrievePassword(identifier);
+  }
+
+  @Override
   public SecretKey getMasterKey(ApplicationAttemptId applicationAttemptID) {
     // Only one master-key for AM, just return that.
     return this.masterKey;
   }
 
   public void setMasterKey(byte[] key) {
-    this.masterKey = SecretManager.createSecretKey(key);
+    synchronized (this) {
+      this.masterKey = SecretManager.createSecretKey(key);
+      notifyAll();
+    }
   }
 }

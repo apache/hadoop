@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.net;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -286,8 +287,8 @@ public class NetUtils {
     if (fqHost == null) {
       try {
         fqHost = SecurityUtil.getByName(host).getHostName();
-        // slight race condition, but won't hurt 
-        canonicalizedHostCache.put(host, fqHost);
+        // slight race condition, but won't hurt
+        canonicalizedHostCache.putIfAbsent(host, fqHost);
       } catch (UnknownHostException e) {
         fqHost = host;
       }
@@ -759,6 +760,13 @@ public class NetUtils {
               + " failed on socket timeout exception: " + exception
               + ";"
               + see("NoRouteToHost"));
+    } else if (exception instanceof EOFException) {
+      return wrapWithMessage(exception,
+          "End of File Exception between "
+              + getHostDetailsAsString(destHost,  destPort, localHost)
+              + ": " + exception
+              + ";"
+              + see("EOFException"));
     }
     else {
       return (IOException) new IOException("Failed on local exception: "

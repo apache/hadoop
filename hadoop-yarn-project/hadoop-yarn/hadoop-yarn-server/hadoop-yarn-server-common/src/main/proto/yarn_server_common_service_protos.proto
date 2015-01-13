@@ -59,6 +59,12 @@ message NodeHeartbeatResponseProto {
   optional int64 nextHeartBeatInterval = 7;
   optional string diagnostics_message = 8;
   repeated ContainerIdProto containers_to_be_removed_from_nm = 9;
+  repeated SystemCredentialsForAppsProto system_credentials_for_apps = 10;
+}
+
+message SystemCredentialsForAppsProto {
+  optional ApplicationIdProto appId = 1;
+  optional bytes credentialsForApp = 2;
 }
 
 message NMContainerStatusProto {
@@ -69,4 +75,21 @@ message NMContainerStatusProto {
   optional string diagnostics = 5 [default = "N/A"];
   optional int32 container_exit_status = 6;
   optional int64 creation_time = 7;
+}
+
+message SCMUploaderNotifyRequestProto {
+  optional string resource_key = 1;
+  optional string filename = 2;
+}
+
+message SCMUploaderNotifyResponseProto {
+  optional bool accepted = 1;
+}
+
+message SCMUploaderCanUploadRequestProto {
+  optional string resource_key = 1;
+}
+
+message SCMUploaderCanUploadResponseProto {
+  optional bool uploadable = 1;
 }

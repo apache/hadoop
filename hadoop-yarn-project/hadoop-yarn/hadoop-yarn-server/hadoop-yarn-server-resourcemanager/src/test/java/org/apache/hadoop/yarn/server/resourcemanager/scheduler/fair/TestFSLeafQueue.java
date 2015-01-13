@@ -28,12 +28,22 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -221,5 +231,86 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     // Both queue B1 and queue B2 usages go to 3 * 1024
     assertFalse(queueB1.isStarvedForFairShare());
     assertFalse(queueB2.isStarvedForFairShare());
+  }
+
+  @Test
+  public void testConcurrentAccess() {
+    conf.set(FairSchedulerConfiguration.ASSIGN_MULTIPLE, "false");
+    resourceManager = new MockRM(conf);
+    resourceManager.start();
+    scheduler = (FairScheduler) resourceManager.getResourceScheduler();
+
+    String queueName = "root.queue1";
+    final FSLeafQueue schedulable = scheduler.getQueueManager().
+      getLeafQueue(queueName, true);
+    ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
+    RMContext rmContext = resourceManager.getRMContext();
+    final FSAppAttempt app =
+        new FSAppAttempt(scheduler, applicationAttemptId, "user1",
+            schedulable, null, rmContext);
+
+    // this needs to be in sync with the number of runnables declared below
+    int testThreads = 2;
+    List<Runnable> runnables = new ArrayList<Runnable>();
+
+    // add applications to modify the list
+    runnables.add(new Runnable() {
+      @Override
+      public void run() {
+        for (int i=0; i < 500; i++) {
+          schedulable.addAppSchedulable(app);
+        }
+      }
+    });
+
+    // iterate over the list a couple of times in a different thread
+    runnables.add(new Runnable() {
+      @Override
+      public void run() {
+        for (int i=0; i < 500; i++) {
+          schedulable.getResourceUsage();
+        }
+      }
+    });
+
+    final List<Throwable> exceptions = Collections.synchronizedList(
+        new ArrayList<Throwable>());
+    final ExecutorService threadPool = Executors.newFixedThreadPool(
+        testThreads);
+
+    try {
+      final CountDownLatch allExecutorThreadsReady =
+          new CountDownLatch(testThreads);
+      final CountDownLatch startBlocker = new CountDownLatch(1);
+      final CountDownLatch allDone = new CountDownLatch(testThreads);
+      for (final Runnable submittedTestRunnable : runnables) {
+        threadPool.submit(new Runnable() {
+          public void run() {
+            allExecutorThreadsReady.countDown();
+            try {
+              startBlocker.await();
+              submittedTestRunnable.run();
+            } catch (final Throwable e) {
+              exceptions.add(e);
+            } finally {
+              allDone.countDown();
+            }
+          }
+        });
+      }
+      // wait until all threads are ready
+      allExecutorThreadsReady.await();
+      // start all test runners
+      startBlocker.countDown();
+      int testTimeout = 2;
+      assertTrue("Timeout waiting for more than " + testTimeout + " seconds",
+          allDone.await(testTimeout, TimeUnit.SECONDS));
+    } catch (InterruptedException ie) {
+      exceptions.add(ie);
+    } finally {
+      threadPool.shutdownNow();
+    }
+    assertTrue("Test failed with exception(s)" + exceptions,
+        exceptions.isEmpty());
   }
 }

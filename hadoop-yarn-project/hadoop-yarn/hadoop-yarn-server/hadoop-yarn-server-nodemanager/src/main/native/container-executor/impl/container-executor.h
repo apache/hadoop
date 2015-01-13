@@ -203,3 +203,9 @@ int create_directory_for_user(const char* path);
 int change_user(uid_t user, gid_t group);
 
 int mount_cgroup(const char *pair, const char *hierarchy);
+
+int check_dir(char* npath, mode_t st_mode, mode_t desired,
+   int finalComponent);
+
+int create_validate_dir(char* npath, mode_t perm, char* path,
+   int finalComponent);

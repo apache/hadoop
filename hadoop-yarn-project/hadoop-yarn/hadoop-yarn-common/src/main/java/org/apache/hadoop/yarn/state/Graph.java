@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.yarn.state;
 
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -149,7 +151,7 @@ public class Graph {
     StringBuilder sb = new StringBuilder();
     if (this.parent == null) {
       sb.append("digraph " + name + " {\n");
-      sb.append(String.format("graph [ label=%s, fontsize=24, fontname=Helvetica];\n",
+      sb.append(String.format("graph [ label=%s, fontsize=24, fontname=Helvetica];%n",
           wrapSafeString(name)));
       sb.append("node [fontsize=12, fontname=Helvetica];\n");
       sb.append("edge [fontsize=9, fontcolor=blue, fontname=Arial];\n");
@@ -163,14 +165,14 @@ public class Graph {
     }
     for (Node n : nodes) {
       sb.append(String.format(
-          "%s%s [ label = %s ];\n",
+          "%s%s [ label = %s ];%n",
           indent,
           wrapSafeString(n.getUniqueId()),
           n.id));
       List<Edge> combinedOuts = combineEdges(n.outs);
       for (Edge e : combinedOuts) {
         sb.append(String.format(
-            "%s%s -> %s [ label = %s ];\n",
+            "%s%s -> %s [ label = %s ];%n",
             indent,
             wrapSafeString(e.from.getUniqueId()),
             wrapSafeString(e.to.getUniqueId()),
@@ -186,9 +188,10 @@ public class Graph {
   }
 
   public void save(String filepath) throws IOException {
-    FileWriter fout = new FileWriter(filepath);
-    fout.write(generateGraphViz());
-    fout.close();
+    try (OutputStreamWriter fout = new OutputStreamWriter(
+        new FileOutputStream(filepath), Charset.forName("UTF-8"));) {
+      fout.write(generateGraphViz());
+    }
   }
 
   public static List<Edge> combineEdges(List<Edge> edges) {

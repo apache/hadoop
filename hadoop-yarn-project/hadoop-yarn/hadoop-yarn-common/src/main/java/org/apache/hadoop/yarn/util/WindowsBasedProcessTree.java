@@ -162,10 +162,10 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
     StringBuilder ret = new StringBuilder();
     // The header.
     ret.append(String.format("\t|- PID " + "CPU_TIME(MILLIS) "
-        + "VMEM(BYTES) WORKING_SET(BYTES)\n"));
+        + "VMEM(BYTES) WORKING_SET(BYTES)%n"));
     for (ProcessInfo p : processTree.values()) {
       if (p != null) {
-        ret.append(String.format("\t|- %s %d %d %d\n", p.pid,
+        ret.append(String.format("\t|- %s %d %d %d%n", p.pid,
             p.cpuTimeMs, p.vmem, p.workingSet));
       }
     }

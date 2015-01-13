@@ -124,12 +124,29 @@ public class FsVolumeImpl implements FsVolumeSpi {
   File getRbwDir(String bpid) throws IOException {
     return getBlockPoolSlice(bpid).getRbwDir();
   }
-  
+
+  File getLazyPersistDir(String bpid) throws IOException {
+    return getBlockPoolSlice(bpid).getLazypersistDir();
+  }
+
+  File getTmpDir(String bpid) throws IOException {
+    return getBlockPoolSlice(bpid).getTmpDir();
+  }
+
   void decDfsUsed(String bpid, long value) {
     synchronized(dataset) {
       BlockPoolSlice bp = bpSlices.get(bpid);
       if (bp != null) {
         bp.decDfsUsed(value);
+      }
+    }
+  }
+
+  void incDfsUsed(String bpid, long value) {
+    synchronized(dataset) {
+      BlockPoolSlice bp = bpSlices.get(bpid);
+      if (bp != null) {
+        bp.incDfsUsed(value);
       }
     }
   }

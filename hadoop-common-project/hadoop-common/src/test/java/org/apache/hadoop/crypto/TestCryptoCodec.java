@@ -23,7 +23,9 @@ import static org.junit.Assert.assertTrue;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,14 +41,15 @@ import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.primitives.Longs;
 
 public class TestCryptoCodec {
   private static final Log LOG= LogFactory.getLog(TestCryptoCodec.class);
-  private static final byte[] key = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 
-    0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16};
-  private static final byte[] iv = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 
-    0x07, 0x08, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+  private static byte[] key = new byte[16];
+  private static byte[] iv = new byte[16];
   private static final int bufferSize = 4096;
   
   private Configuration conf = new Configuration();
@@ -57,6 +60,13 @@ public class TestCryptoCodec {
   private final String opensslCodecClass = 
       "org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec";
   
+  @Before
+  public void setUp() throws IOException {
+    Random random = new SecureRandom();
+    random.nextBytes(key);
+    random.nextBytes(iv);
+  }
+
   @Test(timeout=120000)
   public void testJceAesCtrCryptoCodec() throws Exception {
     if (!"true".equalsIgnoreCase(System.getProperty("runningWithNative"))) {
@@ -68,9 +78,15 @@ public class TestCryptoCodec {
       Assume.assumeTrue(false);
     }
     Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
-    cryptoCodecTest(conf, seed, 0, jceCodecClass, jceCodecClass);
-    cryptoCodecTest(conf, seed, count, jceCodecClass, jceCodecClass);
-    cryptoCodecTest(conf, seed, count, jceCodecClass, opensslCodecClass);
+    cryptoCodecTest(conf, seed, 0, jceCodecClass, jceCodecClass, iv);
+    cryptoCodecTest(conf, seed, count, jceCodecClass, jceCodecClass, iv);
+    cryptoCodecTest(conf, seed, count, jceCodecClass, opensslCodecClass, iv);
+    // Overflow test, IV: xx xx xx xx xx xx xx xx ff ff ff ff ff ff ff ff 
+    for(int i = 0; i < 8; i++) {
+      iv[8 + i] = (byte) 0xff;
+    }
+    cryptoCodecTest(conf, seed, count, jceCodecClass, jceCodecClass, iv);
+    cryptoCodecTest(conf, seed, count, jceCodecClass, opensslCodecClass, iv);
   }
   
   @Test(timeout=120000)
@@ -84,13 +100,19 @@ public class TestCryptoCodec {
       Assume.assumeTrue(false);
     }
     Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
-    cryptoCodecTest(conf, seed, 0, opensslCodecClass, opensslCodecClass);
-    cryptoCodecTest(conf, seed, count, opensslCodecClass, opensslCodecClass);
-    cryptoCodecTest(conf, seed, count, opensslCodecClass, jceCodecClass);
+    cryptoCodecTest(conf, seed, 0, opensslCodecClass, opensslCodecClass, iv);
+    cryptoCodecTest(conf, seed, count, opensslCodecClass, opensslCodecClass, iv);
+    cryptoCodecTest(conf, seed, count, opensslCodecClass, jceCodecClass, iv);
+    // Overflow test, IV: xx xx xx xx xx xx xx xx ff ff ff ff ff ff ff ff 
+    for(int i = 0; i < 8; i++) {
+      iv[8 + i] = (byte) 0xff;
+    }
+    cryptoCodecTest(conf, seed, count, opensslCodecClass, opensslCodecClass, iv);
+    cryptoCodecTest(conf, seed, count, opensslCodecClass, jceCodecClass, iv);
   }
   
   private void cryptoCodecTest(Configuration conf, int seed, int count, 
-      String encCodecClass, String decCodecClass) throws IOException, 
+      String encCodecClass, String decCodecClass, byte[] iv) throws IOException, 
       GeneralSecurityException {
     CryptoCodec encCodec = null;
     try {
@@ -229,5 +251,65 @@ public class TestCryptoCodec {
     Assert.assertEquals(len, rand.length);
     Assert.assertEquals(len, rand1.length);
     Assert.assertFalse(Arrays.equals(rand, rand1));
+  }
+  
+  /**
+   * Regression test for IV calculation, see HADOOP-11343
+   */
+  @Test(timeout=120000)
+  public void testCalculateIV() throws Exception {
+    JceAesCtrCryptoCodec codec = new JceAesCtrCryptoCodec();
+    codec.setConf(conf);
+
+    SecureRandom sr = new SecureRandom();
+    byte[] initIV = new byte[16];
+    byte[] IV = new byte[16];
+
+    long iterations = 1000;
+    long counter = 10000;
+
+    // Overflow test, IV: 00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff 
+    for(int i = 0; i < 8; i++) {
+      initIV[8 + i] = (byte)0xff;
+    }
+
+    for(long j = 0; j < counter; j++) {
+      assertIVCalculation(codec, initIV, j, IV);
+    }
+
+    // Random IV and counter sequence test
+    for(long i = 0; i < iterations; i++) {
+      sr.nextBytes(initIV);
+
+      for(long j = 0; j < counter; j++) {
+        assertIVCalculation(codec, initIV, j, IV);
+      }
+    }
+
+    // Random IV and random counter test
+    for(long i = 0; i < iterations; i++) {
+      sr.nextBytes(initIV);
+
+      for(long j = 0; j < counter; j++) {
+        long c = sr.nextLong();
+        assertIVCalculation(codec, initIV, c, IV);
+      }
+    }
+  }
+
+  private void assertIVCalculation(CryptoCodec codec, byte[] initIV,
+      long counter, byte[] IV) {
+    codec.calculateIV(initIV, counter, IV);
+
+    BigInteger iv = new BigInteger(1, IV);
+    BigInteger ref = calculateRef(initIV, counter);
+
+    assertTrue("Calculated IV don't match with the reference", iv.equals(ref));
+  }
+
+  private static BigInteger calculateRef(byte[] initIV, long counter) {
+    byte[] cb = Longs.toByteArray(counter);
+    BigInteger bi = new BigInteger(1, initIV);
+    return bi.add(new BigInteger(1, cb));
   }
 }

@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 /**
  * This interface is used by the components to talk to the
@@ -97,6 +98,10 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @Public
   @Stable
   public Resource getMaximumResourceCapability();
+
+  @LimitedPrivate("yarn")
+  @Evolving
+  ResourceCalculator getResourceCalculator();
 
   /**
    * Get the number of nodes available in the cluster.

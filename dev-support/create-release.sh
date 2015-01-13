@@ -47,6 +47,9 @@ RC_LABEL=$1
 # Extract Hadoop version from POM
 HADOOP_VERSION=`cat pom.xml | grep "<version>" | head -1 | sed 's|^ *<version>||' | sed 's|</version>.*$||'`
 
+# Setup git
+GIT=${GIT:-git}
+
 echo
 echo "*****************************************************************"
 echo
@@ -69,6 +72,9 @@ else
 fi
 
 ARTIFACTS_DIR="target/artifacts"
+
+# git clean to clear any remnants from previous build
+run ${GIT} clean -xdf
 
 # mvn clean for sanity
 run ${MVN} clean

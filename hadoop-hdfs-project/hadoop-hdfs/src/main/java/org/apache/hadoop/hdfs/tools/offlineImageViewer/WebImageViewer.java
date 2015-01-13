@@ -17,48 +17,51 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.concurrent.Executors;
-
+import com.google.common.annotations.VisibleForTesting;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.string.StringEncoder;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
-import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
-import org.jboss.netty.handler.codec.string.StringEncoder;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 
 /**
  * WebImageViewer loads a fsimage and exposes read-only WebHDFS API for its
  * namespace.
  */
-public class WebImageViewer {
+public class WebImageViewer implements Closeable {
   public static final Log LOG = LogFactory.getLog(WebImageViewer.class);
 
   private Channel channel;
   private InetSocketAddress address;
-  private final ChannelFactory factory =
-      new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
-          Executors.newCachedThreadPool(), 1);
-  private final ServerBootstrap bootstrap = new ServerBootstrap(factory);
 
-  static final ChannelGroup allChannels =
-      new DefaultChannelGroup("WebImageViewer");
+  private final ServerBootstrap bootstrap;
+  private final EventLoopGroup bossGroup;
+  private final EventLoopGroup workerGroup;
+  private final ChannelGroup allChannels;
 
   public WebImageViewer(InetSocketAddress address) {
     this.address = address;
+    this.bossGroup = new NioEventLoopGroup();
+    this.workerGroup = new NioEventLoopGroup();
+    this.allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    this.bootstrap = new ServerBootstrap()
+      .group(bossGroup, workerGroup)
+      .channel(NioServerSocketChannel.class);
   }
 
   /**
@@ -66,13 +69,13 @@ public class WebImageViewer {
    * @param fsimage the fsimage to load.
    * @throws IOException if failed to load the fsimage.
    */
-  public void initServerAndWait(String fsimage) throws IOException {
-    initServer(fsimage);
+  public void start(String fsimage) throws IOException {
     try {
-      channel.getCloseFuture().await();
+      initServer(fsimage);
+      channel.closeFuture().await();
     } catch (InterruptedException e) {
       LOG.info("Interrupted. Stopping the WebImageViewer.");
-      shutdown();
+      close();
     }
   }
 
@@ -82,37 +85,26 @@ public class WebImageViewer {
    * @throws IOException if fail to load the fsimage.
    */
   @VisibleForTesting
-  public void initServer(String fsimage) throws IOException {
-    FSImageLoader loader = FSImageLoader.load(fsimage);
+  public void initServer(String fsimage)
+          throws IOException, InterruptedException {
+    final FSImageLoader loader = FSImageLoader.load(fsimage);
 
-    ChannelPipeline pipeline = Channels.pipeline();
-    pipeline.addLast("channelTracker", new SimpleChannelUpstreamHandler() {
+    bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
       @Override
-      public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
-          throws Exception {
-        allChannels.add(e.getChannel());
+      protected void initChannel(SocketChannel ch) throws Exception {
+        ChannelPipeline p = ch.pipeline();
+        p.addLast(new HttpRequestDecoder(),
+          new StringEncoder(),
+          new HttpResponseEncoder(),
+          new FSImageHandler(loader, allChannels));
       }
     });
-    pipeline.addLast("httpDecoder", new HttpRequestDecoder());
-    pipeline.addLast("requestHandler", new FSImageHandler(loader));
-    pipeline.addLast("stringEncoder", new StringEncoder());
-    pipeline.addLast("httpEncoder", new HttpResponseEncoder());
-    bootstrap.setPipeline(pipeline);
-    channel = bootstrap.bind(address);
+
+    channel = bootstrap.bind(address).sync().channel();
     allChannels.add(channel);
 
-    address = (InetSocketAddress) channel.getLocalAddress();
-    LOG.info("WebImageViewer started. Listening on " + address.toString()
-        + ". Press Ctrl+C to stop the viewer.");
-  }
-
-  /**
-   * Stop WebImageViewer.
-   */
-  @VisibleForTesting
-  public void shutdown() {
-    allChannels.close().awaitUninterruptibly();
-    factory.releaseExternalResources();
+    address = (InetSocketAddress) channel.localAddress();
+    LOG.info("WebImageViewer started. Listening on " + address.toString() + ". Press Ctrl+C to stop the viewer.");
   }
 
   /**
@@ -122,5 +114,12 @@ public class WebImageViewer {
   @VisibleForTesting
   public int getPort() {
     return address.getPort();
+  }
+
+  @Override
+  public void close() {
+    allChannels.close().awaitUninterruptibly();
+    bossGroup.shutdownGracefully();
+    workerGroup.shutdownGracefully();
   }
 }

@@ -88,7 +88,7 @@ public class TestCheckpointPreemptionPolicy {
     EventHandler ea = mock(EventHandler.class);
     when(mActxt.getEventHandler()).thenReturn(ea);
     for (int i = 0; i < 40; ++i) {
-      ContainerId cId = ContainerId.newInstance(appAttemptId, i);
+      ContainerId cId = ContainerId.newContainerId(appAttemptId, i);
       if (0 == i % 7) {
         preemptedContainers.add(cId);
       }
@@ -101,7 +101,7 @@ public class TestCheckpointPreemptionPolicy {
 
     for (Map.Entry<ContainerId,TaskAttemptId> ent :
          assignedContainers.entrySet()) {
-      System.out.println("cont:" + ent.getKey().getId() +
+      System.out.println("cont:" + ent.getKey().getContainerId() +
           " type:" + ent.getValue().getTaskId().getTaskType() +
           " res:" + contToResourceMap.get(ent.getKey()).getMemory() + "MB" );
     }

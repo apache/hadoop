@@ -26,6 +26,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
@@ -43,7 +44,7 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
 
   private long timestamp;
   private String eventType;
-  private Map<String, Object> eventInfo = new HashMap<String, Object>();
+  private HashMap<String, Object> eventInfo = new HashMap<String, Object>();
 
   public TimelineEvent() {
   }
@@ -93,8 +94,14 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
    * 
    * @return the information of the event
    */
-  @XmlElement(name = "eventinfo")
   public Map<String, Object> getEventInfo() {
+    return eventInfo;
+  }
+
+  // Required by JAXB
+  @Private
+  @XmlElement(name = "eventinfo")
+  public HashMap<String, Object> getEventInfoJAXB() {
     return eventInfo;
   }
 
@@ -128,7 +135,11 @@ public class TimelineEvent implements Comparable<TimelineEvent> {
    *          a map of of the information of the event
    */
   public void setEventInfo(Map<String, Object> eventInfo) {
-    this.eventInfo = eventInfo;
+    if (eventInfo != null && !(eventInfo instanceof HashMap)) {
+      this.eventInfo = new HashMap<String, Object>(eventInfo);
+    } else {
+      this.eventInfo = (HashMap<String, Object>) eventInfo;
+    }
   }
 
   @Override

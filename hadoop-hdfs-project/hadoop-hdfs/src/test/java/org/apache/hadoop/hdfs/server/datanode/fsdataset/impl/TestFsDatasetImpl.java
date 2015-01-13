@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -31,24 +32,35 @@ import org.apache.hadoop.hdfs.server.datanode.DataBlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,6 +76,7 @@ public class TestFsDatasetImpl {
       new StorageInfo(HdfsServerConstants.NodeType.DATA_NODE));
 
   private Configuration conf;
+  private DataNode datanode;
   private DataStorage storage;
   private DataBlockScanner scanner;
   private FsDatasetImpl dataset;
@@ -94,9 +107,9 @@ public class TestFsDatasetImpl {
 
   @Before
   public void setUp() throws IOException {
-    final DataNode datanode = Mockito.mock(DataNode.class);
-    storage = Mockito.mock(DataStorage.class);
-    scanner = Mockito.mock(DataBlockScanner.class);
+    datanode = mock(DataNode.class);
+    storage = mock(DataStorage.class);
+    scanner = mock(DataBlockScanner.class);
     this.conf = new Configuration();
     final DNConf dnConf = new DNConf(conf);
 
@@ -119,17 +132,24 @@ public class TestFsDatasetImpl {
     final int numNewVolumes = 3;
     final int numExistingVolumes = dataset.getVolumes().size();
     final int totalVolumes = numNewVolumes + numExistingVolumes;
-    List<StorageLocation> newLocations = new ArrayList<StorageLocation>();
     Set<String> expectedVolumes = new HashSet<String>();
+    List<NamespaceInfo> nsInfos = Lists.newArrayList();
+    for (String bpid : BLOCK_POOL_IDS) {
+      nsInfos.add(new NamespaceInfo(0, "cluster-id", bpid, 1));
+    }
     for (int i = 0; i < numNewVolumes; i++) {
       String path = BASE_DIR + "/newData" + i;
-      newLocations.add(StorageLocation.parse(path));
-      when(storage.getStorageDir(numExistingVolumes + i))
-          .thenReturn(createStorageDirectory(new File(path)));
-    }
-    when(storage.getNumStorageDirs()).thenReturn(totalVolumes);
+      StorageLocation loc = StorageLocation.parse(path);
+      Storage.StorageDirectory sd = createStorageDirectory(new File(path));
+      DataStorage.VolumeBuilder builder =
+          new DataStorage.VolumeBuilder(storage, sd);
+      when(storage.prepareVolume(eq(datanode), eq(loc.getFile()),
+          anyListOf(NamespaceInfo.class)))
+          .thenReturn(builder);
 
-    dataset.addVolumes(newLocations, Arrays.asList(BLOCK_POOL_IDS));
+      dataset.addVolume(loc, nsInfos);
+    }
+
     assertEquals(totalVolumes, dataset.getVolumes().size());
     assertEquals(totalVolumes, dataset.storageMap.size());
 
@@ -185,5 +205,54 @@ public class TestFsDatasetImpl {
     // Verify that every BlockPool deletes the removed blocks from the volume.
     verify(scanner, times(BLOCK_POOL_IDS.length))
         .deleteBlocks(anyString(), any(Block[].class));
+  }
+
+  @Test(timeout = 5000)
+  public void testChangeVolumeWithRunningCheckDirs() throws IOException {
+    RoundRobinVolumeChoosingPolicy<FsVolumeImpl> blockChooser =
+        new RoundRobinVolumeChoosingPolicy<>();
+    final FsVolumeList volumeList = new FsVolumeList(0, blockChooser);
+    final List<FsVolumeImpl> oldVolumes = new ArrayList<>();
+
+    // Initialize FsVolumeList with 5 mock volumes.
+    final int NUM_VOLUMES = 5;
+    for (int i = 0; i < NUM_VOLUMES; i++) {
+      FsVolumeImpl volume = mock(FsVolumeImpl.class);
+      oldVolumes.add(volume);
+      when(volume.getBasePath()).thenReturn("data" + i);
+      volumeList.addVolume(volume);
+    }
+
+    // When call checkDirs() on the 2nd volume, anther "thread" removes the 5th
+    // volume and add another volume. It does not affect checkDirs() running.
+    final FsVolumeImpl newVolume = mock(FsVolumeImpl.class);
+    FsVolumeImpl blockedVolume = volumeList.getVolumes().get(1);
+    doAnswer(new Answer() {
+      @Override
+      public Object answer(InvocationOnMock invocationOnMock)
+          throws Throwable {
+        volumeList.removeVolume("data4");
+        volumeList.addVolume(newVolume);
+        return null;
+      }
+    }).when(blockedVolume).checkDirs();
+
+    FsVolumeImpl brokenVolume = volumeList.getVolumes().get(2);
+    doThrow(new DiskChecker.DiskErrorException("broken"))
+        .when(brokenVolume).checkDirs();
+
+    volumeList.checkDirs();
+
+    // Since FsVolumeImpl#checkDirs() get a snapshot of the list of volumes
+    // before running removeVolume(), it is supposed to run checkDirs() on all
+    // the old volumes.
+    for (FsVolumeImpl volume : oldVolumes) {
+      verify(volume).checkDirs();
+    }
+    // New volume is not visible to checkDirs() process.
+    verify(newVolume, never()).checkDirs();
+    assertTrue(volumeList.getVolumes().contains(newVolume));
+    assertFalse(volumeList.getVolumes().contains(brokenVolume));
+    assertEquals(NUM_VOLUMES - 1, volumeList.getVolumes().size());
   }
 }

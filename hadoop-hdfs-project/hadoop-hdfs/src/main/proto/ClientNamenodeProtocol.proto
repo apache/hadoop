@@ -90,6 +90,7 @@ message AppendRequestProto {
 
 message AppendResponseProto {
   optional LocatedBlockProto block = 1;
+  optional HdfsFileStatusProto stat = 2;
 }
 
 message SetReplicationRequestProto {
@@ -197,6 +198,16 @@ message ConcatRequestProto {
 message ConcatResponseProto { // void response
 }
 
+message TruncateRequestProto {
+  required string src = 1;
+  required uint64 newLength = 2;
+  required string clientName = 3;
+}
+
+message TruncateResponseProto {
+  required bool result = 1;
+}
+
 message RenameRequestProto {
   required string src = 1;
   required string dst = 2;
@@ -283,6 +294,7 @@ message GetFsStatsResponseProto {
   required uint64 under_replicated = 4;
   required uint64 corrupt_blocks = 5;
   required uint64 missing_blocks = 6;
+  optional uint64 missing_repl_one_blocks = 7;
 }
 
 enum DatanodeReportTypeProto {  // type of the datanode report
@@ -720,6 +732,7 @@ service ClientNamenodeProtocol {
   rpc reportBadBlocks(ReportBadBlocksRequestProto)
       returns(ReportBadBlocksResponseProto);
   rpc concat(ConcatRequestProto) returns(ConcatResponseProto);
+  rpc truncate(TruncateRequestProto) returns(TruncateResponseProto);
   rpc rename(RenameRequestProto) returns(RenameResponseProto);
   rpc rename2(Rename2RequestProto) returns(Rename2ResponseProto);
   rpc delete(DeleteRequestProto) returns(DeleteResponseProto);

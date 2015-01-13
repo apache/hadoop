@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -122,13 +123,21 @@ public abstract class FSQueue implements Queue, Schedulable {
   public QueueInfo getQueueInfo(boolean includeChildQueues, boolean recursive) {
     QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
     queueInfo.setQueueName(getQueueName());
-    // TODO: we might change these queue metrics around a little bit
-    // to match the semantics of the fair scheduler.
-    queueInfo.setCapacity((float) getFairShare().getMemory() /
-        scheduler.getClusterResource().getMemory());
-    queueInfo.setCapacity((float) getResourceUsage().getMemory() /
-        scheduler.getClusterResource().getMemory());
-    
+
+    if (scheduler.getClusterResource().getMemory() == 0) {
+      queueInfo.setCapacity(0.0f);
+    } else {
+      queueInfo.setCapacity((float) getFairShare().getMemory() /
+          scheduler.getClusterResource().getMemory());
+    }
+
+    if (getFairShare().getMemory() == 0) {
+      queueInfo.setCurrentCapacity(0.0f);
+    } else {
+      queueInfo.setCurrentCapacity((float) getResourceUsage().getMemory() /
+          getFairShare().getMemory());
+    }
+
     ArrayList<QueueInfo> childQueueInfos = new ArrayList<QueueInfo>();
     if (includeChildQueues) {
       Collection<FSQueue> childQueues = getChildQueues();
@@ -269,5 +278,17 @@ public abstract class FSQueue implements Queue, Schedulable {
   public String toString() {
     return String.format("[%s, demand=%s, running=%s, share=%s, w=%s]",
         getName(), getDemand(), getResourceUsage(), fairShare, getWeights());
+  }
+  
+  @Override
+  public Set<String> getAccessibleNodeLabels() {
+    // TODO, add implementation for FS
+    return null;
+  }
+  
+  @Override
+  public String getDefaultNodeLabelExpression() {
+    // TODO, add implementation for FS
+    return null;
   }
 }

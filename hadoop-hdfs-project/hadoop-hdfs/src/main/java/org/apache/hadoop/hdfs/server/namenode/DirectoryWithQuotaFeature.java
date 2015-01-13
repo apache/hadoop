@@ -21,6 +21,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 /**
  * Quota feature for {@link INodeDirectory}. 
@@ -68,7 +69,7 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
       final ContentSummaryComputationContext summary) {
     final long original = summary.getCounts().get(Content.DISKSPACE);
     long oldYieldCount = summary.getYieldCount();
-    dir.computeDirectoryContentSummary(summary);
+    dir.computeDirectoryContentSummary(summary, Snapshot.CURRENT_STATE_ID);
     // Check only when the content has not changed in the middle.
     if (oldYieldCount == summary.getYieldCount()) {
       checkDiskspace(dir, summary.getCounts().get(Content.DISKSPACE) - original);

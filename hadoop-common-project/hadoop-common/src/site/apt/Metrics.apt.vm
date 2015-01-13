@@ -605,6 +605,145 @@ dfs context
                                           | packets in nanoseconds
 *-------------------------------------+--------------------------------------+
 
+yarn context
+
+* ClusterMetrics
+
+  ClusterMetrics shows the metrics of the YARN cluster from the
+  ResourceManager's perspective. Each metrics record contains
+  Hostname tag as additional information along with metrics.
+
+*-------------------------------------+--------------------------------------+
+|| Name                               || Description
+*-------------------------------------+--------------------------------------+
+|<<<NumActiveNMs>>> | Current number of active NodeManagers
+*-------------------------------------+--------------------------------------+
+|<<<NumDecommissionedNMs>>> | Current number of decommissioned NodeManagers
+*-------------------------------------+--------------------------------------+
+|<<<NumLostNMs>>> | Current number of lost NodeManagers for not sending
+                  | heartbeats
+*-------------------------------------+--------------------------------------+
+|<<<NumUnhealthyNMs>>> | Current number of unhealthy NodeManagers
+*-------------------------------------+--------------------------------------+
+|<<<NumRebootedNMs>>> | Current number of rebooted NodeManagers
+*-------------------------------------+--------------------------------------+
+
+* QueueMetrics
+
+  QueueMetrics shows an application queue from the
+  ResourceManager's perspective. Each metrics record shows
+  the statistics of each queue, and contains tags such as
+  queue name and Hostname as additional information along with metrics.
+
+  In <<<running_>>><num> metrics such as <<<running_0>>>, you can set the
+  property <<<yarn.resourcemanager.metrics.runtime.buckets>>> in yarn-site.xml
+  to change the buckets. The default values is <<<60,300,1440>>>.
+
+*-------------------------------------+--------------------------------------+
+|| Name                               || Description
+*-------------------------------------+--------------------------------------+
+|<<<running_0>>> | Current number of running applications whose elapsed time are
+                 | less than 60 minutes
+*-------------------------------------+--------------------------------------+
+|<<<running_60>>> | Current number of running applications whose elapsed time are
+                  | between 60 and 300 minutes
+*-------------------------------------+--------------------------------------+
+|<<<running_300>>> | Current number of running applications whose elapsed time are
+                   | between 300 and 1440 minutes
+*-------------------------------------+--------------------------------------+
+|<<<running_1440>>> | Current number of running applications elapsed time are
+                    | more than 1440 minutes
+*-------------------------------------+--------------------------------------+
+|<<<AppsSubmitted>>> | Total number of submitted applications
+*-------------------------------------+--------------------------------------+
+|<<<AppsRunning>>> | Current number of running applications
+*-------------------------------------+--------------------------------------+
+|<<<AppsPending>>> | Current number of applications that have not yet been
+                   | assigned by any containers
+*-------------------------------------+--------------------------------------+
+|<<<AppsCompleted>>> | Total number of completed applications
+*-------------------------------------+--------------------------------------+
+|<<<AppsKilled>>> | Total number of killed applications
+*-------------------------------------+--------------------------------------+
+|<<<AppsFailed>>> | Total number of failed applications
+*-------------------------------------+--------------------------------------+
+|<<<AllocatedMB>>> | Current allocated memory in MB
+*-------------------------------------+--------------------------------------+
+|<<<AllocatedVCores>>> | Current allocated CPU in virtual cores
+*-------------------------------------+--------------------------------------+
+|<<<AllocatedContainers>>> | Current number of allocated containers
+*-------------------------------------+--------------------------------------+
+|<<<AggregateContainersAllocated>>> | Total number of allocated containers
+*-------------------------------------+--------------------------------------+
+|<<<AggregateContainersReleased>>> | Total number of released containers
+*-------------------------------------+--------------------------------------+
+|<<<AvailableMB>>> | Current available memory in MB
+*-------------------------------------+--------------------------------------+
+|<<<AvailableVCores>>> | Current available CPU in virtual cores
+*-------------------------------------+--------------------------------------+
+|<<<PendingMB>>> | Current pending memory resource requests in MB that are
+                 | not yet fulfilled by the scheduler
+*-------------------------------------+--------------------------------------+
+|<<<PendingVCores>>> | Current pending CPU allocation requests in virtual
+                     | cores that are not yet fulfilled by the scheduler
+*-------------------------------------+--------------------------------------+
+|<<<PendingContainers>>> | Current pending resource requests that are not
+                         | yet fulfilled by the scheduler
+*-------------------------------------+--------------------------------------+
+|<<<ReservedMB>>> | Current reserved memory in MB
+*-------------------------------------+--------------------------------------+
+|<<<ReservedVCores>>> | Current reserved CPU in virtual cores
+*-------------------------------------+--------------------------------------+
+|<<<ReservedContainers>>> | Current number of reserved containers
+*-------------------------------------+--------------------------------------+
+|<<<ActiveUsers>>> | Current number of active users
+*-------------------------------------+--------------------------------------+
+|<<<ActiveApplications>>> | Current number of active applications
+*-------------------------------------+--------------------------------------+
+|<<<FairShareMB>>> | (FairScheduler only) Current fair share of memory in MB
+*-------------------------------------+--------------------------------------+
+|<<<FairShareVCores>>> | (FairScheduler only) Current fair share of CPU in
+                       | virtual cores
+*-------------------------------------+--------------------------------------+
+|<<<MinShareMB>>> | (FairScheduler only) Minimum share of memory in MB
+*-------------------------------------+--------------------------------------+
+|<<<MinShareVCores>>> | (FairScheduler only) Minimum share of CPU in virtual
+                      | cores
+*-------------------------------------+--------------------------------------+
+|<<<MaxShareMB>>> | (FairScheduler only) Maximum share of memory in MB
+*-------------------------------------+--------------------------------------+
+|<<<MaxShareVCores>>> | (FairScheduler only) Maximum share of CPU in virtual
+                      | cores
+*-------------------------------------+--------------------------------------+
+
+* NodeManagerMetrics
+
+  NodeManagerMetrics shows the statistics of the containers in the node.
+  Each metrics record contains Hostname tag as additional information
+  along with metrics.
+
+*-------------------------------------+--------------------------------------+
+|| Name                               || Description
+*-------------------------------------+--------------------------------------+
+|<<<containersLaunched>>> | Total number of launched containers
+*-------------------------------------+--------------------------------------+
+|<<<containersCompleted>>> | Total number of successfully completed containers
+*-------------------------------------+--------------------------------------+
+|<<<containersFailed>>> | Total number of failed containers
+*-------------------------------------+--------------------------------------+
+|<<<containersKilled>>> | Total number of killed containers
+*-------------------------------------+--------------------------------------+
+|<<<containersIniting>>> | Current number of initializing containers
+*-------------------------------------+--------------------------------------+
+|<<<containersRunning>>> | Current number of running containers
+*-------------------------------------+--------------------------------------+
+|<<<allocatedContainers>>> | Current number of allocated containers
+*-------------------------------------+--------------------------------------+
+|<<<allocatedGB>>> | Current allocated memory in GB
+*-------------------------------------+--------------------------------------+
+|<<<availableGB>>> | Current available memory in GB
+*-------------------------------------+--------------------------------------+
+
 ugi context
 
 * UgiMetrics

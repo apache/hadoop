@@ -173,13 +173,20 @@ public class TestContainer {
       wc = new WrappedContainer(13, 314159265358979L, 4344, "yak");
       wc.initContainer();
       wc.localizeResources();
+      int running = metrics.getRunningContainers();
       wc.launchContainer();
+      assertEquals(running + 1, metrics.getRunningContainers());
       reset(wc.localizerBus);
       wc.containerKilledOnRequest();
       assertEquals(ContainerState.EXITED_WITH_FAILURE, 
           wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
+      int failed = metrics.getFailedContainers();
+      wc.containerResourcesCleanup();
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertEquals(failed + 1, metrics.getFailedContainers());
+      assertEquals(running, metrics.getRunningContainers());
     }
     finally {
       if (wc != null) {
@@ -219,13 +226,20 @@ public class TestContainer {
       wc = new WrappedContainer(11, 314159265358979L, 4344, "yak");
       wc.initContainer();
       wc.localizeResources();
+      int running = metrics.getRunningContainers();
       wc.launchContainer();
+      assertEquals(running + 1, metrics.getRunningContainers());
       reset(wc.localizerBus);
       wc.containerSuccessful();
       assertEquals(ContainerState.EXITED_WITH_SUCCESS,
           wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
+      int completed = metrics.getCompletedContainers();
+      wc.containerResourcesCleanup();
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertEquals(completed + 1, metrics.getCompletedContainers());
+      assertEquals(running, metrics.getRunningContainers());
     }
     finally {
       if (wc != null) {
@@ -319,12 +333,14 @@ public class TestContainer {
     try {
       wc = new WrappedContainer(13, 314159265358979L, 4344, "yak");
       assertEquals(ContainerState.NEW, wc.c.getContainerState());
+      int killed = metrics.getKilledContainers();
       wc.killContainer();
       assertEquals(ContainerState.DONE, wc.c.getContainerState());
       assertEquals(ContainerExitStatus.KILLED_BY_RESOURCEMANAGER,
           wc.c.cloneAndGetContainerStatus().getExitStatus());
       assertTrue(wc.c.cloneAndGetContainerStatus().getDiagnostics()
           .contains("KillRequest"));
+      assertEquals(killed + 1, metrics.getKilledContainers());
     } finally {
       if (wc != null) {
         wc.finished();
@@ -345,6 +361,10 @@ public class TestContainer {
           wc.c.cloneAndGetContainerStatus().getExitStatus());
       assertTrue(wc.c.cloneAndGetContainerStatus().getDiagnostics()
           .contains("KillRequest"));
+      int killed = metrics.getKilledContainers();
+      wc.containerResourcesCleanup();
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertEquals(killed + 1, metrics.getKilledContainers());
     } finally {
       if (wc != null) {
         wc.finished();
@@ -365,6 +385,10 @@ public class TestContainer {
       assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
+      int failed = metrics.getFailedContainers();
+      wc.containerResourcesCleanup();
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertEquals(failed + 1, metrics.getFailedContainers());
     } finally {
       if (wc != null) {
         wc.finished();
@@ -389,8 +413,11 @@ public class TestContainer {
           wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
+      int killed = metrics.getKilledContainers();
       wc.c.handle(new ContainerEvent(wc.c.getContainerId(),
           ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertEquals(killed + 1, metrics.getKilledContainers());
       assertEquals(0, metrics.getRunningContainers());
     } finally {
       if (wc != null) {
@@ -642,7 +669,7 @@ public class TestContainer {
     URL url = BuilderUtils.newURL("file", null, 0, "/local" + vis + "/" + name);
     LocalResource rsrc =
         BuilderUtils.newLocalResource(url, LocalResourceType.FILE, vis,
-            r.nextInt(1024) + 1024L, r.nextInt(1024) + 2048L);
+            r.nextInt(1024) + 1024L, r.nextInt(1024) + 2048L, false);
     return new SimpleEntry<String, LocalResource>(name, rsrc);
   }
 

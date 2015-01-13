@@ -251,6 +251,13 @@ public class FilterFileSystem extends FileSystem {
     return fs.listLocatedStatus(f);
   }
   
+  /** Return a remote iterator for listing in a directory */
+  @Override
+  public RemoteIterator<FileStatus> listStatusIterator(Path f)
+  throws IOException {
+    return fs.listStatusIterator(f);
+   }
+
   @Override
   public Path getHomeDirectory() {
     return fs.getHomeDirectory();

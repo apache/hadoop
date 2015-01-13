@@ -97,7 +97,7 @@ public class TestContainerLaunchRPC {
       ApplicationAttemptId applicationAttemptId =
           ApplicationAttemptId.newInstance(applicationId, 0);
       ContainerId containerId =
-          ContainerId.newInstance(applicationAttemptId, 100);
+          ContainerId.newContainerId(applicationAttemptId, 100);
       NodeId nodeId = NodeId.newInstance("localhost", 1234);
       Resource resource = Resource.newInstance(1234, 2);
       ContainerTokenIdentifier containerTokenIdentifier =

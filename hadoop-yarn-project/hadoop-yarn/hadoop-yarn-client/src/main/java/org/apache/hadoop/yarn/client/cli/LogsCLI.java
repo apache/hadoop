@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -39,8 +38,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
-import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
@@ -113,17 +110,16 @@ public class LogsCLI extends Configured implements Tool {
       System.err.println("Invalid ApplicationId specified");
       return -1;
     }
-    
+
     try {
       int resultCode = verifyApplicationState(appId);
       if (resultCode != 0) {
-        System.out.println("Application has not completed." +
-        		" Logs are only available after an application completes");
+        System.out.println("Logs are not avaiable right now.");
         return resultCode;
       }
     } catch (Exception e) {
-      System.err.println("Unable to get ApplicationState." +
-      		" Attempting to fetch logs directly from the filesystem.");
+      System.err.println("Unable to get ApplicationState."
+          + " Attempting to fetch logs directly from the filesystem.");
     }
 
     LogCLIHelpers logCliHelper = new LogCLIHelpers();
@@ -141,18 +137,9 @@ public class LogsCLI extends Configured implements Tool {
       printHelpMessage(printOpts);
       resultCode = -1;
     } else {
-      Path remoteRootLogDir =
-        new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-      AggregatedLogFormat.LogReader reader =
-          new AggregatedLogFormat.LogReader(getConf(),
-              LogAggregationUtils.getRemoteNodeLogFileForApp(
-                  remoteRootLogDir,
-                  appId,
-                  appOwner,
-                  ConverterUtils.toNodeId(nodeAddress),
-                  LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf())));
-      resultCode = logCliHelper.dumpAContainerLogs(containerIdStr, reader, System.out);
+      resultCode =
+          logCliHelper.dumpAContainersLogs(appIdStr, containerIdStr,
+            nodeAddress, appOwner);
     }
 
     return resultCode;
@@ -167,10 +154,10 @@ public class LogsCLI extends Configured implements Tool {
       switch (appReport.getYarnApplicationState()) {
       case NEW:
       case NEW_SAVING:
-      case ACCEPTED:
       case SUBMITTED:
-      case RUNNING:
         return -1;
+      case ACCEPTED:
+      case RUNNING:
       case FAILED:
       case FINISHED:
       case KILLED:

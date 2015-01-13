@@ -186,4 +186,23 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
         + ", Location: " + getResourceName()
         + ", Relax Locality: " + getRelaxLocality() + "}";
   }
+
+  @Override
+  public String getNodeLabelExpression() {
+    ResourceRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasNodeLabelExpression()) {
+      return null;
+    }
+    return (p.getNodeLabelExpression());
+  }
+
+  @Override
+  public void setNodeLabelExpression(String nodeLabelExpression) {
+    maybeInitBuilder();
+    if (nodeLabelExpression == null) {
+      builder.clearNodeLabelExpression();
+      return;
+    }
+    builder.setNodeLabelExpression(nodeLabelExpression);
+  }
 }

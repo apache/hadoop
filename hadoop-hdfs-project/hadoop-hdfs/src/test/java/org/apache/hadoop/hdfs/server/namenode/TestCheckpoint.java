@@ -289,8 +289,8 @@ public class TestCheckpoint {
   @Test(timeout=30000)
   public void testTooManyEditReplayFailures() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_KEY, "1");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, "1");
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_MAX_RETRIES_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 1);
 
     FSDataOutputStream fos = null;
     SecondaryNameNode secondary = null;
@@ -633,6 +633,22 @@ public class TestCheckpoint {
         });
   }
 
+  private void checkTempImages(NNStorage storage) throws IOException {
+    List<File> dirs = new ArrayList<File>();
+    dirs.add(storage.getStorageDir(0).getCurrentDir());
+    dirs.add(storage.getStorageDir(1).getCurrentDir());
+
+    for (File dir : dirs) {
+      File[] list = dir.listFiles();
+      for (File f : list) {
+        // Throw an exception if a temp image file is found.
+        if(f.getName().contains(NNStorage.NameNodeFile.IMAGE_NEW.getName())) {
+          throw new IOException("Found " + f);
+        }
+      }
+    }
+  }
+
   /**
    * Simulate 2NN failing to send the whole file (error type 3)
    * The length header in the HTTP transfer should prevent
@@ -694,6 +710,9 @@ public class TestCheckpoint {
         GenericTestUtils.assertExceptionContains(exceptionSubstring, e);
       }
       Mockito.reset(faultInjector);
+      // Make sure there is no temporary files left around.
+      checkTempImages(cluster.getNameNode().getFSImage().getStorage());
+      checkTempImages(secondary.getFSImage().getStorage());
       secondary.shutdown(); // secondary namenode crash!
       secondary = null;
 
@@ -837,7 +856,7 @@ public class TestCheckpoint {
   }
   
   /**
-   * Test that, an attempt to lock a storage that is already locked by a nodename,
+   * Test that, an attempt to lock a storage that is already locked by nodename,
    * logs error message that includes JVM name of the namenode that locked it.
    */
   @Test
@@ -853,16 +872,18 @@ public class TestCheckpoint {
         savedSd = sd;
       }
       
-      LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(LogFactory.getLog(Storage.class));
+      LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+          LogFactory.getLog(Storage.class));
       try {
         // try to lock the storage that's already locked
         savedSd.lock();
-        fail("Namenode should not be able to lock a storage that is already locked");
+        fail("Namenode should not be able to lock a storage" +
+            " that is already locked");
       } catch (IOException ioe) {
         // cannot read lock file on Windows, so message cannot get JVM name
         String lockingJvmName = Path.WINDOWS ? "" :
           " " + ManagementFactory.getRuntimeMXBean().getName();
-        String expectedLogMessage = "It appears that another namenode"
+        String expectedLogMessage = "It appears that another node "
           + lockingJvmName + " has already locked the storage directory";
         assertTrue("Log output does not contain expected log message: "
           + expectedLogMessage, logs.getOutput().contains(expectedLogMessage));

@@ -92,7 +92,10 @@ public class DFSck extends Configured implements Tool {
       + "\t-blocks\tprint out block report\n"
       + "\t-locations\tprint out locations for every block\n"
       + "\t-racks\tprint out network topology for data-node locations\n"
-      + "\t-showprogress\tshow progress in output. Default is OFF (no progress)\n\n"
+      + "\t-showprogress\tshow progress in output. Default is OFF (no progress)\n"
+      + "\t-blockId\tprint out which file this blockId belongs to, locations"
+      + " (nodes, racks) of this block, and other diagnostics info"
+      + " (under replicated, corrupted or not, etc)\n\n"
       + "Please Note:\n"
       + "\t1. By default fsck ignores files opened for write, "
       + "use -openforwrite to report such files. They are usually "
@@ -278,6 +281,15 @@ public class DFSck extends Configured implements Tool {
         doListCorruptFileBlocks = true;
       } else if (args[idx].equals("-includeSnapshots")) {
         url.append("&includeSnapshots=1");
+      } else if (args[idx].equals("-blockId")) {
+        StringBuilder sb = new StringBuilder();
+        idx++;
+        while(idx < args.length && !args[idx].startsWith("-")){
+          sb.append(args[idx]);
+          sb.append(" ");
+          idx++;
+        }
+        url.append("&blockId=").append(URLEncoder.encode(sb.toString(), "UTF-8"));
       } else if (!args[idx].startsWith("-")) {
         if (null == dir) {
           dir = args[idx];
@@ -287,6 +299,7 @@ public class DFSck extends Configured implements Tool {
           printUsage(System.err);
           return -1;
         }
+
       } else {
         System.err.println("fsck: Illegal option '" + args[idx] + "'");
         printUsage(System.err);
@@ -327,6 +340,12 @@ public class DFSck extends Configured implements Tool {
       errCode = 1;
     } else if (lastLine.endsWith(NamenodeFsck.NONEXISTENT_STATUS)) {
       errCode = 0;
+    } else if (lastLine.contains("Incorrect blockId format:")) {
+      errCode = 0;
+    } else if (lastLine.endsWith(NamenodeFsck.DECOMMISSIONED_STATUS)) {
+      errCode = 2;
+    } else if (lastLine.endsWith(NamenodeFsck.DECOMMISSIONING_STATUS)) {
+      errCode = 3;
     }
     return errCode;
   }

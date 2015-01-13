@@ -153,9 +153,22 @@ public interface FSNamesystemMBean {
   long getPendingDeletionBlocks();
 
   /**
+   * Time when block deletions will begin
+   * @return time when block deletions will begin
+   */
+  long getBlockDeletionStartTime();
+
+  /**
    * Number of content stale storages.
    * @return number of content stale storages
    */
   public int getNumStaleStorages();
 
+  /**
+   * Returns a nested JSON object listing the top users for different RPC 
+   * operations over tracked time windows.
+   * 
+   * @return JSON string
+   */
+  public String getTopUserOpCounts();
 }

@@ -57,6 +57,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class SecurityUtil {
   public static final Log LOG = LogFactory.getLog(SecurityUtil.class);
   public static final String HOSTNAME_PATTERN = "_HOST";
+  public static final String FAILED_TO_GET_UGI_MSG_HEADER = 
+      "Failed to obtain user group information:";
 
   // controls whether buildTokenService will use an ip or host/ip as given
   // by the user
@@ -618,5 +620,20 @@ public class SecurityUtil {
     }
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
              authenticationMethod.toString().toLowerCase(Locale.ENGLISH));
+  }
+
+  /*
+   * Check if a given port is privileged.
+   * The ports with number smaller than 1024 are treated as privileged ports in
+   * unix/linux system. For other operating systems, use this method with care.
+   * For example, Windows doesn't have the concept of privileged ports.
+   * However, it may be used at Windows client to check port of linux server.
+   * 
+   * @param port the port number
+   * @return true for privileged ports, false otherwise
+   * 
+   */
+  public static boolean isPrivilegedPort(final int port) {
+    return port < 1024;
   }
 }

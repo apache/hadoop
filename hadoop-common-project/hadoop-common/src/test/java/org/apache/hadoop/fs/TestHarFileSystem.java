@@ -125,6 +125,7 @@ public class TestHarFileSystem {
     public Iterator<LocatedFileStatus> listLocatedStatus(Path f);
     public Iterator<LocatedFileStatus> listLocatedStatus(Path f,
         PathFilter filter);
+    public Iterator<FileStatus> listStatusIterator(Path f);
     public void copyFromLocalFile(Path src, Path dst);
     public void moveFromLocalFile(Path[] srcs, Path dst);
     public void moveFromLocalFile(Path src, Path dst);

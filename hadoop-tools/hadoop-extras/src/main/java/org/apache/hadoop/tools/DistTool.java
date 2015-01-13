@@ -23,6 +23,7 @@ import java.io.DataOutput;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -96,14 +97,11 @@ abstract class DistTool implements org.apache.hadoop.util.Tool {
       ) throws IOException {
     List<String> result = new ArrayList<String>();
     FileSystem fs = inputfile.getFileSystem(conf);
-    BufferedReader input = null;
-    try {
-      input = new BufferedReader(new InputStreamReader(fs.open(inputfile)));
+    try (BufferedReader input = new BufferedReader(new InputStreamReader(fs.open(inputfile),
+            Charset.forName("UTF-8")))) {
       for(String line; (line = input.readLine()) != null;) {
         result.add(line);
       }
-    } finally {
-      input.close();
     }
     return result;
   }

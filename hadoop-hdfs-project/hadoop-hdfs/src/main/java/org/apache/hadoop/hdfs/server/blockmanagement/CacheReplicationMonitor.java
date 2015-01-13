@@ -166,17 +166,16 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
         try {
           while (true) {
             if (shutdown) {
-              LOG.info("Shutting down CacheReplicationMonitor");
+              LOG.debug("Shutting down CacheReplicationMonitor");
               return;
             }
             if (completedScanCount < neededScanCount) {
-              LOG.info("Rescanning because of pending operations");
+              LOG.debug("Rescanning because of pending operations");
               break;
             }
             long delta = (startTimeMs + intervalMs) - curTimeMs;
             if (delta <= 0) {
-              LOG.info("Rescanning after " + (curTimeMs - startTimeMs) +
-                  " milliseconds");
+              LOG.debug("Rescanning after {} milliseconds", (curTimeMs - startTimeMs));
               break;
             }
             doRescan.await(delta, TimeUnit.MILLISECONDS);
@@ -198,9 +197,8 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
         } finally {
           lock.unlock();
         }
-        LOG.info("Scanned " + scannedDirectives + " directive(s) and " +
-            scannedBlocks + " block(s) in " + (curTimeMs - startTimeMs) + " " +
-            "millisecond(s).");
+        LOG.debug("Scanned {} directive(s) and {} block(s) in {} millisecond(s).",
+            scannedDirectives, scannedBlocks, (curTimeMs - startTimeMs));
       }
     } catch (InterruptedException e) {
       LOG.info("Shutting down CacheReplicationMonitor.");

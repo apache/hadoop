@@ -443,7 +443,11 @@ public class TestDFSPermission {
       fs.access(p1, FsAction.WRITE);
       fail("The access call should have failed.");
     } catch (AccessControlException e) {
-      // expected
+      assertTrue("Permission denied messages must carry the username",
+              e.getMessage().contains(USER1_NAME));
+      assertTrue("Permission denied messages must carry the path parent",
+              e.getMessage().contains(
+                  p1.getParent().toUri().getPath()));
     }
 
     Path badPath = new Path("/bad/bad");
@@ -473,7 +477,11 @@ public class TestDFSPermission {
       fs.access(p2, FsAction.EXECUTE);
       fail("The access call should have failed.");
     } catch (AccessControlException e) {
-      // expected
+      assertTrue("Permission denied messages must carry the username",
+              e.getMessage().contains(USER1_NAME));
+      assertTrue("Permission denied messages must carry the path parent",
+              e.getMessage().contains(
+                  p2.getParent().toUri().getPath()));
     }
   }
 
@@ -494,7 +502,11 @@ public class TestDFSPermission {
       fs.access(p3, FsAction.READ_WRITE);
       fail("The access call should have failed.");
     } catch (AccessControlException e) {
-      // expected
+      assertTrue("Permission denied messages must carry the username",
+              e.getMessage().contains(USER1_NAME));
+      assertTrue("Permission denied messages must carry the path parent",
+              e.getMessage().contains(
+                  p3.getParent().toUri().getPath()));
     }
   }
 

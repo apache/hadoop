@@ -65,8 +65,8 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
    * @param progNumber program number as defined in RFC 1050
    * @param lowProgVersion lowest version of the specification supported
    * @param highProgVersion highest version of the specification supported
-   * @param DatagramSocket registrationSocket if not null, use this socket to
-   *        register with portmap daemon
+   * @param registrationSocket if not null, use this socket to register
+   *        with portmap daemon
    * @param allowInsecurePorts true to allow client connections from
    *        unprivileged ports, false otherwise
    */
@@ -136,8 +136,9 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
     }
   }
 
-  // Start extra daemons
+  // Start extra daemons or services
   public void startDaemons() {}
+  public void stopDaemons() {}
   
   @Override
   public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)

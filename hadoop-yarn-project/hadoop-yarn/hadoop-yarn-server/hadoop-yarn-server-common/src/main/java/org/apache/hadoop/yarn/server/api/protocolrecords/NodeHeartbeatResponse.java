@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
+import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -58,4 +60,11 @@ public interface NodeHeartbeatResponse {
   String getDiagnosticsMessage();
 
   void setDiagnosticsMessage(String diagnosticsMessage);
+
+  // Credentials (i.e. hdfs tokens) needed by NodeManagers for application
+  // localizations and logAggreations.
+  Map<ApplicationId, ByteBuffer> getSystemCredentialsForApps();
+
+  void setSystemCredentialsForApps(
+      Map<ApplicationId, ByteBuffer> systemCredentials);
 }

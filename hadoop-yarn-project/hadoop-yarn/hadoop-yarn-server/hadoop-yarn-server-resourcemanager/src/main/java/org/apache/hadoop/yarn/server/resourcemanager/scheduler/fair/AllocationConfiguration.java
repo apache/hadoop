@@ -27,12 +27,13 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 
-public class AllocationConfiguration {
+public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   private static final AccessControlList EVERYBODY_ACL = new AccessControlList("*");
   private static final AccessControlList NOBODY_ACL = new AccessControlList(" ");
   
@@ -76,6 +77,8 @@ public class AllocationConfiguration {
   // preempt other queues' tasks.
   private final Map<String, Float> fairSharePreemptionThresholds;
 
+  private final Set<String> reservableQueues;
+
   private final Map<String, SchedulingPolicy> schedulingPolicies;
   
   private final SchedulingPolicy defaultSchedulingPolicy;
@@ -87,7 +90,10 @@ public class AllocationConfiguration {
   //Configured queues in the alloc xml
   @VisibleForTesting
   Map<FSQueueType, Set<String>> configuredQueues;
-  
+
+  // Reservation system configuration
+  private ReservationQueueConfiguration globalReservationQueueConfig;
+
   public AllocationConfiguration(Map<String, Resource> minQueueResources,
       Map<String, Resource> maxQueueResources,
       Map<String, Integer> queueMaxApps, Map<String, Integer> userMaxApps,
@@ -101,7 +107,9 @@ public class AllocationConfiguration {
       Map<String, Float> fairSharePreemptionThresholds,
       Map<String, Map<QueueACL, AccessControlList>> queueAcls,
       QueuePlacementPolicy placementPolicy,
-      Map<FSQueueType, Set<String>> configuredQueues) {
+      Map<FSQueueType, Set<String>> configuredQueues,
+      ReservationQueueConfiguration globalReservationQueueConfig,
+      Set<String> reservableQueues) {
     this.minQueueResources = minQueueResources;
     this.maxQueueResources = maxQueueResources;
     this.queueMaxApps = queueMaxApps;
@@ -117,6 +125,8 @@ public class AllocationConfiguration {
     this.fairSharePreemptionTimeouts = fairSharePreemptionTimeouts;
     this.fairSharePreemptionThresholds = fairSharePreemptionThresholds;
     this.queueAcls = queueAcls;
+    this.reservableQueues = reservableQueues;
+    this.globalReservationQueueConfig = globalReservationQueueConfig;
     this.placementPolicy = placementPolicy;
     this.configuredQueues = configuredQueues;
   }
@@ -137,6 +147,7 @@ public class AllocationConfiguration {
     fairSharePreemptionThresholds = new HashMap<String, Float>();
     schedulingPolicies = new HashMap<String, SchedulingPolicy>();
     defaultSchedulingPolicy = SchedulingPolicy.DEFAULT_POLICY;
+    reservableQueues = new HashSet<>();
     configuredQueues = new HashMap<FSQueueType, Set<String>>();
     for (FSQueueType queueType : FSQueueType.values()) {
       configuredQueues.put(queueType, new HashSet<String>());
@@ -195,6 +206,10 @@ public class AllocationConfiguration {
   public ResourceWeights getQueueWeight(String queue) {
     ResourceWeights weight = queueWeights.get(queue);
     return (weight == null) ? ResourceWeights.NEUTRAL : weight;
+  }
+
+  public void setQueueWeight(String queue, ResourceWeights weight) {
+    queueWeights.put(queue, weight);
   }
   
   public int getUserMaxApps(String user) {
@@ -261,5 +276,65 @@ public class AllocationConfiguration {
   
   public QueuePlacementPolicy getPlacementPolicy() {
     return placementPolicy;
+  }
+
+  @Override
+  public boolean isReservable(String queue) {
+    return reservableQueues.contains(queue);
+  }
+
+  @Override
+  public long getReservationWindow(String queue) {
+    return globalReservationQueueConfig.getReservationWindowMsec();
+  }
+
+  @Override
+  public float getAverageCapacity(String queue) {
+    return globalReservationQueueConfig.getAvgOverTimeMultiplier() * 100;
+  }
+
+  @Override
+  public float getInstantaneousMaxCapacity(String queue) {
+    return globalReservationQueueConfig.getMaxOverTimeMultiplier() * 100;
+  }
+
+  @Override
+  public String getReservationAdmissionPolicy(String queue) {
+    return globalReservationQueueConfig.getReservationAdmissionPolicy();
+  }
+
+  @Override
+  public String getReservationAgent(String queue) {
+    return globalReservationQueueConfig.getReservationAgent();
+  }
+
+  @Override
+  public boolean getShowReservationAsQueues(String queue) {
+    return globalReservationQueueConfig.shouldShowReservationAsQueues();
+  }
+
+  @Override
+  public String getReplanner(String queue) {
+    return globalReservationQueueConfig.getPlanner();
+  }
+
+  @Override
+  public boolean getMoveOnExpiry(String queue) {
+    return globalReservationQueueConfig.shouldMoveOnExpiry();
+  }
+
+  @Override
+  public long getEnforcementWindow(String queue) {
+    return globalReservationQueueConfig.getEnforcementWindowMsec();
+  }
+
+  @VisibleForTesting
+  public void setReservationWindow(long window) {
+    globalReservationQueueConfig.setReservationWindow(window);
+  }
+
+  @VisibleForTesting
+  public void setAverageCapacity(int avgCapacity) {
+    globalReservationQueueConfig.setAverageCapacity(avgCapacity);
   }
 }

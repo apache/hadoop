@@ -22,180 +22,83 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.HadoopKerberosName;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.YARNDelegationTokenIdentifierProto;
 
+@Private
 public abstract class YARNDelegationTokenIdentifier extends
     AbstractDelegationTokenIdentifier {
-  
-  YARNDelegationTokenIdentifierProto.Builder builder = 
+
+  YARNDelegationTokenIdentifierProto.Builder builder =
       YARNDelegationTokenIdentifierProto.newBuilder();
 
-  public YARNDelegationTokenIdentifier() {}
+  public YARNDelegationTokenIdentifier() {
+  }
 
   public YARNDelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {
-    if (owner != null) {
-      builder.setOwner(owner.toString());
-    }
-    
-    if (renewer != null) {
-      HadoopKerberosName renewerKrbName = new HadoopKerberosName(renewer.toString());
-      try {
-        builder.setRenewer(renewerKrbName.getShortName());
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    
-    if (realUser != null) {
-      builder.setRealUser(realUser.toString());
-    }
-  }
-  
-  /**
-   * Get the username encoded in the token identifier
-   * 
-   * @return the username or owner
-   */
-  @Override
-  public UserGroupInformation getUser() {
-    String owner = getOwner() == null ? null : getOwner().toString();
-    String realUser = getRealUser() == null ? null: getRealUser().toString();
-    if ( (owner == null) || (owner.toString().isEmpty())) {
-      return null;
-    }
-    final UserGroupInformation realUgi;
-    final UserGroupInformation ugi;
-    if ((realUser == null) || (realUser.toString().isEmpty())
-        || realUser.equals(owner)) {
-      ugi = realUgi = UserGroupInformation.createRemoteUser(owner.toString());
-    } else {
-      realUgi = UserGroupInformation.createRemoteUser(realUser.toString());
-      ugi = UserGroupInformation.createProxyUser(owner.toString(), realUgi);
-    }
-    realUgi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
-    return ugi;
+    super(owner, renewer, realUser);
   }
 
-  public Text getOwner() {
-    String owner = builder.getOwner();
-    if (owner == null) {
-      return null;
-    } else {
-      return new Text(owner);
-    }
-  }
-
-  public Text getRenewer() {
-    String renewer = builder.getRenewer();
-    if (renewer == null) {
-      return null;
-    } else {
-      return new Text(renewer);
-    }
-  }
-  
-  public Text getRealUser() {
-    String realUser = builder.getRealUser();
-    if (realUser == null) {
-      return null;
-    } else {
-      return new Text(realUser);
-    }
-  }
-  
-  public void setIssueDate(long issueDate) {
-    builder.setIssueDate(issueDate);
-  }
-  
-  public long getIssueDate() {
-    return builder.getIssueDate();
-  }
-  
-  
-  public void setRenewDate(long renewDate) {
-    builder.setRenewDate(renewDate);
-  }
-  
-  public long getRenewDate() {
-    return builder.getRenewDate();
-  }
-  
-  public void setMaxDate(long maxDate) {
-    builder.setMaxDate(maxDate);
-  }
-  
-  public long getMaxDate() {
-    return builder.getMaxDate();
-  }
-
-  public void setSequenceNumber(int seqNum) {
-    builder.setSequenceNumber(seqNum);
-  }
-  
-  public int getSequenceNumber() {
-    return builder.getSequenceNumber();
-  }
-
-  public void setMasterKeyId(int newId) {
-    builder.setMasterKeyId(newId);
-  }
-
-  public int getMasterKeyId() {
-    return builder.getMasterKeyId();
-  }
-  
-  protected static boolean isEqual(Object a, Object b) {
-    return a == null ? b == null : a.equals(b);
-  }
-  
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == this) {
-      return true;
-    }
-    if (obj instanceof YARNDelegationTokenIdentifier) {
-      YARNDelegationTokenIdentifier that = (YARNDelegationTokenIdentifier) obj;
-      return this.getSequenceNumber() == that.getSequenceNumber() 
-          && this.getIssueDate() == that.getIssueDate() 
-          && this.getMaxDate() == that.getMaxDate()
-          && this.getMasterKeyId() == that.getMasterKeyId()
-          && isEqual(this.getOwner(), that.getOwner()) 
-          && isEqual(this.getRenewer(), that.getRenewer())
-          && isEqual(this.getRealUser(), that.getRealUser());
-    }
-    return false;
+  public YARNDelegationTokenIdentifier(
+      YARNDelegationTokenIdentifierProto.Builder builder) {
+    this.builder = builder;
   }
 
   @Override
-  public int hashCode() {
-    return this.getSequenceNumber();
-  }
-  
-  @Override
-  public void readFields(DataInput in) throws IOException {
+  public synchronized void readFields(DataInput in) throws IOException {
     builder.mergeFrom((DataInputStream) in);
-  }
-  
-  @Override
-  public void write(DataOutput out) throws IOException {
-    builder.build().writeTo((DataOutputStream)out);
-  }
-  
-  @Override
-  public String toString() {
-    StringBuilder buffer = new StringBuilder();
-    buffer
-        .append("owner=" + getOwner() + ", renewer=" + getRenewer() + ", realUser="
-            + getRealUser() + ", issueDate=" + getIssueDate() 
-            + ", maxDate=" + getMaxDate() + ", sequenceNumber=" 
-            + getSequenceNumber() + ", masterKeyId="
-            + getMasterKeyId());
-    return buffer.toString();
+    if (builder.getOwner() != null) {
+      setOwner(new Text(builder.getOwner()));
+    }
+    if (builder.getRenewer() != null) {
+      setRenewer(new Text(builder.getRenewer()));
+    }
+    if (builder.getRealUser() != null) {
+      setRealUser(new Text(builder.getRealUser()));
+    }
+    setIssueDate(builder.getIssueDate());
+    setMaxDate(builder.getMaxDate());
+    setSequenceNumber(builder.getSequenceNumber());
+    setMasterKeyId(builder.getMasterKeyId());
   }
 
+  private void setBuilderFields() {
+    if (builder.getOwner() != null &&
+        !builder.getOwner().equals(getOwner().toString())) {
+      builder.setOwner(getOwner().toString());
+    }
+    if (builder.getRenewer() != null &&
+        !builder.getRenewer().equals(getRenewer().toString())) { 
+      builder.setRenewer(getRenewer().toString());
+    }
+    if (builder.getRealUser() != null &&
+        !builder.getRealUser().equals(getRealUser().toString())) {
+      builder.setRealUser(getRealUser().toString());
+    }
+    if (builder.getIssueDate() != getIssueDate()) {
+      builder.setIssueDate(getIssueDate());
+    }
+    if (builder.getMaxDate() != getMaxDate()) {
+      builder.setMaxDate(getMaxDate());
+    }
+    if (builder.getSequenceNumber() != getSequenceNumber()) {
+      builder.setSequenceNumber(getSequenceNumber());
+    }
+    if (builder.getMasterKeyId() != getMasterKeyId()) {
+      builder.setMasterKeyId(getMasterKeyId());
+    }
+  }
+
+  @Override
+  public synchronized void write(DataOutput out) throws IOException {
+    setBuilderFields();
+    builder.build().writeTo((DataOutputStream) out);
+  }
+
+  public YARNDelegationTokenIdentifierProto getProto() {
+    setBuilderFields();
+    return builder.build();
+  }
 }

@@ -668,7 +668,7 @@ public class Client {
               String msg = "Couldn't setup connection for "
                   + UserGroupInformation.getLoginUser().getUserName() + " to "
                   + remoteId;
-              LOG.warn(msg);
+              LOG.warn(msg, ex);
               throw (IOException) new IOException(msg).initCause(ex);
             }
           } else {

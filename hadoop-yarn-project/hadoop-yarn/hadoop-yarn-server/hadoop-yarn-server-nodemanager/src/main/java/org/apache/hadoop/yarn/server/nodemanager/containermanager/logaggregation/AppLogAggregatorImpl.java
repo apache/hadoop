@@ -20,6 +20,10 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregatio
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,19 +37,26 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogWriter;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -65,6 +76,23 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private static final Log LOG = LogFactory
       .getLog(AppLogAggregatorImpl.class);
   private static final int THREAD_SLEEP_TIME = 1000;
+  // This is temporary solution. The configuration will be deleted once
+  // we find a more scalable method to only write a single log file per LRS.
+  private static final String NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP
+      = YarnConfiguration.NM_PREFIX + "log-aggregation.num-log-files-per-app";
+  private static final int
+      DEFAULT_NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP = 30;
+  
+  // This configuration is for debug and test purpose. By setting
+  // this configuration as true. We can break the lower bound of
+  // NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS.
+  private static final String NM_LOG_AGGREGATION_DEBUG_ENABLED
+      = YarnConfiguration.NM_PREFIX + "log-aggregation.debug-enabled";
+  private static final boolean
+      DEFAULT_NM_LOG_AGGREGATION_DEBUG_ENABLED = false;
+
+  private static final long
+      NM_LOG_AGGREGATION_MIN_ROLL_MONITORING_INTERVAL_SECONDS = 3600;
 
   private final LocalDirsHandlerService dirsHandler;
   private final Dispatcher dispatcher;
@@ -83,20 +111,24 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final AtomicBoolean appAggregationFinished = new AtomicBoolean();
   private final AtomicBoolean aborted = new AtomicBoolean();
   private final Map<ApplicationAccessType, String> appAcls;
+  private final FileContext lfs;
   private final LogAggregationContext logAggregationContext;
   private final Context context;
+  private final int retentionSize;
+  private final long rollingMonitorInterval;
+  private final NodeId nodeId;
 
   private final Map<ContainerId, ContainerLogAggregator> containerLogAggregators =
       new HashMap<ContainerId, ContainerLogAggregator>();
 
   public AppLogAggregatorImpl(Dispatcher dispatcher,
       DeletionService deletionService, Configuration conf,
-      ApplicationId appId, UserGroupInformation userUgi,
+      ApplicationId appId, UserGroupInformation userUgi, NodeId nodeId,
       LocalDirsHandlerService dirsHandler, Path remoteNodeLogFileForApp,
       ContainerLogsRetentionPolicy retentionPolicy,
       Map<ApplicationAccessType, String> appAcls,
-      LogAggregationContext logAggregationContext,
-      Context context) {
+      LogAggregationContext logAggregationContext, Context context,
+      FileContext lfs) {
     this.dispatcher = dispatcher;
     this.conf = conf;
     this.delService = deletionService;
@@ -109,13 +141,75 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.retentionPolicy = retentionPolicy;
     this.pendingContainers = new LinkedBlockingQueue<ContainerId>();
     this.appAcls = appAcls;
+    this.lfs = lfs;
     this.logAggregationContext = logAggregationContext;
     this.context = context;
+    this.nodeId = nodeId;
+    int configuredRentionSize =
+        conf.getInt(NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP,
+            DEFAULT_NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP);
+    if (configuredRentionSize <= 0) {
+      this.retentionSize =
+          DEFAULT_NM_LOG_AGGREGATION_NUM_LOG_FILES_SIZE_PER_APP;
+    } else {
+      this.retentionSize = configuredRentionSize;
+    }
+    long configuredRollingMonitorInterval = conf.getLong(
+      YarnConfiguration
+        .NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS,
+      YarnConfiguration
+        .DEFAULT_NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS);
+    boolean debug_mode =
+        conf.getBoolean(NM_LOG_AGGREGATION_DEBUG_ENABLED,
+          DEFAULT_NM_LOG_AGGREGATION_DEBUG_ENABLED);
+    if (configuredRollingMonitorInterval > 0
+        && configuredRollingMonitorInterval <
+          NM_LOG_AGGREGATION_MIN_ROLL_MONITORING_INTERVAL_SECONDS) {
+      if (debug_mode) {
+        this.rollingMonitorInterval = configuredRollingMonitorInterval;
+      } else {
+        LOG.warn(
+            "rollingMonitorIntervall should be more than or equal to "
+            + NM_LOG_AGGREGATION_MIN_ROLL_MONITORING_INTERVAL_SECONDS
+            + " seconds. Using "
+            + NM_LOG_AGGREGATION_MIN_ROLL_MONITORING_INTERVAL_SECONDS
+            + " seconds instead.");
+        this.rollingMonitorInterval =
+            NM_LOG_AGGREGATION_MIN_ROLL_MONITORING_INTERVAL_SECONDS;
+      }
+    } else {
+      if (configuredRollingMonitorInterval <= 0) {
+        LOG.warn("rollingMonitorInterval is set as "
+            + configuredRollingMonitorInterval + ". "
+            + "The log rolling mornitoring interval is disabled. "
+            + "The logs will be aggregated after this application is finished.");
+      } else {
+        LOG.warn("rollingMonitorInterval is set as "
+            + configuredRollingMonitorInterval + ". "
+            + "The logs will be aggregated every "
+            + configuredRollingMonitorInterval + " seconds");
+      }
+      this.rollingMonitorInterval = configuredRollingMonitorInterval;
+    }
   }
 
   private void uploadLogsForContainers() {
     if (this.logAggregationDisabled) {
       return;
+    }
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      Credentials systemCredentials =
+          context.getSystemCredentialsForApps().get(appId);
+      if (systemCredentials != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Adding new framework-token for " + appId
+              + " for log-aggregation: " + systemCredentials.getAllTokens()
+              + "; userUgi=" + userUgi);
+        }
+        // this will replace old token
+        userUgi.addCredentials(systemCredentials);
+      }
     }
 
     // Create a set of Containers whose logs will be uploaded in this cycle.
@@ -181,12 +275,17 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         }
       }
 
+      // Before upload logs, make sure the number of existing logs
+      // is smaller than the configured NM log aggregation retention size.
+      if (uploadedLogsInThisCycle) {
+        cleanOldLogs();
+      }
+
       if (writer != null) {
         writer.close();
       }
 
-      final Path renamedPath = logAggregationContext == null ||
-          logAggregationContext.getRollingIntervalSeconds() <= 0
+      final Path renamedPath = this.rollingMonitorInterval <= 0
               ? remoteNodeLogFileForApp : new Path(
                 remoteNodeLogFileForApp.getParent(),
                 remoteNodeLogFileForApp.getName() + "_"
@@ -198,9 +297,12 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           @Override
           public Object run() throws Exception {
             FileSystem remoteFS = FileSystem.get(conf);
-            if (remoteFS.exists(remoteNodeTmpLogFileForApp)
-                && rename) {
-              remoteFS.rename(remoteNodeTmpLogFileForApp, renamedPath);
+            if (remoteFS.exists(remoteNodeTmpLogFileForApp)) {
+              if (rename) {
+                remoteFS.rename(remoteNodeTmpLogFileForApp, renamedPath);
+              } else {
+                remoteFS.delete(remoteNodeTmpLogFileForApp, false);
+              }
             }
             return null;
           }
@@ -215,6 +317,60 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       if (writer != null) {
         writer.close();
       }
+    }
+  }
+
+  private void cleanOldLogs() {
+    try {
+      final FileSystem remoteFS =
+          this.remoteNodeLogFileForApp.getFileSystem(conf);
+      Path appDir =
+          this.remoteNodeLogFileForApp.getParent().makeQualified(
+            remoteFS.getUri(), remoteFS.getWorkingDirectory());
+      Set<FileStatus> status =
+          new HashSet<FileStatus>(Arrays.asList(remoteFS.listStatus(appDir)));
+
+      Iterable<FileStatus> mask =
+          Iterables.filter(status, new Predicate<FileStatus>() {
+            @Override
+            public boolean apply(FileStatus next) {
+              return next.getPath().getName()
+                .contains(LogAggregationUtils.getNodeString(nodeId))
+                && !next.getPath().getName().endsWith(
+                    LogAggregationUtils.TMP_FILE_SUFFIX);
+            }
+          });
+      status = Sets.newHashSet(mask);
+      // Normally, we just need to delete one oldest log
+      // before we upload a new log.
+      // If we can not delete the older logs in this cycle,
+      // we will delete them in next cycle.
+      if (status.size() >= this.retentionSize) {
+        // sort by the lastModificationTime ascending
+        List<FileStatus> statusList = new ArrayList<FileStatus>(status);
+        Collections.sort(statusList, new Comparator<FileStatus>() {
+          public int compare(FileStatus s1, FileStatus s2) {
+            return s1.getModificationTime() < s2.getModificationTime() ? -1
+                : s1.getModificationTime() > s2.getModificationTime() ? 1 : 0;
+          }
+        });
+        for (int i = 0 ; i <= statusList.size() - this.retentionSize; i++) {
+          final FileStatus remove = statusList.get(i);
+          try {
+            userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+              @Override
+              public Object run() throws Exception {
+                remoteFS.delete(remove.getPath(), false);
+                return null;
+              }
+            });
+          } catch (Exception e) {
+            LOG.error("Failed to delete " + remove.getPath(), e);
+          }
+        }
+      }
+    } catch (Exception e) {
+      LOG.error("Failed to clean old logs", e);
     }
   }
 
@@ -235,9 +391,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     while (!this.appFinishing.get() && !this.aborted.get()) {
       synchronized(this) {
         try {
-          if (this.logAggregationContext != null && this.logAggregationContext
-              .getRollingIntervalSeconds() > 0) {
-            wait(this.logAggregationContext.getRollingIntervalSeconds() * 1000);
+          if (this.rollingMonitorInterval > 0) {
+            wait(this.rollingMonitorInterval * 1000);
             if (this.appFinishing.get() || this.aborted.get()) {
               break;
             }
@@ -260,15 +415,25 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     uploadLogsForContainers();
 
     // Remove the local app-log-dirs
-    List<String> rootLogDirs = dirsHandler.getLogDirs();
-    Path[] localAppLogDirs = new Path[rootLogDirs.size()];
-    int index = 0;
-    for (String rootLogDir : rootLogDirs) {
-      localAppLogDirs[index] = new Path(rootLogDir, this.applicationId);
-      index++;
+    List<Path> localAppLogDirs = new ArrayList<Path>();
+    for (String rootLogDir : dirsHandler.getLogDirsForCleanup()) {
+      Path logPath = new Path(rootLogDir, applicationId);
+      try {
+        // check if log dir exists
+        lfs.getFileStatus(logPath);
+        localAppLogDirs.add(logPath);
+      } catch (UnsupportedFileSystemException ue) {
+        LOG.warn("Log dir " + rootLogDir + "is an unsupported file system", ue);
+        continue;
+      } catch (IOException fe) {
+        continue;
+      }
     }
-    this.delService.delete(this.userUgi.getShortUserName(), null,
-        localAppLogDirs);
+
+    if (localAppLogDirs.size() > 0) {
+      this.delService.delete(this.userUgi.getShortUserName(), null,
+        localAppLogDirs.toArray(new Path[localAppLogDirs.size()]));
+    }
     
     this.dispatcher.getEventHandler().handle(
         new ApplicationEvent(this.appId,
@@ -295,7 +460,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     // AM Container only
     if (this.retentionPolicy
         .equals(ContainerLogsRetentionPolicy.APPLICATION_MASTER_ONLY)) {
-      if (containerId.getId() == 1) {
+      if ((containerId.getContainerId()
+          & ContainerId.CONTAINER_ID_BITMASK)== 1) {
         return true;
       }
       return false;
@@ -304,7 +470,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     // AM + Failing containers
     if (this.retentionPolicy
         .equals(ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY)) {
-      if (containerId.getId() == 1) {
+      if ((containerId.getContainerId()
+          & ContainerId.CONTAINER_ID_BITMASK) == 1) {
         return true;
       } else if(!wasContainerSuccessful) {
         return true;
@@ -385,5 +552,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       this.uploadedFileMeta = Sets.newHashSet(mask);
       return logValue.getCurrentUpLoadedFilesPath();
     }
+  }
+
+  // only for test
+  @VisibleForTesting
+  public UserGroupInformation getUgi() {
+    return this.userUgi;
   }
 }

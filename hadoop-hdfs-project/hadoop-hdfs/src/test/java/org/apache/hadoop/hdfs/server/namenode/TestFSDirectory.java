@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -201,8 +200,9 @@ public class TestFSDirectory {
     List<XAttr> newXAttrs = Lists.newArrayListWithCapacity(2);
     newXAttrs.add(newSystemXAttr);
     newXAttrs.add(newRawXAttr);
-    List<XAttr> xAttrs = fsdir.setINodeXAttrs(existingXAttrs, newXAttrs,
-        EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+    List<XAttr> xAttrs = FSDirXAttrOp.setINodeXAttrs(fsdir, existingXAttrs,
+                                                     newXAttrs, EnumSet.of(
+            XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
     assertEquals(xAttrs.size(), 4);
     
     // Adding a trusted namespace xAttr, is affected by inode xAttrs limit.
@@ -211,8 +211,9 @@ public class TestFSDirectory {
         setValue(new byte[]{0x34, 0x34, 0x34}).build();
     newXAttrs.set(0, newXAttr1);
     try {
-      fsdir.setINodeXAttrs(existingXAttrs, newXAttrs,
-          EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+      FSDirXAttrOp.setINodeXAttrs(fsdir, existingXAttrs, newXAttrs,
+                                  EnumSet.of(XAttrSetFlag.CREATE,
+                                             XAttrSetFlag.REPLACE));
       fail("Setting user visible xattr on inode should fail if " +
           "reaching limit.");
     } catch (IOException e) {
@@ -275,8 +276,9 @@ public class TestFSDirectory {
       for (int i = 0; i < toAdd.size(); i++) {
         LOG.info("Will add XAttr " + toAdd.get(i));
       }
-      List<XAttr> newXAttrs = fsdir.setINodeXAttrs(existingXAttrs, toAdd,
-          EnumSet.of(XAttrSetFlag.CREATE));
+      List<XAttr> newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsdir, existingXAttrs,
+                                                          toAdd, EnumSet.of(
+              XAttrSetFlag.CREATE));
       verifyXAttrsPresent(newXAttrs, numExpectedXAttrs);
       existingXAttrs = newXAttrs;
     }
@@ -296,8 +298,9 @@ public class TestFSDirectory {
       final int expectedNumToRemove = toRemove.size();
       LOG.info("Attempting to remove " + expectedNumToRemove + " XAttrs");
       List<XAttr> removedXAttrs = Lists.newArrayList();
-      List<XAttr> newXAttrs = fsdir.filterINodeXAttrs(existingXAttrs,
-          toRemove, removedXAttrs);
+      List<XAttr> newXAttrs = FSDirXAttrOp.filterINodeXAttrs(existingXAttrs,
+                                                             toRemove,
+                                                             removedXAttrs);
       assertEquals("Unexpected number of removed XAttrs",
           expectedNumToRemove, removedXAttrs.size());
       verifyXAttrsPresent(newXAttrs, numExpectedXAttrs);
@@ -316,8 +319,8 @@ public class TestFSDirectory {
     toAdd.add(generatedXAttrs.get(2));
     toAdd.add(generatedXAttrs.get(0));
     try {
-      fsdir.setINodeXAttrs(existingXAttrs, toAdd, EnumSet.of(XAttrSetFlag
-          .CREATE));
+      FSDirXAttrOp.setINodeXAttrs(fsdir, existingXAttrs, toAdd,
+                                  EnumSet.of(XAttrSetFlag.CREATE));
       fail("Specified the same xattr to be set twice");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Cannot specify the same " +
@@ -328,15 +331,15 @@ public class TestFSDirectory {
     toAdd.remove(generatedXAttrs.get(0));
     existingXAttrs.add(generatedXAttrs.get(0));
     try {
-      fsdir.setINodeXAttrs(existingXAttrs, toAdd, EnumSet.of(XAttrSetFlag
-          .CREATE));
+      FSDirXAttrOp.setINodeXAttrs(fsdir, existingXAttrs, toAdd,
+                                  EnumSet.of(XAttrSetFlag.CREATE));
       fail("Set XAttr that is already set without REPLACE flag");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("already exists", e);
     }
     try {
-      fsdir.setINodeXAttrs(existingXAttrs, toAdd, EnumSet.of(XAttrSetFlag
-          .REPLACE));
+      FSDirXAttrOp.setINodeXAttrs(fsdir, existingXAttrs, toAdd,
+                                  EnumSet.of(XAttrSetFlag.REPLACE));
       fail("Set XAttr that does not exist without the CREATE flag");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("does not exist", e);
@@ -344,8 +347,9 @@ public class TestFSDirectory {
 
     // Sanity test for CREATE
     toAdd.remove(generatedXAttrs.get(0));
-    List<XAttr> newXAttrs = fsdir.setINodeXAttrs(existingXAttrs, toAdd,
-        EnumSet.of(XAttrSetFlag.CREATE));
+    List<XAttr> newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsdir, existingXAttrs,
+                                                        toAdd, EnumSet.of(
+            XAttrSetFlag.CREATE));
     assertEquals("Unexpected toAdd size", 2, toAdd.size());
     for (XAttr x : toAdd) {
       assertTrue("Did not find added XAttr " + x, newXAttrs.contains(x));
@@ -362,8 +366,8 @@ public class TestFSDirectory {
           .build();
       toAdd.add(xAttr);
     }
-    newXAttrs = fsdir.setINodeXAttrs(existingXAttrs, toAdd,
-        EnumSet.of(XAttrSetFlag.REPLACE));
+    newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsdir, existingXAttrs, toAdd,
+                                            EnumSet.of(XAttrSetFlag.REPLACE));
     assertEquals("Unexpected number of new XAttrs", 3, newXAttrs.size());
     for (int i=0; i<3; i++) {
       assertArrayEquals("Unexpected XAttr value",
@@ -376,8 +380,9 @@ public class TestFSDirectory {
     for (int i=0; i<4; i++) {
       toAdd.add(generatedXAttrs.get(i));
     }
-    newXAttrs = fsdir.setINodeXAttrs(existingXAttrs, toAdd,
-        EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+    newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsdir, existingXAttrs, toAdd,
+                                            EnumSet.of(XAttrSetFlag.CREATE,
+                                                       XAttrSetFlag.REPLACE));
     verifyXAttrsPresent(newXAttrs, 4);
   }
 }

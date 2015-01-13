@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,10 +34,13 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import com.google.common.collect.ImmutableSet;
 
 
 /**
@@ -61,8 +65,11 @@ public abstract class SchedulerNode {
 
   private final RMNode rmNode;
   private final String nodeName;
-
-  public SchedulerNode(RMNode node, boolean usePortForNodeName) {
+  
+  private volatile Set<String> labels = null;
+  
+  public SchedulerNode(RMNode node, boolean usePortForNodeName,
+      Set<String> labels) {
     this.rmNode = node;
     this.availableResource = Resources.clone(node.getTotalCapability());
     this.totalResourceCapability = Resources.clone(node.getTotalCapability());
@@ -71,6 +78,11 @@ public abstract class SchedulerNode {
     } else {
       nodeName = rmNode.getHostName();
     }
+    this.labels = ImmutableSet.copyOf(labels);
+  }
+
+  public SchedulerNode(RMNode node, boolean usePortForNodeName) {
+    this(node, usePortForNodeName, CommonNodeLabelsManager.EMPTY_STRING_SET);
   }
 
   public RMNode getRMNode() {
@@ -242,9 +254,8 @@ public abstract class SchedulerNode {
   @Override
   public String toString() {
     return "host: " + rmNode.getNodeAddress() + " #containers="
-        + getNumContainers() + " available="
-        + getAvailableResource().getMemory() + " used="
-        + getUsedResource().getMemory();
+        + getNumContainers() + " available=" + getAvailableResource()
+        + " used=" + getUsedResource();
   }
 
   /**
@@ -274,5 +285,13 @@ public abstract class SchedulerNode {
       return;
     }
     allocateContainer(rmContainer);
+  }
+  
+  public Set<String> getLabels() {
+    return labels;
+  }
+  
+  public void updateLabels(Set<String> labels) {
+    this.labels = labels;
   }
 }

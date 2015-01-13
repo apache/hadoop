@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.fs.permission.AclEntryScope.*;
+import static org.apache.hadoop.fs.permission.AclEntryType.*;
+import static org.apache.hadoop.fs.permission.FsAction.*;
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -57,6 +62,7 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -101,6 +107,11 @@ public class TestEditLog {
   public static class GarbageMkdirOp extends FSEditLogOp {
     public GarbageMkdirOp() {
       super(FSEditLogOpCodes.OP_MKDIR);
+    }
+
+    @Override
+    void resetSubFields() {
+      // nop
     }
 
     @Override
@@ -193,7 +204,7 @@ public class TestEditLog {
       FSEditLog editLog = namesystem.getEditLog();
 
       for (int i = 0; i < numTransactions; i++) {
-        INodeFile inode = new INodeFile(namesystem.allocateNewInodeId(), null,
+        INodeFile inode = new INodeFile(namesystem.dir.allocateNewInodeId(), null,
             p, 0L, 0L, BlockInfo.EMPTY_ARRAY, replication, blockSize);
         inode.toUnderConstruction("", "");
 
@@ -364,7 +375,7 @@ public class TestEditLog {
       // Remember the current lastInodeId and will reset it back to test
       // loading editlog segments.The transactions in the following allocate new
       // inode id to write to editlogs but doesn't create ionde in namespace
-      long originalLastInodeId = namesystem.getLastInodeId();
+      long originalLastInodeId = namesystem.dir.getLastInodeId();
       
       // Create threads and make them run transactions concurrently.
       Thread threadId[] = new Thread[NUM_THREADS];
@@ -398,7 +409,7 @@ public class TestEditLog {
       // If there were any corruptions, it is likely that the reading in
       // of these transactions will throw an exception.
       //
-      namesystem.resetLastInodeIdWithoutChecking(originalLastInodeId);
+      namesystem.dir.resetLastInodeIdWithoutChecking(originalLastInodeId);
       for (Iterator<StorageDirectory> it = 
               fsimage.getStorage().dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
         FSEditLogLoader loader = new FSEditLogLoader(namesystem, 0);
@@ -1500,5 +1511,66 @@ public class TestEditLog {
     double delta = ((float)(endTime - startTime)) / 1000.0;
     LOG.info(String.format("loaded %d edit log segments in %.2f seconds",
         NUM_EDIT_LOG_ROLLS, delta));
+  }
+
+  /**
+   * Edit log op instances are cached internally using thread-local storage.
+   * This test checks that the cached instances are reset in between different
+   * transactions processed on the same thread, so that we don't accidentally
+   * apply incorrect attributes to an inode.
+   *
+   * @throws IOException if there is an I/O error
+   */
+  @Test
+  public void testResetThreadLocalCachedOps() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
+    // Set single handler thread, so all transactions hit same thread-local ops.
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY, 1);
+    MiniDFSCluster cluster = null;
+    FileSystem fileSys = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      fileSys = cluster.getFileSystem();
+
+      // Create /dir1 with a default ACL.
+      Path dir1 = new Path("/dir1");
+      fileSys.mkdirs(dir1);
+      List<AclEntry> aclSpec = Lists.newArrayList(
+          aclEntry(DEFAULT, USER, "foo", READ_EXECUTE));
+      fileSys.modifyAclEntries(dir1, aclSpec);
+
+      // /dir1/dir2 is expected to clone the default ACL.
+      Path dir2 = new Path("/dir1/dir2");
+      fileSys.mkdirs(dir2);
+
+      // /dir1/file1 is expected to clone the default ACL.
+      Path file1 = new Path("/dir1/file1");
+      fileSys.create(file1).close();
+
+      // /dir3 is not a child of /dir1, so must not clone the default ACL.
+      Path dir3 = new Path("/dir3");
+      fileSys.mkdirs(dir3);
+
+      // /file2 is not a child of /dir1, so must not clone the default ACL.
+      Path file2 = new Path("/file2");
+      fileSys.create(file2).close();
+
+      // Restart and assert the above stated expectations.
+      IOUtils.cleanup(LOG, fileSys);
+      cluster.restartNameNode();
+      fileSys = cluster.getFileSystem();
+      assertFalse(fileSys.getAclStatus(dir1).getEntries().isEmpty());
+      assertFalse(fileSys.getAclStatus(dir2).getEntries().isEmpty());
+      assertFalse(fileSys.getAclStatus(file1).getEntries().isEmpty());
+      assertTrue(fileSys.getAclStatus(dir3).getEntries().isEmpty());
+      assertTrue(fileSys.getAclStatus(file2).getEntries().isEmpty());
+    } finally {
+      IOUtils.cleanup(LOG, fileSys);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }

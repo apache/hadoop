@@ -91,7 +91,18 @@ public class QueueManager {
     }
     return (FSLeafQueue) queue;
   }
-  
+
+  /**
+   * Remove a leaf queue if empty
+   * @param name name of the queue
+   * @return true if queue was removed or false otherwise
+   */
+  public boolean removeLeafQueue(String name) {
+    name = ensureRootPrefix(name);
+    return removeEmptyIncompatibleQueues(name, FSQueueType.PARENT);
+  }
+
+
   /**
    * Get a parent queue by name, creating it if the create param is true and is necessary.
    * If the queue is not or can not be a parent queue, i.e. it already exists as a
@@ -297,7 +308,7 @@ public class QueueManager {
     if (queue instanceof FSLeafQueue) {
       FSLeafQueue leafQueue = (FSLeafQueue)queue;
       return queue.getNumRunnableApps() == 0 &&
-          leafQueue.getNonRunnableAppSchedulables().isEmpty();
+          leafQueue.getNumNonRunnableApps() == 0;
     } else {
       for (FSQueue child : queue.getChildQueues()) {
         if (!isEmpty(child)) {

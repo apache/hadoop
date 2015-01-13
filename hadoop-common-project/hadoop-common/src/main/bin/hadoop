@@ -17,7 +17,7 @@
 
 function hadoop_usage()
 {
-  echo "Usage: hadoop [--config confdir] COMMAND"
+  echo "Usage: hadoop [--config confdir] [--loglevel loglevel] COMMAND"
   echo "       where COMMAND is one of:"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest>"
   echo "                       create a Hadoop archive"
@@ -33,6 +33,8 @@ function hadoop_usage()
   echo "                       copy file or directories recursively"
   echo "  fs                   run a generic filesystem user client"
   echo "  jar <jar>            run a jar file"
+  echo "                       note: please use \"yarn jar\" to launch"
+  echo "                             YARN applications, not this command."
   echo "  jnipath              prints the java.library.path"
   echo "  key                  manage keys via the KeyProvider"
   echo "  trace                view and modify Hadoop tracing settings"
@@ -150,6 +152,9 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.fs.FsShell
   ;;
   jar)
+    if [[ -n "${YARN_OPTS}" ]] || [[ -n "${YARN_CLIENT_OPTS}" ]]; then
+      hadoop_error "WARNING: Use \"yarn jar\" to launch YARN applications."
+    fi
     CLASS=org.apache.hadoop.util.RunJar
   ;;
   jnipath)
@@ -174,11 +179,11 @@ case ${COMMAND} in
   ;;
 esac
 
+hadoop_verify_user "${COMMAND}"
+
 # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
 hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
 HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-
-hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 
 hadoop_finalize
 hadoop_java_exec "${COMMAND}" "${CLASS}" "$@"

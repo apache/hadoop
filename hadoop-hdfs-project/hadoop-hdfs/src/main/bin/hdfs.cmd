@@ -34,6 +34,10 @@ if "%1" == "--config" (
   shift
   shift
 )
+if "%1" == "--loglevel" (
+  shift
+  shift
+)
 
 :main
   if exist %HADOOP_CONF_DIR%\hadoop-env.cmd (
@@ -156,12 +160,16 @@ goto :eof
   goto :eof
 
 :storagepolicies
-  set CLASS=org.apache.hadoop.hdfs.tools.GetStoragePolicies
+  set CLASS=org.apache.hadoop.hdfs.tools.StoragePolicyAdmin
   goto :eof
 
 @rem This changes %1, %2 etc. Hence those cannot be used after calling this.
 :make_command_arguments
   if "%1" == "--config" (
+    shift
+    shift
+  )
+  if "%1" == "--loglevel" (
     shift
     shift
   )
@@ -183,7 +191,7 @@ goto :eof
   goto :eof
 
 :print_usage
-  @echo Usage: hdfs [--config confdir] COMMAND
+  @echo Usage: hdfs [--config confdir] [--loglevel loglevel] COMMAND
   @echo        where COMMAND is one of:
   @echo   dfs                  run a filesystem command on the file systems supported in Hadoop.
   @echo   namenode -format     format the DFS filesystem
@@ -208,7 +216,7 @@ goto :eof
   @echo 						Use -help to see options
   @echo   cacheadmin           configure the HDFS cache
   @echo   mover                run a utility to move block replicas across storage types
-  @echo   storagepolicies      get all the existing block storage policies
+  @echo   storagepolicies      list/get/set block storage policies
   @echo.
   @echo Most commands print help when invoked w/o parameters.
 

@@ -209,6 +209,9 @@ public class TestFileStatus {
     RemoteIterator<FileStatus> itor = fc.listStatus(dir);
     assertFalse(dir + " should be empty", itor.hasNext());
 
+    itor = fs.listStatusIterator(dir);
+    assertFalse(dir + " should be empty", itor.hasNext());
+
     // create another file that is smaller than a block.
     Path file2 = new Path(dir, "filestatus2.dat");
     DFSTestUtil.createFile(fs, file2, blockSize/4, blockSize/4, blockSize,
@@ -246,6 +249,12 @@ public class TestFileStatus {
     assertEquals(file3.toString(), itor.next().getPath().toString());
     assertFalse("Unexpected addtional file", itor.hasNext());
 
+    itor = fs.listStatusIterator(dir);
+    assertEquals(file2.toString(), itor.next().getPath().toString());
+    assertEquals(file3.toString(), itor.next().getPath().toString());
+    assertFalse("Unexpected addtional file", itor.hasNext());
+
+
     // Test iterative listing. Now dir has 2 entries, create one more.
     Path dir3 = fs.makeQualified(new Path(dir, "dir3"));
     fs.mkdirs(dir3);
@@ -257,6 +266,12 @@ public class TestFileStatus {
     assertEquals(file3.toString(), stats[2].getPath().toString());
 
     itor = fc.listStatus(dir);
+    assertEquals(dir3.toString(), itor.next().getPath().toString());
+    assertEquals(file2.toString(), itor.next().getPath().toString());
+    assertEquals(file3.toString(), itor.next().getPath().toString());
+    assertFalse("Unexpected addtional file", itor.hasNext());
+
+    itor = fs.listStatusIterator(dir);
     assertEquals(dir3.toString(), itor.next().getPath().toString());
     assertEquals(file2.toString(), itor.next().getPath().toString());
     assertEquals(file3.toString(), itor.next().getPath().toString());
@@ -284,7 +299,17 @@ public class TestFileStatus {
     assertEquals(file2.toString(), itor.next().getPath().toString());
     assertEquals(file3.toString(), itor.next().getPath().toString());
 
-    assertFalse(itor.hasNext());      
+    assertFalse(itor.hasNext());
+
+    itor = fs.listStatusIterator(dir);
+    assertEquals(dir3.toString(), itor.next().getPath().toString());
+    assertEquals(dir4.toString(), itor.next().getPath().toString());
+    assertEquals(dir5.toString(), itor.next().getPath().toString());
+    assertEquals(file2.toString(), itor.next().getPath().toString());
+    assertEquals(file3.toString(), itor.next().getPath().toString());
+
+    assertFalse(itor.hasNext());
+      
 
     fs.delete(dir, true);
   }

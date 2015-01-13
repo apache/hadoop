@@ -133,7 +133,7 @@ public class TestBlocks {
     ApplicationId appId = ApplicationIdPBImpl.newInstance(0, 5);
     ApplicationAttemptId appAttemptId = ApplicationAttemptIdPBImpl.newInstance(appId, 1);
 
-    ContainerId containerId = ContainerIdPBImpl.newInstance(appAttemptId, 1);
+    ContainerId containerId = ContainerIdPBImpl.newContainerId(appAttemptId, 1);
     when(attempt.getAssignedContainerID()).thenReturn(containerId);
 
     when(attempt.getAssignedContainerMgrAddress()).thenReturn(

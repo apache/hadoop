@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 
 /**
  * This class is used to allow the initial registration of the NFS gateway with
- * the system portmap daemon to come from a privileged (< 1024) port. This is
+ * the system portmap daemon to come from a privileged (&lt; 1024) port. This is
  * necessary on certain operating systems to work around this bug in rpcbind:
  * 
  * Red Hat: https://bugzilla.redhat.com/show_bug.cgi?id=731542

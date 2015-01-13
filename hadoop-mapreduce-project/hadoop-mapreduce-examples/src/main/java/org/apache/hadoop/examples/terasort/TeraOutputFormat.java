@@ -20,10 +20,13 @@ package org.apache.hadoop.examples.terasort;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -87,9 +90,31 @@ public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
       throw new InvalidJobConfException("Output directory not set in JobConf.");
     }
 
+    final Configuration jobConf = job.getConfiguration();
+
     // get delegation token for outDir's file system
     TokenCache.obtainTokensForNamenodes(job.getCredentials(),
-        new Path[] { outDir }, job.getConfiguration());
+        new Path[] { outDir }, jobConf);
+
+    final FileSystem fs = outDir.getFileSystem(jobConf);
+
+    if (fs.exists(outDir)) {
+      // existing output dir is considered empty iff its only content is the
+      // partition file.
+      //
+      final FileStatus[] outDirKids = fs.listStatus(outDir);
+      boolean empty = false;
+      if (outDirKids != null && outDirKids.length == 1) {
+        final FileStatus st = outDirKids[0];
+        final String fname = st.getPath().getName();
+        empty =
+          !st.isDirectory() && TeraInputFormat.PARTITION_FILENAME.equals(fname);
+      }
+      if (TeraSort.getUseSimplePartitioner(job) || !empty) {
+        throw new FileAlreadyExistsException("Output directory " + outDir
+            + " already exists");
+      }
+    }
   }
 
   public RecordWriter<Text,Text> getRecordWriter(TaskAttemptContext job

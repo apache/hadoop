@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
-import org.apache.hadoop.security.AccessControlException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -169,12 +168,13 @@ public class TestOpenFilesWithSnapshot {
   }
 
   private void doTestMultipleSnapshots(boolean saveNamespace)
-      throws IOException, AccessControlException {
+      throws IOException {
     Path path = new Path("/test");
     doWriteAndAbort(fs, path);
     fs.createSnapshot(path, "s2");
     fs.delete(new Path("/test/test"), true);
     fs.deleteSnapshot(path, "s2");
+    cluster.triggerBlockReports();
     if (saveNamespace) {
       NameNode nameNode = cluster.getNameNode();
       NameNodeAdapter.enterSafeMode(nameNode, false);

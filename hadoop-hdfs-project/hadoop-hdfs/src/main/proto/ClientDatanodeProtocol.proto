@@ -156,6 +156,13 @@ message StartReconfigurationRequestProto {
 message StartReconfigurationResponseProto {
 }
 
+message TriggerBlockReportRequestProto {
+  required bool incremental = 1;
+}
+
+message TriggerBlockReportResponseProto {
+}
+
 /** Query the running status of reconfiguration process */
 message GetReconfigurationStatusRequestProto {
 }
@@ -222,4 +229,7 @@ service ClientDatanodeProtocolService {
 
   rpc startReconfiguration(StartReconfigurationRequestProto)
       returns(StartReconfigurationResponseProto);
+
+  rpc triggerBlockReport(TriggerBlockReportRequestProto)
+      returns(TriggerBlockReportResponseProto);
 }

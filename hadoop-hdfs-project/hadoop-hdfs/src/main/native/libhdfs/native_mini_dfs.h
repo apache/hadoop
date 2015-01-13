@@ -21,6 +21,10 @@
 
 #include <jni.h> /* for jboolean */
 
+#ifdef __cplusplus
+extern  "C" {
+#endif
+
 struct hdfsBuilder;
 struct NativeMiniDfsCluster; 
 
@@ -110,13 +114,16 @@ int nmdGetNameNodeHttpAddress(const struct NativeMiniDfsCluster *cl,
                                int *port, const char **hostName);
 
 /**
- * Configure the HDFS builder appropriately to connect to this cluster.
+ * Get domain socket path set for this cluster.
  *
- * @param bld       The hdfs builder
+ * @param cl        The cluster
  *
- * @return          the port, or a negative error code
+ * @return          A const string of domain socket path, or NULL if not set.
  */
-int nmdConfigureHdfsBuilder(struct NativeMiniDfsCluster *cl,
-                            struct hdfsBuilder *bld);
+const char *hdfsGetDomainSocketPath(const struct NativeMiniDfsCluster *cl);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

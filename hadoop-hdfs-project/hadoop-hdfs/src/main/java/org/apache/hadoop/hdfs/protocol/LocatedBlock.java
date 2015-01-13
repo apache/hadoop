@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -185,7 +186,11 @@ public class LocatedBlock {
         + "; getBlockSize()=" + getBlockSize()
         + "; corrupt=" + corrupt
         + "; offset=" + offset
-        + "; locs=" + java.util.Arrays.asList(locs)
+        + "; locs=" + Arrays.asList(locs)
+        + "; storageIDs=" +
+            (storageIDs != null ? Arrays.asList(storageIDs) : null)
+        + "; storageTypes=" +
+            (storageTypes != null ? Arrays.asList(storageTypes) : null)
         + "}";
   }
 }

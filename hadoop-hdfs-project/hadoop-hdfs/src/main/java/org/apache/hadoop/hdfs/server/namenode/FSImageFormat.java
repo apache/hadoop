@@ -209,7 +209,8 @@ public class FSImageFormat {
       return impl.getLoadedImageTxId();
     }
 
-    public void load(File file) throws IOException {
+    public void load(File file, boolean requireSameLayoutVersion)
+        throws IOException {
       Preconditions.checkState(impl == null, "Image already loaded!");
 
       FileInputStream is = null;
@@ -219,7 +220,7 @@ public class FSImageFormat {
         IOUtils.readFully(is, magic, 0, magic.length);
         if (Arrays.equals(magic, FSImageUtil.MAGIC_HEADER)) {
           FSImageFormatProtobuf.Loader loader = new FSImageFormatProtobuf.Loader(
-              conf, fsn);
+              conf, fsn, requireSameLayoutVersion);
           impl = loader;
           loader.load(file);
         } else {
@@ -227,7 +228,6 @@ public class FSImageFormat {
           impl = loader;
           loader.load(file);
         }
-
       } finally {
         IOUtils.cleanup(LOG, is);
       }
@@ -341,24 +341,26 @@ public class FSImageFormat {
 
         // read in the last generation stamp for legacy blocks.
         long genstamp = in.readLong();
-        namesystem.setGenerationStampV1(genstamp);
-        
+        namesystem.getBlockIdManager().setGenerationStampV1(genstamp);
+
         if (NameNodeLayoutVersion.supports(
             LayoutVersion.Feature.SEQUENTIAL_BLOCK_ID, imgVersion)) {
           // read the starting generation stamp for sequential block IDs
           genstamp = in.readLong();
-          namesystem.setGenerationStampV2(genstamp);
+          namesystem.getBlockIdManager().setGenerationStampV2(genstamp);
 
           // read the last generation stamp for blocks created after
           // the switch to sequential block IDs.
           long stampAtIdSwitch = in.readLong();
-          namesystem.setGenerationStampV1Limit(stampAtIdSwitch);
+          namesystem.getBlockIdManager().setGenerationStampV1Limit(stampAtIdSwitch);
 
           // read the max sequential block ID.
           long maxSequentialBlockId = in.readLong();
-          namesystem.setLastAllocatedBlockId(maxSequentialBlockId);
+          namesystem.getBlockIdManager().setLastAllocatedBlockId(maxSequentialBlockId);
         } else {
-          long startingGenStamp = namesystem.upgradeGenerationStampToV2();
+
+          long startingGenStamp = namesystem.getBlockIdManager()
+            .upgradeGenerationStampToV2();
           // This is an upgrade.
           LOG.info("Upgrading to sequential block IDs. Generation stamp " +
                    "for new blocks set to " + startingGenStamp);
@@ -377,7 +379,7 @@ public class FSImageFormat {
         if (NameNodeLayoutVersion.supports(
             LayoutVersion.Feature.ADD_INODE_ID, imgVersion)) {
           long lastInodeId = in.readLong();
-          namesystem.resetLastInodeId(lastInodeId);
+          namesystem.dir.resetLastInodeId(lastInodeId);
           if (LOG.isDebugEnabled()) {
             LOG.debug("load last allocated InodeId from fsimage:" + lastInodeId);
           }
@@ -594,7 +596,7 @@ public class FSImageFormat {
      // Rename .snapshot paths if we're doing an upgrade
      parentPath = renameReservedPathsOnUpgrade(parentPath, getLayoutVersion());
      final INodeDirectory parent = INodeDirectory.valueOf(
-         namesystem.dir.getNode(parentPath, true), parentPath);
+         namesystem.dir.getINode(parentPath, true), parentPath);
      return loadChildren(parent, in, counter);
    }
 
@@ -730,7 +732,7 @@ public class FSImageFormat {
 
     long inodeId = NameNodeLayoutVersion.supports(
         LayoutVersion.Feature.ADD_INODE_ID, imgVersion) ? in.readLong()
-        : namesystem.allocateNewInodeId();
+        : namesystem.dir.allocateNewInodeId();
     
     final short replication = namesystem.getBlockManager().adjustReplication(
         in.readShort());
@@ -938,8 +940,8 @@ public class FSImageFormat {
           inSnapshot = true;
         } else {
           path = renameReservedPathsOnUpgrade(path, getLayoutVersion());
-          final INodesInPath iip = fsDir.getLastINodeInPath(path);
-          oldnode = INodeFile.valueOf(iip.getINode(0), path);
+          final INodesInPath iip = fsDir.getINodesInPath(path, true);
+          oldnode = INodeFile.valueOf(iip.getLastINode(), path);
         }
 
         FileUnderConstructionFeature uc = cons.getFileUnderConstructionFeature();
@@ -1181,9 +1183,11 @@ public class FSImageFormat {
   @Deprecated
   static class Saver {
     private static final int LAYOUT_VERSION = -51;
+    public static final int CHECK_CANCEL_INTERVAL = 4096;
     private final SaveNamespaceContext context;
     /** Set to true once an image has been written */
     private boolean saved = false;
+    private long checkCancelCounter = 0;
 
     /** The MD5 checksum of the file that was written */
     private MD5Hash savedDigest;
@@ -1251,12 +1255,12 @@ public class FSImageFormat {
         out.writeInt(sourceNamesystem.unprotectedGetNamespaceInfo()
             .getNamespaceID());
         out.writeLong(numINodes);
-        out.writeLong(sourceNamesystem.getGenerationStampV1());
-        out.writeLong(sourceNamesystem.getGenerationStampV2());
-        out.writeLong(sourceNamesystem.getGenerationStampAtblockIdSwitch());
-        out.writeLong(sourceNamesystem.getLastAllocatedBlockId());
+        out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampV1());
+        out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampV2());
+        out.writeLong(sourceNamesystem.getBlockIdManager().getGenerationStampAtblockIdSwitch());
+        out.writeLong(sourceNamesystem.getBlockIdManager().getLastAllocatedBlockId());
         out.writeLong(context.getTxId());
-        out.writeLong(sourceNamesystem.getLastInodeId());
+        out.writeLong(sourceNamesystem.dir.getLastInodeId());
 
 
         sourceNamesystem.getSnapshotManager().write(out);
@@ -1320,7 +1324,6 @@ public class FSImageFormat {
       // Write normal children INode.
       out.writeInt(children.size());
       int dirNum = 0;
-      int i = 0;
       for(INode child : children) {
         // print all children first
         // TODO: for HDFS-5428, we cannot change the format/content of fsimage
@@ -1333,7 +1336,7 @@ public class FSImageFormat {
             && child.asFile().isUnderConstruction()) {
           this.snapshotUCMap.put(child.getId(), child.asFile());
         }
-        if (i++ % 50 == 0) {
+        if (checkCancelCounter++ % CHECK_CANCEL_INTERVAL == 0) {
           context.checkCancelled();
         }
       }

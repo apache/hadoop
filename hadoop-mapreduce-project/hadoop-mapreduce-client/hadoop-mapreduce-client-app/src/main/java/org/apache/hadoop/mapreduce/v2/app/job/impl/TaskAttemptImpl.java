@@ -657,9 +657,11 @@ public abstract class TaskAttemptImpl implements
       // //////////// Set up JobJar to be localized properly on the remote NM.
       String jobJar = conf.get(MRJobConfig.JAR);
       if (jobJar != null) {
-        Path remoteJobJar = (new Path(jobJar)).makeQualified(remoteFS
-            .getUri(), remoteFS.getWorkingDirectory());
-        LocalResource rc = createLocalResource(remoteFS, remoteJobJar,
+        final Path jobJarPath = new Path(jobJar);
+        final FileSystem jobJarFs = FileSystem.get(jobJarPath.toUri(), conf);
+        Path remoteJobJar = jobJarPath.makeQualified(jobJarFs.getUri(),
+            jobJarFs.getWorkingDirectory());
+        LocalResource rc = createLocalResource(jobJarFs, remoteJobJar,
             LocalResourceType.PATTERN, LocalResourceVisibility.APPLICATION);
         String pattern = conf.getPattern(JobContext.JAR_UNPACK_PATTERN, 
             JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern();
@@ -1517,8 +1519,8 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.remoteTask = taskAttempt.createRemoteTask();
       taskAttempt.jvmID =
           new WrappedJvmID(taskAttempt.remoteTask.getTaskID().getJobID(),
-            taskAttempt.remoteTask.isMapTask(), taskAttempt.container.getId()
-              .getId());
+              taskAttempt.remoteTask.isMapTask(),
+              taskAttempt.container.getId().getContainerId());
       taskAttempt.taskAttemptListener.registerPendingTask(
           taskAttempt.remoteTask, taskAttempt.jvmID);
 

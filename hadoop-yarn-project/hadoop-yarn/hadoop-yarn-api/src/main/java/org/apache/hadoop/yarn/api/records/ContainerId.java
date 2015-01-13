@@ -35,14 +35,27 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Stable
 public abstract class ContainerId implements Comparable<ContainerId>{
+  public static final long CONTAINER_ID_BITMASK = 0xffffffffffL;
   private static final Splitter _SPLITTER = Splitter.on('_').trimResults();
   private static final String CONTAINER_PREFIX = "container";
   private static final String EPOCH_PREFIX = "e";
 
   @Private
   @Unstable
-  public static ContainerId newInstance(ApplicationAttemptId appAttemptId,
+  public static ContainerId newContainerId(ApplicationAttemptId appAttemptId,
       long containerId) {
+    ContainerId id = Records.newRecord(ContainerId.class);
+    id.setContainerId(containerId);
+    id.setApplicationAttemptId(appAttemptId);
+    id.build();
+    return id;
+  }
+
+  @Private
+  @Deprecated
+  @Unstable
+  public static ContainerId newInstance(ApplicationAttemptId appAttemptId,
+      int containerId) {
     ContainerId id = Records.newRecord(ContainerId.class);
     id.setContainerId(containerId);
     id.setApplicationAttemptId(appAttemptId);
@@ -81,6 +94,7 @@ public abstract class ContainerId implements Comparable<ContainerId>{
    * @return lower 32 bits of identifier of the <code>ContainerId</code>
    */
   @Public
+  @Deprecated
   @Stable
   public abstract int getId();
 
@@ -184,7 +198,8 @@ public abstract class ContainerId implements Comparable<ContainerId>{
     sb.append(
         appAttemptIdAndEpochFormat.get().format(
             getApplicationAttemptId().getAttemptId())).append("_");
-    sb.append(containerIdFormat.get().format(0xffffffffffL & getContainerId()));
+    sb.append(containerIdFormat.get()
+        .format(CONTAINER_ID_BITMASK & getContainerId()));
     return sb.toString();
   }
 
@@ -211,7 +226,7 @@ public abstract class ContainerId implements Comparable<ContainerId>{
       }
       long id = Long.parseLong(it.next());
       long cid = (epoch << 40) | id;
-      ContainerId containerId = ContainerId.newInstance(appAttemptID, cid);
+      ContainerId containerId = ContainerId.newContainerId(appAttemptID, cid);
       return containerId;
     } catch (NumberFormatException n) {
       throw new IllegalArgumentException("Invalid ContainerId: "

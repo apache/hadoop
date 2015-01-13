@@ -24,12 +24,12 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.nfs.NfsFileType;
 import org.apache.hadoop.nfs.NfsTime;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
-import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.response.WccAttr;
 import org.apache.hadoop.nfs.nfs3.response.WccData;
 import org.apache.hadoop.oncrpc.XDR;
+import org.apache.hadoop.security.IdMappingServiceProvider;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 
@@ -59,7 +59,7 @@ public class Nfs3Utils {
   }
 
   public static Nfs3FileAttributes getNfs3FileAttrFromFileStatus(
-      HdfsFileStatus fs, IdUserGroup iug) {
+      HdfsFileStatus fs, IdMappingServiceProvider iug) {
     /**
      * Some 32bit Linux client has problem with 64bit fileId: it seems the 32bit
      * client takes only the lower 32bit of the fileId and treats it as signed
@@ -67,17 +67,28 @@ public class Nfs3Utils {
      */
     NfsFileType fileType = fs.isDir() ? NfsFileType.NFSDIR : NfsFileType.NFSREG;
     fileType = fs.isSymlink() ? NfsFileType.NFSLNK : fileType;
-    
-    return new Nfs3FileAttributes(fileType, fs.getChildrenNum(), fs
-        .getPermission().toShort(), iug.getUidAllowingUnknown(fs.getOwner()),
-        iug.getGidAllowingUnknown(fs.getGroup()), fs.getLen(), 0 /* fsid */,
-        fs.getFileId(), fs.getModificationTime(), fs.getAccessTime());
+    int nlink = (fileType == NfsFileType.NFSDIR) ? fs.getChildrenNum() + 2 : 1;
+    long size = (fileType == NfsFileType.NFSDIR) ? getDirSize(fs
+        .getChildrenNum()) : fs.getLen();
+    return new Nfs3FileAttributes(fileType, nlink,
+        fs.getPermission().toShort(), iug.getUidAllowingUnknown(fs.getOwner()),
+        iug.getGidAllowingUnknown(fs.getGroup()), size, 0 /* fsid */,
+        fs.getFileId(), fs.getModificationTime(), fs.getAccessTime(),
+        new Nfs3FileAttributes.Specdata3());
   }
 
   public static Nfs3FileAttributes getFileAttr(DFSClient client,
-      String fileIdPath, IdUserGroup iug) throws IOException {
+      String fileIdPath, IdMappingServiceProvider iug) throws IOException {
     HdfsFileStatus fs = getFileStatus(client, fileIdPath);
     return fs == null ? null : getNfs3FileAttrFromFileStatus(fs, iug);
+  }
+
+  /**
+   * HDFS directory size is always zero. Try to return something meaningful
+   * here. Assume each child take 32bytes.
+   */
+  public static long getDirSize(int childNum) {
+    return (childNum + 2) * 32;
   }
 
   public static WccAttr getWccAttr(DFSClient client, String fileIdPath)
@@ -87,8 +98,8 @@ public class Nfs3Utils {
       return null;
     }
 
-    long size = fstat.isDir() ? Nfs3FileAttributes.getDirSize(fstat
-        .getChildrenNum()) : fstat.getLen();
+    long size = fstat.isDir() ? getDirSize(fstat.getChildrenNum()) : fstat
+        .getLen();
     return new WccAttr(size, new NfsTime(fstat.getModificationTime()),
         new NfsTime(fstat.getModificationTime()));
   }
@@ -100,7 +111,8 @@ public class Nfs3Utils {
 
   // TODO: maybe not efficient
   public static WccData createWccData(final WccAttr preOpAttr,
-      DFSClient dfsClient, final String fileIdPath, final IdUserGroup iug)
+      DFSClient dfsClient, final String fileIdPath,
+      final IdMappingServiceProvider iug)
       throws IOException {
     Nfs3FileAttributes postOpDirAttr = getFileAttr(dfsClient, fileIdPath, iug);
     return new WccData(preOpAttr, postOpDirAttr);
@@ -200,5 +212,9 @@ public class Nfs3Utils {
     data[6] = (byte) (v >>> 8);
     data[7] = (byte) (v >>> 0);
     return data;
+  }
+  
+  public static long getElapsedTime(long startTimeNano) {
+    return System.nanoTime() - startTimeNano;
   }
 }

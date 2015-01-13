@@ -33,7 +33,7 @@ public class TestContainerResourceDecrease {
   @Test
   public void testResourceDecreaseContext() {
     ContainerId containerId = ContainerId
-        .newInstance(ApplicationAttemptId.newInstance(
+        .newContainerId(ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(1234, 3), 3), 7);
     Resource resource = Resource.newInstance(1023, 3);
     ContainerResourceDecrease ctx = ContainerResourceDecrease.newInstance(

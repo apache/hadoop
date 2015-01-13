@@ -21,13 +21,11 @@ import java.util.Date;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.MismatchedUserException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.ResourceOverCommitException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -52,7 +50,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Unstable
 public class CapacityOverTimePolicy implements SharingPolicy {
 
-  private CapacitySchedulerConfiguration conf;
+  private ReservationSchedulerConfiguration conf;
   private long validWindow;
   private float maxInst;
   private float maxAvg;
@@ -61,13 +59,9 @@ public class CapacityOverTimePolicy implements SharingPolicy {
   // configuration structure of the schedulers (e.g., SchedulerConfiguration)
   // it should be easy to remove this limitation
   @Override
-  public void init(String reservationQueuePath, Configuration conf) {
-    if (!(conf instanceof CapacitySchedulerConfiguration)) {
-      throw new IllegalArgumentException("Unexpected conf type: "
-          + conf.getClass().getSimpleName() + " only supported conf is: "
-          + CapacitySchedulerConfiguration.class.getSimpleName());
-    }
-    this.conf = (CapacitySchedulerConfiguration) conf;
+  public void init(String reservationQueuePath,
+      ReservationSchedulerConfiguration conf) {
+    this.conf = conf;
     validWindow = this.conf.getReservationWindow(reservationQueuePath);
     maxInst = this.conf.getInstantaneousMaxCapacity(reservationQueuePath) / 100;
     maxAvg = this.conf.getAverageCapacity(reservationQueuePath) / 100;

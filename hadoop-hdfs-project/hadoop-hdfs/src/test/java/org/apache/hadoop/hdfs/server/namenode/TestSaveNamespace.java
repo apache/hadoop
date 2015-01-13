@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
@@ -516,8 +517,10 @@ public class TestSaveNamespace {
     FSNamesystem spyFsn = spy(fsn);
     final FSNamesystem finalFsn = spyFsn;
     DelayAnswer delayer = new GenericTestUtils.DelayAnswer(LOG);
-    doAnswer(delayer).when(spyFsn).getGenerationStampV2();
-    
+    BlockIdManager bid = spy(spyFsn.getBlockIdManager());
+    Whitebox.setInternalState(finalFsn, "blockIdManager", bid);
+    doAnswer(delayer).when(bid).getGenerationStampV2();
+
     ExecutorService pool = Executors.newFixedThreadPool(2);
     
     try {
@@ -572,9 +575,7 @@ public class TestSaveNamespace {
             NNStorage.getImageFileName(0) + MD5FileUtils.MD5_SUFFIX);
       }      
     } finally {
-      if (fsn != null) {
-        fsn.close();
-      }
+      fsn.close();
     }
   }
 

@@ -95,6 +95,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
   }
 
   private Authenticator authenticator;
+  private ConnectionConfigurator connConfigurator;
 
   public DelegationTokenAuthenticator(Authenticator authenticator) {
     this.authenticator = authenticator;
@@ -103,6 +104,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
   @Override
   public void setConnectionConfigurator(ConnectionConfigurator configurator) {
     authenticator.setConnectionConfigurator(configurator);
+    connConfigurator = configurator;
   }
 
   private boolean hasDelegationToken(URL url, AuthenticatedURL.Token token) {
@@ -134,14 +136,35 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
    * supported.
    * @param token the authentication token being used for the user where the
    * Delegation token will be stored.
+   * @param renewer the renewer user.
    * @throws IOException if an IO error occurred.
    * @throws AuthenticationException if an authentication exception occurred.
    */
   public Token<AbstractDelegationTokenIdentifier> getDelegationToken(URL url,
       AuthenticatedURL.Token token, String renewer)
       throws IOException, AuthenticationException {
+   return getDelegationToken(url, token, renewer, null);
+  }
+
+  /**
+   * Requests a delegation token using the configured <code>Authenticator</code>
+   * for authentication.
+   *
+   * @param url the URL to get the delegation token from. Only HTTP/S URLs are
+   * supported.
+   * @param token the authentication token being used for the user where the
+   * Delegation token will be stored.
+   * @param renewer the renewer user.
+   * @param doAsUser the user to do as, which will be the token owner.
+   * @throws IOException if an IO error occurred.
+   * @throws AuthenticationException if an authentication exception occurred.
+   */
+  public Token<AbstractDelegationTokenIdentifier> getDelegationToken(URL url,
+      AuthenticatedURL.Token token, String renewer, String doAsUser)
+      throws IOException, AuthenticationException {
     Map json = doDelegationTokenOperation(url, token,
-        DelegationTokenOperation.GETDELEGATIONTOKEN, renewer, null, true);
+        DelegationTokenOperation.GETDELEGATIONTOKEN, renewer, null, true,
+        doAsUser);
     json = (Map) json.get(DELEGATION_TOKEN_JSON);
     String tokenStr = (String) json.get(DELEGATION_TOKEN_URL_STRING_JSON);
     Token<AbstractDelegationTokenIdentifier> dToken =
@@ -167,8 +190,27 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
       AuthenticatedURL.Token token,
       Token<AbstractDelegationTokenIdentifier> dToken)
       throws IOException, AuthenticationException {
+    return renewDelegationToken(url, token, dToken, null);
+  }
+
+  /**
+   * Renews a delegation token from the server end-point using the
+   * configured <code>Authenticator</code> for authentication.
+   *
+   * @param url the URL to renew the delegation token from. Only HTTP/S URLs are
+   * supported.
+   * @param token the authentication token with the Delegation Token to renew.
+   * @param doAsUser the user to do as, which will be the token owner.
+   * @throws IOException if an IO error occurred.
+   * @throws AuthenticationException if an authentication exception occurred.
+   */
+  public long renewDelegationToken(URL url,
+      AuthenticatedURL.Token token,
+      Token<AbstractDelegationTokenIdentifier> dToken, String doAsUser)
+      throws IOException, AuthenticationException {
     Map json = doDelegationTokenOperation(url, token,
-        DelegationTokenOperation.RENEWDELEGATIONTOKEN, null, dToken, true);
+        DelegationTokenOperation.RENEWDELEGATIONTOKEN, null, dToken, true,
+        doAsUser);
     return (Long) json.get(RENEW_DELEGATION_TOKEN_JSON);
   }
 
@@ -185,9 +227,27 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
       AuthenticatedURL.Token token,
       Token<AbstractDelegationTokenIdentifier> dToken)
       throws IOException {
+    cancelDelegationToken(url, token, dToken, null);
+  }
+
+  /**
+   * Cancels a delegation token from the server end-point. It does not require
+   * being authenticated by the configured <code>Authenticator</code>.
+   *
+   * @param url the URL to cancel the delegation token from. Only HTTP/S URLs
+   * are supported.
+   * @param token the authentication token with the Delegation Token to cancel.
+   * @param doAsUser the user to do as, which will be the token owner.
+   * @throws IOException if an IO error occurred.
+   */
+  public void cancelDelegationToken(URL url,
+      AuthenticatedURL.Token token,
+      Token<AbstractDelegationTokenIdentifier> dToken, String doAsUser)
+      throws IOException {
     try {
       doDelegationTokenOperation(url, token,
-          DelegationTokenOperation.CANCELDELEGATIONTOKEN, null, dToken, false);
+          DelegationTokenOperation.CANCELDELEGATIONTOKEN, null, dToken, false,
+          doAsUser);
     } catch (AuthenticationException ex) {
       throw new IOException("This should not happen: " + ex.getMessage(), ex);
     }
@@ -195,7 +255,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
 
   private Map doDelegationTokenOperation(URL url,
       AuthenticatedURL.Token token, DelegationTokenOperation operation,
-      String renewer, Token<?> dToken, boolean hasResponse)
+      String renewer, Token<?> dToken, boolean hasResponse, String doAsUser)
       throws IOException, AuthenticationException {
     Map ret = null;
     Map<String, String> params = new HashMap<String, String>();
@@ -206,6 +266,11 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
     if (dToken != null) {
       params.put(TOKEN_PARAM, dToken.encodeToUrlString());
     }
+    // proxyuser
+    if (doAsUser != null) {
+      params.put(DelegationTokenAuthenticatedURL.DO_AS,
+          URLEncoder.encode(doAsUser, "UTF-8"));
+    }
     String urlStr = url.toExternalForm();
     StringBuilder sb = new StringBuilder(urlStr);
     String separator = (urlStr.contains("?")) ? "&" : "?";
@@ -215,7 +280,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
       separator = "&";
     }
     url = new URL(sb.toString());
-    AuthenticatedURL aUrl = new AuthenticatedURL(this);
+    AuthenticatedURL aUrl = new AuthenticatedURL(this, connConfigurator);
     HttpURLConnection conn = aUrl.openConnection(url, token);
     conn.setRequestMethod(operation.getHttpMethod());
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);

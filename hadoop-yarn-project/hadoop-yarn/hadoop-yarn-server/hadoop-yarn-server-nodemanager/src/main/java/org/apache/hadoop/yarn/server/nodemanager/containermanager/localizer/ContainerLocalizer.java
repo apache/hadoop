@@ -369,10 +369,15 @@ public class ContainerLocalizer {
           new ContainerLocalizer(FileContext.getLocalFSFileContext(), user,
               appId, locId, localDirs,
               RecordFactoryProvider.getRecordFactory(null));
-      System.exit(localizer.runLocalization(nmAddr));
+      int nRet = localizer.runLocalization(nmAddr);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("nRet: %d", nRet));
+      }
+      System.exit(nRet);
     } catch (Throwable e) {
       // Print error to stdout so that LCE can use it.
       e.printStackTrace(System.out);
+      LOG.error("Exception in main:", e);
       throw e;
     }
   }

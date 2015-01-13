@@ -111,7 +111,7 @@ public class TestContainerManagerRecovery {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId attemptId =
         ApplicationAttemptId.newInstance(appId, 1);
-    ContainerId cid = ContainerId.newInstance(attemptId, 1);
+    ContainerId cid = ContainerId.newContainerId(attemptId, 1);
     Map<String, LocalResource> localResources = Collections.emptyMap();
     Map<String, String> containerEnv = Collections.emptyMap();
     List<String> containerCmds = Collections.emptyList();
@@ -130,8 +130,7 @@ public class TestContainerManagerRecovery {
         containerTokens, acls);
     // create the logAggregationContext
     LogAggregationContext logAggregationContext =
-        LogAggregationContext.newInstance("includePattern", "excludePattern",
-          1000);
+        LogAggregationContext.newInstance("includePattern", "excludePattern");
     StartContainersResponse startResponse = startContainer(context, cm, cid,
         clc, logAggregationContext);
     assertTrue(startResponse.getFailedRequests().isEmpty());
@@ -168,8 +167,6 @@ public class TestContainerManagerRecovery {
     LogAggregationContext recovered =
         ((ApplicationImpl) app).getLogAggregationContext();
     assertNotNull(recovered);
-    assertEquals(logAggregationContext.getRollingIntervalSeconds(),
-      recovered.getRollingIntervalSeconds());
     assertEquals(logAggregationContext.getIncludePattern(),
       recovered.getIncludePattern());
     assertEquals(logAggregationContext.getExcludePattern(),
@@ -281,8 +278,7 @@ public class TestContainerManagerRecovery {
   private ContainerManagerImpl createContainerManager(Context context) {
     final LogHandler logHandler = mock(LogHandler.class);
     final ResourceLocalizationService rsrcSrv =
-        new ResourceLocalizationService(null, null, null, null,
-            context.getNMStateStore()) {
+        new ResourceLocalizationService(null, null, null, null, context) {
           @Override
           public void serviceInit(Configuration conf) throws Exception {
           }
@@ -323,7 +319,7 @@ public class TestContainerManagerRecovery {
 
           @Override
           protected ResourceLocalizationService createResourceLocalizationService(
-              ContainerExecutor exec, DeletionService deletionContext) {
+              ContainerExecutor exec, DeletionService deletionContext, Context context) {
             return rsrcSrv;
           }
 

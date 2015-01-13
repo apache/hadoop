@@ -253,7 +253,7 @@ import org.junit.Test;
 
      public TestMRApp(ApplicationAttemptId applicationAttemptId, 
          ContainerAllocator allocator) {
-       super(applicationAttemptId, ContainerId.newInstance(
+       super(applicationAttemptId, ContainerId.newContainerId(
            applicationAttemptId, 1), "testhost", 2222, 3333,
            System.currentTimeMillis());
        this.allocator = allocator;

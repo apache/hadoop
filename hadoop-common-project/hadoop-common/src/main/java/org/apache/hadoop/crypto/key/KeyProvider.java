@@ -32,6 +32,7 @@ import java.util.Map;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -207,7 +208,8 @@ public abstract class KeyProvider {
      */
     protected byte[] serialize() throws IOException {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-      JsonWriter writer = new JsonWriter(new OutputStreamWriter(buffer));
+      JsonWriter writer = new JsonWriter(
+          new OutputStreamWriter(buffer, Charsets.UTF_8));
       try {
         writer.beginObject();
         if (cipher != null) {
@@ -251,7 +253,7 @@ public abstract class KeyProvider {
       String description = null;
       Map<String, String> attributes = null;
       JsonReader reader = new JsonReader(new InputStreamReader
-        (new ByteArrayInputStream(bytes)));
+        (new ByteArrayInputStream(bytes), Charsets.UTF_8));
       try {
         reader.beginObject();
         while (reader.hasNext()) {
@@ -532,6 +534,14 @@ public abstract class KeyProvider {
   public abstract KeyVersion rollNewVersion(String name,
                                              byte[] material
                                             ) throws IOException;
+
+  /**
+   * Can be used by implementing classes to close any resources
+   * that require closing
+   */
+  public void close() throws IOException {
+    // NOP
+  }
 
   /**
    * Roll a new version of the given key generating the material for it.

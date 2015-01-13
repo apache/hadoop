@@ -55,6 +55,11 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   private long blockRecoveryId = 0;
 
   /**
+   * The block source to use in the event of copy-on-write truncate.
+   */
+  private Block truncateBlock;
+
+  /**
    * ReplicaUnderConstruction contains information about replicas while
    * they are under construction.
    * The GS, the length and the state of the replica is as reported by 
@@ -141,7 +146,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     
     @Override
     public void appendStringTo(StringBuilder sb) {
-      sb.append("ReplicaUnderConstruction[")
+      sb.append("ReplicaUC[")
         .append(expectedLocation)
         .append("|")
         .append(state)
@@ -153,14 +158,14 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * Create block and set its state to
    * {@link BlockUCState#UNDER_CONSTRUCTION}.
    */
-  public BlockInfoUnderConstruction(Block blk, int replication) {
+  public BlockInfoUnderConstruction(Block blk, short replication) {
     this(blk, replication, BlockUCState.UNDER_CONSTRUCTION, null);
   }
 
   /**
    * Create a block that is currently being constructed.
    */
-  public BlockInfoUnderConstruction(Block blk, int replication,
+  public BlockInfoUnderConstruction(Block blk, short replication,
                              BlockUCState state,
                              DatanodeStorageInfo[] targets) {
     super(blk, replication);
@@ -227,6 +232,15 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   /** Get block recovery ID */
   public long getBlockRecoveryId() {
     return blockRecoveryId;
+  }
+
+  /** Get recover block */
+  public Block getTruncateBlock() {
+    return truncateBlock;
+  }
+
+  public void setTruncateBlock(Block recoveryBlock) {
+    this.truncateBlock = recoveryBlock;
   }
 
   /**
@@ -370,7 +384,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   }
 
   private void appendUCParts(StringBuilder sb) {
-    sb.append("{blockUCState=").append(blockUCState)
+    sb.append("{UCState=").append(blockUCState)
       .append(", primaryNodeIndex=").append(primaryNodeIndex)
       .append(", replicas=[");
     if (replicas != null) {

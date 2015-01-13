@@ -27,8 +27,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,6 +46,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.input.BoundedInputStream;
+import org.apache.commons.io.output.WriterOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -68,7 +71,9 @@ import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Times;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -211,6 +216,22 @@ public class AggregatedLogFormat {
       Collections.sort(fileList);
 
       for (File logFile : fileList) {
+        // We only aggregate top level files.
+        // Ignore anything inside sub-folders.
+        if (logFile.isDirectory()) {
+          LOG.warn(logFile.getAbsolutePath() + " is a directory. Ignore it.");
+          continue;
+        }
+
+        FileInputStream in = null;
+        try {
+          in = secureOpenFile(logFile);
+        } catch (IOException e) {
+          logErrorMessage(logFile, e);
+          IOUtils.cleanup(LOG, in);
+          continue;
+        }
+
         final long fileLength = logFile.length();
         // Write the logFile Type
         out.writeUTF(logFile.getName());
@@ -219,9 +240,7 @@ public class AggregatedLogFormat {
         out.writeUTF(String.valueOf(fileLength));
 
         // Write the log itself
-        FileInputStream in = null;
         try {
-          in = SecureIOUtils.openForRead(logFile, getUser(), null);
           byte[] buf = new byte[65535];
           int len = 0;
           long bytesLeft = fileLength;
@@ -244,16 +263,24 @@ public class AggregatedLogFormat {
           }
           this.uploadedFiles.add(logFile);
         } catch (IOException e) {
-          String message = "Error aggregating log file. Log file : "
-              + logFile.getAbsolutePath() + e.getMessage();
-          LOG.error(message, e);
-          out.write(message.getBytes());
+          String message = logErrorMessage(logFile, e);
+          out.write(message.getBytes(Charset.forName("UTF-8")));
         } finally {
-          if (in != null) {
-            in.close();
-          }
+          IOUtils.cleanup(LOG, in);
         }
       }
+    }
+
+    @VisibleForTesting
+    public FileInputStream secureOpenFile(File logFile) throws IOException {
+      return SecureIOUtils.openForRead(logFile, getUser(), null);
+    }
+
+    private static String logErrorMessage(File logFile, Exception e) {
+      String message = "Error aggregating log file. Log file : "
+          + logFile.getAbsolutePath() + ". " + e.getMessage();
+      LOG.error(message, e);
+      return message;
     }
 
     // Added for testing purpose.
@@ -371,6 +398,11 @@ public class AggregatedLogFormat {
               YarnConfiguration.DEFAULT_NM_LOG_AGG_COMPRESSION_TYPE), null, conf);
       //Write the version string
       writeVersion();
+    }
+
+    @VisibleForTesting
+    public TFile.Writer getWriter() {
+      return this.writer;
     }
 
     private void writeVersion() throws IOException {
@@ -612,63 +644,55 @@ public class AggregatedLogFormat {
      * Writes all logs for a single container to the provided writer.
      * @param valueStream
      * @param writer
+     * @param logUploadedTime
      * @throws IOException
      */
     public static void readAcontainerLogs(DataInputStream valueStream,
-        Writer writer) throws IOException {
-      int bufferSize = 65536;
-      char[] cbuf = new char[bufferSize];
-      String fileType;
-      String fileLengthStr;
-      long fileLength;
-
-      while (true) {
-        try {
-          fileType = valueStream.readUTF();
-        } catch (EOFException e) {
-          // EndOfFile
-          return;
+        Writer writer, long logUploadedTime) throws IOException {
+      OutputStream os = null;
+      PrintStream ps = null;
+      try {
+        os = new WriterOutputStream(writer, Charset.forName("UTF-8"));
+        ps = new PrintStream(os);
+        while (true) {
+          try {
+            readContainerLogs(valueStream, ps, logUploadedTime);
+          } catch (EOFException e) {
+            // EndOfFile
+            return;
+          }
         }
-        fileLengthStr = valueStream.readUTF();
-        fileLength = Long.parseLong(fileLengthStr);
-        writer.write("\n\nLogType:");
-        writer.write(fileType);
-        writer.write("\nLogLength:");
-        writer.write(fileLengthStr);
-        writer.write("\nLog Contents:\n");
-        // ByteLevel
-        BoundedInputStream bis =
-            new BoundedInputStream(valueStream, fileLength);
-        InputStreamReader reader = new InputStreamReader(bis);
-        int currentRead = 0;
-        int totalRead = 0;
-        while ((currentRead = reader.read(cbuf, 0, bufferSize)) != -1) {
-          writer.write(cbuf, 0, currentRead);
-          totalRead += currentRead;
-        }
+      } finally {
+        IOUtils.cleanup(LOG, ps);
+        IOUtils.cleanup(LOG, os);
       }
     }
 
     /**
-     * Keep calling this till you get a {@link EOFException} for getting logs of
-     * all types for a single container.
-     * 
+     * Writes all logs for a single container to the provided writer.
      * @param valueStream
-     * @param out
+     * @param writer
      * @throws IOException
      */
-    public static void readAContainerLogsForALogType(
-        DataInputStream valueStream, PrintStream out)
-          throws IOException {
+    public static void readAcontainerLogs(DataInputStream valueStream,
+        Writer writer) throws IOException {
+      readAcontainerLogs(valueStream, writer, -1);
+    }
 
+    private static void readContainerLogs(DataInputStream valueStream,
+        PrintStream out, long logUploadedTime) throws IOException {
       byte[] buf = new byte[65535];
 
       String fileType = valueStream.readUTF();
       String fileLengthStr = valueStream.readUTF();
       long fileLength = Long.parseLong(fileLengthStr);
-      out.print("LogType: ");
+      out.print("LogType:");
       out.println(fileType);
-      out.print("LogLength: ");
+      if (logUploadedTime != -1) {
+        out.print("Log Upload Time:");
+        out.println(Times.format(logUploadedTime));
+      }
+      out.print("LogLength:");
       out.println(fileLengthStr);
       out.println("Log Contents:");
 
@@ -687,6 +711,35 @@ public class AggregatedLogFormat {
         len = valueStream.read(buf, 0, toRead);
       }
       out.println("");
+    }
+
+    /**
+     * Keep calling this till you get a {@link EOFException} for getting logs of
+     * all types for a single container.
+     * 
+     * @param valueStream
+     * @param out
+     * @param logUploadedTime
+     * @throws IOException
+     */
+    public static void readAContainerLogsForALogType(
+        DataInputStream valueStream, PrintStream out, long logUploadedTime)
+          throws IOException {
+      readContainerLogs(valueStream, out, logUploadedTime);
+    }
+
+    /**
+     * Keep calling this till you get a {@link EOFException} for getting logs of
+     * all types for a single container.
+     * 
+     * @param valueStream
+     * @param out
+     * @throws IOException
+     */
+    public static void readAContainerLogsForALogType(
+        DataInputStream valueStream, PrintStream out)
+          throws IOException {
+      readAContainerLogsForALogType(valueStream, out, -1);
     }
 
     public void close() {
@@ -729,7 +782,8 @@ public class AggregatedLogFormat {
         currentLogData =
             new BoundedInputStream(valueStream, currentLogLength);
         currentLogData.setPropagateClose(false);
-        currentLogISR = new InputStreamReader(currentLogData);
+        currentLogISR = new InputStreamReader(currentLogData,
+            Charset.forName("UTF-8"));
         currentLogType = logType;
       } catch (EOFException e) {
       }
@@ -747,6 +801,10 @@ public class AggregatedLogFormat {
 
     public long skip(long n) throws IOException {
       return currentLogData.skip(n);
+    }
+
+    public int read() throws IOException {
+      return currentLogData.read();
     }
 
     public int read(byte[] buf, int off, int len) throws IOException {

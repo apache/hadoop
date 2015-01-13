@@ -23,6 +23,9 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
@@ -83,6 +86,8 @@ public class KeyAuthorizationKeyProvider extends KeyProviderCryptoExtension {
 
   private final KeyProviderCryptoExtension provider;
   private final KeyACLs acls;
+  private Lock readLock;
+  private Lock writeLock;
 
   /**
    * The constructor takes a {@link KeyProviderCryptoExtension} and an
@@ -96,6 +101,9 @@ public class KeyAuthorizationKeyProvider extends KeyProviderCryptoExtension {
     super(keyProvider, null);
     this.provider = keyProvider;
     this.acls = acls;
+    ReadWriteLock lock = new ReentrantReadWriteLock(true);
+    readLock = lock.readLock();
+    writeLock = lock.writeLock();
   }
 
   // This method first checks if "key.acl.name" attribute is present as an
@@ -132,7 +140,7 @@ public class KeyAuthorizationKeyProvider extends KeyProviderCryptoExtension {
       KeyOpType opType) throws AuthorizationException {
     Preconditions.checkNotNull(aclName, "Key ACL name cannot be null");
     Preconditions.checkNotNull(ugi, "UserGroupInformation cannot be null");
-    if (acls.isACLPresent(aclName, KeyOpType.MANAGEMENT) &&
+    if (acls.isACLPresent(aclName, opType) &&
         (acls.hasAccessToKey(aclName, ugi, opType)
             || acls.hasAccessToKey(aclName, ugi, KeyOpType.ALL))) {
       return;
@@ -146,50 +154,85 @@ public class KeyAuthorizationKeyProvider extends KeyProviderCryptoExtension {
   @Override
   public KeyVersion createKey(String name, Options options)
       throws NoSuchAlgorithmException, IOException {
-    authorizeCreateKey(name, options, getUser());
-    return provider.createKey(name, options);
+    writeLock.lock();
+    try {
+      authorizeCreateKey(name, options, getUser());
+      return provider.createKey(name, options);
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
   public KeyVersion createKey(String name, byte[] material, Options options)
       throws IOException {
-    authorizeCreateKey(name, options, getUser());
-    return provider.createKey(name, material, options);
+    writeLock.lock();
+    try {
+      authorizeCreateKey(name, options, getUser());
+      return provider.createKey(name, material, options);
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
   public KeyVersion rollNewVersion(String name)
       throws NoSuchAlgorithmException, IOException {
-    doAccessCheck(name, KeyOpType.MANAGEMENT);
-    return provider.rollNewVersion(name);
+    writeLock.lock();
+    try {
+      doAccessCheck(name, KeyOpType.MANAGEMENT);
+      return provider.rollNewVersion(name);
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
   public void deleteKey(String name) throws IOException {
-    doAccessCheck(name, KeyOpType.MANAGEMENT);
-    provider.deleteKey(name);
+    writeLock.lock();
+    try {
+      doAccessCheck(name, KeyOpType.MANAGEMENT);
+      provider.deleteKey(name);
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
   public KeyVersion rollNewVersion(String name, byte[] material)
       throws IOException {
-    doAccessCheck(name, KeyOpType.MANAGEMENT);
-    return provider.rollNewVersion(name, material);
+    writeLock.lock();
+    try {
+      doAccessCheck(name, KeyOpType.MANAGEMENT);
+      return provider.rollNewVersion(name, material);
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
   public void warmUpEncryptedKeys(String... names) throws IOException {
-    for (String name : names) {
-      doAccessCheck(name, KeyOpType.GENERATE_EEK);
+    readLock.lock();
+    try {
+      for (String name : names) {
+        doAccessCheck(name, KeyOpType.GENERATE_EEK);
+      }
+      provider.warmUpEncryptedKeys(names);
+    } finally {
+      readLock.unlock();
     }
-    provider.warmUpEncryptedKeys(names);
   }
 
   @Override
   public EncryptedKeyVersion generateEncryptedKey(String encryptionKeyName)
       throws IOException, GeneralSecurityException {
-    doAccessCheck(encryptionKeyName, KeyOpType.GENERATE_EEK);
-    return provider.generateEncryptedKey(encryptionKeyName);
+    readLock.lock();
+    try {
+      doAccessCheck(encryptionKeyName, KeyOpType.GENERATE_EEK);
+      return provider.generateEncryptedKey(encryptionKeyName);
+    } finally {
+      readLock.unlock();
+    }
   }
 
   private void verifyKeyVersionBelongsToKey(EncryptedKeyVersion ekv)
@@ -197,6 +240,10 @@ public class KeyAuthorizationKeyProvider extends KeyProviderCryptoExtension {
     String kn = ekv.getEncryptionKeyName();
     String kvn = ekv.getEncryptionKeyVersionName();
     KeyVersion kv = provider.getKeyVersion(kvn);
+    if (kv == null) {
+      throw new IllegalArgumentException(String.format(
+          "'%s' not found", kvn));
+    }
     if (!kv.getName().equals(kn)) {
       throw new IllegalArgumentException(String.format(
           "KeyVersion '%s' does not belong to the key '%s'", kvn, kn));
@@ -206,19 +253,29 @@ public class KeyAuthorizationKeyProvider extends KeyProviderCryptoExtension {
   @Override
   public KeyVersion decryptEncryptedKey(EncryptedKeyVersion encryptedKeyVersion)
           throws IOException, GeneralSecurityException {
-    verifyKeyVersionBelongsToKey(encryptedKeyVersion);
-    doAccessCheck(
-        encryptedKeyVersion.getEncryptionKeyName(), KeyOpType.DECRYPT_EEK);
-    return provider.decryptEncryptedKey(encryptedKeyVersion);
+    readLock.lock();
+    try {
+      verifyKeyVersionBelongsToKey(encryptedKeyVersion);
+      doAccessCheck(
+          encryptedKeyVersion.getEncryptionKeyName(), KeyOpType.DECRYPT_EEK);
+      return provider.decryptEncryptedKey(encryptedKeyVersion);
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override
   public KeyVersion getKeyVersion(String versionName) throws IOException {
-    KeyVersion keyVersion = provider.getKeyVersion(versionName);
-    if (keyVersion != null) {
-      doAccessCheck(keyVersion.getName(), KeyOpType.READ);
+    readLock.lock();
+    try {
+      KeyVersion keyVersion = provider.getKeyVersion(versionName);
+      if (keyVersion != null) {
+        doAccessCheck(keyVersion.getName(), KeyOpType.READ);
+      }
+      return keyVersion;
+    } finally {
+      readLock.unlock();
     }
-    return keyVersion;
   }
 
   @Override
@@ -228,28 +285,48 @@ public class KeyAuthorizationKeyProvider extends KeyProviderCryptoExtension {
 
   @Override
   public List<KeyVersion> getKeyVersions(String name) throws IOException {
-    doAccessCheck(name, KeyOpType.READ);
-    return provider.getKeyVersions(name);
+    readLock.lock();
+    try {
+      doAccessCheck(name, KeyOpType.READ);
+      return provider.getKeyVersions(name);
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override
   public Metadata getMetadata(String name) throws IOException {
-    doAccessCheck(name, KeyOpType.READ);
-    return provider.getMetadata(name);
+    readLock.lock();
+    try {
+      doAccessCheck(name, KeyOpType.READ);
+      return provider.getMetadata(name);
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override
   public Metadata[] getKeysMetadata(String... names) throws IOException {
-    for (String name : names) {
-      doAccessCheck(name, KeyOpType.READ);
+    readLock.lock();
+    try {
+      for (String name : names) {
+        doAccessCheck(name, KeyOpType.READ);
+      }
+      return provider.getKeysMetadata(names);
+    } finally {
+      readLock.unlock();
     }
-    return provider.getKeysMetadata(names);
   }
 
   @Override
   public KeyVersion getCurrentKey(String name) throws IOException {
-    doAccessCheck(name, KeyOpType.READ);
-    return provider.getCurrentKey(name);
+    readLock.lock();
+    try {
+      doAccessCheck(name, KeyOpType.READ);
+      return provider.getCurrentKey(name);
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override

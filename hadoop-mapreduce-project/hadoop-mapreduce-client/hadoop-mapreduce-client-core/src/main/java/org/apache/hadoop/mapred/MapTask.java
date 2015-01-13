@@ -387,6 +387,7 @@ public class MapTask extends Task {
     Class<?>[] collectorClasses = job.getClasses(
       JobContext.MAP_OUTPUT_COLLECTOR_CLASS_ATTR, MapOutputBuffer.class);
     int remainingCollectors = collectorClasses.length;
+    Exception lastException = null;
     for (Class clazz : collectorClasses) {
       try {
         if (!MapOutputCollector.class.isAssignableFrom(clazz)) {
@@ -406,10 +407,12 @@ public class MapTask extends Task {
         if (--remainingCollectors > 0) {
           msg += " (" + remainingCollectors + " more collector(s) to try)";
         }
+        lastException = e;
         LOG.warn(msg, e);
       }
     }
-    throw new IOException("Unable to initialize any output collector");
+    throw new IOException("Initialization of all the collectors failed. " +
+      "Error in last collector was :" + lastException.getMessage(), lastException);
   }
 
   @SuppressWarnings("unchecked")

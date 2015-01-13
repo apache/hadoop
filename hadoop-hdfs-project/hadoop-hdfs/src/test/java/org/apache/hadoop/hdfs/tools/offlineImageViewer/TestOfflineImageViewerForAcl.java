@@ -157,8 +157,7 @@ public class TestOfflineImageViewerForAcl {
   }
 
   @Test
-  public void testWebImageViewerForAcl() throws IOException,
-      InterruptedException, URISyntaxException {
+  public void testWebImageViewerForAcl() throws Exception {
     WebImageViewer viewer = new WebImageViewer(
         NetUtils.createSocketAddr("localhost:0"));
     try {
@@ -200,7 +199,7 @@ public class TestOfflineImageViewerForAcl {
           connection.getResponseCode());
     } finally {
       // shutdown the viewer
-      viewer.shutdown();
+      viewer.close();
     }
   }
 }

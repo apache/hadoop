@@ -20,24 +20,46 @@ package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.List;
+
+import javax.crypto.SecretKey;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestZKRMStateStore extends RMStateStoreTestBase {
@@ -126,6 +148,52 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     testAMRMTokenSecretManagerStateStore(zkTester);
   }
 
+  @Test (timeout = 60000)
+  public void testCheckMajorVersionChange() throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester() {
+      Version VERSION_INFO = Version.newInstance(Integer.MAX_VALUE, 0);
+
+      @Override
+      public Version getCurrentVersion() throws Exception {
+        return VERSION_INFO;
+      }
+
+      @Override
+      public RMStateStore getRMStateStore() throws Exception {
+        YarnConfiguration conf = new YarnConfiguration();
+        workingZnode = "/Test";
+        conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
+        conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
+        this.client = createClient();
+        this.store = new TestZKRMStateStoreInternal(conf, workingZnode) {
+          Version storedVersion = null;
+
+          @Override
+          public Version getCurrentVersion() {
+            return VERSION_INFO;
+          }
+
+          @Override
+          protected synchronized Version loadVersion() throws Exception {
+            return storedVersion;
+          }
+
+          @Override
+          protected synchronized void storeVersion() throws Exception {
+            storedVersion = VERSION_INFO;
+          }
+        };
+        return this.store;
+      }
+
+    };
+    // default version
+    RMStateStore store = zkTester.getRMStateStore();
+    Version defaultVersion = zkTester.getCurrentVersion();
+    store.checkVersion();
+    Assert.assertEquals(defaultVersion, store.loadVersion());
+  }
+
   private Configuration createHARMConf(
       String rmIds, String rmId, int adminPort) {
     Configuration conf = new YarnConfiguration();
@@ -190,5 +258,116 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     assertEquals("RM should be Active",
         HAServiceProtocol.HAServiceState.ACTIVE,
         rm2.getRMContext().getRMAdminService().getServiceStatus().getState());
+  }
+  
+  @Test
+  public void testFencedState() throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+	RMStateStore store = zkTester.getRMStateStore();
+   
+    // Move state to FENCED from ACTIVE
+    store.updateFencedState();
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());    
+
+    long submitTime = System.currentTimeMillis();
+    long startTime = submitTime + 1000;
+
+    // Add a new app
+    RMApp mockApp = mock(RMApp.class);
+    ApplicationSubmissionContext context =
+      new ApplicationSubmissionContextPBImpl();
+    when(mockApp.getSubmitTime()).thenReturn(submitTime);
+    when(mockApp.getStartTime()).thenReturn(startTime);
+    when(mockApp.getApplicationSubmissionContext()).thenReturn(context);
+    when(mockApp.getUser()).thenReturn("test");
+    store.storeNewApplication(mockApp);
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());
+
+    // Add a new attempt
+    ClientToAMTokenSecretManagerInRM clientToAMTokenMgr =
+            new ClientToAMTokenSecretManagerInRM();
+    ApplicationAttemptId attemptId = ConverterUtils
+            .toApplicationAttemptId("appattempt_1234567894321_0001_000001");
+    SecretKey clientTokenMasterKey =
+                clientToAMTokenMgr.createMasterKey(attemptId);
+    RMAppAttemptMetrics mockRmAppAttemptMetrics = 
+         mock(RMAppAttemptMetrics.class);
+    Container container = new ContainerPBImpl();
+    container.setId(ConverterUtils.toContainerId("container_1234567891234_0001_01_000001"));
+    RMAppAttempt mockAttempt = mock(RMAppAttempt.class);
+    when(mockAttempt.getAppAttemptId()).thenReturn(attemptId);
+    when(mockAttempt.getMasterContainer()).thenReturn(container);
+    when(mockAttempt.getClientTokenMasterKey())
+        .thenReturn(clientTokenMasterKey);
+    when(mockAttempt.getRMAppAttemptMetrics())
+        .thenReturn(mockRmAppAttemptMetrics);
+    when(mockRmAppAttemptMetrics.getAggregateAppResourceUsage())
+        .thenReturn(new AggregateAppResourceUsage(0,0));
+    store.storeNewApplicationAttempt(mockAttempt);
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());
+
+    long finishTime = submitTime + 1000;
+    // Update attempt
+    ApplicationAttemptStateData newAttemptState =
+      ApplicationAttemptStateData.newInstance(attemptId, container,
+            store.getCredentialsFromAppAttempt(mockAttempt),
+            startTime, RMAppAttemptState.FINISHED, "testUrl", 
+            "test", FinalApplicationStatus.SUCCEEDED, 100, 
+            finishTime, 0, 0);
+    store.updateApplicationAttemptState(newAttemptState);
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());
+
+    // Update app
+    ApplicationStateData appState = ApplicationStateData.newInstance(submitTime, 
+            startTime, context, "test");
+    store.updateApplicationState(appState);
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());
+
+    // Remove app
+    store.removeApplication(mockApp);
+    assertEquals("RMStateStore should have been in fenced state",
+            true, store.isFencedState());
+
+    // store RM delegation token;
+    RMDelegationTokenIdentifier dtId1 =
+        new RMDelegationTokenIdentifier(new Text("owner1"),
+            new Text("renewer1"), new Text("realuser1"));
+    Long renewDate1 = new Long(System.currentTimeMillis()); 
+    dtId1.setSequenceNumber(1111);
+    store.storeRMDelegationToken(dtId1, renewDate1);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    store.updateRMDelegationToken(dtId1, renewDate1);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // remove delegation key;
+    store.removeRMDelegationToken(dtId1);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // store delegation master key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    store.storeRMDTMasterKey(key);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // remove delegation master key;
+    store.removeRMDTMasterKey(key);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // store or update AMRMToken;
+    store.storeOrUpdateAMRMTokenSecretManager(null, false);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    store.close();
   }
 }

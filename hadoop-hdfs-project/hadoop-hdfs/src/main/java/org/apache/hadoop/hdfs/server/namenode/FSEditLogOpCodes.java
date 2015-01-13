@@ -73,6 +73,7 @@ public enum FSEditLogOpCodes {
   OP_SET_XATTR                  ((byte) 43),
   OP_REMOVE_XATTR               ((byte) 44),
   OP_SET_STORAGE_POLICY         ((byte) 45),
+  OP_TRUNCATE                   ((byte) 46),
 
   // Note that the current range of the valid OP code is 0~127
   OP_INVALID                    ((byte) -1);

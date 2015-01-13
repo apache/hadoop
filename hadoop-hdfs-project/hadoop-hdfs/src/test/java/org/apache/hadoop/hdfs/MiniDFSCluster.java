@@ -807,7 +807,7 @@ public class MiniDFSCluster {
             format, startOpt, clusterId, conf);
       } catch (IOException ioe) {
         LOG.error("IOE creating namenodes. Permissions dump:\n" +
-            createPermissionsDiagnosisString(data_dir));
+            createPermissionsDiagnosisString(data_dir), ioe);
         throw ioe;
       }
       if (format) {
@@ -1822,23 +1822,40 @@ public class MiniDFSCluster {
     }
   }
 
-  /**
-   * Return the contents of the given block on the given datanode.
-   *
-   * @param block block to be corrupted
-   * @throws IOException on error accessing the file for the given block
-   */
-  public int corruptBlockOnDataNodes(ExtendedBlock block) throws IOException{
+  private int corruptBlockOnDataNodesHelper(ExtendedBlock block,
+      boolean deleteBlockFile) throws IOException {
     int blocksCorrupted = 0;
     File[] blockFiles = getAllBlockFiles(block);
     for (File f : blockFiles) {
-      if (corruptBlock(f)) {
+      if ((deleteBlockFile && corruptBlockByDeletingBlockFile(f)) ||
+          (!deleteBlockFile && corruptBlock(f))) {
         blocksCorrupted++;
       }
     }
     return blocksCorrupted;
   }
 
+  /**
+   * Return the number of corrupted replicas of the given block.
+   *
+   * @param block block to be corrupted
+   * @throws IOException on error accessing the file for the given block
+   */
+  public int corruptBlockOnDataNodes(ExtendedBlock block) throws IOException{
+    return corruptBlockOnDataNodesHelper(block, false);
+  }
+
+  /**
+   * Return the number of corrupted replicas of the given block.
+   *
+   * @param block block to be corrupted
+   * @throws IOException on error accessing the file for the given block
+   */
+  public int corruptBlockOnDataNodesByDeletingBlockFile(ExtendedBlock block)
+      throws IOException{
+    return corruptBlockOnDataNodesHelper(block, true);
+  }
+  
   public String readBlockOnDataNode(int i, ExtendedBlock block)
       throws IOException {
     assert (i >= 0 && i < dataNodes.size()) : "Invalid datanode "+i;
@@ -1884,7 +1901,18 @@ public class MiniDFSCluster {
     LOG.warn("Corrupting the block " + blockFile);
     return true;
   }
-  
+
+  /*
+   * Corrupt a block on a particular datanode by deleting the block file
+   */
+  public static boolean corruptBlockByDeletingBlockFile(File blockFile) 
+      throws IOException {
+    if (blockFile == null || !blockFile.exists()) {
+      return false;
+    }
+    return blockFile.delete();
+  }
+
   public static boolean changeGenStampOfBlock(int dnIndex, ExtendedBlock blk,
       long newGenStamp) throws IOException {
     File blockFile = getBlockFile(dnIndex, blk);

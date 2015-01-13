@@ -20,9 +20,13 @@ package org.apache.hadoop.yarn.server.nodemanager.util;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -38,6 +42,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -235,7 +240,6 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
   private void updateCgroup(String controller, String groupName, String param,
                             String value) throws IOException {
-    FileWriter f = null;
     String path = pathForCgroup(controller, groupName);
     param = controller + "." + param;
 
@@ -243,19 +247,25 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
       LOG.debug("updateCgroup: " + path + ": " + param + "=" + value);
     }
 
+    PrintWriter pw = null;
     try {
-      f = new FileWriter(path + "/" + param, false);
-      f.write(value);
+      File file = new File(path + "/" + param);
+      Writer w = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
+      pw = new PrintWriter(w);
+      pw.write(value);
     } catch (IOException e) {
       throw new IOException("Unable to set " + param + "=" + value +
           " for cgroup at: " + path, e);
     } finally {
-      if (f != null) {
-        try {
-          f.close();
-        } catch (IOException e) {
-          LOG.warn("Unable to close cgroup file: " +
-              path, e);
+      if (pw != null) {
+        boolean hasError = pw.checkError();
+        pw.close();
+        if(hasError) {
+          throw new IOException("Unable to set " + param + "=" + value +
+                " for cgroup at: " + path);
+        }
+        if(pw.checkError()) {
+          throw new IOException("Error while closing cgroup file " + path);
         }
       }
     }
@@ -376,7 +386,8 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     BufferedReader in = null;
 
     try {
-      in = new BufferedReader(new FileReader(new File(getMtabFileName())));
+      FileInputStream fis = new FileInputStream(new File(getMtabFileName()));
+      in = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
 
       for (String str = in.readLine(); str != null;
           str = in.readLine()) {
@@ -396,12 +407,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     } catch (IOException e) {
       throw new IOException("Error while reading " + getMtabFileName(), e);
     } finally {
-      // Close the streams
-      try {
-        in.close();
-      } catch (IOException e2) {
-        LOG.warn("Error closing the stream: " + getMtabFileName(), e2);
-      }
+      IOUtils.cleanup(LOG, in);
     }
 
     return ret;

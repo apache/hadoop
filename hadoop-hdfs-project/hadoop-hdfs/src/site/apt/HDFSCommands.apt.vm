@@ -26,8 +26,8 @@ HDFS Commands Guide
    hdfs script without any arguments prints the description for all
    commands.
 
-   Usage: <<<hdfs [--config confdir] [COMMAND] [GENERIC_OPTIONS]
-          [COMMAND_OPTIONS]>>>
+   Usage: <<<hdfs [--config confdir] [--loglevel loglevel] [COMMAND]
+          [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
 
    Hadoop has an option parsing framework that employs parsing generic options
    as well as running classes.
@@ -37,6 +37,10 @@ HDFS Commands Guide
 *-----------------------+---------------+
 | <<<--config confdir>>>| Overwrites the default Configuration directory.
 |                       | Default is <<<${HADOOP_HOME}/conf>>>.
+*-----------------------+---------------+
+| <<<--loglevel loglevel>>>| Overwrites the log level. Valid log levels are
+|                       | FATAL, ERROR, WARN, INFO, DEBUG, and TRACE.
+|                       | Default is INFO.
 *-----------------------+---------------+
 | GENERIC_OPTIONS       | The common set of options supported by multiple
 |                       | commands. Full list is
@@ -194,6 +198,7 @@ HDFS Commands Guide
           [-refreshSuperUserGroupsConfiguration]
           [-refreshCallQueue]
           [-refresh <host:ipc_port> <key> [arg1..argn]]
+          [-reconfig <datanode|...> <host:ipc_port> <start|status>]
           [-printTopology]
           [-refreshNamenodes datanodehost:port]
           [-deleteBlockPool datanode-host:port blockpoolId [force]]
@@ -203,6 +208,7 @@ HDFS Commands Guide
           [-fetchImage <local directory>]
           [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
           [-getDatanodeInfo <datanode_host:ipc_port>]
+          [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
           [-help [cmd]]
 +------------------------------------------+
 
@@ -287,6 +293,12 @@ HDFS Commands Guide
                   | of the resource specified by \<key\> on \<host:ipc_port\>.
                   | All other args after are sent to the host.
 *-----------------+-----------------------------------------------------------+
+| -reconfig \<datanode\|...\> \<host:ipc_port\> \<start\|status\> | Start
+                  | reconfiguration or get the status of an ongoing
+                  | reconfiguration. The second parameter specifies the node
+                  | type. Currently, only reloading DataNode's configuration is
+                  | supported.
+*-----------------+-----------------------------------------------------------+
 | -printTopology  | Print a tree of the racks and their nodes as reported by
                   | the Namenode
 *-----------------+-----------------------------------------------------------+
@@ -329,6 +341,11 @@ HDFS Commands Guide
                   | given datanode. See
                   | {{{./HdfsRollingUpgrade.html#dfsadmin_-getDatanodeInfo}Rolling Upgrade document}}
                   | for the detail.
+*-----------------+-----------------------------------------------------------+
+| -triggerBlockReport [-incremental] \<datanode_host:ipc_port\> | Trigger a
+                  | block report for the given datanode.  If 'incremental' is
+                  | specified, it will be | an incremental block report;
+                  | otherwise, it will be a full block report.
 *-----------------+-----------------------------------------------------------+
 | -help [cmd]     | Displays help for the given command or all commands if none
                   | is specified.
@@ -447,3 +464,46 @@ HDFS Commands Guide
 | -geteditsize         | Prints the number of uncheckpointed transactions on
                        | the NameNode.
 *----------------------+------------------------------------------------------+
+
+* Debug Commands
+
+   Useful commands to help administrators debug HDFS issues, like validating
+   block files and calling recoverLease.
+
+** <<<verify>>>
+
+   Verify HDFS metadata and block files.  If a block file is specified, we
+   will verify that the checksums in the metadata file match the block
+   file.
+
+   Usage: <<<hdfs dfs verify [-meta <metadata-file>] [-block <block-file>]>>>
+
+*------------------------+----------------------------------------------------+
+|| COMMAND_OPTION        | Description
+*------------------------+----------------------------------------------------+
+| -meta <metadata-file>  | Absolute path for the metadata file on the local file
+|                        | system of the data node.
+*------------------------+----------------------------------------------------+
+| -block <block-file>    | Optional parameter to specify the absolute path for
+|                        | the block file on the local file system of the data
+|                        | node.
+*------------------------+----------------------------------------------------+
+
+
+
+** <<<recoverLease>>>
+
+   Recover the lease on the specified path.  The path must reside on an
+   HDFS filesystem.  The default number of retries is 1.
+
+   Usage: <<<hdfs dfs recoverLease [-path <path>] [-retries <num-retries>]>>>
+
+*-------------------------------+--------------------------------------------+
+|| COMMAND_OPTION               || Description
+*-------------------------------+---------------------------------------------+
+| [-path <path>]                | HDFS path for which to recover the lease.
+*-------------------------------+---------------------------------------------+
+| [-retries <num-retries>]      | Number of times the client will retry calling
+|                               | recoverLease. The default number of retries
+|                               | is 1.
+*-------------------------------+---------------------------------------------+

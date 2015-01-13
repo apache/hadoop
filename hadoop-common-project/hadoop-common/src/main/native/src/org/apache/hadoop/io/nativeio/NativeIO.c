@@ -35,6 +35,9 @@
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#if !(defined(__FreeBSD__) || defined(__MACH__))
+#include <sys/sendfile.h>
+#endif
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -68,8 +71,13 @@ static jmethodID nioe_ctor;
 // Please see HADOOP-7156 for details.
 jobject pw_lock_object;
 
+/*
+ * Throw a java.IO.IOException, generating the message from errno.
+ * NB. this is also used form windows_secure_container_executor.c
+ */
+extern void throw_ioe(JNIEnv* env, int errnum);
+
 // Internal functions
-static void throw_ioe(JNIEnv* env, int errnum);
 #ifdef UNIX
 static ssize_t get_pw_buflen();
 #endif
@@ -213,7 +221,7 @@ static int map_fadvise_flag(jint flag) {
  */
 JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_nativeio_NativeIO_initNative(
-	JNIEnv *env, jclass clazz) {
+  JNIEnv *env, jclass clazz) {
   stat_init(env, clazz);
   PASS_EXCEPTIONS_GOTO(env, error);
   nioe_init(env);
@@ -275,7 +283,7 @@ cleanup:
 #ifdef WINDOWS
   LPWSTR owner = NULL;
   LPWSTR group = NULL;
-  int mode;
+  int mode = 0;
   jstring jstr_owner = NULL;
   jstring jstr_group = NULL;
   int rc;
@@ -503,6 +511,86 @@ cleanup:
   THROW(env, "java/io/IOException",
     "The function POSIX.open() is not supported on Windows");
   return NULL;
+#endif
+}
+
+/*
+ * Class:     org_apache_hadoop_io_nativeio_NativeIO_Windows
+ * Method:    createDirectoryWithMode0
+ * Signature: (Ljava/lang/String;I)V
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT void JNICALL
+  Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_createDirectoryWithMode0
+  (JNIEnv *env, jclass clazz, jstring j_path, jint mode)
+{
+#ifdef WINDOWS
+  DWORD dwRtnCode = ERROR_SUCCESS;
+
+  LPCWSTR path = (LPCWSTR) (*env)->GetStringChars(env, j_path, NULL);
+  if (!path) {
+    goto done;
+  }
+
+  dwRtnCode = CreateDirectoryWithMode(path, mode);
+
+done:
+  if (path) {
+    (*env)->ReleaseStringChars(env, j_path, (const jchar*) path);
+  }
+  if (dwRtnCode != ERROR_SUCCESS) {
+    throw_ioe(env, dwRtnCode);
+  }
+#else
+  THROW(env, "java/io/IOException",
+    "The function Windows.createDirectoryWithMode0() is not supported on this platform");
+#endif
+}
+
+/*
+ * Class:     org_apache_hadoop_io_nativeio_NativeIO_Windows
+ * Method:    createFileWithMode0
+ * Signature: (Ljava/lang/String;JJJI)Ljava/io/FileDescriptor;
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT jobject JNICALL
+  Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_createFileWithMode0
+  (JNIEnv *env, jclass clazz, jstring j_path,
+  jlong desiredAccess, jlong shareMode, jlong creationDisposition, jint mode)
+{
+#ifdef WINDOWS
+  DWORD dwRtnCode = ERROR_SUCCESS;
+  HANDLE hFile = INVALID_HANDLE_VALUE;
+  jobject fd = NULL;
+
+  LPCWSTR path = (LPCWSTR) (*env)->GetStringChars(env, j_path, NULL);
+  if (!path) {
+    goto done;
+  }
+
+  dwRtnCode = CreateFileWithMode(path, desiredAccess, shareMode,
+      creationDisposition, mode, &hFile);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+
+  fd = fd_create(env, (long) hFile);
+
+done:
+  if (path) {
+    (*env)->ReleaseStringChars(env, j_path, (const jchar*) path);
+  }
+  if (dwRtnCode != ERROR_SUCCESS) {
+    throw_ioe(env, dwRtnCode);
+  }
+  return fd;
+#else
+  THROW(env, "java/io/IOException",
+    "The function Windows.createFileWithMode0() is not supported on this platform");
 #endif
 }
 
@@ -799,7 +887,7 @@ cleanup:
 /*
  * Throw a java.IO.IOException, generating the message from errno.
  */
-static void throw_ioe(JNIEnv* env, int errnum)
+void throw_ioe(JNIEnv* env, int errnum)
 {
 #ifdef UNIX
   char message[80];
@@ -1139,6 +1227,32 @@ JNIEnv *env, jclass clazz)
   }
   return (rlim.rlim_cur == RLIM_INFINITY) ?
     INT64_MAX : rlim.rlim_cur;
+#endif
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_copyFileUnbuffered0(
+JNIEnv *env, jclass clazz, jstring jsrc, jstring jdst)
+{
+#ifdef UNIX
+  THROW(env, "java/lang/UnsupportedOperationException",
+    "The function copyFileUnbuffered0 should not be used on Unix. Use FileChannel#transferTo instead.");
+#endif
+
+#ifdef WINDOWS
+  LPCWSTR src = NULL, dst = NULL;
+
+  src = (LPCWSTR) (*env)->GetStringChars(env, jsrc, NULL);
+  if (!src) goto cleanup; // exception was thrown
+  dst = (LPCWSTR) (*env)->GetStringChars(env, jdst, NULL);
+  if (!dst) goto cleanup; // exception was thrown
+  if (!CopyFileEx(src, dst, NULL, NULL, NULL, COPY_FILE_NO_BUFFERING)) {
+    throw_ioe(env, GetLastError());
+  }
+
+cleanup:
+  if (src) (*env)->ReleaseStringChars(env, jsrc, src);
+  if (dst) (*env)->ReleaseStringChars(env, jdst, dst);
 #endif
 }
 

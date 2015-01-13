@@ -18,11 +18,14 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,23 +47,39 @@ public class BlockStoragePolicySuite {
   public static BlockStoragePolicySuite createDefaultSuite() {
     final BlockStoragePolicy[] policies =
         new BlockStoragePolicy[1 << ID_BIT_LENGTH];
-    final byte lazyPersistId = 15;
-    policies[lazyPersistId] = new BlockStoragePolicy(lazyPersistId, "LAZY_PERSIST",
+    final byte lazyPersistId = HdfsConstants.MEMORY_STORAGE_POLICY_ID;
+    policies[lazyPersistId] = new BlockStoragePolicy(lazyPersistId,
+        HdfsConstants.MEMORY_STORAGE_POLICY_NAME,
         new StorageType[]{StorageType.RAM_DISK, StorageType.DISK},
         new StorageType[]{StorageType.DISK},
         new StorageType[]{StorageType.DISK},
         true);    // Cannot be changed on regular files, but inherited.
-    final byte hotId = 12;
-    policies[hotId] = new BlockStoragePolicy(hotId, "HOT",
+    final byte allssdId = HdfsConstants.ALLSSD_STORAGE_POLICY_ID;
+    policies[allssdId] = new BlockStoragePolicy(allssdId,
+        HdfsConstants.ALLSSD_STORAGE_POLICY_NAME,
+        new StorageType[]{StorageType.SSD},
+        new StorageType[]{StorageType.DISK},
+        new StorageType[]{StorageType.DISK});
+    final byte onessdId = HdfsConstants.ONESSD_STORAGE_POLICY_ID;
+    policies[onessdId] = new BlockStoragePolicy(onessdId,
+        HdfsConstants.ONESSD_STORAGE_POLICY_NAME,
+        new StorageType[]{StorageType.SSD, StorageType.DISK},
+        new StorageType[]{StorageType.SSD, StorageType.DISK},
+        new StorageType[]{StorageType.SSD, StorageType.DISK});
+    final byte hotId = HdfsConstants.HOT_STORAGE_POLICY_ID;
+    policies[hotId] = new BlockStoragePolicy(hotId,
+        HdfsConstants.HOT_STORAGE_POLICY_NAME,
         new StorageType[]{StorageType.DISK}, StorageType.EMPTY_ARRAY,
         new StorageType[]{StorageType.ARCHIVE});
-    final byte warmId = 8;
-    policies[warmId] = new BlockStoragePolicy(warmId, "WARM",
+    final byte warmId = HdfsConstants.WARM_STORAGE_POLICY_ID;
+    policies[warmId] = new BlockStoragePolicy(warmId,
+        HdfsConstants.WARM_STORAGE_POLICY_NAME,
         new StorageType[]{StorageType.DISK, StorageType.ARCHIVE},
         new StorageType[]{StorageType.DISK, StorageType.ARCHIVE},
         new StorageType[]{StorageType.DISK, StorageType.ARCHIVE});
-    final byte coldId = 4;
-    policies[coldId] = new BlockStoragePolicy(coldId, "COLD",
+    final byte coldId = HdfsConstants.COLD_STORAGE_POLICY_ID;
+    policies[coldId] = new BlockStoragePolicy(coldId,
+        HdfsConstants.COLD_STORAGE_POLICY_NAME,
         new StorageType[]{StorageType.ARCHIVE}, StorageType.EMPTY_ARRAY,
         StorageType.EMPTY_ARRAY);
     return new BlockStoragePolicySuite(hotId, policies);
@@ -87,9 +106,11 @@ public class BlockStoragePolicySuite {
   }
 
   public BlockStoragePolicy getPolicy(String policyName) {
+    Preconditions.checkNotNull(policyName);
+
     if (policies != null) {
       for (BlockStoragePolicy policy : policies) {
-        if (policy != null && policy.getName().equals(policyName)) {
+        if (policy != null && policy.getName().equalsIgnoreCase(policyName)) {
           return policy;
         }
       }

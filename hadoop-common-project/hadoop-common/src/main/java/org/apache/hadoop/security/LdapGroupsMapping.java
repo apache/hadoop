@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.security;
 
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -34,6 +36,7 @@ import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -366,11 +369,10 @@ public class LdapGroupsMapping
       // an anonymous bind
       return "";
     }
-    
-    Reader reader = null;
-    try {
-      StringBuilder password = new StringBuilder();
-      reader = new FileReader(pwFile);
+
+    StringBuilder password = new StringBuilder();
+    try (Reader reader = new InputStreamReader(
+        new FileInputStream(pwFile), Charsets.UTF_8)) {
       int c = reader.read();
       while (c > -1) {
         password.append((char)c);
@@ -379,8 +381,6 @@ public class LdapGroupsMapping
       return password.toString().trim();
     } catch (IOException ioe) {
       throw new RuntimeException("Could not read password file: " + pwFile, ioe);
-    } finally {
-      IOUtils.cleanup(LOG, reader);
     }
   }
 }

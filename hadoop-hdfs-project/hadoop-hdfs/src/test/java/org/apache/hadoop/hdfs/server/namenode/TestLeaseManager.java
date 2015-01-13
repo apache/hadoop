@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
@@ -53,5 +54,31 @@ public class TestLeaseManager {
 
     assertNull(lm.getLeaseByPath("/a/b"));
     assertNull(lm.getLeaseByPath("/a/c"));
+  }
+
+  /** Check that even if LeaseManager.checkLease is not able to relinquish
+   * leases, the Namenode does't enter an infinite loop while holding the FSN
+   * write lock and thus become unresponsive
+   */
+  @Test (timeout=1000)
+  public void testCheckLeaseNotInfiniteLoop() {
+    FSDirectory dir = Mockito.mock(FSDirectory.class);
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.isRunning()).thenReturn(true);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Mockito.when(fsn.getFSDirectory()).thenReturn(dir);
+    LeaseManager lm = new LeaseManager(fsn);
+
+    //Make sure the leases we are going to add exceed the hard limit
+    lm.setLeasePeriod(0,0);
+
+    //Add some leases to the LeaseManager
+    lm.addLease("holder1", "src1");
+    lm.addLease("holder2", "src2");
+    lm.addLease("holder3", "src3");
+    assertEquals(lm.getNumSortedLeases(), 3);
+
+    //Initiate a call to checkLease. This should exit within the test timeout
+    lm.checkLeases();
   }
 }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.doReturn;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
@@ -35,6 +37,8 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -43,7 +47,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
@@ -57,12 +63,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -71,8 +77,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -196,10 +205,11 @@ public class TestRMAppTransitions {
     AMLivelinessMonitor amFinishingMonitor = mock(AMLivelinessMonitor.class);
     store = mock(RMStateStore.class);
     writer = mock(RMApplicationHistoryWriter.class);
+    DelegationTokenRenewer renewer = mock(DelegationTokenRenewer.class);
     RMContext realRMContext = 
         new RMContextImpl(rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-          null, new AMRMTokenSecretManager(conf, this.rmContext),
+          renewer, new AMRMTokenSecretManager(conf, this.rmContext),
           new RMContainerTokenSecretManager(conf),
           new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM(),
@@ -254,7 +264,7 @@ public class TestRMAppTransitions {
     RMApp application =
         new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
           submissionContext, scheduler, masterService,
-          System.currentTimeMillis(), "YARN", null);
+          System.currentTimeMillis(), "YARN", null, null);
 
     testAppStartState(applicationId, user, name, queue, application);
     this.rmContext.getRMApps().putIfAbsent(application.getApplicationId(),
@@ -316,11 +326,13 @@ public class TestRMAppTransitions {
   }
 
   private void assertAppFinalStateSaved(RMApp application){
-    verify(store, times(1)).updateApplicationState(any(ApplicationState.class));
+    verify(store, times(1)).updateApplicationState(
+        any(ApplicationStateData.class));
   }
 
   private void assertAppFinalStateNotSaved(RMApp application){
-    verify(store, times(0)).updateApplicationState(any(ApplicationState.class));
+    verify(store, times(0)).updateApplicationState(
+        any(ApplicationStateData.class));
   }
 
   private void assertKilled(RMApp application) {
@@ -384,8 +396,14 @@ public class TestRMAppTransitions {
       ApplicationSubmissionContext submissionContext) throws IOException {
     RMApp application = createNewTestApp(submissionContext);
     // NEW => SUBMITTED event RMAppEventType.RECOVER
+    RMState state = new RMState();
+    ApplicationStateData appState =
+        ApplicationStateData.newInstance(123, 123, null, "user");
+    state.getApplicationState().put(application.getApplicationId(), appState);
     RMAppEvent event =
-        new RMAppEvent(application.getApplicationId(), RMAppEventType.RECOVER);
+        new RMAppRecoverEvent(application.getApplicationId(), state);
+
+
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.SUBMITTED, application);
@@ -511,7 +529,18 @@ public class TestRMAppTransitions {
   @Test (timeout = 30000)
   public void testAppRecoverPath() throws IOException {
     LOG.info("--- START: testAppRecoverPath ---");
-    testCreateAppSubmittedRecovery(null);
+    ApplicationSubmissionContext sub =
+        Records.newRecord(ApplicationSubmissionContext.class);
+    ContainerLaunchContext clc =
+        Records.newRecord(ContainerLaunchContext.class);
+    Credentials credentials = new Credentials();
+    DataOutputBuffer dob = new DataOutputBuffer();
+    credentials.writeTokenStorageToStream(dob);
+    ByteBuffer securityTokens =
+        ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    clc.setTokens(securityTokens);
+    sub.setAMContainerSpec(clc);
+    testCreateAppSubmittedRecovery(sub);
   }
 
   @Test (timeout = 30000)
@@ -689,6 +718,29 @@ public class TestRMAppTransitions {
     verifyApplicationFinished(RMAppState.KILLED);
     verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
   }
+  
+  @Test
+  public void testAppAcceptedAttemptKilled() throws IOException,
+      InterruptedException {
+    LOG.info("--- START: testAppAcceptedAttemptKilled ---");
+    RMApp application = testCreateAppAccepted(null);
+
+    // ACCEPTED => FINAL_SAVING event RMAppEventType.ATTEMPT_KILLED
+    // When application recovery happens for attempt is KILLED but app is
+    // RUNNING.
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(),
+            RMAppEventType.ATTEMPT_KILLED);
+    application.handle(event);
+    rmDispatcher.await();
+
+    assertAppState(RMAppState.FINAL_SAVING, application);
+    sendAppUpdateSavedEvent(application);
+    assertKilled(application);
+    assertAppFinalStateSaved(application);
+    verifyApplicationFinished(RMAppState.KILLED);
+    verifyAppRemovedSchedulerEvent(RMAppState.KILLED);
+  }
 
   @Test
   public void testAppRunningKill() throws IOException {
@@ -701,12 +753,6 @@ public class TestRMAppTransitions {
     application.handle(event);
     rmDispatcher.await();
 
-    // Ignore Attempt_Finished if we were supposed to go to Finished.
-    assertAppState(RMAppState.KILLING, application);
-    RMAppEvent finishEvent =
-        new RMAppFinishedAttemptEvent(application.getApplicationId(), null);
-    application.handle(finishEvent);
-    assertAppState(RMAppState.KILLING, application);
     sendAttemptUpdateSavedEvent(application);
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
@@ -904,36 +950,42 @@ public class TestRMAppTransitions {
   @Test(timeout = 30000)
   public void testAppsRecoveringStates() throws Exception {
     RMState state = new RMState();
-    Map<ApplicationId, ApplicationState> applicationState =
+    Map<ApplicationId, ApplicationStateData> applicationState =
         state.getApplicationState();
     createRMStateForApplications(applicationState, RMAppState.FINISHED);
     createRMStateForApplications(applicationState, RMAppState.KILLED);
     createRMStateForApplications(applicationState, RMAppState.FAILED);
-    for (ApplicationState appState : applicationState.values()) {
+    for (ApplicationStateData appState : applicationState.values()) {
       testRecoverApplication(appState, state);
     }
   }
   
-  public void testRecoverApplication(ApplicationState appState, RMState rmState)
+  public void testRecoverApplication(ApplicationStateData appState,
+      RMState rmState)
       throws Exception {
     ApplicationSubmissionContext submissionContext =
         appState.getApplicationSubmissionContext();
     RMAppImpl application =
-        new RMAppImpl(appState.getAppId(), rmContext, conf,
+        new RMAppImpl(
+            appState.getApplicationSubmissionContext().getApplicationId(),
+            rmContext, conf,
             submissionContext.getApplicationName(), null,
             submissionContext.getQueue(), submissionContext, null, null,
             appState.getSubmitTime(), submissionContext.getApplicationType(),
-            submissionContext.getApplicationTags());
+            submissionContext.getApplicationTags(),
+            BuilderUtils.newResourceRequest(
+                RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
+                submissionContext.getResource(), 1));
     Assert.assertEquals(RMAppState.NEW, application.getState());
-    application.recover(rmState);
 
+    RMAppEvent recoverEvent =
+        new RMAppRecoverEvent(application.getApplicationId(), rmState);
+    // Trigger RECOVER event.
+    application.handle(recoverEvent);
     // Application final status looked from recoveredFinalStatus
     Assert.assertTrue("Application is not in recoveredFinalStatus.",
         RMAppImpl.isAppInFinalState(application));
 
-    // Trigger RECOVER event.
-    application.handle(new RMAppEvent(appState.getAppId(),
-        RMAppEventType.RECOVER));
     rmDispatcher.await();
     RMAppState finalState = appState.getState();
     Assert.assertEquals("Application is not in finalState.", finalState,
@@ -941,12 +993,12 @@ public class TestRMAppTransitions {
   }
   
   public void createRMStateForApplications(
-      Map<ApplicationId, ApplicationState> applicationState,
+      Map<ApplicationId, ApplicationStateData> applicationState,
       RMAppState rmAppState) {
     RMApp app = createNewTestApp(null);
-    ApplicationState appState =
-        new ApplicationState(app.getSubmitTime(), app.getStartTime(),
-            app.getApplicationSubmissionContext(), app.getUser(), rmAppState,
+    ApplicationStateData appState =
+        ApplicationStateData.newInstance(app.getSubmitTime(), app.getStartTime(),
+            app.getUser(), app.getApplicationSubmissionContext(), rmAppState,
             null, app.getFinishTime());
     applicationState.put(app.getApplicationId(), appState);
   }

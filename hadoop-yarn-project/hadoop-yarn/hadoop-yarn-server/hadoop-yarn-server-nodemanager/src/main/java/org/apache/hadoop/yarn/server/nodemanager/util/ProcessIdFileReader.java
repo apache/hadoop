@@ -19,8 +19,9 @@ package org.apache.hadoop.yarn.server.nodemanager.util;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,14 +50,14 @@ public class ProcessIdFileReader {
     
     LOG.debug("Accessing pid from pid file " + path);
     String processId = null;
-    FileReader fileReader = null;
     BufferedReader bufReader = null;
 
     try {
       File file = new File(path.toString());
       if (file.exists()) {
-        fileReader = new FileReader(file);
-        bufReader = new BufferedReader(fileReader);
+        FileInputStream fis = new FileInputStream(file);
+        bufReader = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
+
         while (true) {
           String line = bufReader.readLine();
           if (line == null) {
@@ -91,9 +92,6 @@ public class ProcessIdFileReader {
         }
       }
     } finally {
-      if (fileReader != null) {
-        fileReader.close();
-      }
       if (bufReader != null) {
         bufReader.close();
       }

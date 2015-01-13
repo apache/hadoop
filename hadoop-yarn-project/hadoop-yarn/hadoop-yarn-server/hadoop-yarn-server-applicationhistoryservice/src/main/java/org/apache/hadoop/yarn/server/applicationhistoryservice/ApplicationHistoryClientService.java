@@ -61,6 +61,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.timeline.security.authorize.TimelinePolicyProvider;
 
+import com.google.common.base.Preconditions;
+
 public class ApplicationHistoryClientService extends AbstractService {
   private static final Log LOG = LogFactory
     .getLog(ApplicationHistoryClientService.class);
@@ -83,6 +85,12 @@ public class ApplicationHistoryClientService extends AbstractService {
         YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT);
+
+    Preconditions.checkArgument(conf.getInt(
+        YarnConfiguration.TIMELINE_SERVICE_HANDLER_THREAD_COUNT,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_THREAD_COUNT) > 0,
+        "%s property value should be greater than zero",
+        YarnConfiguration.TIMELINE_SERVICE_HANDLER_THREAD_COUNT);
 
     server =
         rpc.getServer(ApplicationHistoryProtocol.class, protocolHandler,

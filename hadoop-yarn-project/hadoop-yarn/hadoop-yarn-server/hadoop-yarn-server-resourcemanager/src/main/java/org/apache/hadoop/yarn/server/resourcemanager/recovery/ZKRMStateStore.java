@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -34,8 +35,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataInputByteBuffer;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil;
@@ -50,13 +49,14 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.Appl
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.EpochProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.RMZKUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Epoch;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegationTokenIdentifierData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.AMRMTokenSecretManagerStatePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
@@ -488,6 +488,10 @@ public class ZKRMStateStore extends RMStateStore {
           DelegationKey key = new DelegationKey();
           key.readFields(fsIn);
           rmState.rmSecretManagerState.masterKeyState.add(key);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Loaded delegation key: keyId=" + key.getKeyId()
+                + ", expirationDate=" + key.getExpiryDate());
+          }
         }
       } finally {
         is.close();
@@ -527,12 +531,18 @@ public class ZKRMStateStore extends RMStateStore {
 
       try {
         if (childNodeName.startsWith(DELEGATION_TOKEN_PREFIX)) {
+          RMDelegationTokenIdentifierData identifierData =
+              new RMDelegationTokenIdentifierData();
+          identifierData.readFields(fsIn);
           RMDelegationTokenIdentifier identifier =
-              new RMDelegationTokenIdentifier();
-          identifier.readFields(fsIn);
-          long renewDate = identifier.getRenewDate();
+              identifierData.getTokenIdentifier();
+          long renewDate = identifierData.getRenewDate();
           rmState.rmSecretManagerState.delegationTokenState.put(identifier,
               renewDate);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Loaded RMDelegationTokenIdentifier: " + identifier
+                + " renewDate=" + renewDate);
+          }
         }
       } finally {
         is.close();
@@ -551,17 +561,11 @@ public class ZKRMStateStore extends RMStateStore {
           LOG.debug("Loading application from znode: " + childNodeName);
         }
         ApplicationId appId = ConverterUtils.toApplicationId(childNodeName);
-        ApplicationStateDataPBImpl appStateData =
+        ApplicationStateDataPBImpl appState =
             new ApplicationStateDataPBImpl(
                 ApplicationStateDataProto.parseFrom(childData));
-        ApplicationState appState =
-            new ApplicationState(appStateData.getSubmitTime(),
-              appStateData.getStartTime(),
-              appStateData.getApplicationSubmissionContext(),
-              appStateData.getUser(),
-              appStateData.getState(),
-              appStateData.getDiagnostics(), appStateData.getFinishTime());
-        if (!appId.equals(appState.context.getApplicationId())) {
+        if (!appId.equals(
+            appState.getApplicationSubmissionContext().getApplicationId())) {
           throw new YarnRuntimeException("The child node name is different " +
               "from the application id");
         }
@@ -573,7 +577,7 @@ public class ZKRMStateStore extends RMStateStore {
     }
   }
 
-  private void loadApplicationAttemptState(ApplicationState appState,
+  private void loadApplicationAttemptState(ApplicationStateData appState,
       ApplicationId appId)
       throws Exception {
     String appPath = getNodePath(rmAppRoot, appId.toString());
@@ -583,31 +587,9 @@ public class ZKRMStateStore extends RMStateStore {
         String attemptPath = getNodePath(appPath, attemptIDStr);
         byte[] attemptData = getDataWithRetries(attemptPath, true);
 
-        ApplicationAttemptId attemptId =
-            ConverterUtils.toApplicationAttemptId(attemptIDStr);
-        ApplicationAttemptStateDataPBImpl attemptStateData =
+        ApplicationAttemptStateDataPBImpl attemptState =
             new ApplicationAttemptStateDataPBImpl(
                 ApplicationAttemptStateDataProto.parseFrom(attemptData));
-        Credentials credentials = null;
-        if (attemptStateData.getAppAttemptTokens() != null) {
-          credentials = new Credentials();
-          DataInputByteBuffer dibb = new DataInputByteBuffer();
-          dibb.reset(attemptStateData.getAppAttemptTokens());
-          credentials.readTokenStorageStream(dibb);
-        }
-
-        ApplicationAttemptState attemptState =
-            new ApplicationAttemptState(attemptId,
-              attemptStateData.getMasterContainer(), credentials,
-              attemptStateData.getStartTime(), attemptStateData.getState(),
-              attemptStateData.getFinalTrackingUrl(),
-              attemptStateData.getDiagnostics(),
-              attemptStateData.getFinalApplicationStatus(),
-              attemptStateData.getAMContainerExitStatus(),
-              attemptStateData.getFinishTime(),
-              attemptStateData.getMemorySeconds(),
-              attemptStateData.getVcoreSeconds());
-
 
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
@@ -694,9 +676,11 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void removeApplicationStateInternal(ApplicationState appState)
+  public synchronized void removeApplicationStateInternal(
+      ApplicationStateData  appState)
       throws Exception {
-    String appId = appState.getAppId().toString();
+    String appId = appState.getApplicationSubmissionContext().getApplicationId()
+        .toString();
     String appIdRemovePath = getNodePath(rmAppRoot, appId);
     ArrayList<Op> opList = new ArrayList<Op>();
 
@@ -714,12 +698,11 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected synchronized void storeRMDelegationTokenAndSequenceNumberState(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
+  protected synchronized void storeRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
     ArrayList<Op> opList = new ArrayList<Op>();
-    addStoreOrUpdateOps(
-        opList, rmDTIdentifier, renewDate, latestSequenceNumber, false);
+    addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, false);
     doMultiWithRetries(opList);
   }
 
@@ -743,63 +726,56 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateRMDelegationTokenAndSequenceNumberInternal(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
+  protected synchronized void updateRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
     ArrayList<Op> opList = new ArrayList<Op>();
     String nodeRemovePath =
         getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
             + rmDTIdentifier.getSequenceNumber());
     if (existsWithRetries(nodeRemovePath, true) == null) {
       // in case znode doesn't exist
-      addStoreOrUpdateOps(
-          opList, rmDTIdentifier, renewDate, latestSequenceNumber, false);
+      addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, false);
       LOG.debug("Attempted to update a non-existing znode " + nodeRemovePath);
     } else {
       // in case znode exists
-      addStoreOrUpdateOps(
-          opList, rmDTIdentifier, renewDate, latestSequenceNumber, true);
+      addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, true);
     }
     doMultiWithRetries(opList);
   }
 
   private void addStoreOrUpdateOps(ArrayList<Op> opList,
       RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber, boolean isUpdate) throws Exception {
+      boolean isUpdate) throws Exception {
     // store RM delegation token
     String nodeCreatePath =
         getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
             + rmDTIdentifier.getSequenceNumber());
-    ByteArrayOutputStream tokenOs = new ByteArrayOutputStream();
-    DataOutputStream tokenOut = new DataOutputStream(tokenOs);
     ByteArrayOutputStream seqOs = new ByteArrayOutputStream();
     DataOutputStream seqOut = new DataOutputStream(seqOs);
-
+    RMDelegationTokenIdentifierData identifierData =
+        new RMDelegationTokenIdentifierData(rmDTIdentifier, renewDate);
     try {
-      rmDTIdentifier.setRenewDate(renewDate);
-      rmDTIdentifier.write(tokenOut);
       if (LOG.isDebugEnabled()) {
         LOG.debug((isUpdate ? "Storing " : "Updating ") + "RMDelegationToken_" +
             rmDTIdentifier.getSequenceNumber());
       }
 
       if (isUpdate) {
-        opList.add(Op.setData(nodeCreatePath, tokenOs.toByteArray(), -1));
+        opList.add(Op.setData(nodeCreatePath, identifierData.toByteArray(), -1));
       } else {
-        opList.add(Op.create(nodeCreatePath, tokenOs.toByteArray(), zkAcl,
+        opList.add(Op.create(nodeCreatePath, identifierData.toByteArray(), zkAcl,
             CreateMode.PERSISTENT));
+        // Update Sequence number only while storing DT
+        seqOut.writeInt(rmDTIdentifier.getSequenceNumber());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug((isUpdate ? "Storing " : "Updating ") +
+                    dtSequenceNumberPath + ". SequenceNumber: "
+                    + rmDTIdentifier.getSequenceNumber());
+        }
+        opList.add(Op.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1));
       }
-
-
-     seqOut.writeInt(latestSequenceNumber);
-     if (LOG.isDebugEnabled()) {
-        LOG.debug((isUpdate ? "Storing " : "Updating ") + dtSequenceNumberPath +
-            ". SequenceNumber: " + latestSequenceNumber);
-      }
-
-     opList.add(Op.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1));
     } finally {
-      tokenOs.close();
       seqOs.close();
     }
   }
@@ -1038,6 +1014,9 @@ public class ZKRMStateStore extends RMStateStore {
     public void run() {
       try {
         while (true) {
+          if(isFencedState()) { 
+            break;
+          }
           doMultiWithRetries(emptyOpList);
           Thread.sleep(zkSessionTimeout);
         }
@@ -1074,6 +1053,8 @@ public class ZKRMStateStore extends RMStateStore {
       switch (code) {
         case CONNECTIONLOSS:
         case OPERATIONTIMEOUT:
+        case SESSIONEXPIRED:
+        case SESSIONMOVED:
           return true;
         default:
           break;
@@ -1094,10 +1075,15 @@ public class ZKRMStateStore extends RMStateStore {
             throw new StoreFencedException();
           }
         } catch (KeeperException ke) {
+          if (ke.code() == Code.NODEEXISTS) {
+            LOG.info("znode already exists!");
+            return null;
+          }
           LOG.info("Exception while executing a ZK operation.", ke);
           if (shouldRetry(ke.code()) && ++retry < numRetries) {
             LOG.info("Retrying operation on ZK. Retry no. " + retry);
             Thread.sleep(zkRetryInterval);
+            createConnection();
             continue;
           }
           LOG.info("Maxed out ZK retries. Giving up!");
@@ -1119,7 +1105,7 @@ public class ZKRMStateStore extends RMStateStore {
         }
         if (useDefaultFencingScheme) {
           zkClient.addAuthInfo(zkRootNodeAuthScheme,
-              (zkRootNodeUsername + ":" + zkRootNodePassword).getBytes());
+              (zkRootNodeUsername + ":" + zkRootNodePassword).getBytes(Charset.forName("UTF-8")));
         }
       } catch (IOException ioe) {
         // Retry in case of network failures
@@ -1149,17 +1135,12 @@ public class ZKRMStateStore extends RMStateStore {
 
   @Override
   public synchronized void storeOrUpdateAMRMTokenSecretManagerState(
-      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
-      boolean isUpdate) {
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState, boolean isUpdate)
+      throws Exception {
     AMRMTokenSecretManagerState data =
         AMRMTokenSecretManagerState.newInstance(amrmTokenSecretManagerState);
     byte[] stateData = data.getProto().toByteArray();
-    try {
-      setDataWithRetries(amrmTokenSecretManagerRoot, stateData, -1);
-    } catch (Exception ex) {
-      LOG.info("Error storing info for AMRMTokenSecretManager", ex);
-      notifyStoreOperationFailed(ex);
-    }
+    setDataWithRetries(amrmTokenSecretManagerRoot, stateData, -1);
   }
 
 }

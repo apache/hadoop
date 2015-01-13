@@ -92,9 +92,10 @@ public final class IdentityHashStore<K, V> {
   }
 
   private void putInternal(Object k, Object v) {
-    int hash = System.identityHashCode(k);
-    final int numEntries = buffer.length / 2;
-    int index = hash % numEntries;
+    final int hash = System.identityHashCode(k);
+    final int numEntries = buffer.length >>  1;
+    //computing modulo with the assumption buffer.length is power of 2
+    int index = hash & (numEntries-1);
     while (true) {
       if (buffer[2 * index] == null) {
         buffer[2 * index] = k;
@@ -127,9 +128,10 @@ public final class IdentityHashStore<K, V> {
     if (buffer == null) {
       return -1;
     }
-    final int numEntries = buffer.length / 2;
-    int hash = System.identityHashCode(k);
-    int index = hash % numEntries;
+    final int numEntries = buffer.length >> 1;
+    final int hash = System.identityHashCode(k);
+    //computing modulo with the assumption buffer.length is power of 2
+    int index = hash & (numEntries -1);
     int firstIndex = index;
     do {
       if (buffer[2 * index] == k) {

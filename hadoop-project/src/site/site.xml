@@ -38,7 +38,7 @@
   <body>
     <links position="left">
       <item name="Wiki" href="http://wiki.apache.org/hadoop" />
-      <item name="SVN" href="https://svn.apache.org/repos/asf/hadoop/" />
+      <item name="git" href="https://git-wip-us.apache.org/repos/asf/hadoop.git" />
     </links>
 
     <breadcrumbs position="left">
@@ -81,7 +81,6 @@
       <item name="Image Viewer" href="hadoop-project-dist/hadoop-hdfs/HdfsImageViewer.html"/>
       <item name="Permissions and HDFS" href="hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html"/>
       <item name="Quotas and HDFS" href="hadoop-project-dist/hadoop-hdfs/HdfsQuotaAdminGuide.html"/>
-      <item name="HFTP" href="hadoop-project-dist/hadoop-hdfs/Hftp.html"/>
       <item name="C API libhdfs" href="hadoop-project-dist/hadoop-hdfs/LibHdfs.html"/>
       <item name="WebHDFS REST API" href="hadoop-project-dist/hadoop-hdfs/WebHDFS.html"/>
       <item name="HttpFS Gateway" href="hadoop-hdfs-httpfs/index.html"/>
@@ -93,7 +92,7 @@
       <item name="Extended Attributes" href="hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html"/>
       <item name="Transparent Encryption" href="hadoop-project-dist/hadoop-hdfs/TransparentEncryption.html"/>
       <item name="HDFS Support for Multihoming" href="hadoop-project-dist/hadoop-hdfs/HdfsMultihoming.html"/>
-      <item name="Archival Storage" href="hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html"/>
+      <item name="Archival Storage, SSD &amp; Memory" href="hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
@@ -114,6 +113,7 @@
     </menu>
 
     <menu name="YARN" inherit="top">
+      <item name="Overview" href="hadoop-yarn/hadoop-yarn-site/index.html"/>
       <item name="YARN Architecture" href="hadoop-yarn/hadoop-yarn-site/YARN.html"/>
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
       <item name="Fair Scheduler" href="hadoop-yarn/hadoop-yarn-site/FairScheduler.html"/>
@@ -124,6 +124,11 @@
       <item name="Writing YARN Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
       <item name="YARN Commands" href="hadoop-yarn/hadoop-yarn-site/YarnCommands.html"/>
       <item name="Scheduler Load Simulator" href="hadoop-sls/SchedulerLoadSimulator.html"/>
+      <item name="NodeManager Restart" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRestart.html"/>
+      <item name="DockerContainerExecutor" href="hadoop-yarn/hadoop-yarn-site/DockerContainerExecutor.html"/>
+      <item name="Using CGroups" href="hadoop-yarn/hadoop-yarn-site/NodeManagerCGroups.html"/>
+      <item name="Secure Containers" href="hadoop-yarn/hadoop-yarn-site/SecureContainer.html"/>
+      <item name="Registry" href="hadoop-yarn/hadoop-yarn-site/registry/index.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
@@ -132,6 +137,12 @@
       <item name="Node Manager" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html"/>
     </menu>
     
+    <menu name="Hadoop Compatible File Systems" inherit="top">
+      <item name="Amazon S3" href="hadoop-aws/tools/hadoop-aws/index.html"/>
+      <item name="Azure Blob Storage" href="hadoop-azure/index.html"/>
+      <item name="OpenStack Swift" href="hadoop-openstack/index.html"/>
+    </menu>
+
     <menu name="Auth" inherit="top">
       <item name="Overview" href="hadoop-auth/index.html"/>
       <item name="Examples" href="hadoop-auth/Examples.html"/>

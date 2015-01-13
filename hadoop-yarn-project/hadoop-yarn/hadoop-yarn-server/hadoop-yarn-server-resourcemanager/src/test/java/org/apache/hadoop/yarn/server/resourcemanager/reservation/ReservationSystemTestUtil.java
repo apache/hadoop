@@ -17,15 +17,21 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anySetOf;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
@@ -35,15 +41,23 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ReservationDefinitionPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ReservationRequestsPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.junit.Assert;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class ReservationSystemTestUtil {
 
@@ -55,6 +69,122 @@ public class ReservationSystemTestUtil {
     return ReservationId.newInstance(rand.nextLong(), rand.nextLong());
   }
 
+  public static ReservationSchedulerConfiguration createConf(
+      String reservationQ, long timeWindow, float instConstraint,
+      float avgConstraint) {
+    ReservationSchedulerConfiguration conf = mock
+        (ReservationSchedulerConfiguration.class);
+    when(conf.getReservationWindow(reservationQ)).thenReturn(timeWindow);
+    when(conf.getInstantaneousMaxCapacity(reservationQ)).thenReturn
+        (instConstraint);
+    when(conf.getAverageCapacity(reservationQ)).thenReturn(avgConstraint);
+    return conf;
+  }
+
+  public static void validateReservationQueue(
+      AbstractReservationSystem reservationSystem, String planQName) {
+    Plan plan = reservationSystem.getPlan(planQName);
+    Assert.assertNotNull(plan);
+    Assert.assertTrue(plan instanceof InMemoryPlan);
+    Assert.assertEquals(planQName, plan.getQueueName());
+    Assert.assertEquals(8192, plan.getTotalCapacity().getMemory());
+    Assert.assertTrue(
+        plan.getReservationAgent() instanceof GreedyReservationAgent);
+    Assert.assertTrue(
+        plan.getSharingPolicy() instanceof CapacityOverTimePolicy);
+  }
+
+  public static void validateNewReservationQueue(
+      AbstractReservationSystem reservationSystem, String newQ) {
+    Plan newPlan = reservationSystem.getPlan(newQ);
+    Assert.assertNotNull(newPlan);
+    Assert.assertTrue(newPlan instanceof InMemoryPlan);
+    Assert.assertEquals(newQ, newPlan.getQueueName());
+    Assert.assertEquals(1024, newPlan.getTotalCapacity().getMemory());
+    Assert
+        .assertTrue(newPlan.getReservationAgent() instanceof GreedyReservationAgent);
+    Assert
+        .assertTrue(newPlan.getSharingPolicy() instanceof CapacityOverTimePolicy);
+  }
+
+  public static void setupFSAllocationFile(String allocationFile)
+      throws IOException {
+    PrintWriter out = new PrintWriter(new FileWriter(allocationFile));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"default\">");
+    out.println("<weight>1</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a\">");
+    out.println("<weight>1</weight>");
+    out.println("<queue name=\"a1\">");
+    out.println("<weight>3</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a2\">");
+    out.println("<weight>7</weight>");
+    out.println("</queue>");
+    out.println("</queue>");
+    out.println("<queue name=\"dedicated\">");
+    out.println("<reservation></reservation>");
+    out.println("<weight>8</weight>");
+    out.println("</queue>");
+    out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
+    out.println("</allocations>");
+    out.close();
+  }
+
+  public static void updateFSAllocationFile(String allocationFile)
+      throws IOException {
+    PrintWriter out = new PrintWriter(new FileWriter(allocationFile));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"default\">");
+    out.println("<weight>5</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a\">");
+    out.println("<weight>5</weight>");
+    out.println("<queue name=\"a1\">");
+    out.println("<weight>3</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a2\">");
+    out.println("<weight>7</weight>");
+    out.println("</queue>");
+    out.println("</queue>");
+    out.println("<queue name=\"dedicated\">");
+    out.println("<reservation></reservation>");
+    out.println("<weight>80</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"reservation\">");
+    out.println("<reservation></reservation>");
+    out.println("<weight>10</weight>");
+    out.println("</queue>");
+    out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
+    out.println("</allocations>");
+    out.close();
+  }
+
+  public static FairScheduler setupFairScheduler(
+      ReservationSystemTestUtil testUtil,
+      RMContext rmContext, Configuration conf, int numContainers) throws
+      IOException {
+    FairScheduler scheduler = new FairScheduler();
+    scheduler.setRMContext(rmContext);
+
+    when(rmContext.getScheduler()).thenReturn(scheduler);
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, rmContext);
+
+
+    Resource resource = testUtil.calculateClusterResource(numContainers);
+    RMNode node1 = MockNodes.newNodeInfo(1, resource, 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+    return scheduler;
+  }
+
+  @SuppressWarnings("unchecked")
   public CapacityScheduler mockCapacityScheduler(int numContainers)
       throws IOException {
     // stolen from TestCapacityScheduler
@@ -63,21 +193,57 @@ public class ReservationSystemTestUtil {
 
     CapacityScheduler cs = Mockito.spy(new CapacityScheduler());
     cs.setConf(new YarnConfiguration());
-    RMContext mockRmContext =
-        Mockito.spy(new RMContextImpl(null, null, null, null, null, null,
-            new RMContainerTokenSecretManager(conf),
-            new NMTokenSecretManagerInRM(conf),
-            new ClientToAMTokenSecretManagerInRM(), null));
+
+    RMContext mockRmContext = createRMContext(conf);
+
     cs.setRMContext(mockRmContext);
     try {
       cs.serviceInit(conf);
     } catch (Exception e) {
       Assert.fail(e.getMessage());
     }
-    when(mockRmContext.getScheduler()).thenReturn(cs);
-    Resource r = Resource.newInstance(numContainers * 1024, numContainers);
-    doReturn(r).when(cs).getClusterResource();
+
+    initializeRMContext(numContainers, cs, mockRmContext);
     return cs;
+  }
+
+  public static void initializeRMContext(int numContainers,
+      AbstractYarnScheduler scheduler, RMContext mockRMContext) {
+
+    when(mockRMContext.getScheduler()).thenReturn(scheduler);
+    Resource r = calculateClusterResource(numContainers);
+    doReturn(r).when(scheduler).getClusterResource();
+  }
+
+  public static RMContext createRMContext(Configuration conf) {
+    RMContext mockRmContext =
+        Mockito.spy(new RMContextImpl(null, null, null, null, null, null,
+            new RMContainerTokenSecretManager(conf),
+            new NMTokenSecretManagerInRM(conf),
+            new ClientToAMTokenSecretManagerInRM(), null));
+
+    RMNodeLabelsManager nlm = mock(RMNodeLabelsManager.class);
+    when(
+        nlm.getQueueResource(any(String.class), anySetOf(String.class),
+            any(Resource.class))).thenAnswer(new Answer<Resource>() {
+      @Override
+      public Resource answer(InvocationOnMock invocation) throws Throwable {
+        Object[] args = invocation.getArguments();
+        return (Resource) args[2];
+      }
+    });
+
+    when(nlm.getResourceByLabel(any(String.class), any(Resource.class)))
+        .thenAnswer(new Answer<Resource>() {
+          @Override
+          public Resource answer(InvocationOnMock invocation) throws Throwable {
+            Object[] args = invocation.getArguments();
+            return (Resource) args[1];
+          }
+        });
+
+    mockRmContext.setNodeLabelManager(nlm);
+    return mockRmContext;
   }
 
   public static void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
@@ -144,7 +310,7 @@ public class ReservationSystemTestUtil {
     // Define 2nd-level queues
     final String A1 = A + ".a1";
     final String A2 = A + ".a2";
-    conf.setQueues(A, new String[] { "a1", "a2" });
+    conf.setQueues(A, new String[]{"a1", "a2"});
     conf.setCapacity(A1, 30);
     conf.setCapacity(A2, 70);
   }
@@ -224,4 +390,9 @@ public class ReservationSystemTestUtil {
     return req;
   }
 
+  public static Resource calculateClusterResource(int numContainers) {
+    Resource clusterResource = Resource.newInstance(numContainers * 1024,
+        numContainers);
+    return clusterResource;
+  }
 }

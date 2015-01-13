@@ -44,7 +44,7 @@ public class HttpFSAuthenticationFilter
 
   /**
    * Returns the hadoop-auth configuration from HttpFSServer's configuration.
-   * <p/>
+   * <p>
    * It returns all HttpFSServer's configuration properties prefixed with
    * <code>httpfs.authentication</code>. The <code>httpfs.authentication</code>
    * prefix is removed from the returned property names.

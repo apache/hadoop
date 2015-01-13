@@ -31,30 +31,30 @@
 
 # By default, YARN will use HADOOP_LOG_DIR for YARN logging.  Specify a custom
 # log directory for YARN things here:
+# Java properties: hadoop.log.dir, yarn.log.dir
 # export YARN_LOG_DIR="${HADOOP_LOG_DIR}"
 
 # By default, YARN will use the value of HADOOP_LOGFILE as the 'fallback' log
 # file # when log4j settings are not defined.  Specify a custom YARN log file
 # here:
+# Java properties: hadoop.log.file, yarn.log.file
 # export YARN_LOGFILE=${HADOOP_LOGFILE}
 
 #Override the log4j settings for all YARN apps By default, YARN will use
 # HADOOP_ROOT_LOGGER.
+# Java properties: hadoop.root.logger, yarn.root.logger
 # export YARN_ROOT_LOGGER=${HADOOP_ROOT_LOGGER}
 
 ###
 # Resource Manager specific parameters
 ###
 
-# Specify the max heapsize for the ResourceManager using a numerical value
-# in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
-# the value to 1000.
+# Specify the max heapsize for the ResourceManager.  If no units are
+# given, it will be assumed to be in MB.
 # This value will be overridden by an Xmx setting specified in either YARN_OPTS,
 # HADOOP_OPTS, and/or YARN_RESOURCEMANAGER_OPTS.
-# If not specified, the default value will be picked from either YARN_HEAPMAX
-# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
-#
-#export YARN_RESOURCEMANAGER_HEAPSIZE=1000
+# Default is the same as HADOOP_HEAPSIZE_MAX
+#export YARN_RESOURCEMANAGER_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the ResourceManager.
 # These options will be appended to the options specified as YARN_OPTS
@@ -80,15 +80,12 @@
 # Node Manager specific parameters
 ###
 
-# Specify the max Heapsize for the NodeManager using a numerical value
-# in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
-# the value to 1000.
+# Specify the max heapsize for the NodeManager.  If no units are
+# given, it will be assumed to be in MB.
 # This value will be overridden by an Xmx setting specified in either YARN_OPTS,
 # HADOOP_OPTS, and/or YARN_NODEMANAGER_OPTS.
-# If not specified, the default value will be picked from either YARN_HEAPMAX
-# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
-#
-#export YARN_NODEMANAGER_HEAPSIZE=1000
+# Default is the same as HADOOP_HEAPSIZE_MAX.
+#export YARN_NODEMANAGER_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the NodeManager.
 # These options will be appended to the options specified as YARN_OPTS
@@ -102,15 +99,12 @@
 # TimeLineServer specifc parameters
 ###
 
-# Specify the max Heapsize for the timeline server using a numerical value
-# in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
-# the value to 1000.
+# Specify the max heapsize for the timelineserver.  If no units are
+# given, it will be assumed to be in MB.
 # This value will be overridden by an Xmx setting specified in either YARN_OPTS,
 # HADOOP_OPTS, and/or YARN_TIMELINESERVER_OPTS.
-# If not specified, the default value will be picked from either YARN_HEAPMAX
-# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
-#
-#export YARN_TIMELINESERVER_HEAPSIZE=1000
+# Default is the same as HADOOP_HEAPSIZE_MAX.
+#export YARN_TIMELINE_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the TimeLineServer.
 # These options will be appended to the options specified as YARN_OPTS
@@ -124,15 +118,12 @@
 # Web App Proxy Server specifc parameters
 ###
 
-# Specify the max Heapsize for the proxy server using a numerical value
-# in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
-# the value to 1000.
+# Specify the max heapsize for the web app proxy server.  If no units are
+# given, it will be assumed to be in MB.
 # This value will be overridden by an Xmx setting specified in either YARN_OPTS,
 # HADOOP_OPTS, and/or YARN_PROXYSERVER_OPTS.
-# If not specified, the default value will be picked from either YARN_HEAPMAX
-# or JAVA_HEAP_MAX with YARN_HEAPMAX as the preferred option of the two.
-#
-#export YARN_PROXYSERVER_HEAPSIZE=1000
+# Default is the same as HADOOP_HEAPSIZE_MAX.
+#export YARN_PROXYSERVER_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the proxy server.
 # These options will be appended to the options specified as YARN_OPTS
@@ -142,4 +133,14 @@
 #
 #export YARN_PROXYSERVER_OPTS=
 
-
+###
+# Shared Cache Manager specific parameters
+###
+# Specify the JVM options to be used when starting the
+# shared cache manager server.
+# These options will be appended to the options specified as YARN_OPTS
+# and therefore may override any similar flags set in YARN_OPTS
+#
+# See ResourceManager for some examples
+#
+#export YARN_SHAREDCACHEMANAGER_OPTS=

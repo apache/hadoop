@@ -32,6 +32,7 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.io.JsonEncoder;
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -195,11 +196,11 @@ class Display extends FsCommand {
 
       FileChecksum checksum = item.fs.getFileChecksum(item.path);
       if (checksum == null) {
-        out.printf("%s\tNONE\t\n", item.toString());
+        out.printf("%s\tNONE\t%n", item.toString());
       } else {
         String checksumString = StringUtils.byteToHexString(
             checksum.getBytes(), 0, checksum.getLength());
-        out.printf("%s\t%s\t%s\n",
+        out.printf("%s\t%s\t%s%n",
             item.toString(), checksum.getAlgorithmName(),
             checksumString);
       }
@@ -234,10 +235,10 @@ class Display extends FsCommand {
         if (!r.next(key, val)) {
           return -1;
         }
-        byte[] tmp = key.toString().getBytes();
+        byte[] tmp = key.toString().getBytes(Charsets.UTF_8);
         outbuf.write(tmp, 0, tmp.length);
         outbuf.write('\t');
-        tmp = val.toString().getBytes();
+        tmp = val.toString().getBytes(Charsets.UTF_8);
         outbuf.write(tmp, 0, tmp.length);
         outbuf.write('\n');
         inbuf.reset(outbuf.getData(), outbuf.getLength());
@@ -299,7 +300,8 @@ class Display extends FsCommand {
       encoder.flush();
       if (!fileReader.hasNext()) {
         // Write a new line after the last Avro record.
-        output.write(System.getProperty("line.separator").getBytes());
+        output.write(System.getProperty("line.separator")
+                         .getBytes(Charsets.UTF_8));
         output.flush();
       }
       pos = 0;

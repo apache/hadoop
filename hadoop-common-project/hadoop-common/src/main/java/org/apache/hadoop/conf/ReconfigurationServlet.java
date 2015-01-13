@@ -71,10 +71,10 @@ public class ReconfigurationServlet extends HttpServlet {
 
   private void printHeader(PrintWriter out, String nodeName) {
     out.print("<html><head>");
-    out.printf("<title>%s Reconfiguration Utility</title>\n", 
+    out.printf("<title>%s Reconfiguration Utility</title>%n",
                StringEscapeUtils.escapeHtml(nodeName));
     out.print("</head><body>\n");
-    out.printf("<h1>%s Reconfiguration Utility</h1>\n",
+    out.printf("<h1>%s Reconfiguration Utility</h1>%n",
                StringEscapeUtils.escapeHtml(nodeName));
   }
 

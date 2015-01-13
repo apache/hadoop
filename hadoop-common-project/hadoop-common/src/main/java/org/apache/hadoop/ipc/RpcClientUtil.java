@@ -189,4 +189,25 @@ public class RpcClientUtil {
         .getProtocolMetaInfoProxy(inv.getConnectionId(), conf,
             NetUtils.getDefaultSocketFactory(conf)).getProxy();
   }
+
+  /**
+   * Convert an RPC method to a string.
+   * The format we want is 'MethodOuterClassShortName#methodName'.
+   *
+   * For example, if the method is:
+   *   org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.
+   *     ClientNamenodeProtocol.BlockingInterface.getServerDefaults
+   *
+   * the format we want is:
+   *   ClientNamenodeProtocol#getServerDefaults
+   */
+  public static String methodToTraceString(Method method) {
+    Class<?> clazz = method.getDeclaringClass();
+    while (true) {
+      Class<?> next = clazz.getEnclosingClass();
+      if (next == null || next.getEnclosingClass() == null) break;
+      clazz = next;
+    }
+    return clazz.getSimpleName() + "#" + method.getName();
+  }
 }

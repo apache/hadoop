@@ -157,8 +157,9 @@ public final class FSImageFormatPBINode {
       }
 
       if (d.hasAcl()) {
-        dir.addAclFeature(new AclFeature(loadAclEntries(d.getAcl(),
-            state.getStringTable())));
+        int[] entries = AclEntryStatusFormat.toInt(loadAclEntries(
+            d.getAcl(), state.getStringTable()));
+        dir.addAclFeature(new AclFeature(entries));
       }
       if (d.hasXAttrs()) {
         dir.addXAttrFeature(new XAttrFeature(
@@ -211,7 +212,7 @@ public final class FSImageFormatPBINode {
 
     void loadINodeSection(InputStream in) throws IOException {
       INodeSection s = INodeSection.parseDelimitedFrom(in);
-      fsn.resetLastInodeId(s.getLastInodeId());
+      fsn.dir.resetLastInodeId(s.getLastInodeId());
       LOG.info("Loading " + s.getNumInodes() + " INodes.");
       for (int i = 0; i < s.getNumInodes(); ++i) {
         INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
@@ -294,8 +295,9 @@ public final class FSImageFormatPBINode {
           (byte)f.getStoragePolicyID());
 
       if (f.hasAcl()) {
-        file.addAclFeature(new AclFeature(loadAclEntries(f.getAcl(),
-            state.getStringTable())));
+        int[] entries = AclEntryStatusFormat.toInt(loadAclEntries(
+            f.getAcl(), state.getStringTable()));
+        file.addAclFeature(new AclFeature(entries));
       }
       
       if (f.hasXAttrs()) {
@@ -362,11 +364,13 @@ public final class FSImageFormatPBINode {
     private static AclFeatureProto.Builder buildAclEntries(AclFeature f,
         final SaverContext.DeduplicationMap<String> map) {
       AclFeatureProto.Builder b = AclFeatureProto.newBuilder();
-      for (AclEntry e : f.getEntries()) {
-        int v = ((map.getId(e.getName()) & ACL_ENTRY_NAME_MASK) << ACL_ENTRY_NAME_OFFSET)
-            | (e.getType().ordinal() << ACL_ENTRY_TYPE_OFFSET)
-            | (e.getScope().ordinal() << ACL_ENTRY_SCOPE_OFFSET)
-            | (e.getPermission().ordinal());
+      for (int pos = 0, e; pos < f.getEntriesSize(); pos++) {
+        e = f.getEntryAt(pos);
+        int nameId = map.getId(AclEntryStatusFormat.getName(e));
+        int v = ((nameId & ACL_ENTRY_NAME_MASK) << ACL_ENTRY_NAME_OFFSET)
+            | (AclEntryStatusFormat.getType(e).ordinal() << ACL_ENTRY_TYPE_OFFSET)
+            | (AclEntryStatusFormat.getScope(e).ordinal() << ACL_ENTRY_SCOPE_OFFSET)
+            | (AclEntryStatusFormat.getPermission(e).ordinal());
         b.addEntries(v);
       }
       return b;
@@ -490,7 +494,7 @@ public final class FSImageFormatPBINode {
       INodeMap inodesMap = fsn.dir.getINodeMap();
 
       INodeSection.Builder b = INodeSection.newBuilder()
-          .setLastInodeId(fsn.getLastInodeId()).setNumInodes(inodesMap.size());
+          .setLastInodeId(fsn.dir.getLastInodeId()).setNumInodes(inodesMap.size());
       INodeSection s = b.build();
       s.writeDelimitedTo(out);
 

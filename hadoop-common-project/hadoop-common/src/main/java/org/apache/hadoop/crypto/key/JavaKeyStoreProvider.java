@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.crypto.key;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -143,13 +144,8 @@ public class JavaKeyStoreProvider extends KeyProvider {
           // Provided Password file does not exist
           throw new IOException("Password file does not exists");
         }
-        if (pwdFile != null) {
-          InputStream is = pwdFile.openStream();
-          try {
-            password = IOUtils.toCharArray(is);
-          } finally {
-            is.close();
-          }
+        try (InputStream is = pwdFile.openStream()) {
+          password = IOUtils.toString(is).trim().toCharArray();
         }
       }
     }
@@ -423,6 +419,8 @@ public class JavaKeyStoreProvider extends KeyProvider {
   @Override
   public KeyVersion createKey(String name, byte[] material,
                                Options options) throws IOException {
+    Preconditions.checkArgument(name.equals(name.toLowerCase()),
+        "Uppercase key names are unsupported: %s", name);
     writeLock.lock();
     try {
       try {

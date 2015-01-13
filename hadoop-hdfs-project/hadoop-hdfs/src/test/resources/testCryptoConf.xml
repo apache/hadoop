@@ -238,13 +238,35 @@
     </test>
 
     <test>
-      <description>Test failure of renaming a non-EZ file from an EZ</description>
+        <description>Test failure of renaming an EZ file into a non-EZ</description>
+        <test-commands>
+            <command>-fs NAMENODE -mkdir /src</command>
+            <command>-fs NAMENODE -mkdir /dst</command>
+            <command>-fs NAMENODE -ls /</command>-
+            <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
+            <command>-fs NAMENODE -touchz /src/foo</command>
+            <command>-fs NAMENODE -mv /src/foo /dst</command>-
+        </test-commands>
+        <cleanup-commands>
+            <command>-fs NAMENODE -rm /src/foo</command>
+            <command>-fs NAMENODE -rmdir /src</command>
+            <command>-fs NAMENODE -rmdir /dst</command>
+        </cleanup-commands>
+        <comparators>
+            <comparator>
+                <type>SubstringComparator</type>
+                <expected-output>/src/foo can't be moved from an encryption zone.</expected-output>
+            </comparator>
+        </comparators>
+    </test>
+
+    <test>
+      <description>Test success of renaming an EZ root</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /src</command>
-        <command>-fs NAMENODE -mkdir /dst</command>
-        <command>-fs NAMENODE -ls /</command>-
         <crypto-admin-command>-createZone -path /src -keyName myKey</crypto-admin-command>
         <command>-fs NAMENODE -mv /src /dst</command>-
+        <command>-fs NAMENODE -ls /</command>-
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rmdir /src</command>
@@ -253,7 +275,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>/src can't be moved from an encryption zone</expected-output>
+          <expected-output>/dst</expected-output>
         </comparator>
       </comparators>
     </test>

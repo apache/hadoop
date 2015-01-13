@@ -209,13 +209,13 @@ YARN Timeline Server
   start the Timeline server/history service with the following command:
 
 +---+
-  $ yarn historyserver
+  $ yarn timelineserver
 +---+
 
   Or users can start the Timeline server / history service as a daemon:
 
 +---+
-  $ yarn-daemon.sh start historyserver
+  $ yarn --daemon start timelineserver
 +---+
 
 * Accessing generic-data via command-line

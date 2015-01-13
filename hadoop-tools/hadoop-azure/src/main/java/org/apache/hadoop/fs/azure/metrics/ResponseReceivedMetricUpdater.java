@@ -33,8 +33,7 @@ import com.microsoft.windowsazure.storage.StorageEvent;
 
 /**
  * An event listener to the ResponseReceived event from Azure Storage that will
- * update metrics appropriately.
- *
+ * update metrics appropriately when it gets that event.
  */
 @InterfaceAudience.Private
 public final class ResponseReceivedMetricUpdater extends StorageEvent<ResponseReceivedEvent> {
@@ -43,7 +42,7 @@ public final class ResponseReceivedMetricUpdater extends StorageEvent<ResponseRe
 
   private final AzureFileSystemInstrumentation instrumentation;
   private final BandwidthGaugeUpdater blockUploadGaugeUpdater;
-  
+
   private ResponseReceivedMetricUpdater(OperationContext operationContext,
       AzureFileSystemInstrumentation instrumentation,
       BandwidthGaugeUpdater blockUploadGaugeUpdater) {
@@ -142,6 +141,6 @@ public final class ResponseReceivedMetricUpdater extends StorageEvent<ResponseRe
         instrumentation.rawBytesDownloaded(length);
         instrumentation.blockDownloaded(requestLatency);
       }
-    } 
+    }
   }
 }

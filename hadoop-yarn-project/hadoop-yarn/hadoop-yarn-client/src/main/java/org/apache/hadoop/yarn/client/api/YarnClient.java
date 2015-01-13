@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client.api;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -579,4 +581,32 @@ public abstract class YarnClient extends AbstractService {
   @Unstable
   public abstract ReservationDeleteResponse deleteReservation(
       ReservationDeleteRequest request) throws YarnException, IOException;
+  
+  /**
+   * <p>
+   * The interface used by client to get node to labels mappings in existing cluster
+   * </p>
+   * 
+   * @return node to labels mappings
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public abstract Map<NodeId, Set<String>> getNodeToLabels()
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get node labels in the cluster
+   * </p>
+   *
+   * @return cluster node labels collection
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public abstract Set<String> getClusterNodeLabels()
+      throws YarnException, IOException;
 }

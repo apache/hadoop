@@ -515,9 +515,9 @@ public class Merger {
     }
 
     private void adjustPriorityQueue(Segment<K, V> reader) throws IOException{
-      long startPos = reader.getPosition();
+      long startPos = reader.getReader().bytesRead;
       boolean hasNext = reader.nextRawKey();
-      long endPos = reader.getPosition();
+      long endPos = reader.getReader().bytesRead;
       totalBytesProcessed += endPos - startPos;
       mergeProgress.set(totalBytesProcessed * progPerByte);
       if (hasNext) {
@@ -528,9 +528,17 @@ public class Merger {
       }
     }
 
+    private void resetKeyValue() {
+      key = null;
+      value.reset(new byte[] {}, 0);
+      diskIFileValue.reset(new byte[] {}, 0);
+    }
+
     public boolean next() throws IOException {
-      if (size() == 0)
+      if (size() == 0) {
+        resetKeyValue();
         return false;
+      }
 
       if (minSegment != null) {
         //minSegment is non-null for all invocations of next except the first
@@ -539,11 +547,12 @@ public class Merger {
         adjustPriorityQueue(minSegment);
         if (size() == 0) {
           minSegment = null;
+          resetKeyValue();
           return false;
         }
       }
       minSegment = top();
-      long startPos = minSegment.getPosition();
+      long startPos = minSegment.getReader().bytesRead;
       key = minSegment.getKey();
       if (!minSegment.inMemory()) {
         //When we load the value from an inmemory segment, we reset
@@ -560,7 +569,7 @@ public class Merger {
       } else {
         minSegment.getValue(value);
       }
-      long endPos = minSegment.getPosition();
+      long endPos = minSegment.getReader().bytesRead;
       totalBytesProcessed += endPos - startPos;
       mergeProgress.set(totalBytesProcessed * progPerByte);
       return true;
@@ -638,9 +647,9 @@ public class Merger {
             // Initialize the segment at the last possible moment;
             // this helps in ensuring we don't use buffers until we need them
             segment.init(readsCounter);
-            long startPos = segment.getPosition();
+            long startPos = segment.getReader().bytesRead;
             boolean hasNext = segment.nextRawKey();
-            long endPos = segment.getPosition();
+            long endPos = segment.getReader().bytesRead;
             
             if (hasNext) {
               startBytes += endPos - startPos;

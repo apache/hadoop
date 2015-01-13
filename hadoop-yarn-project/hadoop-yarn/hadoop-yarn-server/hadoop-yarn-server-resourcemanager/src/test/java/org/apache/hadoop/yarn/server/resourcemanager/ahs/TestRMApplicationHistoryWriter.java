@@ -153,7 +153,7 @@ public class TestRMApplicationHistoryWriter {
     when(appAttempt.getRpcPort()).thenReturn(-100);
     Container container = mock(Container.class);
     when(container.getId())
-      .thenReturn(ContainerId.newInstance(appAttemptId, 1));
+      .thenReturn(ContainerId.newContainerId(appAttemptId, 1));
     when(appAttempt.getMasterContainer()).thenReturn(container);
     when(appAttempt.getDiagnostics()).thenReturn("test diagnostics info");
     when(appAttempt.getTrackingUrl()).thenReturn("test url");
@@ -254,7 +254,7 @@ public class TestRMApplicationHistoryWriter {
     Assert.assertNotNull(appAttemptHD);
     Assert.assertEquals("test host", appAttemptHD.getHost());
     Assert.assertEquals(-100, appAttemptHD.getRPCPort());
-    Assert.assertEquals(ContainerId.newInstance(
+    Assert.assertEquals(ContainerId.newContainerId(
       ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1), 1),
       appAttemptHD.getMasterContainerId());
 
@@ -281,14 +281,14 @@ public class TestRMApplicationHistoryWriter {
   @Test
   public void testWriteContainer() throws Exception {
     RMContainer container =
-        createRMContainer(ContainerId.newInstance(
+        createRMContainer(ContainerId.newContainerId(
           ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1),
           1));
     writer.containerStarted(container);
     ContainerHistoryData containerHD = null;
     for (int i = 0; i < MAX_RETRIES; ++i) {
       containerHD =
-          store.getContainer(ContainerId.newInstance(ApplicationAttemptId
+          store.getContainer(ContainerId.newContainerId(ApplicationAttemptId
             .newInstance(ApplicationId.newInstance(0, 1), 1), 1));
       if (containerHD != null) {
         break;
@@ -307,7 +307,7 @@ public class TestRMApplicationHistoryWriter {
     writer.containerFinished(container);
     for (int i = 0; i < MAX_RETRIES; ++i) {
       containerHD =
-          store.getContainer(ContainerId.newInstance(ApplicationAttemptId
+          store.getContainer(ContainerId.newContainerId(ApplicationAttemptId
             .newInstance(ApplicationId.newInstance(0, 1), 1), 1));
       if (containerHD.getContainerState() != null) {
         break;
@@ -337,7 +337,7 @@ public class TestRMApplicationHistoryWriter {
         RMAppAttempt appAttempt = createRMAppAttempt(appAttemptId);
         writer.applicationAttemptStarted(appAttempt);
         for (int k = 1; k <= 10; ++k) {
-          ContainerId containerId = ContainerId.newInstance(appAttemptId, k);
+          ContainerId containerId = ContainerId.newContainerId(appAttemptId, k);
           RMContainer container = createRMContainer(containerId);
           writer.containerStarted(container);
           writer.containerFinished(container);

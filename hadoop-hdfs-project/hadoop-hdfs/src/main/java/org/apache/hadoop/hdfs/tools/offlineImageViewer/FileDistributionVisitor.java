@@ -159,10 +159,10 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
         current.path = (value.equals("") ? "/" : value);
         break;
       case REPLICATION:
-        current.replication = Integer.valueOf(value);
+        current.replication = Integer.parseInt(value);
         break;
       case NUM_BYTES:
-        current.fileSize += Long.valueOf(value);
+        current.fileSize += Long.parseLong(value);
         break;
       default:
         break;

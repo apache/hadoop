@@ -86,7 +86,7 @@ public abstract class AllocateResponse {
     response.setNMTokens(nmTokens);
     return response;
   }
-  
+
   @Public
   @Stable
   public static AllocateResponse newInstance(int responseId,

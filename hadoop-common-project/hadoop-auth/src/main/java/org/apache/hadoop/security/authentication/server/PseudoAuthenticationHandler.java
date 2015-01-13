@@ -15,13 +15,13 @@ package org.apache.hadoop.security.authentication.server;
 
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
-
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.NameValuePair;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -30,12 +30,12 @@ import java.util.Properties;
 /**
  * The <code>PseudoAuthenticationHandler</code> provides a pseudo authentication mechanism that accepts
  * the user name specified as a query string parameter.
- * <p/>
+ * <p>
  * This mimics the model of Hadoop Simple authentication which trust the 'user.name' property provided in
  * the configuration object.
- * <p/>
+ * <p>
  * This handler can be configured to support anonymous users.
- * <p/>
+ * <p>
  * The only supported configuration property is:
  * <ul>
  * <li>simple.anonymous.allowed: <code>true|false</code>, default value is <code>false</code></li>
@@ -54,6 +54,9 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
   public static final String ANONYMOUS_ALLOWED = TYPE + ".anonymous.allowed";
 
   private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
+
+  private static final String PSEUDO_AUTH = "PseudoAuth";
+
   private boolean acceptAnonymous;
   private String type;
 
@@ -77,7 +80,7 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
 
   /**
    * Initializes the authentication handler instance.
-   * <p/>
+   * <p>
    * This method is invoked by the {@link AuthenticationFilter#init} method.
    *
    * @param config configuration properties to initialize the handler.
@@ -100,7 +103,7 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
 
   /**
    * Releases any resources initialized by the authentication handler.
-   * <p/>
+   * <p>
    * This implementation does a NOP.
    */
   @Override
@@ -109,7 +112,6 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
 
   /**
    * Returns the authentication type of the authentication handler, 'simple'.
-   * <p/>
    *
    * @return the authentication type of the authentication handler, 'simple'.
    */
@@ -153,14 +155,14 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
 
   /**
    * Authenticates an HTTP client request.
-   * <p/>
+   * <p>
    * It extracts the {@link PseudoAuthenticator#USER_NAME} parameter from the query string and creates
    * an {@link AuthenticationToken} with it.
-   * <p/>
+   * <p>
    * If the HTTP client request does not contain the {@link PseudoAuthenticator#USER_NAME} parameter and
    * the handler is configured to allow anonymous users it returns the {@link AuthenticationToken#ANONYMOUS}
    * token.
-   * <p/>
+   * <p>
    * If the HTTP client request does not contain the {@link PseudoAuthenticator#USER_NAME} parameter and
    * the handler is configured to disallow anonymous users it throws an {@link AuthenticationException}.
    *
@@ -181,7 +183,9 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
       if (getAcceptAnonymous()) {
         token = AuthenticationToken.ANONYMOUS;
       } else {
-        throw new AuthenticationException("Anonymous requests are disallowed");
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setHeader(WWW_AUTHENTICATE, PSEUDO_AUTH);
+        token = null;
       }
     } else {
       token = new AuthenticationToken(userName, userName, getType());

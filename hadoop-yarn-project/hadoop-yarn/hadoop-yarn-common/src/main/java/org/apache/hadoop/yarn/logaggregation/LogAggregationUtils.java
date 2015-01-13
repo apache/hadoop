@@ -110,4 +110,9 @@ public class LogAggregationUtils {
   public static String getNodeString(NodeId nodeId) {
     return nodeId.toString().replace(":", "_");
   }
+
+  @VisibleForTesting
+  public static String getNodeString(String nodeId) {
+    return nodeId.toString().replace(":", "_");
+  }
 }

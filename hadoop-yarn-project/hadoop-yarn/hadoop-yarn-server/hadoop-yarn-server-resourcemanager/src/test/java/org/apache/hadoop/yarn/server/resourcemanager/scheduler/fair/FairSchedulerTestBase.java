@@ -60,7 +60,7 @@ public class FairSchedulerTestBase {
     }
   }
 
-  protected final static String TEST_DIR =
+  public final static String TEST_DIR =
       new File(System.getProperty("test.build.data", "/tmp")).getAbsolutePath();
 
   private static RecordFactory
@@ -74,7 +74,7 @@ public class FairSchedulerTestBase {
   protected ResourceManager resourceManager;
 
   // Helper methods
-  protected Configuration createConfiguration() {
+  public Configuration createConfiguration() {
     Configuration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
         ResourceScheduler.class);
@@ -216,7 +216,7 @@ public class FairSchedulerTestBase {
     RMApp rmApp = new RMAppImpl(attId.getApplicationId(), rmContext, conf,
         null, null, null, ApplicationSubmissionContext.newInstance(null, null,
         null, null, null, false, false, 0, amResource, null), null, null,
-        0, null, null);
+        0, null, null, null);
     rmContext.getRMApps().put(attId.getApplicationId(), rmApp);
     AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
         attId.getApplicationId(), queue, user);

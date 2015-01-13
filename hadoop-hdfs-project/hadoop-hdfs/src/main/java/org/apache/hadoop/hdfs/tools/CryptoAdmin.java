@@ -24,7 +24,6 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -39,11 +38,6 @@ import org.apache.hadoop.util.Tool;
 @InterfaceAudience.Private
 public class CryptoAdmin extends Configured implements Tool {
 
-  /**
-   * Maximum length for printed lines
-   */
-  private static final int MAX_LINE_WIDTH = 80;
-
   public CryptoAdmin() {
     this(null);
   }
@@ -55,16 +49,17 @@ public class CryptoAdmin extends Configured implements Tool {
   @Override
   public int run(String[] args) throws IOException {
     if (args.length == 0) {
-      printUsage(false);
+      AdminHelper.printUsage(false, "crypto", COMMANDS);
       return 1;
     }
-    final Command command = determineCommand(args[0]);
+    final AdminHelper.Command command = AdminHelper.determineCommand(args[0],
+        COMMANDS);
     if (command == null) {
       System.err.println("Can't understand command '" + args[0] + "'");
       if (!args[0].startsWith("-")) {
         System.err.println("Command names must start with dashes.");
       }
-      printUsage(false);
+      AdminHelper.printUsage(false, "crypto", COMMANDS);
       return 1;
     }
     final List<String> argsList = new LinkedList<String>();
@@ -84,16 +79,6 @@ public class CryptoAdmin extends Configured implements Tool {
     System.exit(cryptoAdmin.run(argsArray));
   }
 
-  private static DistributedFileSystem getDFS(Configuration conf)
-      throws IOException {
-    final FileSystem fs = FileSystem.get(conf);
-    if (!(fs instanceof DistributedFileSystem)) {
-      throw new IllegalArgumentException("FileSystem " + fs.getUri() +
-      " is not an HDFS file system");
-    }
-    return (DistributedFileSystem) fs;
-  }
-
   /**
    * NN exceptions contain the stack trace as part of the exception message.
    * When it's a known error, pretty-print the error and squish the stack trace.
@@ -103,21 +88,7 @@ public class CryptoAdmin extends Configured implements Tool {
       e.getLocalizedMessage().split("\n")[0];
   }
 
-  private static TableListing getOptionDescriptionListing() {
-    final TableListing listing = new TableListing.Builder()
-      .addField("").addField("", true)
-      .wrapWidth(MAX_LINE_WIDTH).hideHeaders().build();
-    return listing;
-  }
-
-  interface Command {
-    String getName();
-    String getShortUsage();
-    String getLongUsage();
-    int run(Configuration conf, List<String> args) throws IOException;
-  }
-
-  private static class CreateZoneCommand implements Command {
+  private static class CreateZoneCommand implements AdminHelper.Command {
     @Override
     public String getName() {
       return "-createZone";
@@ -130,7 +101,7 @@ public class CryptoAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      final TableListing listing = getOptionDescriptionListing();
+      final TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<path>", "The path of the encryption zone to create. " +
         "It must be an empty directory.");
       listing.addRow("<keyName>", "Name of the key to use for the " +
@@ -160,7 +131,7 @@ public class CryptoAdmin extends Configured implements Tool {
         return 1;
       }
 
-      final DistributedFileSystem dfs = getDFS(conf);
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         dfs.createEncryptionZone(new Path(path), keyName);
         System.out.println("Added encryption zone " + path);
@@ -173,7 +144,7 @@ public class CryptoAdmin extends Configured implements Tool {
     }
   }
 
-  private static class ListZonesCommand implements Command {
+  private static class ListZonesCommand implements AdminHelper.Command {
     @Override
     public String getName() {
       return "-listZones";
@@ -197,11 +168,11 @@ public class CryptoAdmin extends Configured implements Tool {
         return 1;
       }
 
-      final DistributedFileSystem dfs = getDFS(conf);
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         final TableListing listing = new TableListing.Builder()
           .addField("").addField("", true)
-          .wrapWidth(MAX_LINE_WIDTH).hideHeaders().build();
+          .wrapWidth(AdminHelper.MAX_LINE_WIDTH).hideHeaders().build();
         final RemoteIterator<EncryptionZone> it = dfs.listEncryptionZones();
         while (it.hasNext()) {
           EncryptionZone ez = it.next();
@@ -217,85 +188,8 @@ public class CryptoAdmin extends Configured implements Tool {
     }
   }
 
-  private static class HelpCommand implements Command {
-    @Override
-    public String getName() {
-      return "-help";
-    }
-
-    @Override
-    public String getShortUsage() {
-      return "[-help <command-name>]\n";
-    }
-
-    @Override
-    public String getLongUsage() {
-      final TableListing listing = getOptionDescriptionListing();
-      listing.addRow("<command-name>", "The command for which to get " +
-          "detailed help. If no command is specified, print detailed help for " +
-          "all commands");
-      return getShortUsage() + "\n" +
-        "Get detailed help about a command.\n\n" +
-        listing.toString();
-    }
-
-    @Override
-    public int run(Configuration conf, List<String> args) throws IOException {
-      if (args.size() == 0) {
-        for (Command command : COMMANDS) {
-          System.err.println(command.getLongUsage());
-        }
-        return 0;
-      }
-      if (args.size() != 1) {
-        System.out.println("You must give exactly one argument to -help.");
-        return 0;
-      }
-      final String commandName = args.get(0);
-      // prepend a dash to match against the command names
-      final Command command = determineCommand("-"+commandName);
-      if (command == null) {
-        System.err.print("Sorry, I don't know the command '" +
-          commandName + "'.\n");
-        System.err.print("Valid help command names are:\n");
-        String separator = "";
-        for (Command c : COMMANDS) {
-          System.err.print(separator + c.getName().substring(1));
-          separator = ", ";
-        }
-        System.err.print("\n");
-        return 1;
-      }
-      System.err.print(command.getLongUsage());
-      return 0;
-    }
-  }
-
-  private static final Command[] COMMANDS = {
+  private static final AdminHelper.Command[] COMMANDS = {
     new CreateZoneCommand(),
-    new ListZonesCommand(),
-    new HelpCommand(),
+    new ListZonesCommand()
   };
-
-  private static void printUsage(boolean longUsage) {
-    System.err.println(
-        "Usage: bin/hdfs crypto [COMMAND]");
-    for (Command command : COMMANDS) {
-      if (longUsage) {
-        System.err.print(command.getLongUsage());
-      } else {
-        System.err.print("          " + command.getShortUsage());
-      }
-    }
-    System.err.println();
-  }
-
-  private static Command determineCommand(String commandName) {
-    for (int i = 0; i < COMMANDS.length; i++) {
-      if (COMMANDS[i].getName().equals(commandName)) {
-        return COMMANDS[i];
-      }
-    }
-    return null;
-  }
 }

@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +33,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.VersionUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -349,15 +352,25 @@ public class ResourceTrackerService extends AbstractService implements
     NodeStatus remoteNodeStatus = request.getNodeStatus();
     /**
      * Here is the node heartbeat sequence...
-     * 1. Check if it's a registered node
-     * 2. Check if it's a valid (i.e. not excluded) node 
-     * 3. Check if it's a 'fresh' heartbeat i.e. not duplicate heartbeat 
+     * 1. Check if it's a valid (i.e. not excluded) node
+     * 2. Check if it's a registered node
+     * 3. Check if it's a 'fresh' heartbeat i.e. not duplicate heartbeat
      * 4. Send healthStatus to RMNode
      */
 
     NodeId nodeId = remoteNodeStatus.getNodeId();
 
-    // 1. Check if it's a registered node
+    // 1. Check if it's a valid (i.e. not excluded) node
+    if (!this.nodesListManager.isValidNode(nodeId.getHost())) {
+      String message =
+          "Disallowed NodeManager nodeId: " + nodeId + " hostname: "
+              + nodeId.getHost();
+      LOG.info(message);
+      shutDown.setDiagnosticsMessage(message);
+      return shutDown;
+    }
+
+    // 2. Check if it's a registered node
     RMNode rmNode = this.rmContext.getRMNodes().get(nodeId);
     if (rmNode == null) {
       /* node does not exist */
@@ -370,24 +383,12 @@ public class ResourceTrackerService extends AbstractService implements
     // Send ping
     this.nmLivelinessMonitor.receivedPing(nodeId);
 
-    // 2. Check if it's a valid (i.e. not excluded) node
-    if (!this.nodesListManager.isValidNode(rmNode.getHostName())) {
-      String message =
-          "Disallowed NodeManager nodeId: " + nodeId + " hostname: "
-              + rmNode.getNodeAddress();
-      LOG.info(message);
-      shutDown.setDiagnosticsMessage(message);
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMNodeEvent(nodeId, RMNodeEventType.DECOMMISSION));
-      return shutDown;
-    }
-    
     // 3. Check if it's a 'fresh' heartbeat i.e. not duplicate heartbeat
     NodeHeartbeatResponse lastNodeHeartbeatResponse = rmNode.getLastNodeHeartBeatResponse();
     if (remoteNodeStatus.getResponseId() + 1 == lastNodeHeartbeatResponse
         .getResponseId()) {
       LOG.info("Received duplicate heartbeat from node "
-          + rmNode.getNodeAddress());
+          + rmNode.getNodeAddress()+ " responseId=" + remoteNodeStatus.getResponseId());
       return lastNodeHeartbeatResponse;
     } else if (remoteNodeStatus.getResponseId() + 1 < lastNodeHeartbeatResponse
         .getResponseId()) {
@@ -411,6 +412,12 @@ public class ResourceTrackerService extends AbstractService implements
     rmNode.updateNodeHeartbeatResponseForCleanup(nodeHeartBeatResponse);
 
     populateKeys(request, nodeHeartBeatResponse);
+
+    ConcurrentMap<ApplicationId, ByteBuffer> systemCredentials =
+        rmContext.getSystemCredentialsForApps();
+    if (!systemCredentials.isEmpty()) {
+      nodeHeartBeatResponse.setSystemCredentialsForApps(systemCredentials);
+    }
 
     // 4. Send status to RMNode, saving the latest response.
     this.rmContext.getDispatcher().getEventHandler().handle(

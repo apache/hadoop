@@ -17,15 +17,17 @@
 
 function hadoop_usage
 {
-  echo "Usage: mapred [--config confdir] [--daemon (start|stop|status)] COMMAND"
+  echo "Usage: mapred [--config confdir] [--daemon (start|stop|status)]"
+  echo "           [--loglevel loglevel] COMMAND"
   echo "       where COMMAND is one of:"
   
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
   echo "  classpath            prints the class path needed for running"
   echo "                       mapreduce subcommands"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
-  echo "  job                  manipulate MapReduce jobs"
   echo "  historyserver        run job history servers as a standalone daemon"
+  echo "  hsadmin              job history server admin interface"
+  echo "  job                  manipulate MapReduce jobs"
   echo "  pipes                run a Pipes job"
   echo "  queue                get information regarding JobQueues"
   echo "  sampler              sampler"
@@ -88,17 +90,24 @@ case ${COMMAND} in
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   historyserver)
-    daemon="true"
+    supportdaemonization="true"
     CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
     hadoop_debug "Appending HADOOP_JOB_HISTORYSERVER_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_JOB_HISTORYSERVER_OPTS}"
     if [ -n "${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}" ]; then
-      JAVA_HEAP_MAX="-Xmx${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}m"
+      HADOOP_HEAPSIZE_MAX="${HADOOP_JOB_HISTORYSERVER_HEAPSIZE}"
     fi
     HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_JHS_LOGGER:-$HADOOP_DAEMON_ROOT_LOGGER}
   ;;
+  hsadmin)
+    CLASS=org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  ;;
   job)
     CLASS=org.apache.hadoop.mapred.JobClient
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   pipes)
     CLASS=org.apache.hadoop.mapred.pipes.Submitter
@@ -126,6 +135,8 @@ case ${COMMAND} in
   ;;
 esac
 
+hadoop_verify_user "${COMMAND}"
+
 daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
 daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}.pid"
 
@@ -138,10 +149,9 @@ if [[  "${HADOOP_DAEMON_MODE}" != "default" ]]; then
   HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.log"
 fi
 
-hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 hadoop_finalize
 
-if [[ -n "${daemon}" ]]; then
+if [[ -n "${supportdaemonization}" ]]; then
   if [[ -n "${secure_service}" ]]; then
     hadoop_secure_daemon_handler "${HADOOP_DAEMON_MODE}" "${COMMAND}"\
     "${CLASS}" "${daemon_pidfile}" "${daemon_outfile}" \

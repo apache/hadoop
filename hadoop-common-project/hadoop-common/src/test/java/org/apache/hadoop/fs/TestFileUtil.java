@@ -619,7 +619,7 @@ public class TestFileUtil {
     OutputStream os = new FileOutputStream(simpleTar); 
     TarOutputStream tos = new TarOutputStream(os);
     try {
-      TarEntry te = new TarEntry("foo");
+      TarEntry te = new TarEntry("/bar/foo");
       byte[] data = "some-content".getBytes("UTF-8");
       te.setSize(data.length);
       tos.putNextEntry(te);
@@ -634,8 +634,8 @@ public class TestFileUtil {
     // successfully untar it into an existing dir:
     FileUtil.unTar(simpleTar, tmp);
     // check result:
-    assertTrue(new File(tmp, "foo").exists());
-    assertEquals(12, new File(tmp, "foo").length());
+    assertTrue(new File(tmp, "/bar/foo").exists());
+    assertEquals(12, new File(tmp, "/bar/foo").length());
     
     final File regularFile = new File(tmp, "QuickBrownFoxJumpsOverTheLazyDog");
     regularFile.createNewFile();
@@ -1036,8 +1036,10 @@ public class TestFileUtil {
     List<String> classPaths = Arrays.asList("", "cp1.jar", "cp2.jar", wildcardPath,
       "cp3.jar", nonExistentSubdir);
     String inputClassPath = StringUtils.join(File.pathSeparator, classPaths);
-    String classPathJar = FileUtil.createJarWithClassPath(inputClassPath,
+    String[] jarCp = FileUtil.createJarWithClassPath(inputClassPath + File.pathSeparator + "unexpandedwildcard/*",
       new Path(tmp.getCanonicalPath()), System.getenv());
+    String classPathJar = jarCp[0];
+    assertNotEquals("Unexpanded wildcard was not placed in extra classpath", jarCp[1].indexOf("unexpanded"), -1);
 
     // verify classpath by reading manifest from jar file
     JarFile jarFile = null;

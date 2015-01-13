@@ -67,7 +67,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
  */
 public abstract class RMCommunicator extends AbstractService
     implements RMHeartbeatHandler {
-  private static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
+  private static final Log LOG = LogFactory.getLog(RMCommunicator.class);
   private int rmPollInterval;//millis
   protected ApplicationId applicationId;
   private final AtomicBoolean stopped;
@@ -76,7 +76,6 @@ public abstract class RMCommunicator extends AbstractService
   protected EventHandler eventHandler;
   protected ApplicationMasterProtocol scheduler;
   private final ClientService clientService;
-  protected int lastResponseID;
   private Resource maxContainerCapability;
   protected Map<ApplicationAccessType, String> applicationACLs;
   private volatile long lastHeartbeatTime;

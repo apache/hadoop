@@ -37,13 +37,6 @@ import org.apache.hadoop.yarn.util.Records;
  *     which match the defined exclude pattern and those log files
  *     will not be uploaded. If the log file name matches both the
  *     include and the exclude pattern, this file will be excluded eventually</li>
- *     <li>rollingIntervalSeconds. The default value is -1. By default,
- *     the logAggregationService only uploads container logs when
- *     the application is finished. This configure defines
- *     how often the logAggregationSerivce uploads container logs in seconds.
- *     By setting this configure, the logAggregationSerivce can upload container
- *     logs periodically when the application is running.
- *     </li>
  *   </ul>
  * </p>
  *
@@ -57,11 +50,10 @@ public abstract class LogAggregationContext {
   @Public
   @Unstable
   public static LogAggregationContext newInstance(String includePattern,
-      String excludePattern, long rollingIntervalSeconds) {
+      String excludePattern) {
     LogAggregationContext context = Records.newRecord(LogAggregationContext.class);
     context.setIncludePattern(includePattern);
     context.setExcludePattern(excludePattern);
-    context.setRollingIntervalSeconds(rollingIntervalSeconds);
     return context;
   }
 
@@ -100,22 +92,4 @@ public abstract class LogAggregationContext {
   @Public
   @Unstable
   public abstract void setExcludePattern(String excludePattern);
-
-  /**
-   * Get rollingIntervalSeconds
-   *
-   * @return the rollingIntervalSeconds
-   */
-  @Public
-  @Unstable
-  public abstract long getRollingIntervalSeconds();
-
-  /**
-   * Set rollingIntervalSeconds
-   *
-   * @param rollingIntervalSeconds
-   */
-  @Public
-  @Unstable
-  public abstract void setRollingIntervalSeconds(long rollingIntervalSeconds);
 }

@@ -27,8 +27,16 @@ import org.apache.hadoop.fs.Path;
 public class TestNativeAzureFileSystemOperationsMocked extends
     FSMainOperationsBaseTest {
 
-  public TestNativeAzureFileSystemOperationsMocked() {
-    super("/tmp/TestNativeAzureFileSystemOperationsMocked");
+  private static final String TEST_ROOT_DIR =
+      "/tmp/TestNativeAzureFileSystemOperationsMocked";
+  
+  public TestNativeAzureFileSystemOperationsMocked (){
+    super(TEST_ROOT_DIR);
+  }
+
+  @Override
+  public void setUp() throws Exception {
+    fSys = AzureBlobStorageTestAccount.createMock().getFileSystem();
   }
 
   @Override
@@ -41,5 +49,30 @@ public class TestNativeAzureFileSystemOperationsMocked extends
         .println("Skipping testListStatusThrowsExceptionForUnreadableDir since WASB"
             + " doesn't honor directory permissions.");
     assumeTrue(!Path.WINDOWS);
+  }
+
+  @Override
+  public String getTestRootDir() {
+    return TEST_ROOT_DIR;
+  }
+
+  @Override
+  public Path getTestRootPath(FileSystem fSys) {
+    return fSys.makeQualified(new Path(TEST_ROOT_DIR));
+  }
+
+  @Override
+  public Path getTestRootPath(FileSystem fSys, String pathString) {
+    return fSys.makeQualified(new Path(TEST_ROOT_DIR, pathString));
+  }
+
+  @Override
+  public Path getAbsoluteTestRootPath(FileSystem fSys) {
+    Path testRootPath = new Path(TEST_ROOT_DIR);
+    if (testRootPath.isAbsolute()) {
+      return testRootPath;
+    } else {
+      return new Path(fSys.getWorkingDirectory(), TEST_ROOT_DIR);
+    }
   }
 }

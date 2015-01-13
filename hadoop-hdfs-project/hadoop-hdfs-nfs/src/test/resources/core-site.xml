@@ -20,10 +20,24 @@
 <property>
   <name>nfs.server.port</name>
   <value>2079</value>
+  <description>
+    Specify the port number used by Hadoop NFS.
+    Notice that the default value here is different than the default Hadoop nfs
+    port 2049 specified in hdfs-default.xml. 2049 is also the default port for
+    Linux nfs. The setting here allows starting Hadoop nfs for testing even if
+    nfs server (linux or Hadoop) is aready running on he same host.
+  </description>
 </property>
 
 <property>
   <name>nfs.mountd.port</name>
   <value>4272</value>
+  <description>
+    Specify the port number used by Hadoop mount daemon.
+    Notice that the default value here is different than 4242 specified in 
+    hdfs-default.xml. This setting allows starting Hadoop nfs mountd for
+    testing even if the Linux or Hadoop mountd is already running on the
+    same host.
+  </description>
 </property>
 </configuration>

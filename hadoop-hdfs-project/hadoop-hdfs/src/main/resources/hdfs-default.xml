@@ -314,7 +314,8 @@
   <name>dfs.namenode.fs-limits.max-directory-items</name>
   <value>1048576</value>
   <description>Defines the maximum number of items that a directory may
-      contain.  A value of 0 will disable the check.</description>
+      contain. Cannot set the property to a value less than 1 or more than
+      6400000.</description>
 </property>
 
 <property>
@@ -752,7 +753,7 @@
   <name>dfs.namenode.replication.interval</name>
   <value>3</value>
   <description>The periodicity in seconds with which the namenode computes 
-  repliaction work for datanodes. </description>
+  replication work for datanodes. </description>
 </property>
 
 <property>
@@ -826,8 +827,8 @@
   <value>${dfs.namenode.checkpoint.dir}</value>
   <description>Determines where on the local filesystem the DFS secondary
       name node should store the temporary edits to merge.
-      If this is a comma-delimited list of directoires then teh edits is
-      replicated in all of the directoires for redundancy.
+      If this is a comma-delimited list of directories then the edits is
+      replicated in all of the directories for redundancy.
       Default value is same as dfs.namenode.checkpoint.dir
   </description>
 </property>
@@ -958,7 +959,7 @@
         dfs.image.transfer.bandwidthPerSec parameter should be configured such
         that normal image transfer can complete successfully.
         This timeout prevents client hangs when the sender fails during
-        image transfer. This is socket timeout during image tranfer.
+        image transfer. This is socket timeout during image transfer.
   </description>
 </property>
 
@@ -1035,7 +1036,7 @@
         (e.g HBase random-IO workloads).
 
         This may improve performance for some workloads by freeing buffer
-        cache spage usage for more cacheable data.
+        cache space usage for more cacheable data.
 
         If the Hadoop native libraries are not available, this configuration
         has no effect.
@@ -1053,7 +1054,7 @@
         after it is written to disk.
 
         This may improve performance for some workloads by freeing buffer
-        cache spage usage for more cacheable data.
+        cache space usage for more cacheable data.
 
         If the Hadoop native libraries are not available, this configuration
         has no effect.
@@ -1514,6 +1515,31 @@
     the configured JCE default on the system is used (usually 3DES.) It is
     widely believed that 3DES is more cryptographically secure, but RC4 is
     substantially faster.
+    
+    Note that if AES is supported by both the client and server then this 
+    encryption algorithm will only be used to initially transfer keys for AES.
+    (See dfs.encrypt.data.transfer.cipher.suites.)
+  </description>
+</property>
+
+<property>
+  <name>dfs.encrypt.data.transfer.cipher.suites</name>
+  <value></value>
+  <description>
+    This value may be either undefined or AES/CTR/NoPadding.  If defined, then
+    dfs.encrypt.data.transfer uses the specified cipher suite for data
+    encryption.  If not defined, then only the algorithm specified in
+    dfs.encrypt.data.transfer.algorithm is used.  By default, the property is
+    not defined.
+  </description>
+</property>
+
+<property>
+  <name>dfs.encrypt.data.transfer.cipher.key.bitlength</name>
+  <value>128</value>
+  <description>
+    The key bitlength negotiated by dfsclient and datanode for encryption.
+    This value may be set to either 128, 192 or 256.
   </description>
 </property>
 
@@ -2196,6 +2222,42 @@
     dump the contents of the old format fsimage by oiv_legacy command. If
     the value is not specified, old format fsimage will not be saved in
     checkpoint.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.top.enabled</name>
+  <value>true</value>
+  <description>Enable nntop: reporting top users on namenode
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.top.window.num.buckets</name>
+  <value>10</value>
+  <description>Number of buckets in the rolling window implementation of nntop
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.top.num.users</name>
+  <value>10</value>
+  <description>Number of top users returned by the top tool
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.top.windows.minutes</name>
+  <value>1,5,25</value>
+  <description>comma separated list of nntop reporting periods in minutes
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.blocks.per.postponedblocks.rescan</name>
+  <value>10000</value>
+  <description>Number of blocks to rescan for each iteration of
+    postponedMisreplicatedBlocks.
   </description>
 </property>
 

@@ -86,7 +86,7 @@ public class AllocationFileLoaderService extends AbstractService {
   
   private Thread reloadThread;
   private volatile boolean running = true;
-  
+
   public AllocationFileLoaderService() {
     this(new SystemClock());
   }
@@ -222,6 +222,7 @@ public class AllocationFileLoaderService extends AbstractService {
         new HashMap<String, Float>();
     Map<String, Map<QueueACL, AccessControlList>> queueAcls =
         new HashMap<String, Map<QueueACL, AccessControlList>>();
+    Set<String> reservableQueues = new HashSet<String>();
     int userMaxAppsDefault = Integer.MAX_VALUE;
     int queueMaxAppsDefault = Integer.MAX_VALUE;
     float queueMaxAMShareDefault = 0.5f;
@@ -229,6 +230,11 @@ public class AllocationFileLoaderService extends AbstractService {
     long defaultMinSharePreemptionTimeout = Long.MAX_VALUE;
     float defaultFairSharePreemptionThreshold = 0.5f;
     SchedulingPolicy defaultSchedPolicy = SchedulingPolicy.DEFAULT_POLICY;
+
+    // Reservation global configuration knobs
+    String planner = null;
+    String reservationAgent = null;
+    String reservationAdmissionPolicy = null;
 
     QueuePlacementPolicy newPlacementPolicy = null;
 
@@ -317,6 +323,15 @@ public class AllocationFileLoaderService extends AbstractService {
           defaultSchedPolicy = SchedulingPolicy.parse(text);
         } else if ("queuePlacementPolicy".equals(element.getTagName())) {
           placementPolicyElement = element;
+        } else if ("reservation-planner".equals(element.getTagName())) {
+          String text = ((Text) element.getFirstChild()).getData().trim();
+          planner = text;
+        } else if ("reservation-agent".equals(element.getTagName())) {
+          String text = ((Text) element.getFirstChild()).getData().trim();
+          reservationAgent = text;
+        } else if ("reservation-policy".equals(element.getTagName())) {
+          String text = ((Text) element.getFirstChild()).getData().trim();
+          reservationAdmissionPolicy = text;
         } else {
           LOG.warn("Bad element in allocations file: " + element.getTagName());
         }
@@ -337,7 +352,8 @@ public class AllocationFileLoaderService extends AbstractService {
       loadQueue(parent, element, minQueueResources, maxQueueResources,
           queueMaxApps, userMaxApps, queueMaxAMShares, queueWeights,
           queuePolicies, minSharePreemptionTimeouts, fairSharePreemptionTimeouts,
-          fairSharePreemptionThresholds, queueAcls, configuredQueues);
+          fairSharePreemptionThresholds, queueAcls, configuredQueues,
+          reservableQueues);
     }
 
     // Load placement policy and pass it configured queues
@@ -366,13 +382,27 @@ public class AllocationFileLoaderService extends AbstractService {
           defaultFairSharePreemptionThreshold);
     }
 
+    ReservationQueueConfiguration globalReservationQueueConfig = new
+        ReservationQueueConfiguration();
+    if (planner != null) {
+      globalReservationQueueConfig.setPlanner(planner);
+    }
+    if (reservationAdmissionPolicy != null) {
+      globalReservationQueueConfig.setReservationAdmissionPolicy
+          (reservationAdmissionPolicy);
+    }
+    if (reservationAgent != null) {
+      globalReservationQueueConfig.setReservationAgent(reservationAgent);
+    }
+
     AllocationConfiguration info = new AllocationConfiguration(minQueueResources,
         maxQueueResources, queueMaxApps, userMaxApps, queueWeights,
         queueMaxAMShares, userMaxAppsDefault, queueMaxAppsDefault,
         queueMaxAMShareDefault, queuePolicies, defaultSchedPolicy,
         minSharePreemptionTimeouts, fairSharePreemptionTimeouts,
         fairSharePreemptionThresholds, queueAcls,
-        newPlacementPolicy, configuredQueues);
+        newPlacementPolicy, configuredQueues, globalReservationQueueConfig,
+        reservableQueues);
     
     lastSuccessfulReload = clock.getTime();
     lastReloadAttemptFailed = false;
@@ -392,10 +422,17 @@ public class AllocationFileLoaderService extends AbstractService {
       Map<String, Long> minSharePreemptionTimeouts,
       Map<String, Long> fairSharePreemptionTimeouts,
       Map<String, Float> fairSharePreemptionThresholds,
-      Map<String, Map<QueueACL, AccessControlList>> queueAcls, 
-      Map<FSQueueType, Set<String>> configuredQueues) 
+      Map<String, Map<QueueACL, AccessControlList>> queueAcls,
+      Map<FSQueueType, Set<String>> configuredQueues,
+      Set<String> reservableQueues)
       throws AllocationConfigurationException {
     String queueName = element.getAttribute("name");
+
+    if (queueName.contains(".")) {
+      throw new AllocationConfigurationException("Bad fair scheduler config "
+          + "file: queue name (" + queueName + ") shouldn't contain period.");
+    }
+
     if (parentName != null) {
       queueName = parentName + "." + queueName;
     }
@@ -454,14 +491,17 @@ public class AllocationFileLoaderService extends AbstractService {
       } else if ("aclAdministerApps".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData();
         acls.put(QueueACL.ADMINISTER_QUEUE, new AccessControlList(text));
+      } else if ("reservation".equals(field.getTagName())) {
+        isLeaf = false;
+        reservableQueues.add(queueName);
+        configuredQueues.get(FSQueueType.PARENT).add(queueName);
       } else if ("queue".endsWith(field.getTagName()) || 
           "pool".equals(field.getTagName())) {
         loadQueue(queueName, field, minQueueResources, maxQueueResources,
             queueMaxApps, userMaxApps, queueMaxAMShares, queueWeights,
             queuePolicies, minSharePreemptionTimeouts,
             fairSharePreemptionTimeouts, fairSharePreemptionThresholds,
-            queueAcls, configuredQueues);
-        configuredQueues.get(FSQueueType.PARENT).add(queueName);
+            queueAcls, configuredQueues, reservableQueues);
         isLeaf = false;
       }
     }
@@ -473,6 +513,13 @@ public class AllocationFileLoaderService extends AbstractService {
       } else {
         configuredQueues.get(FSQueueType.LEAF).add(queueName);
       }
+    } else {
+      if ("parent".equals(element.getAttribute("type"))) {
+        throw new AllocationConfigurationException("Both <reservation> and " +
+            "type=\"parent\" found for queue " + queueName + " which is " +
+            "unsupported");
+      }
+      configuredQueues.get(FSQueueType.PARENT).add(queueName);
     }
     queueAcls.put(queueName, acls);
     if (maxQueueResources.containsKey(queueName) &&

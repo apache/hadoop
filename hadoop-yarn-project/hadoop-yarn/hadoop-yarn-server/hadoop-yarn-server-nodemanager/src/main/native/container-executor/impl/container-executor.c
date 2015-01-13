@@ -455,12 +455,7 @@ int mkdirs(const char* path, mode_t perm) {
   char * npath;
   char * p;
   if (stat(path, &sb) == 0) {
-    if (S_ISDIR (sb.st_mode)) {
-      return 0;
-    } else {
-      fprintf(LOGFILE, "Path %s is file not dir\n", path);
-      return -1;
-    }
+    return check_dir(path, sb.st_mode, perm, 1);
   }
   npath = strdup(path);
   if (npath == NULL) {
@@ -475,15 +470,7 @@ int mkdirs(const char* path, mode_t perm) {
 
   while (NULL != (p = strchr(p, '/'))) {
     *p = '\0';
-    if (stat(npath, &sb) != 0) {
-      if (mkdir(npath, perm) != 0) {
-        fprintf(LOGFILE, "Can't create directory %s in %s - %s\n", npath,
-                path, strerror(errno));
-        free(npath);
-        return -1;
-      }
-    } else if (!S_ISDIR (sb.st_mode)) {
-      fprintf(LOGFILE, "Path %s is file not dir\n", npath);
+    if (create_validate_dir(npath, perm, path, 0) == -1) {
       free(npath);
       return -1;
     }
@@ -493,9 +480,7 @@ int mkdirs(const char* path, mode_t perm) {
   }
 
   /* Create the final directory component. */
-  if (mkdir(npath, perm) != 0) {
-    fprintf(LOGFILE, "Can't create directory %s - %s\n", npath,
-            strerror(errno));
+  if (create_validate_dir(npath, perm, path, 1) == -1) {
     free(npath);
     return -1;
   }
@@ -503,6 +488,50 @@ int mkdirs(const char* path, mode_t perm) {
   return 0;
 }
 
+/*
+* Create the parent directory if they do not exist. Or check the permission if
+* the race condition happens.
+* Give 0 or 1 to represent whether this is the final component. If it is, we
+* need to check the permission.
+*/
+int create_validate_dir(char* npath, mode_t perm, char* path, int finalComponent) {
+  struct stat sb;
+  if (stat(npath, &sb) != 0) {
+    if (mkdir(npath, perm) != 0) {
+      if (errno != EEXIST || stat(npath, &sb) != 0) {
+        fprintf(LOGFILE, "Can't create directory %s - %s\n", npath,
+                strerror(errno));
+        return -1;
+      }
+      // The directory npath should exist.
+      if (check_dir(npath, sb.st_mode, perm, finalComponent) == -1) {
+        return -1;
+      }
+    }
+  } else {
+    if (check_dir(npath, sb.st_mode, perm, finalComponent) == -1) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
+// check whether the given path is a directory
+// also check the access permissions whether it is the same as desired permissions
+int check_dir(char* npath, mode_t st_mode, mode_t desired, int finalComponent) {
+  if (!S_ISDIR(st_mode)) {
+    fprintf(LOGFILE, "Path %s is file not dir\n", npath);
+    return -1;
+  } else if (finalComponent == 1) {
+    int filePermInt = st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
+    int desiredInt = desired & (S_IRWXU | S_IRWXG | S_IRWXO);
+    if (filePermInt != desiredInt) {
+      fprintf(LOGFILE, "Path %s has permission %o but needs permission %o.\n", npath, filePermInt, desiredInt);
+      return -1;
+    }
+  }
+  return 0;
+}
 
 /**
  * Function to prepare the container directories.

@@ -31,10 +31,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,7 +51,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -65,10 +67,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.ipc.GenericRefreshProtocol;
@@ -331,7 +331,8 @@ public class DFSAdmin extends FsShell {
           out.println(info);
         }
       } else {
-        out.println("There is no rolling upgrade in progress.");
+        out.println("There is no rolling upgrade in progress or rolling " +
+            "upgrade has already been finalized.");
       }
     }
 
@@ -353,7 +354,7 @@ public class DFSAdmin extends FsShell {
         Preconditions.checkState(info.isStarted());
         break;
       case FINALIZE:
-        Preconditions.checkState(info.isFinalized());
+        Preconditions.checkState(info == null || info.isFinalized());
         break;
       }
       printMessage(info, System.out);
@@ -394,8 +395,7 @@ public class DFSAdmin extends FsShell {
     "\t[-shutdownDatanode <datanode_host:ipc_port> [upgrade]]\n" +
     "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
     "\t[-metasave filename]\n" +
-    "\t[-setStoragePolicy path policyName]\n" +
-    "\t[-getStoragePolicy path]\n" +
+    "\t[-triggerBlockReport [-incremental] <datanode_host:ipc_port>]\n" +
     "\t[-help [cmd]]\n";
 
   /**
@@ -458,6 +458,8 @@ public class DFSAdmin extends FsShell {
                        dfs.getCorruptBlocksCount());
     System.out.println("Missing blocks: " + 
                        dfs.getMissingBlocksCount());
+    System.out.println("Missing blocks (with replication factor 1): " +
+                      dfs.getMissingReplOneBlocksCount());
 
     System.out.println();
 
@@ -601,33 +603,36 @@ public class DFSAdmin extends FsShell {
     return inSafeMode;
   }
 
-  public int setStoragePolicy(String[] argv) throws IOException {
-    DistributedFileSystem dfs = getDFS();
-    dfs.setStoragePolicy(new Path(argv[1]), argv[2]);
-    System.out.println("Set storage policy " + argv[2] + " on " + argv[1]);
+  public int triggerBlockReport(String[] argv) throws IOException {
+    List<String> args = new LinkedList<String>();
+    for (int j = 1; j < argv.length; j++) {
+      args.add(argv[j]);
+    }
+    boolean incremental = StringUtils.popOption("-incremental", args);
+    String hostPort = StringUtils.popFirstNonOption(args);
+    if (hostPort == null) {
+      System.err.println("You must specify a host:port pair.");
+      return 1;
+    }
+    if (!args.isEmpty()) {
+      System.err.print("Can't understand arguments: " +
+        Joiner.on(" ").join(args) + "\n");
+      return 1;
+    }
+    ClientDatanodeProtocol dnProxy = getDataNodeProxy(hostPort);
+    try {
+      dnProxy.triggerBlockReport(
+          new BlockReportOptions.Factory().
+              setIncremental(incremental).
+              build());
+    } catch (IOException e) {
+      System.err.println("triggerBlockReport error: " + e);
+      return 1;
+    }
+    System.out.println("Triggering " +
+        (incremental ? "an incremental " : "a full ") +
+        "block report on " + hostPort + ".");
     return 0;
-  }
-
-  public int getStoragePolicy(String[] argv) throws IOException {
-    DistributedFileSystem dfs = getDFS();
-    HdfsFileStatus status = dfs.getClient().getFileInfo(argv[1]);
-    if (status == null) {
-      throw new FileNotFoundException("File/Directory does not exist: "
-          + argv[1]);
-    }
-    byte storagePolicyId = status.getStoragePolicy();
-    if (storagePolicyId == BlockStoragePolicySuite.ID_UNSPECIFIED) {
-      System.out.println("The storage policy of " + argv[1] + " is unspecified");
-      return 0;
-    }
-    BlockStoragePolicy[] policies = dfs.getStoragePolicies();
-    for (BlockStoragePolicy p : policies) {
-      if (p.getId() == storagePolicyId) {
-        System.out.println("The storage policy of " + argv[1] + ":\n" + p);
-        return 0;
-      }
-    }
-    throw new IOException("Cannot identify the storage policy for " + argv[1]);
   }
 
   /**
@@ -977,11 +982,11 @@ public class DFSAdmin extends FsShell {
         + "\tGet the information about the given datanode. This command can\n"
         + "\tbe used for checking if a datanode is alive.\n";
 
-    String setStoragePolicy = "-setStoragePolicy path policyName\n"
-        + "\tSet the storage policy for a file/directory.\n";
-
-    String getStoragePolicy = "-getStoragePolicy path\n"
-        + "\tGet the storage policy for a file/directory.\n";
+    String triggerBlockReport =
+      "-triggerBlockReport [-incremental] <datanode_host:ipc_port>\n"
+        + "\tTrigger a block report for the datanode.\n"
+        + "\tIf 'incremental' is specified, it will be an incremental\n"
+        + "\tblock report; otherwise, it will be a full block report.\n";
 
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
@@ -1042,10 +1047,6 @@ public class DFSAdmin extends FsShell {
       System.out.println(shutdownDatanode);
     } else if ("getDatanodeInfo".equalsIgnoreCase(cmd)) {
       System.out.println(getDatanodeInfo);
-    } else if ("setStoragePolicy".equalsIgnoreCase(cmd))  {
-      System.out.println(setStoragePolicy);
-    } else if ("getStoragePolicy".equalsIgnoreCase(cmd))  {
-      System.out.println(getStoragePolicy);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -1078,8 +1079,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(disallowSnapshot);
       System.out.println(shutdownDatanode);
       System.out.println(getDatanodeInfo);
-      System.out.println(setStoragePolicy);
-      System.out.println(getStoragePolicy);
+      System.out.println(triggerBlockReport);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -1396,11 +1396,12 @@ public class DFSAdmin extends FsShell {
       ClientDatanodeProtocol dnProxy = getDataNodeProxy(address);
       dnProxy.startReconfiguration();
       System.out.println("Started reconfiguration task on DataNode " + address);
+      return 0;
     } else {
       System.err.println("Node type " + nodeType +
           " does not support reconfiguration.");
+      return 1;
     }
-    return -1;
   }
 
   int getReconfigurationStatus(String nodeType, String address,
@@ -1429,7 +1430,7 @@ public class DFSAdmin extends FsShell {
           } else {
             out.print("FAILED: ");
           }
-          out.printf("Change property %s\n\tFrom: \"%s\"\n\tTo: \"%s\"\n",
+          out.printf("Change property %s%n\tFrom: \"%s\"%n\tTo: \"%s\"%n",
               result.getKey().prop, result.getKey().oldVal,
               result.getKey().newVal);
           if (result.getValue().isPresent()) {
@@ -1438,11 +1439,11 @@ public class DFSAdmin extends FsShell {
         }
       } catch (IOException e) {
         err.println("DataNode reloading configuration: " + e + ".");
-        return -1;
+        return 1;
       }
     } else {
       err.println("Node type " + nodeType + " does not support reconfiguration.");
-      return -1;
+      return 1;
     }
     return 0;
   }
@@ -1508,12 +1509,6 @@ public class DFSAdmin extends FsShell {
     } else if ("-safemode".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-safemode enter | leave | get | wait]");
-    } else if ("-setStoragePolicy".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
-          + " [-setStoragePolicy path policyName]");
-    } else if ("-getStoragePolicy".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
-          + " [-getStoragePolicy path]");
     } else if ("-allowSnapshot".equalsIgnoreCase(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-allowSnapshot <snapshotDir>]");
@@ -1592,6 +1587,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-getDatanodeInfo".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-getDatanodeInfo <datanode_host:ipc_port>]");
+    } else if ("-triggerBlockReport".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]");
     } else {
       System.err.println("Usage: hdfs dfsadmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
@@ -1730,13 +1728,8 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
-    } else if ("-setStoragePolicy".equals(cmd)) {
-      if (argv.length != 3) {
-        printUsage(cmd);
-        return exitCode;
-      }
-    } else if ("-getStoragePolicy".equals(cmd)) {
-      if (argv.length != 2) {
+    } else if ("-triggerBlockReport".equals(cmd)) {
+      if (argv.length < 1) {
         printUsage(cmd);
         return exitCode;
       }
@@ -1813,10 +1806,8 @@ public class DFSAdmin extends FsShell {
         exitCode = getDatanodeInfo(argv, i);
       } else if ("-reconfig".equals(cmd)) {
         exitCode = reconfig(argv, i);
-      } else if ("-setStoragePolicy".equals(cmd)) {
-        exitCode = setStoragePolicy(argv);
-      } else if ("-getStoragePolicy".equals(cmd)) {
-        exitCode = getStoragePolicy(argv);
+      } else if ("-triggerBlockReport".equals(cmd)) {
+        exitCode = triggerBlockReport(argv);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);

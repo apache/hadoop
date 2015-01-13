@@ -21,6 +21,7 @@ package org.apache.hadoop.tools;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -155,15 +156,15 @@ public class Logalyzer {
         
         //Compare column-wise according to *sortSpec*
         for(int i=0; i < sortSpec.length; ++i) {
-          int column = (Integer.valueOf(sortSpec[i]).intValue());
+          int column = Integer.parseInt(sortSpec[i]);
           String c1 = logColumns1[column]; 
           String c2 = logColumns2[column];
           
           //Compare columns
           int comparision = super.compareBytes(
-                                               c1.getBytes(), 0, c1.length(),
-                                               c2.getBytes(), 0, c2.length()
-                                               );
+                                  c1.getBytes(Charset.forName("UTF-8")), 0, c1.length(),
+                                  c2.getBytes(Charset.forName("UTF-8")), 0, c2.length()
+                                  );
           
           //They differ!
           if (comparision != 0) {

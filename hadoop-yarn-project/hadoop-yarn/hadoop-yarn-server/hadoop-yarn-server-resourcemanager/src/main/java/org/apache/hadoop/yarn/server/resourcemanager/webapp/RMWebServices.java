@@ -24,6 +24,7 @@ import java.security.AccessControlException;
 import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -65,6 +66,7 @@ import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHa
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -79,6 +81,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -115,6 +118,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
@@ -132,6 +136,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
@@ -201,7 +207,7 @@ public class RMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ClusterMetricsInfo getClusterMetricsInfo() {
     init();
-    return new ClusterMetricsInfo(this.rm, this.rm.getRMContext());
+    return new ClusterMetricsInfo(this.rm);
   }
 
   @GET
@@ -692,7 +698,7 @@ public class RMWebServices {
       app = getRMAppForAppId(appId);
     } catch (NotFoundException e) {
       RMAuditLogger.logFailure(userName, AuditConstants.KILL_APP_REQUEST,
-        "UNKNOWN", "RMWebService", "Trying to kill/move an absent application "
+        "UNKNOWN", "RMWebService", "Trying to kill an absent application "
             + appId);
       throw e;
     }
@@ -713,6 +719,179 @@ public class RMWebServices {
     ret.setState(app.getState().toString());
 
     return Response.status(Status.OK).entity(ret).build();
+  }
+  
+  @GET
+  @Path("/get-node-to-labels")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public NodeToLabelsInfo getNodeToLabels(@Context HttpServletRequest hsr) 
+    throws IOException {
+    init();
+
+    NodeToLabelsInfo ntl = new NodeToLabelsInfo();
+    HashMap<String, NodeLabelsInfo> ntlMap = ntl.getNodeToLabels();
+    Map<NodeId, Set<String>> nodeIdToLabels =   
+      rm.getRMContext().getNodeLabelManager().getNodeLabels();
+      
+    for (Map.Entry<NodeId, Set<String>> nitle : nodeIdToLabels.entrySet()) {
+      ntlMap.put(nitle.getKey().toString(), 
+        new NodeLabelsInfo(nitle.getValue()));
+    }
+
+    return ntl;
+  }
+  
+  @POST
+  @Path("/replace-node-to-labels")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response replaceLabelsOnNodes(
+    final NodeToLabelsInfo newNodeToLabels,
+    @Context HttpServletRequest hsr) 
+    throws IOException {
+    init();
+    
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      String msg = "Unable to obtain user name, user not authenticated for"
+        + " post to .../replace-node-to-labels";
+      throw new AuthorizationException(msg);
+    }
+    if (!rm.getRMContext().getNodeLabelManager().checkAccess(callerUGI)) {
+      String msg = "User " + callerUGI.getShortUserName() + " not authorized"
+        + " for post to .../replace-node-to-labels ";
+      throw new AuthorizationException(msg);
+    }
+    
+    Map<NodeId, Set<String>> nodeIdToLabels = 
+      new HashMap<NodeId, Set<String>>();
+
+    for (Map.Entry<String, NodeLabelsInfo> nitle : 
+      newNodeToLabels.getNodeToLabels().entrySet()) {
+     nodeIdToLabels.put(ConverterUtils.toNodeIdWithDefaultPort(nitle.getKey()),
+       new HashSet<String>(nitle.getValue().getNodeLabels()));
+    }
+    
+    rm.getRMContext().getNodeLabelManager().replaceLabelsOnNode(nodeIdToLabels);
+
+    return Response.status(Status.OK).build();
+  }
+  
+  @GET
+  @Path("/get-node-labels")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public NodeLabelsInfo getClusterNodeLabels(@Context HttpServletRequest hsr) 
+    throws IOException {
+    init();
+
+    NodeLabelsInfo ret = 
+      new NodeLabelsInfo(rm.getRMContext().getNodeLabelManager()
+        .getClusterNodeLabels());
+
+    return ret;
+  }
+  
+  @POST
+  @Path("/add-node-labels")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response addToClusterNodeLabels(final NodeLabelsInfo newNodeLabels,
+      @Context HttpServletRequest hsr)
+      throws Exception {
+    init();
+    
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      String msg = "Unable to obtain user name, user not authenticated for"
+        + " post to .../add-node-labels";
+      throw new AuthorizationException(msg);
+    }
+    if (!rm.getRMContext().getNodeLabelManager().checkAccess(callerUGI)) {
+      String msg = "User " + callerUGI.getShortUserName() + " not authorized"
+        + " for post to .../add-node-labels ";
+      throw new AuthorizationException(msg);
+    }
+    
+    rm.getRMContext().getNodeLabelManager()
+        .addToCluserNodeLabels(new HashSet<String>(
+          newNodeLabels.getNodeLabels()));
+            
+    return Response.status(Status.OK).build();
+
+  }
+  
+  @POST
+  @Path("/remove-node-labels")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response removeFromCluserNodeLabels(final NodeLabelsInfo oldNodeLabels,
+      @Context HttpServletRequest hsr)
+      throws Exception {
+    init();
+    
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      String msg = "Unable to obtain user name, user not authenticated for"
+        + " post to .../remove-node-labels";
+      throw new AuthorizationException(msg);
+    }
+    if (!rm.getRMContext().getNodeLabelManager().checkAccess(callerUGI)) {
+      String msg = "User " + callerUGI.getShortUserName() + " not authorized"
+        + " for post to .../remove-node-labels ";
+      throw new AuthorizationException(msg);
+    }
+    
+    rm.getRMContext().getNodeLabelManager()
+        .removeFromClusterNodeLabels(new HashSet<String>(
+          oldNodeLabels.getNodeLabels()));
+            
+    return Response.status(Status.OK).build();
+
+  }
+  
+  @GET
+  @Path("/nodes/{nodeId}/get-labels")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public NodeLabelsInfo getLabelsOnNode(@Context HttpServletRequest hsr,
+                                  @PathParam("nodeId") String nodeId) 
+    throws IOException {
+    init();
+
+    NodeId nid = ConverterUtils.toNodeIdWithDefaultPort(nodeId);
+    return new NodeLabelsInfo(
+      rm.getRMContext().getNodeLabelManager().getLabelsOnNode(nid));
+
+  }
+  
+  @POST
+  @Path("/nodes/{nodeId}/replace-labels")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response replaceLabelsOnNode(NodeLabelsInfo newNodeLabelsInfo,
+      @Context HttpServletRequest hsr, @PathParam("nodeId") String nodeId)
+      throws Exception {
+    init();
+    
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      String msg = "Unable to obtain user name, user not authenticated for"
+        + " post to .../nodes/nodeid/replace-labels";
+      throw new AuthorizationException(msg);
+    }
+
+    if (!rm.getRMContext().getNodeLabelManager().checkAccess(callerUGI)) {
+      String msg = "User " + callerUGI.getShortUserName() + " not authorized"
+        + " for post to .../nodes/nodeid/replace-labels";
+      throw new AuthorizationException(msg);
+    }
+    
+    NodeId nid = ConverterUtils.toNodeIdWithDefaultPort(nodeId);
+    
+    Map<NodeId, Set<String>> newLabelsForNode = new HashMap<NodeId,
+      Set<String>>();
+    
+    newLabelsForNode.put(nid, new HashSet<String>(newNodeLabelsInfo.getNodeLabels()));
+    
+    rm.getRMContext().getNodeLabelManager().replaceLabelsOnNode(newLabelsForNode);
+    
+    return Response.status(Status.OK).build();
+
   }
 
   protected Response killApp(RMApp app, UserGroupInformation callerUGI,
@@ -765,6 +944,126 @@ public class RMWebServices {
       return Response.status(Status.ACCEPTED).entity(ret)
         .header(HttpHeaders.LOCATION, hsr.getRequestURL()).build();
     }
+    return Response.status(Status.OK).entity(ret).build();
+  }
+
+  @GET
+  @Path("/apps/{appid}/queue")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public AppQueue getAppQueue(@Context HttpServletRequest hsr,
+      @PathParam("appid") String appId) throws AuthorizationException {
+    init();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    String userName = "UNKNOWN-USER";
+    if (callerUGI != null) {
+      userName = callerUGI.getUserName();
+    }
+    RMApp app = null;
+    try {
+      app = getRMAppForAppId(appId);
+    } catch (NotFoundException e) {
+      RMAuditLogger.logFailure(userName, AuditConstants.KILL_APP_REQUEST,
+        "UNKNOWN", "RMWebService",
+        "Trying to get state of an absent application " + appId);
+      throw e;
+    }
+
+    AppQueue ret = new AppQueue();
+    ret.setQueue(app.getQueue());
+
+    return ret;
+  }
+
+  @PUT
+  @Path("/apps/{appid}/queue")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response updateAppQueue(AppQueue targetQueue,
+      @Context HttpServletRequest hsr, @PathParam("appid") String appId)
+      throws AuthorizationException, YarnException, InterruptedException,
+      IOException {
+
+    init();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      String msg = "Unable to obtain user name, user not authenticated";
+      throw new AuthorizationException(msg);
+    }
+
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
+    }
+
+    String userName = callerUGI.getUserName();
+    RMApp app = null;
+    try {
+      app = getRMAppForAppId(appId);
+    } catch (NotFoundException e) {
+      RMAuditLogger.logFailure(userName, AuditConstants.KILL_APP_REQUEST,
+        "UNKNOWN", "RMWebService", "Trying to move an absent application "
+            + appId);
+      throw e;
+    }
+
+    if (!app.getQueue().equals(targetQueue.getQueue())) {
+      // user is attempting to change queue.
+      return moveApp(app, callerUGI, targetQueue.getQueue());
+    }
+
+    AppQueue ret = new AppQueue();
+    ret.setQueue(app.getQueue());
+
+    return Response.status(Status.OK).entity(ret).build();
+  }
+
+  protected Response moveApp(RMApp app, UserGroupInformation callerUGI,
+      String targetQueue) throws IOException, InterruptedException {
+
+    if (app == null) {
+      throw new IllegalArgumentException("app cannot be null");
+    }
+    String userName = callerUGI.getUserName();
+    final ApplicationId appid = app.getApplicationId();
+    final String reqTargetQueue = targetQueue;
+    try {
+      callerUGI
+        .doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws IOException,
+              YarnException {
+            MoveApplicationAcrossQueuesRequest req =
+                MoveApplicationAcrossQueuesRequest.newInstance(appid,
+                  reqTargetQueue);
+            rm.getClientRMService().moveApplicationAcrossQueues(req);
+            return null;
+          }
+        });
+    } catch (UndeclaredThrowableException ue) {
+      // if the root cause is a permissions issue
+      // bubble that up to the user
+      if (ue.getCause() instanceof YarnException) {
+        YarnException ye = (YarnException) ue.getCause();
+        if (ye.getCause() instanceof AccessControlException) {
+          String appId = app.getApplicationId().toString();
+          String msg =
+              "Unauthorized attempt to move appid " + appId
+                  + " by remote user " + userName;
+          return Response.status(Status.FORBIDDEN).entity(msg).build();
+        } else if (ye.getMessage().startsWith("App in")
+            && ye.getMessage().endsWith("state cannot be moved.")) {
+          return Response.status(Status.BAD_REQUEST).entity(ye.getMessage())
+            .build();
+        } else {
+          throw ue;
+        }
+      } else {
+        throw ue;
+      }
+    }
+
+    AppQueue ret = new AppQueue();
+    ret.setQueue(app.getQueue());
     return Response.status(Status.OK).entity(ret).build();
   }
 
@@ -964,7 +1263,9 @@ public class RMWebServices {
           newApp.getCancelTokensWhenComplete(), newApp.getMaxAppAttempts(),
           createAppSubmissionContextResource(newApp),
           newApp.getApplicationType(),
-          newApp.getKeepContainersAcrossApplicationAttempts());
+          newApp.getKeepContainersAcrossApplicationAttempts(),
+          newApp.getAppNodeLabelExpression(),
+          newApp.getAMContainerNodeLabelExpression());
     appContext.setApplicationTags(newApp.getApplicationTags());
 
     return appContext;
@@ -1085,10 +1386,18 @@ public class RMWebServices {
     }
 
     String authType = hsr.getAuthType();
-    if (!KerberosAuthenticationHandler.TYPE.equals(authType)) {
+    if (!KerberosAuthenticationHandler.TYPE.equalsIgnoreCase(authType)) {
       String msg =
           "Delegation token operations can only be carried out on a "
-              + "Kerberos authenticated channel";
+              + "Kerberos authenticated channel. Expected auth type is "
+              + KerberosAuthenticationHandler.TYPE + ", got type " + authType;
+      throw new YarnException(msg);
+    }
+    if (hsr
+      .getAttribute(DelegationTokenAuthenticationHandler.DELEGATION_TOKEN_UGI_ATTRIBUTE) != null) {
+      String msg =
+          "Delegation token operations cannot be carried out using delegation"
+              + " token authentication.";
       throw new YarnException(msg);
     }
 

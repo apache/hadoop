@@ -64,6 +64,10 @@ if "%1" == "--config" (
   shift
   shift
 )
+if "%1" == "--loglevel" (
+  shift
+  shift
+)
 
 :main
   if exist %YARN_CONF_DIR%\yarn-env.cmd (
@@ -196,6 +200,11 @@ goto :eof
   set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
   goto :eof
 
+:queue
+  set CLASS=org.apache.hadoop.yarn.client.cli.QueueCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  goto :eof
+
 :resourcemanager
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\rm-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.resourcemanager.ResourceManager
@@ -268,6 +277,10 @@ goto :eof
     shift
     shift
   )
+  if "%1" == "--loglevel" (
+    shift
+    shift
+  )
   if [%2] == [] goto :eof
   shift
   set _yarnarguments=
@@ -286,7 +299,7 @@ goto :eof
   goto :eof
 
 :print_usage
-  @echo Usage: yarn [--config confdir] COMMAND
+  @echo Usage: yarn [--config confdir] [--loglevel loglevel] COMMAND
   @echo        where COMMAND is one of:
   @echo   resourcemanager      run the ResourceManager
   @echo   nodemanager          run a nodemanager on each slave
@@ -298,6 +311,7 @@ goto :eof
   @echo   applicationattempt   prints applicationattempt(s) report
   @echo   container            prints container(s) report
   @echo   node                 prints node report(s)
+  @echo   queue                prints queue information
   @echo   logs                 dump container logs
   @echo   classpath            prints the class path needed to get the
   @echo                        Hadoop jar and the required libraries

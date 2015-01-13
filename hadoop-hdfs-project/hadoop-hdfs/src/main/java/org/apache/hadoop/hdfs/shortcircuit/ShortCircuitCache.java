@@ -400,7 +400,7 @@ public class ShortCircuitCache implements Closeable {
     lock.lock();
     try {
       Preconditions.checkArgument(replica.refCount > 0,
-          "can't ref " + replica + " because its refCount reached " +
+          "can't ref %s because its refCount reached %d", replica,
           replica.refCount);
       Long evictableTimeNs = replica.getEvictableTimeNs();
       replica.refCount++;
@@ -456,14 +456,13 @@ public class ShortCircuitCache implements Closeable {
       if (newRefCount == 0) {
         // Close replica, since there are no remaining references to it.
         Preconditions.checkArgument(replica.purged,
-            "Replica " + replica + " reached a refCount of 0 without " +
-            "being purged");
+          "Replica %s reached a refCount of 0 without being purged", replica);
         replica.close();
       } else if (newRefCount == 1) {
         Preconditions.checkState(null == replica.getEvictableTimeNs(),
-            "Replica " + replica + " had a refCount higher than 1, " +
-              "but was still evictable (evictableTimeNs = " +
-                replica.getEvictableTimeNs() + ")");
+            "Replica %s had a refCount higher than 1, " +
+              "but was still evictable (evictableTimeNs = %d)",
+              replica, replica.getEvictableTimeNs());
         if (!replica.purged) {
           // Add the replica to the end of an eviction list.
           // Eviction lists are sorted by time.
@@ -478,8 +477,8 @@ public class ShortCircuitCache implements Closeable {
         }
       } else {
         Preconditions.checkArgument(replica.refCount >= 0,
-            "replica's refCount went negative (refCount = " +
-            replica.refCount + " for " + replica + ")");
+            "replica's refCount went negative (refCount = %d" +
+            " for %s)", replica.refCount, replica);
       }
       if (LOG.isTraceEnabled()) {
         LOG.trace(this + ": unref replica " + replica +
@@ -602,7 +601,7 @@ public class ShortCircuitCache implements Closeable {
     Preconditions.checkNotNull(evictableTimeNs);
     ShortCircuitReplica removed = map.remove(evictableTimeNs);
     Preconditions.checkState(removed == replica,
-        "failed to make " + replica + " unevictable");
+        "failed to make %s unevictable", replica);
     replica.setEvictableTimeNs(null);
   }
 
@@ -743,7 +742,7 @@ public class ShortCircuitCache implements Closeable {
       throw new RetriableException("interrupted");
     }
     if (info.getInvalidTokenException() != null) {
-      LOG.warn(this + ": could not get " + key + " due to InvalidToken " +
+      LOG.info(this + ": could not get " + key + " due to InvalidToken " +
             "exception.", info.getInvalidTokenException());
       return info;
     }
@@ -802,7 +801,7 @@ public class ShortCircuitCache implements Closeable {
         Waitable<ShortCircuitReplicaInfo> waitableInMap = replicaInfoMap.get(key);
         if (waitableInMap == newWaitable) replicaInfoMap.remove(key);
         if (info.getInvalidTokenException() != null) {
-          LOG.warn(this + ": could not load " + key + " due to InvalidToken " +
+          LOG.info(this + ": could not load " + key + " due to InvalidToken " +
               "exception.", info.getInvalidTokenException());
         } else {
           LOG.warn(this + ": failed to load " + key);
@@ -859,7 +858,7 @@ public class ShortCircuitCache implements Closeable {
           Condition cond = (Condition)replica.mmapData;
           cond.awaitUninterruptibly();
         } else {
-          Preconditions.checkState(false, "invalid mmapData type " +
+          Preconditions.checkState(false, "invalid mmapData type %s",
               replica.mmapData.getClass().getName());
         }
       }

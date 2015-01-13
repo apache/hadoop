@@ -17,7 +17,8 @@
 
 function hadoop_usage
 {
-  echo "Usage: yarn [--config confdir] [--daemon (start|stop|status)] COMMAND"
+  echo "Usage: yarn [--config confdir] [--daemon (start|stop|status)]"
+  echo "           [--loglevel loglevel] COMMAND"
   echo "where COMMAND is one of:"
   echo "  application                           prints application(s) report/kill application"
   echo "  applicationattempt                    prints applicationattempt(s) report"
@@ -30,9 +31,11 @@ function hadoop_usage
   echo "  node                                  prints node report(s)"
   echo "  nodemanager                           run a nodemanager on each slave"
   echo "  proxyserver                           run the web app proxy server"
+  echo "  queue                                 prints queue information"
   echo "  resourcemanager                       run the ResourceManager"
   echo "  resourcemanager -format-state-store   deletes the RMStateStore"
   echo "  rmadmin                               admin tools"
+  echo "  scmadmin                              SharedCacheManager admin tools"
   echo "  sharedcachemanager                    run the SharedCacheManager daemon"
   echo "  timelineserver                        run the timeline server"
   echo "  version                               print the version"
@@ -93,7 +96,7 @@ case "${COMMAND}" in
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   historyserver)
-    daemon="true"
+    supportdaemonization="true"
     echo "DEPRECATED: Use of this command to start the timeline server is deprecated." 1>&2
     echo "Instead use the timelineserver command for it." 1>&2
     echo "Starting the History Server anyway..." 1>&2
@@ -110,30 +113,38 @@ case "${COMMAND}" in
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   nodemanager)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
     hadoop_debug "Append YARN_NODEMANAGER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_NODEMANAGER_OPTS}"
+    # Backwards compatibility
     if [[ -n "${YARN_NODEMANAGER_HEAPSIZE}" ]]; then
-      JAVA_HEAP_MAX="-Xmx${YARN_NODEMANAGER_HEAPSIZE}m"
+      HADOOP_HEAPSIZE_MAX="${YARN_NODEMANAGER_HEAPSIZE}"
     fi
   ;;
   proxyserver)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer'
     hadoop_debug "Append YARN_PROXYSERVER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_PROXYSERVER_OPTS}"
+    # Backwards compatibility
     if [[ -n "${YARN_PROXYSERVER_HEAPSIZE}" ]]; then
-      JAVA_HEAP_MAX="-Xmx${YARN_PROXYSERVER_HEAPSIZE}m"
+      HADOOP_HEAPSIZE_MAX="${YARN_PROXYSERVER_HEAPSIZE}"
     fi
   ;;
+  queue)
+    CLASS=org.apache.hadoop.yarn.client.cli.QueueCLI
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
   resourcemanager)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
     YARN_OPTS="${YARN_OPTS} ${YARN_RESOURCEMANAGER_OPTS}"
     hadoop_debug "Append YARN_RESOURCEMANAGER_OPTS onto YARN_OPTS"
+    # Backwards compatibility
     if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
-      JAVA_HEAP_MAX="-Xmx${YARN_RESOURCEMANAGER_HEAPSIZE}m"
+      HADOOP_HEAPSIZE_MAX="${YARN_RESOURCEMANAGER_HEAPSIZE}"
     fi
   ;;
   rmadmin)
@@ -141,19 +152,26 @@ case "${COMMAND}" in
     hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
+  scmadmin)
+    CLASS='org.apache.hadoop.yarn.client.SCMAdmin'
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
+  ;;
+  sharedcachemanager)
+    supportdaemonization="true"
+    CLASS='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
+    hadoop_debug "Append YARN_SHAREDCACHEMANAGER_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_SHAREDCACHEMANAGER_OPTS}"
+  ;;
   timelineserver)
-    daemon="true"
+    supportdaemonization="true"
     CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
     hadoop_debug "Append YARN_TIMELINESERVER_OPTS onto YARN_OPTS"
     YARN_OPTS="${YARN_OPTS} ${YARN_TIMELINESERVER_OPTS}"
+    # Backwards compatibility
     if [[ -n "${YARN_TIMELINESERVER_HEAPSIZE}" ]]; then
-      JAVA_HEAP_MAX="-Xmx${YARN_TIMELINESERVER_HEAPSIZE}m"
+      HADOOP_HEAPSIZE_MAX="${YARN_TIMELINESERVER_HEAPSIZE}"
     fi
-  ;;
-  sharedcachemanager)
-    daemon="true"
-    CLASS='org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager'
-    YARN_OPTS="$YARN_OPTS $YARN_SHAREDCACHEMANAGER_OPTS"
   ;;
   version)
     CLASS=org.apache.hadoop.util.VersionInfo
@@ -167,6 +185,8 @@ case "${COMMAND}" in
     fi
   ;;
 esac
+
+hadoop_verify_user "${COMMAND}"
 
 # set HADOOP_OPTS to YARN_OPTS so that we can use
 # finalize, etc, without doing anything funky
@@ -184,22 +204,24 @@ if [[  "${HADOOP_DAEMON_MODE}" != "default" ]]; then
   HADOOP_LOGFILE="hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.log"
 fi
 
-hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
-
 # Add YARN custom options to comamnd line in case someone actaully 
 # used these.
 #
 # Note that we are replacing ' ' with '\ ' so that when we exec
 # stuff it works
 #
-hadoop_add_param HADOOP_OPTS yarn.log.dir "-Dyarn.log.dir=${HADOOP_LOG_DIR/ /\ }"
+YARN_LOG_DIR=$HADOOP_LOG_DIR
+hadoop_translate_cygwin_path YARN_LOG_DIR
+hadoop_add_param HADOOP_OPTS yarn.log.dir "-Dyarn.log.dir=${YARN_LOG_DIR/ /\ }"
 hadoop_add_param HADOOP_OPTS yarn.log.file "-Dyarn.log.file=${HADOOP_LOGFILE/ /\ }"
-hadoop_add_param HADOOP_OPTS yarn.home.dir "-Dyarn.home.dir=${HADOOP_YARN_HOME/ /\ }"
+YARN_HOME_DIR=$HADOOP_YARN_HOME
+hadoop_translate_cygwin_path YARN_HOME_DIR
+hadoop_add_param HADOOP_OPTS yarn.home.dir "-Dyarn.home.dir=${YARN_HOME_DIR/ /\ }"
 hadoop_add_param HADOOP_OPTS yarn.root.logger "-Dyarn.root.logger=${YARN_ROOT_LOGGER:-INFO,console}"
 
 hadoop_finalize
 
-if [[ -n "${daemon}" ]]; then
+if [[ -n "${supportdaemonization}" ]]; then
   if [[ -n "${secure_service}" ]]; then
     hadoop_secure_daemon_handler "${HADOOP_DAEMON_MODE}" "${COMMAND}" \
     "${CLASS}" "${daemon_pidfile}" "${daemon_outfile}" \

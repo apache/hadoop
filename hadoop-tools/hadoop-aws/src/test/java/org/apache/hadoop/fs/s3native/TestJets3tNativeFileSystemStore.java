@@ -117,10 +117,13 @@ public class TestJets3tNativeFileSystemStore {
     writeRenameReadCompare(new Path("/test/medium"), 33554432);    // 100 MB
   }
 
+  /*
+  Enable Multipart upload to run this test
   @Test
   public void testExtraLargeUpload()
       throws IOException, NoSuchAlgorithmException {
     // Multipart upload, multipart copy
     writeRenameReadCompare(new Path("/test/xlarge"), 5368709121L); // 5GB+1byte
   }
+  */
 }

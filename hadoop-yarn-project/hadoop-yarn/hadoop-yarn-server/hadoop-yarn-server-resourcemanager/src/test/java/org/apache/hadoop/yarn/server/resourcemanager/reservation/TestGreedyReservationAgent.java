@@ -40,8 +40,6 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ReservationRequestsPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -71,18 +69,19 @@ public class TestGreedyReservationAgent {
     Resource clusterCapacity = Resource.newInstance(100 * 1024, 100);
     step = 1000L;
     ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
-    CapacityScheduler scheduler = testUtil.mockCapacityScheduler(125);
     String reservationQ = testUtil.getFullReservationQueueName();
-    CapacitySchedulerConfiguration capConf = scheduler.getConfiguration();
-    capConf.setReservationWindow(reservationQ, timeWindow);
-    capConf.setMaximumCapacity(reservationQ, 100);
-    capConf.setAverageCapacity(reservationQ, 100);
+
+    float instConstraint = 100;
+    float avgConstraint = 100;
+
+    ReservationSchedulerConfiguration conf =
+        ReservationSystemTestUtil.createConf(reservationQ, timeWindow,
+            instConstraint, avgConstraint);
     CapacityOverTimePolicy policy = new CapacityOverTimePolicy();
-    policy.init(reservationQ, capConf);
+    policy.init(reservationQ, conf);
     agent = new GreedyReservationAgent();
 
-    QueueMetrics queueMetrics = QueueMetrics.forQueue("dedicated",
-        mock(ParentQueue.class), false, capConf);
+    QueueMetrics queueMetrics = mock(QueueMetrics.class);
 
     plan = new InMemoryPlan(queueMetrics, policy, agent, clusterCapacity, step,
         res, minAlloc, maxAlloc, "dedicated", null, true);
@@ -549,12 +548,13 @@ public class TestGreedyReservationAgent {
     ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
     CapacityScheduler scheduler = testUtil.mockCapacityScheduler(500 * 100);
     String reservationQ = testUtil.getFullReservationQueueName();
-    CapacitySchedulerConfiguration capConf = scheduler.getConfiguration();
-    capConf.setReservationWindow(reservationQ, timeWindow);
-    capConf.setMaximumCapacity(reservationQ, 100);
-    capConf.setAverageCapacity(reservationQ, 100);
+    float instConstraint = 100;
+    float avgConstraint = 100;
+    ReservationSchedulerConfiguration conf =
+        ReservationSystemTestUtil.createConf(reservationQ, timeWindow,
+            instConstraint, avgConstraint);
     CapacityOverTimePolicy policy = new CapacityOverTimePolicy();
-    policy.init(reservationQ, capConf);
+    policy.init(reservationQ, conf);
 
     plan = new InMemoryPlan(scheduler.getRootQueueMetrics(), policy, agent,
       clusterCapacity, step, res, minAlloc, maxAlloc, "dedicated", null, true);

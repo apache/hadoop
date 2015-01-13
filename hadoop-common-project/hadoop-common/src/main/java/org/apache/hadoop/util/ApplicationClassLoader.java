@@ -216,25 +216,43 @@ public class ApplicationClassLoader extends URLClassLoader {
     return c;
   }
 
+  /**
+   * Checks if a class should be included as a system class.
+   *
+   * A class is a system class if and only if it matches one of the positive
+   * patterns and none of the negative ones.
+   *
+   * @param name the class name to check
+   * @param systemClasses a list of system class configurations.
+   * @return true if the class is a system class
+   */
   public static boolean isSystemClass(String name, List<String> systemClasses) {
+    boolean result = false;
     if (systemClasses != null) {
       String canonicalName = name.replace('/', '.');
       while (canonicalName.startsWith(".")) {
         canonicalName=canonicalName.substring(1);
       }
       for (String c : systemClasses) {
-        boolean result = true;
+        boolean shouldInclude = true;
         if (c.startsWith("-")) {
           c = c.substring(1);
-          result = false;
+          shouldInclude = false;
         }
-        if (c.endsWith(".") && canonicalName.startsWith(c)) {
-          return result;
-        } else if (canonicalName.equals(c)) {
-          return result;
+        if (canonicalName.startsWith(c)) {
+          if (   c.endsWith(".")                                   // package
+              || canonicalName.length() == c.length()              // class
+              ||    canonicalName.length() > c.length()            // nested
+                 && canonicalName.charAt(c.length()) == '$' ) {
+            if (shouldInclude) {
+              result = true;
+            } else {
+              return false;
+            }
+          }
         }
       }
     }
-    return false;
+    return result;
   }
 }

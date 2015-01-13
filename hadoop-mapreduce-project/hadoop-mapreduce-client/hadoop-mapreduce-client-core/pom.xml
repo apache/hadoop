@@ -90,6 +90,7 @@
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
           <excludes>
+            <exclude>.gitattributes</exclude>
             <exclude>src/test/resources/recordSpanningMultipleSplits.txt</exclude>
             <exclude>src/test/resources/testBOM.txt</exclude>
           </excludes>

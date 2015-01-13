@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 
 import java.io.File;
@@ -195,9 +196,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   @Override
   public void startLocalizer(Path nmPrivateContainerTokensPath,
       InetSocketAddress nmAddr, String user, String appId, String locId,
-      List<String> localDirs, List<String> logDirs)
+      LocalDirsHandlerService dirsHandler)
       throws IOException, InterruptedException {
 
+    List<String> localDirs = dirsHandler.getLocalDirs();
+    List<String> logDirs = dirsHandler.getLogDirs();
+    
     verifyUsernamePattern(user);
     String runAsUser = getRunAsUser(user);
     List<String> command = new ArrayList<String>();
@@ -220,7 +224,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     if (javaLibPath != null) {
       command.add("-Djava.library.path=" + javaLibPath);
     }
-    ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr, localDirs);
+    buildMainArgs(command, user, appId, locId, nmAddr, localDirs);
     String[] commandArray = command.toArray(new String[command.size()]);
     ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
     if (LOG.isDebugEnabled()) {
@@ -239,6 +243,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       throw new IOException("Application " + appId + " initialization failed" +
       		" (exitCode=" + exitCode + ") with output: " + shExec.getOutput(), e);
     }
+  }
+
+  @VisibleForTesting
+  public void buildMainArgs(List<String> command, String user, String appId,
+      String locId, InetSocketAddress nmAddr, List<String> localDirs) {
+    ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
+      localDirs);
   }
 
   @Override
@@ -290,9 +301,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         return ExitCode.TERMINATED.getExitCode();
       }
     } catch (ExitCodeException e) {
-      if (null == shExec) {
-        return -1;
-      }
       int exitCode = shExec.getExitCode();
       LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
       // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
@@ -336,7 +344,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
   @Override
   public int reacquireContainer(String user, ContainerId containerId)
-      throws IOException {
+      throws IOException, InterruptedException {
     try {
       return super.reacquireContainer(user, containerId);
     } finally {

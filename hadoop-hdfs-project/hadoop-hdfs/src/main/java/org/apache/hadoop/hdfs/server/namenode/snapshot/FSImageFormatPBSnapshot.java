@@ -36,6 +36,11 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.AclEntryStatusFormat;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
@@ -208,8 +213,10 @@ public class FSImageFormatPBSnapshot {
 
           AclFeature acl = null;
           if (fileInPb.hasAcl()) {
-            acl = new AclFeature(FSImageFormatPBINode.Loader.loadAclEntries(
-                fileInPb.getAcl(), state.getStringTable()));
+            int[] entries = AclEntryStatusFormat
+                .toInt(FSImageFormatPBINode.Loader.loadAclEntries(
+                    fileInPb.getAcl(), state.getStringTable()));
+            acl = new AclFeature(entries);
           }
           XAttrFeature xAttrs = null;
           if (fileInPb.hasXAttrs()) {
@@ -226,6 +233,20 @@ public class FSImageFormatPBSnapshot {
 
         FileDiff diff = new FileDiff(pbf.getSnapshotId(), copy, null,
             pbf.getFileSize());
+        List<BlockProto> bpl = pbf.getBlocksList();
+        BlockInfo[] blocks = new BlockInfo[bpl.size()];
+        for(int j = 0, e = bpl.size(); j < e; ++j) {
+          Block blk = PBHelper.convert(bpl.get(j));
+          BlockInfo storedBlock =  fsn.getBlockManager().getStoredBlock(blk);
+          if(storedBlock == null) {
+            storedBlock = fsn.getBlockManager().addBlockCollection(
+                new BlockInfo(blk, copy.getFileReplication()), file);
+          }
+          blocks[j] = storedBlock;
+        }
+        if(blocks.length > 0) {
+          diff.setBlocks(blocks);
+        }
         diffs.addFirst(diff);
       }
       file.addSnapshotFeature(diffs);
@@ -309,8 +330,10 @@ public class FSImageFormatPBSnapshot {
               dirCopyInPb.getPermission(), state.getStringTable());
           AclFeature acl = null;
           if (dirCopyInPb.hasAcl()) {
-            acl = new AclFeature(FSImageFormatPBINode.Loader.loadAclEntries(
-                dirCopyInPb.getAcl(), state.getStringTable()));
+            int[] entries = AclEntryStatusFormat
+                .toInt(FSImageFormatPBINode.Loader.loadAclEntries(
+                    dirCopyInPb.getAcl(), state.getStringTable()));
+            acl = new AclFeature(entries);
           }
           XAttrFeature xAttrs = null;
           if (dirCopyInPb.hasXAttrs()) {
@@ -467,6 +490,11 @@ public class FSImageFormatPBSnapshot {
           SnapshotDiffSection.FileDiff.Builder fb = SnapshotDiffSection.FileDiff
               .newBuilder().setSnapshotId(diff.getSnapshotId())
               .setFileSize(diff.getFileSize());
+          if(diff.getBlocks() != null) {
+            for(Block block : diff.getBlocks()) {
+              fb.addBlocks(PBHelper.convert(block));
+            }
+          }
           INodeFileAttributes copy = diff.snapshotINode;
           if (copy != null) {
             fb.setName(ByteString.copyFrom(copy.getLocalNameBytes()))

@@ -27,12 +27,17 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.BZip2Codec;
+import org.apache.hadoop.io.compress.CodecPool;
+import org.apache.hadoop.io.compress.Decompressor;
 import org.junit.Test;
 
 public class TestLineRecordReader {
@@ -99,6 +104,27 @@ public class TestLineRecordReader {
     // split which ends at compressed offset 136498 and the next
     // character is a linefeed
     testSplitRecords("blockEndingInCRThenLF.txt.bz2", 136498);
+  }
+
+  //This test ensures record reader doesn't lose records when it starts
+  //exactly at the starting byte of a bz2 compressed block
+  @Test
+  public void testBzip2SplitStartAtBlockMarker() throws IOException {
+    //136504 in blockEndingInCR.txt.bz2 is the byte at which the bz2 block ends
+    //In the following test cases record readers should iterate over all the records
+    //and should not miss any record.
+
+    //Start next split at just the start of the block.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136504);
+
+    //Start next split a byte forward in next block.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136505);
+
+    //Start next split 3 bytes forward in next block.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136508);
+
+    //Start next split 10 bytes from behind the end marker.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136494);
   }
 
   // Use the LineRecordReader to read records from the file
@@ -224,5 +250,37 @@ public class TestLineRecordReader {
     reader.close();
 
     assertTrue("BOM is not skipped", skipBOM);
+  }
+
+  @Test
+  public void testMultipleClose() throws IOException {
+    URL testFileUrl = getClass().getClassLoader().
+        getResource("recordSpanningMultipleSplits.txt.bz2");
+    assertNotNull("Cannot find recordSpanningMultipleSplits.txt.bz2",
+        testFileUrl);
+    File testFile = new File(testFileUrl.getFile());
+    Path testFilePath = new Path(testFile.getAbsolutePath());
+    long testFileSize = testFile.length();
+    Configuration conf = new Configuration();
+    conf.setInt(org.apache.hadoop.mapreduce.lib.input.
+        LineRecordReader.MAX_LINE_LENGTH, Integer.MAX_VALUE);
+    FileSplit split = new FileSplit(testFilePath, 0, testFileSize,
+        (String[])null);
+
+    LineRecordReader reader = new LineRecordReader(conf, split);
+    LongWritable key = new LongWritable();
+    Text value = new Text();
+    //noinspection StatementWithEmptyBody
+    while (reader.next(key, value)) ;
+    reader.close();
+    reader.close();
+
+    BZip2Codec codec = new BZip2Codec();
+    codec.setConf(conf);
+    Set<Decompressor> decompressors = new HashSet<Decompressor>();
+    for (int i = 0; i < 10; ++i) {
+      decompressors.add(CodecPool.getDecompressor(codec));
+    }
+    assertEquals(10, decompressors.size());
   }
 }

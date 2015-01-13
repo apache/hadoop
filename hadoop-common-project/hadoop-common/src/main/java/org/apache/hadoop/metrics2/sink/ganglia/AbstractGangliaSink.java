@@ -21,6 +21,7 @@ package org.apache.hadoop.metrics2.sink.ganglia;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.MetricsSink;
@@ -223,7 +225,7 @@ public abstract class AbstractGangliaSink implements MetricsSink {
    * @param s the string to be written to buffer at offset location
    */
   protected void xdr_string(String s) {
-    byte[] bytes = s.getBytes();
+    byte[] bytes = s.getBytes(Charsets.UTF_8);
     int len = bytes.length;
     xdr_int(len);
     System.arraycopy(bytes, 0, buffer, offset, len);
@@ -256,6 +258,12 @@ public abstract class AbstractGangliaSink implements MetricsSink {
   protected void emitToGangliaHosts() throws IOException {
     try {
       for (SocketAddress socketAddress : metricsServers) {
+        if (socketAddress == null || !(socketAddress instanceof InetSocketAddress))
+          throw new IllegalArgumentException("Unsupported Address type");
+        InetSocketAddress inetAddress = (InetSocketAddress)socketAddress;
+        if(inetAddress.isUnresolved()) {
+          throw new UnknownHostException("Unresolved host: " + inetAddress);
+        }
         DatagramPacket packet =
           new DatagramPacket(buffer, offset, socketAddress);
         datagramSocket.send(packet);

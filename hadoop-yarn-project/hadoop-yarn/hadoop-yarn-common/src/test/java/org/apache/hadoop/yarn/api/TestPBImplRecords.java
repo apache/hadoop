@@ -45,11 +45,13 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.*;
 import org.apache.hadoop.yarn.proto.YarnProtos.*;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.*;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.*;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -212,8 +214,9 @@ public class TestPBImplRecords {
     generateByNewInstance(StartContainerRequest.class);
     // genByNewInstance does not apply to QueueInfo, cause
     // it is recursive(has sub queues)
-    typeValueCache.put(QueueInfo.class, QueueInfo.newInstance(
-        "root", 1.0f, 1.0f, 0.1f, null, null, QueueState.RUNNING));
+    typeValueCache.put(QueueInfo.class, QueueInfo.newInstance("root", 1.0f,
+        1.0f, 0.1f, null, null, QueueState.RUNNING, ImmutableSet.of("x", "y"),
+        "x && y"));
     generateByNewInstance(QueueUserACLInfo.class);
     generateByNewInstance(YarnClusterMetrics.class);
     // for reservation system
@@ -652,6 +655,12 @@ public class TestPBImplRecords {
   public void testApplicationSubmissionContextPBImpl() throws Exception {
     validatePBImplRecord(ApplicationSubmissionContextPBImpl.class,
         ApplicationSubmissionContextProto.class);
+    
+    ApplicationSubmissionContext ctx =
+        ApplicationSubmissionContext.newInstance(null, null, null, null, null,
+            false, false, 0, Resources.none(), null, false, null, null);
+    
+    Assert.assertNotNull(ctx.getResource());
   }
 
   @Test
@@ -933,5 +942,65 @@ public class TestPBImplRecords {
   public void testReservationDeleteResponsePBImpl() throws Exception {
     validatePBImplRecord(ReservationDeleteResponsePBImpl.class,
         ReservationDeleteResponseProto.class);
+  }
+  
+  @Test
+  public void testAddToClusterNodeLabelsRequestPBImpl() throws Exception {
+    validatePBImplRecord(AddToClusterNodeLabelsRequestPBImpl.class,
+        AddToClusterNodeLabelsRequestProto.class);
+  }
+  
+  @Test
+  public void testAddToClusterNodeLabelsResponsePBImpl() throws Exception {
+    validatePBImplRecord(AddToClusterNodeLabelsResponsePBImpl.class,
+        AddToClusterNodeLabelsResponseProto.class);
+  }
+  
+  @Test
+  public void testRemoveFromClusterNodeLabelsRequestPBImpl() throws Exception {
+    validatePBImplRecord(RemoveFromClusterNodeLabelsRequestPBImpl.class,
+        RemoveFromClusterNodeLabelsRequestProto.class);
+  }
+  
+  @Test
+  public void testRemoveFromClusterNodeLabelsResponsePBImpl() throws Exception {
+    validatePBImplRecord(RemoveFromClusterNodeLabelsResponsePBImpl.class,
+        RemoveFromClusterNodeLabelsResponseProto.class);
+  }
+  
+  @Test
+  public void testGetClusterNodeLabelsRequestPBImpl() throws Exception {
+    validatePBImplRecord(GetClusterNodeLabelsRequestPBImpl.class,
+        GetClusterNodeLabelsRequestProto.class);
+  }
+
+  @Test
+  public void testGetClusterNodeLabelsResponsePBImpl() throws Exception {
+    validatePBImplRecord(GetClusterNodeLabelsResponsePBImpl.class,
+        GetClusterNodeLabelsResponseProto.class);
+  }
+  
+  @Test
+  public void testReplaceLabelsOnNodeRequestPBImpl() throws Exception {
+    validatePBImplRecord(ReplaceLabelsOnNodeRequestPBImpl.class,
+        ReplaceLabelsOnNodeRequestProto.class);
+  }
+
+  @Test
+  public void testReplaceLabelsOnNodeResponsePBImpl() throws Exception {
+    validatePBImplRecord(ReplaceLabelsOnNodeResponsePBImpl.class,
+        ReplaceLabelsOnNodeResponseProto.class);
+  }
+  
+  @Test
+  public void testGetNodeToLabelsRequestPBImpl() throws Exception {
+    validatePBImplRecord(GetNodesToLabelsRequestPBImpl.class,
+        GetNodesToLabelsRequestProto.class);
+  }
+
+  @Test
+  public void testGetNodeToLabelsResponsePBImpl() throws Exception {
+    validatePBImplRecord(GetNodesToLabelsResponsePBImpl.class,
+        GetNodesToLabelsResponseProto.class);
   }
 }

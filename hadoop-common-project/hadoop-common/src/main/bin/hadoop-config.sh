@@ -148,6 +148,12 @@ while [[ -z "${_hadoop_common_done}" ]]; do
       hadoop_populate_slaves_file "$1"
       shift
     ;;
+    --loglevel)
+      shift
+      # shellcheck disable=SC2034
+      HADOOP_LOGLEVEL="$1"
+      shift
+    ;;
     *)
       _hadoop_common_done=true
     ;;
@@ -161,6 +167,9 @@ hadoop_exec_userfuncs
 #
 # IMPORTANT! User provided code is now available!
 #
+
+hadoop_exec_hadooprc
+hadoop_verify_confdir
 
 # do all the OS-specific startup bits here
 # this allows us to get a decent JAVA_HOME,

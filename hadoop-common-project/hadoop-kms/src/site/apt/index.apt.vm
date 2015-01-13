@@ -159,6 +159,15 @@ hadoop-${project.version} $ sbin/kms.sh start
   NOTE: You need to restart the KMS for the configuration changes to take
   effect.
 
+** Loading native libraries
+
+  The following environment variable (which can be set in KMS's
+  <<<etc/hadoop/kms-env.sh>>> script) can be used to specify the location
+  of any required native libraries. For eg. Tomact native Apache Portable
+  Runtime (APR) libraries:
+
+  * JAVA_LIBRARY_PATH
+
 ** KMS Security Configuration
 
 *** Enabling Kerberos HTTP SPNEGO Authentication
@@ -467,10 +476,20 @@ $ keytool -genkey -alias tomcat -keyalg RSA
   is possible to configure a default key access control for a subset of the
   operation types.
 
+  It is also possible to configure a "whitelist" key ACL for a subset of the
+  operation types. The whitelist key ACL is a whitelist in addition to the
+  explicit or default per-key ACL. That is, if no per-key ACL is explicitly
+  set, a user will be granted access if they are present in the default per-key
+  ACL or the whitelist key ACL. If a per-key ACL is explicitly set, a user
+  will be granted access if they are present in the per-key ACL or the
+  whitelist key ACL.
+
   If no ACL is configured for a specific key AND no default ACL is configured
-  for the requested operation, then access will be DENIED.
+  AND no root key ACL is configured for the requested operation,
+  then access will be DENIED.
   
-  <<NOTE:>> The default ACL does not support <<<ALL>>> operation qualifier.
+  <<NOTE:>> The default and whitelist key ACL does not support <<<ALL>>>
+            operation qualifier.
   
 +---+
   <property>
@@ -491,7 +510,7 @@ $ keytool -genkey -alias tomcat -keyalg RSA
 
   <property>
     <name>key.acl.testKey3.DECRYPT_EEK</name>
-    <value>*</value>
+    <value>admink3</value>
     <description>
       ACL for decryptEncryptedKey operations.
     </description>
@@ -511,6 +530,28 @@ $ keytool -genkey -alias tomcat -keyalg RSA
     <value>*</value>
     <description>
       ACL for ALL operations.
+    </description>
+  </property>
+
+  <property>
+    <name>whitelist.key.acl.MANAGEMENT</name>
+    <value>admin1</value>
+    <description>
+      whitelist ACL for MANAGEMENT operations for all keys.
+    </description>
+  </property>
+
+  <!--
+  'testKey3' key ACL is defined. Since a 'whitelist'
+  key is also defined for DECRYPT_EEK, in addition to
+  admink3, admin1 can also perform DECRYPT_EEK operations
+  on 'testKey3'
+  -->
+  <property>
+    <name>whitelist.key.acl.DECRYPT_EEK</name>
+    <value>admin1</value>
+    <description>
+      whitelist ACL for DECRYPT_EEK operations for all keys.
     </description>
   </property>
 

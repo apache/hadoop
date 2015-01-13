@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShellPermissions;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.shell.find.Find;
 
 /**
  * Base class for all "hadoop fs" commands
@@ -48,6 +49,7 @@ abstract public class FsCommand extends Command {
     factory.registerCommands(Count.class);
     factory.registerCommands(Delete.class);
     factory.registerCommands(Display.class);
+    factory.registerCommands(Find.class);
     factory.registerCommands(FsShellPermissions.class);
     factory.registerCommands(FsUsage.class);
     factory.registerCommands(Ls.class);

@@ -24,9 +24,16 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class QueueACLsManager {
   private ResourceScheduler scheduler;
   private boolean isACLsEnable;
+  
+  @VisibleForTesting
+  public QueueACLsManager() {
+    this(null, new Configuration());
+  }
 
   public QueueACLsManager(ResourceScheduler scheduler, Configuration conf) {
     this.scheduler = scheduler;

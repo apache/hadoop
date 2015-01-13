@@ -213,10 +213,37 @@ public class BlockManagerTestUtil {
   public static void checkHeartbeat(BlockManager bm) {
     bm.getDatanodeManager().getHeartbeatManager().heartbeatCheck();
   }
-  
+
+  /**
+   * Call heartbeat check function of HeartbeatManager and get
+   * under replicated blocks count within write lock to make sure
+   * computeDatanodeWork doesn't interfere.
+   * @param namesystem the FSNamesystem
+   * @param bm the BlockManager to manipulate
+   * @return the number of under replicated blocks
+   */
+  public static int checkHeartbeatAndGetUnderReplicatedBlocksCount(
+      FSNamesystem namesystem, BlockManager bm) {
+    namesystem.writeLock();
+    try {
+      bm.getDatanodeManager().getHeartbeatManager().heartbeatCheck();
+      return bm.getUnderReplicatedNotMissingBlocks();
+    } finally {
+      namesystem.writeUnlock();
+    }
+  }
+
   public static DatanodeStorageInfo updateStorage(DatanodeDescriptor dn,
       DatanodeStorage s) {
     return dn.updateStorage(s);
+  }
+
+  /**
+   * Call heartbeat check function of HeartbeatManager
+   * @param bm the BlockManager to manipulate
+   */
+  public static void rescanPostponedMisreplicatedBlocks(BlockManager bm) {
+    bm.rescanPostponedMisreplicatedBlocks();
   }
 
   public static DatanodeDescriptor getLocalDatanodeDescriptor(

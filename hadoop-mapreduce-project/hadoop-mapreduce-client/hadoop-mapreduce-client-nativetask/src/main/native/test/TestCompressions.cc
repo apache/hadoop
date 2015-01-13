@@ -193,7 +193,7 @@ void MeasureSingleFileLz4(const string & path, CompressResult & total, size_t bl
     result.compressTime += endTime - startTime;
     startTime = t.now();
     for (int i = 0; i < times; i++) {
-      int osize = LZ4_uncompress(outputBuffer, dest, currentblocksize);
+      int osize = LZ4_decompress_fast(outputBuffer, dest, currentblocksize);
       ASSERT_EQ(currentblocksize, osize);
     }
     endTime = t.now();

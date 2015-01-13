@@ -55,8 +55,8 @@ class Stat extends FsCommand {
     "in the specified format. Format accepts filesize in blocks (%b), group name of owner(%g), " +
     "filename (%n), block size (%o), replication (%r), user name of owner(%u), modification date (%y, %Y)\n";
 
-  protected static final SimpleDateFormat timeFmt;
-  static {
+  protected final SimpleDateFormat timeFmt;
+  {
     timeFmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     timeFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
   }

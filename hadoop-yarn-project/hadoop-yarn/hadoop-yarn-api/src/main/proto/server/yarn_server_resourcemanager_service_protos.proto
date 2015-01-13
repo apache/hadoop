@@ -75,6 +75,27 @@ message UpdateNodeResourceRequestProto {
 message UpdateNodeResourceResponseProto {
 }
 
+message AddToClusterNodeLabelsRequestProto {
+  repeated string nodeLabels = 1;
+}
+
+message AddToClusterNodeLabelsResponseProto {
+}
+
+message RemoveFromClusterNodeLabelsRequestProto {
+  repeated string nodeLabels = 1;
+}
+
+message RemoveFromClusterNodeLabelsResponseProto {
+}
+
+message ReplaceLabelsOnNodeRequestProto {
+  repeated NodeIdToLabelsProto nodeToLabels = 1;
+}
+
+message ReplaceLabelsOnNodeResponseProto {
+  
+}
 
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////

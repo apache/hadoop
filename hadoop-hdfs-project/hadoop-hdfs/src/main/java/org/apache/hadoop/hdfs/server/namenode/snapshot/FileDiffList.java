@@ -17,6 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 
@@ -32,5 +39,96 @@ public class FileDiffList extends
   @Override
   INodeFileAttributes createSnapshotCopy(INodeFile currentINode) {
     return new INodeFileAttributes.SnapshotCopy(currentINode);
+  }
+
+  public void destroyAndCollectSnapshotBlocks(
+      BlocksMapUpdateInfo collectedBlocks) {
+    for(FileDiff d : asList())
+      d.destroyAndCollectSnapshotBlocks(collectedBlocks);
+  }
+
+  public void saveSelf2Snapshot(int latestSnapshotId, INodeFile iNodeFile,
+      INodeFileAttributes snapshotCopy, boolean withBlocks)
+          throws QuotaExceededException {
+    final FileDiff diff =
+        super.saveSelf2Snapshot(latestSnapshotId, iNodeFile, snapshotCopy);
+    if(withBlocks)  // Store blocks if this is the first update
+      diff.setBlocks(iNodeFile.getBlocks());
+  }
+
+  public BlockInfo[] findEarlierSnapshotBlocks(int snapshotId) {
+    assert snapshotId != Snapshot.NO_SNAPSHOT_ID : "Wrong snapshot id";
+    if(snapshotId == Snapshot.CURRENT_STATE_ID) {
+      return null;
+    }
+    List<FileDiff> diffs = this.asList();
+    int i = Collections.binarySearch(diffs, snapshotId);
+    BlockInfo[] blocks = null;
+    for(i = i >= 0 ? i : -i; i < diffs.size(); i--) {
+      blocks = diffs.get(i).getBlocks();
+      if(blocks != null) {
+        break;
+      }
+    }
+    return blocks;
+  }
+
+  public BlockInfo[] findLaterSnapshotBlocks(int snapshotId) {
+    assert snapshotId != Snapshot.NO_SNAPSHOT_ID : "Wrong snapshot id";
+    if(snapshotId == Snapshot.CURRENT_STATE_ID) {
+      return null;
+    }
+    List<FileDiff> diffs = this.asList();
+    int i = Collections.binarySearch(diffs, snapshotId);
+    BlockInfo[] blocks = null;
+    for(i = i >= 0 ? i+1 : -i-1; i < diffs.size(); i++) {
+      blocks = diffs.get(i).getBlocks();
+      if(blocks != null) {
+        break;
+      }
+    }
+    return blocks;
+  }
+
+  /**
+   * Copy blocks from the removed snapshot into the previous snapshot
+   * up to the file length of the latter.
+   * Collect unused blocks of the removed snapshot.
+   */
+  void combineAndCollectSnapshotBlocks(INodeFile file,
+                                       FileDiff removed,
+                                       BlocksMapUpdateInfo collectedBlocks,
+                                       List<INode> removedINodes) {
+    BlockInfo[] removedBlocks = removed.getBlocks();
+    if(removedBlocks == null) {
+      FileWithSnapshotFeature sf = file.getFileWithSnapshotFeature();
+      assert sf != null : "FileWithSnapshotFeature is null";
+      if(sf.isCurrentFileDeleted())
+        sf.collectBlocksAndClear(file, collectedBlocks, removedINodes);
+      return;
+    }
+    int p = getPrior(removed.getSnapshotId(), true);
+    FileDiff earlierDiff = p == Snapshot.NO_SNAPSHOT_ID ? null : getDiffById(p);
+    // Copy blocks to the previous snapshot if not set already
+    if(earlierDiff != null)
+      earlierDiff.setBlocks(removedBlocks);
+    BlockInfo[] earlierBlocks =
+        (earlierDiff == null ? new BlockInfo[]{} : earlierDiff.getBlocks());
+    // Find later snapshot (or file itself) with blocks
+    BlockInfo[] laterBlocks = findLaterSnapshotBlocks(removed.getSnapshotId());
+    laterBlocks = (laterBlocks==null) ? file.getBlocks() : laterBlocks;
+    // Skip blocks, which belong to either the earlier or the later lists
+    int i = 0;
+    for(; i < removedBlocks.length; i++) {
+      if(i < earlierBlocks.length && removedBlocks[i] == earlierBlocks[i])
+        continue;
+      if(i < laterBlocks.length && removedBlocks[i] == laterBlocks[i])
+        continue;
+      break;
+    }
+    // Collect the remaining blocks of the file
+    while(i < removedBlocks.length) {
+      collectedBlocks.addDeleteBlock(removedBlocks[i++]);
+    }
   }
 }

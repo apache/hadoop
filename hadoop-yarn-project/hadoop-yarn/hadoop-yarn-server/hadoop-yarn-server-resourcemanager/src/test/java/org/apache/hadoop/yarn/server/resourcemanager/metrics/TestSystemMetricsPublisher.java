@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
+import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -68,6 +70,8 @@ public class TestSystemMetricsPublisher {
     conf.setBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED, true);
     conf.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
         MemoryTimelineStore.class, TimelineStore.class);
+    conf.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
+        MemoryTimelineStateStore.class, TimelineStateStore.class);
     conf.setInt(
         YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE,
         2);
@@ -90,7 +94,6 @@ public class TestSystemMetricsPublisher {
     if (timelineServer != null) {
       timelineServer.stop();
     }
-    AHSWebApp.resetInstance();
   }
 
   @Test(timeout = 10000)
@@ -251,7 +254,7 @@ public class TestSystemMetricsPublisher {
   @Test(timeout = 10000)
   public void testPublishContainerMetrics() throws Exception {
     ContainerId containerId =
-        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+        ContainerId.newContainerId(ApplicationAttemptId.newInstance(
             ApplicationId.newInstance(0, 1), 1), 1);
     RMContainer container = createRMContainer(containerId);
     metricsPublisher.containerCreated(container, container.getCreationTime());
@@ -348,7 +351,7 @@ public class TestSystemMetricsPublisher {
     when(appAttempt.getRpcPort()).thenReturn(-100);
     Container container = mock(Container.class);
     when(container.getId())
-        .thenReturn(ContainerId.newInstance(appAttemptId, 1));
+        .thenReturn(ContainerId.newContainerId(appAttemptId, 1));
     when(appAttempt.getMasterContainer()).thenReturn(container);
     when(appAttempt.getDiagnostics()).thenReturn("test diagnostics info");
     when(appAttempt.getTrackingUrl()).thenReturn("test tracking url");

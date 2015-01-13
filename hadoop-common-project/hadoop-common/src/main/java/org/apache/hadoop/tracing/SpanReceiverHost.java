@@ -19,6 +19,7 @@ package org.apache.hadoop.tracing;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -99,8 +101,12 @@ public class SpanReceiverHost implements TraceAdminProtocol {
       // out of /proc/self/stat.  (There isn't any portable way to get the
       // process ID from Java.)
       reader = new BufferedReader(
-          new InputStreamReader(new FileInputStream("/proc/self/stat")));
+          new InputStreamReader(new FileInputStream("/proc/self/stat"),
+                                Charsets.UTF_8));
       String line = reader.readLine();
+      if (line == null) {
+        throw new EOFException();
+      }
       nonce = line.split(" ")[0];
     } catch (IOException e) {
     } finally {
@@ -137,10 +143,6 @@ public class SpanReceiverHost implements TraceAdminProtocol {
           getUniqueLocalTraceFileName());
     }
     for (String className : receiverNames) {
-      className = className.trim();
-      if (!className.contains(".")) {
-        className = "org.htrace.impl." + className;
-      }
       try {
         SpanReceiver rcvr = loadInstance(className, EMPTY);
         Trace.addReceiver(rcvr);
@@ -154,6 +156,10 @@ public class SpanReceiverHost implements TraceAdminProtocol {
 
   private synchronized SpanReceiver loadInstance(String className,
       List<ConfigurationPair> extraConfig) throws IOException {
+    className = className.trim();
+    if (!className.contains(".")) {
+      className = "org.htrace.impl." + className;
+    }
     Class<?> implClass = null;
     SpanReceiver impl;
     try {

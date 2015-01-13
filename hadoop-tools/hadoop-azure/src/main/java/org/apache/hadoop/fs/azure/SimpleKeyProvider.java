@@ -28,7 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 @InterfaceAudience.Private
 public class SimpleKeyProvider implements KeyProvider {
 
-  protected static final String KEY_ACCOUNT_KEY_PREFIX = "fs.azure.account.key.";
+  protected static final String KEY_ACCOUNT_KEY_PREFIX =
+      "fs.azure.account.key.";
 
   @Override
   public String getStorageAccountKey(String accountName, Configuration conf)

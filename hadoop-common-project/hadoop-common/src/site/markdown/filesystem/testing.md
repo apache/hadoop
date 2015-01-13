@@ -28,53 +28,6 @@ These filesystem bindings must be defined in an XML configuration file, usually
 `hadoop-common-project/hadoop-common/src/test/resources/contract-test-options.xml`.
 This file is excluded should not be checked in.
 
-### s3://
-
-In `contract-test-options.xml`, the filesystem name must be defined in the property `fs.contract.test.fs.s3`. The standard configuration options to define the S3 authentication details must also be provided.
-
-Example:
-
-    <configuration>
-      <property>
-        <name>fs.contract.test.fs.s3</name>
-        <value>s3://tests3hdfs/</value>
-      </property>
-
-      <property>
-        <name>fs.s3.awsAccessKeyId</name>
-        <value>DONOTPCOMMITTHISKEYTOSCM</value>
-      </property>
-
-      <property>
-        <name>fs.s3.awsSecretAccessKey</name>
-        <value>DONOTEVERSHARETHISSECRETKEY!</value>
-      </property>
-    </configuration>
-
-### s3n://
-
-
-In `contract-test-options.xml`, the filesystem name must be defined in the property `fs.contract.test.fs.s3n`. The standard configuration options to define the S3N authentication details muse also be provided.
-
-Example:
-
-
-    <configuration>
-      <property>
-        <name>fs.contract.test.fs.s3n</name>
-        <value>s3n://tests3contract</value>
-      </property>
-
-      <property>
-        <name>fs.s3n.awsAccessKeyId</name>
-        <value>DONOTPCOMMITTHISKEYTOSCM</value>
-      </property>
-
-      <property>
-        <name>fs.s3n.awsSecretAccessKey</name>
-        <value>DONOTEVERSHARETHISSECRETKEY!</value>
-      </property>
-
 ### ftp://
 
 

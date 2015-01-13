@@ -95,6 +95,7 @@ public class TestParentQueue {
     thenReturn(CapacityScheduler.queueComparator);
     when(csContext.getResourceCalculator()).
     thenReturn(resourceComparator);
+    when(csContext.getRMContext()).thenReturn(rmContext);
   }
   
   private static final String A = "a";
@@ -144,11 +145,11 @@ public class TestParentQueue {
         final Resource allocatedResource = Resources.createResource(allocation);
         if (queue instanceof ParentQueue) {
           ((ParentQueue)queue).allocateResource(clusterResource, 
-              allocatedResource);
+              allocatedResource, null);
         } else {
           FiCaSchedulerApp app1 = getMockApplication(0, "");
           ((LeafQueue)queue).allocateResource(clusterResource, app1, 
-              allocatedResource);
+              allocatedResource, null);
         }
         
         // Next call - nothing

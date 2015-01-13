@@ -43,15 +43,18 @@ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
@@ -247,7 +250,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
             + theBlock);
       } else {
         SimulatedOutputStream crcStream = new SimulatedOutputStream();
-        return new ReplicaOutputStreams(oStream, crcStream, requestedChecksum);
+        return new ReplicaOutputStreams(oStream, crcStream, requestedChecksum,
+            volume.isTransientStorage());
       }
     }
 
@@ -722,17 +726,52 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     return getBInfo(block) != null;
   }
 
+  /**
+   * Check if a block is valid.
+   *
+   * @param b           The block to check.
+   * @param minLength   The minimum length that the block must have.  May be 0.
+   * @param state       If this is null, it is ignored.  If it is non-null, we
+   *                        will check that the replica has this state.
+   *
+   * @throws ReplicaNotFoundException          If the replica is not found
+   *
+   * @throws UnexpectedReplicaStateException   If the replica is not in the 
+   *                                             expected state.
+   */
+  @Override // {@link FsDatasetSpi}
+  public void checkBlock(ExtendedBlock b, long minLength, ReplicaState state)
+      throws ReplicaNotFoundException, UnexpectedReplicaStateException {
+    final BInfo binfo = getBInfo(b);
+    
+    if (binfo == null) {
+      throw new ReplicaNotFoundException(b);
+    }
+    if ((state == ReplicaState.FINALIZED && !binfo.isFinalized()) ||
+        (state != ReplicaState.FINALIZED && binfo.isFinalized())) {
+      throw new UnexpectedReplicaStateException(b,state);
+    }
+  }
+
   @Override // FsDatasetSpi
   public synchronized boolean isValidBlock(ExtendedBlock b) {
-    final BInfo binfo = getBInfo(b);
-    return binfo != null && binfo.isFinalized();
+    try {
+      checkBlock(b, 0, ReplicaState.FINALIZED);
+    } catch (IOException e) {
+      return false;
+    }
+    return true;
   }
 
   /* check if a block is created but not finalized */
   @Override
   public synchronized boolean isValidRbw(ExtendedBlock b) {
-    final BInfo binfo = getBInfo(b);
-    return binfo != null && !binfo.isFinalized();  
+    try {
+      checkBlock(b, 0, ReplicaState.RBW);
+    } catch (IOException e) {
+      return false;
+    }
+    return true;
   }
 
   @Override
@@ -1067,6 +1106,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override // FsDatasetSpi
   public String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
                                         long recoveryId,
+                                        long newBlockId,
                                         long newlength) {
     // Caller does not care about the exact Storage UUID returned.
     return datanodeUuid;
@@ -1157,8 +1197,9 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public List<StorageLocation> addVolumes(List<StorageLocation> volumes,
-      final Collection<String> bpids) {
+  public void addVolume(
+      final StorageLocation location,
+      final List<NamespaceInfo> nsInfos) throws IOException {
     throw new UnsupportedOperationException();
   }
 
@@ -1208,6 +1249,24 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   public void submitBackgroundSyncFileRangeRequest(ExtendedBlock block,
       FileDescriptor fd, long offset, long nbytes, int flags) {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void onCompleteLazyPersist(String bpId, long blockId,
+      long creationTime, File[] savedFiles, FsVolumeImpl targetVolume) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void onFailLazyPersist(String bpId, long blockId) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ReplicaInfo moveBlockAcrossStorage(ExtendedBlock block,
+      StorageType targetStorageType) throws IOException {
+    // TODO Auto-generated method stub
+    return null;
   }
 }
 

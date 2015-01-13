@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+
 import static org.mockito.Matchers.isA;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
@@ -37,7 +38,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
 import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.MockApps;
@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
@@ -207,6 +208,7 @@ public class TestAppManager{
   private ApplicationSubmissionContext asContext;
   private ApplicationId appId;
 
+  @SuppressWarnings("deprecation")
   @Before
   public void setUp() {
     long now = System.currentTimeMillis();
@@ -540,6 +542,7 @@ public class TestAppManager{
     Assert.assertEquals("app state doesn't match", RMAppState.FINISHED, app.getState());
   }
 
+  @SuppressWarnings("deprecation")
   @Test (timeout = 30000)
   public void testRMAppSubmitInvalidResourceRequest() throws Exception {
     asContext.setResource(Resources.createResource(
@@ -570,6 +573,10 @@ public class TestAppManager{
     when(app.getQueue()).thenReturn("Multiline\n\n\r\rQueueName");
     when(app.getState()).thenReturn(RMAppState.RUNNING);
 
+    RMAppMetrics metrics =
+        new RMAppMetrics(Resource.newInstance(1234, 56), 10, 1, 16384, 64);
+    when(app.getRMAppMetrics()).thenReturn(metrics);
+
     RMAppManager.ApplicationSummary.SummaryBuilder summary =
         new RMAppManager.ApplicationSummary().createAppSummary(app);
     String msg = summary.toString();
@@ -581,7 +588,12 @@ public class TestAppManager{
     Assert.assertTrue(msg.contains("Multiline" + escaped +"AppName"));
     Assert.assertTrue(msg.contains("Multiline" + escaped +"UserName"));
     Assert.assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
-  }
+    Assert.assertTrue(msg.contains("memorySeconds=16384"));
+    Assert.assertTrue(msg.contains("vcoreSeconds=64"));
+    Assert.assertTrue(msg.contains("preemptedAMContainers=1"));
+    Assert.assertTrue(msg.contains("preemptedNonAMContainers=10"));
+    Assert.assertTrue(msg.contains("preemptedResources=<memory:1234\\, vCores:56>"));
+ }
 
   private static ResourceScheduler mockResourceScheduler() {
     ResourceScheduler scheduler = mock(ResourceScheduler.class);

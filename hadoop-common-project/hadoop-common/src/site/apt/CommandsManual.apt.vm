@@ -21,97 +21,161 @@
 
 %{toc}
 
-Overview
+Hadoop Commands Guide
 
-   All hadoop commands are invoked by the <<<bin/hadoop>>> script. Running the
-   hadoop script without any arguments prints the description for all
-   commands.
+* Overview
 
-   Usage: <<<hadoop [--config confdir] [COMMAND] [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
+   All of the Hadoop commands and subprojects follow the same basic structure:
 
-   Hadoop has an option parsing framework that employs parsing generic
-   options as well as running classes.
+   Usage: <<<shellcommand [SHELL_OPTIONS] [COMMAND] [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
+
+*--------+---------+
+|| FIELD || Description 
+*-----------------------+---------------+
+| shellcommand | The command of the project being invoked.  For example,
+               | Hadoop common uses <<<hadoop>>>, HDFS uses <<<hdfs>>>, 
+               | and YARN uses <<<yarn>>>.
+*---------------+-------------------+
+| SHELL_OPTIONS | Options that the shell processes prior to executing Java.
+*-----------------------+---------------+
+| COMMAND | Action to perform.
+*-----------------------+---------------+
+| GENERIC_OPTIONS       | The common set of options supported by 
+                        | multiple commands.
+*-----------------------+---------------+
+| COMMAND_OPTIONS       | Various commands with their options are 
+                        | described in this documention for the 
+                        | Hadoop common sub-project.  HDFS and YARN are
+                        | covered in other documents.
+*-----------------------+---------------+
+
+** {Shell Options}
+
+   All of the shell commands will accept a common set of options.  For some commands,
+   these options are ignored. For example, passing <<<---hostnames>>> on a
+   command that only executes on a single host will be ignored.
 
 *-----------------------+---------------+
-|| COMMAND_OPTION       || Description
+|| SHELL_OPTION       || Description
 *-----------------------+---------------+
-| <<<--config confdir>>>| Overwrites the default Configuration directory.  Default is <<<${HADOOP_HOME}/conf>>>.
+| <<<--buildpaths>>>    | Enables developer versions of jars.
 *-----------------------+---------------+
-| GENERIC_OPTIONS       | The common set of options supported by multiple commands.
-| COMMAND_OPTIONS       | Various commands with their options are described in the following sections. The commands have been grouped into User Commands and Administration Commands.
+| <<<--config confdir>>> | Overwrites the default Configuration 
+                         | directory.  Default is <<<${HADOOP_PREFIX}/conf>>>.
+*-----------------------+----------------+
+| <<<--daemon mode>>>   | If the command supports daemonization (e.g.,
+                        | <<<hdfs namenode>>>), execute in the appropriate
+                        | mode. Supported modes are <<<start>>> to start the
+                        | process in daemon mode, <<<stop>>> to stop the
+                        | process, and <<<status>>> to determine the active
+                        | status of the process.  <<<status>>> will return
+                        | an {{{http://refspecs.linuxbase.org/LSB_3.0.0/LSB-generic/LSB-generic/iniscrptact.html}LSB-compliant}} result code. 
+                        | If no option is provided, commands that support
+                        | daemonization will run in the foreground.   
+*-----------------------+---------------+
+| <<<--debug>>>         | Enables shell level configuration debugging information
+*-----------------------+---------------+
+| <<<--help>>>          | Shell script usage information.
+*-----------------------+---------------+
+| <<<--hostnames>>> | A space delimited list of hostnames where to execute 
+                    | a multi-host subcommand. By default, the content of
+                    | the <<<slaves>>> file is used.  
+*-----------------------+----------------+
+| <<<--hosts>>> | A file that contains a list of hostnames where to execute
+                | a multi-host subcommand. By default, the content of the
+                | <<<slaves>>> file is used.  
+*-----------------------+----------------+
+| <<<--loglevel loglevel>>> | Overrides the log level. Valid log levels are
+|                           | FATAL, ERROR, WARN, INFO, DEBUG, and TRACE.
+|                           | Default is INFO.
 *-----------------------+---------------+
 
-Generic Options
+** {Generic Options}
 
-   The following options are supported by {{dfsadmin}}, {{fs}}, {{fsck}},
-   {{job}} and {{fetchdt}}. Applications should implement 
-   {{{../../api/org/apache/hadoop/util/Tool.html}Tool}} to support
-   GenericOptions.
+   Many subcommands honor a common set of configuration options to alter their behavior:
 
 *------------------------------------------------+-----------------------------+
 ||            GENERIC_OPTION                     ||            Description
-*------------------------------------------------+-----------------------------+
-|<<<-conf \<configuration file\> >>>             | Specify an application
-                                                 | configuration file.
-*------------------------------------------------+-----------------------------+
-|<<<-D \<property\>=\<value\> >>>                | Use value for given property.
-*------------------------------------------------+-----------------------------+
-|<<<-jt \<local\> or \<resourcemanager:port\>>>> | Specify a ResourceManager.
-                                                 | Applies only to job.
-*------------------------------------------------+-----------------------------+
-|<<<-files \<comma separated list of files\> >>> | Specify comma separated files
-                                                 | to be copied to the map
-                                                 | reduce cluster.  Applies only
-                                                 | to job.
-*------------------------------------------------+-----------------------------+
-|<<<-libjars \<comma seperated list of jars\> >>>| Specify comma separated jar
-                                                 | files to include in the
-                                                 | classpath. Applies only to
-                                                 | job.
 *------------------------------------------------+-----------------------------+
 |<<<-archives \<comma separated list of archives\> >>> | Specify comma separated
                                                  | archives to be unarchived on
                                                  | the compute machines. Applies
                                                  | only to job.
 *------------------------------------------------+-----------------------------+
+|<<<-conf \<configuration file\> >>>             | Specify an application
+                                                 | configuration file.
+*------------------------------------------------+-----------------------------+
+|<<<-D \<property\>=\<value\> >>>                | Use value for given property.
+*------------------------------------------------+-----------------------------+
+|<<<-files \<comma separated list of files\> >>> | Specify comma separated files
+                                                 | to be copied to the map
+                                                 | reduce cluster.  Applies only
+                                                 | to job.
+*------------------------------------------------+-----------------------------+
+|<<<-jt \<local\> or \<resourcemanager:port\>>>> | Specify a ResourceManager.
+                                                 | Applies only to job.
+*------------------------------------------------+-----------------------------+
+|<<<-libjars \<comma seperated list of jars\> >>>| Specify comma separated jar
+                                                 | files to include in the
+                                                 | classpath. Applies only to
+                                                 | job.
+*------------------------------------------------+-----------------------------+
 
-User Commands
+Hadoop Common Commands
+
+  All of these commands are executed from the <<<hadoop>>> shell command.  They
+  have been broken up into {{User Commands}} and 
+  {{Admininistration Commands}}.
+
+* User Commands
 
    Commands useful for users of a hadoop cluster.
 
-* <<<archive>>>
-
+** <<<archive>>>
+    
    Creates a hadoop archive. More information can be found at
-   {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopArchives.html}
+  {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopArchives.html}
    Hadoop Archives Guide}}.
 
-* <<<credential>>>
+** <<<checknative>>>
 
-   Command to manage credentials, passwords and secrets within credential providers.
+    Usage: <<<hadoop checknative [-a] [-h] >>>
 
-   The CredentialProvider API in Hadoop allows for the separation of applications
-   and how they store their required passwords/secrets. In order to indicate
-   a particular provider type and location, the user must provide the
-   <hadoop.security.credential.provider.path> configuration element in core-site.xml
-   or use the command line option <<<-provider>>> on each of the following commands.
-   This provider path is a comma-separated list of URLs that indicates the type and
-   location of a list of providers that should be consulted.
-   For example, the following path:
+*-----------------+-----------------------------------------------------------+
+|| COMMAND_OPTION || Description
+*-----------------+-----------------------------------------------------------+
+| -a              | Check all libraries are available.
+*-----------------+-----------------------------------------------------------+
+| -h              | print help
+*-----------------+-----------------------------------------------------------+
 
-   <<<user:///,jceks://file/tmp/test.jceks,jceks://hdfs@nn1.example.com/my/path/test.jceks>>>
+    This command checks the availability of the Hadoop native code.  See
+    {{{NativeLibraries.html}}} for more information.  By default, this command 
+    only checks the availability of libhadoop.
 
-   indicates that the current user's credentials file should be consulted through
-   the User Provider, that the local file located at <<</tmp/test.jceks>>> is a Java Keystore
-   Provider and that the file located within HDFS at <<<nn1.example.com/my/path/test.jceks>>>
-   is also a store for a Java Keystore Provider.
+** <<<classpath>>>
 
-   When utilizing the credential command it will often be for provisioning a password
-   or secret to a particular credential store provider. In order to explicitly
-   indicate which provider store to use the <<<-provider>>> option should be used. Otherwise,
-   given a path of multiple providers, the first non-transient provider will be used.
-   This may or may not be the one that you intended.
+   Usage: <<<hadoop classpath [--glob|--jar <path>|-h|--help]>>>
 
-   Example: <<<-provider jceks://file/tmp/test.jceks>>>
+*-----------------+-----------------------------------------------------------+
+|| COMMAND_OPTION || Description
+*-----------------+-----------------------------------------------------------+
+| --glob          | expand wildcards
+*-----------------+-----------------------------------------------------------+
+| --jar <path>    | write classpath as manifest in jar named <path>
+*-----------------+-----------------------------------------------------------+
+| -h, --help      | print help
+*-----------------+-----------------------------------------------------------+
+
+   Prints the class path needed to get the Hadoop jar and the required
+   libraries.  If called without arguments, then prints the classpath set up by
+   the command scripts, which is likely to contain wildcards in the classpath
+   entries.  Additional options print the classpath after wildcard expansion or
+   write the classpath into the manifest of a jar file.  The latter is useful in
+   environments where wildcards cannot be used and the expanded classpath exceeds
+   the maximum supported command line length.
+
+** <<<credential>>>
 
    Usage: <<<hadoop credential <subcommand> [options]>>>
 
@@ -138,106 +202,96 @@ User Commands
                     | indicated.
 *-------------------+-------------------------------------------------------+
 
-* <<<distcp>>>
+   Command to manage credentials, passwords and secrets within credential providers.
+
+   The CredentialProvider API in Hadoop allows for the separation of applications
+   and how they store their required passwords/secrets. In order to indicate
+   a particular provider type and location, the user must provide the
+   <hadoop.security.credential.provider.path> configuration element in core-site.xml
+   or use the command line option <<<-provider>>> on each of the following commands.
+   This provider path is a comma-separated list of URLs that indicates the type and
+   location of a list of providers that should be consulted. For example, the following path:
+   <<<user:///,jceks://file/tmp/test.jceks,jceks://hdfs@nn1.example.com/my/path/test.jceks>>>
+
+   indicates that the current user's credentials file should be consulted through
+   the User Provider, that the local file located at <<</tmp/test.jceks>>> is a Java Keystore
+   Provider and that the file located within HDFS at <<<nn1.example.com/my/path/test.jceks>>>
+   is also a store for a Java Keystore Provider.
+
+   When utilizing the credential command it will often be for provisioning a password
+   or secret to a particular credential store provider. In order to explicitly
+   indicate which provider store to use the <<<-provider>>> option should be used. Otherwise,
+   given a path of multiple providers, the first non-transient provider will be used.
+   This may or may not be the one that you intended.
+
+   Example: <<<-provider jceks://file/tmp/test.jceks>>>
+
+** <<<distch>>>
+
+  Usage: <<<hadoop distch [-f urilist_url] [-i] [-log logdir] path:owner:group:permissions>>>
+  
+*-------------------+-------------------------------------------------------+
+||COMMAND_OPTION    ||                   Description
+*-------------------+-------------------------------------------------------+
+| -f | List of objects to change
+*----+------------+
+| -i | Ignore failures
+*----+------------+
+| -log | Directory to log output
+*-----+---------+
+
+  Change the ownership and permissions on many files at once.
+
+** <<<distcp>>>
 
    Copy file or directories recursively. More information can be found at
    {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistCp.html}
    Hadoop DistCp Guide}}.
 
-* <<<fs>>>
+** <<<fs>>>
 
-   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#dfs}<<<hdfs dfs>>>}}
-   instead.
+   This command is documented in the {{{./FileSystemShell.html}File System Shell Guide}}.  It is a synonym for <<<hdfs dfs>>> when HDFS is in use.
 
-* <<<fsck>>>
+** <<<jar>>>
 
-   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#fsck}<<<hdfs fsck>>>}}
-   instead.
+  Usage: <<<hadoop jar <jar> [mainClass] args...>>>
 
-* <<<fetchdt>>>
+  Runs a jar file. 
+  
+  Use {{{../../hadoop-yarn/hadoop-yarn-site/YarnCommands.html#jar}<<<yarn jar>>>}}
+  to launch YARN applications instead.
 
-   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#fetchdt}
-   <<<hdfs fetchdt>>>}} instead.
+** <<<jnipath>>>
 
-* <<<jar>>>
+    Usage: <<<hadoop jnipath>>>
 
-   Runs a jar file. Users can bundle their Map Reduce code in a jar file and
-   execute it using this command.
+    Print the computed java.library.path.
 
-   Usage: <<<hadoop jar <jar> [mainClass] args...>>>
+** <<<key>>>
 
-   The streaming jobs are run via this command. Examples can be referred from
-   Streaming examples
+    Manage keys via the KeyProvider.
 
-   Word count example is also run using jar command. It can be referred from
-   Wordcount example
+** <<<trace>>>
 
-* <<<job>>>
+    View and modify Hadoop tracing settings.   See the {{{./Tracing.html}Tracing Guide}}.
 
-   Deprecated. Use
-   {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html#job}
-   <<<mapred job>>>}} instead.
-
-* <<<pipes>>>
-
-   Deprecated. Use
-   {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html#pipes}
-   <<<mapred pipes>>>}} instead.
-
-* <<<queue>>>
-
-   Deprecated. Use
-   {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html#queue}
-   <<<mapred queue>>>}} instead.
-
-* <<<version>>>
-
-   Prints the version.
+** <<<version>>>
 
    Usage: <<<hadoop version>>>
 
-* <<<CLASSNAME>>>
+   Prints the version.
 
-   hadoop script can be used to invoke any class.
+** <<<CLASSNAME>>>
 
    Usage: <<<hadoop CLASSNAME>>>
 
-   Runs the class named <<<CLASSNAME>>>.
+   Runs the class named <<<CLASSNAME>>>.  The class must be part of a package.
 
-* <<<classpath>>>
-
-   Prints the class path needed to get the Hadoop jar and the required
-   libraries.  If called without arguments, then prints the classpath set up by
-   the command scripts, which is likely to contain wildcards in the classpath
-   entries.  Additional options print the classpath after wildcard expansion or
-   write the classpath into the manifest of a jar file.  The latter is useful in
-   environments where wildcards cannot be used and the expanded classpath exceeds
-   the maximum supported command line length.
-
-   Usage: <<<hadoop classpath [--glob|--jar <path>|-h|--help]>>>
-
-*-----------------+-----------------------------------------------------------+
-|| COMMAND_OPTION || Description
-*-----------------+-----------------------------------------------------------+
-| --glob          | expand wildcards
-*-----------------+-----------------------------------------------------------+
-| --jar <path>    | write classpath as manifest in jar named <path>
-*-----------------+-----------------------------------------------------------+
-| -h, --help      | print help
-*-----------------+-----------------------------------------------------------+
-
-Administration Commands
+* {Administration Commands}
 
    Commands useful for administrators of a hadoop cluster.
 
-* <<<balancer>>>
-
-   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#balancer}
-   <<<hdfs balancer>>>}} instead.
-
-* <<<daemonlog>>>
-
-   Get/Set the log level for each daemon.
+** <<<daemonlog>>>
 
    Usage: <<<hadoop daemonlog -getlevel <host:port> <name> >>>
    Usage: <<<hadoop daemonlog -setlevel <host:port> <name> <level> >>>
@@ -254,22 +308,20 @@ Administration Commands
                                | connects to http://<host:port>/logLevel?log=<name>
 *------------------------------+-----------------------------------------------------------+
 
-* <<<datanode>>>
+   Get/Set the log level for each daemon.
 
-   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#datanode}
-   <<<hdfs datanode>>>}} instead.
+* Files
 
-* <<<dfsadmin>>>
+** <<etc/hadoop/hadoop-env.sh>>
 
-   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#dfsadmin}
-   <<<hdfs dfsadmin>>>}} instead.
+    This file stores the global settings used by all Hadoop shell commands.
 
-* <<<namenode>>>
+** <<etc/hadoop/hadoop-user-functions.sh>>
 
-   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#namenode}
-   <<<hdfs namenode>>>}} instead.
+    This file allows for advanced users to override some shell functionality.
 
-* <<<secondarynamenode>>>
+** <<~/.hadooprc>>
 
-   Deprecated, use {{{../hadoop-hdfs/HDFSCommands.html#secondarynamenode}
-   <<<hdfs secondarynamenode>>>}} instead.
+    This stores the personal environment for an individual user.  It is
+    processed after the hadoop-env.sh and hadoop-user-functions.sh files
+    and can contain the same settings.

@@ -199,9 +199,9 @@ public class EncryptionZoneManager {
   private EncryptionZoneInt getEncryptionZoneForPath(INodesInPath iip) {
     assert dir.hasReadLock();
     Preconditions.checkNotNull(iip);
-    final INode[] inodes = iip.getINodes();
-    for (int i = inodes.length - 1; i >= 0; i--) {
-      final INode inode = inodes[i];
+    List<INode> inodes = iip.getReadOnlyINodes();
+    for (int i = inodes.size() - 1; i >= 0; i--) {
+      final INode inode = inodes.get(i);
       if (inode != null) {
         final EncryptionZoneInt ezi = encryptionZones.get(inode.getId());
         if (ezi != null) {
@@ -249,6 +249,10 @@ public class EncryptionZoneManager {
     final boolean dstInEZ = (dstEZI != null);
     if (srcInEZ) {
       if (!dstInEZ) {
+        if (srcEZI.getINodeId() == srcIIP.getLastINode().getId()) {
+          // src is ez root and dest is not in an ez. Allow the rename.
+          return;
+        }
         throw new IOException(
             src + " can't be moved from an encryption zone.");
       }
@@ -259,9 +263,7 @@ public class EncryptionZoneManager {
       }
     }
 
-    if (srcInEZ || dstInEZ) {
-      Preconditions.checkState(srcEZI != null, "couldn't find src EZ?");
-      Preconditions.checkState(dstEZI != null, "couldn't find dst EZ?");
+    if (srcInEZ) {
       if (srcEZI != dstEZI) {
         final String srcEZPath = getFullPathName(srcEZI);
         final String dstEZPath = getFullPathName(dstEZI);
@@ -285,12 +287,12 @@ public class EncryptionZoneManager {
       CryptoProtocolVersion version, String keyName)
       throws IOException {
     assert dir.hasWriteLock();
-    if (dir.isNonEmptyDirectory(src)) {
+    final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
+    if (dir.isNonEmptyDirectory(srcIIP)) {
       throw new IOException(
           "Attempt to create an encryption zone for a non-empty directory.");
     }
 
-    final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
     if (srcIIP != null &&
         srcIIP.getLastINode() != null &&
         !srcIIP.getLastINode().isDirectory()) {
@@ -311,7 +313,8 @@ public class EncryptionZoneManager {
     xattrs.add(ezXAttr);
     // updating the xattr will call addEncryptionZone,
     // done this way to handle edit log loading
-    dir.unprotectedSetXAttrs(src, xattrs, EnumSet.of(XAttrSetFlag.CREATE));
+    FSDirXAttrOp.unprotectedSetXAttrs(dir, src, xattrs,
+                                      EnumSet.of(XAttrSetFlag.CREATE));
     return ezXAttr;
   }
 

@@ -1701,6 +1701,36 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * Returns a remote iterator so that followup calls are made on demand
+   * while consuming the entries. Each file system implementation should
+   * override this method and provide a more efficient implementation, if
+   * possible. 
+   *
+   * @param p target path
+   * @return remote iterator
+   */
+  public RemoteIterator<FileStatus> listStatusIterator(final Path p)
+  throws FileNotFoundException, IOException {
+    return new RemoteIterator<FileStatus>() {
+      private final FileStatus[] stats = listStatus(p);
+      private int i = 0;
+
+      @Override
+      public boolean hasNext() {
+        return i<stats.length;
+      }
+
+      @Override
+      public FileStatus next() throws IOException {
+        if (!hasNext()) {
+          throw new NoSuchElementException("No more entry in " + p);
+        }
+        return stats[i++];
+      }
+    };
+  }
+
+  /**
    * List the statuses and block locations of the files in the given path.
    * 
    * If the path is a directory, 
@@ -2588,9 +2618,6 @@ public abstract class FileSystem extends Configured implements Closeable {
   private static FileSystem createFileSystem(URI uri, Configuration conf
       ) throws IOException {
     Class<?> clazz = getFileSystemClass(uri.getScheme(), conf);
-    if (clazz == null) {
-      throw new IOException("No FileSystem for scheme: " + uri.getScheme());
-    }
     FileSystem fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
     fs.initialize(uri, conf);
     return fs;

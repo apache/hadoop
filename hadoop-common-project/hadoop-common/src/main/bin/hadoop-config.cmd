@@ -88,6 +88,16 @@ if "%1" == "--hosts" (
   shift
 )
 
+@rem
+@rem Set log level. Default to INFO.
+@rem
+
+if "%1" == "--loglevel" (
+  set HADOOP_LOGLEVEL=%2
+  shift
+  shift
+)
+
 if exist %HADOOP_CONF_DIR%\hadoop-env.cmd (
   call %HADOOP_CONF_DIR%\hadoop-env.cmd
 )
@@ -157,8 +167,12 @@ if not defined HADOOP_LOGFILE (
   set HADOOP_LOGFILE=hadoop.log
 )
 
+if not defined HADOOP_LOGLEVEL (
+  set HADOOP_LOGLEVEL=INFO
+)
+
 if not defined HADOOP_ROOT_LOGGER (
-  set HADOOP_ROOT_LOGGER=INFO,console
+  set HADOOP_ROOT_LOGGER=%HADOOP_LOGLEVEL%,console
 )
 
 @rem

@@ -117,10 +117,10 @@ public class TestEncryptionZones {
   private FileSystemTestHelper fsHelper;
 
   private MiniDFSCluster cluster;
-  private HdfsAdmin dfsAdmin;
-  private DistributedFileSystem fs;
+  protected HdfsAdmin dfsAdmin;
+  protected DistributedFileSystem fs;
   private File testRootDir;
-  private final String TEST_KEY = "testKey";
+  protected final String TEST_KEY = "test_key";
 
   protected FileSystemTestWrapper fsWrapper;
   protected FileContextTestWrapper fcWrapper;
@@ -149,12 +149,16 @@ public class TestEncryptionZones {
     fcWrapper = new FileContextTestWrapper(
         FileContext.getFileContext(cluster.getURI(), conf));
     dfsAdmin = new HdfsAdmin(cluster.getURI(), conf);
+    setProvider();
+    // Create a test key
+    DFSTestUtil.createKey(TEST_KEY, cluster, conf);
+  }
+  
+  protected void setProvider() {
     // Need to set the client's KeyProvider to the NN's for JKS,
     // else the updates do not get flushed properly
     fs.getClient().provider = cluster.getNameNode().getNamesystem()
         .getProvider();
-    // Create a test key
-    DFSTestUtil.createKey(TEST_KEY, cluster, conf);
   }
 
   @After
@@ -534,6 +538,19 @@ public class TestEncryptionZones {
         !wrapper.exists(pathFooBaz) && wrapper.exists(pathFooBar));
     assertEquals("Renamed file contents not the same",
         contents, DFSTestUtil.readFile(fs, pathFooBarFile));
+
+    // Verify that we can rename an EZ root
+    final Path newFoo = new Path(testRoot, "newfoo");
+    assertTrue("Rename of EZ root", fs.rename(pathFoo, newFoo));
+    assertTrue("Rename of EZ root failed",
+        !wrapper.exists(pathFoo) && wrapper.exists(newFoo));
+
+    // Verify that we can't rename an EZ root onto itself
+    try {
+      wrapper.rename(newFoo, newFoo);
+    } catch (IOException e) {
+      assertExceptionContains("are the same", e);
+    }
   }
 
   @Test(timeout = 60000)
@@ -981,7 +998,7 @@ public class TestEncryptionZones {
 
     // Test when the parent directory becomes a different EZ
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
-    final String otherKey = "otherKey";
+    final String otherKey = "other_key";
     DFSTestUtil.createKey(otherKey, cluster, conf);
     dfsAdmin.createEncryptionZone(zone1, TEST_KEY);
 
@@ -1001,7 +1018,7 @@ public class TestEncryptionZones {
 
     // Test that the retry limit leads to an error
     fsWrapper.mkdir(zone1, FsPermission.getDirDefault(), true);
-    final String anotherKey = "anotherKey";
+    final String anotherKey = "another_key";
     DFSTestUtil.createKey(anotherKey, cluster, conf);
     dfsAdmin.createEncryptionZone(zone1, anotherKey);
     String keyToUse = otherKey;
@@ -1217,6 +1234,28 @@ public class TestEncryptionZones {
     fs.delete(target, true);
   }
 
+  @Test(timeout = 60000)
+  public void testConcatFailsInEncryptionZones() throws Exception {
+    final int len = 8192;
+    final Path ez = new Path("/ez");
+    fs.mkdirs(ez);
+    dfsAdmin.createEncryptionZone(ez, TEST_KEY);
+    final Path src1 = new Path(ez, "src1");
+    final Path src2 = new Path(ez, "src2");
+    final Path target = new Path(ez, "target");
+    DFSTestUtil.createFile(fs, src1, len, (short)1, 0xFEED);
+    DFSTestUtil.createFile(fs, src2, len, (short)1, 0xFEED);
+    DFSTestUtil.createFile(fs, target, len, (short)1, 0xFEED);
+    try {
+      fs.concat(target, new Path[] { src1, src2 });
+      fail("expected concat to throw en exception for files in an ez");
+    } catch (IOException e) {
+      assertExceptionContains(
+          "concat can not be called for files in an encryption zone", e);
+    }
+    fs.delete(ez, true);
+  }
+
   /**
    * Test running the OfflineImageViewer on a system with encryption zones.
    */
@@ -1239,11 +1278,11 @@ public class TestEncryptionZones {
     }
 
     // Run the XML OIV processor
-    StringWriter output = new StringWriter();
-    PrintWriter pw = new PrintWriter(output);
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    PrintStream pw = new PrintStream(output);
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), pw);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
-    final String xml = output.getBuffer().toString();
+    final String xml = output.toString();
     SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
     parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
   }

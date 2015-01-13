@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import com.google.common.base.Supplier;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -147,6 +148,7 @@ public class TestAMRMClient {
     racks = new String[]{ rack };
   }
   
+  @SuppressWarnings("deprecation")
   @Before
   public void startApp() throws Exception {
     // submit new app
@@ -667,6 +669,28 @@ public class TestAMRMClient {
       }
     }
   }
+  
+  @Test(timeout=30000)
+  public void testAskWithNodeLabels() {
+    AMRMClientImpl<ContainerRequest> client =
+        new AMRMClientImpl<ContainerRequest>();
+
+    // add x, y to ANY
+    client.addContainerRequest(new ContainerRequest(Resource.newInstance(1024,
+        1), null, null, Priority.UNDEFINED, true, "x && y"));
+    Assert.assertEquals(1, client.ask.size());
+    Assert.assertEquals("x && y", client.ask.iterator().next()
+        .getNodeLabelExpression());
+
+    // add x, y and a, b to ANY, only a, b should be kept
+    client.addContainerRequest(new ContainerRequest(Resource.newInstance(1024,
+        1), null, null, Priority.UNDEFINED, true, "x && y"));
+    client.addContainerRequest(new ContainerRequest(Resource.newInstance(1024,
+        1), null, null, Priority.UNDEFINED, true, "a && b"));
+    Assert.assertEquals(1, client.ask.size());
+    Assert.assertEquals("a && b", client.ask.iterator().next()
+        .getNodeLabelExpression());
+  }
     
   private void testAllocation(final AMRMClientImpl<ContainerRequest> amClient)  
       throws YarnException, IOException {
@@ -908,7 +932,7 @@ public class TestAMRMClient {
       Assert.assertNotEquals(amrmToken_1, amrmToken_2);
 
       // can do the allocate call with latest AMRMToken
-      amClient.allocate(0.1f);
+      AllocateResponse response = amClient.allocate(0.1f);
       
       // Verify latest AMRMToken can be used to send allocation request.
       UserGroupInformation testUser1 =
@@ -929,7 +953,8 @@ public class TestAMRMClient {
         .getResourceManager().getApplicationMasterService().getBindAddress());
       testUser1.addToken(newVersionToken);
       
-      
+      AllocateRequest request = Records.newRecord(AllocateRequest.class);
+      request.setResponseId(response.getResponseId());
       testUser1.doAs(new PrivilegedAction<ApplicationMasterProtocol>() {
         @Override
         public ApplicationMasterProtocol run() {
@@ -938,7 +963,7 @@ public class TestAMRMClient {
             yarnCluster.getResourceManager().getApplicationMasterService()
                 .getBindAddress(), conf);
         }
-      }).allocate(Records.newRecord(AllocateRequest.class));
+      }).allocate(request);
 
       // Make sure previous token has been rolled-over
       // and can not use this rolled-over token to make a allocate all.

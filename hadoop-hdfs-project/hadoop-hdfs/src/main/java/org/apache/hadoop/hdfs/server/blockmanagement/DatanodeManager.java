@@ -66,6 +66,7 @@ public class DatanodeManager {
   private final Namesystem namesystem;
   private final BlockManager blockManager;
   private final HeartbeatManager heartbeatManager;
+  private final FSClusterStats fsClusterStats;
   private Daemon decommissionthread = null;
 
   /**
@@ -132,12 +133,17 @@ public class DatanodeManager {
    * writing to stale datanodes, i.e., continue using stale nodes for writing.
    */
   private final float ratioUseStaleDataNodesForWrite;
-  
+
   /** The number of stale DataNodes */
   private volatile int numStaleNodes;
 
   /** The number of stale storages */
   private volatile int numStaleStorages;
+
+  /**
+   * Number of blocks to check for each postponedMisreplicatedBlocks iteration
+   */
+  private final long blocksPerPostponedMisreplicatedBlocksRescan;
 
   /**
    * Whether or not this cluster has ever consisted of more than 1 rack,
@@ -169,7 +175,7 @@ public class DatanodeManager {
    * directives that we've already sent.
    */
   private final long timeBetweenResendingCachingDirectivesMs;
-  
+
   DatanodeManager(final BlockManager blockManager, final Namesystem namesystem,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
@@ -178,6 +184,7 @@ public class DatanodeManager {
     networktopology = NetworkTopology.getInstance(conf);
 
     this.heartbeatManager = new HeartbeatManager(namesystem, blockManager, conf);
+    this.fsClusterStats = newFSClusterStats();
 
     this.defaultXferPort = NetUtils.createSocketAddr(
           conf.get(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
@@ -257,6 +264,9 @@ public class DatanodeManager {
     this.timeBetweenResendingCachingDirectivesMs = conf.getLong(
         DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_RETRY_INTERVAL_MS,
         DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_RETRY_INTERVAL_MS_DEFAULT);
+    this.blocksPerPostponedMisreplicatedBlocksRescan = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY,
+        DFSConfigKeys.DFS_NAMENODE_BLOCKS_PER_POSTPONEDBLOCKS_RESCAN_KEY_DEFAULT);
   }
 
   private static long getStaleIntervalFromConf(Configuration conf,
@@ -327,6 +337,11 @@ public class DatanodeManager {
   /** @return the heartbeat manager. */
   HeartbeatManager getHeartbeatManager() {
     return heartbeatManager;
+  }
+
+  @VisibleForTesting
+  public FSClusterStats getFSClusterStats() {
+    return fsClusterStats;
   }
 
   /** @return the datanode statistics. */
@@ -593,6 +608,8 @@ public class DatanodeManager {
     synchronized (datanodeMap) {
       host2DatanodeMap.remove(datanodeMap.remove(key));
     }
+    // Also remove all block invalidation tasks under this node
+    blockManager.removeFromInvalidates(new DatanodeInfo(node));
     if (LOG.isDebugEnabled()) {
       LOG.debug(getClass().getSimpleName() + ".wipeDatanode("
           + node + "): storage " + key 
@@ -836,16 +853,21 @@ public class DatanodeManager {
   @InterfaceAudience.Private
   @VisibleForTesting
   public void startDecommission(DatanodeDescriptor node) {
-    if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
-      for (DatanodeStorageInfo storage : node.getStorageInfos()) {
-        LOG.info("Start Decommissioning " + node + " " + storage
-            + " with " + storage.numBlocks() + " blocks");
+    if (!node.isDecommissionInProgress()) {
+      if (!node.isAlive) {
+        LOG.info("Dead node " + node + " is decommissioned immediately.");
+        node.setDecommissioned();
+      } else if (!node.isDecommissioned()) {
+        for (DatanodeStorageInfo storage : node.getStorageInfos()) {
+          LOG.info("Start Decommissioning " + node + " " + storage
+              + " with " + storage.numBlocks() + " blocks");
+        }
+        heartbeatManager.startDecommission(node);
+        node.decommissioningStatus.setStartTime(now());
+
+        // all the blocks that reside on this node have to be replicated.
+        checkDecommissionState(node);
       }
-      heartbeatManager.startDecommission(node);
-      node.decommissioningStatus.setStartTime(now());
-      
-      // all the blocks that reside on this node have to be replicated.
-      checkDecommissionState(node);
     }
   }
 
@@ -1000,14 +1022,13 @@ public class DatanodeManager {
   
         // register new datanode
         addDatanode(nodeDescr);
-        checkDecommissioning(nodeDescr);
-        
         // also treat the registration message as a heartbeat
         // no need to update its timestamp
         // because its is done when the descriptor is created
         heartbeatManager.addDatanode(nodeDescr);
-        success = true;
         incrementVersionCount(nodeReg.getSoftwareVersion());
+        checkDecommissioning(nodeDescr);
+        success = true;
       } finally {
         if (!success) {
           removeDatanode(nodeDescr);
@@ -1099,16 +1120,8 @@ public class DatanodeManager {
   public List<DatanodeDescriptor> getDecommissioningNodes() {
     // There is no need to take namesystem reader lock as
     // getDatanodeListForReport will synchronize on datanodeMap
-    final List<DatanodeDescriptor> decommissioningNodes
-        = new ArrayList<DatanodeDescriptor>();
-    final List<DatanodeDescriptor> results = getDatanodeListForReport(
-        DatanodeReportType.LIVE);
-    for(DatanodeDescriptor node : results) {
-      if (node.isDecommissionInProgress()) {
-        decommissioningNodes.add(node);
-      }
-    }
-    return decommissioningNodes;
+    // A decommissioning DN may be "alive" or "dead".
+    return getDatanodeListForReport(DatanodeReportType.DECOMMISSIONING);
   }
   
   /* Getter and Setter for stale DataNodes related attributes */
@@ -1126,6 +1139,10 @@ public class DatanodeManager {
     return avoidStaleDataNodesForWrite &&
         (numStaleNodes <= heartbeatManager.getLiveDatanodeCount()
             * ratioUseStaleDataNodesForWrite);
+  }
+
+  public long getBlocksPerPostponedMisreplicatedBlocksRescan() {
+    return blocksPerPostponedMisreplicatedBlocksRescan;
   }
 
   /**
@@ -1415,24 +1432,37 @@ public class DatanodeManager {
                 recoveryLocations.add(storages[i]);
               }
             }
+            // If we are performing a truncate recovery than set recovery fields
+            // to old block.
+            boolean truncateRecovery = b.getTruncateBlock() != null;
+            boolean copyOnTruncateRecovery = truncateRecovery &&
+                b.getTruncateBlock().getBlockId() != b.getBlockId();
+            ExtendedBlock primaryBlock = (copyOnTruncateRecovery) ?
+                new ExtendedBlock(blockPoolId, b.getTruncateBlock()) :
+                new ExtendedBlock(blockPoolId, b);
             // If we only get 1 replica after eliminating stale nodes, then choose all
             // replicas for recovery and let the primary data node handle failures.
+            DatanodeInfo[] recoveryInfos;
             if (recoveryLocations.size() > 1) {
               if (recoveryLocations.size() != storages.length) {
                 LOG.info("Skipped stale nodes for recovery : " +
                     (storages.length - recoveryLocations.size()));
               }
-              brCommand.add(new RecoveringBlock(
-                  new ExtendedBlock(blockPoolId, b),
-                  DatanodeStorageInfo.toDatanodeInfos(recoveryLocations),
-                  b.getBlockRecoveryId()));
+              recoveryInfos =
+                  DatanodeStorageInfo.toDatanodeInfos(recoveryLocations);
             } else {
               // If too many replicas are stale, then choose all replicas to participate
               // in block recovery.
-              brCommand.add(new RecoveringBlock(
-                  new ExtendedBlock(blockPoolId, b),
-                  DatanodeStorageInfo.toDatanodeInfos(storages),
-                  b.getBlockRecoveryId()));
+              recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(storages);
+            }
+            if(truncateRecovery) {
+              Block recoveryBlock = (copyOnTruncateRecovery) ? b :
+                  b.getTruncateBlock();
+              brCommand.add(new RecoveringBlock(primaryBlock, recoveryInfos,
+                                                recoveryBlock));
+            } else {
+              brCommand.add(new RecoveringBlock(primaryBlock, recoveryInfos,
+                                                b.getBlockRecoveryId()));
             }
           }
           return new DatanodeCommand[] { brCommand };
@@ -1594,6 +1624,37 @@ public class DatanodeManager {
 
   public void setShouldSendCachingCommands(boolean shouldSendCachingCommands) {
     this.shouldSendCachingCommands = shouldSendCachingCommands;
+  }
+
+  FSClusterStats newFSClusterStats() {
+    return new FSClusterStats() {
+      @Override
+      public int getTotalLoad() {
+        return heartbeatManager.getXceiverCount();
+      }
+
+      @Override
+      public boolean isAvoidingStaleDataNodesForWrite() {
+        return shouldAvoidStaleDataNodesForWrite();
+      }
+
+      @Override
+      public int getNumDatanodesInService() {
+        return heartbeatManager.getNumDatanodesInService();
+      }
+
+      @Override
+      public double getInServiceXceiverAverage() {
+        double avgLoad = 0;
+        final int nodes = getNumDatanodesInService();
+        if (nodes != 0) {
+          final int xceivers = heartbeatManager
+            .getInServiceXceiverCount();
+          avgLoad = (double)xceivers/nodes;
+        }
+        return avgLoad;
+      }
+    };
   }
 }
 

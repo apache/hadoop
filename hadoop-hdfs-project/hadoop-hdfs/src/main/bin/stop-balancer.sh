@@ -43,4 +43,4 @@ fi
 # Stop balancer daemon.
 # Run this on the machine where the balancer is running
 
-"${bin}/hadoop-daemon.sh" --config "${HADOOP_CONF_DIR}" stop balancer
+exec "${HADOOP_HDFS_HOME}/bin/hdfs" --config "${HADOOP_CONF_DIR}" --daemon stop balancer

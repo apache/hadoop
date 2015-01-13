@@ -52,7 +52,7 @@ public class TestBookKeeperHACheckpoints extends TestStandbyCheckpoints {
 
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(topology)
-      .numDataNodes(0)
+      .numDataNodes(1)
       .manageNameDfsSharedDirs(false)
       .build();
     cluster.waitActive();

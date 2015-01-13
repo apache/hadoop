@@ -17,115 +17,141 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import com.google.common.base.Charsets;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.QueryStringDecoder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.web.JsonUtil;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.web.JsonUtil;
-import org.apache.hadoop.ipc.RemoteException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.codec.http.QueryStringDecoder;
-
-import javax.management.Query;
-
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
+import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
+import static io.netty.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED;
+import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static org.apache.hadoop.hdfs.server.datanode.web.webhdfs.WebHdfsHandler.APPLICATION_JSON_UTF8;
+import static org.apache.hadoop.hdfs.server.datanode.web.webhdfs.WebHdfsHandler.WEBHDFS_PREFIX;
+import static org.apache.hadoop.hdfs.server.datanode.web.webhdfs.WebHdfsHandler.WEBHDFS_PREFIX_LENGTH;
 /**
  * Implement the read-only WebHDFS API for fsimage.
  */
-class FSImageHandler extends SimpleChannelUpstreamHandler {
+class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
   public static final Log LOG = LogFactory.getLog(FSImageHandler.class);
   private final FSImageLoader image;
+  private final ChannelGroup activeChannels;
 
-  FSImageHandler(FSImageLoader image) throws IOException {
+  @Override
+  public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    activeChannels.add(ctx.channel());
+  }
+
+  FSImageHandler(FSImageLoader image, ChannelGroup activeChannels) throws IOException {
     this.image = image;
+    this.activeChannels = activeChannels;
   }
 
   @Override
-  public void messageReceived(
-      ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-    ChannelFuture future = e.getFuture();
-    try {
-      future = handleOperation(e);
-    } finally {
-      future.addListener(ChannelFutureListener.CLOSE);
-    }
-  }
-
-  private ChannelFuture handleOperation(MessageEvent e)
-      throws IOException {
-    HttpRequest request = (HttpRequest) e.getMessage();
-    HttpResponse response = new DefaultHttpResponse(
-            HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    response.setHeader(HttpHeaders.Names.CONTENT_TYPE, "application/json");
-
+  public void channelRead0(ChannelHandlerContext ctx, HttpRequest request)
+          throws Exception {
     if (request.getMethod() != HttpMethod.GET) {
-      response.setStatus(HttpResponseStatus.METHOD_NOT_ALLOWED);
-      return e.getChannel().write(response);
+      DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1,
+        METHOD_NOT_ALLOWED);
+      resp.headers().set(CONNECTION, CLOSE);
+      ctx.write(resp).addListener(ChannelFutureListener.CLOSE);
+      return;
     }
 
     QueryStringDecoder decoder = new QueryStringDecoder(request.getUri());
     final String op = getOp(decoder);
 
-    String content;
-    String path = null;
-    try {
-      path = getPath(decoder);
-      if ("GETFILESTATUS".equals(op)) {
+    final String content;
+    String path = getPath(decoder);
+    switch (op) {
+      case "GETFILESTATUS":
         content = image.getFileStatus(path);
-      } else if ("LISTSTATUS".equals(op)) {
+        break;
+      case "LISTSTATUS":
         content = image.listStatus(path);
-      } else if ("GETACLSTATUS".equals(op)) {
+        break;
+      case "GETACLSTATUS":
         content = image.getAclStatus(path);
-      } else {
-        throw new IllegalArgumentException("Invalid value for webhdfs parameter" + " \"op\"");
-      }
-    } catch (IllegalArgumentException ex) {
-      response.setStatus(HttpResponseStatus.BAD_REQUEST);
-      content = JsonUtil.toJsonString(ex);
-    } catch (FileNotFoundException ex) {
-      response.setStatus(HttpResponseStatus.NOT_FOUND);
-      content = JsonUtil.toJsonString(ex);
-    } catch (Exception ex) {
-      content = JsonUtil.toJsonString(ex);
+        break;
+      default:
+        throw new IllegalArgumentException(
+            "Invalid value for webhdfs parameter" + " \"op\"");
     }
 
-    HttpHeaders.setContentLength(response, content.length());
-    e.getChannel().write(response);
-    ChannelFuture future = e.getChannel().write(content);
+    LOG.info("op=" + op + " target=" + path);
 
-    LOG.info(response.getStatus().getCode() + " method="
-        + request.getMethod().getName() + " op=" + op + " target=" + path);
+    DefaultFullHttpResponse resp = new DefaultFullHttpResponse(
+            HTTP_1_1, HttpResponseStatus.OK,
+            Unpooled.wrappedBuffer(content.getBytes(Charsets.UTF_8)));
+    resp.headers().set(CONTENT_TYPE, APPLICATION_JSON_UTF8);
+    resp.headers().set(CONTENT_LENGTH, resp.content().readableBytes());
+    resp.headers().set(CONNECTION, CLOSE);
+    ctx.write(resp).addListener(ChannelFutureListener.CLOSE);
+  }
 
-    return future;
+  @Override
+  public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    ctx.flush();
+  }
+
+  @Override
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+          throws Exception {
+    Exception e = cause instanceof Exception ? (Exception) cause : new
+      Exception(cause);
+    final String output = JsonUtil.toJsonString(e);
+    ByteBuf content = Unpooled.wrappedBuffer(output.getBytes(Charsets.UTF_8));
+    final DefaultFullHttpResponse resp = new DefaultFullHttpResponse(
+            HTTP_1_1, INTERNAL_SERVER_ERROR, content);
+
+    resp.headers().set(CONTENT_TYPE, APPLICATION_JSON_UTF8);
+    if (e instanceof IllegalArgumentException) {
+      resp.setStatus(BAD_REQUEST);
+    } else if (e instanceof FileNotFoundException) {
+      resp.setStatus(NOT_FOUND);
+    }
+
+    resp.headers().set(CONTENT_LENGTH, resp.content().readableBytes());
+    resp.headers().set(CONNECTION, CLOSE);
+    ctx.write(resp).addListener(ChannelFutureListener.CLOSE);
   }
 
   private static String getOp(QueryStringDecoder decoder) {
-    Map<String, List<String>> parameters = decoder.getParameters();
+    Map<String, List<String>> parameters = decoder.parameters();
     return parameters.containsKey("op")
             ? parameters.get("op").get(0).toUpperCase() : null;
   }
 
   private static String getPath(QueryStringDecoder decoder)
           throws FileNotFoundException {
-    String path = decoder.getPath();
-    if (path.startsWith("/webhdfs/v1/")) {
-      return path.substring(11);
+    String path = decoder.path();
+    if (path.startsWith(WEBHDFS_PREFIX)) {
+      return path.substring(WEBHDFS_PREFIX_LENGTH);
     } else {
       throw new FileNotFoundException("Path: " + path + " should " +
-              "start with \"/webhdfs/v1/\"");
+              "start with " + WEBHDFS_PREFIX);
     }
   }
 }

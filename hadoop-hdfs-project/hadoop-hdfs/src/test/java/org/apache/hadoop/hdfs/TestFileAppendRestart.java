@@ -188,7 +188,7 @@ public class TestFileAppendRestart {
     try {
       cluster = new MiniDFSCluster.Builder(conf).manageDataDfsDirs(true)
           .manageNameDfsDirs(true).numDataNodes(4)
-          .racks(new String[] { "/rack1", "/rack1", "/rack1", "/rack2" })
+          .racks(new String[] { "/rack1", "/rack1", "/rack2", "/rack2" })
           .build();
       cluster.waitActive();
 

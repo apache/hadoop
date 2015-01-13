@@ -21,12 +21,16 @@ package org.apache.hadoop.yarn.exceptions;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 
 /**
  * This exception is thrown on
  * {@link ApplicationHistoryProtocol#getApplicationAttemptReport (GetApplicationAttemptReportRequest)}
- * API when the Application Attempt doesn't exist in Application History Server
+ * API when the Application Attempt doesn't exist in Application History Server or
+ * {@link ApplicationMasterProtocol#allocate(AllocateRequest)} if application
+ * doesn't exist in RM.
  */
 @Public
 @Unstable

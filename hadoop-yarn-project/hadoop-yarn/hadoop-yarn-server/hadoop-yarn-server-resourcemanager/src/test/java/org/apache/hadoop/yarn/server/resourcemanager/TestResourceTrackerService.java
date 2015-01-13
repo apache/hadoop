@@ -130,16 +130,16 @@ public class TestResourceTrackerService {
 
     rm.getNodesListManager().refreshNodes(conf);
 
+    checkDecommissionedNMCount(rm, ++metricCount);
+
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     Assert
-        .assertEquals(0, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+        .assertEquals(1, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
 
     nodeHeartbeat = nm2.nodeHeartbeat(true);
     Assert.assertTrue("Node is not decommisioned.", NodeAction.SHUTDOWN
         .equals(nodeHeartbeat.getNodeAction()));
-
-    checkDecommissionedNMCount(rm, ++metricCount);
 
     nodeHeartbeat = nm3.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
@@ -185,6 +185,8 @@ public class TestResourceTrackerService {
 
     rm.getNodesListManager().refreshNodes(conf);
 
+    checkDecommissionedNMCount(rm, metricCount + 2);
+
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
@@ -195,7 +197,7 @@ public class TestResourceTrackerService {
     Assert.assertTrue("The decommisioned metrics are not updated",
         NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
     dispatcher.await();
-    checkDecommissionedNMCount(rm, metricCount + 2);
+
     writeToHostsFile("");
     rm.getNodesListManager().refreshNodes(conf);
 
@@ -234,6 +236,7 @@ public class TestResourceTrackerService {
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, hostFile
         .getAbsolutePath());
     rm.getNodesListManager().refreshNodes(conf);
+    checkDecommissionedNMCount(rm, ++initialMetricCount);
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertEquals(
         "Node should not have been decomissioned.",
@@ -243,7 +246,6 @@ public class TestResourceTrackerService {
     Assert.assertEquals("Node should have been decomissioned but is in state" +
         nodeHeartbeat.getNodeAction(),
         NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction());
-    checkDecommissionedNMCount(rm, ++initialMetricCount);
   }
   
   /**
@@ -271,6 +273,7 @@ public class TestResourceTrackerService {
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
         .getAbsolutePath());
     rm.getNodesListManager().refreshNodes(conf);
+    checkDecommissionedNMCount(rm, ++initialMetricCount);
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertEquals(
         "Node should not have been decomissioned.",
@@ -280,7 +283,6 @@ public class TestResourceTrackerService {
     Assert.assertEquals("Node should have been decomissioned but is in state" +
         nodeHeartbeat.getNodeAction(),
         NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction());
-    checkDecommissionedNMCount(rm, ++initialMetricCount);
   }
 
   @Test
@@ -508,7 +510,7 @@ public class TestResourceTrackerService {
     // Case 1.1: AppAttemptId is null
     NMContainerStatus report =
         NMContainerStatus.newInstance(
-          ContainerId.newInstance(
+          ContainerId.newContainerId(
             ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
@@ -520,7 +522,7 @@ public class TestResourceTrackerService {
         (RMAppAttemptImpl) app.getCurrentAppAttempt();
     currentAttempt.setMasterContainer(null);
     report = NMContainerStatus.newInstance(
-          ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
+          ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0),
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
     rm.getResourceTrackerService().handleNMContainerStatus(report, null);
@@ -531,7 +533,7 @@ public class TestResourceTrackerService {
 
     // Case 2.1: AppAttemptId is null
     report = NMContainerStatus.newInstance(
-          ContainerId.newInstance(
+          ContainerId.newContainerId(
             ApplicationAttemptId.newInstance(app.getApplicationId(), 2), 1),
           ContainerState.COMPLETE, Resource.newInstance(1024, 1),
           "Dummy Completed", 0, Priority.newInstance(10), 1234);
@@ -547,7 +549,7 @@ public class TestResourceTrackerService {
         (RMAppAttemptImpl) app.getCurrentAppAttempt();
     currentAttempt.setMasterContainer(null);
     report = NMContainerStatus.newInstance(
-      ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
+      ContainerId.newContainerId(currentAttempt.getAppAttemptId(), 0),
       ContainerState.COMPLETE, Resource.newInstance(1024, 1),
       "Dummy Completed", 0, Priority.newInstance(10), 1234);
     try {

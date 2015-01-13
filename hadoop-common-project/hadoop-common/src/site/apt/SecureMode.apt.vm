@@ -244,7 +244,7 @@ KVNO Timestamp         Principal
   10.222.0.0-15 and 10.113.221.221
   can impersonate any user belonging to any group.
   
-  ----
+----
   <property>
     <name>hadoop.proxyuser.oozie.hosts</name>
     <value>10.222.0.0/16,10.113.221.221</value>
@@ -273,6 +273,33 @@ KVNO Timestamp         Principal
   You must specify <<<HADOOP_SECURE_DN_USER>>> and <<<JSVC_HOME>>>
   as environment variables on start up (in hadoop-env.sh).
 
+  As of version 2.6.0, SASL can be used to authenticate the data transfer
+  protocol.  In this configuration, it is no longer required for secured clusters
+  to start the DataNode as root using jsvc and bind to privileged ports.  To
+  enable SASL on data transfer protocol, set <<<dfs.data.transfer.protection>>>
+  in hdfs-site.xml, set a non-privileged port for <<<dfs.datanode.address>>>, set
+  <<<dfs.http.policy>>> to <HTTPS_ONLY> and make sure the
+  <<<HADOOP_SECURE_DN_USER>>> environment variable is not defined.  Note that it
+  is not possible to use SASL on data transfer protocol if
+  <<<dfs.datanode.address>>> is set to a privileged port.  This is required for
+  backwards-compatibility reasons.
+
+  In order to migrate an existing cluster that used root authentication to start
+  using SASL instead, first ensure that version 2.6.0 or later has been deployed
+  to all cluster nodes as well as any external applications that need to connect
+  to the cluster.  Only versions 2.6.0 and later of the HDFS client can connect
+  to a DataNode that uses SASL for authentication of data transfer protocol, so
+  it is vital that all callers have the correct version before migrating.  After
+  version 2.6.0 or later has been deployed everywhere, update configuration of
+  any external applications to enable SASL.  If an HDFS client is enabled for
+  SASL, then it can connect successfully to a DataNode running with either root
+  authentication or SASL authentication.  Changing configuration for all clients
+  guarantees that subsequent configuration changes on DataNodes will not disrupt
+  the applications.  Finally, each individual DataNode can be migrated by
+  changing its configuration and restarting.  It is acceptable to have a mix of
+  some DataNodes running with root authentication and some DataNodes running with
+  SASL authentication temporarily during this migration period, because an HDFS
+  client enabled for SASL can connect to both.
 
 * Data confidentiality
 
@@ -286,6 +313,21 @@ KVNO Timestamp         Principal
 
   You need to set <<<dfs.encrypt.data.transfer>>> to <<<"true">>> in the hdfs-site.xml
   in order to activate data encryption for data transfer protocol of DataNode.
+
+  Optionally, you may set <<<dfs.encrypt.data.transfer.algorithm>>> to either
+  "3des" or "rc4" to choose the specific encryption algorithm.  If unspecified,
+  then the configured JCE default on the system is used, which is usually 3DES.
+
+  Setting <<<dfs.encrypt.data.transfer.cipher.suites>>> to
+  <<<AES/CTR/NoPadding>>> activates AES encryption.  By default, this is
+  unspecified, so AES is not used.  When AES is used, the algorithm specified in
+  <<<dfs.encrypt.data.transfer.algorithm>>> is still used during an initial key
+  exchange.  The AES key bit length can be configured by setting
+  <<<dfs.encrypt.data.transfer.cipher.key.bitlength>>> to 128, 192 or 256.  The
+  default is 128.
+
+  AES offers the greatest cryptographic strength and the best performance.  At
+  this time, 3DES and RC4 have been used more often in Hadoop clusters.
 
 ** Data Encryption on HTTP
 
@@ -391,6 +433,10 @@ Configuration for <<<conf/core-site.xml>>>
 | <<<dfs.http.policy>>> | <HTTP_ONLY> or <HTTPS_ONLY> or <HTTP_AND_HTTPS> | |
 | | | HTTPS_ONLY turns off http access. This option takes precedence over |
 | | | the deprecated configuration dfs.https.enable and hadoop.ssl.enabled. |
+| | | If using SASL to authenticate data transfer protocol instead of |
+| | | running DataNode as root and using privileged ports, then this property |
+| | | must be set to <HTTPS_ONLY> to guarantee authentication of HTTP servers. |
+| | | (See <<<dfs.data.transfer.protection>>>.)  |
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.namenode.https-address>>> | <nn_host_fqdn:50470> | |
 *-------------------------+-------------------------+------------------------+
@@ -402,8 +448,8 @@ Configuration for <<<conf/core-site.xml>>>
 | <<<dfs.namenode.kerberos.principal>>> | nn/_HOST@REALM.TLD | |
 | | | Kerberos principal name for the NameNode. |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.namenode.kerberos.https.principal>>> | host/_HOST@REALM.TLD | |
-| | | HTTPS Kerberos principal name for the NameNode. |
+| <<<dfs.namenode.kerberos.internal.spnego.principal>>> | HTTP/_HOST@REALM.TLD | |
+| | | HTTP Kerberos principal name for the NameNode. |
 *-------------------------+-------------------------+------------------------+
 Configuration for <<<conf/hdfs-site.xml>>>
 
@@ -416,16 +462,16 @@ Configuration for <<<conf/hdfs-site.xml>>>
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.namenode.secondary.https-port>>> | <50470> | |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.namenode.secondary.keytab.file>>> | | |
+| <<<dfs.secondary.namenode.keytab.file>>> | | |
 | | </etc/security/keytab/sn.service.keytab> | |
-| | | Kerberos keytab file for the NameNode. |
+| | | Kerberos keytab file for the Secondary NameNode. |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.namenode.secondary.kerberos.principal>>> | sn/_HOST@REALM.TLD | |
+| <<<dfs.secondary.namenode.kerberos.principal>>> | sn/_HOST@REALM.TLD | |
 | | | Kerberos principal name for the Secondary NameNode. |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.namenode.secondary.kerberos.https.principal>>> | | |
-| | host/_HOST@REALM.TLD | |
-| | | HTTPS Kerberos principal name for the Secondary NameNode. |
+| <<<dfs.secondary.namenode.kerberos.internal.spnego.principal>>> | | |
+| | HTTP/_HOST@REALM.TLD | |
+| | | HTTP Kerberos principal name for the Secondary NameNode. |
 *-------------------------+-------------------------+------------------------+
 Configuration for <<<conf/hdfs-site.xml>>>
 
@@ -440,6 +486,9 @@ Configuration for <<<conf/hdfs-site.xml>>>
 | | | Secure DataNode must use privileged port |
 | | | in order to assure that the server was started securely. |
 | | | This means that the server must be started via jsvc. |
+| | | Alternatively, this must be set to a non-privileged port if using SASL |
+| | | to authenticate data transfer protocol. |
+| | | (See <<<dfs.data.transfer.protection>>>.)  |
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.datanode.http.address>>> | <0.0.0.0:1006> | |
 | | | Secure DataNode must use privileged port |
@@ -454,12 +503,31 @@ Configuration for <<<conf/hdfs-site.xml>>>
 | <<<dfs.datanode.kerberos.principal>>> | dn/_HOST@REALM.TLD | |
 | | | Kerberos principal name for the DataNode. |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.datanode.kerberos.https.principal>>> | | |
-| | host/_HOST@REALM.TLD | |
-| | | HTTPS Kerberos principal name for the DataNode. |
-*-------------------------+-------------------------+------------------------+
 | <<<dfs.encrypt.data.transfer>>> | <false> | |
 | | | set to <<<true>>> when using data encryption |
+*-------------------------+-------------------------+------------------------+
+| <<<dfs.encrypt.data.transfer.algorithm>>> | | |
+| | | optionally set to <<<3des>>> or <<<rc4>>> when using data encryption to |
+| | | control encryption algorithm |
+*-------------------------+-------------------------+------------------------+
+| <<<dfs.encrypt.data.transfer.cipher.suites>>> | | |
+| | | optionally set to <<<AES/CTR/NoPadding>>> to activate AES encryption    |
+| | | when using data encryption |
+*-------------------------+-------------------------+------------------------+
+| <<<dfs.encrypt.data.transfer.cipher.key.bitlength>>> | | |
+| | | optionally set to <<<128>>>, <<<192>>> or <<<256>>> to control key bit  |
+| | | length when using AES with data encryption |
+*-------------------------+-------------------------+------------------------+
+| <<<dfs.data.transfer.protection>>> | | |
+| | | <authentication> : authentication only \
+| | | <integrity> : integrity check in addition to authentication \
+| | | <privacy> : data encryption in addition to integrity |
+| | | This property is unspecified by default.  Setting this property enables |
+| | | SASL for authentication of data transfer protocol.  If this is enabled, |
+| | | then <<<dfs.datanode.address>>> must use a non-privileged port, |
+| | | <<<dfs.http.policy>>> must be set to <HTTPS_ONLY> and the |
+| | | <<<HADOOP_SECURE_DN_USER>>> environment variable must be undefined when |
+| | | starting the DataNode process. |
 *-------------------------+-------------------------+------------------------+
 Configuration for <<<conf/hdfs-site.xml>>>
 
@@ -631,7 +699,7 @@ Configuration for  <<<conf/yarn-site.xml>>>
 | | | required for validating the secure access of the <container-executor> |
 | | | binary. |
 *-------------------------+-------------------------+------------------------+
-| <<<banned.users>>> | hfds,yarn,mapred,bin | Banned users. |
+| <<<banned.users>>> | hdfs,yarn,mapred,bin | Banned users. |
 *-------------------------+-------------------------+------------------------+
 | <<<allowed.system.users>>> | foo,bar | Allowed system users. |
 *-------------------------+-------------------------+------------------------+

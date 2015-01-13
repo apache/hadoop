@@ -79,6 +79,6 @@ public class TestContainerId {
     ApplicationId applicationId = ApplicationId.newInstance(timestamp, appId);
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, appAttemptId);
-    return ContainerId.newInstance(applicationAttemptId, containerId);
+    return ContainerId.newContainerId(applicationAttemptId, containerId);
   }
 }

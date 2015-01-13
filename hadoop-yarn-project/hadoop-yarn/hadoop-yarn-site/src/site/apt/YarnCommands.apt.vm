@@ -11,66 +11,48 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  Yarn Commands
+  YARN Commands
   ---
   ---
   ${maven.build.timestamp}
 
-Yarn Commands
+YARN Commands
 
 %{toc|section=1|fromDepth=0}
 
 * Overview
 
-  Yarn commands are invoked by the bin/yarn script. Running the yarn script
+  YARN commands are invoked by the bin/yarn script. Running the yarn script
   without any arguments prints the description for all commands.
 
-------
-Usage: yarn [--config confdir] COMMAND
-------
+ Usage: <<<yarn [SHELL_OPTIONS] COMMAND [GENERIC_OPTIONS] [COMMAND_OPTIONS]>>>
 
-  Yarn has an option parsing framework that employs parsing generic options as
+  YARN has an option parsing framework that employs parsing generic options as
   well as running classes.
 
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
-*---------------+--------------+
-| --config confdir | Overwrites the default Configuration directory. Default
-|                  | is $\{HADOOP_PREFIX\}/conf.
-*---------------+--------------+
+*-------------------------+-------------+
+| SHELL_OPTIONS | The common set of shell options. These are documented on the {{{../../hadoop-project-dist/hadoop-common/CommandsManual.html#Shell Options}Commands Manual}} page.
+*-------------------------+----+
+| GENERIC_OPTIONS | The common set of options supported by multiple commands. See the Hadoop {{{../../hadoop-project-dist/hadoop-common/CommandsManual.html#Generic Options}Commands Manual}} for more information.
+*------------------+---------------+
 | COMMAND COMMAND_OPTIONS | Various commands with their options are described
 |                         | in the following sections. The commands have been
 |                         | grouped into {{User Commands}} and
 |                         | {{Administration Commands}}.
-*---------------+--------------+
+*-------------------------+--------------+
 
 * {User Commands}
 
   Commands useful for users of a Hadoop cluster.
 
-** jar
+** <<<application>>>
 
-  Runs a jar file. Users can bundle their Yarn code in a jar file and execute
-  it using this command.
-
--------
-  Usage: yarn jar <jar> [mainClass] args...
--------
-
-** application
-
-  Prints application(s) report/kill application
-
--------
-  Usage: yarn application <options>
--------
+  Usage: <<<yarn application [options] >>>
 
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
-*---------------+--------------+
-| -list | Lists applications from the RM. Supports optional use of -appTypes
-|       | to filter applications based on application type, and -appStates to
-|       | filter applications based on application state.
 *---------------+--------------+
 | -appStates States | Works with -list to filter applications based on input
 |                   | comma-separated list of application states. The valid
@@ -81,40 +63,66 @@ Usage: yarn [--config confdir] COMMAND
 | -appTypes Types | Works with -list to filter applications based on input
 |                 | comma-separated list of application types.
 *---------------+--------------+
-| -status  ApplicationId | Prints the status of the application.
+| -list | Lists applications from the RM. Supports optional use of -appTypes
+|       | to filter applications based on application type, and -appStates to
+|       | filter applications based on application state.
 *---------------+--------------+
 | -kill ApplicationId | Kills the application.
 *---------------+--------------+
+| -status  ApplicationId | Prints the status of the application.
+*---------------+--------------+
 
-** node
+  Prints application(s) report/kill application
 
-  Prints node report(s)
+** <<<applicationattempt>>>
 
--------
-  Usage: yarn node <options>
--------
+  Usage: <<<yarn applicationattempt [options] >>>
 
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
 *---------------+--------------+
-| -list | Lists all running nodes. Supports optional use of -states to filter
-|       | nodes based on node state, and -all to list all nodes.
+| -help | Help
 *---------------+--------------+
-| -states States | Works with -list to filter nodes based on input
-|                | comma-separated list of node states.
+| -list ApplicationId | Lists applications attempts from the RM
 *---------------+--------------+
-| -all | Works with -list to list all nodes.
-*---------------+--------------+
-| -status NodeId | Prints the status report of the node.
+| -status  Application Attempt Id | Prints the status of the application attempt.
 *---------------+--------------+
 
-** logs
+  prints applicationattempt(s) report
 
-  Dump the container logs
+** <<<classpath>>>
 
--------
-  Usage: yarn logs -applicationId <application ID> <options>
--------
+  Usage: <<<yarn classpath>>>
+
+  Prints the class path needed to get the Hadoop jar and the required libraries
+
+
+** <<<container>>>
+
+  Usage: <<<yarn container [options] >>>
+
+*---------------+--------------+
+|| COMMAND_OPTIONS || Description                   |
+*---------------+--------------+
+| -help | Help
+*---------------+--------------+
+| -list ApplicationId | Lists containers for the application attempt.
+*---------------+--------------+
+| -status  ContainerId | Prints the status of the container.
+*---------------+--------------+
+
+  prints container(s) report
+
+** <<<jar>>>
+
+  Usage: <<<yarn jar <jar> [mainClass] args... >>>
+
+  Runs a jar file. Users can bundle their YARN code in a jar file and execute
+  it using this command.
+
+** <<<logs>>>
+
+  Usage: <<<yarn logs -applicationId <application ID> [options] >>>
 
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
@@ -127,38 +135,99 @@ Usage: yarn [--config confdir] COMMAND
 | -containerId ContainerId | ContainerId (must be specified if node address is
 |                          | specified)
 *---------------+--------------+
+| -help | Help
+*---------------+--------------+
 | -nodeAddress NodeAddress | NodeAddress in the format nodename:port (must be
 |                          | specified if container id is specified)
 *---------------+--------------+
 
-** classpath
+  Dump the container logs
 
-  Prints the class path needed to get the Hadoop jar and the required libraries
 
--------
-  Usage: yarn classpath
--------
+** <<<node>>>
 
-** version
+  Usage: <<<yarn node [options] >>>
 
-  Prints the version.
+*---------------+--------------+
+|| COMMAND_OPTIONS || Description                   |
+*---------------+--------------+
+| -all | Works with -list to list all nodes.
+*---------------+--------------+
+| -list | Lists all running nodes. Supports optional use of -states to filter
+|       | nodes based on node state, and -all to list all nodes.
+*---------------+--------------+
+| -states States | Works with -list to filter nodes based on input
+|                | comma-separated list of node states.
+*---------------+--------------+
+| -status NodeId | Prints the status report of the node.
+*---------------+--------------+
 
--------
-  Usage: yarn version
--------
+  Prints node report(s)
 
+** <<<queue>>>
+
+  Usage: <<<yarn queue [options] >>>
+
+*---------------+--------------+
+|| COMMAND_OPTIONS || Description                   |
+*---------------+--------------+
+| -help | Help
+*---------------+--------------+
+| -status  QueueName | Prints the status of the queue.
+*---------------+--------------+
+
+  Prints queue information
+
+
+** <<<version>>>
+
+  Usage: <<<yarn version>>>
+
+  Prints the Hadoop version.
 
 * {Administration Commands}
 
   Commands useful for administrators of a Hadoop cluster.
 
-** resourcemanager
+** <<<daemonlog>>>
 
-  Start the ResourceManager
+  Usage:
 
--------
-  Usage: yarn resourcemanager [-format-state-store]
--------
+---------------------------------
+   yarn daemonlog -getlevel <host:port> <name>
+   yarn daemonlog -setlevel <host:port> <name> <level>
+---------------------------------
+
+*---------------+--------------+
+|| COMMAND_OPTIONS || Description                   |
+*---------------+--------------+
+| -getlevel \<host:port\> \<name\> | Prints the log level of the daemon running
+| | at \<host:port\>. This command internally connects to
+| | http://\<host:port\>/logLevel?log=\<name\>
+*---------------+--------------+
+| -setlevel \<host:port\> \<name\> \<level\> | Sets the log level of the daemon
+| | running at \<host:port\>. This command internally connects to
+| | http://\<host:port\>/logLevel?log=\<name\>
+*---------------+--------------+
+
+  Get/Set the log level for each daemon.
+
+
+** <<<nodemanager>>>
+
+  Usage: <<<yarn nodemanager>>>
+
+  Start the NodeManager
+
+** <<<proxyserver>>>
+
+  Usage: <<<yarn proxyserver>>>
+
+  Start the web proxy server
+
+** <<<resourcemanager>>>
+
+  Usage: <<<yarn resourcemanager [-format-state-store]>>>
 
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
@@ -169,35 +238,22 @@ Usage: yarn [--config confdir] COMMAND
 |                     | ResourceManager is not running.
 *---------------+--------------+
 
-** nodemanager
+  Start the ResourceManager
 
-  Start the NodeManager
 
--------
-  Usage: yarn nodemanager
--------
+** <<<rmadmin>>>
 
-** proxyserver
+  Usage:
 
-  Start the web proxy server
-
--------
-  Usage: yarn proxyserver
--------
-
-** rmadmin
-
-  Runs ResourceManager admin client
-
--------
-  Usage: yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshUserToGroupsMapping] 
-                      [-refreshSuperUserGroupsConfiguration] [-refreshAdminAcls] 
+----
+  yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshUserToGroupsMapping]
+                      [-refreshSuperUserGroupsConfiguration] [-refreshAdminAcls]
                       [-refreshServiceAcl] [-getGroups [username]] [-help [cmd]]
                       [-transitionToActive <serviceId>]
                       [-transitionToStandby <serviceId>]
                       [-getServiceState <serviceId>]
                       [-checkHealth <serviceId>]
--------
+----
 
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
@@ -237,25 +293,52 @@ Usage: yarn [--config confdir] COMMAND
 |                            | non-zero exit code if the check fails.
 *---------------+--------------+
 
-** daemonlog
+  Runs ResourceManager admin client
 
-  Get/Set the log level for each daemon.
+** scmadmin
 
--------
-  Usage: yarn daemonlog -getlevel <host:port> <name> 
-  Usage: yarn daemonlog -setlevel <host:port> <name> <level>
--------
+  Usage: <<<yarn scmadmin [options] >>>
 
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
 *---------------+--------------+
-| -getlevel \<host:port\> \<name\> | Prints the log level of the daemon running
-| | at \<host:port\>. This command internally connects to
-| | http://\<host:port\>/logLevel?log=\<name\>
+| -help | Help
 *---------------+--------------+
-| -setlevel \<host:port\> \<name\> \<level\> | Sets the log level of the daemon
-| | running at \<host:port\>. This command internally connects to
-| | http://\<host:port\>/logLevel?log=\<name\>
+| -runCleanerTask | Runs the cleaner task
 *---------------+--------------+
 
+  Runs Shared Cache Manager admin client
 
+
+** sharedcachemanager
+
+  Usage: <<<yarn sharedcachemanager>>>
+
+  Start the Shared Cache Manager
+
+** timelineserver
+
+  Usage: <<<yarn timelineserver>>>
+
+  Start the TimeLineServer
+
+
+* Files
+
+** <<etc/hadoop/hadoop-env.sh>>
+
+    This file stores the global settings used by all Hadoop shell commands.
+
+** <<etc/hadoop/yarn-env.sh>>
+
+    This file stores overrides used by all YARN shell commands.
+
+** <<etc/hadoop/hadoop-user-functions.sh>>
+
+    This file allows for advanced users to override some shell functionality.
+
+** <<~/.hadooprc>>
+
+    This stores the personal environment for an individual user.  It is
+    processed after the <<<hadoop-env.sh>>>, <<<hadoop-user-functions.sh>>>, and <<<yarn-env.sh>>> files
+    and can contain the same settings.

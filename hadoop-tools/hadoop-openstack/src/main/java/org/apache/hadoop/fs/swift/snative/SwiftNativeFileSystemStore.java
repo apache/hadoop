@@ -45,6 +45,7 @@ import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -352,8 +353,8 @@ public class SwiftNativeFileSystemStore {
     final CollectionType collectionType = JSONUtil.getJsonMapper().getTypeFactory().
             constructCollectionType(List.class, SwiftObjectFileStatus.class);
 
-    final List<SwiftObjectFileStatus> fileStatusList =
-            JSONUtil.toObject(new String(bytes), collectionType);
+    final List<SwiftObjectFileStatus> fileStatusList = JSONUtil.toObject(
+        new String(bytes, Charset.forName("UTF-8")), collectionType);
 
     //this can happen if user lists file /data/files/file
     //in this case swift will return empty array
@@ -447,7 +448,7 @@ public class SwiftNativeFileSystemStore {
       //no object location, return an empty list
       return new LinkedList<URI>();
     }
-    return extractUris(new String(objectLocation), path);
+    return extractUris(new String(objectLocation, Charset.forName("UTF-8")), path);
   }
 
   /**

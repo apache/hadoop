@@ -43,7 +43,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
@@ -61,7 +60,6 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -69,18 +67,19 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CredentialsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LocalResourceInfo;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -105,11 +104,10 @@ import com.sun.jersey.api.client.filter.LoggingFilter;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.JerseyTest;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
 @RunWith(Parameterized.class)
-public class TestRMWebServicesAppsModification extends JerseyTest {
+public class TestRMWebServicesAppsModification extends JerseyTestBase {
   private static MockRM rm;
 
   private static final int CONTAINER_MB = 1024;
@@ -175,10 +173,6 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      bind(RMContext.class).toInstance(rm.getRMContext());
-      bind(ApplicationACLsManager.class).toInstance(
-        rm.getApplicationACLsManager());
-      bind(QueueACLsManager.class).toInstance(rm.getQueueACLsManager());
       if (setAuthFilter) {
         filter("/*").through(TestRMCustomAuthFilter.class);
       }
@@ -204,6 +198,9 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
         out.println("<queue name=\"root\">");
         out.println("  <aclAdministerApps>someuser </aclAdministerApps>");
         out.println("  <queue name=\"default\">");
+        out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
+        out.println("  </queue>");
+        out.println("  <queue name=\"test\">");
         out.println("    <aclAdministerApps>someuser </aclAdministerApps>");
         out.println("  </queue>");
         out.println("</queue>");
@@ -365,7 +362,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
             new AppState(YarnApplicationState.KILLED.toString());
 
         Object entity;
-        if (contentType == MediaType.APPLICATION_JSON_TYPE) {
+        if (contentType.equals(MediaType.APPLICATION_JSON_TYPE)) {
           entity = appStateToJSON(targetState);
         } else {
           entity = targetState;
@@ -446,7 +443,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
           ClientResponse response;
           AppState targetState = new AppState(targetStateString);
           Object entity;
-          if (contentType == MediaType.APPLICATION_JSON_TYPE) {
+          if (contentType.equals(MediaType.APPLICATION_JSON_TYPE)) {
             entity = appStateToJSON(targetState);
           } else {
             entity = targetState;
@@ -562,7 +559,6 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
       validateResponseStatus(response, Status.FORBIDDEN);
     }
     rm.stop();
-
   }
 
   @Test
@@ -743,20 +739,19 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     String appType = "test-type";
     String urlPath = "apps";
     String appId = testGetNewApplication(acceptMedia);
-    List<String> commands = new ArrayList<String>();
+    List<String> commands = new ArrayList<>();
     commands.add("/bin/sleep 5");
-    HashMap<String, String> environment = new HashMap<String, String>();
+    HashMap<String, String> environment = new HashMap<>();
     environment.put("APP_VAR", "ENV_SETTING");
-    HashMap<ApplicationAccessType, String> acls =
-        new HashMap<ApplicationAccessType, String>();
+    HashMap<ApplicationAccessType, String> acls = new HashMap<>();
     acls.put(ApplicationAccessType.MODIFY_APP, "testuser1, testuser2");
     acls.put(ApplicationAccessType.VIEW_APP, "testuser3, testuser4");
-    Set<String> tags = new HashSet<String>();
+    Set<String> tags = new HashSet<>();
     tags.add("tag1");
     tags.add("tag 2");
     CredentialsInfo credentials = new CredentialsInfo();
-    HashMap<String, String> tokens = new HashMap<String, String>();
-    HashMap<String, String> secrets = new HashMap<String, String>();
+    HashMap<String, String> tokens = new HashMap<>();
+    HashMap<String, String> secrets = new HashMap<>();
     secrets.put("secret1", Base64.encodeBase64String(
         "mysecret".getBytes("UTF8")));
     credentials.setSecrets(secrets);
@@ -768,8 +763,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     appInfo.setMaxAppAttempts(2);
     appInfo.setQueue(queueName);
     appInfo.setApplicationType(appType);
-    HashMap<String, LocalResourceInfo> lr =
-        new HashMap<String, LocalResourceInfo>();
+    HashMap<String, LocalResourceInfo> lr =  new HashMap<>();
     LocalResourceInfo y = new LocalResourceInfo();
     y.setUrl(new URI("http://www.test.com/file.txt"));
     y.setSize(100);
@@ -918,8 +912,7 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
     appInfo.setMaxAppAttempts(2);
     appInfo.setQueue("testqueue");
     appInfo.setApplicationType("test-type");
-    HashMap<String, LocalResourceInfo> lr =
-        new HashMap<String, LocalResourceInfo>();
+    HashMap<String, LocalResourceInfo> lr = new HashMap<>();
     LocalResourceInfo y = new LocalResourceInfo();
     y.setUrl(new URI("http://www.test.com/file.txt"));
     y.setSize(100);
@@ -944,6 +937,152 @@ public class TestRMWebServicesAppsModification extends JerseyTest {
           .entity(body, MediaType.APPLICATION_JSON).post(ClientResponse.class);
     validateResponseStatus(response, Status.BAD_REQUEST);
     rm.stop();
+  }
+
+  @Test
+  public void testGetAppQueue() throws Exception {
+    client().addFilter(new LoggingFilter(System.out));
+    boolean isCapacityScheduler =
+        rm.getResourceScheduler() instanceof CapacityScheduler;
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    String[] contentTypes =
+        { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
+    for (String contentType : contentTypes) {
+      RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+      amNodeManager.nodeHeartbeat(true);
+      ClientResponse response =
+          this
+            .constructWebResource("apps", app.getApplicationId().toString(),
+              "queue").accept(contentType).get(ClientResponse.class);
+      assertEquals(Status.OK, response.getClientResponseStatus());
+      String expectedQueue = "default";
+      if(!isCapacityScheduler) {
+        expectedQueue = "root." + webserviceUserName;
+      }
+      if (contentType.equals(MediaType.APPLICATION_JSON)) {
+        verifyAppQueueJson(response, expectedQueue);
+      } else {
+        verifyAppQueueXML(response, expectedQueue);
+      }
+    }
+    rm.stop();
+  }
+
+  @Test(timeout = 90000)
+  public void testAppMove() throws Exception {
+
+    client().addFilter(new LoggingFilter(System.out));
+
+    boolean isCapacityScheduler =
+        rm.getResourceScheduler() instanceof CapacityScheduler;
+
+    // default root queue allows anyone to have admin acl
+    CapacitySchedulerConfiguration csconf =
+        new CapacitySchedulerConfiguration();
+    String[] queues = { "default", "test" };
+    csconf.setQueues("root", queues);
+    csconf.setCapacity("root.default", 50.0f);
+    csconf.setCapacity("root.test", 50.0f);
+    csconf.setAcl("root", QueueACL.ADMINISTER_QUEUE, "someuser");
+    csconf.setAcl("root.default", QueueACL.ADMINISTER_QUEUE, "someuser");
+    csconf.setAcl("root.test", QueueACL.ADMINISTER_QUEUE, "someuser");
+    rm.getResourceScheduler().reinitialize(csconf, rm.getRMContext());
+
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    String[] mediaTypes =
+        { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
+    MediaType[] contentTypes =
+        { MediaType.APPLICATION_JSON_TYPE, MediaType.APPLICATION_XML_TYPE };
+    for (String mediaType : mediaTypes) {
+      for (MediaType contentType : contentTypes) {
+        RMApp app = rm.submitApp(CONTAINER_MB, "", webserviceUserName);
+        amNodeManager.nodeHeartbeat(true);
+        AppQueue targetQueue = new AppQueue("test");
+        Object entity;
+        if (contentType.equals(MediaType.APPLICATION_JSON_TYPE)) {
+          entity = appQueueToJSON(targetQueue);
+        } else {
+          entity = targetQueue;
+        }
+        ClientResponse response =
+            this
+              .constructWebResource("apps", app.getApplicationId().toString(),
+                "queue").entity(entity, contentType).accept(mediaType)
+              .put(ClientResponse.class);
+
+        if (!isAuthenticationEnabled()) {
+          assertEquals(Status.UNAUTHORIZED, response.getClientResponseStatus());
+          continue;
+        }
+        assertEquals(Status.OK, response.getClientResponseStatus());
+        String expectedQueue = "test";
+        if(!isCapacityScheduler) {
+          expectedQueue = "root.test";
+        }
+        if (mediaType.equals(MediaType.APPLICATION_JSON)) {
+          verifyAppQueueJson(response, expectedQueue);
+        } else {
+          verifyAppQueueXML(response, expectedQueue);
+        }
+        Assert.assertEquals(expectedQueue, app.getQueue());
+
+        // check unauthorized
+        app = rm.submitApp(CONTAINER_MB, "", "someuser");
+        amNodeManager.nodeHeartbeat(true);
+        response =
+            this
+              .constructWebResource("apps", app.getApplicationId().toString(),
+                "queue").entity(entity, contentType).accept(mediaType)
+              .put(ClientResponse.class);
+        assertEquals(Status.FORBIDDEN, response.getClientResponseStatus());
+        if(isCapacityScheduler) {
+          Assert.assertEquals("default", app.getQueue());
+        }
+        else {
+          Assert.assertEquals("root.someuser", app.getQueue());
+        }
+
+      }
+    }
+    rm.stop();
+  }
+
+  protected static String appQueueToJSON(AppQueue targetQueue) throws Exception {
+    StringWriter sw = new StringWriter();
+    JSONJAXBContext ctx = new JSONJAXBContext(AppQueue.class);
+    JSONMarshaller jm = ctx.createJSONMarshaller();
+    jm.marshallToJSON(targetQueue, sw);
+    return sw.toString();
+  }
+
+  protected static void
+      verifyAppQueueJson(ClientResponse response, String queue)
+          throws JSONException {
+
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    String responseQueue = json.getString("queue");
+    assertEquals(queue, responseQueue);
+  }
+
+  protected static void
+      verifyAppQueueXML(ClientResponse response, String queue)
+          throws ParserConfigurationException, IOException, SAXException {
+    assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+    String xml = response.getEntity(String.class);
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(xml));
+    Document dom = db.parse(is);
+    NodeList nodes = dom.getElementsByTagName("appqueue");
+    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    Element element = (Element) nodes.item(0);
+    String responseQueue = WebServicesTestUtils.getXmlString(element, "queue");
+    assertEquals(queue, responseQueue);
   }
 
 }

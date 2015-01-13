@@ -90,7 +90,7 @@ public abstract class ConfigurationUtils {
 
   /**
    * Create a configuration from an InputStream.
-   * <p/>
+   * <p>
    * ERROR canibalized from <code>Configuration.loadResource()</code>.
    *
    * @param is inputstream to read the configuration from.

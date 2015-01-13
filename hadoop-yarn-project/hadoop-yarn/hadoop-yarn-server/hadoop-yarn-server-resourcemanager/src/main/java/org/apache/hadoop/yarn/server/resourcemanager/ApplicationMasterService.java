@@ -22,7 +22,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -46,12 +50,13 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NMToken;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.PreemptionContainer;
 import org.apache.hadoop.yarn.api.records.PreemptionContract;
@@ -62,6 +67,7 @@ import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
@@ -105,18 +111,12 @@ public class ApplicationMasterService extends AbstractService implements
       RecordFactoryProvider.getRecordFactory(null);
   private final ConcurrentMap<ApplicationAttemptId, AllocateResponseLock> responseMap =
       new ConcurrentHashMap<ApplicationAttemptId, AllocateResponseLock>();
-  private final AllocateResponse resync =
-      recordFactory.newRecordInstance(AllocateResponse.class);
-  private final AllocateResponse shutdown =
-      recordFactory.newRecordInstance(AllocateResponse.class);
   private final RMContext rmContext;
 
   public ApplicationMasterService(RMContext rmContext, YarnScheduler scheduler) {
     super(ApplicationMasterService.class.getName());
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.rScheduler = scheduler;
-    this.shutdown.setAMCommand(AMCommand.AM_SHUTDOWN);
-    this.resync.setAMCommand(AMCommand.AM_RESYNC);
     this.rmContext = rmContext;
   }
 
@@ -254,13 +254,13 @@ public class ApplicationMasterService extends AbstractService implements
       if (hasApplicationMasterRegistered(applicationAttemptId)) {
         String message =
             "Application Master is already registered : "
-                + applicationAttemptId.getApplicationId();
+                + appID;
         LOG.warn(message);
         RMAuditLogger.logFailure(
           this.rmContext.getRMApps()
-            .get(applicationAttemptId.getApplicationId()).getUser(),
+            .get(appID).getUser(),
           AuditConstants.REGISTER_AM, "", "ApplicationMasterService", message,
-          applicationAttemptId.getApplicationId(), applicationAttemptId);
+          appID, applicationAttemptId);
         throw new InvalidApplicationMasterRequestException(message);
       }
       
@@ -340,6 +340,17 @@ public class ApplicationMasterService extends AbstractService implements
 
     ApplicationAttemptId applicationAttemptId =
         authorizeRequest().getApplicationAttemptId();
+    ApplicationId appId = applicationAttemptId.getApplicationId();
+
+    RMApp rmApp =
+        rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
+    // checking whether the app exits in RMStateStore at first not to throw
+    // ApplicationDoesNotExistInCacheException before and after
+    // RM work-preserving restart.
+    if (rmApp.isAppFinalStateStored()) {
+      LOG.info(rmApp.getApplicationId() + " unregistered successfully. ");
+      return FinishApplicationMasterResponse.newInstance(true);
+    }
 
     AllocateResponseLock lock = responseMap.get(applicationAttemptId);
     if (lock == null) {
@@ -351,25 +362,18 @@ public class ApplicationMasterService extends AbstractService implements
       if (!hasApplicationMasterRegistered(applicationAttemptId)) {
         String message =
             "Application Master is trying to unregister before registering for: "
-                + applicationAttemptId.getApplicationId();
+                + appId;
         LOG.error(message);
         RMAuditLogger.logFailure(
             this.rmContext.getRMApps()
-                .get(applicationAttemptId.getApplicationId()).getUser(),
+                .get(appId).getUser(),
             AuditConstants.UNREGISTER_AM, "", "ApplicationMasterService",
-            message, applicationAttemptId.getApplicationId(),
+            message, appId,
             applicationAttemptId);
         throw new ApplicationMasterNotRegisteredException(message);
       }
 
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);
-
-      RMApp rmApp =
-          rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
-
-      if (rmApp.isAppFinalStateStored()) {
-        return FinishApplicationMasterResponse.newInstance(true);
-      }
 
       rmContext.getDispatcher().getEventHandler().handle(
           new RMAppAttemptUnregistrationEvent(applicationAttemptId, request
@@ -418,42 +422,42 @@ public class ApplicationMasterService extends AbstractService implements
 
     ApplicationAttemptId appAttemptId =
         amrmTokenIdentifier.getApplicationAttemptId();
+    ApplicationId applicationId = appAttemptId.getApplicationId();
 
     this.amLivelinessMonitor.receivedPing(appAttemptId);
 
     /* check if its in cache */
     AllocateResponseLock lock = responseMap.get(appAttemptId);
     if (lock == null) {
-      LOG.error("AppAttemptId doesnt exist in cache " + appAttemptId);
-      return shutdown;
+      String message =
+          "Application attempt " + appAttemptId
+              + " doesn't exist in ApplicationMasterService cache.";
+      LOG.error(message);
+      throw new ApplicationAttemptNotFoundException(message);
     }
     synchronized (lock) {
       AllocateResponse lastResponse = lock.getAllocateResponse();
       if (!hasApplicationMasterRegistered(appAttemptId)) {
         String message =
-            "Application Master is not registered for known application: "
-                + appAttemptId.getApplicationId()
-                + ". Let AM resync.";
+            "AM is not registered for known application attempt: " + appAttemptId
+                + " or RM had restarted after AM registered . AM should re-register.";
         LOG.info(message);
         RMAuditLogger.logFailure(
-            this.rmContext.getRMApps().get(appAttemptId.getApplicationId())
-                .getUser(), AuditConstants.REGISTER_AM, "",
-            "ApplicationMasterService", message,
-            appAttemptId.getApplicationId(),
-            appAttemptId);
-        return resync;
+          this.rmContext.getRMApps().get(appAttemptId.getApplicationId())
+            .getUser(), AuditConstants.AM_ALLOCATE, "",
+          "ApplicationMasterService", message, applicationId, appAttemptId);
+        throw new ApplicationMasterNotRegisteredException(message);
       }
 
       if ((request.getResponseId() + 1) == lastResponse.getResponseId()) {
         /* old heartbeat */
         return lastResponse;
       } else if (request.getResponseId() + 1 < lastResponse.getResponseId()) {
-        LOG.error("Invalid responseid from appAttemptId " + appAttemptId);
-        // Oh damn! Sending reboot isn't enough. RM state is corrupted. TODO:
-        // Reboot is not useful since after AM reboots, it will send register
-        // and
-        // get an exception. Might as well throw an exception here.
-        return resync;
+        String message =
+            "Invalid responseId in AllocateRequest from application attempt: "
+                + appAttemptId + ", expect responseId to be "
+                + (lastResponse.getResponseId() + 1);
+        throw new InvalidApplicationMasterRequestException(message);
       }
 
       //filter illegal progress values
@@ -481,11 +485,22 @@ public class ApplicationMasterService extends AbstractService implements
       List<String> blacklistRemovals =
           (blacklistRequest != null) ?
               blacklistRequest.getBlacklistRemovals() : Collections.EMPTY_LIST;
-
+      RMApp app =
+          this.rmContext.getRMApps().get(applicationId);
+      
+      // set label expression for Resource Requests
+      ApplicationSubmissionContext asc = app.getApplicationSubmissionContext();
+      for (ResourceRequest req : ask) {
+        if (null == req.getNodeLabelExpression()) {
+          req.setNodeLabelExpression(asc.getNodeLabelExpression());
+        }
+      }
+              
       // sanity check
       try {
         RMServerUtils.validateResourceRequests(ask,
-            rScheduler.getMaximumResourceCapability());
+            rScheduler.getMaximumResourceCapability(), app.getQueue(),
+            rScheduler);
       } catch (InvalidResourceRequestException e) {
         LOG.warn("Invalid resource ask by application " + appAttemptId, e);
         throw e;
@@ -498,8 +513,6 @@ public class ApplicationMasterService extends AbstractService implements
         throw e;
       }
 
-      RMApp app =
-          this.rmContext.getRMApps().get(appAttemptId.getApplicationId());
       // In the case of work-preserving AM restart, it's possible for the
       // AM to release containers from the earlier attempt.
       if (!app.getApplicationSubmissionContext()
@@ -542,12 +555,13 @@ public class ApplicationMasterService extends AbstractService implements
             used = schedulerNodeReport.getUsedResource();
             numContainers = schedulerNodeReport.getNumContainers();
           }
-          NodeReport report = BuilderUtils.newNodeReport(rmNode.getNodeID(),
-              rmNode.getState(),
-              rmNode.getHttpAddress(), rmNode.getRackName(), used,
-              rmNode.getTotalCapability(), numContainers,
-              rmNode.getHealthReport(),
-              rmNode.getLastHealthReportTime());
+          NodeId nodeId = rmNode.getNodeID();
+          NodeReport report =
+              BuilderUtils.newNodeReport(nodeId, rmNode.getState(),
+                  rmNode.getHttpAddress(), rmNode.getRackName(), used,
+                  rmNode.getTotalCapability(), numContainers,
+                  rmNode.getHealthReport(), rmNode.getLastHealthReportTime(),
+                  rmNode.getNodeLabels());
 
           updatedNodeReports.add(report);
         }
@@ -582,7 +596,7 @@ public class ApplicationMasterService extends AbstractService implements
             .toString(), amrmToken.getPassword(), amrmToken.getService()
             .toString()));
         LOG.info("The AMRMToken has been rolled-over. Send new AMRMToken back"
-            + " to application: " + appAttemptId.getApplicationId());
+            + " to application: " + applicationId);
       }
 
       /*

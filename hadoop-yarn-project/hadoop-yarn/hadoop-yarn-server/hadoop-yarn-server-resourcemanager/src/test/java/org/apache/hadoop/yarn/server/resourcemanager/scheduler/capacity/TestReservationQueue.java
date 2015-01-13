@@ -23,7 +23,10 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -42,8 +45,7 @@ public class TestReservationQueue {
   ReservationQueue reservationQueue;
 
   @Before
-  public void setup() {
-
+  public void setup() throws IOException {
     // setup a context / conf
     csConf = new CapacitySchedulerConfiguration();
     YarnConfiguration conf = new YarnConfiguration();
@@ -57,6 +59,9 @@ public class TestReservationQueue {
     when(csContext.getClusterResource()).thenReturn(
         Resources.createResource(100 * 16 * GB, 100 * 32));
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    
+    RMContext mockRMContext = TestUtils.getMockRMContext();
+    when(csContext.getRMContext()).thenReturn(mockRMContext);
 
     // create a queue
     PlanQueue pq = new PlanQueue(csContext, "root", null, null);

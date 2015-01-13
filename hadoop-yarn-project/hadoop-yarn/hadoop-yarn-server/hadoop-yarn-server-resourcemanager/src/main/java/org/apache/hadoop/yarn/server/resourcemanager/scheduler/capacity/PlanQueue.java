@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -35,8 +37,6 @@ import org.slf4j.LoggerFactory;
  */
 public class PlanQueue extends ParentQueue {
 
-  public static final String DEFAULT_QUEUE_SUFFIX = "-default";
-
   private static final Logger LOG = LoggerFactory.getLogger(PlanQueue.class);
 
   private int maxAppsForReservation;
@@ -47,7 +47,7 @@ public class PlanQueue extends ParentQueue {
   private boolean showReservationsAsQueues;
 
   public PlanQueue(CapacitySchedulerContext cs, String queueName,
-      CSQueue parent, CSQueue old) {
+      CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
 
     this.schedulerContext = cs;
@@ -104,6 +104,10 @@ public class PlanQueue extends ParentQueue {
         newlyParsedParentQueue.getMaximumCapacity(),
         newlyParsedParentQueue.getAbsoluteMaximumCapacity(),
         newlyParsedParentQueue.getState(), newlyParsedParentQueue.getACLs(),
+        newlyParsedParentQueue.accessibleLabels,
+        newlyParsedParentQueue.defaultLabelExpression,
+        newlyParsedParentQueue.capacitiyByNodeLabels,
+        newlyParsedParentQueue.maxCapacityByNodeLabels,
         newlyParsedParentQueue.getReservationContinueLooking());
 
     updateQuotas(newlyParsedParentQueue.userLimit,

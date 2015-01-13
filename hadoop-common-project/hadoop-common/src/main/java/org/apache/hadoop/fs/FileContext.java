@@ -161,7 +161,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
-public final class FileContext {
+public class FileContext {
   
   public static final Log LOG = LogFactory.getLog(FileContext.class);
   /**
@@ -430,6 +430,9 @@ public final class FileContext {
       final Configuration aConf) throws UnsupportedFileSystemException {
     UserGroupInformation currentUser = null;
     AbstractFileSystem defaultAfs = null;
+    if (defaultFsUri.getScheme() == null) {
+      return getFileContext(aConf);
+    }
     try {
       currentUser = UserGroupInformation.getCurrentUser();
       defaultAfs = getAbstractFileSystem(currentUser, defaultFsUri, aConf);
@@ -454,9 +457,15 @@ public final class FileContext {
    */
   public static FileContext getFileContext(final Configuration aConf)
       throws UnsupportedFileSystemException {
-    return getFileContext(
-      URI.create(aConf.get(FS_DEFAULT_NAME_KEY, FS_DEFAULT_NAME_DEFAULT)), 
-      aConf);
+    final URI defaultFsUri = URI.create(aConf.get(FS_DEFAULT_NAME_KEY,
+        FS_DEFAULT_NAME_DEFAULT));
+    if (   defaultFsUri.getScheme() != null
+        && !defaultFsUri.getScheme().trim().isEmpty()) {
+      return getFileContext(defaultFsUri, aConf);
+    }
+    throw new UnsupportedFileSystemException(String.format(
+        "%s: URI configured via %s carries no scheme",
+        defaultFsUri, FS_DEFAULT_NAME_KEY));
   }
 
   /**

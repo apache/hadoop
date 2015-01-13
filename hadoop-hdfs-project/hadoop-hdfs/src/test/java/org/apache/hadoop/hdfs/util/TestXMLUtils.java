@@ -22,11 +22,21 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestXMLUtils {
+  private static void testRoundTripImpl(String str, String expectedMangled,
+                                    boolean encodeEntityRefs) {
+    String mangled = XMLUtils.mangleXmlString(str, encodeEntityRefs);
+    Assert.assertEquals(expectedMangled, mangled);
+    String unmangled = XMLUtils.unmangleXmlString(mangled, encodeEntityRefs);
+    Assert.assertEquals(str, unmangled);
+  }
+
   private static void testRoundTrip(String str, String expectedMangled) {
-    String mangled = XMLUtils.mangleXmlString(str);
-    Assert.assertEquals(mangled, expectedMangled);
-    String unmangled = XMLUtils.unmangleXmlString(mangled);
-    Assert.assertEquals(unmangled, str);
+    testRoundTripImpl(str, expectedMangled, false);
+  }
+
+  private static void testRoundTripWithEntityRefs(String str,
+                          String expectedMangled) {
+    testRoundTripImpl(str, expectedMangled, true);
   }
 
   @Test
@@ -54,16 +64,25 @@ public class TestXMLUtils {
   @Test
   public void testInvalidSequence() throws Exception {
     try {
-      XMLUtils.unmangleXmlString("\\000g;foo");
+      XMLUtils.unmangleXmlString("\\000g;foo", false);
       Assert.fail("expected an unmangling error");
     } catch (UnmanglingError e) {
       // pass through
     }
     try {
-      XMLUtils.unmangleXmlString("\\0");
+      XMLUtils.unmangleXmlString("\\0", false);
       Assert.fail("expected an unmangling error");
     } catch (UnmanglingError e) {
       // pass through
     }
+  }
+
+  @Test
+  public void testAddEntityRefs() throws Exception {
+    testRoundTripWithEntityRefs("The Itchy & Scratchy Show",
+        "The Itchy &amp; Scratchy Show");
+    testRoundTripWithEntityRefs("\"He said '1 < 2, but 2 > 1'\"",
+        "&quot;He said &apos;1 &lt; 2, but 2 &gt; 1&apos;&quot;");
+    testRoundTripWithEntityRefs("\u0001 < \u0002", "\\0001; &lt; \\0002;");
   }
 }
