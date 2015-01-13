@@ -21,7 +21,6 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
@@ -182,40 +181,6 @@ public class FileWithSnapshotFeature implements INode.Feature {
       max = file.computeFileSize();
     }
 
-    collectBlocksBeyondMax(file, max, info);
-  }
-
-  private void collectBlocksBeyondMax(final INodeFile file, final long max,
-      final BlocksMapUpdateInfo collectedBlocks) {
-    final BlockInfo[] oldBlocks = file.getBlocks();
-    if (oldBlocks != null) {
-      //find the minimum n such that the size of the first n blocks > max
-      int n = 0;
-      for(long size = 0; n < oldBlocks.length && max > size; n++) {
-        size += oldBlocks[n].getNumBytes();
-      }
-      
-      // starting from block n, the data is beyond max.
-      if (n < oldBlocks.length) {
-        // resize the array.  
-        final BlockInfo[] newBlocks;
-        if (n == 0) {
-          newBlocks = BlockInfo.EMPTY_ARRAY;
-        } else {
-          newBlocks = new BlockInfo[n];
-          System.arraycopy(oldBlocks, 0, newBlocks, 0, n);
-        }
-        
-        // set new blocks
-        file.setBlocks(newBlocks);
-
-        // collect the blocks beyond max.  
-        if (collectedBlocks != null) {
-          for(; n < oldBlocks.length; n++) {
-            collectedBlocks.addDeleteBlock(oldBlocks[n]);
-          }
-        }
-      }
-    }
+    file.collectBlocksBeyondMax(max, info);
   }
 }

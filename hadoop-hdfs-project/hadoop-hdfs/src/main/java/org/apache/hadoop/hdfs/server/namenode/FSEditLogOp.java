@@ -59,6 +59,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_XAT
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_START_LOG_SEGMENT;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SYMLINK;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_TIMES;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_TRUNCATE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_BLOCKS;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_MASTER_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_STORAGE_POLICY;
@@ -180,6 +181,7 @@ public abstract class FSEditLogOp {
       inst.put(OP_START_LOG_SEGMENT, new LogSegmentOp(OP_START_LOG_SEGMENT));
       inst.put(OP_END_LOG_SEGMENT, new LogSegmentOp(OP_END_LOG_SEGMENT));
       inst.put(OP_UPDATE_BLOCKS, new UpdateBlocksOp());
+      inst.put(OP_TRUNCATE, new TruncateOp());
 
       inst.put(OP_ALLOW_SNAPSHOT, new AllowSnapshotOp());
       inst.put(OP_DISALLOW_SNAPSHOT, new DisallowSnapshotOp());
@@ -2600,6 +2602,115 @@ public abstract class FSEditLogOp {
         }
       }
       readRpcIdsFromXml(st);
+    }
+  }
+
+  static class TruncateOp extends FSEditLogOp {
+    String src;
+    String clientName;
+    String clientMachine;
+    long newLength;
+    long timestamp;
+
+    private TruncateOp() {
+      super(OP_TRUNCATE);
+    }
+
+    static TruncateOp getInstance(OpInstanceCache cache) {
+      return (TruncateOp)cache.get(OP_TRUNCATE);
+    }
+
+    @Override
+    void resetSubFields() {
+      src = null;
+      clientName = null;
+      clientMachine = null;
+      newLength = 0L;
+      timestamp = 0L;
+    }
+
+    TruncateOp setPath(String src) {
+      this.src = src;
+      return this;
+    }
+
+    TruncateOp setClientName(String clientName) {
+      this.clientName = clientName;
+      return this;
+    }
+
+    TruncateOp setClientMachine(String clientMachine) {
+      this.clientMachine = clientMachine;
+      return this;
+    }
+
+    TruncateOp setNewLength(long newLength) {
+      this.newLength = newLength;
+      return this;
+    }
+
+    TruncateOp setTimestamp(long timestamp) {
+      this.timestamp = timestamp;
+      return this;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      src = FSImageSerialization.readString(in);
+      clientName = FSImageSerialization.readString(in);
+      clientMachine = FSImageSerialization.readString(in);
+      newLength = FSImageSerialization.readLong(in);
+      timestamp = FSImageSerialization.readLong(in);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(src, out);
+      FSImageSerialization.writeString(clientName, out);
+      FSImageSerialization.writeString(clientMachine, out);
+      FSImageSerialization.writeLong(newLength, out);
+      FSImageSerialization.writeLong(timestamp, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SRC", src);
+      XMLUtils.addSaxString(contentHandler, "CLIENTNAME", clientName);
+      XMLUtils.addSaxString(contentHandler, "CLIENTMACHINE", clientMachine);
+      XMLUtils.addSaxString(contentHandler, "NEWLENGTH",
+          Long.toString(newLength));
+      XMLUtils.addSaxString(contentHandler, "TIMESTAMP",
+          Long.toString(timestamp));
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      this.src = st.getValue("SRC");
+      this.clientName = st.getValue("CLIENTNAME");
+      this.clientMachine = st.getValue("CLIENTMACHINE");
+      this.newLength = Long.parseLong(st.getValue("NEWLENGTH"));
+      this.timestamp = Long.parseLong(st.getValue("TIMESTAMP"));
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("TruncateOp [src=");
+      builder.append(src);
+      builder.append(", clientName=");
+      builder.append(clientName);
+      builder.append(", clientMachine=");
+      builder.append(clientMachine);
+      builder.append(", newLength=");
+      builder.append(newLength);
+      builder.append(", timestamp=");
+      builder.append(timestamp);
+      builder.append(", opCode=");
+      builder.append(opCode);
+      builder.append(", txid=");
+      builder.append(txid);
+      builder.append("]");
+      return builder.toString();
     }
   }
  

@@ -198,6 +198,16 @@ message ConcatRequestProto {
 message ConcatResponseProto { // void response
 }
 
+message TruncateRequestProto {
+  required string src = 1;
+  required uint64 newLength = 2;
+  required string clientName = 3;
+}
+
+message TruncateResponseProto {
+  required bool result = 1;
+}
+
 message RenameRequestProto {
   required string src = 1;
   required string dst = 2;
@@ -722,6 +732,7 @@ service ClientNamenodeProtocol {
   rpc reportBadBlocks(ReportBadBlocksRequestProto)
       returns(ReportBadBlocksResponseProto);
   rpc concat(ConcatRequestProto) returns(ConcatResponseProto);
+  rpc truncate(TruncateRequestProto) returns(TruncateResponseProto);
   rpc rename(RenameRequestProto) returns(RenameResponseProto);
   rpc rename2(Rename2RequestProto) returns(Rename2ResponseProto);
   rpc delete(DeleteRequestProto) returns(DeleteResponseProto);

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TruncateOp;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormat.renameReservedPathsOnUpgrade;
 import static org.apache.hadoop.util.Time.now;
 
@@ -851,6 +852,12 @@ public class FSEditLogLoader {
         fsNamesys.addCacheEntry(removeXAttrOp.rpcClientId,
             removeXAttrOp.rpcCallId);
       }
+      break;
+    }
+    case OP_TRUNCATE: {
+      TruncateOp truncateOp = (TruncateOp) op;
+      fsDir.unprotectedTruncate(truncateOp.src, truncateOp.clientName,
+          truncateOp.clientMachine, truncateOp.newLength, truncateOp.timestamp);
       break;
     }
     case OP_SET_STORAGE_POLICY: {

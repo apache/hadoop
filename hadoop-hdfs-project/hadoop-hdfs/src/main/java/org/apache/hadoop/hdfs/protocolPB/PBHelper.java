@@ -608,13 +608,15 @@ public class PBHelper {
     }
     LocatedBlockProto lb = PBHelper.convert((LocatedBlock)b);
     return RecoveringBlockProto.newBuilder().setBlock(lb)
-        .setNewGenStamp(b.getNewGenerationStamp()).build();
+        .setNewGenStamp(b.getNewGenerationStamp())
+        .setTruncateFlag(b.getTruncateFlag()).build();
   }
 
   public static RecoveringBlock convert(RecoveringBlockProto b) {
     ExtendedBlock block = convert(b.getBlock().getB());
     DatanodeInfo[] locs = convert(b.getBlock().getLocsList());
-    return new RecoveringBlock(block, locs, b.getNewGenStamp());
+    return new RecoveringBlock(block, locs, b.getNewGenStamp(),
+        b.getTruncateFlag());
   }
   
   public static DatanodeInfoProto.AdminState convert(

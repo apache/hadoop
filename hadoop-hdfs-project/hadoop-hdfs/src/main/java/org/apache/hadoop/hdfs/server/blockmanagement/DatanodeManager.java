@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -1439,10 +1440,12 @@ public class DatanodeManager {
                 LOG.info("Skipped stale nodes for recovery : " +
                     (storages.length - recoveryLocations.size()));
               }
+              boolean isTruncate = b.getBlockUCState().equals(
+                  HdfsServerConstants.BlockUCState.BEING_TRUNCATED);
               brCommand.add(new RecoveringBlock(
                   new ExtendedBlock(blockPoolId, b),
                   DatanodeStorageInfo.toDatanodeInfos(recoveryLocations),
-                  b.getBlockRecoveryId()));
+                  b.getBlockRecoveryId(), isTruncate));
             } else {
               // If too many replicas are stale, then choose all replicas to participate
               // in block recovery.
