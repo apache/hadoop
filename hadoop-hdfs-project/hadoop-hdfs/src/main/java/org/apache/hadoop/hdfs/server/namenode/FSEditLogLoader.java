@@ -857,7 +857,8 @@ public class FSEditLogLoader {
     case OP_TRUNCATE: {
       TruncateOp truncateOp = (TruncateOp) op;
       fsDir.unprotectedTruncate(truncateOp.src, truncateOp.clientName,
-          truncateOp.clientMachine, truncateOp.newLength, truncateOp.timestamp);
+          truncateOp.clientMachine, truncateOp.newLength, truncateOp.timestamp,
+          truncateOp.truncateBlock);
       break;
     }
     case OP_SET_STORAGE_POLICY: {

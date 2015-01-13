@@ -2611,6 +2611,7 @@ public abstract class FSEditLogOp {
     String clientMachine;
     long newLength;
     long timestamp;
+    Block truncateBlock;
 
     private TruncateOp() {
       super(OP_TRUNCATE);
@@ -2654,6 +2655,11 @@ public abstract class FSEditLogOp {
       return this;
     }
 
+    TruncateOp setTruncateBlock(Block truncateBlock) {
+      this.truncateBlock = truncateBlock;
+      return this;
+    }
+
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       src = FSImageSerialization.readString(in);
@@ -2661,6 +2667,10 @@ public abstract class FSEditLogOp {
       clientMachine = FSImageSerialization.readString(in);
       newLength = FSImageSerialization.readLong(in);
       timestamp = FSImageSerialization.readLong(in);
+      Block[] blocks =
+          FSImageSerialization.readCompactBlockArray(in, logVersion);
+      assert blocks.length <= 1 : "Truncate op should have 1 or 0 blocks";
+      truncateBlock = (blocks.length == 0) ? null : blocks[0];
     }
 
     @Override
@@ -2670,6 +2680,12 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeString(clientMachine, out);
       FSImageSerialization.writeLong(newLength, out);
       FSImageSerialization.writeLong(timestamp, out);
+      int size = truncateBlock != null ? 1 : 0;
+      Block[] blocks = new Block[size];
+      if (truncateBlock != null) {
+        blocks[0] = truncateBlock;
+      }
+      FSImageSerialization.writeCompactBlockArray(blocks, out);
     }
 
     @Override
@@ -2681,6 +2697,8 @@ public abstract class FSEditLogOp {
           Long.toString(newLength));
       XMLUtils.addSaxString(contentHandler, "TIMESTAMP",
           Long.toString(timestamp));
+      if(truncateBlock != null)
+        FSEditLogOp.blockToXml(contentHandler, truncateBlock);
     }
 
     @Override
@@ -2690,6 +2708,8 @@ public abstract class FSEditLogOp {
       this.clientMachine = st.getValue("CLIENTMACHINE");
       this.newLength = Long.parseLong(st.getValue("NEWLENGTH"));
       this.timestamp = Long.parseLong(st.getValue("TIMESTAMP"));
+      if (st.hasChildren("BLOCK"))
+        this.truncateBlock = FSEditLogOp.blockFromXml(st);
     }
 
     @Override
@@ -2705,6 +2725,8 @@ public abstract class FSEditLogOp {
       builder.append(newLength);
       builder.append(", timestamp=");
       builder.append(timestamp);
+      builder.append(", truncateBlock=");
+      builder.append(truncateBlock);
       builder.append(", opCode=");
       builder.append(opCode);
       builder.append(", txid=");

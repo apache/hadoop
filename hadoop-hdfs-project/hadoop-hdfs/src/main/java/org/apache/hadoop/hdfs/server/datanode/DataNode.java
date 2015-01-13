@@ -2530,14 +2530,16 @@ public class DataNode extends ReconfigurableBase
    */
   @Override // InterDatanodeProtocol
   public String updateReplicaUnderRecovery(final ExtendedBlock oldBlock,
-      final long recoveryId, final long newLength) throws IOException {
+      final long recoveryId, final long newBlockId, final long newLength)
+      throws IOException {
     final String storageID = data.updateReplicaUnderRecovery(oldBlock,
-        recoveryId, newLength);
+        recoveryId, newBlockId, newLength);
     // Notify the namenode of the updated block info. This is important
     // for HA, since otherwise the standby node may lose track of the
     // block locations until the next block report.
     ExtendedBlock newBlock = new ExtendedBlock(oldBlock);
     newBlock.setGenerationStamp(recoveryId);
+    newBlock.setBlockId(newBlockId);
     newBlock.setNumBytes(newLength);
     notifyNamenodeReceivedBlock(newBlock, "", storageID);
     return storageID;
@@ -2559,10 +2561,12 @@ public class DataNode extends ReconfigurableBase
       this.rInfo = rInfo;
     }
 
-    void updateReplicaUnderRecovery(String bpid, long recoveryId, long newLength 
-        ) throws IOException {
+    void updateReplicaUnderRecovery(String bpid, long recoveryId,
+                                    long newBlockId, long newLength)
+        throws IOException {
       final ExtendedBlock b = new ExtendedBlock(bpid, rInfo);
-      storageID = datanode.updateReplicaUnderRecovery(b, recoveryId, newLength);
+      storageID = datanode.updateReplicaUnderRecovery(b, recoveryId, newBlockId,
+          newLength);
     }
 
     @Override
@@ -2644,8 +2648,12 @@ public class DataNode extends ReconfigurableBase
     final String bpid = block.getBlockPoolId();
     DatanodeProtocolClientSideTranslatorPB nn =
       getActiveNamenodeForBP(block.getBlockPoolId());
-    
+
     long recoveryId = rBlock.getNewGenerationStamp();
+    boolean isTruncateRecovery = rBlock.getNewBlock() != null;
+    long blockId = (isTruncateRecovery) ?
+        rBlock.getNewBlock().getBlockId() : block.getBlockId();
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("block=" + block + ", (length=" + block.getNumBytes()
           + "), syncList=" + syncList);
@@ -2679,7 +2687,7 @@ public class DataNode extends ReconfigurableBase
     // Calculate list of nodes that will participate in the recovery
     // and the new block size
     List<BlockRecord> participatingList = new ArrayList<BlockRecord>();
-    final ExtendedBlock newBlock = new ExtendedBlock(bpid, block.getBlockId(),
+    final ExtendedBlock newBlock = new ExtendedBlock(bpid, blockId,
         -1, recoveryId);
     switch(bestState) {
     case FINALIZED:
@@ -2691,10 +2699,7 @@ public class DataNode extends ReconfigurableBase
                       r.rInfo.getNumBytes() == finalizedLength)
           participatingList.add(r);
       }
-      if(rBlock.getTruncateFlag())
-        newBlock.setNumBytes(rBlock.getBlock().getNumBytes());
-      else
-        newBlock.setNumBytes(finalizedLength);
+      newBlock.setNumBytes(finalizedLength);
       break;
     case RBW:
     case RWR:
@@ -2706,21 +2711,21 @@ public class DataNode extends ReconfigurableBase
           participatingList.add(r);
         }
       }
-      if(rBlock.getTruncateFlag())
-        newBlock.setNumBytes(rBlock.getBlock().getNumBytes());
-      else
-        newBlock.setNumBytes(minLength);
+      newBlock.setNumBytes(minLength);
       break;
     case RUR:
     case TEMPORARY:
       assert false : "bad replica state: " + bestState;
     }
+    if(isTruncateRecovery)
+      newBlock.setNumBytes(rBlock.getNewBlock().getNumBytes());
 
     List<DatanodeID> failedList = new ArrayList<DatanodeID>();
     final List<BlockRecord> successList = new ArrayList<BlockRecord>();
     for(BlockRecord r : participatingList) {
       try {
-        r.updateReplicaUnderRecovery(bpid, recoveryId, newBlock.getNumBytes());
+        r.updateReplicaUnderRecovery(bpid, recoveryId, blockId,
+            newBlock.getNumBytes());
         successList.add(r);
       } catch (IOException e) {
         InterDatanodeProtocol.LOG.warn("Failed to updateBlock (newblock="

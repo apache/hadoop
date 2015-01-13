@@ -424,7 +424,7 @@ class FSDirStatAndListingOp {
           fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
 
       loc = fsd.getFSNamesystem().getBlockManager().createLocatedBlocks(
-          fileNode.getBlocks(), fileSize, isUc, 0L, size, false,
+          fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size, false,
           inSnapshot, feInfo);
       if (loc == null) {
         loc = new LocatedBlocks();

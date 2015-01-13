@@ -20,6 +20,8 @@ Trunk (Unreleased)
 
     HDFS-3107. Introduce truncate. (Plamen Jeliazkov via shv)
 
+    HDFS-7056. Snapshot support for truncate. (Plamen Jeliazkov and shv)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
