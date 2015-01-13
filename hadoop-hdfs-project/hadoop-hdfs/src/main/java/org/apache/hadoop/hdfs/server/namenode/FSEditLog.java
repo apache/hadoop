@@ -86,6 +86,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetStoragePolicyOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TruncateOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RollingUpgradeOp;
@@ -894,6 +895,20 @@ public class FSEditLog implements LogsPurgeable {
       .setPath(src)
       .setTimestamp(timestamp);
     logRpcIds(op, toLogRpcIds);
+    logEdit(op);
+  }
+  
+  /**
+   * Add truncate file record to edit log
+   */
+  void logTruncate(String src, String clientName, String clientMachine,
+                   long size, long timestamp) {
+    TruncateOp op = TruncateOp.getInstance(cache.get())
+      .setPath(src)
+      .setClientName(clientName)
+      .setClientMachine(clientMachine)
+      .setNewLength(size)
+      .setTimestamp(timestamp);
     logEdit(op);
   }
 

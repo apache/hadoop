@@ -1194,7 +1194,13 @@ public class DFSTestUtil {
     DFSTestUtil.createFile(filesystem, pathConcatFiles[1], length, replication,
         seed);
     filesystem.concat(pathConcatTarget, pathConcatFiles);
-    
+
+    // OP_TRUNCATE 46
+    length = blockSize * 2;
+    DFSTestUtil.createFile(filesystem, pathFileCreate, length, replication,
+        seed);
+    filesystem.truncate(pathFileCreate, blockSize);
+
     // OP_SYMLINK 17
     Path pathSymlink = new Path("/file_symlink");
     fc.createSymlink(pathConcatTarget, pathSymlink, false);

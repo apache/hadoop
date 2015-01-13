@@ -273,7 +273,11 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * make it primary.
    */
   public void initializeBlockRecovery(long recoveryId) {
-    setBlockUCState(BlockUCState.UNDER_RECOVERY);
+    initializeBlockRecovery(BlockUCState.UNDER_RECOVERY, recoveryId);
+  }
+
+  public void initializeBlockRecovery(BlockUCState s, long recoveryId) {
+    setBlockUCState(s);
     blockRecoveryId = recoveryId;
     if (replicas.size() == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*"

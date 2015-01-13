@@ -300,6 +300,13 @@ public final class HdfsServerConstants {
      */
     UNDER_RECOVERY,
     /**
+     * The block is being truncated.<br>
+     * When a file is truncated its last block may need to be truncated
+     * and needs to go through a recovery procedure,
+     * which synchronizes the existing replicas contents.
+     */
+    BEING_TRUNCATED,
+    /**
      * The block is committed.<br>
      * The client reported that all bytes are written to data-nodes
      * with the given generation stamp and block length, but no 

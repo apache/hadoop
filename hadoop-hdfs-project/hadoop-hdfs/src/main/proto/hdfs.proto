@@ -556,6 +556,7 @@ enum ReplicaStateProto {
 message RecoveringBlockProto {
   required uint64 newGenStamp = 1;      // New genstamp post recovery
   required LocatedBlockProto block = 2; // Block to be recovered
+  optional bool truncateFlag = 3;       // Block needs to be truncated
 }
 
 /**

@@ -53,6 +53,7 @@ public class BlockRecoveryCommand extends DatanodeCommand {
   @InterfaceAudience.Private
   @InterfaceStability.Evolving
   public static class RecoveringBlock extends LocatedBlock {
+    private boolean truncate;
     private final long newGenerationStamp;
 
     /**
@@ -64,11 +65,27 @@ public class BlockRecoveryCommand extends DatanodeCommand {
     }
 
     /**
+     * RecoveryingBlock with truncate option.
+     */
+    public RecoveringBlock(ExtendedBlock b, DatanodeInfo[] locs, long newGS,
+                           boolean truncate) {
+      this(b, locs, newGS);
+      this.truncate = truncate;
+    }
+
+    /**
      * Return the new generation stamp of the block,
      * which also plays role of the recovery id.
      */
     public long getNewGenerationStamp() {
       return newGenerationStamp;
+    }
+
+    /**
+     * Return whether to truncate the block to the ExtendedBlock's length.
+     */
+    public boolean getTruncateFlag() {
+      return truncate;
     }
   }
 
