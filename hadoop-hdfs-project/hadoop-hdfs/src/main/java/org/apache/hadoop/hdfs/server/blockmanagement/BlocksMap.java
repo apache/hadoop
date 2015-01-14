@@ -85,9 +85,13 @@ class BlocksMap {
 
 
   void close() {
+    clear();
+    blocks = null;
+  }
+  
+  void clear() {
     if (blocks != null) {
       blocks.clear();
-      blocks = null;
     }
   }
 

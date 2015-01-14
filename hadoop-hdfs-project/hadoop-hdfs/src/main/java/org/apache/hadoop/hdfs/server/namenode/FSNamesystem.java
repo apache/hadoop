@@ -651,6 +651,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     snapshotManager.clearSnapshottableDirs();
     cacheManager.clear();
     setImageLoaded(false);
+    blockManager.clear();
   }
 
   @VisibleForTesting

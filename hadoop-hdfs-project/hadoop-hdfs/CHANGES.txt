@@ -169,6 +169,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-8846. Add a unit test for INotify functionality across a layout
     version upgrade (Zhe Zhang via Colin P. McCabe)
 
+    HDFS-7470. SecondaryNameNode need twice memory when calling
+    reloadFromImageFile. (zhaoyunjiong via cnauroth)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
