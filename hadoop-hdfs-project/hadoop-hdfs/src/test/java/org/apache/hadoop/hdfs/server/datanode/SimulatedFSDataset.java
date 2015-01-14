@@ -563,12 +563,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   synchronized BlockListAsLongs getBlockReport(String bpid) {
-    final List<Block> blocks = new ArrayList<Block>();
+    final List<Replica> blocks = new ArrayList<Replica>();
     final Map<Block, BInfo> map = blockMap.get(bpid);
     if (map != null) {
       for (BInfo b : map.values()) {
         if (b.isFinalized()) {
-          blocks.add(b.theBlock);
+          blocks.add(b);
         }
       }
     }
