@@ -69,15 +69,15 @@ public abstract class HAAdmin extends Configured implements Tool {
   protected final static Map<String, UsageInfo> USAGE =
     ImmutableMap.<String, UsageInfo>builder()
     .put("-transitionToActive",
-        new UsageInfo("<serviceId> [--"+FORCEACTIVE+"]", "Transitions the service into Active state"))
+        new UsageInfo("[--"+FORCEACTIVE+"] <serviceId>", "Transitions the service into Active state"))
     .put("-transitionToStandby",
         new UsageInfo("<serviceId>", "Transitions the service into Standby state"))
     .put("-failover",
         new UsageInfo("[--"+FORCEFENCE+"] [--"+FORCEACTIVE+"] <serviceId> <serviceId>",
             "Failover from the first service to the second.\n" +
-            "Unconditionally fence services if the "+FORCEFENCE+" option is used.\n" +
+            "Unconditionally fence services if the --"+FORCEFENCE+" option is used.\n" +
             "Try to failover to the target service even if it is not ready if the " + 
-            FORCEACTIVE + " option is used."))
+            "--" + FORCEACTIVE + " option is used."))
     .put("-getServiceState",
         new UsageInfo("<serviceId>", "Returns the state of the service"))
     .put("-checkHealth",
@@ -228,7 +228,7 @@ public abstract class HAAdmin extends Configured implements Tool {
             "Refusing to manually manage HA state, since it may cause\n" +
             "a split-brain scenario or other incorrect state.\n" +
             "If you are very sure you know what you are doing, please \n" +
-            "specify the " + FORCEMANUAL + " flag.");
+            "specify the --" + FORCEMANUAL + " flag.");
         return false;
       } else {
         LOG.warn("Proceeding with manual HA state management even though\n" +
@@ -462,7 +462,7 @@ public abstract class HAAdmin extends Configured implements Tool {
   
   private boolean confirmForceManual() throws IOException {
      return ToolRunner.confirmPrompt(
-        "You have specified the " + FORCEMANUAL + " flag. This flag is " +
+        "You have specified the --" + FORCEMANUAL + " flag. This flag is " +
         "dangerous, as it can induce a split-brain scenario that WILL " +
         "CORRUPT your HDFS namespace, possibly irrecoverably.\n" +
         "\n" +
