@@ -378,7 +378,7 @@ public class YarnConfiguration extends Configuration {
       + "work-preserving-recovery.enabled";
   @Private
   public static final boolean DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED =
-      false;
+      true;
 
   public static final String RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS =
       RM_PREFIX + "work-preserving-recovery.scheduling-wait-ms";
