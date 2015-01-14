@@ -152,6 +152,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3019. Make work-preserving-recovery the default mechanism for RM 
     recovery. (Jian He via junping_du)
 
+    YARN-2807. Option "--forceactive" not works as described in usage of
+    "yarn rmadmin -transitionToActive". (Masatake Iwasaki via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
