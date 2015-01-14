@@ -271,7 +271,7 @@
     to YARN for experimenting the feature.
     </description>
     <name>yarn.resourcemanager.work-preserving-recovery.enabled</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 
   <property>
