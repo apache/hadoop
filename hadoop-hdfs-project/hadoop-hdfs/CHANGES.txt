@@ -430,6 +430,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7470. SecondaryNameNode need twice memory when calling
     reloadFromImageFile. (zhaoyunjiong via cnauroth)
 
+    HDFS-7585. Get TestEnhancedByteBufferAccess working on CPU architectures
+    with page sizes other than 4096 (Sam Liu via Colin P. McCabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
