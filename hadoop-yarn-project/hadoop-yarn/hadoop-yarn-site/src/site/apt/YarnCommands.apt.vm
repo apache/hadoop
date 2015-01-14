@@ -246,13 +246,19 @@ YARN Commands
   Usage:
 
 ----
-  yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshUserToGroupsMapping]
-                      [-refreshSuperUserGroupsConfiguration] [-refreshAdminAcls]
-                      [-refreshServiceAcl] [-getGroups [username]] [-help [cmd]]
-                      [-transitionToActive <serviceId>]
-                      [-transitionToStandby <serviceId>]
-                      [-getServiceState <serviceId>]
-                      [-checkHealth <serviceId>]
+  yarn rmadmin [-refreshQueues]
+               [-refreshNodes]
+               [-refreshUserToGroupsMapping] 
+               [-refreshSuperUserGroupsConfiguration]
+               [-refreshAdminAcls] 
+               [-refreshServiceAcl]
+               [-getGroups [username]]
+               [-transitionToActive [--forceactive] [--forcemanual] <serviceId>]
+               [-transitionToStandby [--forcemanual] <serviceId>]
+               [-failover [--forcefence] [--forceactive] <serviceId1> <serviceId2>]
+               [-getServiceState <serviceId>]
+               [-checkHealth <serviceId>]
+               [-help [cmd]]
 ----
 
 *---------------+--------------+
@@ -277,14 +283,26 @@ YARN Commands
 *---------------+--------------+
 | -getGroups [username] | Get groups the specified user belongs to.
 *---------------+--------------+
-| -help [cmd] | Displays help for the given command or all commands if none is
-|             | specified.
+| -transitionToActive [--forceactive] [--forcemanual] \<serviceId\> |
+|               | Transitions the service into Active state.
+|               | Try to make the target active
+|               | without checking that there is no active node
+|               | if the --forceactive option is used.
+|               | This command can not be used if automatic failover is enabled.
+|               | Though you can override this by --forcemanual option,
+|               | you need caution.
 *---------------+--------------+
-| -transitionToActive \<serviceId\> | Transitions the service into Active
-|                                   | state.
+| -transitionToStandby [--forcemanual] \<serviceId\> |
+|               | Transitions the service into Standby state.
+|               | This command can not be used if automatic failover is enabled.
+|               | Though you can override this by --forcemanual option,
+|               | you need caution.
 *---------------+--------------+
-| -transitionToStandby \<serviceId\> | Transitions the service into Standby
-|                                    | state.
+| -failover [--forceactive] \<serviceId1\> \<serviceId2\> |
+|               | Initiate a failover from serviceId1 to serviceId2.
+|               | Try to failover to the target service even if it is not ready
+|               | if the --forceactive option is used.
+|               | This command can not be used if automatic failover is enabled.
 *---------------+--------------+
 | -getServiceState \<serviceId\> | Returns the state of the service.
 *---------------+--------------+
@@ -292,6 +310,10 @@ YARN Commands
 |                            | check. The RMAdmin tool will exit with a
 |                            | non-zero exit code if the check fails.
 *---------------+--------------+
+| -help [cmd] | Displays help for the given command or all commands if none is
+|             | specified.
+*---------------+--------------+
+
 
   Runs ResourceManager admin client
 
