@@ -109,30 +109,6 @@ class CSQueueUtils {
     }
     return absoluteMaxCapacityByNodeLabels;
   }
-
-  public static int computeMaxActiveApplications(
-      ResourceCalculator calculator,
-      Resource clusterResource, Resource minimumAllocation, 
-      float maxAMResourcePercent, float absoluteMaxCapacity) {
-    return
-        Math.max(
-            (int)Math.ceil(
-                Resources.ratio(
-                    calculator, 
-                    clusterResource, 
-                    minimumAllocation) * 
-                    maxAMResourcePercent * absoluteMaxCapacity
-                ), 
-            1);
-  }
-
-  public static int computeMaxActiveApplicationsPerUser(
-      int maxActiveApplications, int userLimit, float userLimitFactor) {
-    return Math.max(
-        (int)Math.ceil(
-            maxActiveApplications * (userLimit / 100.0f) * userLimitFactor),
-        1);
-  }
   
   @Lock(CSQueue.class)
   public static void updateQueueStatistics(
