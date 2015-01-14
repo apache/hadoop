@@ -684,7 +684,7 @@ public class RMContainerAllocator extends RMContainerRequestor
         JobEventType.JOB_AM_REBOOT));
       throw new YarnRuntimeException(
         "Resource Manager doesn't recognize AttemptId: "
-            + this.getContext().getApplicationID(), e);
+            + this.getContext().getApplicationAttemptId(), e);
     } catch (ApplicationMasterNotRegisteredException e) {
       LOG.info("ApplicationMaster is out of sync with ResourceManager,"
           + " hence resync and send outstanding requests.");
