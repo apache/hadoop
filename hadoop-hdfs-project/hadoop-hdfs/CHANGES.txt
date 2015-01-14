@@ -502,6 +502,10 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7600. Refine hdfs admin classes to reuse common code. (jing9)
 
+    HDFS-2219. Change fsck to support fully qualified paths so that a 
+    particular namenode in a federated cluster with multiple namenodes
+    can be specified in the path parameter.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
