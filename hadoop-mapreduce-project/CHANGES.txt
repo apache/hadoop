@@ -38,6 +38,9 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6210. Use getApplicationAttemptId() instead of getApplicationId()
+    for logging AttemptId in RMContainerAllocator.java (Leitao Guo via aajisaka)
+
     MAPREDUCE-6177. Minor typo in the EncryptedShuffle document about
     ssl-client.xml (Yangping Wu via harsh)
 
