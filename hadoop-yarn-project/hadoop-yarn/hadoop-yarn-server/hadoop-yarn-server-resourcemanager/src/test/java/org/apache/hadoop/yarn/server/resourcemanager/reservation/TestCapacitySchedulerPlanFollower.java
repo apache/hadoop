@@ -82,6 +82,7 @@ public class TestCapacitySchedulerPlanFollower extends TestSchedulerPlanFollower
         .thenReturn(null);
     Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId) Matchers.any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
+    when(spyRMContext.getScheduler()).thenReturn(scheduler);
 
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();

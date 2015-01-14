@@ -173,6 +173,7 @@
       <Field name="userLimit" />
       <Field name="userLimitFactor" />
       <Field name="maxAMResourcePerQueuePercent" />
+      <Field name="lastClusterResource" />
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
