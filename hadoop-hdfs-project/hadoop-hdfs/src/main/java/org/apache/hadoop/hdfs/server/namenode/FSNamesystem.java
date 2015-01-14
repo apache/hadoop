@@ -585,6 +585,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     snapshotManager.clearSnapshottableDirs();
     cacheManager.clear();
     setImageLoaded(false);
+    blockManager.clear();
   }
 
   @VisibleForTesting
