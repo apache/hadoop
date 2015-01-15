@@ -192,14 +192,17 @@ public class RegistrySecurity extends AbstractService {
     String auth = conf.getTrimmed(KEY_REGISTRY_CLIENT_AUTH,
         REGISTRY_CLIENT_AUTH_ANONYMOUS);
 
-    // TODO JDK7 SWITCH
-    if (REGISTRY_CLIENT_AUTH_KERBEROS.equals(auth)) {
+    switch (auth) {
+    case REGISTRY_CLIENT_AUTH_KERBEROS:
       access = AccessPolicy.sasl;
-    } else if (REGISTRY_CLIENT_AUTH_DIGEST.equals(auth)) {
+      break;
+    case REGISTRY_CLIENT_AUTH_DIGEST:
       access = AccessPolicy.digest;
-    } else if (REGISTRY_CLIENT_AUTH_ANONYMOUS.equals(auth)) {
+      break;
+    case REGISTRY_CLIENT_AUTH_ANONYMOUS:
       access = AccessPolicy.anon;
-    } else {
+      break;
+    default:
       throw new ServiceStateException(E_UNKNOWN_AUTHENTICATION_MECHANISM
                                       + "\"" + auth + "\"");
     }
