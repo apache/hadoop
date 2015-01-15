@@ -1456,47 +1456,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     this.fsLock.readLock().lock();
   }
   @Override
-  public void longReadLockInterruptibly() throws InterruptedException {
-    this.fsLock.longReadLock().lockInterruptibly();
-    try {
-      this.fsLock.readLock().lockInterruptibly();
-    } catch (InterruptedException ie) {
-      // In the event we're interrupted while getting the normal FSNS read lock,
-      // release the long read lock.
-      this.fsLock.longReadLock().unlock();
-      throw ie;
-    }
-  }
-  @Override
-  public void longReadUnlock() {
-    this.fsLock.readLock().unlock();
-    this.fsLock.longReadLock().unlock();
-  }
-  @Override
   public void readUnlock() {
     this.fsLock.readLock().unlock();
   }
   @Override
   public void writeLock() {
-    this.fsLock.longReadLock().lock();
     this.fsLock.writeLock().lock();
   }
   @Override
   public void writeLockInterruptibly() throws InterruptedException {
-    this.fsLock.longReadLock().lockInterruptibly();
-    try {
-      this.fsLock.writeLock().lockInterruptibly();
-    } catch (InterruptedException ie) {
-      // In the event we're interrupted while getting the normal FSNS write
-      // lock, release the long read lock.
-      this.fsLock.longReadLock().unlock();
-      throw ie;
-    }
+    this.fsLock.writeLock().lockInterruptibly();
   }
   @Override
   public void writeUnlock() {
     this.fsLock.writeLock().unlock();
-    this.fsLock.longReadLock().unlock();
   }
   @Override
   public boolean hasWriteLock() {
@@ -6915,11 +6888,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return fsLock.coarseLock;
   }
   
-  @VisibleForTesting
-  public ReentrantLock getLongReadLockForTests() {
-    return fsLock.longReadLock;
-  }
-
   @VisibleForTesting
   public ReentrantLock getCpLockForTests() {
     return cpLock;
