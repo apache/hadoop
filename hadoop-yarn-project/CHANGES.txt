@@ -46,6 +46,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-3005. [JDK7] Use switch statement for String instead of if-else
+    statement in RegistrySecurity.java (Kengo Seki via aajisaka)
+
     YARN-2950. Change message to mandate, not suggest JS requirement on UI.
     (Dustin Cote via harsh)
 
