@@ -25,7 +25,7 @@ HDFS High Availability Using the Quorum Journal Manager
   This guide provides an overview of the HDFS High Availability (HA) feature
   and how to configure and manage an HA HDFS cluster, using the Quorum Journal
   Manager (QJM) feature.
- 
+
   This document assumes that the reader has a general understanding of
   general components and node types in an HDFS cluster. Please refer to the
   HDFS Architecture guide for details.
@@ -44,7 +44,7 @@ HDFS High Availability Using the Quorum Journal Manager
   an HDFS cluster. Each cluster had a single NameNode, and if that machine or
   process became unavailable, the cluster as a whole would be unavailable
   until the NameNode was either restarted or brought up on a separate machine.
-  
+
   This impacted the total availability of the HDFS cluster in two major ways:
 
     * In the case of an unplanned event such as a machine crash, the cluster would
@@ -52,7 +52,7 @@ HDFS High Availability Using the Quorum Journal Manager
 
     * Planned maintenance events such as software or hardware upgrades on the
       NameNode machine would result in windows of cluster downtime.
-  
+
   The HDFS High Availability feature addresses the above problems by providing
   the option of running two redundant NameNodes in the same cluster in an
   Active/Passive configuration with a hot standby. This allows a fast failover to
@@ -67,7 +67,7 @@ HDFS High Availability Using the Quorum Journal Manager
   for all client operations in the cluster, while the Standby is simply acting
   as a slave, maintaining enough state to provide a fast failover if
   necessary.
-  
+
   In order for the Standby node to keep its state synchronized with the Active
   node, both nodes communicate with a group of separate daemons called
   "JournalNodes" (JNs). When any namespace modification is performed by the
@@ -78,12 +78,12 @@ HDFS High Availability Using the Quorum Journal Manager
   failover, the Standby will ensure that it has read all of the edits from the
   JounalNodes before promoting itself to the Active state. This ensures that the
   namespace state is fully synchronized before a failover occurs.
-  
+
   In order to provide a fast failover, it is also necessary that the Standby node
   have up-to-date information regarding the location of blocks in the cluster.
   In order to achieve this, the DataNodes are configured with the location of
   both NameNodes, and send block location information and heartbeats to both.
-  
+
   It is vital for the correct operation of an HA cluster that only one of the
   NameNodes be Active at a time. Otherwise, the namespace state would quickly
   diverge between the two, risking data loss or other incorrect results.  In
@@ -113,7 +113,7 @@ HDFS High Availability Using the Quorum Journal Manager
     you should run an odd number of JNs, (i.e. 3, 5, 7, etc.). Note that when
     running with N JournalNodes, the system can tolerate at most (N - 1) / 2
     failures and continue to function normally.
-  
+
   Note that, in an HA cluster, the Standby NameNode also performs checkpoints of
   the namespace state, and thus it is not necessary to run a Secondary NameNode,
   CheckpointNode, or BackupNode in an HA cluster. In fact, to do so would be an
@@ -130,7 +130,7 @@ HDFS High Availability Using the Quorum Journal Manager
   The new configuration is designed such that all the nodes in the cluster may
   have the same configuration without the need for deploying different
   configuration files to different machines based on the type of the node.
- 
+
   Like HDFS Federation, HA clusters reuse the <<<nameservice ID>>> to identify a
   single HDFS instance that may in fact consist of multiple HA NameNodes. In
   addition, a new abstraction called <<<NameNode ID>>> is added with HA. Each
@@ -347,7 +347,7 @@ HDFS High Availability Using the Quorum Journal Manager
       <<dfs_namenode_rpc-address>> will contain the RPC address of the target node, even
       though the configuration may specify that variable as
       <<dfs.namenode.rpc-address.ns1.nn1>>.
-      
+
       Additionally, the following variables referring to the target node to be fenced
       are also available:
 
@@ -362,7 +362,7 @@ HDFS High Availability Using the Quorum Journal Manager
 *-----------------------:-----------------------------------+
 | $target_namenodeid    | the namenode ID of the NN to be fenced |
 *-----------------------:-----------------------------------+
-      
+
       These environment variables may also be used as substitutions in the shell
       command itself. For example:
 
@@ -372,7 +372,7 @@ HDFS High Availability Using the Quorum Journal Manager
   <value>shell(/path/to/my/script.sh --nameservice=$target_nameserviceid $target_host:$target_port)</value>
 </property>
 ---
-      
+
       If the shell command returns an exit
       code of 0, the fencing is determined to be successful. If it returns any other
       exit code, the fencing was not successful and the next fencing method in the
@@ -424,7 +424,7 @@ HDFS High Availability Using the Quorum Journal Manager
 
     * If you are setting up a fresh HDFS cluster, you should first run the format
     command (<hdfs namenode -format>) on one of NameNodes.
-  
+
     * If you have already formatted the NameNode, or are converting a
     non-HA-enabled cluster to be HA-enabled, you should now copy over the
     contents of your NameNode metadata directories to the other, unformatted
@@ -432,7 +432,7 @@ HDFS High Availability Using the Quorum Journal Manager
     unformatted NameNode. Running this command will also ensure that the
     JournalNodes (as configured by <<dfs.namenode.shared.edits.dir>>) contain
     sufficient edits transactions to be able to start both NameNodes.
-  
+
     * If you are converting a non-HA NameNode to be HA, you should run the
     command "<hdfs -initializeSharedEdits>", which will initialize the
     JournalNodes with the edits data from the local NameNode edits directories.
@@ -522,7 +522,7 @@ Usage: DFSHAAdmin [-ns <nameserviceId>]
   of coordination data, notifying clients of changes in that data, and
   monitoring clients for failures. The implementation of automatic HDFS failover
   relies on ZooKeeper for the following things:
-  
+
     * <<Failure detection>> - each of the NameNode machines in the cluster
     maintains a persistent session in ZooKeeper. If the machine crashes, the
     ZooKeeper session will expire, notifying the other NameNode that a failover
@@ -623,7 +623,7 @@ Usage: DFSHAAdmin [-ns <nameserviceId>]
   from one of the NameNode hosts.
 
 ----
-$ hdfs zkfc -formatZK
+[hdfs]$ $HADOOP_PREFIX/bin/hdfs zkfc -formatZK
 ----
 
   This will create a znode in ZooKeeper inside of which the automatic failover
@@ -643,7 +643,7 @@ $ hdfs zkfc -formatZK
   can start the daemon by running:
 
 ----
-$ hadoop-daemon.sh start zkfc
+[hdfs]$ $HADOOP_PREFIX/bin/hdfs --daemon start zkfc
 ----
 
 ** Securing access to ZooKeeper
@@ -684,7 +684,7 @@ digest:hdfs-zkfcs:mypassword
   a command like the following:
 
 ----
-$ java -cp $ZK_HOME/lib/*:$ZK_HOME/zookeeper-3.4.2.jar org.apache.zookeeper.server.auth.DigestAuthenticationProvider hdfs-zkfcs:mypassword
+[hdfs]$ java -cp $ZK_HOME/lib/*:$ZK_HOME/zookeeper-3.4.2.jar org.apache.zookeeper.server.auth.DigestAuthenticationProvider hdfs-zkfcs:mypassword
 output: hdfs-zkfcs:mypassword->hdfs-zkfcs:P/OQvnYyU/nF/mGYvB/xurX8dYs=
 ----
 
@@ -786,18 +786,18 @@ digest:hdfs-zkfcs:vlUvLnd8MlacsE80rDuu6ONESbM=:rwcda
     operations, the operation will fail.
 
     [[3]] Start one of the NNs with the <<<'-upgrade'>>> flag.
-  
+
     [[4]] On start, this NN will not enter the standby state as usual in an HA
     setup. Rather, this NN will immediately enter the active state, perform an
     upgrade of its local storage dirs, and also perform an upgrade of the shared
     edit log.
-  
+
     [[5]] At this point the other NN in the HA pair will be out of sync with
     the upgraded NN. In order to bring it back in sync and once again have a highly
     available setup, you should re-bootstrap this NameNode by running the NN with
     the <<<'-bootstrapStandby'>>> flag. It is an error to start this second NN with
     the <<<'-upgrade'>>> flag.
-  
+
   Note that if at any time you want to restart the NameNodes before finalizing
   or rolling back the upgrade, you should start the NNs as normal, i.e. without
   any special startup flag.
