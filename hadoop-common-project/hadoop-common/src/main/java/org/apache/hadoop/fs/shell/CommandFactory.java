@@ -124,6 +124,7 @@ public class CommandFactory extends Configured {
       if (cmdClass != null) {
         instance = ReflectionUtils.newInstance(cmdClass, conf);
         instance.setName(cmdName);
+        instance.setCommandFactory(this);
       }
     }
     return instance;

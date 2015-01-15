@@ -64,6 +64,8 @@ abstract public class Command extends Configured {
   public PrintStream out = System.out;
   /** allows stderr to be captured if necessary */
   public PrintStream err = System.err;
+  /** allows the command factory to be used if necessary */
+  private CommandFactory commandFactory = null;
 
   /** Constructor */
   protected Command() {
@@ -118,6 +120,15 @@ abstract public class Command extends Configured {
       }
     }
     return exitCode;
+  }
+
+  /** sets the command factory for later use */
+  public void setCommandFactory(CommandFactory factory) {
+    this.commandFactory = factory;
+  }
+  /** retrieves the command factory */
+  protected CommandFactory getCommandFactory() {
+    return this.commandFactory;
   }
 
   /**
@@ -304,7 +315,7 @@ abstract public class Command extends Configured {
     for (PathData item : items) {
       try {
         processPath(item);
-        if (recursive && item.stat.isDirectory()) {
+        if (recursive && isPathRecursable(item)) {
           recursePath(item);
         }
         postProcessPath(item);
@@ -312,6 +323,21 @@ abstract public class Command extends Configured {
         displayError(e);
       }
     }
+  }
+
+  /**
+   * Determines whether a {@link PathData} item is recursable. Default
+   * implementation is to recurse directories but can be overridden to recurse
+   * through symbolic links.
+   *
+   * @param item
+   *          a {@link PathData} object
+   * @return true if the item is recursable, false otherwise
+   * @throws IOException
+   *           if anything goes wrong in the user-implementation
+   */
+  protected boolean isPathRecursable(PathData item) throws IOException {
+    return item.stat.isDirectory();
   }
 
   /**

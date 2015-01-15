@@ -23,6 +23,8 @@ Release 2.7.0 - UNRELEASED
     Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
     Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
 
+    HADOOP-8989. hadoop fs -find feature (Jonathan Allen via aw)
+
   IMPROVEMENTS
 
     HADOOP-11483. HardLink.java should use the jdk7 createLink method (aajisaka)
