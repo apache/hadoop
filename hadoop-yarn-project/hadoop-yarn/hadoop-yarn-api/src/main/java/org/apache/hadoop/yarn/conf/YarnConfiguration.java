@@ -356,18 +356,18 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE =
       10;
 
-  //Delegation token related keys
-  public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 
+  //RM delegation token related keys
+  public static final String RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY =
     RM_PREFIX + "delegation.key.update-interval";
-  public static final long    DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT = 
+  public static final long RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT =
     24*60*60*1000; // 1 day
-  public static final String  DELEGATION_TOKEN_RENEW_INTERVAL_KEY = 
+  public static final String RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY =
     RM_PREFIX + "delegation.token.renew-interval";
-  public static final long    DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT = 
+  public static final long RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT =
     24*60*60*1000;  // 1 day
-  public static final String  DELEGATION_TOKEN_MAX_LIFETIME_KEY = 
+  public static final String RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY =
      RM_PREFIX + "delegation.token.max-lifetime";
-  public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT = 
+  public static final long RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
     7*24*60*60*1000; // 7 days
   
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
@@ -1381,6 +1381,20 @@ public class YarnConfiguration extends Configuration {
   /** Timeline service state store leveldb path */
   public static final String TIMELINE_SERVICE_LEVELDB_STATE_STORE_PATH =
       TIMELINE_SERVICE_LEVELDB_STATE_STORE_PREFIX + "path";
+
+  // Timeline delegation token related keys
+  public static final String  TIMELINE_DELEGATION_KEY_UPDATE_INTERVAL =
+      TIMELINE_SERVICE_PREFIX + "delegation.key.update-interval";
+  public static final long    DEFAULT_TIMELINE_DELEGATION_KEY_UPDATE_INTERVAL =
+      24*60*60*1000; // 1 day
+  public static final String  TIMELINE_DELEGATION_TOKEN_RENEW_INTERVAL =
+      TIMELINE_SERVICE_PREFIX + "delegation.token.renew-interval";
+  public static final long    DEFAULT_TIMELINE_DELEGATION_TOKEN_RENEW_INTERVAL =
+      24*60*60*1000;  // 1 day
+  public static final String  TIMELINE_DELEGATION_TOKEN_MAX_LIFETIME =
+      TIMELINE_SERVICE_PREFIX + "delegation.token.max-lifetime";
+  public static final long    DEFAULT_TIMELINE_DELEGATION_TOKEN_MAX_LIFETIME =
+      7*24*60*60*1000; // 7 days
 
   // ///////////////////////////////
   // Shared Cache Configs
