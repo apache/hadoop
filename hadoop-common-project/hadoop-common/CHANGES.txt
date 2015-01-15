@@ -115,6 +115,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11465. Fix findbugs warnings in hadoop-gridmix. (Varun Saxena via
     Arpit Agarwal)
 
+    HADOOP-11481. ClassCastException while using a key created by keytool to
+    create encryption zone. (Charles Lamb via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
