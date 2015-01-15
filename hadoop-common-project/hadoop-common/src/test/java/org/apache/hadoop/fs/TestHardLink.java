@@ -295,91 +295,11 @@ public class TestHardLink {
     String[] emptyList = {};
     
     //test the case of empty file list
-    int callCount = createHardLinkMult(src, emptyList, tgt_mult, 
-        getMaxAllowedCmdArgLength());
-    //check no exec calls were made
-    assertEquals(0, callCount);
+    createHardLinkMult(src, emptyList, tgt_mult);
     //check nothing changed in the directory tree
     validateSetup();
   }
-  
-  /**
-   * Test createHardLinkMult(), again, this time with the "too long list" 
-   * case where the total size of the command line arguments exceed the 
-   * allowed maximum.  In this case, the list should be automatically 
-   * broken up into chunks, each chunk no larger than the max allowed.
-   * 
-   * We use an extended version of the method call, specifying the
-   * size limit explicitly, to simulate the "too long" list with a 
-   * relatively short list.
-   */
-  @Test
-  public void testCreateHardLinkMultOversizeAndEmpty() throws IOException {
-    
-    // prep long filenames - each name takes 10 chars in the arg list
-    // (9 actual chars plus terminal null or delimeter blank)
-    String name1 = "x11111111";
-    String name2 = "x22222222";
-    String name3 = "x33333333";
-    File x1_long = new File(src, name1);
-    File x2_long = new File(src, name2);
-    File x3_long = new File(src, name3);
-    //set up source files with long file names
-    x1.renameTo(x1_long);
-    x2.renameTo(x2_long);
-    x3.renameTo(x3_long);
-    //validate setup
-    assertTrue(x1_long.exists());
-    assertTrue(x2_long.exists());
-    assertTrue(x3_long.exists());
-    assertFalse(x1.exists());
-    assertFalse(x2.exists());
-    assertFalse(x3.exists());
-    
-    //prep appropriate length information to construct test case for
-    //oversize filename list
-    int callCount;
-    String[] emptyList = {};
-    String[] fileNames = src.list();
-    //get fixed size of arg list without any filenames
-    int overhead = getLinkMultArgLength(src, emptyList, tgt_mult);
-    //select a maxLength that is slightly too short to hold 3 filenames
-    int maxLength = overhead + (int)(2.5 * (float)(1 + name1.length())); 
-    
-    //now test list of three filenames when there is room for only 2.5
-    callCount = createHardLinkMult(src, fileNames, tgt_mult, maxLength);
-    //check the request was completed in exactly two "chunks"
-    assertEquals(2, callCount);
-    String[] tgt_multNames = tgt_mult.list();
-    //sort directory listings before comparsion
-    Arrays.sort(fileNames);
-    Arrays.sort(tgt_multNames);
-    //and check the results were as expected in the dir tree
-    assertArrayEquals(fileNames, tgt_multNames);
-    
-    //Test the case where maxlength is too small even for one filename.
-    //It should go ahead and try the single files.
-    
-    //Clear the test dir tree
-    FileUtil.fullyDelete(tgt_mult);
-    assertFalse(tgt_mult.exists());
-    tgt_mult.mkdirs();
-    assertTrue(tgt_mult.exists() && tgt_mult.list().length == 0);
-    //set a limit size much smaller than a single filename
-    maxLength = overhead + (int)(0.5 * (float)(1 + name1.length()));
-    //attempt the method call
-    callCount = createHardLinkMult(src, fileNames, tgt_mult, 
-        maxLength);
-    //should go ahead with each of the three single file names
-    assertEquals(3, callCount);
-    tgt_multNames = tgt_mult.list();
-    //sort directory listings before comparsion
-    Arrays.sort(fileNames);
-    Arrays.sort(tgt_multNames);
-    //and check the results were as expected in the dir tree
-    assertArrayEquals(fileNames, tgt_multNames);
-  }
-  
+
   /*
    * Assume that this test won't usually be run on a Windows box.
    * This test case allows testing of the correct syntax of the Windows
@@ -392,18 +312,13 @@ public class TestHardLink {
    */
   @Test
   public void testWindowsSyntax() {
-    class win extends HardLinkCGWin {};
+    class win extends HardLinkCGWin {}
 
     //basic checks on array lengths
-    assertEquals(5, win.hardLinkCommand.length); 
-    assertEquals(7, win.hardLinkMultPrefix.length);
-    assertEquals(7, win.hardLinkMultSuffix.length);
     assertEquals(4, win.getLinkCountCommand.length);
 
-    assertTrue(win.hardLinkMultPrefix[4].equals("%f"));
     //make sure "%f" was not munged
     assertEquals(2, ("%f").length()); 
-    assertTrue(win.hardLinkMultDir.equals("\\%f"));
     //make sure "\\%f" was munged correctly
     assertEquals(3, ("\\%f").length()); 
     assertTrue(win.getLinkCountCommand[1].equals("hardlink"));

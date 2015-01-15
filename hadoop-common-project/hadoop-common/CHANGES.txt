@@ -25,6 +25,8 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-11483. HardLink.java should use the jdk7 createLink method (aajisaka)
+
     HADOOP-11156. DelegateToFileSystem should implement
     getFsStatus(final Path f). (Zhihai Xu via wang)
 
