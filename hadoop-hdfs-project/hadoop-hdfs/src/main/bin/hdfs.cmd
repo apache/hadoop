@@ -51,7 +51,15 @@ if "%1" == "--loglevel" (
       goto print_usage
   )
 
-  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir cacheadmin mover storagepolicies
+  if %hdfs-command% == classpath (
+    if not defined hdfs-command-arguments (
+      @rem No need to bother starting up a JVM for this simple case.
+      @echo %CLASSPATH%
+      exit /b
+    )
+  )
+
+  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir cacheadmin mover storagepolicies classpath
   for %%i in ( %hdfscommands% ) do (
     if %hdfs-command% == %%i set hdfscommand=true
   )
@@ -120,6 +128,10 @@ goto :eof
 
 :jmxget
   set CLASS=org.apache.hadoop.hdfs.tools.JMXGet
+  goto :eof
+
+:classpath
+  set CLASS=org.apache.hadoop.util.Classpath
   goto :eof
 
 :oiv

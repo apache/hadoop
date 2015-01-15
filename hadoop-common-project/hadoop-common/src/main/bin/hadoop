@@ -124,13 +124,7 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.util.NativeLibraryChecker
   ;;
   classpath)
-    if [[ "$#" -eq 1 ]]; then
-      CLASS=org.apache.hadoop.util.Classpath
-    else   
-      hadoop_finalize
-      echo "${CLASSPATH}"
-      exit 0
-    fi
+    hadoop_do_classpath_subcommand "$@"
   ;;
   credential)
     CLASS=org.apache.hadoop.security.alias.CredentialShell
