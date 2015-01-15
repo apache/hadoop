@@ -60,14 +60,14 @@ public class TimelineDelegationTokenSecretManagerService extends
     }
 
     long secretKeyInterval =
-        conf.getLong(YarnConfiguration.DELEGATION_KEY_UPDATE_INTERVAL_KEY,
-            YarnConfiguration.DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
+        conf.getLong(YarnConfiguration.TIMELINE_DELEGATION_KEY_UPDATE_INTERVAL,
+            YarnConfiguration.DEFAULT_TIMELINE_DELEGATION_KEY_UPDATE_INTERVAL);
     long tokenMaxLifetime =
-        conf.getLong(YarnConfiguration.DELEGATION_TOKEN_MAX_LIFETIME_KEY,
-            YarnConfiguration.DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
+        conf.getLong(YarnConfiguration.TIMELINE_DELEGATION_TOKEN_MAX_LIFETIME,
+            YarnConfiguration.DEFAULT_TIMELINE_DELEGATION_TOKEN_MAX_LIFETIME);
     long tokenRenewInterval =
-        conf.getLong(YarnConfiguration.DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
-            YarnConfiguration.DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+        conf.getLong(YarnConfiguration.TIMELINE_DELEGATION_TOKEN_RENEW_INTERVAL,
+            YarnConfiguration.DEFAULT_TIMELINE_DELEGATION_TOKEN_RENEW_INTERVAL);
     secretManager = new TimelineDelegationTokenSecretManager(secretKeyInterval,
         tokenMaxLifetime, tokenRenewInterval, 3600000, stateStore);
     super.init(conf);

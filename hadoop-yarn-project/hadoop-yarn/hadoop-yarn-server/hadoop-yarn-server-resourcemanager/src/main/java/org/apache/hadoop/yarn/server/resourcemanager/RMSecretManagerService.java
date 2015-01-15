@@ -127,14 +127,14 @@ public class RMSecretManagerService extends AbstractService {
   protected RMDelegationTokenSecretManager createRMDelegationTokenSecretManager(
       Configuration conf, RMContext rmContext) {
     long secretKeyInterval =
-        conf.getLong(YarnConfiguration.DELEGATION_KEY_UPDATE_INTERVAL_KEY,
-            YarnConfiguration.DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
+        conf.getLong(YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY,
+            YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
     long tokenMaxLifetime =
-        conf.getLong(YarnConfiguration.DELEGATION_TOKEN_MAX_LIFETIME_KEY,
-            YarnConfiguration.DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
+        conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
+            YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
     long tokenRenewInterval =
-        conf.getLong(YarnConfiguration.DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
-            YarnConfiguration.DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+        conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
+            YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
 
     return new RMDelegationTokenSecretManager(secretKeyInterval,
         tokenMaxLifetime, tokenRenewInterval, 3600000, rmContext);
