@@ -363,6 +363,20 @@ public class MetricsRegistry {
   }
 
   private void checkMetricName(String name) {
+    // Check for invalid characters in metric name
+    boolean foundWhitespace = false;
+    for (int i = 0; i < name.length(); i++) {
+      char c = name.charAt(i);
+      if (Character.isWhitespace(c)) {
+        foundWhitespace = true;
+        break;
+      }
+    }
+    if (foundWhitespace) {
+      throw new MetricsException("Metric name '"+ name +
+          "' contains illegal whitespace character");
+    }
+    // Check if name has already been registered
     if (metricsMap.containsKey(name)) {
       throw new MetricsException("Metric name "+ name +" already exists!");
     }
