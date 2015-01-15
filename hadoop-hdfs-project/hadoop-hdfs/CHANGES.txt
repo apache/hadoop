@@ -515,6 +515,8 @@ Release 2.7.0 - UNRELEASED
     particular namenode in a federated cluster with multiple namenodes
     can be specified in the path parameter.  (szetszwo)
 
+    HDFS-7457. DatanodeID generates excessive garbage. (daryn via kihwal)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
