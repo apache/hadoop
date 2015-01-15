@@ -1,6 +1,20 @@
 Hadoop YARN Change Log
 
-Trunk - Unreleased
+Branch YARN-2928: Timeline Server Next Generation: Phase 1
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    YARN-3063. Bootstrapping TimelineServer next generation module. (zjshen)
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Trunk - Unreleased 
 
   INCOMPATIBLE CHANGES
 

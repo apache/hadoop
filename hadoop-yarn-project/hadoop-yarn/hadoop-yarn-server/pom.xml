@@ -43,5 +43,6 @@
     <module>hadoop-yarn-server-tests</module>
     <module>hadoop-yarn-server-applicationhistoryservice</module>
     <module>hadoop-yarn-server-timeline-pluginstorage</module>
+    <module>hadoop-yarn-server-timelineservice</module>
   </modules>
 </project>
