@@ -517,6 +517,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7457. DatanodeID generates excessive garbage. (daryn via kihwal)
 
+    HDFS-7189. Add trace spans for DFSClient metadata operations. (Colin P.
+    McCabe via yliu)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
