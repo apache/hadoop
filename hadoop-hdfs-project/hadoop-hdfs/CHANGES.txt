@@ -265,6 +265,8 @@ Trunk (Unreleased)
 
     HDFS-7407. Minor typo in privileged pid/out/log names (aw)
 
+    HDFS-7581. HDFS documentation needs updating post-shell rewrite (aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
