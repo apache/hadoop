@@ -165,6 +165,7 @@ public class TestNodeManagerResync {
       throws IOException, InterruptedException, YarnException {
     NodeManager nm = new TestNodeManager2();
     YarnConfiguration conf = createNMConfig();
+    conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
     nm.init(conf);
     nm.start();
 

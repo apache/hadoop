@@ -340,6 +340,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2861. Fixed Timeline DT secret manager to not reuse RM's configs.
     (Zhijie Shen via jianhe)
 
+    YARN-3064. TestRMRestart/TestContainerResourceUsage/TestNodeManagerResync 
+    failure with allocation timeout. (Jian He via junping_du)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
