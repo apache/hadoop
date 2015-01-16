@@ -67,7 +67,7 @@ public class TestPendingCorruptDnMessages {
       // Change the gen stamp of the block on datanode to go back in time (gen
       // stamps start at 1000)
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
-      assertTrue(MiniDFSCluster.changeGenStampOfBlock(0, block, 900));
+      assertTrue(cluster.changeGenStampOfBlock(0, block, 900));
       
       // Stop the DN so the replica with the changed gen stamp will be reported
       // when this DN starts up.

@@ -358,7 +358,6 @@ public class TestReplication {
           0, Long.MAX_VALUE).get(0).getBlock();
       
       cluster.shutdown();
-      cluster = null;
       
       for (int i=0; i<25; i++) {
         buffer[i] = '0';
@@ -367,7 +366,7 @@ public class TestReplication {
       int fileCount = 0;
       // Choose 3 copies of block file - delete 1 and corrupt the remaining 2
       for (int dnIndex=0; dnIndex<3; dnIndex++) {
-        File blockFile = MiniDFSCluster.getBlockFile(dnIndex, block);
+        File blockFile = cluster.getBlockFile(dnIndex, block);
         LOG.info("Checking for file " + blockFile);
         
         if (blockFile != null && blockFile.exists()) {
@@ -454,7 +453,8 @@ public class TestReplication {
 
     // Change the length of a replica
     for (int i=0; i<cluster.getDataNodes().size(); i++) {
-      if (TestDatanodeBlockScanner.changeReplicaLength(block, i, lenDelta)) {
+      if (TestDatanodeBlockScanner.changeReplicaLength(cluster, block, i,
+          lenDelta)) {
         break;
       }
     }

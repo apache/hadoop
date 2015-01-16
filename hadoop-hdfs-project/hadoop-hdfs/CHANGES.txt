@@ -449,6 +449,10 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7635. Remove TestCorruptFilesJsp from branch-2. (cnauroth)
 
+    HDFS-7632. MiniDFSCluster configures DataNode data directories incorrectly if
+    using more than 1 DataNode and more than 2 storage locations per DataNode.
+    (cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

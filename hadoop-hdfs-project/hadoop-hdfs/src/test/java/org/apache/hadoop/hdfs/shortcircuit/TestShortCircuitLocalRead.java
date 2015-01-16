@@ -466,7 +466,7 @@ public class TestShortCircuitLocalRead {
             "waitReplication: " + e);
       }
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, TEST_PATH);
-      File dataFile = MiniDFSCluster.getBlockFile(0, block);
+      File dataFile = cluster.getBlockFile(0, block);
       cluster.shutdown();
       cluster = null;
       RandomAccessFile raf = null;
