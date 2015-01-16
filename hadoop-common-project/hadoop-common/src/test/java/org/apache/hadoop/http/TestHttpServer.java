@@ -67,7 +67,6 @@ import java.util.concurrent.Executors;
 public class TestHttpServer extends HttpServerFunctionalTest {
   static final Log LOG = LogFactory.getLog(TestHttpServer.class);
   private static HttpServer2 server;
-  private static URL baseUrl;
   private static final int MAX_THREADS = 10;
   
   @SuppressWarnings("serial")
@@ -118,17 +117,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       }
       out.close();
     }    
-  }
-
-  @SuppressWarnings("serial")
-  public static class LongHeaderServlet extends HttpServlet {
-    @Override
-    public void doGet(HttpServletRequest request,
-                      HttpServletResponse response
-    ) throws ServletException, IOException {
-      Assert.assertEquals(63 * 1024, request.getHeader("longheader").length());
-      response.setStatus(HttpServletResponse.SC_OK);
-    }
   }
 
   @SuppressWarnings("serial")
@@ -210,20 +198,10 @@ public class TestHttpServer extends HttpServerFunctionalTest {
                  readOutput(new URL(baseUrl, "/echomap?a=b&c<=d&a=>")));
   }
 
-  /** 
-   *  Test that verifies headers can be up to 64K long. 
-   *  The test adds a 63K header leaving 1K for other headers.
-   *  This is because the header buffer setting is for ALL headers,
-   *  names and values included. */
   @Test public void testLongHeader() throws Exception {
     URL url = new URL(baseUrl, "/longheader");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0 ; i < 63 * 1024; i++) {
-      sb.append("a");
-    }
-    conn.setRequestProperty("longheader", sb.toString());
-    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    testLongHeader(conn);
   }
 
   @Test public void testContentTypes() throws Exception {
