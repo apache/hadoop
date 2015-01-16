@@ -57,6 +57,7 @@ import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.event.ProgressEvent;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -176,6 +177,16 @@ public class S3AFileSystem extends FileSystem {
       DEFAULT_SOCKET_TIMEOUT));
 
     s3 = new AmazonS3Client(credentials, awsConf);
+    String endPoint = conf.getTrimmed(ENDPOINT,"");
+    if (!endPoint.isEmpty()) {
+      try {
+        s3.setEndpoint(endPoint);
+      } catch (IllegalArgumentException e) {
+        String msg = "Incorrect endpoint: "  + e.getMessage();
+        LOG.error(msg);
+        throw new IllegalArgumentException(msg, e);
+      }
+    }
 
     maxKeys = conf.getInt(MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS);
     partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
@@ -262,6 +273,14 @@ public class S3AFileSystem extends FileSystem {
     return uri;
   }
 
+  /**
+   * Returns the S3 client used by this filesystem.
+   * @return AmazonS3Client
+   */
+  @VisibleForTesting
+  AmazonS3Client getAmazonS3Client() {
+    return s3;
+  }
 
   public S3AFileSystem() {
     super();
