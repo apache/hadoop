@@ -179,10 +179,6 @@ public class TestDatanodeBlockScanner {
     cluster.shutdown();
   }
 
-  public static boolean corruptReplica(ExtendedBlock blk, int replica) throws IOException {
-    return MiniDFSCluster.corruptReplica(replica, blk);
-  }
-
   @Test
   public void testBlockCorruptionPolicy() throws Exception {
     Configuration conf = new HdfsConfiguration();
@@ -202,7 +198,7 @@ public class TestDatanodeBlockScanner {
     assertFalse(DFSTestUtil.allBlockReplicasCorrupt(cluster, file1, 0));
 
     // Corrupt random replica of block 
-    assertTrue(MiniDFSCluster.corruptReplica(rand, block));
+    assertTrue(cluster.corruptReplica(rand, block));
 
     // Restart the datanode hoping the corrupt block to be reported
     cluster.restartDataNode(rand);
@@ -213,9 +209,9 @@ public class TestDatanodeBlockScanner {
   
     // Corrupt all replicas. Now, block should be marked as corrupt
     // and we should get all the replicas 
-    assertTrue(MiniDFSCluster.corruptReplica(0, block));
-    assertTrue(MiniDFSCluster.corruptReplica(1, block));
-    assertTrue(MiniDFSCluster.corruptReplica(2, block));
+    assertTrue(cluster.corruptReplica(0, block));
+    assertTrue(cluster.corruptReplica(1, block));
+    assertTrue(cluster.corruptReplica(2, block));
 
     // Trigger each of the DNs to scan this block immediately.
     // The block pool scanner doesn't run frequently enough on its own
@@ -288,7 +284,7 @@ public class TestDatanodeBlockScanner {
       // Corrupt numCorruptReplicas replicas of block 
       int[] corruptReplicasDNIDs = new int[numCorruptReplicas];
       for (int i=0, j=0; (j != numCorruptReplicas) && (i < numDataNodes); i++) {
-        if (corruptReplica(block, i)) {
+        if (cluster.corruptReplica(i, block)) {
           corruptReplicasDNIDs[j++] = i;
           LOG.info("successfully corrupted block " + block + " on node " 
                    + i + " " + cluster.getDataNodes().get(i).getDisplayName());
@@ -373,7 +369,7 @@ public class TestDatanodeBlockScanner {
       assertTrue(waitForVerification(infoPort, fs, fileName, 1, startTime, TIMEOUT) >= startTime);
       
       // Truncate replica of block
-      if (!changeReplicaLength(block, 0, -1)) {
+      if (!changeReplicaLength(cluster, block, 0, -1)) {
         throw new IOException(
             "failed to find or change length of replica on node 0 "
             + cluster.getDataNodes().get(0).getDisplayName());
@@ -403,7 +399,7 @@ public class TestDatanodeBlockScanner {
           cluster.getFileSystem(), fileName, REPLICATION_FACTOR);
       
       // Make sure that truncated block will be deleted
-      waitForBlockDeleted(block, 0, TIMEOUT);
+      waitForBlockDeleted(cluster, block, 0, TIMEOUT);
     } finally {
       cluster.shutdown();
     }
@@ -412,9 +408,9 @@ public class TestDatanodeBlockScanner {
   /**
    * Change the length of a block at datanode dnIndex
    */
-  static boolean changeReplicaLength(ExtendedBlock blk, int dnIndex,
-      int lenDelta) throws IOException {
-    File blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
+  static boolean changeReplicaLength(MiniDFSCluster cluster, ExtendedBlock blk,
+      int dnIndex, int lenDelta) throws IOException {
+    File blockFile = cluster.getBlockFile(dnIndex, blk);
     if (blockFile != null && blockFile.exists()) {
       RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
       raFile.setLength(raFile.length()+lenDelta);
@@ -425,9 +421,10 @@ public class TestDatanodeBlockScanner {
     return false;
   }
   
-  private static void waitForBlockDeleted(ExtendedBlock blk, int dnIndex,
-      long timeout) throws TimeoutException, InterruptedException {
-    File blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
+  private static void waitForBlockDeleted(MiniDFSCluster cluster,
+      ExtendedBlock blk, int dnIndex, long timeout) throws TimeoutException,
+      InterruptedException {
+    File blockFile = cluster.getBlockFile(dnIndex, blk);
     long failtime = Time.monotonicNow()
                     + ((timeout > 0) ? timeout : Long.MAX_VALUE);
     while (blockFile != null && blockFile.exists()) {
@@ -436,7 +433,7 @@ public class TestDatanodeBlockScanner {
             + blockFile.getPath() + (blockFile.exists() ? " still exists; " : " is absent; "));
       }
       Thread.sleep(100);
-      blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
+      blockFile = cluster.getBlockFile(dnIndex, blk);
     }
   }
   

@@ -1876,7 +1876,7 @@ public class MiniDFSCluster {
    * @return true if a replica was corrupted, false otherwise
    * Types: delete, write bad data, truncate
    */
-  public static boolean corruptReplica(int i, ExtendedBlock blk)
+  public boolean corruptReplica(int i, ExtendedBlock blk)
       throws IOException {
     File blockFile = getBlockFile(i, blk);
     return corruptBlock(blockFile);
@@ -1913,7 +1913,7 @@ public class MiniDFSCluster {
     return blockFile.delete();
   }
 
-  public static boolean changeGenStampOfBlock(int dnIndex, ExtendedBlock blk,
+  public boolean changeGenStampOfBlock(int dnIndex, ExtendedBlock blk,
       long newGenStamp) throws IOException {
     File blockFile = getBlockFile(dnIndex, blk);
     File metaFile = FsDatasetUtil.findMetaFile(blockFile);
@@ -2429,7 +2429,7 @@ public class MiniDFSCluster {
    * @param dirIndex directory index.
    * @return Storage directory
    */
-  public static File getStorageDir(int dnIndex, int dirIndex) {
+  public File getStorageDir(int dnIndex, int dirIndex) {
     return new File(getBaseDirectory(), getStorageDirPath(dnIndex, dirIndex));
   }
 
@@ -2440,8 +2440,8 @@ public class MiniDFSCluster {
    * @param dirIndex directory index.
    * @return storage directory path
    */
-  private static String getStorageDirPath(int dnIndex, int dirIndex) {
-    return "data/data" + (2 * dnIndex + 1 + dirIndex);
+  private String getStorageDirPath(int dnIndex, int dirIndex) {
+    return "data/data" + (storagesPerDatanode * dnIndex + 1 + dirIndex);
   }
 
   /**
@@ -2570,10 +2570,10 @@ public class MiniDFSCluster {
    * @param dnIndex Index of the datanode to get block files for
    * @param block block for which corresponding files are needed
    */
-  public static File getBlockFile(int dnIndex, ExtendedBlock block) {
+  public File getBlockFile(int dnIndex, ExtendedBlock block) {
     // Check for block file in the two storage directories of the datanode
     for (int i = 0; i <=1 ; i++) {
-      File storageDir = MiniDFSCluster.getStorageDir(dnIndex, i);
+      File storageDir = getStorageDir(dnIndex, i);
       File blockFile = getBlockFile(storageDir, block);
       if (blockFile.exists()) {
         return blockFile;
@@ -2588,10 +2588,10 @@ public class MiniDFSCluster {
    * @param dnIndex Index of the datanode to get block files for
    * @param block block for which corresponding files are needed
    */
-  public static File getBlockMetadataFile(int dnIndex, ExtendedBlock block) {
+  public File getBlockMetadataFile(int dnIndex, ExtendedBlock block) {
     // Check for block file in the two storage directories of the datanode
     for (int i = 0; i <=1 ; i++) {
-      File storageDir = MiniDFSCluster.getStorageDir(dnIndex, i);
+      File storageDir = getStorageDir(dnIndex, i);
       File blockMetaFile = getBlockMetadataFile(storageDir, block);
       if (blockMetaFile.exists()) {
         return blockMetaFile;
