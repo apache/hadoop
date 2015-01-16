@@ -28,7 +28,10 @@ public class Constants {
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS = "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
-  
+
+  //use a custom endpoint?
+  public static final String ENDPOINT = "fs.s3a.endpoint";
+
   // number of times we should retry errors
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
   public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
