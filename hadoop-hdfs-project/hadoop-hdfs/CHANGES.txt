@@ -447,6 +447,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7585. Get TestEnhancedByteBufferAccess working on CPU architectures
     with page sizes other than 4096 (Sam Liu via Colin P. McCabe)
 
+    HDFS-7635. Remove TestCorruptFilesJsp from branch-2. (cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
