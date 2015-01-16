@@ -28,15 +28,32 @@ import org.apache.hadoop.http.HttpServer2.Builder;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.MalformedURLException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * This is a base class for functional tests of the {@link HttpServer2}.
  * The methods are static for other classes to import statically.
  */
 public class HttpServerFunctionalTest extends Assert {
+  @SuppressWarnings("serial")
+  public static class LongHeaderServlet extends HttpServlet {
+    @Override
+    public void doGet(HttpServletRequest request,
+                      HttpServletResponse response
+    ) throws ServletException, IOException {
+      Assert.assertEquals(63 * 1024, request.getHeader("longheader").length());
+      response.setStatus(HttpServletResponse.SC_OK);
+    }
+  }
+
   /** JVM property for the webapp test dir : {@value} */
   public static final String TEST_BUILD_WEBAPPS = "test.build.webapps";
   /** expected location of the test.build.webapps dir: {@value} */
@@ -44,6 +61,7 @@ public class HttpServerFunctionalTest extends Assert {
   
   /** name of the test webapp: {@value} */
   private static final String TEST = "test";
+  protected static URL baseUrl;
 
   /**
    * Create but do not start the test webapp server. The test webapp dir is
@@ -226,5 +244,19 @@ public class HttpServerFunctionalTest extends Assert {
       len = in.read(buffer);
     }
     return out.toString();
+  }
+
+  /**
+   *  Test that verifies headers can be up to 64K long.
+   *  The test adds a 63K header leaving 1K for other headers.
+   *  This is because the header buffer setting is for ALL headers,
+   *  names and values included. */
+  protected void testLongHeader(HttpURLConnection conn) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0 ; i < 63 * 1024; i++) {
+      sb.append("a");
+    }
+    conn.setRequestProperty("longheader", sb.toString());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
   }
 }
