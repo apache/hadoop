@@ -129,15 +129,15 @@ case $COMMAND in
     elif [ "$COMMAND" = "trace" ] ; then
       CLASS=org.apache.hadoop.tracing.TraceAdmin
     elif [ "$COMMAND" = "classpath" ] ; then
-      if [ "$#" -eq 1 ]; then
+      if [ "$#" -gt 1 ]; then
+        CLASS=org.apache.hadoop.util.Classpath
+      else
         # No need to bother starting up a JVM for this simple case.
         if $cygwin; then
           CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
         fi
         echo $CLASSPATH
         exit
-      else
-        CLASS=org.apache.hadoop.util.Classpath
       fi
     elif [[ "$COMMAND" = -*  ]] ; then
         # class and package names cannot begin with a -

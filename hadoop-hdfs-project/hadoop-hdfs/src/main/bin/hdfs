@@ -43,6 +43,7 @@ function print_usage(){
   echo "Usage: hdfs [--config confdir] [--loglevel loglevel] COMMAND"
   echo "       where COMMAND is one of:"
   echo "  dfs                  run a filesystem command on the file systems supported in Hadoop."
+  echo "  classpath            prints the classpath"
   echo "  namenode -format     format the DFS filesystem"
   echo "  secondarynamenode    run the DFS secondary namenode"
   echo "  namenode             run the DFS namenode"
@@ -207,6 +208,17 @@ elif [ "$COMMAND" = "version" ] ; then
   CLASS=org.apache.hadoop.util.VersionInfo
 elif [ "$COMMAND" = "debug" ]; then
   CLASS=org.apache.hadoop.hdfs.tools.DebugAdmin
+elif [ "$COMMAND" = "classpath" ]; then
+  if [ "$#" -gt 0 ]; then
+    CLASS=org.apache.hadoop.util.Classpath
+  else
+    # No need to bother starting up a JVM for this simple case.
+    if $cygwin; then
+      CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
+    fi
+    echo $CLASSPATH
+    exit 0
+  fi
 else
   CLASS="$COMMAND"
 fi

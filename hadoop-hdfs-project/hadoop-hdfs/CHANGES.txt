@@ -250,6 +250,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7189. Add trace spans for DFSClient metadata operations. (Colin P.
     McCabe via yliu)
 
+    HDFS-7591. hdfs classpath command should support same options as hadoop
+    classpath. (Varun Saxena via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
