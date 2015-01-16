@@ -134,7 +134,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
     UserGroupInformation.setConfiguration(conf);
-    conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
+    conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
     rmAddr = new InetSocketAddress("localhost", 8032);
     Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);

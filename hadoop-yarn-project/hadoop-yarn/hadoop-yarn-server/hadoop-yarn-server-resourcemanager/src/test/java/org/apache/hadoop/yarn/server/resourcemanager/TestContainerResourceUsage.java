@@ -61,7 +61,6 @@ public class TestContainerResourceUsage {
     rootLogger.setLevel(Level.DEBUG);
     conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
-    conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
   }
@@ -137,6 +136,8 @@ public class TestContainerResourceUsage {
     // Set max attempts to 1 so that when the first attempt fails, the app
     // won't try to start a new one.
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
+    conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
 
