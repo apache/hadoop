@@ -270,6 +270,8 @@ Trunk (Unreleased)
 
     HDFS-7581. HDFS documentation needs updating post-shell rewrite (aw)
 
+    HDFS-7606. Fix potential NPE in INodeFile.getBlocks(). (Byron Wong via shv)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
