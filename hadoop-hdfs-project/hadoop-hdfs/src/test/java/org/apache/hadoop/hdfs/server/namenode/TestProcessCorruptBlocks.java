@@ -267,14 +267,14 @@ public class TestProcessCorruptBlocks {
     // corrupt the block on datanode dnIndex
     // the indexes change once the nodes are restarted.
     // But the datadirectory will not change
-    assertTrue(MiniDFSCluster.corruptReplica(dnIndex, block));
+    assertTrue(cluster.corruptReplica(dnIndex, block));
 
     DataNodeProperties dnProps = cluster.stopDataNode(0);
 
     // Each datanode has multiple data dirs, check each
     for (int dirIndex = 0; dirIndex < 2; dirIndex++) {
       final String bpid = cluster.getNamesystem().getBlockPoolId();
-      File storageDir = MiniDFSCluster.getStorageDir(dnIndex, dirIndex);
+      File storageDir = cluster.getStorageDir(dnIndex, dirIndex);
       File dataDir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       File scanLogFile = new File(dataDir, "dncp_block_verification.log.curr");
       if (scanLogFile.exists()) {

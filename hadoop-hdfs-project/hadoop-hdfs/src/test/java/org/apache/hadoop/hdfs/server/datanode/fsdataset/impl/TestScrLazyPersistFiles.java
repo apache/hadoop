@@ -178,7 +178,7 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
 
     // Verify short-circuit read from RAM_DISK.
     ensureFileReplicasOnStorageType(path1, RAM_DISK);
-    File metaFile = MiniDFSCluster.getBlockMetadataFile(0,
+    File metaFile = cluster.getBlockMetadataFile(0,
         DFSTestUtil.getFirstBlock(fs, path1));
     assertTrue(metaFile.length() <= BlockMetadataHeader.getHeaderSize());
     assertTrue(verifyReadRandomFile(path1, BLOCK_SIZE, SEED));
@@ -188,7 +188,7 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
 
     // Verify short-circuit read from RAM_DISK once again.
     ensureFileReplicasOnStorageType(path1, RAM_DISK);
-    metaFile = MiniDFSCluster.getBlockMetadataFile(0,
+    metaFile = cluster.getBlockMetadataFile(0,
         DFSTestUtil.getFirstBlock(fs, path1));
     assertTrue(metaFile.length() <= BlockMetadataHeader.getHeaderSize());
     assertTrue(verifyReadRandomFile(path1, BLOCK_SIZE, SEED));
@@ -201,7 +201,7 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
     // Verify short-circuit read still works from DEFAULT storage.  This time,
     // we'll have a checksum written during lazy persistence.
     ensureFileReplicasOnStorageType(path1, DEFAULT);
-    metaFile = MiniDFSCluster.getBlockMetadataFile(0,
+    metaFile = cluster.getBlockMetadataFile(0,
         DFSTestUtil.getFirstBlock(fs, path1));
     assertTrue(metaFile.length() > BlockMetadataHeader.getHeaderSize());
     assertTrue(verifyReadRandomFile(path1, BLOCK_SIZE, SEED));
@@ -251,7 +251,7 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
     // Corrupt the lazy-persisted block file, and verify that checksum
     // verification catches it.
     ensureFileReplicasOnStorageType(path1, DEFAULT);
-    MiniDFSCluster.corruptReplica(0, DFSTestUtil.getFirstBlock(fs, path1));
+    cluster.corruptReplica(0, DFSTestUtil.getFirstBlock(fs, path1));
     exception.expect(ChecksumException.class);
     DFSTestUtil.readFileBuffer(fs, path1);
   }
@@ -291,7 +291,7 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
     // Corrupt the lazy-persisted checksum file, and verify that checksum
     // verification catches it.
     ensureFileReplicasOnStorageType(path1, DEFAULT);
-    File metaFile = MiniDFSCluster.getBlockMetadataFile(0,
+    File metaFile = cluster.getBlockMetadataFile(0,
         DFSTestUtil.getFirstBlock(fs, path1));
     MiniDFSCluster.corruptBlock(metaFile);
     exception.expect(ChecksumException.class);

@@ -160,8 +160,8 @@ public class TestBlockReaderLocal {
       fsIn.close();
       fsIn = null;
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, TEST_PATH);
-      File dataFile = MiniDFSCluster.getBlockFile(0, block);
-      File metaFile = MiniDFSCluster.getBlockMetadataFile(0, block);
+      File dataFile = cluster.getBlockFile(0, block);
+      File metaFile = cluster.getBlockMetadataFile(0, block);
 
       ShortCircuitCache shortCircuitCache =
           ClientContext.getFromConf(conf).getShortCircuitCache();
