@@ -343,6 +343,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3064. TestRMRestart/TestContainerResourceUsage/TestNodeManagerResync 
     failure with allocation timeout. (Jian He via junping_du)
 
+    YARN-2815. Excluded transitive dependency of JLine in hadoop-yarn-server-common.
+    (Ferdinand Xu via zjshen)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
