@@ -173,7 +173,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
       return object.getDataInputStream();
     } catch (S3ServiceException e) {
       if ("NoSuchKey".equals(e.getS3ErrorCode())) {
-        return null;
+        throw new IOException(key + " doesn't exist");
       }
       if (e.getCause() instanceof IOException) {
         throw (IOException) e.getCause();
