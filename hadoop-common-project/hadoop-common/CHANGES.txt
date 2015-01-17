@@ -360,6 +360,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11350. The size of header buffer of HttpServer is too small when
     HTTPS is enabled. (Benoy Antony via wheat9)
 
+    HADOOP-10542 Potential null pointer dereference in Jets3tFileSystemStore
+    retrieveBlock(). (Ted Yu via stevel)	
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
