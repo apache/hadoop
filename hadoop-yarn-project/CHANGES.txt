@@ -161,6 +161,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2807. Option "--forceactive" not works as described in usage of
     "yarn rmadmin -transitionToActive". (Masatake Iwasaki via xgong)
 
+    YARN-2984. Metrics for container's actual memory usage. (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
