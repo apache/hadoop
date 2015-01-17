@@ -822,6 +822,20 @@ public class YarnConfiguration extends Configuration {
       "container-monitor.procfs-tree.smaps-based-rss.enabled";
   public static final boolean DEFAULT_PROCFS_USE_SMAPS_BASED_RSS_ENABLED =
       false;
+
+  /** Enable/disable container metrics. */
+  @Private
+  public static final String NM_CONTAINER_METRICS_ENABLE =
+      NM_PREFIX + "container-metrics.enable";
+  @Private
+  public static final boolean DEFAULT_NM_CONTAINER_METRICS_ENABLE = true;
+
+  /** Container metrics flush period. -1 for flush on completion. */
+  @Private
+  public static final String NM_CONTAINER_METRICS_PERIOD_MS =
+      NM_PREFIX + "container-metrics.period-ms";
+  @Private
+  public static final int DEFAULT_NM_CONTAINER_METRICS_PERIOD_MS = -1;
   
   /** Prefix for all node manager disk health checker configs. */
   private static final String NM_DISK_HEALTH_CHECK_PREFIX =

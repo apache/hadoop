@@ -51,6 +51,8 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   private long monitoringInterval;
   private MonitoringThread monitoringThread;
+  private boolean containerMetricsEnabled;
+  private long containerMetricsPeriodMs;
 
   final List<ContainerId> containersToBeRemoved;
   final Map<ContainerId, ProcessTreeInfo> containersToBeAdded;
@@ -105,6 +107,13 @@ public class ContainersMonitorImpl extends AbstractService implements
     this.conf = conf;
     LOG.info(" Using ResourceCalculatorProcessTree : "
         + this.processTreeClass);
+
+    this.containerMetricsEnabled =
+        conf.getBoolean(YarnConfiguration.NM_CONTAINER_METRICS_ENABLE,
+            YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_ENABLE);
+    this.containerMetricsPeriodMs =
+        conf.getLong(YarnConfiguration.NM_CONTAINER_METRICS_PERIOD_MS,
+            YarnConfiguration.DEFAULT_NM_CONTAINER_METRICS_PERIOD_MS);
 
     long configuredPMemForContainers = conf.getLong(
         YarnConfiguration.NM_PMEM_MB,
@@ -352,6 +361,9 @@ public class ContainersMonitorImpl extends AbstractService implements
         // Remove finished containers
         synchronized (containersToBeRemoved) {
           for (ContainerId containerId : containersToBeRemoved) {
+            if (containerMetricsEnabled) {
+              ContainerMetrics.forContainer(containerId).finished();
+            }
             trackingContainers.remove(containerId);
             LOG.info("Stopping resource-monitoring for " + containerId);
           }
@@ -408,7 +420,15 @@ public class ContainersMonitorImpl extends AbstractService implements
             LOG.info(String.format(
                 "Memory usage of ProcessTree %s for container-id %s: ",
                      pId, containerId.toString()) +
-                formatUsageString(currentVmemUsage, vmemLimit, currentPmemUsage, pmemLimit));
+                formatUsageString(
+                    currentVmemUsage, vmemLimit, currentPmemUsage, pmemLimit));
+
+            // Add usage to container metrics
+            if (containerMetricsEnabled) {
+              ContainerMetrics.forContainer(
+                  containerId, containerMetricsPeriodMs).recordMemoryUsage(
+                  (int) (currentPmemUsage >> 20));
+            }
 
             boolean isMemoryOverLimit = false;
             String msg = "";
