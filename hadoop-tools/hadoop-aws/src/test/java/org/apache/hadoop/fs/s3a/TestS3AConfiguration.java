@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.services.s3.AmazonS3Client;
 import org.apache.commons.lang.StringUtils;
+import com.amazonaws.AmazonClientException;
 import org.apache.hadoop.conf.Configuration;
 
 import org.junit.Rule;
@@ -80,6 +81,100 @@ public class TestS3AConfiguration {
       }
       assertEquals("Endpoint config setting and bucket location differ: ",
           endPointRegion, s3.getBucketLocation(fs.getUri().getHost()));
+    }
+  }
+
+  @Test
+  public void TestProxyConnection() throws Exception {
+    conf = new Configuration();
+    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
+    conf.set(Constants.PROXY_HOST, "127.0.0.1");
+    conf.setInt(Constants.PROXY_PORT, 1);
+    String proxy =
+        conf.get(Constants.PROXY_HOST) + ":" + conf.get(Constants.PROXY_PORT);
+    try {
+      fs = S3ATestUtils.createTestFileSystem(conf);
+      fail("Expected a connection error for proxy server at " + proxy);
+    } catch (AmazonClientException e) {
+      if (!e.getMessage().contains(proxy + " refused")) {
+        throw e;
+      }
+    }
+  }
+
+  @Test
+  public void TestProxyPortWithoutHost() throws Exception {
+    conf = new Configuration();
+    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
+    conf.setInt(Constants.PROXY_PORT, 1);
+    try {
+      fs = S3ATestUtils.createTestFileSystem(conf);
+      fail("Expected a proxy configuration error");
+    } catch (IllegalArgumentException e) {
+      String msg = e.toString();
+      if (!msg.contains(Constants.PROXY_HOST) &&
+          !msg.contains(Constants.PROXY_PORT)) {
+        throw e;
+      }
+    }
+  }
+
+  @Test
+  public void TestAutomaticProxyPortSelection() throws Exception {
+    conf = new Configuration();
+    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
+    conf.set(Constants.PROXY_HOST, "127.0.0.1");
+    conf.set(Constants.SECURE_CONNECTIONS, "true");
+    try {
+      fs = S3ATestUtils.createTestFileSystem(conf);
+      fail("Expected a connection error for proxy server");
+    } catch (AmazonClientException e) {
+      if (!e.getMessage().contains("443")) {
+        throw e;
+      }
+    }
+    conf.set(Constants.SECURE_CONNECTIONS, "false");
+    try {
+      fs = S3ATestUtils.createTestFileSystem(conf);
+      fail("Expected a connection error for proxy server");
+    } catch (AmazonClientException e) {
+      if (!e.getMessage().contains("80")) {
+        throw e;
+      }
+    }
+  }
+
+  @Test
+  public void TestUsernameInconsistentWithPassword() throws Exception {
+    conf = new Configuration();
+    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
+    conf.set(Constants.PROXY_HOST, "127.0.0.1");
+    conf.setInt(Constants.PROXY_PORT, 1);
+    conf.set(Constants.PROXY_USERNAME, "user");
+    try {
+      fs = S3ATestUtils.createTestFileSystem(conf);
+      fail("Expected a connection error for proxy server");
+    } catch (IllegalArgumentException e) {
+      String msg = e.toString();
+      if (!msg.contains(Constants.PROXY_USERNAME) &&
+          !msg.contains(Constants.PROXY_PASSWORD)) {
+        throw e;
+      }
+    }
+    conf = new Configuration();
+    conf.setInt(Constants.MAX_ERROR_RETRIES, 2);
+    conf.set(Constants.PROXY_HOST, "127.0.0.1");
+    conf.setInt(Constants.PROXY_PORT, 1);
+    conf.set(Constants.PROXY_PASSWORD, "password");
+    try {
+      fs = S3ATestUtils.createTestFileSystem(conf);
+      fail("Expected a connection error for proxy server");
+    } catch (IllegalArgumentException e) {
+      String msg = e.toString();
+      if (!msg.contains(Constants.PROXY_USERNAME) &&
+          !msg.contains(Constants.PROXY_PASSWORD)) {
+        throw e;
+      }
     }
   }
 }
