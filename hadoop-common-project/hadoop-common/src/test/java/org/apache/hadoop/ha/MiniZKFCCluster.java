@@ -158,8 +158,8 @@ public class MiniZKFCCluster {
    */
   public void waitForHAState(int idx, HAServiceState state)
       throws Exception {
-    DummyHAService svc = getService(idx);
-    while (svc.state != state) {
+    DummyZKFC svc = getZkfc(idx);
+    while (svc.getServiceState() != state) {
       ctx.checkException();
       Thread.sleep(50);
     }

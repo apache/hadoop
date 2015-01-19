@@ -153,7 +153,9 @@ public abstract class ZKFailoverController {
   public HAServiceTarget getLocalTarget() {
     return localTarget;
   }
-  
+
+  HAServiceState getServiceState() { return serviceState; }
+
   public int run(final String[] args) throws Exception {
     if (!localTarget.isAutoFailoverEnabled()) {
       LOG.fatal("Automatic failover is not enabled for " + localTarget + "." +
