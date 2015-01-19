@@ -456,6 +456,8 @@ Release 2.7.0 - UNRELEASED
     using more than 1 DataNode and more than 2 storage locations per DataNode.
     (cnauroth)
 
+    HDFS-7637. Fix the check condition for reserved path. (Yi Liu via jing9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
