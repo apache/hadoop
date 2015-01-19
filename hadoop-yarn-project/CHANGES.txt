@@ -348,6 +348,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2815. Excluded transitive dependency of JLine in hadoop-yarn-server-common.
     (Ferdinand Xu via zjshen)
 
+    YARN-3070. TestRMAdminCLI#testHelp fails for transitionToActive command. 
+    (Contributed by Junping Du)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
