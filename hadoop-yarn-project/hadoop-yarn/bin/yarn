@@ -81,9 +81,7 @@ case "${COMMAND}" in
     set -- "${COMMAND}" "$@"
   ;;
   classpath)
-    hadoop_finalize
-    echo "${CLASSPATH}"
-    exit
+    hadoop_do_classpath_subcommand "$@"
   ;;
   daemonlog)
     CLASS=org.apache.hadoop.log.LogLevel
