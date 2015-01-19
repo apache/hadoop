@@ -162,7 +162,7 @@ public class BlockMetadataHeader {
    * The current file position will be altered by this method.
    * If an error occurs, the file is <em>not</em> closed.
    */
-  static BlockMetadataHeader readHeader(RandomAccessFile raf) throws IOException {
+  public static BlockMetadataHeader readHeader(RandomAccessFile raf) throws IOException {
     byte[] buf = new byte[getHeaderSize()];
     raf.seek(0);
     raf.readFully(buf, 0, buf.length);

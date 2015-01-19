@@ -229,14 +229,15 @@ class RamDiskAsyncLazyPersistService {
     @Override
     public void run() {
       boolean succeeded = false;
+      final FsDatasetImpl dataset = (FsDatasetImpl)datanode.getFSDataset();
       try {
         // No FsDatasetImpl lock for the file copy
         File targetFiles[] = FsDatasetImpl.copyBlockFiles(
             blockId, genStamp, metaFile, blockFile, lazyPersistDir, true);
 
         // Lock FsDataSetImpl during onCompleteLazyPersist callback
-        datanode.getFSDataset().onCompleteLazyPersist(bpId, blockId,
-            creationTime, targetFiles, targetVolume);
+        dataset.onCompleteLazyPersist(bpId, blockId,
+                creationTime, targetFiles, targetVolume);
         succeeded = true;
       } catch (Exception e){
         FsDatasetImpl.LOG.warn(
@@ -244,7 +245,7 @@ class RamDiskAsyncLazyPersistService {
             + bpId + "block Id: " + blockId, e);
       } finally {
         if (!succeeded) {
-          datanode.getFSDataset().onFailLazyPersist(bpId, blockId);
+          dataset.onFailLazyPersist(bpId, blockId);
         }
       }
     }
