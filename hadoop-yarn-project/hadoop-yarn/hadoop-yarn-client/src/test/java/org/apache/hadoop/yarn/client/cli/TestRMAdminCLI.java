@@ -333,8 +333,8 @@ public class TestRMAdminCLI {
       testError(new String[] { "-help", "-getGroups" },
           "Usage: yarn rmadmin [-getGroups [username]]", dataErr, 0);
       testError(new String[] { "-help", "-transitionToActive" },
-          "Usage: yarn rmadmin [-transitionToActive <serviceId>" +
-          " [--forceactive]]", dataErr, 0);
+          "Usage: yarn rmadmin [-transitionToActive [--forceactive]" +
+          " <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-transitionToStandby" },
           "Usage: yarn rmadmin [-transitionToStandby <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-getServiceState" },
@@ -355,19 +355,21 @@ public class TestRMAdminCLI {
       // Test -help when RM HA is enabled
       assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
       oldOutPrintStream.println(dataOut);
-      assertTrue(dataOut
-          .toString()
-          .contains(
-              "yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper" +
+      String expectedHelpMsg = 
+          "yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper" +
               "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
               " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]" +
               " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode " +
               "[node1:port,label1,label2 node2:port,label1] [-directlyAccessNodeLabelStore]] " +
-              "[-transitionToActive <serviceId> [--forceactive]] " + 
+              "[-transitionToActive [--forceactive] <serviceId>] " + 
               "[-transitionToStandby <serviceId>] [-failover" +
               " [--forcefence] [--forceactive] <serviceId> <serviceId>] " +
-              "[-getServiceState <serviceId>] [-checkHealth <serviceId>] [-help [cmd]]"));
+              "[-getServiceState <serviceId>] [-checkHealth <serviceId>] [-help [cmd]]";
+      String actualHelpMsg = dataOut.toString();
+      assertTrue(String.format("Help messages: %n " + actualHelpMsg + " %n doesn't include expected " +
+          "messages: %n" + expectedHelpMsg), actualHelpMsg.contains(expectedHelpMsg
+              ));
     } finally {
       System.setOut(oldOutPrintStream);
       System.setErr(oldErrPrintStream);
@@ -543,8 +545,12 @@ public class TestRMAdminCLI {
 
   private void testError(String[] args, String template,
       ByteArrayOutputStream data, int resultCode) throws Exception {
-    assertEquals(resultCode, rmAdminCLI.run(args));
-    assertTrue(data.toString().contains(template));
+    int actualResultCode = rmAdminCLI.run(args);
+    assertEquals("Expected result code: " + resultCode + 
+        ", actual result code is: " + actualResultCode, resultCode, actualResultCode);
+    assertTrue(String.format("Expected error message: %n" + template + 
+        " is not included in messages: %n" + data.toString()), 
+        data.toString().contains(template));
     data.reset();
   }
   
