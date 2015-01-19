@@ -208,11 +208,15 @@ unset IFS
 
 # figure out which class to run
 if [ "$COMMAND" = "classpath" ] ; then
-  if $cygwin; then
-    CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
+  if [ "$#" -gt 0 ]; then
+    CLASS=org.apache.hadoop.util.Classpath
+  else
+    if $cygwin; then
+      CLASSPATH=$(cygpath -p -w "$CLASSPATH" 2>/dev/null)
+    fi
+    echo $CLASSPATH
+    exit 0
   fi
-  echo $CLASSPATH
-  exit
 elif [ "$COMMAND" = "rmadmin" ] ; then
   CLASS='org.apache.hadoop.yarn.client.cli.RMAdminCLI'
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
