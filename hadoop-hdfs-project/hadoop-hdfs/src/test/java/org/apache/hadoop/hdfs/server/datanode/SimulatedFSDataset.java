@@ -1253,7 +1253,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public void onCompleteLazyPersist(String bpId, long blockId,
-      long creationTime, File[] savedFiles, FsVolumeImpl targetVolume) {
+      long creationTime, File[] savedFiles, FsVolumeSpi targetVolume) {
     throw new UnsupportedOperationException();
   }
 
