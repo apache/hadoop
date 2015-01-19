@@ -167,6 +167,9 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    YARN-3071. Remove invalid char from sample conf in doc of FairScheduler.
+    (Masatake Iwasaki via aajisaka)
+
     YARN-2254. TestRMWebServicesAppsModification should run against both 
     CS and FS. (Zhihai Xu via kasha)
 
