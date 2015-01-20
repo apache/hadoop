@@ -256,6 +256,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7573. Consolidate the implementation of delete() into a single class.
     (wheat9)
 
+    HDFS-7640. Print NFS Client in the NFS log. (Brandon Li via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
