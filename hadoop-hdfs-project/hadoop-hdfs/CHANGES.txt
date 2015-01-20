@@ -258,6 +258,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7640. Print NFS Client in the NFS log. (Brandon Li via wheat9)
 
+    HDFS-7623. Add htrace configuration properties to core-default.xml and
+    update user doc about how to enable htrace. (yliu)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

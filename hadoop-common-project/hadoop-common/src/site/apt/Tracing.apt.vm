@@ -16,18 +16,31 @@
   ---
   ${maven.build.timestamp}
 
-Enabling Dapper-like Tracing in HDFS
+Enabling Dapper-like Tracing in Hadoop
 
 %{toc|section=1|fromDepth=0}
 
-* {Dapper-like Tracing in HDFS}
+* {Dapper-like Tracing in Hadoop}
 
 ** HTrace
 
   {{{https://issues.apache.org/jira/browse/HDFS-5274}HDFS-5274}}
   added support for tracing requests through HDFS,
-  using the open source tracing library, {{{https://github.com/cloudera/htrace}HTrace}}.
+  using the open source tracing library, {{{https://git-wip-us.apache.org/repos/asf/incubator-htrace.git}Apache HTrace}}.
   Setting up tracing is quite simple, however it requires some very minor changes to your client code.
+
+** Samplers
+  Configure the samplers in <<<core-site.xml>>> property: <<<hadoop.htrace.sampler>>>.
+  The value can be NeverSampler, AlwaysSampler or ProbabilitySampler. NeverSampler: HTrace is OFF 
+  for all spans; AlwaysSampler: HTrace is ON for all spans; ProbabilitySampler: HTrace is ON for 
+  some percentage% of top-level spans.
+
++----
+  <property>
+    <name>hadoop.htrace.sampler</name>
+    <value>NeverSampler</value>
+  </property>
++----
 
 ** SpanReceivers
 
@@ -42,7 +55,7 @@ public void receiveSpan(Span span);
   Configure what SpanReceivers you'd like to use
   by putting a comma separated list of the fully-qualified class name of
   classes implementing SpanReceiver
-  in <<<hdfs-site.xml>>> property: <<<hadoop.htrace.spanreceiver.classes>>>.
+  in <<<core-site.xml>>> property: <<<hadoop.htrace.spanreceiver.classes>>>.
 
 +----
   <property>
@@ -83,11 +96,11 @@ public void receiveSpan(Span span);
   $ git clone https://github.com/cloudera/htrace
   $ cd htrace/htrace-zipkin
   $ mvn compile assembly:single
-  $ cp target/htrace-zipkin-*-jar-with-dependencies.jar $HADOOP_HOME/share/hadoop/hdfs/lib/
+  $ cp target/htrace-zipkin-*-jar-with-dependencies.jar $HADOOP_HOME/share/hadoop/common/lib/
 +----
 
   The sample configuration for <<<ZipkinSpanReceiver>>> is shown below.
-  By adding these to <<<hdfs-site.xml>>> of NameNode and DataNodes,
+  By adding these to <<<core-site.xml>>> of NameNode and DataNodes,
   <<<ZipkinSpanReceiver>>> is initialized on the startup.
   You also need this configuration on the client node in addition to the servers.
 
