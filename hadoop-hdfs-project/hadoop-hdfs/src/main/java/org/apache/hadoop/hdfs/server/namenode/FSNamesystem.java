@@ -1952,6 +1952,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       dir.checkPathAccess(pc, iip, FsAction.WRITE);
     }
     INodeFile file = INodeFile.valueOf(iip.getLastINode(), src);
+    final BlockStoragePolicy lpPolicy =
+        blockManager.getStoragePolicy("LAZY_PERSIST");
+
+    if (lpPolicy != null &&
+        lpPolicy.getId() == file.getStoragePolicyID()) {
+      throw new UnsupportedOperationException(
+          "Cannot truncate lazy persist file " + src);
+    }
     // Opening an existing file for write. May need lease recovery.
     recoverLeaseInternal(iip, src, clientName, clientMachine, false);
     // Truncate length check.
