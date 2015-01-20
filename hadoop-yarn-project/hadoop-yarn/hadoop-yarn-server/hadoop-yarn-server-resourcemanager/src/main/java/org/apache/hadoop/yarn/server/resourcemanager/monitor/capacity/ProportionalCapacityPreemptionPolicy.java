@@ -30,15 +30,19 @@ import java.util.NavigableSet;
 import java.util.PriorityQueue;
 import java.util.Set;
 
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerPreemptEventType;
@@ -129,6 +133,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   private float percentageClusterPreemptionAllowed;
   private double naturalTerminationFactor;
   private boolean observeOnly;
+  private Map<NodeId, Set<String>> labels;
 
   public ProportionalCapacityPreemptionPolicy() {
     clock = new SystemClock();
@@ -168,6 +173,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       config.getFloat(TOTAL_PREEMPTION_PER_ROUND, (float) 0.1);
     observeOnly = config.getBoolean(OBSERVE_ONLY, false);
     rc = scheduler.getResourceCalculator();
+    labels = null;
   }
   
   @VisibleForTesting
@@ -176,13 +182,38 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   }
 
   @Override
-  public void editSchedule(){
+  public void editSchedule() {
     CSQueue root = scheduler.getRootQueue();
-    Resource clusterResources =
-      Resources.clone(scheduler.getClusterResource());
+    Resource clusterResources = Resources.clone(scheduler.getClusterResource());
+    clusterResources = getNonLabeledResources(clusterResources);
+    setNodeLabels(scheduler.getRMContext().getNodeLabelManager()
+        .getNodeLabels());
     containerBasedPreemptOrKill(root, clusterResources);
   }
 
+  /**
+   * Setting Node Labels
+   * 
+   * @param nodelabels
+   */
+  public void setNodeLabels(Map<NodeId, Set<String>> nodelabels) {
+    labels = nodelabels;
+  }
+
+  /**
+   * This method returns all non labeled resources.
+   * 
+   * @param clusterResources
+   * @return Resources
+   */
+  private Resource getNonLabeledResources(Resource clusterResources) {
+    RMContext rmcontext = scheduler.getRMContext();
+    RMNodeLabelsManager lm = rmcontext.getNodeLabelManager();
+    Resource res = lm.getResourceByLabel(RMNodeLabelsManager.NO_LABEL,
+        clusterResources);
+    return res == null ? clusterResources : res;
+  }
+  
   /**
    * This method selects and tracks containers to be preempted. If a container
    * is in the target list for more than maxWaitTime it is killed.
@@ -593,7 +624,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
    * @param app
    * @param clusterResource
    * @param rsrcPreempt
-   * @return
+   * @return Set<RMContainer> Set of RMContainers
    */
   private Set<RMContainer> preemptFrom(FiCaSchedulerApp app,
       Resource clusterResource, Resource rsrcPreempt,
@@ -635,11 +666,25 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         Resources.addTo(skippedAMSize, c.getContainer().getResource());
         continue;
       }
+      // skip Labeled resource
+      if(isLabeledContainer(c)){
+        continue;
+      }
       ret.add(c);
       Resources.subtractFrom(rsrcPreempt, c.getContainer().getResource());
     }
 
     return ret;
+  }
+  
+  /**
+   * Checking if given container is a labeled container
+   * 
+   * @param c
+   * @return true/false
+   */
+  private boolean isLabeledContainer(RMContainer c) {
+    return labels.containsKey(c.getAllocatedNode());
   }
 
   /**
