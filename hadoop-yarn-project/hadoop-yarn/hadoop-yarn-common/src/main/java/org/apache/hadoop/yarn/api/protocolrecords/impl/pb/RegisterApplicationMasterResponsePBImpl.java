@@ -229,11 +229,11 @@ public class RegisterApplicationMasterResponsePBImpl extends
   
   @Override
   public void setClientToAMTokenMasterKey(ByteBuffer key) {
+    maybeInitBuilder();
     if (key == null) {
       builder.clearClientToAmTokenMasterKey();
       return;
     }
-    maybeInitBuilder();
     builder.setClientToAmTokenMasterKey(ByteString.copyFrom(key));
   }
   
@@ -316,6 +316,7 @@ public class RegisterApplicationMasterResponsePBImpl extends
   
   @Override
   public void setNMTokensFromPreviousAttempts(final List<NMToken> nmTokens) {
+    maybeInitBuilder();
     if (nmTokens == null || nmTokens.isEmpty()) {
       if (this.nmTokens != null) {
         this.nmTokens.clear();
