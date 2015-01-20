@@ -463,6 +463,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7637. Fix the check condition for reserved path. (Yi Liu via jing9)
 
+    HDFS-7641. Update archival storage user doc for list/set/get block storage
+    policies. (yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
