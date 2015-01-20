@@ -360,6 +360,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2933. Capacity Scheduler preemption policy should only consider capacity 
     without labels temporarily. (Mayank Bansal via wangda)
 
+    YARN-2731. Fixed RegisterApplicationMasterResponsePBImpl to properly invoke 
+    maybeInitBuilder. (Carlo Curino via wangda)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
