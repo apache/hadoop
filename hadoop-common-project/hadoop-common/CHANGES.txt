@@ -149,6 +149,9 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-11256. Some site docs have inconsistent appearance (Masatake 
+    Iwasaki via aw)
+
     HADOOP-11318. Update the document for hadoop fs -stat (aajisaka)
 
     HADOOP 11400. GraphiteSink does not reconnect to Graphite after 'broken pipe' 
