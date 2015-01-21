@@ -95,6 +95,14 @@ if "%1" == "--loglevel" (
   @rem add modules to CLASSPATH
   set CLASSPATH=%CLASSPATH%;%HADOOP_MAPRED_HOME%\modules\*
 
+  if %mapred-command% == classpath (
+    if not defined mapred-command-arguments (
+      @rem No need to bother starting up a JVM for this simple case.
+      @echo %CLASSPATH%
+      exit /b
+    )
+  )
+
   call :%mapred-command% %mapred-command-arguments%
   set java_arguments=%JAVA_HEAP_MAX% %HADOOP_OPTS% -classpath %CLASSPATH% %CLASS% %mapred-command-arguments%
   call %JAVA% %java_arguments%
@@ -103,7 +111,7 @@ goto :eof
 
 
 :classpath
-  @echo %CLASSPATH%
+  set CLASS=org.apache.hadoop.util.Classpath
   goto :eof
 
 :job
