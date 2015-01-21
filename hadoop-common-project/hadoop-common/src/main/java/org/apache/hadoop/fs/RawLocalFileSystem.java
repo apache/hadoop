@@ -371,6 +371,31 @@ public class RawLocalFileSystem extends FileSystem {
     }
     return FileUtil.copy(this, src, this, dst, true, getConf());
   }
+
+  @Override
+  public boolean truncate(Path f, final long newLength) throws IOException {
+    FileStatus status = getFileStatus(f);
+    if(status == null) {
+      throw new FileNotFoundException("File " + f + " not found");
+    }
+    if(status.isDirectory()) {
+      throw new IOException("Cannot truncate a directory (=" + f + ")");
+    }
+    long oldLength = status.getLen();
+    if(newLength > oldLength) {
+      throw new IllegalArgumentException(
+          "Cannot truncate to a larger file size. Current size: " + oldLength +
+          ", truncate size: " + newLength + ".");
+    }
+    try (FileOutputStream out = new FileOutputStream(pathToFile(f), true)) {
+      try {
+        out.getChannel().truncate(newLength);
+      } catch(IOException e) {
+        throw new FSError(e);
+      }
+    }
+    return true;
+  }
   
   /**
    * Delete the given path to a file or directory.
