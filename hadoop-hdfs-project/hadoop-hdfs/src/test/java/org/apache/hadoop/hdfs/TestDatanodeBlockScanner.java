@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -28,7 +27,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.datanode.DataBlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
@@ -485,6 +488,61 @@ public class TestDatanodeBlockScanner {
           DFSTestUtil.getFirstBlock(fs, new Path("/test" + (9))));
       assertEquals("There should not be duplicate scan", scanTimeBefore,
           scanTimeAfter);
+    } finally {
+      IOUtils.closeStream(fs);
+      cluster.shutdown();
+    }
+  }
+  
+/**
+ * This test verifies whether block is added to the first location of 
+ * BlockPoolSliceScanner#blockInfoSet
+ */
+  @Test
+  public void testAddBlockInfoToFirstLocation() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
+        .numDataNodes(1).build();
+    FileSystem fs = null;
+    try {
+      fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+      // Creating a bunch of blocks
+      for (int i = 1; i < 10; i++) {
+        Path fileName = new Path("/test" + i);
+        DFSTestUtil.createFile(fs, fileName, 1024, (short) 1, 1000L);
+      } 
+      // Get block of the first file created (file1)
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, new Path("/test1"));
+      dataNode.getBlockScanner().setLastScanTimeDifference(block, 0);
+      // Let it sleep for more than 5 seconds so that BlockPoolSliceScanner can
+      // scan the first set of blocks
+      Thread.sleep(10000);
+      Long scanTime1Fortest1Block = DataNodeTestUtils.getLatestScanTime(
+          dataNode, block);
+      // Create another set of blocks
+      for (int i = 10; i < 20; i++) {
+        Path fileName = new Path("/test" + i);
+        DFSTestUtil.createFile(fs, fileName, 1024, (short) 1, 1000L);
+      }
+      dataNode.getBlockScanner().addBlock(block, true);
+      // Sleep so that BlockPoolSliceScanner can scan the second set of blocks
+      // and one block which we scheduled to rescan
+      Thread.sleep(10000);
+      // Get the lastScanTime of all of the second set of blocks
+      Set<Long> lastScanTimeSet = new HashSet<Long>();
+      for (int i = 10; i < 20; i++) {
+        long lastScanTime = DataNodeTestUtils.getLatestScanTime(dataNode,
+            DFSTestUtil.getFirstBlock(fs, new Path("/test" + i)));
+        lastScanTimeSet.add(lastScanTime);
+      }
+      Long scanTime2Fortest1Block = DataNodeTestUtils.getLatestScanTime(
+          dataNode, DFSTestUtil.getFirstBlock(fs, new Path("/test1")));
+      Long minimumLastScanTime = Collections.min(lastScanTimeSet);
+      assertTrue("The second scanTime for test1 block should be greater than "
+         + "first scanTime", scanTime2Fortest1Block > scanTime1Fortest1Block);
+      assertTrue("The second scanTime for test1 block should be less than or"
+         + " equal to minimum of the lastScanTime of second set of blocks",
+          scanTime2Fortest1Block <= minimumLastScanTime);
     } finally {
       IOUtils.closeStream(fs);
       cluster.shutdown();
