@@ -18,7 +18,10 @@ Trunk (Unreleased)
     HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via aw)
 
     HADOOP-11353. Add support for .hadooprc (aw)
-    
+
+    HADOOP-11490. Expose truncate API via FileSystem and shell command.
+    (Milan Desai via shv)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution

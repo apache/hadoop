@@ -1317,6 +1317,29 @@ public abstract class FileSystem extends Configured implements Closeable {
       throw new IOException("rename from " + src + " to " + dst + " failed.");
     }
   }
+
+  /**
+   * Truncate the file in the indicated path to the indicated size.
+   * <ul>
+   * <li>Fails if path is a directory.
+   * <li>Fails if path does not exist.
+   * <li>Fails if path is not closed.
+   * <li>Fails if new size is greater than current size.
+   * </ul>
+   * @param f The path to the file to be truncated
+   * @param newLength The size the file is to be truncated to
+   *
+   * @return <code>true</code> if the file has been truncated to the desired
+   * <code>newLength</code> and is immediately available to be reused for
+   * write operations such as <code>append</code>, or
+   * <code>false</code> if a background process of adjusting the length of
+   * the last block has been started, and clients should wait for it to
+   * complete before proceeding with further file updates.
+   */
+  public boolean truncate(Path f, long newLength) throws IOException {
+    throw new UnsupportedOperationException("Not implemented by the " +
+        getClass().getSimpleName() + " FileSystem implementation");
+  }
   
   /**
    * Delete a file 

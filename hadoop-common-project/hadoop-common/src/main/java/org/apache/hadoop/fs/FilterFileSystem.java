@@ -225,6 +225,11 @@ public class FilterFileSystem extends FileSystem {
   public boolean rename(Path src, Path dst) throws IOException {
     return fs.rename(src, dst);
   }
+
+  @Override
+  public boolean truncate(Path f, final long newLength) throws IOException {
+    return fs.truncate(f, newLength);
+  }
   
   /** Delete a file */
   @Override

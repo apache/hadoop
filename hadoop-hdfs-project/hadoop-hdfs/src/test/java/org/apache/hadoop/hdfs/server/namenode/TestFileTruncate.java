@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -674,6 +676,73 @@ public class TestFileTruncate {
     checkBlockRecovery(srcPath);
     fs.deleteSnapshot(parent, "ss0");
     fs.delete(parent, true);
+  }
+
+  @Test
+  public void testTruncateShellCommand() throws Exception {
+    final Path parent = new Path("/test");
+    final Path src = new Path("/test/testTruncateShellCommand");
+    final int oldLength = 2*BLOCK_SIZE + 1;
+    final int newLength = BLOCK_SIZE + 1;
+
+    String[] argv =
+        new String[]{"-truncate", String.valueOf(newLength), src.toString()};
+    runTruncateShellCommand(src, oldLength, argv);
+
+    // wait for block recovery
+    checkBlockRecovery(src);
+    assertThat(fs.getFileStatus(src).getLen(), is((long) newLength));
+    fs.delete(parent, true);
+  }
+
+  @Test
+  public void testTruncateShellCommandOnBlockBoundary() throws Exception {
+    final Path parent = new Path("/test");
+    final Path src = new Path("/test/testTruncateShellCommandOnBoundary");
+    final int oldLength = 2 * BLOCK_SIZE;
+    final int newLength = BLOCK_SIZE;
+
+    String[] argv =
+        new String[]{"-truncate", String.valueOf(newLength), src.toString()};
+    runTruncateShellCommand(src, oldLength, argv);
+
+    // shouldn't need to wait for block recovery
+    assertThat(fs.getFileStatus(src).getLen(), is((long) newLength));
+    fs.delete(parent, true);
+  }
+
+  @Test
+  public void testTruncateShellCommandWithWaitOption() throws Exception {
+    final Path parent = new Path("/test");
+    final Path src = new Path("/test/testTruncateShellCommandWithWaitOption");
+    final int oldLength = 2 * BLOCK_SIZE + 1;
+    final int newLength = BLOCK_SIZE + 1;
+
+    String[] argv = new String[]{"-truncate", "-w", String.valueOf(newLength),
+        src.toString()};
+    runTruncateShellCommand(src, oldLength, argv);
+
+    // shouldn't need to wait for block recovery
+    assertThat(fs.getFileStatus(src).getLen(), is((long) newLength));
+    fs.delete(parent, true);
+  }
+
+  private void runTruncateShellCommand(Path src, int oldLength,
+                                       String[] shellOpts) throws Exception {
+    // create file and write data
+    writeContents(AppendTestUtil.initBuffer(oldLength), oldLength, src);
+    assertThat(fs.getFileStatus(src).getLen(), is((long)oldLength));
+
+    // truncate file using shell
+    FsShell shell = null;
+    try {
+      shell = new FsShell(conf);
+      assertThat(ToolRunner.run(shell, shellOpts), is(0));
+    } finally {
+      if(shell != null) {
+        shell.close();
+      }
+    }
   }
 
   static void writeContents(byte[] contents, int fileLength, Path p)
