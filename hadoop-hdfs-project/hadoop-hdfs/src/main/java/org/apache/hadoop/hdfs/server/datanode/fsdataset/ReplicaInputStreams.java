@@ -30,9 +30,12 @@ import org.apache.hadoop.io.IOUtils;
 public class ReplicaInputStreams implements Closeable {
   private final InputStream dataIn;
   private final InputStream checksumIn;
+  private final FsVolumeReference volumeRef;
 
   /** Create an object with a data input stream and a checksum input stream. */
-  public ReplicaInputStreams(FileDescriptor dataFd, FileDescriptor checksumFd) {
+  public ReplicaInputStreams(FileDescriptor dataFd, FileDescriptor checksumFd,
+      FsVolumeReference volumeRef) {
+    this.volumeRef = volumeRef;
     this.dataIn = new FileInputStream(dataFd);
     this.checksumIn = new FileInputStream(checksumFd);
   }
@@ -51,5 +54,6 @@ public class ReplicaInputStreams implements Closeable {
   public void close() {
     IOUtils.closeStream(dataIn);
     IOUtils.closeStream(checksumIn);
+    IOUtils.cleanup(null, volumeRef);
   }
 }

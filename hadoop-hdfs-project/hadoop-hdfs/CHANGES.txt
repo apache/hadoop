@@ -466,6 +466,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7641. Update archival storage user doc for list/set/get block storage
     policies. (yliu)
 
+    HDFS-7496. Fix FsVolume removal race conditions on the DataNode by
+    reference-counting the volume instances (lei via cmccabe)
+
     HDFS-7610. Fix removal of dynamically added DN volumes (Lei (Eddy) Xu via
     Colin P. McCabe)
 

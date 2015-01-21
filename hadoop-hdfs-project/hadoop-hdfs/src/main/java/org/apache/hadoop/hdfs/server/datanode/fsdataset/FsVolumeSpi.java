@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 
 import org.apache.hadoop.hdfs.StorageType;
 
@@ -26,6 +27,15 @@ import org.apache.hadoop.hdfs.StorageType;
  * This is an interface for the underlying volume.
  */
 public interface FsVolumeSpi {
+  /**
+   * Obtain a reference object that had increased 1 reference count of the
+   * volume.
+   *
+   * It is caller's responsibility to close {@link FsVolumeReference} to decrease
+   * the reference count on the volume.
+   */
+  FsVolumeReference obtainReference() throws ClosedChannelException;
+
   /** @return the StorageUuid of the volume */
   public String getStorageID();
 

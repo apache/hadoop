@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,6 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -59,6 +61,21 @@ class FsVolumeList {
     return Collections.unmodifiableList(Arrays.asList(volumes.get()));
   }
 
+  private FsVolumeReference chooseVolume(List<FsVolumeImpl> list, long blockSize)
+      throws IOException {
+    while (true) {
+      FsVolumeImpl volume = blockChooser.chooseVolume(list, blockSize);
+      try {
+        return volume.obtainReference();
+      } catch (ClosedChannelException e) {
+        FsDatasetImpl.LOG.warn("Chosen a closed volume: " + volume);
+        // blockChooser.chooseVolume returns DiskOutOfSpaceException when the list
+        // is empty, indicating that all volumes are closed.
+        list.remove(volume);
+      }
+    }
+  }
+
   /** 
    * Get next volume.
    *
@@ -66,7 +83,7 @@ class FsVolumeList {
    * @param storageType the desired {@link StorageType} 
    * @return next volume to store the block in.
    */
-  FsVolumeImpl getNextVolume(StorageType storageType, long blockSize)
+  FsVolumeReference getNextVolume(StorageType storageType, long blockSize)
       throws IOException {
     // Get a snapshot of currently available volumes.
     final FsVolumeImpl[] curVolumes = volumes.get();
@@ -76,7 +93,7 @@ class FsVolumeList {
         list.add(v);
       }
     }
-    return blockChooser.chooseVolume(list, blockSize);
+    return chooseVolume(list, blockSize);
   }
 
   /**
@@ -85,7 +102,7 @@ class FsVolumeList {
    * @param blockSize free space needed on the volume
    * @return next volume to store the block in.
    */
-  FsVolumeImpl getNextTransientVolume(long blockSize) throws IOException {
+  FsVolumeReference getNextTransientVolume(long blockSize) throws IOException {
     // Get a snapshot of currently available volumes.
     final List<FsVolumeImpl> curVolumes = getVolumes();
     final List<FsVolumeImpl> list = new ArrayList<>(curVolumes.size());
@@ -94,13 +111,17 @@ class FsVolumeList {
         list.add(v);
       }
     }
-    return blockChooser.chooseVolume(list, blockSize);
+    return chooseVolume(list, blockSize);
   }
 
   long getDfsUsed() throws IOException {
     long dfsUsed = 0L;
     for (FsVolumeImpl v : volumes.get()) {
-      dfsUsed += v.getDfsUsed();
+      try(FsVolumeReference ref = v.obtainReference()) {
+        dfsUsed += v.getDfsUsed();
+      } catch (ClosedChannelException e) {
+        // ignore.
+      }
     }
     return dfsUsed;
   }
@@ -108,7 +129,11 @@ class FsVolumeList {
   long getBlockPoolUsed(String bpid) throws IOException {
     long dfsUsed = 0L;
     for (FsVolumeImpl v : volumes.get()) {
-      dfsUsed += v.getBlockPoolUsed(bpid);
+      try (FsVolumeReference ref = v.obtainReference()) {
+        dfsUsed += v.getBlockPoolUsed(bpid);
+      } catch (ClosedChannelException e) {
+        // ignore.
+      }
     }
     return dfsUsed;
   }
@@ -116,7 +141,11 @@ class FsVolumeList {
   long getCapacity() {
     long capacity = 0L;
     for (FsVolumeImpl v : volumes.get()) {
-      capacity += v.getCapacity();
+      try (FsVolumeReference ref = v.obtainReference()) {
+        capacity += v.getCapacity();
+      } catch (IOException e) {
+        // ignore.
+      }
     }
     return capacity;
   }
@@ -124,7 +153,11 @@ class FsVolumeList {
   long getRemaining() throws IOException {
     long remaining = 0L;
     for (FsVolumeSpi vol : volumes.get()) {
-      remaining += vol.getAvailable();
+      try (FsVolumeReference ref = vol.obtainReference()) {
+        remaining += vol.getAvailable();
+      } catch (ClosedChannelException e) {
+        // ignore
+      }
     }
     return remaining;
   }
@@ -140,7 +173,7 @@ class FsVolumeList {
     for (final FsVolumeImpl v : volumes.get()) {
       Thread t = new Thread() {
         public void run() {
-          try {
+          try (FsVolumeReference ref = v.obtainReference()) {
             FsDatasetImpl.LOG.info("Adding replicas to map for block pool " +
                 bpid + " on volume " + v + "...");
             long startTime = Time.monotonicNow();
@@ -148,6 +181,9 @@ class FsVolumeList {
             long timeTaken = Time.monotonicNow() - startTime;
             FsDatasetImpl.LOG.info("Time to add replicas to map for block pool"
                 + " " + bpid + " on volume " + v + ": " + timeTaken + "ms");
+          } catch (ClosedChannelException e) {
+            FsDatasetImpl.LOG.info("The volume " + v + " is closed while " +
+                "addng replicas, ignored.");
           } catch (IOException ioe) {
             FsDatasetImpl.LOG.info("Caught exception while adding replicas " +
                 "from " + v + ". Will throw later.", ioe);
@@ -190,16 +226,21 @@ class FsVolumeList {
 
       for(Iterator<FsVolumeImpl> i = volumeList.iterator(); i.hasNext(); ) {
         final FsVolumeImpl fsv = i.next();
-        try {
+        try (FsVolumeReference ref = fsv.obtainReference()) {
           fsv.checkDirs();
         } catch (DiskErrorException e) {
-          FsDatasetImpl.LOG.warn("Removing failed volume " + fsv + ": ",e);
+          FsDatasetImpl.LOG.warn("Removing failed volume " + fsv + ": ", e);
           if (removedVols == null) {
-            removedVols = new ArrayList<FsVolumeImpl>(1);
+            removedVols = new ArrayList<>(1);
           }
           removedVols.add(fsv);
           removeVolume(fsv);
           numFailedVolumes++;
+        } catch (ClosedChannelException e) {
+          FsDatasetImpl.LOG.debug("Caught exception when obtaining " +
+            "reference count on closed volume", e);
+        } catch (IOException e) {
+          FsDatasetImpl.LOG.error("Unexpected IOException", e);
         }
       }
       
@@ -222,7 +263,6 @@ class FsVolumeList {
    * @param newVolume the instance of new FsVolumeImpl.
    */
   void addVolume(FsVolumeImpl newVolume) {
-    // Make a copy of volumes to add new volumes.
     while (true) {
       final FsVolumeImpl[] curVolumes = volumes.get();
       final List<FsVolumeImpl> volumeList = Lists.newArrayList(curVolumes);
@@ -253,6 +293,12 @@ class FsVolumeList {
       if (volumeList.remove(target)) {
         if (volumes.compareAndSet(curVolumes,
             volumeList.toArray(new FsVolumeImpl[volumeList.size()]))) {
+          try {
+            target.closeAndWait();
+          } catch (IOException e) {
+            FsDatasetImpl.LOG.warn(
+                "Error occurs when waiting volume to close: " + target, e);
+          }
           target.shutdown();
           FsDatasetImpl.LOG.info("Removed volume: " + target);
           break;
@@ -302,7 +348,7 @@ class FsVolumeList {
     for (final FsVolumeImpl v : volumes.get()) {
       Thread t = new Thread() {
         public void run() {
-          try {
+          try (FsVolumeReference ref = v.obtainReference()) {
             FsDatasetImpl.LOG.info("Scanning block pool " + bpid +
                 " on volume " + v + "...");
             long startTime = Time.monotonicNow();
@@ -310,6 +356,8 @@ class FsVolumeList {
             long timeTaken = Time.monotonicNow() - startTime;
             FsDatasetImpl.LOG.info("Time taken to scan block pool " + bpid +
                 " on " + v + ": " + timeTaken + "ms");
+          } catch (ClosedChannelException e) {
+            // ignore.
           } catch (IOException ioe) {
             FsDatasetImpl.LOG.info("Caught exception while scanning " + v +
                 ". Will throw later.", ioe);
