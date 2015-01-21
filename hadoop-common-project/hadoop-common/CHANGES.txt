@@ -18,6 +18,9 @@ Release 2.6.3 - UNRELEASED
     HADOOP-9242. Duplicate surefire plugin config in hadoop-common.
     (Andrey Klochkov via suresh)
 
+    HADOOP-10668. TestZKFailoverControllerStress#testExpireBackAndForth
+    occasionally fails. (Ming Ma via cnauroth)
+
 Release 2.6.2 - 2015-10-28
 
   INCOMPATIBLE CHANGES
