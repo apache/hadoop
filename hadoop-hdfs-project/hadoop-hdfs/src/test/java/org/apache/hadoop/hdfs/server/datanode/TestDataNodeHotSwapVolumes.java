@@ -56,6 +56,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
@@ -568,7 +570,7 @@ public class TestDataNodeHotSwapVolumes {
   @Test(timeout=180000)
   public void testRemoveVolumeBeingWritten()
       throws InterruptedException, TimeoutException, ReconfigurationException,
-      IOException {
+      IOException, BrokenBarrierException {
     // test against removing volumes on the different DataNode on the pipeline.
     for (int i = 0; i < 3; i++) {
       testRemoveVolumeBeingWrittenForDatanode(i);
@@ -582,7 +584,7 @@ public class TestDataNodeHotSwapVolumes {
    */
   private void testRemoveVolumeBeingWrittenForDatanode(int dataNodeIdx)
       throws IOException, ReconfigurationException, TimeoutException,
-      InterruptedException {
+      InterruptedException, BrokenBarrierException {
     // Starts DFS cluster with 3 DataNodes to form a pipeline.
     startDFSCluster(1, 3);
 
@@ -599,11 +601,27 @@ public class TestDataNodeHotSwapVolumes {
     out.write(writeBuf);
     out.hflush();
 
-    List<String> oldDirs = getDataDirs(dn);
-    String newDirs = oldDirs.get(1);  // Remove the first volume.
-    dn.reconfigurePropertyImpl(
-        DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs);
+    final CyclicBarrier barrier = new CyclicBarrier(2);
 
+    List<String> oldDirs = getDataDirs(dn);
+    final String newDirs = oldDirs.get(1);  // Remove the first volume.
+    final List<Exception> exceptions = new ArrayList<>();
+    Thread reconfigThread = new Thread() {
+      public void run() {
+        try {
+          barrier.await();
+          dn.reconfigurePropertyImpl(
+              DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs);
+        } catch (ReconfigurationException |
+            InterruptedException |
+            BrokenBarrierException e) {
+          exceptions.add(e);
+        }
+      }
+    };
+    reconfigThread.start();
+
+    barrier.await();
     rb.nextBytes(writeBuf);
     out.write(writeBuf);
     out.hflush();
@@ -614,5 +632,10 @@ public class TestDataNodeHotSwapVolumes {
     // Read the content back
     byte[] content = DFSTestUtil.readFileBuffer(fs, testFile);
     assertEquals(BLOCK_SIZE, content.length);
+
+    reconfigThread.join();
+    if (!exceptions.isEmpty()) {
+      throw new IOException(exceptions.get(0).getCause());
+    }
   }
 }

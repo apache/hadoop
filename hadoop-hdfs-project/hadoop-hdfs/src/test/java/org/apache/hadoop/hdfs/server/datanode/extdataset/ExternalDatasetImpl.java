@@ -144,25 +144,25 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   @Override
   public ReplicaInputStreams getTmpInputStreams(ExtendedBlock b, long blkoff,
       long ckoff) throws IOException {
-    return new ReplicaInputStreams(FileDescriptor.in, FileDescriptor.in);
+    return new ReplicaInputStreams(FileDescriptor.in, FileDescriptor.in, null);
   }
 
   @Override
-  public ReplicaInPipelineInterface createTemporary(StorageType t, ExtendedBlock b)
+  public ReplicaHandler createTemporary(StorageType t, ExtendedBlock b)
       throws IOException {
-    return new ExternalReplicaInPipeline();
+    return new ReplicaHandler(new ExternalReplicaInPipeline(), null);
   }
 
   @Override
-  public ReplicaInPipelineInterface createRbw(StorageType t, ExtendedBlock b, boolean tf)
+  public ReplicaHandler createRbw(StorageType t, ExtendedBlock b, boolean tf)
       throws IOException {
-    return new ExternalReplicaInPipeline();
+    return new ReplicaHandler(new ExternalReplicaInPipeline(), null);
   }
 
   @Override
-  public ReplicaInPipelineInterface recoverRbw(ExtendedBlock b, long newGS,
+  public ReplicaHandler recoverRbw(ExtendedBlock b, long newGS,
       long minBytesRcvd, long maxBytesRcvd) throws IOException {
-    return new ExternalReplicaInPipeline();
+    return new ReplicaHandler(new ExternalReplicaInPipeline(), null);
   }
 
   @Override
@@ -172,15 +172,15 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public ReplicaInPipelineInterface append(ExtendedBlock b, long newGS,
+  public ReplicaHandler append(ExtendedBlock b, long newGS,
       long expectedBlockLen) throws IOException {
-    return new ExternalReplicaInPipeline();
+    return new ReplicaHandler(new ExternalReplicaInPipeline(), null);
   }
 
   @Override
-  public ReplicaInPipelineInterface recoverAppend(ExtendedBlock b, long newGS,
+  public ReplicaHandler recoverAppend(ExtendedBlock b, long newGS,
       long expectedBlockLen) throws IOException {
-    return new ExternalReplicaInPipeline();
+    return new ReplicaHandler(new ExternalReplicaInPipeline(), null);
   }
 
   @Override
