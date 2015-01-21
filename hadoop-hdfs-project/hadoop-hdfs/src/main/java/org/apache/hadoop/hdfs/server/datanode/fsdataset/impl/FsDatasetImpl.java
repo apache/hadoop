@@ -336,7 +336,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     StorageType storageType = location.getStorageType();
     final FsVolumeImpl fsVolume = new FsVolumeImpl(
-        this, sd.getStorageUuid(), dir, this.conf, storageType);
+        this, sd.getStorageUuid(), sd.getCurrentDir(), this.conf, storageType);
     final ReplicaMap tempVolumeMap = new ReplicaMap(fsVolume);
     ArrayList<IOException> exceptions = Lists.newArrayList();
 
@@ -379,19 +379,19 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   @Override
   public synchronized void removeVolumes(Collection<StorageLocation> volumes) {
-    Set<File> volumeSet = new HashSet<File>();
+    Set<String> volumeSet = new HashSet<>();
     for (StorageLocation sl : volumes) {
-      volumeSet.add(sl.getFile());
+      volumeSet.add(sl.getFile().getAbsolutePath());
     }
     for (int idx = 0; idx < dataStorage.getNumStorageDirs(); idx++) {
       Storage.StorageDirectory sd = dataStorage.getStorageDir(idx);
-      if (volumeSet.contains(sd.getRoot())) {
-        String volume = sd.getRoot().toString();
+      String volume = sd.getRoot().getAbsolutePath();
+      if (volumeSet.contains(volume)) {
         LOG.info("Removing " + volume + " from FsDataset.");
 
         // Disable the volume from the service.
         asyncDiskService.removeVolume(sd.getCurrentDir());
-        this.volumes.removeVolume(volume);
+        this.volumes.removeVolume(sd.getRoot());
 
         // Removed all replica information for the blocks on the volume. Unlike
         // updating the volumeMap in addVolume(), this operation does not scan
@@ -401,7 +401,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           for (Iterator<ReplicaInfo> it = volumeMap.replicas(bpid).iterator();
               it.hasNext(); ) {
             ReplicaInfo block = it.next();
-            if (block.getVolume().getBasePath().equals(volume)) {
+            String absBasePath =
+                  new File(block.getVolume().getBasePath()).getAbsolutePath();
+            if (absBasePath.equals(volume)) {
               invalidate(bpid, block);
               blocks.add(block);
               it.remove();

@@ -466,6 +466,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7641. Update archival storage user doc for list/set/get block storage
     policies. (yliu)
 
+    HDFS-7610. Fix removal of dynamically added DN volumes (Lei (Eddy) Xu via
+    Colin P. McCabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -276,13 +277,16 @@ class FsVolumeList {
    * Dynamically remove volume in the list.
    * @param volume the volume to be removed.
    */
-  void removeVolume(String volume) {
+  void removeVolume(File volume) {
     // Make a copy of volumes to remove one volume.
     final FsVolumeImpl[] curVolumes = volumes.get();
     final List<FsVolumeImpl> volumeList = Lists.newArrayList(curVolumes);
     for (Iterator<FsVolumeImpl> it = volumeList.iterator(); it.hasNext(); ) {
       FsVolumeImpl fsVolume = it.next();
-      if (fsVolume.getBasePath().equals(volume)) {
+      String basePath, targetPath;
+      basePath = new File(fsVolume.getBasePath()).getAbsolutePath();
+      targetPath = volume.getAbsolutePath();
+      if (basePath.equals(targetPath)) {
         // Make sure the removed volume is the one in the curVolumes.
         removeVolume(fsVolume);
       }
