@@ -88,6 +88,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7885. Datanode should not trust the generation stamp provided by
     client. (Tsz Wo Nicholas Sze via jing9)
 
+    HDFS-7610. Fix removal of dynamically added DN volumes (Lei (Eddy) Xu via
+    Colin P. McCabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
