@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -31,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
@@ -40,8 +43,10 @@ import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.util.CloseableReferenceCount;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -62,6 +67,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final File currentDir;    // <StorageDirectory>/current
   private final DF usage;           
   private final long reserved;
+  private CloseableReferenceCount reference = new CloseableReferenceCount();
 
   // Disk space reserved for open blocks.
   private AtomicLong reservedForRbw;
@@ -99,6 +105,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
     if (storageType.isTransient()) {
       return null;
     }
+    if (dataset.datanode == null) {
+      // FsVolumeImpl is used in test.
+      return null;
+    }
 
     final int maxNumThreads = dataset.datanode.getConf().getInt(
         DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY,
@@ -116,7 +126,114 @@ public class FsVolumeImpl implements FsVolumeSpi {
     executor.allowCoreThreadTimeOut(true);
     return executor;
   }
-  
+
+  private void printReferenceTraceInfo(String op) {
+    StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+    for (StackTraceElement ste : stack) {
+      switch (ste.getMethodName()) {
+      case "getDfsUsed":
+      case "getBlockPoolUsed":
+      case "getAvailable":
+      case "getVolumeMap":
+        return;
+      default:
+        break;
+      }
+    }
+    FsDatasetImpl.LOG.trace("Reference count: " + op + " " + this + ": " +
+        this.reference.getReferenceCount());
+    FsDatasetImpl.LOG.trace(
+        Joiner.on("\n").join(Thread.currentThread().getStackTrace()));
+  }
+
+  /**
+   * Increase the reference count. The caller must increase the reference count
+   * before issuing IOs.
+   *
+   * @throws IOException if the volume is already closed.
+   */
+  private void reference() throws ClosedChannelException {
+    this.reference.reference();
+    if (FsDatasetImpl.LOG.isTraceEnabled()) {
+      printReferenceTraceInfo("incr");
+    }
+  }
+
+  /**
+   * Decrease the reference count.
+   */
+  private void unreference() {
+    if (FsDatasetImpl.LOG.isTraceEnabled()) {
+      printReferenceTraceInfo("desc");
+    }
+    if (FsDatasetImpl.LOG.isDebugEnabled()) {
+      if (reference.getReferenceCount() <= 0) {
+        FsDatasetImpl.LOG.debug("Decrease reference count <= 0 on " + this +
+          Joiner.on("\n").join(Thread.currentThread().getStackTrace()));
+      }
+    }
+    checkReference();
+    this.reference.unreference();
+  }
+
+  private static class FsVolumeReferenceImpl implements FsVolumeReference {
+    private final FsVolumeImpl volume;
+
+    FsVolumeReferenceImpl(FsVolumeImpl volume) throws ClosedChannelException {
+      this.volume = volume;
+      volume.reference();
+    }
+
+    /**
+     * Decreases the reference count.
+     * @throws IOException it never throws IOException.
+     */
+    @Override
+    public void close() throws IOException {
+      volume.unreference();
+    }
+
+    @Override
+    public FsVolumeSpi getVolume() {
+      return this.volume;
+    }
+  }
+
+  @Override
+  public FsVolumeReference obtainReference() throws ClosedChannelException {
+    return new FsVolumeReferenceImpl(this);
+  }
+
+  private void checkReference() {
+    Preconditions.checkState(reference.getReferenceCount() > 0);
+  }
+
+  /**
+   * Close this volume and wait all other threads to release the reference count
+   * on this volume.
+   * @throws IOException if the volume is closed or the waiting is interrupted.
+   */
+  void closeAndWait() throws IOException {
+    try {
+      this.reference.setClosed();
+    } catch (ClosedChannelException e) {
+      throw new IOException("The volume has already closed.", e);
+    }
+    final int SLEEP_MILLIS = 500;
+    while (this.reference.getReferenceCount() > 0) {
+      if (FsDatasetImpl.LOG.isDebugEnabled()) {
+        FsDatasetImpl.LOG.debug(String.format(
+            "The reference count for %s is %d, wait to be 0.",
+            this, reference.getReferenceCount()));
+      }
+      try {
+        Thread.sleep(SLEEP_MILLIS);
+      } catch (InterruptedException e) {
+        throw new IOException(e);
+      }
+    }
+  }
+
   File getCurrentDir() {
     return currentDir;
   }
@@ -250,6 +367,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
    * the block is finalized.
    */
   File createTmpFile(String bpid, Block b) throws IOException {
+    checkReference();
     return getBlockPoolSlice(bpid).createTmpFile(b);
   }
 
@@ -282,6 +400,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
    * the block is finalized.
    */
   File createRbwFile(String bpid, Block b) throws IOException {
+    checkReference();
     reserveSpaceForRbw(b.getNumBytes());
     return getBlockPoolSlice(bpid).createRbwFile(b);
   }
