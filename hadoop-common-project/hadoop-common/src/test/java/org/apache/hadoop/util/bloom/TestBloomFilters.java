@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.AbstractCollection;
+import java.util.BitSet;
 import java.util.Iterator;
 
 import org.apache.hadoop.util.bloom.BloomFilterCommonTester.BloomFilterTestStrategy;
@@ -236,5 +237,15 @@ public class TestBloomFilters {
                 BloomFilterTestStrategy.FILTER_OR_STRATEGY,
                 BloomFilterTestStrategy.FILTER_AND_STRATEGY,
                 BloomFilterTestStrategy.FILTER_XOR_STRATEGY)).test();
+  }
+
+  @Test
+  public void testNot() {
+    BloomFilter bf = new BloomFilter(8, 1, Hash.JENKINS_HASH);
+    bf.bits = BitSet.valueOf(new byte[] { (byte) 0x95 });
+    BitSet origBitSet = (BitSet) bf.bits.clone();
+    bf.not();
+    assertFalse("BloomFilter#not should have inverted all bits",
+                bf.bits.intersects(origBitSet));
   }
 }
