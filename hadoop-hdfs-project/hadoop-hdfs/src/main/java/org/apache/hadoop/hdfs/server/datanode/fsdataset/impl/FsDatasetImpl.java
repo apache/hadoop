@@ -766,7 +766,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     // Replace the old block if any to reschedule the scanning.
-    datanode.getBlockScanner().addBlock(block);
+    datanode.getBlockScanner().addBlock(block, false);
     return replicaInfo;
   }
 
@@ -2030,7 +2030,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         final DataBlockScanner blockScanner = datanode.getBlockScanner();
         if (!vol.isTransientStorage()) {
           if (blockScanner != null) {
-            blockScanner.addBlock(new ExtendedBlock(bpid, diskBlockInfo));
+            blockScanner.addBlock(new ExtendedBlock(bpid, diskBlockInfo), false);
           }
         } else {
           ramDiskReplicaTracker.addReplica(bpid, blockId, (FsVolumeImpl) vol);

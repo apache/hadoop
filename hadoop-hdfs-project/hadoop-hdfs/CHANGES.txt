@@ -472,6 +472,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7610. Fix removal of dynamically added DN volumes (Lei (Eddy) Xu via
     Colin P. McCabe)
 
+    HDFS-7548. Corrupt block reporting delayed until datablock scanner thread
+    detects it (Rushabh Shah via kihwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -600,6 +600,9 @@ class BlockSender implements java.io.Closeable {
         String ioem = e.getMessage();
         if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
           LOG.error("BlockSender.sendChunks() exception: ", e);
+          //Something might be wrong with the block. Make this block the high 
+          //priority block for verification.
+          datanode.blockScanner.addBlock(block, true);
         }
       }
       throw ioeToSocketException(e);

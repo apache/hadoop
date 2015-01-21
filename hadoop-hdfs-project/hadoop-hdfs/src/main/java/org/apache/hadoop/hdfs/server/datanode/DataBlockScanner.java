@@ -186,10 +186,10 @@ public class DataBlockScanner implements Runnable {
         new String[blockPoolScannerMap.keySet().size()]);
   }
   
-  public void addBlock(ExtendedBlock block) {
+  public void addBlock(ExtendedBlock block, boolean scanNow) {
     BlockPoolSliceScanner bpScanner = getBPScanner(block.getBlockPoolId());
     if (bpScanner != null) {
-      bpScanner.addBlock(block);
+      bpScanner.addBlock(block, scanNow);
     } else {
       LOG.warn("No block pool scanner found for block pool id: "
           + block.getBlockPoolId());
@@ -293,6 +293,17 @@ public class DataBlockScanner implements Runnable {
     }
   }
 
+  @VisibleForTesting
+  public void setLastScanTimeDifference(ExtendedBlock block, int lastScanTimeDifference) {
+    BlockPoolSliceScanner bpScanner = getBPScanner(block.getBlockPoolId());
+    if (bpScanner != null) {
+      bpScanner.setLastScanTimeDifference(lastScanTimeDifference);
+    } else {
+      LOG.warn("No block pool scanner found for block pool id: "
+          + block.getBlockPoolId());
+    }
+  }
+  
   public void start() {
     blockScannerThread = new Thread(this);
     blockScannerThread.setDaemon(true);
