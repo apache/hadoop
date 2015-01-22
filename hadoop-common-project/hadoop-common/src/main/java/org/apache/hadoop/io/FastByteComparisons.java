@@ -24,6 +24,9 @@ import java.security.PrivilegedAction;
 
 import sun.misc.Unsafe;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedBytes;
 
@@ -33,6 +36,7 @@ import com.google.common.primitives.UnsignedBytes;
  * class to be able to compare arrays that start at non-zero offsets.
  */
 abstract class FastByteComparisons {
+  static final Log LOG = LogFactory.getLog(FastByteComparisons.class);
 
   /**
    * Lexicographically compare two byte arrays.
@@ -71,6 +75,13 @@ abstract class FastByteComparisons {
      * implementation if unable to do so.
      */
     static Comparer<byte[]> getBestComparer() {
+      if (System.getProperty("os.arch").equals("sparc")) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Lexicographical comparer selected for "
+              + "byte aligned system architecture");
+        }
+        return lexicographicalComparerJavaImpl();
+      }
       try {
         Class<?> theClass = Class.forName(UNSAFE_COMPARER_NAME);
 
@@ -78,8 +89,16 @@ abstract class FastByteComparisons {
         @SuppressWarnings("unchecked")
         Comparer<byte[]> comparer =
           (Comparer<byte[]>) theClass.getEnumConstants()[0];
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Unsafe comparer selected for "
+              + "byte unaligned system architecture");
+        }
         return comparer;
       } catch (Throwable t) { // ensure we really catch *everything*
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(t.getMessage());
+          LOG.trace("Lexicographical comparer selected");
+        }
         return lexicographicalComparerJavaImpl();
       }
     }
