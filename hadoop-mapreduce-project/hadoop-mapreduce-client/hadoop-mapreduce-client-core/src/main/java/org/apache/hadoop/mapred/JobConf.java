@@ -20,8 +20,10 @@ package org.apache.hadoop.mapred;
 
 
 import java.io.IOException;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -44,6 +46,7 @@ import org.apache.hadoop.mapred.lib.KeyFieldBasedComparator;
 import org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
 import org.apache.hadoop.security.Credentials;
@@ -114,6 +117,8 @@ import org.apache.log4j.Level;
 public class JobConf extends Configuration {
 
   private static final Log LOG = LogFactory.getLog(JobConf.class);
+  private static final Pattern JAVA_OPTS_XMX_PATTERN =
+          Pattern.compile(".*(?:^|\\s)-Xmx(\\d+)([gGmMkK]?)(?:$|\\s).*");
 
   static{
     ConfigUtil.loadResources();
@@ -247,9 +252,9 @@ public class JobConf extends Configuration {
    */
   public static final String MAPRED_REDUCE_TASK_JAVA_OPTS = 
     JobContext.REDUCE_JAVA_OPTS;
-  
-  public static final String DEFAULT_MAPRED_TASK_JAVA_OPTS = "-Xmx200m";
-  
+
+  public static final String DEFAULT_MAPRED_TASK_JAVA_OPTS = "";
+
   /**
    * @deprecated
    * Configuration key to set the maximum virtual memory available to the child
@@ -2022,7 +2027,123 @@ public class JobConf extends Configuration {
       LOG.warn(JobConf.deprecatedString(JobConf.MAPRED_REDUCE_TASK_ULIMIT));
     }
   }
-  
+
+  private String getConfiguredTaskJavaOpts(TaskType taskType) {
+    String userClasspath = "";
+    String adminClasspath = "";
+    if (taskType == TaskType.MAP) {
+      userClasspath = get(MAPRED_MAP_TASK_JAVA_OPTS,
+          get(MAPRED_TASK_JAVA_OPTS, DEFAULT_MAPRED_TASK_JAVA_OPTS));
+      adminClasspath = get(MRJobConfig.MAPRED_MAP_ADMIN_JAVA_OPTS,
+          MRJobConfig.DEFAULT_MAPRED_ADMIN_JAVA_OPTS);
+    } else {
+      userClasspath = get(MAPRED_REDUCE_TASK_JAVA_OPTS,
+          get(MAPRED_TASK_JAVA_OPTS, DEFAULT_MAPRED_TASK_JAVA_OPTS));
+      adminClasspath = get(MRJobConfig.MAPRED_REDUCE_ADMIN_JAVA_OPTS,
+          MRJobConfig.DEFAULT_MAPRED_ADMIN_JAVA_OPTS);
+    }
+
+    return adminClasspath + " " + userClasspath;
+  }
+
+  @Private
+  public String getTaskJavaOpts(TaskType taskType) {
+    String javaOpts = getConfiguredTaskJavaOpts(taskType);
+
+    if (!javaOpts.contains("-Xmx")) {
+      float heapRatio = getFloat(MRJobConfig.HEAP_MEMORY_MB_RATIO,
+          MRJobConfig.DEFAULT_HEAP_MEMORY_MB_RATIO);
+
+      if (heapRatio > 1.0f || heapRatio < 0) {
+        LOG.warn("Invalid value for " + MRJobConfig.HEAP_MEMORY_MB_RATIO
+            + ", using the default.");
+        heapRatio = MRJobConfig.DEFAULT_HEAP_MEMORY_MB_RATIO;
+      }
+
+      int taskContainerMb = getMemoryRequired(taskType);
+      int taskHeapSize = (int)Math.ceil(taskContainerMb * heapRatio);
+
+      String xmxArg = String.format("-Xmx%dm", taskHeapSize);
+      LOG.info("Task java-opts do not specify heap size. Setting task attempt" +
+          " jvm max heap size to " + xmxArg);
+
+      javaOpts += " " + xmxArg;
+    }
+
+    return javaOpts;
+  }
+
+  /**
+   * Parse the Maximum heap size from the java opts as specified by the -Xmx option
+   * Format: -Xmx<size>[g|G|m|M|k|K]
+   * @param javaOpts String to parse to read maximum heap size
+   * @return Maximum heap size in MB or -1 if not specified
+   */
+  @Private
+  @VisibleForTesting
+  public static int parseMaximumHeapSizeMB(String javaOpts) {
+    // Find the last matching -Xmx following word boundaries
+    Matcher m = JAVA_OPTS_XMX_PATTERN.matcher(javaOpts);
+    if (m.matches()) {
+      int size = Integer.parseInt(m.group(1));
+      if (size <= 0) {
+        return -1;
+      }
+      if (m.group(2).isEmpty()) {
+        // -Xmx specified in bytes
+        return size / (1024 * 1024);
+      }
+      char unit = m.group(2).charAt(0);
+      switch (unit) {
+        case 'g':
+        case 'G':
+          // -Xmx specified in GB
+          return size * 1024;
+        case 'm':
+        case 'M':
+          // -Xmx specified in MB
+          return size;
+        case 'k':
+        case 'K':
+          // -Xmx specified in KB
+          return size / 1024;
+      }
+    }
+    // -Xmx not specified
+    return -1;
+  }
+
+  private int getMemoryRequiredHelper(
+      String configName, int defaultValue, int heapSize, float heapRatio) {
+    int memory = getInt(configName, -1);
+    if (memory <= 0) {
+      if (heapSize > 0) {
+        memory = (int) Math.ceil(heapSize / heapRatio);
+        LOG.info("Figured value for " + configName + " from javaOpts");
+      } else {
+        memory = defaultValue;
+      }
+    }
+
+    return memory;
+  }
+
+  @Private
+  public int getMemoryRequired(TaskType taskType) {
+    int memory = 1024;
+    int heapSize = parseMaximumHeapSizeMB(getConfiguredTaskJavaOpts(taskType));
+    float heapRatio = getFloat(MRJobConfig.HEAP_MEMORY_MB_RATIO,
+        MRJobConfig.DEFAULT_HEAP_MEMORY_MB_RATIO);
+    if (taskType == TaskType.MAP) {
+      return getMemoryRequiredHelper(MRJobConfig.MAP_MEMORY_MB,
+          MRJobConfig.DEFAULT_MAP_MEMORY_MB, heapSize, heapRatio);
+    } else if (taskType == TaskType.REDUCE) {
+      return getMemoryRequiredHelper(MRJobConfig.REDUCE_MEMORY_MB,
+          MRJobConfig.DEFAULT_REDUCE_MEMORY_MB, heapSize, heapRatio);
+    } else {
+      return memory;
+    }
+  }
 
 }
 
