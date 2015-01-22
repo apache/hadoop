@@ -475,6 +475,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7548. Corrupt block reporting delayed until datablock scanner thread
     detects it (Rushabh Shah via kihwal)
 
+    HDFS-7575. Upgrade should generate a unique storage ID for each
+    volume. (Arpit Agarwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
