@@ -1308,6 +1308,52 @@ public class TestConfiguration extends TestCase {
     assertTrue("my.var is not final", finalParameters.contains("my.var"));
   }
 
+  /**
+   * A test to check whether this thread goes into infinite loop because of
+   * destruction of data structure by resize of Map. This problem was reported
+   * by SPARK-2546.
+   * @throws Exception
+   */
+  public void testConcurrentAccesses() throws Exception {
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    declareProperty("some.config", "xyz", "xyz", false);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    Configuration conf = new Configuration();
+    conf.addResource(fileResource);
+
+    class ConfigModifyThread extends Thread {
+      final private Configuration config;
+      final private String prefix;
+
+      public ConfigModifyThread(Configuration conf, String prefix) {
+        config = conf;
+        this.prefix = prefix;
+      }
+
+      @Override
+      public void run() {
+        for (int i = 0; i < 100000; i++) {
+          config.set("some.config.value-" + prefix + i, "value");
+        }
+      }
+    }
+
+    ArrayList<ConfigModifyThread> threads = new ArrayList<>();
+    for (int i = 0; i < 100; i++) {
+      threads.add(new ConfigModifyThread(conf, String.valueOf(i)));
+    }
+    for (Thread t: threads) {
+      t.start();
+    }
+    for (Thread t: threads) {
+      t.join();
+    }
+    // If this test completes without going into infinite loop,
+    // it's expected behaviour.
+  }
+
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()

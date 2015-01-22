@@ -52,6 +52,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -228,7 +229,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * List of configuration parameters marked <b>final</b>. 
    */
-  private Set<String> finalParameters = new HashSet<String>();
+  private Set<String> finalParameters = Collections.newSetFromMap(
+      new ConcurrentHashMap<String, Boolean>());
   
   private boolean loadDefaults = true;
   
@@ -258,7 +260,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Stores the mapping of key to the resource which modifies or loads 
    * the key most recently
    */
-  private HashMap<String, String[]> updatingResource;
+  private Map<String, String[]> updatingResource;
  
   /**
    * Class to keep the information about the keys which replace the deprecated
@@ -685,7 +687,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
-    updatingResource = new HashMap<String, String[]>();
+    updatingResource = new ConcurrentHashMap<String, String[]>();
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
@@ -708,8 +710,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
        this.overlay = (Properties)other.overlay.clone();
      }
 
-     this.updatingResource = new HashMap<String, String[]>(other.updatingResource);
-     this.finalParameters = new HashSet<String>(other.finalParameters);
+     this.updatingResource = new ConcurrentHashMap<String, String[]>(
+         other.updatingResource);
+     this.finalParameters = Collections.newSetFromMap(
+         new ConcurrentHashMap<String, Boolean>());
+     this.finalParameters.addAll(other.finalParameters);
    }
    
     synchronized(Configuration.class) {
@@ -2314,20 +2319,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return final parameter set.
    */
   public Set<String> getFinalParameters() {
-    return new HashSet<String>(finalParameters);
+    Set<String> setFinalParams = Collections.newSetFromMap(
+        new ConcurrentHashMap<String, Boolean>());
+    setFinalParams.addAll(finalParameters);
+    return setFinalParams;
   }
 
   protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
-      HashMap<String, String[]> backup = 
-        new HashMap<String, String[]>(updatingResource);
+      Map<String, String[]> backup =
+          new ConcurrentHashMap<String, String[]>(updatingResource);
       loadResources(properties, resources, quietmode);
-      if (overlay!= null) {
+
+      if (overlay != null) {
         properties.putAll(overlay);
         for (Map.Entry<Object,Object> item: overlay.entrySet()) {
           String key = (String)item.getKey();
-          updatingResource.put(key, backup.get(key));
+          String[] source = backup.get(key);
+          if(source != null) {
+            updatingResource.put(key, source);
+          }
         }
       }
     }
@@ -2576,16 +2588,18 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (value != null || allowNullValueProperties) {
       if (!finalParameters.contains(attr)) {
         if (value==null && allowNullValueProperties) {
-	  value = DEFAULT_STRING_CHECK;
-	}
+          value = DEFAULT_STRING_CHECK;
+        }
         properties.setProperty(attr, value);
-        updatingResource.put(attr, source);
+        if(source != null) {
+          updatingResource.put(attr, source);
+        }
       } else if (!value.equals(properties.getProperty(attr))) {
         LOG.warn(name+":an attempt to override final parameter: "+attr
             +";  Ignoring.");
       }
     }
-    if (finalParameter) {
+    if (finalParameter && attr != null) {
       finalParameters.add(attr);
     }
   }
@@ -2788,7 +2802,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       String value = org.apache.hadoop.io.Text.readString(in);
       set(key, value); 
       String sources[] = WritableUtils.readCompressedStringArray(in);
-      updatingResource.put(key, sources);
+      if(sources != null) {
+        updatingResource.put(key, sources);
+      }
     }
   }
 
