@@ -212,11 +212,11 @@ public class LogCLIHelpers implements Configurable {
   }
 
   private static void logDirNotExist(String remoteAppLogDir) {
-    System.out.println(remoteAppLogDir + "does not exist.");
+    System.out.println(remoteAppLogDir + " does not exist.");
     System.out.println("Log aggregation has not completed or is not enabled.");
   }
 
   private static void emptyLogDir(String remoteAppLogDir) {
-    System.out.println(remoteAppLogDir + "does not have any log files.");
+    System.out.println(remoteAppLogDir + " does not have any log files.");
   }
 }
