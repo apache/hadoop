@@ -43,6 +43,6 @@ public class TestDatanodeLayoutUpgrade {
         System.getProperty("test.build.data") + File.separator +
             "dfs" + File.separator + "name");
     upgrade.upgradeAndVerify(new MiniDFSCluster.Builder(conf).numDataNodes(1)
-    .manageDataDfsDirs(false).manageNameDfsDirs(false));
+    .manageDataDfsDirs(false).manageNameDfsDirs(false), null);
   }
 }

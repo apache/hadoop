@@ -47,6 +47,7 @@ public class DatanodeStorage {
   private final String storageID;
   private final State state;
   private final StorageType storageType;
+  private static final String STORAGE_ID_PREFIX = "DS-";
 
   /**
    * Create a storage with {@link State#NORMAL} and {@link StorageType#DEFAULT}.
@@ -80,7 +81,23 @@ public class DatanodeStorage {
    * @return unique storage ID
    */
   public static String generateUuid() {
-    return "DS-" + UUID.randomUUID();
+    return STORAGE_ID_PREFIX + UUID.randomUUID();
+  }
+
+  /**
+   * Verify that a given string is a storage ID in the "DS-..uuid.." format.
+   */
+  public static boolean isValidStorageId(final String storageID) {
+    try {
+      // Attempt to parse the UUID.
+      if (storageID != null && storageID.indexOf(STORAGE_ID_PREFIX) == 0) {
+        UUID.fromString(storageID.substring(STORAGE_ID_PREFIX.length()));
+        return true;
+      }
+    } catch (IllegalArgumentException iae) {
+    }
+
+    return false;
   }
 
   @Override
