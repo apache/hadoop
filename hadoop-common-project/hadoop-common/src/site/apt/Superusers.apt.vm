@@ -11,19 +11,19 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  Superusers Acting On Behalf Of Other Users
+  Proxy user - Superusers Acting On Behalf Of Other Users
   ---
   ---
   ${maven.build.timestamp}
 
-Superusers Acting On Behalf Of Other Users
+Proxy user - Superusers Acting On Behalf Of Other Users
 
 %{toc|section=1|fromDepth=0}
 
 * Introduction
 
    This document describes how a superuser can submit jobs or access hdfs
-   on behalf of another user in a secured way.
+   on behalf of another user.
 
 * Use Case
 
@@ -38,9 +38,12 @@ Superusers Acting On Behalf Of Other Users
    on a connection authenticated with super's kerberos credentials. In
    other words super is impersonating the user joe.
 
+   Some products such as Apache Oozie need this.
+
+
 * Code example
 
-   In this example super's kerberos credentials are used for login and a
+   In this example super's credentials are used for login and a
    proxy user ugi object is created for joe. The operations are performed
    within the doAs method of this proxy user ugi object.
 
@@ -63,21 +66,26 @@ Superusers Acting On Behalf Of Other Users
 
 * Configurations
 
-   The superuser must be configured on namenode and jobtracker to be
-   allowed to impersonate another user. Following configurations are
-   required.
+   You can configure proxy user using properties
+   <<<hadoop.proxyuser.${superuser}.hosts>>> along with either or both of 
+   <<<hadoop.proxyuser.${superuser}.groups>>>
+   and <<<hadoop.proxyuser.${superuser}.users>>>.
+
+   By specifying as below in core-site.xml,
+   the superuser named <<<super>>> can connect
+   only from <<<host1>>> and <<<host2>>>
+   to impersonate a user belonging to <<<group1>>> and <<<group2>>>.
 
 ----
    <property>
-     <name>hadoop.proxyuser.super.groups</name>
-     <value>group1,group2</value>
-     <description>Allow the superuser super to impersonate any members of the group group1 and group2</description>
-   </property>
-   <property>
      <name>hadoop.proxyuser.super.hosts</name>
      <value>host1,host2</value>
-     <description>The superuser can connect only from host1 and host2 to impersonate a user</description>
    </property>
+   <property>
+     <name>hadoop.proxyuser.super.groups</name>
+     <value>group1,group2</value>
+   </property>
+
 ----
 
    If these configurations are not present, impersonation will not be
@@ -85,11 +93,47 @@ Superusers Acting On Behalf Of Other Users
 
    If more lax security is preferred, the wildcard value * may be used to
    allow impersonation from any host or of any user.
+   For example, by specifying as below in core-site.xml,
+   user named <<<oozie>>> accessing from any host
+   can impersonate any user belonging to any group.
+
+----
+  <property>
+    <name>hadoop.proxyuser.oozie.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.oozie.groups</name>
+    <value>*</value>
+  </property>
+----
+
+   The <<<hadoop.proxyuser.${superuser}.hosts>>> accepts list of ip addresses,
+   ip address ranges in CIDR format and/or host names.
+   For example, by specifying as below,
+   user named <<<super>>> accessing from hosts in the range 
+   <<<10.222.0.0-15>>> and <<<10.113.221.221>>> can impersonate
+   <<<user1>>> and <<<user2>>>.
+      
+----
+   <property>
+     <name>hadoop.proxyuser.super.hosts</name>
+     <value>10.222.0.0/16,10.113.221.221</value>
+   </property>
+   <property>
+     <name>hadoop.proxyuser.super.users</name>
+     <value>user1,user2</value>
+   </property>
+----
+
 
 * Caveats
 
-   The superuser must have kerberos credentials to be able to impersonate
-   another user. It cannot use delegation tokens for this feature. It
+   If the cluster is running in {{{./SecureMode.html}Secure Mode}},
+   the superuser must have kerberos credentials to be able to impersonate
+   another user.
+
+   It cannot use delegation tokens for this feature. It
    would be wrong if superuser adds its own delegation token to the proxy
    user ugi, as it will allow the proxy user to connect to the service
    with the privileges of the superuser.

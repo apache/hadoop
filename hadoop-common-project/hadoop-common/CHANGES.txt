@@ -388,6 +388,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11500. InputStream is left unclosed in ApplicationClassLoader.
     (Ted Yu via ozawa)
 
+    HADOOP-11008. Remove duplicated description about proxy-user in site 
+    documents (Masatake Iwasaki via aw)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

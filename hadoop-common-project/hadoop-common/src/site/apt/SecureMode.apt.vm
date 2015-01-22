@@ -202,58 +202,7 @@ KVNO Timestamp         Principal
 
   Some products such as Apache Oozie which access the services of Hadoop
   on behalf of end users need to be able to impersonate end users.
-  You can configure proxy user using properties
-  <<<hadoop.proxyuser.${superuser}.hosts>>> along with either or both of 
-  <<<hadoop.proxyuser.${superuser}.groups>>>
-  and <<<hadoop.proxyuser.${superuser}.users>>>.
-
-  For example, by specifying as below in core-site.xml,
-  user named <<<oozie>>> accessing from any host
-  can impersonate any user belonging to any group.
-
-----
-  <property>
-    <name>hadoop.proxyuser.oozie.hosts</name>
-    <value>*</value>
-  </property>
-  <property>
-    <name>hadoop.proxyuser.oozie.groups</name>
-    <value>*</value>
-  </property>
-----
-
-  User named <<<oozie>>> accessing from any host
-  can impersonate user1 and user2 by specifying as below in core-site.xml.
-
-----
-  <property>
-    <name>hadoop.proxyuser.oozie.hosts</name>
-    <value>*</value>
-  </property>
-  <property>
-    <name>hadoop.proxyuser.oozie.users</name>
-    <value>user1,user2</value>
-  </property>
-----
-
-  The <<<hadoop.proxyuser.${superuser}.hosts>>> accepts list of ip addresses,
-  ip address ranges in CIDR format and/or host names.
-  
-  For example, by specifying as below in core-site.xml,
-  user named <<<oozie>>> accessing from hosts in the range 
-  10.222.0.0-15 and 10.113.221.221
-  can impersonate any user belonging to any group.
-  
-----
-  <property>
-    <name>hadoop.proxyuser.oozie.hosts</name>
-    <value>10.222.0.0/16,10.113.221.221</value>
-  </property>
-  <property>
-    <name>hadoop.proxyuser.oozie.groups</name>
-    <value>*</value>
-  </property>
-----
+  See {{{./Superusers.html}the doc of proxy user}} for details.
 
 ** Secure DataNode
 
