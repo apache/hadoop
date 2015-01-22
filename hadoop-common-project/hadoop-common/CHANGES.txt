@@ -382,6 +382,9 @@ Release 2.7.0 - UNRELEASED
     architecture because it is slower there (Suman Somasundar via Colin P.
     McCabe)
 
+    HADOOP-11209. Configuration#updatingResource/finalParameters are not
+    thread-safe. (Varun Saxena via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
