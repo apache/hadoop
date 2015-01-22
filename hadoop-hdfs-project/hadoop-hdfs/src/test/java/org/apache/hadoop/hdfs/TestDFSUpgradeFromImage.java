@@ -24,7 +24,6 @@ import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -91,6 +90,10 @@ public class TestDFSUpgradeFromImage {
     }
   }
   
+  public interface ClusterVerifier {
+    public void verifyClusterPostUpgrade(final MiniDFSCluster cluster) throws IOException;
+  }
+
   final LinkedList<ReferenceFileInfo> refList = new LinkedList<ReferenceFileInfo>();
   Iterator<ReferenceFileInfo> refIter;
   
@@ -119,7 +122,7 @@ public class TestDFSUpgradeFromImage {
       if (line.length() <= 0 || line.startsWith("#")) {
         continue;
       }
-      String[] arr = line.split("\\s+\t\\s+");
+      String[] arr = line.split("\\s+");
       if (arr.length < 1) {
         continue;
       }
@@ -288,7 +291,7 @@ public class TestDFSUpgradeFromImage {
   public void testUpgradeFromRel22Image() throws IOException {
     unpackStorage(HADOOP22_IMAGE, HADOOP_DFS_DIR_TXT);
     upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf).
-        numDataNodes(4));
+        numDataNodes(4), null);
   }
   
   /**
@@ -316,7 +319,7 @@ public class TestDFSUpgradeFromImage {
     // Upgrade should now fail
     try {
       upgradeAndVerify(new MiniDFSCluster.Builder(upgradeConf).
-          numDataNodes(4));
+          numDataNodes(4), null);
       fail("Upgrade did not fail with bad MD5");
     } catch (IOException ioe) {
       String msg = StringUtils.stringifyException(ioe);
@@ -573,7 +576,7 @@ public class TestDFSUpgradeFromImage {
     } while (dirList.hasMore());
   }
   
-  void upgradeAndVerify(MiniDFSCluster.Builder bld)
+  void upgradeAndVerify(MiniDFSCluster.Builder bld, ClusterVerifier verifier)
       throws IOException {
     MiniDFSCluster cluster = null;
     try {
@@ -592,6 +595,10 @@ public class TestDFSUpgradeFromImage {
       }
       recoverAllLeases(dfsClient, new Path("/"));
       verifyFileSystem(dfs);
+
+      if (verifier != null) {
+        verifier.verifyClusterPostUpgrade(cluster);
+      }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     } 
@@ -611,6 +618,6 @@ public class TestDFSUpgradeFromImage {
         "data1");
     upgradeAndVerify(new MiniDFSCluster.Builder(conf).
           numDataNodes(1).enableManagedDfsDirsRedundancy(false).
-          manageDataDfsDirs(false));
+          manageDataDfsDirs(false), null);
   }
 }
