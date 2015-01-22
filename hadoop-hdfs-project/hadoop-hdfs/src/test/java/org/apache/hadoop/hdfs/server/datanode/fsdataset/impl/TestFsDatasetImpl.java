@@ -86,7 +86,7 @@ public class TestFsDatasetImpl {
 
   private static Storage.StorageDirectory createStorageDirectory(File root) {
     Storage.StorageDirectory sd = new Storage.StorageDirectory(root);
-    dsForStorageUuid.createStorageID(sd);
+    dsForStorageUuid.createStorageID(sd, false);
     return sd;
   }
 
