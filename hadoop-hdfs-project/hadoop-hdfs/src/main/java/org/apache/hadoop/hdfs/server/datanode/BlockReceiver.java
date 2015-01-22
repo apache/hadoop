@@ -123,7 +123,7 @@ class BlockReceiver implements Closeable {
   private boolean syncOnClose;
   private long restartBudget;
   /** the reference of the volume where the block receiver writes to */
-  private final ReplicaHandler replicaHandler;
+  private ReplicaHandler replicaHandler;
 
   /**
    * for replaceBlock response
@@ -334,6 +334,7 @@ class BlockReceiver implements Closeable {
     }
     if (replicaHandler != null) {
       IOUtils.cleanup(null, replicaHandler);
+      replicaHandler = null;
     }
     if (measuredFlushTime) {
       datanode.metrics.addFlushNanos(flushTotalNanos);
