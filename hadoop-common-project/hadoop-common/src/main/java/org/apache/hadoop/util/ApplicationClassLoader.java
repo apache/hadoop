@@ -67,10 +67,8 @@ public class ApplicationClassLoader extends URLClassLoader {
   };
 
   static {
-    InputStream is = null;
-    try {
-      is = ApplicationClassLoader.class.getClassLoader().
-          getResourceAsStream(PROPERTIES_FILE);
+    try (InputStream is = ApplicationClassLoader.class.getClassLoader()
+        .getResourceAsStream(PROPERTIES_FILE);) {
       if (is == null) {
         throw new ExceptionInInitializerError("properties file " +
             PROPERTIES_FILE + " is not found");
