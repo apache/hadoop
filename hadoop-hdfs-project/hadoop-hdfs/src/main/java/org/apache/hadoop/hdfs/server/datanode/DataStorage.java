@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -142,11 +143,20 @@ public class DataStorage extends Storage {
     this.datanodeUuid = newDatanodeUuid;
   }
 
-  /** Create an ID for this storage. */
-  public synchronized void createStorageID(StorageDirectory sd) {
-    if (sd.getStorageUuid() == null) {
+  /** Create an ID for this storage.
+   * @return true if a new storage ID was generated.
+   * */
+  public synchronized boolean createStorageID(
+      StorageDirectory sd, boolean regenerateStorageIds) {
+    final String oldStorageID = sd.getStorageUuid();
+    if (oldStorageID == null || regenerateStorageIds) {
       sd.setStorageUuid(DatanodeStorage.generateUuid());
+      LOG.info("Generated new storageID " + sd.getStorageUuid() +
+          " for directory " + sd.getRoot() +
+          (oldStorageID == null ? "" : (" to replace " + oldStorageID)));
+      return true;
     }
+    return false;
   }
 
   /**
@@ -677,20 +687,25 @@ public class DataStorage extends Storage {
           + sd.getRoot().getCanonicalPath() + ": namenode clusterID = "
           + nsInfo.getClusterID() + "; datanode clusterID = " + getClusterID());
     }
-    
-    // After addition of the federation feature, ctime check is only 
-    // meaningful at BlockPoolSliceStorage level. 
 
-    // regular start up. 
+    // Clusters previously upgraded from layout versions earlier than
+    // ADD_DATANODE_AND_STORAGE_UUIDS failed to correctly generate a
+    // new storage ID. We check for that and fix it now.
+    boolean haveValidStorageId =
+        DataNodeLayoutVersion.supports(
+            LayoutVersion.Feature.ADD_DATANODE_AND_STORAGE_UUIDS, layoutVersion) &&
+            DatanodeStorage.isValidStorageId(sd.getStorageUuid());
+
+    // regular start up.
     if (this.layoutVersion == HdfsConstants.DATANODE_LAYOUT_VERSION) {
-      createStorageID(sd);
+      createStorageID(sd, !haveValidStorageId);
       return; // regular startup
     }
-    
+
     // do upgrade
     if (this.layoutVersion > HdfsConstants.DATANODE_LAYOUT_VERSION) {
       doUpgrade(datanode, sd, nsInfo);  // upgrade
-      createStorageID(sd);
+      createStorageID(sd, !haveValidStorageId);
       return;
     }
     
