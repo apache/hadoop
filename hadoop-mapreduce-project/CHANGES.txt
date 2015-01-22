@@ -3,6 +3,8 @@ Hadoop MapReduce Change Log
 Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
+    MAPREDUCE-5785. Derive heap size or mapreduce.*.memory.mb automatically.
+    (Gera Shegalov and Karthik Kambatla via gera)
 
   NEW FEATURES
 
