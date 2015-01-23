@@ -25,9 +25,10 @@ import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelsStore;
 
-public class MemoryRMNodeLabelsManager extends RMNodeLabelsManager {
+public class NullRMNodeLabelsManager extends RMNodeLabelsManager {
   Map<NodeId, Set<String>> lastNodeToLabels = null;
   Collection<String> lastAddedlabels = null;
   Collection<String> lastRemovedlabels = null;
@@ -78,5 +79,12 @@ public class MemoryRMNodeLabelsManager extends RMNodeLabelsManager {
   @Override
   protected void stopDispatcher() {
     // do nothing
+  }
+  
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    // always enable node labels while using MemoryRMNodeLabelsManager
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    super.serviceInit(conf);
   }
 }

@@ -26,7 +26,7 @@ import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.MemoryRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
@@ -47,7 +47,7 @@ public class TestQueueParsing {
   
   @Before
   public void setup() {
-    nodeLabelManager = new MemoryRMNodeLabelsManager();
+    nodeLabelManager = new NullRMNodeLabelsManager();
     nodeLabelManager.init(new YarnConfiguration());
     nodeLabelManager.start();
   }
@@ -566,7 +566,7 @@ public class TestQueueParsing {
             new NMTokenSecretManagerInRM(csConf),
             new ClientToAMTokenSecretManagerInRM(), null);
     
-    RMNodeLabelsManager nodeLabelsManager = new MemoryRMNodeLabelsManager();
+    RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
     nodeLabelsManager.init(conf);
     nodeLabelsManager.start();
     
@@ -594,7 +594,7 @@ public class TestQueueParsing {
             new NMTokenSecretManagerInRM(csConf),
             new ClientToAMTokenSecretManagerInRM(), null);
     
-    RMNodeLabelsManager nodeLabelsManager = new MemoryRMNodeLabelsManager();
+    RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
     nodeLabelsManager.init(conf);
     nodeLabelsManager.start();
     
@@ -622,7 +622,7 @@ public class TestQueueParsing {
             new NMTokenSecretManagerInRM(csConf),
             new ClientToAMTokenSecretManagerInRM(), null);
     
-    RMNodeLabelsManager nodeLabelsManager = new MemoryRMNodeLabelsManager();
+    RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
     nodeLabelsManager.init(conf);
     nodeLabelsManager.start();
     
@@ -649,7 +649,7 @@ public class TestQueueParsing {
             new NMTokenSecretManagerInRM(csConf),
             new ClientToAMTokenSecretManagerInRM(), null);
     
-    RMNodeLabelsManager nodeLabelsManager = new MemoryRMNodeLabelsManager();
+    RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
     nodeLabelsManager.init(conf);
     nodeLabelsManager.start();
     
