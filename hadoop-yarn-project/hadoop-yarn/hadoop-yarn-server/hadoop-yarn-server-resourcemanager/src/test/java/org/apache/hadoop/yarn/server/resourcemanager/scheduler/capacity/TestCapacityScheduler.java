@@ -84,7 +84,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMWithAMS;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.MemoryRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -154,7 +154,7 @@ public class TestCapacityScheduler {
     resourceManager = new ResourceManager() {
       @Override
       protected RMNodeLabelsManager createNodeLabelManager() {
-        RMNodeLabelsManager mgr = new MemoryRMNodeLabelsManager();
+        RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
         mgr.init(getConfig());
         return mgr;
       }
@@ -1485,7 +1485,7 @@ public class TestCapacityScheduler {
     resourceManager = new ResourceManager() {
        @Override
         protected RMNodeLabelsManager createNodeLabelManager() {
-          RMNodeLabelsManager mgr = new MemoryRMNodeLabelsManager();
+          RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
           mgr.init(getConfig());
           return mgr;
         }

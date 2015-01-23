@@ -26,6 +26,8 @@ import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,7 +43,9 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
   @Before
   public void before() {
     mgr = new DummyCommonNodeLabelsManager();
-    mgr.init(new Configuration());
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    mgr.init(conf);
     mgr.start();
   }
 
@@ -318,5 +322,59 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
         toSet("p1"), toNodeId("n1:1"), toSet("p2"), toNodeId("n1:2"),
         toSet("p1")));
+  }
+
+  private void assertNodeLabelsDisabledErrorMessage(IOException e) {
+    Assert.assertEquals(CommonNodeLabelsManager.NODE_LABELS_NOT_ENABLED_ERR,
+        e.getMessage());
+  }
+  
+  @Test(timeout = 5000)
+  public void testNodeLabelsDisabled() throws IOException {
+    DummyCommonNodeLabelsManager mgr = new DummyCommonNodeLabelsManager();
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    mgr.init(conf);
+    mgr.start();
+    
+    // add labels
+    try {
+      mgr.addToCluserNodeLabels(ImmutableSet.of("x"));
+    } catch (IOException e) {
+      assertNodeLabelsDisabledErrorMessage(e);
+    }
+    
+    // remove labels
+    try {
+      mgr.removeFromClusterNodeLabels(ImmutableSet.of("x"));
+    } catch (IOException e) {
+      assertNodeLabelsDisabledErrorMessage(e);
+    }
+    
+    // add labels to node
+    try {
+      mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("host", 0),
+          CommonNodeLabelsManager.EMPTY_STRING_SET));
+    } catch (IOException e) {
+      assertNodeLabelsDisabledErrorMessage(e);
+    }
+    
+    // remove labels from node
+    try {
+      mgr.removeLabelsFromNode(ImmutableMap.of(NodeId.newInstance("host", 0),
+          CommonNodeLabelsManager.EMPTY_STRING_SET));
+    } catch (IOException e) {
+      assertNodeLabelsDisabledErrorMessage(e);
+    }
+    
+    // replace labels on node
+    try {
+      mgr.replaceLabelsOnNode(ImmutableMap.of(NodeId.newInstance("host", 0),
+          CommonNodeLabelsManager.EMPTY_STRING_SET));
+    } catch (IOException e) {
+      assertNodeLabelsDisabledErrorMessage(e);
+    }
+    
+    mgr.close();
   }
 }

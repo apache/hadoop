@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.nodelabels.NodeLabel;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelTestBase;
@@ -44,12 +45,14 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
   private final Resource SMALL_RESOURCE = Resource.newInstance(100, 0);
   private final Resource LARGE_NODE = Resource.newInstance(1000, 0);
   
-  MemoryRMNodeLabelsManager mgr = null;
+  NullRMNodeLabelsManager mgr = null;
 
   @Before
   public void before() {
-    mgr = new MemoryRMNodeLabelsManager();
-    mgr.init(new Configuration());
+    mgr = new NullRMNodeLabelsManager();
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    mgr.init(conf);
     mgr.start();
   }
 
