@@ -293,6 +293,8 @@ Trunk (Unreleased)
     HDFS-7667. Various typos and improvements to HDFS Federation doc
     (Charles Lamb via aw)
 
+    HDFS-3750. API docs don't include HDFS (Jolly Chen via aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
