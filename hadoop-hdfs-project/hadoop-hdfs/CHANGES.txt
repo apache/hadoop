@@ -290,6 +290,9 @@ Trunk (Unreleased)
     HADOOP-11484. hadoop-mapreduce-client-nativetask fails to build on ARM
     AARCH64 due to x86 asm statements (Edward Nevill via Colin P. McCabe)
 
+    HDFS-7667. Various typos and improvements to HDFS Federation doc
+    (Charles Lamb via aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
