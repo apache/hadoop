@@ -104,7 +104,8 @@ public class NodeHeartbeatResponsePBImpl extends
     for (Map.Entry<ApplicationId, ByteBuffer> entry : systemCredentials.entrySet()) {
       builder.addSystemCredentialsForApps(SystemCredentialsForAppsProto.newBuilder()
         .setAppId(convertToProtoFormat(entry.getKey()))
-        .setCredentialsForApp(ProtoUtils.convertToProtoFormat(entry.getValue())));
+        .setCredentialsForApp(ProtoUtils.convertToProtoFormat(
+            entry.getValue().duplicate())));
     }
   }
 
