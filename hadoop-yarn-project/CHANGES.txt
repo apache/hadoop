@@ -366,6 +366,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3078. LogCLIHelpers lacks of a blank space before string 'does not exist'.
     (Sam Liu via ozawa)
 
+    YARN-3082. Non thread safe access to systemCredentials in NodeHeartbeatResponse
+    processing. (Anubhav Dhoot via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
