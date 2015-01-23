@@ -299,7 +299,7 @@ $ keytool -genkey -alias tomcat -keyalg RSA
     <value>*</value>
     <description>
       ACL for create-key operations.
-      If the user does is not in the GET ACL, the key material is not returned
+      If the user is not in the GET ACL, the key material is not returned
       as part of the response.
     </description>
   </property>
@@ -309,7 +309,7 @@ $ keytool -genkey -alias tomcat -keyalg RSA
     <value>hdfs,foo</value>
     <description>
       Blacklist for create-key operations.
-      If the user does is in the Blacklist, the key material is not returned
+      If the user is in the Blacklist, the key material is not returned
       as part of the response.
     </description>
   </property>
@@ -335,7 +335,7 @@ $ keytool -genkey -alias tomcat -keyalg RSA
     <value>*</value>
     <description>
       ACL for rollover-key operations.
-      If the user does is not in the GET ACL, the key material is not returned
+      If the user is not in the GET ACL, the key material is not returned
       as part of the response.
     </description>
   </property>
