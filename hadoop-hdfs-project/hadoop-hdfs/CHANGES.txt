@@ -775,6 +775,8 @@ Release 2.7.0 - UNRELEASED
     causes the fsvolume reference being released incorrectly. (Lei Xu via
     yliu)
 
+    HDFS-7644. minor typo in HttpFS doc (Charles Lamb via aw)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
