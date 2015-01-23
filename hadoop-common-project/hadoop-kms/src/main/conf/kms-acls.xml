@@ -41,7 +41,7 @@
     <value>*</value>
     <description>
       ACL for rollover-key operations.
-      If the user does is not in the GET ACL, the key material is not returned
+      If the user is not in the GET ACL, the key material is not returned
       as part of the response.
     </description>
   </property>
