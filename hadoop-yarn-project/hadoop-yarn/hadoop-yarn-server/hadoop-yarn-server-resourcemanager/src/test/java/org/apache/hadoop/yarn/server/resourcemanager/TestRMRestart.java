@@ -2073,6 +2073,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     MockRM rm1 = new MockRM(conf, memStore) {
       @Override
       protected RMNodeLabelsManager createNodeLabelManager() {

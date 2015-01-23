@@ -45,7 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.RMSecretManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.TestFifoScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.MemoryRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -81,7 +81,7 @@ public class TestContainerAllocation {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
       ResourceScheduler.class);
-    mgr = new MemoryRMNodeLabelsManager();
+    mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
   }
 
@@ -451,7 +451,7 @@ public class TestContainerAllocation {
   
   @Test(timeout = 300000)
   public void testContainerAllocationWithSingleUserLimits() throws Exception {
-    final RMNodeLabelsManager mgr = new MemoryRMNodeLabelsManager();
+    final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
 
     // set node -> label

@@ -80,6 +80,7 @@ public class TestDistributedShell {
     conf.set("yarn.log.dir", "target");
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     
     if (yarnCluster == null) {
       yarnCluster =
