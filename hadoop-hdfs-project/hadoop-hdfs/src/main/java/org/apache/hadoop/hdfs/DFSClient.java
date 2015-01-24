@@ -1984,6 +1984,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public boolean truncate(String src, long newLength) throws IOException {
     checkOpen();
+    if (newLength < 0) {
+      throw new HadoopIllegalArgumentException(
+          "Cannot truncate to a negative file size: " + newLength + ".");
+    }
     TraceScope scope = getPathTraceScope("truncate", src);
     try {
       return namenode.truncate(src, newLength, clientName);

@@ -34,6 +34,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -442,6 +443,14 @@ public class TestFileTruncate {
       fail("Truncate must fail on open file.");
     } catch(IOException expected) {}
     out.close();
+
+    try {
+      fs.truncate(p, -1);
+      fail("Truncate must fail for a negative new length.");
+    } catch (HadoopIllegalArgumentException expected) {
+      GenericTestUtils.assertExceptionContains(
+          "Cannot truncate to a negative file size", expected);
+    }
 
     cluster.shutdownDataNodes();
     NameNodeAdapter.getLeaseManager(cluster.getNamesystem())
