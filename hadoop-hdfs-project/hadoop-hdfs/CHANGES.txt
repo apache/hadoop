@@ -143,6 +143,9 @@ Trunk (Unreleased)
     HDFS-7430. Rewrite the BlockScanner to use O(1) memory and use multiple
     threads (cmccabe)
 
+    HDFS-7659. truncate should check negative value of the new length.
+    (Yi Liu via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
