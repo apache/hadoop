@@ -1984,6 +1984,21 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       scope.close();
     }
   }
+
+  /**
+   * Truncate a file to an indicated size
+   * See {@link ClientProtocol#truncate(String, long)}. 
+   */
+  public boolean truncate(String src, long newLength) throws IOException {
+    checkOpen();
+    try {
+      return namenode.truncate(src, newLength, clientName);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          UnresolvedPathException.class);
+    }
+  }
+
   /**
    * Delete file or directory.
    * See {@link ClientProtocol#delete(String, boolean)}. 

@@ -19,6 +19,8 @@ Release 2.7.0 - UNRELEASED
     
     HDFS-7449. Add metrics to NFS gateway (brandonli)
 
+    HDFS-3107. Introduce truncate. (Plamen Jeliazkov via shv)
+
   IMPROVEMENTS
 
     HDFS-7055. Add tracing to DFSInputStream (cmccabe)

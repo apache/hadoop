@@ -626,7 +626,20 @@ public class DistributedFileSystem extends FileSystem {
       }.resolve(this, absDst);
     }
   }
-  
+
+  /**
+   * Truncate the file in the indicated path to the indicated size.
+   * @param f The path to the file to be truncated
+   * @param newLength The size the file is to be truncated to
+   *
+   * @return true if and client does not need to wait for block recovery,
+   * false if client needs to wait for block recovery.
+   */
+  public boolean truncate(Path f, final long newLength) throws IOException {
+    statistics.incrementWriteOps(1);
+    return dfs.truncate(getPathName(f), newLength);
+  }
+
   @Override
   public boolean delete(Path f, final boolean recursive) throws IOException {
     statistics.incrementWriteOps(1);

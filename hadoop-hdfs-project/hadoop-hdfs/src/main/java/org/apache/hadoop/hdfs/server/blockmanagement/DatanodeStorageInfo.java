@@ -240,7 +240,7 @@ public class DatanodeStorageInfo {
     return result;
   }
 
-  boolean removeBlock(BlockInfo b) {
+  public boolean removeBlock(BlockInfo b) {
     blockList = b.listRemove(blockList, this);
     if (b.removeStorage(this)) {
       numBlocks--;
