@@ -352,6 +352,11 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     throw new IOException("Not supported");
   }
 
+  @Override
+  public boolean truncate(Path f, long newLength) throws IOException {
+    throw new IOException("Not supported");
+  }
+
   /**
    * Calculated the length of the checksum file in bytes.
    * @param size the length of the data file in bytes

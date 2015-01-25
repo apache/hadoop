@@ -761,6 +761,14 @@ public class HarFileSystem extends FileSystem {
    * Not implemented.
    */
   @Override
+  public boolean truncate(Path f, long newLength) throws IOException {
+    throw new IOException("Har: truncate not allowed");
+  }
+
+  /**
+   * Not implemented.
+   */
+  @Override
   public boolean delete(Path f, boolean recursive) throws IOException { 
     throw new IOException("Har: delete not allowed");
   }

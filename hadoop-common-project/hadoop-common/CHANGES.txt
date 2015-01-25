@@ -25,6 +25,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-8989. hadoop fs -find feature (Jonathan Allen via aw)
 
+    HADOOP-11490. Expose truncate API via FileSystem and shell command.
+    (Milan Desai via shv)
+
   IMPROVEMENTS
 
     HADOOP-11483. HardLink.java should use the jdk7 createLink method (aajisaka)

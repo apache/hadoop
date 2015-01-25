@@ -446,6 +446,14 @@ public class ViewFileSystem extends FileSystem {
     return resSrc.targetFileSystem.rename(resSrc.remainingPath,
         resDst.remainingPath);
   }
+
+  @Override
+  public boolean truncate(final Path f, final long newLength)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(f), true);
+    return res.targetFileSystem.truncate(f, newLength);
+  }
   
   @Override
   public void setOwner(final Path f, final String username,
@@ -831,6 +839,11 @@ public class ViewFileSystem extends FileSystem {
       checkPathIsSlash(src);
       checkPathIsSlash(dst);
       throw readOnlyMountTable("rename", src);     
+    }
+
+    @Override
+    public boolean truncate(Path f, long newLength) throws IOException {
+      throw readOnlyMountTable("truncate", f);
     }
 
     @Override
