@@ -700,13 +700,14 @@ public class BlockManager {
    * The client is supposed to allocate a new block with the next call.
    *
    * @param bc file
+   * @param bytesToRemove num of bytes to remove from block
    * @return the last block locations if the block is partial or null otherwise
    */
   public LocatedBlock convertLastBlockToUnderConstruction(
-      BlockCollection bc) throws IOException {
+      BlockCollection bc, long bytesToRemove) throws IOException {
     BlockInfo oldBlock = bc.getLastBlock();
     if(oldBlock == null ||
-        bc.getPreferredBlockSize() == oldBlock.getNumBytes())
+       bc.getPreferredBlockSize() == oldBlock.getNumBytes() - bytesToRemove)
       return null;
     assert oldBlock == getStoredBlock(oldBlock) :
       "last block of the file is not in blocksMap";

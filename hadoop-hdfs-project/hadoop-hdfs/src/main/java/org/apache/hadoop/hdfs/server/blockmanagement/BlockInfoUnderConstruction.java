@@ -55,6 +55,11 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   private long blockRecoveryId = 0;
 
   /**
+   * The block source to use in the event of copy-on-write truncate.
+   */
+  private Block truncateBlock;
+
+  /**
    * ReplicaUnderConstruction contains information about replicas while
    * they are under construction.
    * The GS, the length and the state of the replica is as reported by 
@@ -229,6 +234,15 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     return blockRecoveryId;
   }
 
+  /** Get recover block */
+  public Block getTruncateBlock() {
+    return truncateBlock;
+  }
+
+  public void setTruncateBlock(Block recoveryBlock) {
+    this.truncateBlock = recoveryBlock;
+  }
+
   /**
    * Process the recorded replicas. When about to commit or finish the
    * pipeline recovery sort out bad replicas.
@@ -273,11 +287,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * make it primary.
    */
   public void initializeBlockRecovery(long recoveryId) {
-    initializeBlockRecovery(BlockUCState.UNDER_RECOVERY, recoveryId);
-  }
-
-  public void initializeBlockRecovery(BlockUCState s, long recoveryId) {
-    setBlockUCState(s);
+    setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
     if (replicas.size() == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*"

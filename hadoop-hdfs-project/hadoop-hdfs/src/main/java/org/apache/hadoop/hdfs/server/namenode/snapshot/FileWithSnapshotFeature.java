@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
@@ -154,18 +155,19 @@ public class FileWithSnapshotFeature implements INode.Feature {
         AclStorage.removeAclFeature(aclFeature);
       }
     }
-    
-    collectBlocksAndClear(file, collectedBlocks, removedINodes);
-    
+
+    getDiffs().combineAndCollectSnapshotBlocks(
+        file, removed, collectedBlocks, removedINodes);
+
     long dsDelta = oldDiskspace - file.diskspaceConsumed();
     return Quota.Counts.newInstance(0, dsDelta);
   }
-  
+
   /**
    * If some blocks at the end of the block list no longer belongs to
    * any inode, collect them and update the block list.
    */
-  private void collectBlocksAndClear(final INodeFile file,
+  public void collectBlocksAndClear(final INodeFile file,
       final BlocksMapUpdateInfo info, final List<INode> removedINodes) {
     // check if everything is deleted.
     if (isCurrentFileDeleted() && getDiffs().asList().isEmpty()) {
@@ -174,13 +176,19 @@ public class FileWithSnapshotFeature implements INode.Feature {
     }
     // find max file size.
     final long max;
+    FileDiff diff = getDiffs().getLast();
     if (isCurrentFileDeleted()) {
-      final FileDiff last = getDiffs().getLast();
-      max = last == null? 0: last.getFileSize();
+      max = diff == null? 0: diff.getFileSize();
     } else { 
       max = file.computeFileSize();
     }
 
-    file.collectBlocksBeyondMax(max, info);
+    // Collect blocks that should be deleted
+    FileDiff last = diffs.getLast();
+    BlockInfo[] snapshotBlocks = last == null ? null : last.getBlocks();
+    if(snapshotBlocks == null)
+      file.collectBlocksBeyondMax(max, info);
+    else
+      file.collectBlocksBeyondSnapshot(snapshotBlocks, info);
   }
 }

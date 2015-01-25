@@ -22,6 +22,7 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -53,8 +54,8 @@ public class BlockRecoveryCommand extends DatanodeCommand {
   @InterfaceAudience.Private
   @InterfaceStability.Evolving
   public static class RecoveringBlock extends LocatedBlock {
-    private boolean truncate;
     private final long newGenerationStamp;
+    private final Block recoveryBlock;
 
     /**
      * Create RecoveringBlock.
@@ -62,15 +63,17 @@ public class BlockRecoveryCommand extends DatanodeCommand {
     public RecoveringBlock(ExtendedBlock b, DatanodeInfo[] locs, long newGS) {
       super(b, locs, -1, false); // startOffset is unknown
       this.newGenerationStamp = newGS;
+      this.recoveryBlock = null;
     }
 
     /**
-     * RecoveryingBlock with truncate option.
+     * Create RecoveringBlock with copy-on-truncate option.
      */
-    public RecoveringBlock(ExtendedBlock b, DatanodeInfo[] locs, long newGS,
-                           boolean truncate) {
-      this(b, locs, newGS);
-      this.truncate = truncate;
+    public RecoveringBlock(ExtendedBlock b, DatanodeInfo[] locs,
+        Block recoveryBlock) {
+      super(b, locs, -1, false); // startOffset is unknown
+      this.newGenerationStamp = recoveryBlock.getGenerationStamp();
+      this.recoveryBlock = recoveryBlock;
     }
 
     /**
@@ -82,10 +85,10 @@ public class BlockRecoveryCommand extends DatanodeCommand {
     }
 
     /**
-     * Return whether to truncate the block to the ExtendedBlock's length.
+     * Return the new block.
      */
-    public boolean getTruncateFlag() {
-      return truncate;
+    public Block getNewBlock() {
+      return recoveryBlock;
     }
   }
 

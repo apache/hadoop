@@ -537,7 +537,7 @@ public interface ClientProtocol {
    * @param src  existing file
    * @param newLength  the target size
    *
-   * @return true if and client does not need to wait for block recovery,
+   * @return true if client does not need to wait for block recovery,
    * false if client needs to wait for block recovery.
    *
    * @throws AccessControlException If access is denied

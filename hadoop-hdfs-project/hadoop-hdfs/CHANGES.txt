@@ -21,6 +21,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-3107. Introduce truncate. (Plamen Jeliazkov via shv)
 
+    HDFS-7056. Snapshot support for truncate. (Plamen Jeliazkov and shv)
+
   IMPROVEMENTS
 
     HDFS-7055. Add tracing to DFSInputStream (cmccabe)

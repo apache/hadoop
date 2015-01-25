@@ -228,7 +228,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   /** Is this inode in the latest snapshot? */
   public final boolean isInLatestSnapshot(final int latestSnapshotId) {
-    if (latestSnapshotId == Snapshot.CURRENT_STATE_ID) {
+    if (latestSnapshotId == Snapshot.CURRENT_STATE_ID ||
+        latestSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
       return false;
     }
     // if parent is a reference node, parent must be a renamed node. We can 
@@ -817,11 +818,15 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      * @param toDelete the to-be-deleted block
      */
     public void addDeleteBlock(Block toDelete) {
-      if (toDelete != null) {
-        toDeleteList.add(toDelete);
-      }
+      assert toDelete != null : "toDelete is null";
+      toDeleteList.add(toDelete);
     }
-    
+
+    public void removeDeleteBlock(Block block) {
+      assert block != null : "block is null";
+      toDeleteList.remove(block);
+    }
+
     /**
      * Clear {@link BlocksMapUpdateInfo#toDeleteList}
      */
