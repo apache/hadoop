@@ -18,10 +18,6 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-3107. Introduce truncate. (Plamen Jeliazkov via shv)
-
-    HDFS-7056. Snapshot support for truncate. (Plamen Jeliazkov and shv)
-
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -142,9 +138,6 @@ Trunk (Unreleased)
 
     HDFS-7430. Rewrite the BlockScanner to use O(1) memory and use multiple
     threads (cmccabe)
-
-    HDFS-7659. truncate should check negative value of the new length.
-    (Yi Liu via shv)
 
   OPTIMIZATIONS
 
@@ -280,16 +273,6 @@ Trunk (Unreleased)
 
     HDFS-7581. HDFS documentation needs updating post-shell rewrite (aw)
 
-    HDFS-7606. Fix potential NPE in INodeFile.getBlocks(). (Byron Wong via shv)
-
-    HDFS-7638: Small fix and few refinements for FSN#truncate. (yliu)
-
-    HDFS-7634. Disallow truncation of Lazy persist files. (Yi Liu via
-    Arpit Agarwal)
-
-    HDFS-7643. Test case to ensure lazy persist files cannot be truncated.
-    (Yi Liu via Arpit Agarwal)
-
     HADOOP-11484. hadoop-mapreduce-client-nativetask fails to build on ARM
     AARCH64 due to x86 asm statements (Edward Nevill via Colin P. McCabe)
 
@@ -319,6 +302,10 @@ Release 2.7.0 - UNRELEASED
     HDFS-7424. Add web UI for NFS gateway (brandonli)
     
     HDFS-7449. Add metrics to NFS gateway (brandonli)
+
+    HDFS-3107. Introduce truncate. (Plamen Jeliazkov via shv)
+
+    HDFS-7056. Snapshot support for truncate. (Plamen Jeliazkov and shv)
 
   IMPROVEMENTS
 
@@ -784,6 +771,19 @@ Release 2.7.0 - UNRELEASED
     yliu)
 
     HDFS-7644. minor typo in HttpFS doc (Charles Lamb via aw)
+
+    HDFS-7606. Fix potential NPE in INodeFile.getBlocks(). (Byron Wong via shv)
+
+    HDFS-7638: Small fix and few refinements for FSN#truncate. (yliu)
+
+    HDFS-7634. Disallow truncation of Lazy persist files. (Yi Liu via
+    Arpit Agarwal)
+
+    HDFS-7643. Test case to ensure lazy persist files cannot be truncated.
+    (Yi Liu via Arpit Agarwal)
+
+    HDFS-7659. truncate should check negative value of the new length.
+    (Yi Liu via shv)
 
 Release 2.6.1 - UNRELEASED
 
