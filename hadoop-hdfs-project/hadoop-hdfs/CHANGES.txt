@@ -491,6 +491,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7638: Small fix and few refinements for FSN#truncate. (yliu)
 
+    HDFS-7634. Disallow truncation of Lazy persist files. (Yi Liu via
+    Arpit Agarwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
