@@ -494,6 +494,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7634. Disallow truncation of Lazy persist files. (Yi Liu via
     Arpit Agarwal)
 
+    HDFS-7643. Test case to ensure lazy persist files cannot be truncated.
+    (Yi Liu via Arpit Agarwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
