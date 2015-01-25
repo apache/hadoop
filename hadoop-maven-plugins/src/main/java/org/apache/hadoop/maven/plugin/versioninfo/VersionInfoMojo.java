@@ -18,7 +18,6 @@ import org.apache.hadoop.maven.plugin.util.FileSetUtils;
 import org.apache.maven.model.FileSet;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
@@ -47,7 +46,7 @@ import java.util.TimeZone;
 @Mojo(name="version-info")
 public class VersionInfoMojo extends AbstractMojo {
 
-  @Parameter(defaultValue="${project}")
+  @Parameter(defaultValue="${project}", readonly=true)
   private MavenProject project;
 
   @Parameter(required=true)
