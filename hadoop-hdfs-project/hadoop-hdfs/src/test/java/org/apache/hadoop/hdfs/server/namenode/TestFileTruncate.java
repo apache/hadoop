@@ -496,6 +496,11 @@ public class TestFileTruncate {
    */
   @Test
   public void testTruncateEditLogLoad() throws IOException {
+    // purge previously accumulated edits
+    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    fs.saveNamespace();
+    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
     int startingFileSize = 2 * BLOCK_SIZE + BLOCK_SIZE / 2;
     int toTruncate = 1;
     final String s = "/testTruncateEditLogLoad";
