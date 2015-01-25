@@ -497,6 +497,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7643. Test case to ensure lazy persist files cannot be truncated.
     (Yi Liu via Arpit Agarwal)
 
+    HDFS-7659. truncate should check negative value of the new length.
+    (Yi Liu via shv)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
