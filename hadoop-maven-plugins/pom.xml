@@ -28,6 +28,7 @@
   <name>Apache Hadoop Maven Plugins</name>
   <properties>
     <maven.dependency.version>3.0</maven.dependency.version>
+    <maven.plugin-tools.version>3.4</maven.plugin-tools.version>
   </properties>
   <dependencies>
     <dependency>
@@ -43,13 +44,8 @@
     <dependency>
       <groupId>org.apache.maven.plugin-tools</groupId>
       <artifactId>maven-plugin-annotations</artifactId>
-      <version>${maven.dependency.version}</version>
+      <version>${maven.plugin-tools.version}</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
   <build>
@@ -57,16 +53,11 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-plugin-plugin</artifactId>
-        <version>${maven.dependency.version}</version>
-        <configuration>
-          <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
-        </configuration>
+        <version>${maven.plugin-tools.version}</version>
         <executions>
           <execution>
-            <id>mojo-descriptor</id>
-            <goals>
-              <goal>descriptor</goal>
-            </goals>
+            <id>default-descriptor</id>
+            <phase>process-classes</phase>
           </execution>
         </executions>
       </plugin>
