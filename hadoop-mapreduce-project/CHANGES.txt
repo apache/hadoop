@@ -30,6 +30,8 @@ Release 2.7.0 - UNRELEASED
     cache with enabling wired encryption at the same time. 
     (Junping Du via xgong)
 
+    MAPREDUCE-6141. History server leveldb recovery store (jlowe)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
