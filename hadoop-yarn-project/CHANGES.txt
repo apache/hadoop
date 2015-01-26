@@ -166,6 +166,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2800. Remove MemoryNodeLabelsStore and add a way to enable/disable
     node labels feature. (Wangda Tan via ozawa)
 
+    YARN-3024. LocalizerRunner should give DIE action when all resources are
+    localized. (Chengbing Liu via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
