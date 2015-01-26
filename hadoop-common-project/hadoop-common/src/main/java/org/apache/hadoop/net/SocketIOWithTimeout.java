@@ -338,6 +338,12 @@ abstract class SocketIOWithTimeout {
             return ret;
           }
           
+          if (Thread.currentThread().isInterrupted()) {
+            throw new InterruptedIOException("Interrupted while waiting for "
+                + "IO on channel " + channel + ". " + timeout
+                + " millis timeout left.");
+          }
+
           /* Sometimes select() returns 0 much before timeout for 
            * unknown reasons. So select again if required.
            */
@@ -348,12 +354,6 @@ abstract class SocketIOWithTimeout {
             }
           }
           
-          if (Thread.currentThread().isInterrupted()) {
-            throw new InterruptedIOException("Interruped while waiting for " +
-                                             "IO on channel " + channel +
-                                             ". " + timeout + 
-                                             " millis timeout left.");
-          }
         }
       } finally {
         if (key != null) {
