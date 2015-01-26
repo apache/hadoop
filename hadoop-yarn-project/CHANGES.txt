@@ -375,6 +375,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3082. Non thread safe access to systemCredentials in NodeHeartbeatResponse
     processing. (Anubhav Dhoot via ozawa)
 
+    YARN-3088. LinuxContainerExecutor.deleteAsUser can throw NPE if native
+    executor returns an error (Eric Payne via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
