@@ -16,6 +16,9 @@ Release 2.6.1 - UNRELEASED
     YARN-1809. Synchronize RM and TimeLineServer Web-UIs. (Zhijie Shen and
     Xuan Gong via jianhe)
 
+    YARN-3092. Created a common ResourceUsage class to track labeled resource
+    usages in Capacity Scheduler. (Wangda Tan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
