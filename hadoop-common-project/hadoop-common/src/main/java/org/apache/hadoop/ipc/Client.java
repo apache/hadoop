@@ -849,6 +849,12 @@ public class Client {
         throw ioe;
       }
 
+      // Throw the exception if the thread is interrupted
+      if (Thread.currentThread().isInterrupted()) {
+        LOG.warn("Interrupted while trying for connection");
+        throw ioe;
+      }
+
       try {
         Thread.sleep(action.delayMillis);
       } catch (InterruptedException e) {

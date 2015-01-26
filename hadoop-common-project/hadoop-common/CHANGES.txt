@@ -407,6 +407,8 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11499. Check of executorThreadsStarted in
     ValueQueue#submitRefillTask() evades lock acquisition (Ted Yu via jlowe)
 
+    HADOOP-6221 RPC Client operations cannot be interrupted. (stevel)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

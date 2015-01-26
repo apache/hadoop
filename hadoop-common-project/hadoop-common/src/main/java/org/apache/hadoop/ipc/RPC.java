@@ -408,11 +408,18 @@ public class RPC {
         throw ioe;
       }
 
+      if (Thread.currentThread().isInterrupted()) {
+        // interrupted during some IO; this may not have been caught
+        throw new InterruptedIOException("Interrupted waiting for the proxy");
+      }
+
       // wait for retry
       try {
         Thread.sleep(1000);
       } catch (InterruptedException ie) {
-        // IGNORE
+        Thread.currentThread().interrupt();
+        throw (IOException) new InterruptedIOException(
+            "Interrupted waiting for the proxy").initCause(ioe);
       }
     }
   }
