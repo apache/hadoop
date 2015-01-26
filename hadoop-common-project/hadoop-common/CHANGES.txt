@@ -408,6 +408,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11482. Use correct UGI when KMSClientProvider is called by a proxy
     user. Contributed by Arun Suresh.
 
+    HADOOP-11499. Check of executorThreadsStarted in
+    ValueQueue#submitRefillTask() evades lock acquisition (Ted Yu via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
