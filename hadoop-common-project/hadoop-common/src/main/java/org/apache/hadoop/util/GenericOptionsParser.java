@@ -284,6 +284,17 @@ public class GenericOptionsParser {
         conf.addResource(new Path(value));
       }
     }
+
+    if (line.hasOption('D')) {
+      String[] property = line.getOptionValues('D');
+      for(String prop : property) {
+        String[] keyval = prop.split("=", 2);
+        if (keyval.length == 2) {
+          conf.set(keyval[0], keyval[1], "from command line");
+        }
+      }
+    }
+
     if (line.hasOption("libjars")) {
       conf.set("tmpjars", 
                validateFiles(line.getOptionValue("libjars"), conf),
@@ -306,15 +317,6 @@ public class GenericOptionsParser {
       conf.set("tmparchives", 
                 validateFiles(line.getOptionValue("archives"), conf),
                 "from -archives command line option");
-    }
-    if (line.hasOption('D')) {
-      String[] property = line.getOptionValues('D');
-      for(String prop : property) {
-        String[] keyval = prop.split("=", 2);
-        if (keyval.length == 2) {
-          conf.set(keyval[0], keyval[1], "from command line");
-        }
-      }
     }
     conf.setBoolean("mapreduce.client.genericoptionsparser.used", true);
     
