@@ -386,10 +386,6 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11327. BloomFilter#not() omits the last bit, resulting in an
     incorrect filter (Eric Payne via jlowe)
 
-    HADOOP-11466. FastByteComparisons: do not use UNSAFE_COMPARER on the SPARC
-    architecture because it is slower there (Suman Somasundar via Colin P.
-    McCabe)
-
     HADOOP-11209. Configuration#updatingResource/finalParameters are not
     thread-safe. (Varun Saxena via ozawa)
 
@@ -410,6 +406,22 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11499. Check of executorThreadsStarted in
     ValueQueue#submitRefillTask() evades lock acquisition (Ted Yu via jlowe)
+
+Release 2.6.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-11466. FastByteComparisons: do not use UNSAFE_COMPARER on the SPARC
+    architecture because it is slower there (Suman Somasundar via Colin P.
+    McCabe)
 
 Release 2.6.0 - 2014-11-18
 
