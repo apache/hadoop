@@ -265,6 +265,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7623. Add htrace configuration properties to core-default.xml and
     update user doc about how to enable htrace. (yliu)
 
+    HDFS-7224. Allow reuse of NN connections via webhdfs (Eric Payne via
+    kihwal)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

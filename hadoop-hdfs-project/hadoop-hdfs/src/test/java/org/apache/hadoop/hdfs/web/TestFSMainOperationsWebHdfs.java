@@ -17,8 +17,14 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.doReturn;
+
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -32,6 +38,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
+import org.apache.hadoop.hdfs.web.resources.GetOpParam;
+import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
@@ -126,6 +134,47 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
 
     FileStatus fileStatus = fSys.getFileStatus(catPath);
     Assert.assertEquals(1024*4, fileStatus.getLen());
+  }
+
+  // Test that WebHdfsFileSystem.jsonParse() closes the connection's input
+  // stream.
+  // Closing the inputstream in jsonParse will allow WebHDFS to reuse
+  // connections to the namenode rather than needing to always open new ones.
+  boolean closedInputStream = false;
+  @Test
+  public void testJsonParseClosesInputStream() throws Exception {
+    final WebHdfsFileSystem webhdfs = (WebHdfsFileSystem)fileSystem;
+    Path file = getTestRootPath(fSys, "test/hadoop/file");
+    createFile(file);
+    final HttpOpParam.Op op = GetOpParam.Op.GETHOMEDIRECTORY;
+    final URL url = webhdfs.toUrl(op, file);
+    final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(op.getType().toString());
+    conn.connect();
+
+    InputStream myIn = new InputStream(){
+      private HttpURLConnection localConn = conn;
+      @Override
+      public void close() throws IOException {
+        closedInputStream = true;
+        localConn.getInputStream().close();
+      }
+      @Override
+      public int read() throws IOException {
+        return localConn.getInputStream().read();
+      }
+    };
+    final HttpURLConnection spyConn = spy(conn);
+    doReturn(myIn).when(spyConn).getInputStream();
+
+    try {
+      Assert.assertFalse(closedInputStream);
+      WebHdfsFileSystem.jsonParse(spyConn, false);
+      Assert.assertTrue(closedInputStream);
+    } catch(IOException ioe) {
+      junit.framework.TestCase.fail();
+    }
+    conn.disconnect();
   }
 
   @Override
