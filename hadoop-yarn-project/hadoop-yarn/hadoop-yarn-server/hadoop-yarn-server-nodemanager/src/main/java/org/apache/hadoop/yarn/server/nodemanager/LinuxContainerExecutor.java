@@ -392,18 +392,23 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     verifyUsernamePattern(user);
     String runAsUser = getRunAsUser(user);
 
+    String dirString = dir == null ? "" : dir.toUri().getPath();
+
     List<String> command = new ArrayList<String>(
         Arrays.asList(containerExecutorExe,
                     runAsUser,
                     user,
                     Integer.toString(Commands.DELETE_AS_USER.getValue()),
-                    dir == null ? "" : dir.toUri().getPath()));
+                    dirString));
+    List<String> pathsToDelete = new ArrayList<String>();
     if (baseDirs == null || baseDirs.length == 0) {
       LOG.info("Deleting absolute path : " + dir);
+      pathsToDelete.add(dirString);
     } else {
       for (Path baseDir : baseDirs) {
         Path del = dir == null ? baseDir : new Path(baseDir, dir);
         LOG.info("Deleting path : " + del);
+        pathsToDelete.add(del.toString());
         command.add(baseDir.toUri().getPath());
       }
     }
@@ -419,7 +424,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       }
     } catch (IOException e) {
       int exitCode = shExec.getExitCode();
-      LOG.error("DeleteAsUser for " + dir.toUri().getPath()
+      LOG.error("DeleteAsUser for " + StringUtils.join(" ", pathsToDelete)
           + " returned with exit code: " + exitCode, e);
       LOG.error("Output from LinuxContainerExecutor's deleteAsUser follows:");
       logOutput(shExec.getOutput());
