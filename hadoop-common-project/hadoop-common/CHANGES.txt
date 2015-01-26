@@ -409,6 +409,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-6221 RPC Client operations cannot be interrupted. (stevel)
 
+    HADOOP-11509. Change parsing sequence in GenericOptionsParser to parse -D
+    parameters before -files. (xgong)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
