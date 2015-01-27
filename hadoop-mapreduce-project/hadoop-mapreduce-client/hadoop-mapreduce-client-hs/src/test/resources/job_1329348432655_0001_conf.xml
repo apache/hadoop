@@ -113,7 +113,6 @@
 <property><!--Loaded from job.xml--><name>hadoop.proxyuser.user.groups</name><value>users</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.name.dir.restore</name><value>false</value></property>
 <property><!--Loaded from job.xml--><name>io.seqfile.lazydecompress</name><value>true</value></property>
-<property><!--Loaded from job.xml--><name>dfs.https.enable</name><value>false</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.reduce.merge.inmem.threshold</name><value>1000</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.input.fileinputformat.split.minsize</name><value>0</value></property>
 <property><!--Loaded from job.xml--><name>dfs.replication</name><value>3</value></property>
@@ -209,7 +208,6 @@
 <property><!--Loaded from job.xml--><name>mapreduce.job.dir</name><value>/tmp/hadoop-yarn/staging/user/.staging/job_1329348432655_0001</value></property>
 <property><!--Loaded from job.xml--><name>io.map.index.skip</name><value>0</value></property>
 <property><!--Loaded from job.xml--><name>net.topology.node.switch.mapping.impl</name><value>org.apache.hadoop.net.ScriptBasedMapping</value></property>
-<property><!--Loaded from job.xml--><name>dfs.namenode.logging.level</name><value>info</value></property>
 <property><!--Loaded from job.xml--><name>fs.s3.maxRetries</name><value>4</value></property>
 <property><!--Loaded from job.xml--><name>s3native.client-write-packet-size</name><value>65536</value></property>
 <property><!--Loaded from job.xml--><name>yarn.resourcemanager.amliveliness-monitor.interval-ms</name><value>1000</value></property>
