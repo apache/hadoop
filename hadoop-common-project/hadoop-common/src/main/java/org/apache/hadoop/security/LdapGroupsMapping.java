@@ -341,6 +341,8 @@ public class LdapGroupsMapping
 
     int dirSearchTimeout = conf.getInt(DIRECTORY_SEARCH_TIMEOUT, DIRECTORY_SEARCH_TIMEOUT_DEFAULT);
     SEARCH_CONTROLS.setTimeLimit(dirSearchTimeout);
+    // Limit the attributes returned to only those required to speed up the search. See HADOOP-10626 for more details.
+    SEARCH_CONTROLS.setReturningAttributes(new String[] {groupNameAttr});
 
     this.conf = conf;
   }
