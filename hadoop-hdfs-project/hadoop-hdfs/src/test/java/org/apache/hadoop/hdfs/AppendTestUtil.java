@@ -136,6 +136,22 @@ public class AppendTestUtil {
     }
   }
 
+  public static void check(DistributedFileSystem fs, Path p, int position,
+      int length) throws IOException {
+    byte[] buf = new byte[length];
+    int i = 0;
+    try {
+      FSDataInputStream in = fs.open(p);
+      in.read(position, buf, 0, buf.length);
+      for(i = position; i < length + position; i++) {
+        assertEquals((byte) i, buf[i - position]);
+      }
+      in.close();
+    } catch(IOException ioe) {
+      throw new IOException("p=" + p + ", length=" + length + ", i=" + i, ioe);
+    }
+  }
+
   /**
    *  create a buffer that contains the entire test file data.
    */

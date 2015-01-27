@@ -99,10 +99,11 @@ public class TestFileAppendRestart {
       // OP_ADD to create file
       // OP_ADD_BLOCK for first block
       // OP_CLOSE to close file
-      // OP_ADD to reopen file
+      // OP_APPEND to reopen file
       // OP_ADD_BLOCK for second block
       // OP_CLOSE to close file
-      assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
+      assertEquals(1, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
+      assertEquals(1, (int)counts.get(FSEditLogOpCodes.OP_APPEND).held);
       assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_ADD_BLOCK).held);
       assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
 
@@ -112,13 +113,14 @@ public class TestFileAppendRestart {
       // OP_ADD to create file
       // OP_ADD_BLOCK for first block
       // OP_CLOSE to close file
-      // OP_ADD to re-establish the lease
+      // OP_APPEND to re-establish the lease
       // OP_UPDATE_BLOCKS from the updatePipeline call (increments genstamp of last block)
       // OP_ADD_BLOCK at the start of the second block
       // OP_CLOSE to close file
       // Total: 2 OP_ADDs, 1 OP_UPDATE_BLOCKS, 2 OP_ADD_BLOCKs, and 2 OP_CLOSEs
        //       in addition to the ones above
-      assertEquals(2+2, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
+      assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
+      assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_APPEND).held);
       assertEquals(1, (int)counts.get(FSEditLogOpCodes.OP_UPDATE_BLOCKS).held);
       assertEquals(2+2, (int)counts.get(FSEditLogOpCodes.OP_ADD_BLOCK).held);
       assertEquals(2+2, (int)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
