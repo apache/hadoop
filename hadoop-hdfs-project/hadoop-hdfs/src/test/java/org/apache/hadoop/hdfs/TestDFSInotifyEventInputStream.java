@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -71,7 +72,7 @@ public class TestDFSInotifyEventInputStream {
    */
   @Test
   public void testOpcodeCount() {
-    Assert.assertEquals(48, FSEditLogOpCodes.values().length);
+    Assert.assertEquals(49, FSEditLogOpCodes.values().length);
   }
 
 
@@ -109,7 +110,8 @@ public class TestDFSInotifyEventInputStream {
       os.write(new byte[BLOCK_SIZE]);
       os.close(); // CloseOp -> CloseEvent
       // AddOp -> AppendEvent
-      os = client.append("/file2", BLOCK_SIZE, null, null);
+      os = client.append("/file2", BLOCK_SIZE, EnumSet.of(CreateFlag.APPEND),
+          null, null);
       os.write(new byte[BLOCK_SIZE]);
       os.close(); // CloseOp -> CloseEvent
       Thread.sleep(10); // so that the atime will get updated on the next line
@@ -182,13 +184,14 @@ public class TestDFSInotifyEventInputStream {
       Assert.assertTrue(ce2.getFileSize() > 0);
       Assert.assertTrue(ce2.getTimestamp() > 0);
 
-      // AddOp
+      // AppendOp
       batch = waitForNextEvents(eis);
       Assert.assertEquals(1, batch.getEvents().length);
       txid = checkTxid(batch, txid);
       Assert.assertTrue(batch.getEvents()[0].getEventType() == Event.EventType.APPEND);
       Event.AppendEvent append2 = (Event.AppendEvent)batch.getEvents()[0];
       Assert.assertEquals("/file2", append2.getPath());
+      Assert.assertFalse(append2.toNewBlock());
 
       // CloseOp
       batch = waitForNextEvents(eis);

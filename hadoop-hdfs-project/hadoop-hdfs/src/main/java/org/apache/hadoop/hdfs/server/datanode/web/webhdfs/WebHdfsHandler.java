@@ -176,7 +176,8 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     final int bufferSize = params.bufferSize();
 
     DFSClient dfsClient = newDfsClient(nnId, conf);
-    OutputStream out = dfsClient.append(path, bufferSize, null, null);
+    OutputStream out = dfsClient.append(path, bufferSize,
+        EnumSet.of(CreateFlag.APPEND), null, null);
     DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1, OK);
     resp.headers().set(CONTENT_LENGTH, 0);
     ctx.pipeline().replace(this, HdfsWriter.class.getSimpleName(),

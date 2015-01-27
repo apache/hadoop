@@ -101,6 +101,12 @@ public class HdfsDataOutputStream extends FSDataOutputStream {
      * When doing sync to DataNodes, also update the metadata (block length) in
      * the NameNode.
      */
-    UPDATE_LENGTH;
+    UPDATE_LENGTH,
+
+    /**
+     * Sync the data to DataNode, close the current block, and allocate a new
+     * block
+     */
+    END_BLOCK;
   }
 }

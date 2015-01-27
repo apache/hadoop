@@ -40,9 +40,12 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -99,7 +102,7 @@ public class TestHDFSConcat {
     HdfsFileStatus fStatus;
     FSDataInputStream stm;
     
-    String trg = new String("/trg");
+    String trg = "/trg";
     Path trgPath = new Path(trg);
     DFSTestUtil.createFile(dfs, trgPath, fileLen, REPL_FACTOR, 1);
     fStatus  = nn.getFileInfo(trg);
@@ -112,7 +115,7 @@ public class TestHDFSConcat {
     long [] lens = new long [numFiles];
     
     
-    int i = 0;
+    int i;
     for(i=0; i<files.length; i++) {
       files[i] = new Path("/file"+i);
       Path path = files[i];
@@ -385,6 +388,75 @@ public class TestHDFSConcat {
     } catch (Exception e) {
       // exspected
     }
- 
+  }
+
+  /**
+   * make sure we update the quota correctly after concat
+   */
+  @Test
+  public void testConcatWithQuotaDecrease() throws IOException {
+    final short srcRepl = 3; // note this is different with REPL_FACTOR
+    final int srcNum = 10;
+    final Path foo = new Path("/foo");
+    final Path[] srcs = new Path[srcNum];
+    final Path target = new Path(foo, "target");
+    DFSTestUtil.createFile(dfs, target, blockSize, REPL_FACTOR, 0L);
+
+    dfs.setQuota(foo, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+
+    for (int i = 0; i < srcNum; i++) {
+      srcs[i] = new Path(foo, "src" + i);
+      DFSTestUtil.createFile(dfs, srcs[i], blockSize * 2, srcRepl, 0L);
+    }
+
+    ContentSummary summary = dfs.getContentSummary(foo);
+    Assert.assertEquals(11, summary.getFileCount());
+    Assert.assertEquals(blockSize * REPL_FACTOR +
+            blockSize * 2 * srcRepl * srcNum, summary.getSpaceConsumed());
+
+    dfs.concat(target, srcs);
+    summary = dfs.getContentSummary(foo);
+    Assert.assertEquals(1, summary.getFileCount());
+    Assert.assertEquals(
+        blockSize * REPL_FACTOR + blockSize * 2 * REPL_FACTOR * srcNum,
+        summary.getSpaceConsumed());
+  }
+
+  @Test
+  public void testConcatWithQuotaIncrease() throws IOException {
+    final short repl = 3;
+    final int srcNum = 10;
+    final Path foo = new Path("/foo");
+    final Path bar = new Path(foo, "bar");
+    final Path[] srcs = new Path[srcNum];
+    final Path target = new Path(bar, "target");
+    DFSTestUtil.createFile(dfs, target, blockSize, repl, 0L);
+
+    final long dsQuota = blockSize * repl + blockSize * srcNum * REPL_FACTOR;
+    dfs.setQuota(foo, Long.MAX_VALUE - 1, dsQuota);
+
+    for (int i = 0; i < srcNum; i++) {
+      srcs[i] = new Path(bar, "src" + i);
+      DFSTestUtil.createFile(dfs, srcs[i], blockSize, REPL_FACTOR, 0L);
+    }
+
+    ContentSummary summary = dfs.getContentSummary(bar);
+    Assert.assertEquals(11, summary.getFileCount());
+    Assert.assertEquals(dsQuota, summary.getSpaceConsumed());
+
+    try {
+      dfs.concat(target, srcs);
+      fail("QuotaExceededException expected");
+    } catch (RemoteException e) {
+      Assert.assertTrue(
+          e.unwrapRemoteException() instanceof QuotaExceededException);
+    }
+
+    dfs.setQuota(foo, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    dfs.concat(target, srcs);
+    summary = dfs.getContentSummary(bar);
+    Assert.assertEquals(1, summary.getFileCount());
+    Assert.assertEquals(blockSize * repl * (srcNum + 1),
+        summary.getSpaceConsumed());
   }
 }

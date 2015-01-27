@@ -89,6 +89,7 @@ message CloseEventProto {
 
 message AppendEventProto {
   required string path = 1;
+  optional bool newBlock = 2 [default = false];
 }
 
 message RenameEventProto {

@@ -630,15 +630,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public LastBlockWithStatus append(String src, String clientName) 
-      throws IOException {
+  public LastBlockWithStatus append(String src, String clientName,
+      EnumSetWritable<CreateFlag> flag) throws IOException {
     checkNNStartup();
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.append: file "
           +src+" for "+clientName+" at "+clientMachine);
     }
-    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache, null);
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
+        null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return (LastBlockWithStatus) cacheEntry.getPayload();
     }
@@ -646,7 +647,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     LastBlockWithStatus info = null;
     boolean success = false;
     try {
-      info = namesystem.appendFile(src, clientName, clientMachine,
+      info = namesystem.appendFile(src, clientName, clientMachine, flag.get(),
           cacheEntry != null);
       success = true;
     } finally {

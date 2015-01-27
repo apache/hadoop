@@ -165,7 +165,7 @@ abstract public class FSOutputSummer extends OutputStream {
         count = partialLen;
         System.arraycopy(buf, bufLen - count, buf, 0, count);
       } else {
-      count = 0;
+        count = 0;
       }
     }
 

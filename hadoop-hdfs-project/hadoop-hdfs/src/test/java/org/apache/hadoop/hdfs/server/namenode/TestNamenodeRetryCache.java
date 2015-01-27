@@ -232,14 +232,18 @@ public class TestNamenodeRetryCache {
     
     // Retried append requests succeed
     newCall();
-    LastBlockWithStatus b = nnRpc.append(src, "holder");
-    Assert.assertEquals(b, nnRpc.append(src, "holder"));
-    Assert.assertEquals(b, nnRpc.append(src, "holder"));
+    LastBlockWithStatus b = nnRpc.append(src, "holder",
+        new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND)));
+    Assert.assertEquals(b, nnRpc.append(src, "holder",
+        new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND))));
+    Assert.assertEquals(b, nnRpc.append(src, "holder",
+        new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND))));
     
     // non-retried call fails
     newCall();
     try {
-      nnRpc.append(src, "holder");
+      nnRpc.append(src, "holder",
+          new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND)));
       Assert.fail("testAppend - expected exception is not thrown");
     } catch (Exception e) {
       // Expected
@@ -409,7 +413,7 @@ public class TestNamenodeRetryCache {
 
     LightWeightCache<CacheEntry, CacheEntry> cacheSet = 
         (LightWeightCache<CacheEntry, CacheEntry>) namesystem.getRetryCache().getCacheSet();
-    assertEquals(24, cacheSet.size());
+    assertEquals(25, cacheSet.size());
     
     Map<CacheEntry, CacheEntry> oldEntries = 
         new HashMap<CacheEntry, CacheEntry>();
@@ -428,7 +432,7 @@ public class TestNamenodeRetryCache {
     assertTrue(namesystem.hasRetryCache());
     cacheSet = (LightWeightCache<CacheEntry, CacheEntry>) namesystem
         .getRetryCache().getCacheSet();
-    assertEquals(24, cacheSet.size());
+    assertEquals(25, cacheSet.size());
     iter = cacheSet.iterator();
     while (iter.hasNext()) {
       CacheEntry entry = iter.next();

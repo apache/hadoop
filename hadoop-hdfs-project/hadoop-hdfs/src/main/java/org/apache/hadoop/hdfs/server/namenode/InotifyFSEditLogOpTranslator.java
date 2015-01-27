@@ -65,6 +65,10 @@ public class InotifyFSEditLogOpTranslator {
       FSEditLogOp.CloseOp cOp = (FSEditLogOp.CloseOp) op;
       return new EventBatch(op.txid, new Event[] {
           new Event.CloseEvent(cOp.path, getSize(cOp), cOp.mtime) });
+    case OP_APPEND:
+      FSEditLogOp.AppendOp appendOp = (FSEditLogOp.AppendOp) op;
+      return new EventBatch(op.txid, new Event[] {new Event.AppendEvent
+          .Builder().path(appendOp.path).newBlock(appendOp.newBlock).build()});
     case OP_SET_REPLICATION:
       FSEditLogOp.SetReplicationOp setRepOp = (FSEditLogOp.SetReplicationOp) op;
       return new EventBatch(op.txid,

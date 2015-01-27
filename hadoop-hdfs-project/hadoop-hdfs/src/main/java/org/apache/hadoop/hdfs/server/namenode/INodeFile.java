@@ -411,7 +411,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** @return the diskspace required for a full block. */
-  final long getBlockDiskspace() {
+  final long getPreferredBlockDiskspace() {
     return getPreferredBlockSize() * getBlockReplication();
   }
 
