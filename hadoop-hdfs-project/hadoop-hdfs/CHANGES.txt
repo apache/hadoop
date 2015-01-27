@@ -505,6 +505,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7676. Fix TestFileTruncate to avoid bug of HDFS-7611. (shv)
 
+    HDFS-49. MiniDFSCluster.stopDataNode will always shut down a node in
+    the cluster if a matching name is not found. (stevel)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

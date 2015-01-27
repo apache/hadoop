@@ -1926,6 +1926,9 @@ public class MiniDFSCluster {
 
   /*
    * Shutdown a particular datanode
+   * @param i node index
+   * @return null if the node index is out of range, else the properties of the
+   * removed node
    */
   public synchronized DataNodeProperties stopDataNode(int i) {
     if (i < 0 || i >= dataNodes.size()) {
@@ -1944,18 +1947,20 @@ public class MiniDFSCluster {
 
   /*
    * Shutdown a datanode by name.
+   * @return the removed datanode or null if there was no match
    */
   public synchronized DataNodeProperties stopDataNode(String dnName) {
-    int i;
-    for (i = 0; i < dataNodes.size(); i++) {
+    int node = -1;
+    for (int i = 0; i < dataNodes.size(); i++) {
       DataNode dn = dataNodes.get(i).datanode;
       LOG.info("DN name=" + dnName + " found DN=" + dn +
           " with name=" + dn.getDisplayName());
       if (dnName.equals(dn.getDatanodeId().getXferAddr())) {
+        node = i;
         break;
       }
     }
-    return stopDataNode(i);
+    return stopDataNode(node);
   }
 
   /**
