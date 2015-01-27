@@ -37,6 +37,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected float userLimitFactor;
   protected ResourceInfo aMResourceLimit;
   protected ResourceInfo userAMResourceLimit;
+  protected boolean preemptionDisabled;
 
   CapacitySchedulerLeafQueueInfo() {
   };
@@ -53,6 +54,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     userLimitFactor = q.getUserLimitFactor();
     aMResourceLimit = new ResourceInfo(q.getAMResourceLimit());
     userAMResourceLimit = new ResourceInfo(q.getUserAMResourceLimit());
+    preemptionDisabled = q.getPreemptionDisabled();
   }
 
   public int getNumActiveApplications() {
@@ -94,5 +96,9 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   
   public ResourceInfo getUserAMResourceLimit() {
     return userAMResourceLimit; 
+  }
+
+  public boolean getPreemptionDisabled() {
+    return preemptionDisabled;
   }
 }

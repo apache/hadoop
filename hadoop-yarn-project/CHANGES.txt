@@ -181,6 +181,10 @@ Release 2.7.0 - UNRELEASED
     YARN-3028. Better syntax for replaceLabelsOnNode in RMAdmin CLI
     (Rohith Sharmaks via wangda)
 
+    YARN-2932. Add entry for "preemptable" status (enabled/disabled) to 
+    scheduler web UI and queue initialize/refresh logging. 
+    (Eric Payne via wangda)
+
   OPTIMIZATIONS
 
   BUG FIXES
