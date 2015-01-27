@@ -30,6 +30,9 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.timelineservice.aggregator.AppLevelServiceManager;
+import org.apache.hadoop.yarn.server.timelineservice.aggregator.AppLevelServiceManagerProvider;
+import org.apache.hadoop.yarn.server.timelineservice.aggregator.PerNodeAggregatorWebService;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -123,6 +126,12 @@ public class WebServer extends AbstractService {
       bind(NMWebServices.class);
       bind(GenericExceptionHandler.class);
       bind(JAXBContextResolver.class);
+      // host the timeline service aggregator web service temporarily
+      // (see YARN-3087)
+      bind(PerNodeAggregatorWebService.class);
+      // bind to the global singleton instance
+      bind(AppLevelServiceManager.class).
+          toProvider(AppLevelServiceManagerProvider.class);
       bind(ResourceView.class).toInstance(this.resourceView);
       bind(ApplicationACLsManager.class).toInstance(this.aclsManager);
       bind(LocalDirsHandlerService.class).toInstance(dirsHandler);
