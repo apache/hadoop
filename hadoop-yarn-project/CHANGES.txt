@@ -8,6 +8,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
 
     YARN-3063. Bootstrapping TimelineServer next generation module. (zjshen)
 
+    YARN-3030. Set up TS aggregator with basic request serving structure and
+    lifecycle. (Sangjin Lee via zjshen)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
