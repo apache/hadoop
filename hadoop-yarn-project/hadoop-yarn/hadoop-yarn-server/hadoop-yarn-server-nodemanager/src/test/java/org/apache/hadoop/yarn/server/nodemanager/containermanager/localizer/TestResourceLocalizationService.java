@@ -1253,14 +1253,33 @@ public class TestResourceLocalizationService {
             user, appId);
       Assert.assertNull(tracker.getLocalizedResource(pubReq));
 
-      // test RejectedExecutionException
+      // test IllegalArgumentException
+      String name = Long.toHexString(r.nextLong());
+      URL url = getPath("/local/PRIVATE/" + name + "/");
+      final LocalResource rsrc =
+          BuilderUtils.newLocalResource(url, LocalResourceType.FILE,
+          LocalResourceVisibility.PUBLIC, r.nextInt(1024) + 1024L,
+          r.nextInt(1024) + 2048L, false);
+      final LocalResourceRequest pubReq1 = new LocalResourceRequest(rsrc);
+      Map<LocalResourceVisibility, Collection<LocalResourceRequest>> req1 =
+          new HashMap<LocalResourceVisibility, 
+          Collection<LocalResourceRequest>>();
+      req1.put(LocalResourceVisibility.PUBLIC,
+          Collections.singletonList(pubReq1));
       Mockito
         .doCallRealMethod()
         .when(dirsHandlerSpy)
         .getLocalPathForWrite(isA(String.class), Mockito.anyLong(),
           Mockito.anyBoolean());
+      // send request
+      spyService.handle(new ContainerLocalizationRequestEvent(c, req1));
+      dispatcher.await();
+      tracker =
+          spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC,
+          user, appId);
+      Assert.assertNull(tracker.getLocalizedResource(pubReq));
 
-      // shutdown the thread pool
+      // test RejectedExecutionException by shutting down the thread pool
       PublicLocalizer publicLocalizer = spyService.getPublicLocalizer();
       publicLocalizer.threadPool.shutdown();
 
