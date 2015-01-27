@@ -333,23 +333,32 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
   public void testNodeLabelsDisabled() throws IOException {
     DummyCommonNodeLabelsManager mgr = new DummyCommonNodeLabelsManager();
     Configuration conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, false);
     mgr.init(conf);
     mgr.start();
+    boolean caught = false;
     
     // add labels
     try {
       mgr.addToCluserNodeLabels(ImmutableSet.of("x"));
     } catch (IOException e) {
       assertNodeLabelsDisabledErrorMessage(e);
+      caught = true;
     }
+    // check exception caught
+    Assert.assertTrue(caught);
+    caught = false;
     
     // remove labels
     try {
       mgr.removeFromClusterNodeLabels(ImmutableSet.of("x"));
     } catch (IOException e) {
       assertNodeLabelsDisabledErrorMessage(e);
+      caught = true;
     }
+    // check exception caught
+    Assert.assertTrue(caught);
+    caught = false;
     
     // add labels to node
     try {
@@ -357,7 +366,11 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
           CommonNodeLabelsManager.EMPTY_STRING_SET));
     } catch (IOException e) {
       assertNodeLabelsDisabledErrorMessage(e);
+      caught = true;
     }
+    // check exception caught
+    Assert.assertTrue(caught);
+    caught = false;
     
     // remove labels from node
     try {
@@ -365,7 +378,11 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
           CommonNodeLabelsManager.EMPTY_STRING_SET));
     } catch (IOException e) {
       assertNodeLabelsDisabledErrorMessage(e);
+      caught = true;
     }
+    // check exception caught
+    Assert.assertTrue(caught);
+    caught = false;
     
     // replace labels on node
     try {
@@ -373,7 +390,11 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
           CommonNodeLabelsManager.EMPTY_STRING_SET));
     } catch (IOException e) {
       assertNodeLabelsDisabledErrorMessage(e);
+      caught = true;
     }
+    // check exception caught
+    Assert.assertTrue(caught);
+    caught = false;
     
     mgr.close();
   }
