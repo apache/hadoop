@@ -1205,6 +1205,11 @@ public class YarnConfiguration extends Configuration {
   public static final boolean
       DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING = false;
 
+  /** Allow changing the memory for the NodeManager in the MiniYARNCluster */
+  public static final String YARN_MINICLUSTER_NM_PMEM_MB =
+      YARN_MC_PREFIX + YarnConfiguration.NM_PMEM_MB;
+  public static final int DEFAULT_YARN_MINICLUSTER_NM_PMEM_MB = 4 * 1024;
+
   /** The log directory for the containers */
   public static final String YARN_APP_CONTAINER_LOG_DIR =
       YARN_PREFIX + "app.container.log.dir";

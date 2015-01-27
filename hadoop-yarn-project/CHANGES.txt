@@ -172,6 +172,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3092. Created a common ResourceUsage class to track labeled resource
     usages in Capacity Scheduler. (Wangda Tan via jianhe)
 
+    YARN-3086. Make NodeManager memory configurable in MiniYARNCluster.
+    (Robert Metzger via ozawa)
+
   OPTIMIZATIONS
 
   BUG FIXES
