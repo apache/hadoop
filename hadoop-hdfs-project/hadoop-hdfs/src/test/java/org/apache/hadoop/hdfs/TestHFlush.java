@@ -31,7 +31,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -121,7 +123,66 @@ public class TestHFlush {
       cluster.shutdown();
     }
   }
-  
+
+  /**
+   * Test hsync with END_BLOCK flag.
+   */
+  @Test
+  public void hSyncEndBlock_00() throws IOException {
+    final int preferredBlockSize = 1024;
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, preferredBlockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+        .build();
+    DistributedFileSystem fileSystem = cluster.getFileSystem();
+    FSDataOutputStream stm = null;
+    try {
+      Path path = new Path("/" + fName);
+      stm = fileSystem.create(path, true, 4096, (short) 2,
+          AppendTestUtil.BLOCK_SIZE);
+      System.out.println("Created file " + path.toString());
+      ((DFSOutputStream) stm.getWrappedStream()).hsync(EnumSet
+          .of(SyncFlag.END_BLOCK));
+      long currentFileLength = fileSystem.getFileStatus(path).getLen();
+      assertEquals(0L, currentFileLength);
+      LocatedBlocks blocks = fileSystem.dfs.getLocatedBlocks(path.toString(), 0);
+      assertEquals(0, blocks.getLocatedBlocks().size());
+
+      // write a block and call hsync(end_block) at the block boundary
+      stm.write(new byte[preferredBlockSize]);
+      ((DFSOutputStream) stm.getWrappedStream()).hsync(EnumSet
+          .of(SyncFlag.END_BLOCK));
+      currentFileLength = fileSystem.getFileStatus(path).getLen();
+      assertEquals(preferredBlockSize, currentFileLength);
+      blocks = fileSystem.dfs.getLocatedBlocks(path.toString(), 0);
+      assertEquals(1, blocks.getLocatedBlocks().size());
+
+      // call hsync then call hsync(end_block) immediately
+      stm.write(new byte[preferredBlockSize / 2]);
+      stm.hsync();
+      ((DFSOutputStream) stm.getWrappedStream()).hsync(EnumSet
+          .of(SyncFlag.END_BLOCK));
+      currentFileLength = fileSystem.getFileStatus(path).getLen();
+      assertEquals(preferredBlockSize + preferredBlockSize / 2,
+          currentFileLength);
+      blocks = fileSystem.dfs.getLocatedBlocks(path.toString(), 0);
+      assertEquals(2, blocks.getLocatedBlocks().size());
+
+      stm.write(new byte[preferredBlockSize / 4]);
+      stm.hsync();
+      currentFileLength = fileSystem.getFileStatus(path).getLen();
+      assertEquals(preferredBlockSize + preferredBlockSize / 2
+          + preferredBlockSize / 4, currentFileLength);
+      blocks = fileSystem.dfs.getLocatedBlocks(path.toString(), 0);
+      assertEquals(3, blocks.getLocatedBlocks().size());
+    } finally {
+      IOUtils.cleanup(null, stm, fileSystem);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   /**
    * The test calls
    * {@link #doTheJob(Configuration, String, long, short, boolean, EnumSet)}
@@ -131,6 +192,29 @@ public class TestHFlush {
   public void hSyncUpdateLength_01() throws IOException {
     doTheJob(new HdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
         (short) 2, true, EnumSet.of(SyncFlag.UPDATE_LENGTH));
+  }
+
+  /**
+   * The test calls
+   * {@link #doTheJob(Configuration, String, long, short, boolean, EnumSet)}
+   * while requiring the semantic of {@link SyncFlag#END_BLOCK}.
+   */
+  @Test
+  public void hSyncEndBlock_01() throws IOException {
+    doTheJob(new HdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
+        (short) 2, true, EnumSet.of(SyncFlag.END_BLOCK));
+  }
+
+  /**
+   * The test calls
+   * {@link #doTheJob(Configuration, String, long, short, boolean, EnumSet)}
+   * while requiring the semantic of {@link SyncFlag#END_BLOCK} and
+   * {@link SyncFlag#UPDATE_LENGTH}.
+   */
+  @Test
+  public void hSyncEndBlockAndUpdateLength() throws IOException {
+    doTheJob(new HdfsConfiguration(), fName, AppendTestUtil.BLOCK_SIZE,
+        (short) 2, true, EnumSet.of(SyncFlag.END_BLOCK, SyncFlag.UPDATE_LENGTH));
   }
 
   /**
@@ -152,7 +236,20 @@ public class TestHFlush {
     doTheJob(conf, fName, customBlockSize, (short) 2, true,
         EnumSet.of(SyncFlag.UPDATE_LENGTH));
   }
-  
+
+  @Test
+  public void hSyncEndBlock_02() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    int customPerChecksumSize = 512;
+    int customBlockSize = customPerChecksumSize * 3;
+    // Modify defaul filesystem settings
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
+
+    doTheJob(conf, fName, customBlockSize, (short) 2, true,
+        EnumSet.of(SyncFlag.END_BLOCK));
+  }
+
   /**
    * The test calls
    * {@link #doTheJob(Configuration, String, long, short, boolean, EnumSet)}
@@ -173,7 +270,20 @@ public class TestHFlush {
     doTheJob(conf, fName, customBlockSize, (short) 2, true,
         EnumSet.of(SyncFlag.UPDATE_LENGTH));
   }
-  
+
+  @Test
+  public void hSyncEndBlock_03() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    int customPerChecksumSize = 400;
+    int customBlockSize = customPerChecksumSize * 3;
+    // Modify defaul filesystem settings
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, customPerChecksumSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, customBlockSize);
+
+    doTheJob(conf, fName, customBlockSize, (short) 2, true,
+        EnumSet.of(SyncFlag.END_BLOCK));
+  }
+
   /**
    * The method starts new cluster with defined Configuration; creates a file
    * with specified block_size and writes 10 equal sections in it; it also calls
@@ -197,12 +307,13 @@ public class TestHFlush {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
                                                .numDataNodes(replicas).build();
     // Make sure we work with DFS in order to utilize all its functionality
-    DistributedFileSystem fileSystem =
-        cluster.getFileSystem();
+    DistributedFileSystem fileSystem = cluster.getFileSystem();
 
     FSDataInputStream is;
     try {
       Path path = new Path(fileName);
+      final String pathName = new Path(fileSystem.getWorkingDirectory(), path)
+          .toUri().getPath();
       FSDataOutputStream stm = fileSystem.create(path, false, 4096, replicas,
           block_size);
       System.out.println("Created file " + fileName);
@@ -210,7 +321,8 @@ public class TestHFlush {
       int tenth = AppendTestUtil.FILE_SIZE/SECTIONS;
       int rounding = AppendTestUtil.FILE_SIZE - tenth * SECTIONS;
       for (int i=0; i<SECTIONS; i++) {
-        System.out.println("Writing " + (tenth * i) + " to " + (tenth * (i+1)) + " section to file " + fileName);
+        System.out.println("Writing " + (tenth * i) + " to "
+            + (tenth * (i + 1)) + " section to file " + fileName);
         // write to the file
         stm.write(fileContent, tenth * i, tenth);
         
@@ -227,7 +339,11 @@ public class TestHFlush {
           assertEquals(
             "File size doesn't match for hsync/hflush with updating the length",
             tenth * (i + 1), currentFileLength);
+        } else if (isSync && syncFlags.contains(SyncFlag.END_BLOCK)) {
+          LocatedBlocks blocks = fileSystem.dfs.getLocatedBlocks(pathName, 0);
+          assertEquals(i + 1, blocks.getLocatedBlocks().size());
         }
+
         byte [] toRead = new byte[tenth];
         byte [] expected = new byte[tenth];
         System.arraycopy(fileContent, tenth * i, expected, 0, tenth);

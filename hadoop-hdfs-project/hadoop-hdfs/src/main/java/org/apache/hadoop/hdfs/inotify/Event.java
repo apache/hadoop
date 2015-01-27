@@ -463,12 +463,19 @@ public abstract class Event {
    */
   public static class AppendEvent extends Event {
     private String path;
+    private boolean newBlock;
 
     public static class Builder {
       private String path;
+      private boolean newBlock;
 
       public Builder path(String path) {
         this.path = path;
+        return this;
+      }
+
+      public Builder newBlock(boolean newBlock) {
+        this.newBlock = newBlock;
         return this;
       }
 
@@ -480,10 +487,15 @@ public abstract class Event {
     private AppendEvent(Builder b) {
       super(EventType.APPEND);
       this.path = b.path;
+      this.newBlock = b.newBlock;
     }
 
     public String getPath() {
       return path;
+    }
+
+    public boolean toNewBlock() {
+      return newBlock;
     }
   }
 

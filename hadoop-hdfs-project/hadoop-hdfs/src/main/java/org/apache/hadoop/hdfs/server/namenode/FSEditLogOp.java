@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_APPEND;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_BLOCK;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_CACHE_DIRECTIVE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_CACHE_POOL;
@@ -207,6 +208,7 @@ public abstract class FSEditLogOp {
       inst.put(OP_SET_XATTR, new SetXAttrOp());
       inst.put(OP_REMOVE_XATTR, new RemoveXAttrOp());
       inst.put(OP_SET_STORAGE_POLICY, new SetStoragePolicyOp());
+      inst.put(OP_APPEND, new AppendOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
@@ -428,7 +430,7 @@ public abstract class FSEditLogOp {
     private AddCloseOp(FSEditLogOpCodes opCode) {
       super(opCode);
       storagePolicyId = BlockStoragePolicySuite.ID_UNSPECIFIED;
-      assert(opCode == OP_ADD || opCode == OP_CLOSE);
+      assert(opCode == OP_ADD || opCode == OP_CLOSE || opCode == OP_APPEND);
     }
 
     @Override
@@ -770,7 +772,7 @@ public abstract class FSEditLogOp {
     }
 
     static AddOp getInstance(OpInstanceCache cache) {
-      return (AddOp)cache.get(OP_ADD);
+      return (AddOp) cache.get(OP_ADD);
     }
 
     @Override
@@ -788,7 +790,7 @@ public abstract class FSEditLogOp {
   }
 
   /**
-   * Although {@link ClientProtocol#appendFile} may also log a close op, we do
+   * Although {@link ClientProtocol#append} may also log a close op, we do
    * not need to record the rpc ids here since a successful appendFile op will
    * finally log an AddOp.
    */
@@ -812,6 +814,97 @@ public abstract class FSEditLogOp {
       builder.append("CloseOp ");
       builder.append(stringifyMembers());
       return builder.toString();
+    }
+  }
+
+  static class AppendOp extends FSEditLogOp {
+    String path;
+    String clientName;
+    String clientMachine;
+    boolean newBlock;
+
+    private AppendOp() {
+      super(OP_APPEND);
+    }
+
+    static AppendOp getInstance(OpInstanceCache cache) {
+      return (AppendOp) cache.get(OP_APPEND);
+    }
+
+    AppendOp setPath(String path) {
+      this.path = path;
+      return this;
+    }
+
+    AppendOp setClientName(String clientName) {
+      this.clientName = clientName;
+      return this;
+    }
+
+    AppendOp setClientMachine(String clientMachine) {
+      this.clientMachine = clientMachine;
+      return this;
+    }
+
+    AppendOp setNewBlock(boolean newBlock) {
+      this.newBlock = newBlock;
+      return this;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("AppendOp ");
+      builder.append("[path=").append(path);
+      builder.append(", clientName=").append(clientName);
+      builder.append(", clientMachine=").append(clientMachine);
+      builder.append(", newBlock=").append(newBlock).append("]");
+      return builder.toString();
+    }
+
+    @Override
+    void resetSubFields() {
+      this.path = null;
+      this.clientName = null;
+      this.clientMachine = null;
+      this.newBlock = false;
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      this.path = FSImageSerialization.readString(in);
+      this.clientName = FSImageSerialization.readString(in);
+      this.clientMachine = FSImageSerialization.readString(in);
+      this.newBlock = FSImageSerialization.readBoolean(in);
+      readRpcIds(in, logVersion);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(path, out);
+      FSImageSerialization.writeString(clientName, out);
+      FSImageSerialization.writeString(clientMachine, out);
+      FSImageSerialization.writeBoolean(newBlock, out);
+      writeRpcIds(rpcClientId, rpcCallId, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "PATH", path);
+      XMLUtils.addSaxString(contentHandler, "CLIENT_NAME", clientName);
+      XMLUtils.addSaxString(contentHandler, "CLIENT_MACHINE", clientMachine);
+      XMLUtils.addSaxString(contentHandler, "NEWBLOCK",
+          Boolean.toString(newBlock));
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      this.path = st.getValue("PATH");
+      this.clientName = st.getValue("CLIENT_NAME");
+      this.clientMachine = st.getValue("CLIENT_MACHINE");
+      this.newBlock = Boolean.parseBoolean(st.getValue("NEWBLOCK"));
+      readRpcIdsFromXml(st);
     }
   }
   
@@ -1643,7 +1736,7 @@ public abstract class FSEditLogOp {
    * {@link ClientProtocol#updateBlockForPipeline},
    * {@link ClientProtocol#recoverLease}, {@link ClientProtocol#addBlock}) or
    * already bound with other editlog op which records rpc ids (
-   * {@link ClientProtocol#startFile}). Thus no need to record rpc ids here.
+   * {@link ClientProtocol#create}). Thus no need to record rpc ids here.
    */
   static class SetGenstampV1Op extends FSEditLogOp {
     long genStampV1;
