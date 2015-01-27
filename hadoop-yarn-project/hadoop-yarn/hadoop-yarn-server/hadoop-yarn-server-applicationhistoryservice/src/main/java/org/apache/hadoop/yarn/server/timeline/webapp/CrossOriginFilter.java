@@ -106,25 +106,43 @@ public class CrossOriginFilter implements Filter {
 
     String originsList = encodeHeader(req.getHeader(ORIGIN));
     if (!isCrossOrigin(originsList)) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Header origin is null. Returning");
+      }
       return;
     }
 
     if (!areOriginsAllowed(originsList)) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Header origins '" + originsList + "' not allowed. Returning");
+      }
       return;
     }
 
     String accessControlRequestMethod =
         req.getHeader(ACCESS_CONTROL_REQUEST_METHOD);
     if (!isMethodAllowed(accessControlRequestMethod)) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Access control method '" + accessControlRequestMethod +
+            "' not allowed. Returning");
+      }
       return;
     }
 
     String accessControlRequestHeaders =
         req.getHeader(ACCESS_CONTROL_REQUEST_HEADERS);
     if (!areHeadersAllowed(accessControlRequestHeaders)) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Access control headers '" + accessControlRequestHeaders +
+            "' not allowed. Returning");
+      }
       return;
     }
 
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Completed cross origin filter checks. Populating " +
+          "HttpServletResponse");
+    }
     res.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, originsList);
     res.setHeader(ACCESS_CONTROL_ALLOW_CREDENTIALS, Boolean.TRUE.toString());
     res.setHeader(ACCESS_CONTROL_ALLOW_METHODS, getAllowedMethodsHeader());
