@@ -36,6 +36,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Provides access to the <code>AccessControlList</code>s used by KMS,
  * hot-reloading them if the <code>kms-acls.xml</code> file where the ACLs
@@ -70,7 +72,8 @@ public class KMSACLs implements Runnable, KeyACLs {
 
   private volatile Map<Type, AccessControlList> acls;
   private volatile Map<Type, AccessControlList> blacklistedAcls;
-  private volatile Map<String, HashMap<KeyOpType, AccessControlList>> keyAcls;
+  @VisibleForTesting
+  volatile Map<String, HashMap<KeyOpType, AccessControlList>> keyAcls;
   private final Map<KeyOpType, AccessControlList> defaultKeyAcls =
       new HashMap<KeyOpType, AccessControlList>();
   private final Map<KeyOpType, AccessControlList> whitelistKeyAcls =
@@ -112,7 +115,7 @@ public class KMSACLs implements Runnable, KeyACLs {
     Map<String, HashMap<KeyOpType, AccessControlList>> tempKeyAcls =
         new HashMap<String, HashMap<KeyOpType,AccessControlList>>();
     Map<String, String> allKeyACLS =
-        conf.getValByRegex(Pattern.quote(KMSConfiguration.KEY_ACL_PREFIX));
+        conf.getValByRegex(KMSConfiguration.KEY_ACL_PREFIX_REGEX);
     for (Map.Entry<String, String> keyAcl : allKeyACLS.entrySet()) {
       String k = keyAcl.getKey();
       // this should be of type "key.acl.<KEY_NAME>.<OP_TYPE>"

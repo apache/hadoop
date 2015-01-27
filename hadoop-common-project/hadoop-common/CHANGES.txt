@@ -418,6 +418,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11509. Change parsing sequence in GenericOptionsParser to parse -D
     parameters before -files. (xgong)
 
+    HADOOP-11469. KMS should skip default.key.acl and whitelist.key.acl when
+    loading key acl. (Dian Fu via yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
