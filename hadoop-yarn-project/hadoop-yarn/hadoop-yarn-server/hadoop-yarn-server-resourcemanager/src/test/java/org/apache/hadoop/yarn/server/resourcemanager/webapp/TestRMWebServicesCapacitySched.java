@@ -347,7 +347,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     int numExpectedElements = 13;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 23;
+      numExpectedElements = 24;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());

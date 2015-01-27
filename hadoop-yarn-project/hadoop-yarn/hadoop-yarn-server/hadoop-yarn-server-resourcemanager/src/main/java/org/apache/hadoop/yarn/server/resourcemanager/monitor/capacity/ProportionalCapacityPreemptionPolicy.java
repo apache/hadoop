@@ -116,9 +116,6 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
   public static final String NATURAL_TERMINATION_FACTOR =
       "yarn.resourcemanager.monitor.capacity.preemption.natural_termination_factor";
 
-  public static final String BASE_YARN_RM_PREEMPTION = "yarn.scheduler.capacity.";
-  public static final String SUFFIX_DISABLE_PREEMPTION = ".disable_preemption";
-
   // the dispatcher to send preempt and kill events
   public EventHandler<ContainerPreemptEvent> dispatcher;
 
@@ -227,7 +224,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     // extract a summary of the queues from scheduler
     TempQueue tRoot;
     synchronized (scheduler) {
-      tRoot = cloneQueues(root, clusterResources, false);
+      tRoot = cloneQueues(root, clusterResources);
     }
 
     // compute the ideal distribution of resources among queues
@@ -728,11 +725,9 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
    *
    * @param root the root of the CapacityScheduler queue hierarchy
    * @param clusterResources the total amount of resources in the cluster
-   * @param parentDisablePreempt true if disable preemption is set for parent
    * @return the root of the cloned queue hierarchy
    */
-  private TempQueue cloneQueues(CSQueue root, Resource clusterResources,
-      boolean parentDisablePreempt) {
+  private TempQueue cloneQueues(CSQueue root, Resource clusterResources) {
     TempQueue ret;
     synchronized (root) {
       String queueName = root.getQueueName();
@@ -744,12 +739,6 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       Resource guaranteed = Resources.multiply(clusterResources, absCap);
       Resource maxCapacity = Resources.multiply(clusterResources, absMaxCap);
 
-      boolean queueDisablePreemption = false;
-      String queuePropName = BASE_YARN_RM_PREEMPTION + root.getQueuePath()
-                               + SUFFIX_DISABLE_PREEMPTION;
-      queueDisablePreemption = scheduler.getConfiguration()
-                              .getBoolean(queuePropName, parentDisablePreempt);
-
       Resource extra = Resource.newInstance(0, 0);
       if (Resources.greaterThan(rc, clusterResources, current, guaranteed)) {
         extra = Resources.subtract(current, guaranteed);
@@ -759,7 +748,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         Resource pending = l.getTotalResourcePending();
         ret = new TempQueue(queueName, current, pending, guaranteed,
             maxCapacity);
-        if (queueDisablePreemption) {
+        if (root.getPreemptionDisabled()) {
           ret.untouchableExtra = extra;
         } else {
           ret.preemptableExtra = extra;
@@ -771,8 +760,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
             maxCapacity);
         Resource childrensPreemptable = Resource.newInstance(0, 0);
         for (CSQueue c : root.getChildQueues()) {
-          TempQueue subq =
-                cloneQueues(c, clusterResources, queueDisablePreemption);
+          TempQueue subq = cloneQueues(c, clusterResources);
           Resources.addTo(childrensPreemptable, subq.preemptableExtra);
           ret.addChild(subq);
         }

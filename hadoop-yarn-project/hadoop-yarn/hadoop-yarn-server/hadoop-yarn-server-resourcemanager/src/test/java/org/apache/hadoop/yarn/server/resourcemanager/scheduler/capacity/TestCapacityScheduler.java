@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -2070,5 +2071,57 @@ public class TestCapacityScheduler {
     Assert.assertEquals(1, allocResponse.getAllocatedContainers().size());
     Assert.assertEquals(0, report.getNumReservedContainers());
     rm.stop();
+  }
+
+  @Test
+  public void testPreemptionDisabled() throws Exception {
+    CapacityScheduler cs = new CapacityScheduler();
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
+    RMContextImpl rmContext =  new RMContextImpl(null, null, null, null, null,
+        null, new RMContainerTokenSecretManager(conf),
+        new NMTokenSecretManagerInRM(conf),
+        new ClientToAMTokenSecretManagerInRM(), null);
+    setupQueueConfiguration(conf);
+    cs.setConf(new YarnConfiguration());
+    cs.setRMContext(resourceManager.getRMContext());
+    cs.init(conf);
+    cs.start();
+    cs.reinitialize(conf, rmContext);
+
+    CSQueue rootQueue = cs.getRootQueue();
+    CSQueue queueB = findQueue(rootQueue, B);
+    CSQueue queueB2 = findQueue(queueB, B2);
+
+    // When preemption turned on for the whole system
+    // (yarn.resourcemanager.scheduler.monitor.enable=true), and with no other 
+    // preemption properties set, queue root.b.b2 should be preemptable.
+    assertFalse("queue " + B2 + " should default to preemptable",
+               queueB2.getPreemptionDisabled());
+
+    // Disable preemption at the root queue level.
+    // The preemption property should be inherited from root all the
+    // way down so that root.b.b2 should NOT be preemptable.
+    conf.setPreemptionDisabled(rootQueue.getQueuePath(), true);
+    cs.reinitialize(conf, rmContext);
+    assertTrue(
+        "queue " + B2 + " should have inherited non-preemptability from root",
+        queueB2.getPreemptionDisabled());
+
+    // Enable preemption for root (grandparent) but disable for root.b (parent).
+    // root.b.b2 should inherit property from parent and NOT be preemptable
+    conf.setPreemptionDisabled(rootQueue.getQueuePath(), false);
+    conf.setPreemptionDisabled(queueB.getQueuePath(), true);
+    cs.reinitialize(conf, rmContext);
+    assertTrue(
+        "queue " + B2 + " should have inherited non-preemptability from parent",
+        queueB2.getPreemptionDisabled());
+
+    // When preemption is turned on for root.b.b2, it should be preemptable
+    // even though preemption is disabled on root.b (parent).
+    conf.setPreemptionDisabled(queueB2.getQueuePath(), false);
+    cs.reinitialize(conf, rmContext);
+    assertFalse("queue " + B2 + " should have been preemptable",
+        queueB2.getPreemptionDisabled());
   }
 }

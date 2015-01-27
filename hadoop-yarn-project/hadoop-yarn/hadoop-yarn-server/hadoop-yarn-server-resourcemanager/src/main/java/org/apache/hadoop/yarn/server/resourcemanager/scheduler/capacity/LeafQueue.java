@@ -296,7 +296,8 @@ public class LeafQueue extends AbstractCSQueue {
         "labels=" + labelStrBuilder.toString() + "\n" +
         "nodeLocalityDelay = " +  nodeLocalityDelay + "\n" +
         "reservationsContinueLooking = " +
-        reservationsContinueLooking + "\n");
+        reservationsContinueLooking + "\n" +
+        "preemptionDisabled = " + getPreemptionDisabled() + "\n");
   }
 
   @Override
