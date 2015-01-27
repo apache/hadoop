@@ -514,6 +514,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7566. Remove obsolete entries from hdfs-default.xml (Ray Chiang
     via aw)
 
+    HDFS-7677. DistributedFileSystem#truncate should resolve symlinks. (yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
