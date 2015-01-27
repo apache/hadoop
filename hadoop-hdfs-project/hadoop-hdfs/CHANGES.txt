@@ -511,6 +511,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-49. MiniDFSCluster.stopDataNode will always shut down a node in
     the cluster if a matching name is not found. (stevel)
 
+    HDFS-7566. Remove obsolete entries from hdfs-default.xml (Ray Chiang
+    via aw)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

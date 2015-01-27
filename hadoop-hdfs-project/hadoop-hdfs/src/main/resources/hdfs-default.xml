@@ -31,16 +31,6 @@
 </property>
 
 <property>
-  <name>dfs.namenode.logging.level</name>
-  <value>info</value>
-  <description>
-    The logging level for dfs namenode. Other values are "dir" (trace
-    namespace mutations), "block" (trace block under/over replications
-    and block creations/deletions), or "all".
-  </description>
-</property>
-
-<property>
   <name>dfs.namenode.rpc-address</name>
   <value></value>
   <description>
@@ -151,14 +141,6 @@
     It can also be specified per name node or name service for HA/Federation.
     This is useful for making the name node HTTP server listen on all
     interfaces by setting it to 0.0.0.0.
-  </description>
-</property>
-
-<property>
-  <name>dfs.https.enable</name>
-  <value>false</value>
-  <description>
-    Deprecated. Use "dfs.http.policy" instead.
   </description>
 </property>
 
@@ -1221,14 +1203,6 @@
     Whether automatic failover is enabled. See the HDFS High
     Availability documentation for details on automatic HA
     configuration.
-  </description>
-</property>
-
-<property>
-  <name>dfs.support.append</name>
-  <value>true</value>
-  <description>
-    Does HDFS allow appends to files?
   </description>
 </property>
 
