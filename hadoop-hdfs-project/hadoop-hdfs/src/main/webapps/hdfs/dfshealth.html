@@ -153,13 +153,10 @@
 {#nn}
 <table class="table table-bordered table-striped">
   <tr><th> Configured Capacity:</th><td>{Total|fmt_bytes}</td></tr>
-  <tr><th> DFS Used:</th><td>{Used|fmt_bytes}</td></tr>
+  <tr><th> DFS Used:</th><td>{Used|fmt_bytes} ({PercentUsed|fmt_percentage})</td></tr>
   <tr><th> Non DFS Used:</th><td>{NonDfsUsedSpace|fmt_bytes}</td></tr>
-  <tr><th> DFS Remaining:</th><td>{Free|fmt_bytes}</td></tr>
-  <tr><th> DFS Used%:</th><td>{PercentUsed|fmt_percentage}</td></tr>
-  <tr><th> DFS Remaining%:</th><td>{PercentRemaining|fmt_percentage}</td></tr>
-  <tr><th> Block Pool Used:</th><td>{BlockPoolUsedSpace|fmt_bytes}</td></tr>
-  <tr><th> Block Pool Used%:</th><td>{PercentBlockPoolUsed|fmt_percentage}</td></tr>
+  <tr><th> DFS Remaining:</th><td>{Free|fmt_bytes} ({PercentRemaining|fmt_percentage})</td></tr>
+  <tr><th> Block Pool Used:</th><td>{BlockPoolUsedSpace|fmt_bytes} ({PercentBlockPoolUsed|fmt_percentage})</td></tr>
   <tr><th> DataNodes usages% (Min/Median/Max/stdDev): </th>
 	<td>{#NodeUsage.nodeUsage}{min} / {median} / {max} / {stdDev}{/NodeUsage.nodeUsage}</td></tr>
 {/nn}
