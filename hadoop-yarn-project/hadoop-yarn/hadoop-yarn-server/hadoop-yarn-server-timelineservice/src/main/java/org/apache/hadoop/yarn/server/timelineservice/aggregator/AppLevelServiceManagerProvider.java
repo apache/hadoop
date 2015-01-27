@@ -16,8 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice;
+package org.apache.hadoop.yarn.server.timelineservice.aggregator;
 
-public class TimelineAggregator {
+import com.google.inject.Provider;
 
+/**
+ * A guice provider that provides a global singleton instance of
+ * AppLevelServiceManager.
+ */
+public class AppLevelServiceManagerProvider
+    implements Provider<AppLevelServiceManager> {
+  @Override
+  public AppLevelServiceManager get() {
+    return AppLevelServiceManager.getInstance();
+  }
 }
