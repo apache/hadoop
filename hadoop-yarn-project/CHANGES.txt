@@ -178,6 +178,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2897. CrossOriginFilter needs more log statements (Mit Desai via
     jeagles)
 
+    YARN-3028. Better syntax for replaceLabelsOnNode in RMAdmin CLI
+    (Rohith Sharmaks via wangda)
+
   OPTIMIZATIONS
 
   BUG FIXES
