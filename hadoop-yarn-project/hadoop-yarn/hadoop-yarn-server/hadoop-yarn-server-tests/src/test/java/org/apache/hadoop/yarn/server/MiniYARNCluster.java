@@ -508,8 +508,10 @@ public class MiniYARNCluster extends CompositeService {
       String logDirsString = prepareDirs("log", numLogDirs);
       config.set(YarnConfiguration.NM_LOG_DIRS, logDirsString);
 
-      // By default AM + 2 containers
-      config.setInt(YarnConfiguration.NM_PMEM_MB, 4*1024);
+      config.setInt(YarnConfiguration.NM_PMEM_MB, config.getInt(
+          YarnConfiguration.YARN_MINICLUSTER_NM_PMEM_MB,
+          YarnConfiguration.DEFAULT_YARN_MINICLUSTER_NM_PMEM_MB));
+
       config.set(YarnConfiguration.NM_ADDRESS,
           MiniYARNCluster.getHostname() + ":0");
       config.set(YarnConfiguration.NM_LOCALIZER_ADDRESS,
