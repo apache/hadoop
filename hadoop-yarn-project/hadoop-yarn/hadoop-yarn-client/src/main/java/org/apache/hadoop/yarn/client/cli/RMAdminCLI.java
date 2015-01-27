@@ -100,7 +100,8 @@ public class RMAdminCLI extends HAAdmin {
               new UsageInfo("[label1,label2,label3] (label splitted by \",\")",
                   "remove from cluster node labels"))
           .put("-replaceLabelsOnNode",
-              new UsageInfo("[node1:port,label1,label2 node2:port,label1,label2]",
+              new UsageInfo(
+                  "[node1[:port]=label1,label2 node2[:port]=label1,label2]",
                   "replace labels on nodes"))
           .put("-directlyAccessNodeLabelStore",
               new UsageInfo("", "Directly access node label store, "
@@ -199,7 +200,7 @@ public class RMAdminCLI extends HAAdmin {
       " [-getGroup [username]]" +
       " [[-addToClusterNodeLabels [label1,label2,label3]]" +
       " [-removeFromClusterNodeLabels [label1,label2,label3]]" +
-      " [-replaceLabelsOnNode [node1:port,label1,label2 node2:port,label1]" +
+      " [-replaceLabelsOnNode [node1[:port]=label1,label2 node2[:port]=label1]" +
       " [-directlyAccessNodeLabelStore]]");
     if (isHAEnabled) {
       appendHAUsage(summary);
@@ -398,8 +399,18 @@ public class RMAdminCLI extends HAAdmin {
         continue;
       }
 
-      String[] splits = nodeToLabels.split(",");
+      // "," also supported for compatibility
+      String[] splits = nodeToLabels.split("=");
+      int index = 0;
+      if (splits.length != 2) {
+        splits = nodeToLabels.split(",");
+        index = 1;
+      }
+
       String nodeIdStr = splits[0];
+      if (index == 0) {
+        splits = splits[1].split(",");
+      }
 
       if (nodeIdStr.trim().isEmpty()) {
         throw new IOException("node name cannot be empty");
@@ -408,7 +419,7 @@ public class RMAdminCLI extends HAAdmin {
       NodeId nodeId = ConverterUtils.toNodeIdWithDefaultPort(nodeIdStr);
       map.put(nodeId, new HashSet<String>());
 
-      for (int i = 1; i < splits.length; i++) {
+      for (int i = index; i < splits.length; i++) {
         if (!splits[i].trim().isEmpty()) {
           map.get(nodeId).add(splits[i].trim());
         }
