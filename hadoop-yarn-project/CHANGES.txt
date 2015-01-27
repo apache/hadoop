@@ -175,6 +175,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3086. Make NodeManager memory configurable in MiniYARNCluster.
     (Robert Metzger via ozawa)
 
+    YARN-2897. CrossOriginFilter needs more log statements (Mit Desai via
+    jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
