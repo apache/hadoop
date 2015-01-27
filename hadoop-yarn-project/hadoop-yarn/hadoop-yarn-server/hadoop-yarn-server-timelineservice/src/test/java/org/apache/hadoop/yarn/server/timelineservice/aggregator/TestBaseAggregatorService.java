@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice;
+package org.apache.hadoop.yarn.server.timelineservice.aggregator;
 
-public class TestTimelineAggregator {
+public class TestBaseAggregatorService {
 
 }
