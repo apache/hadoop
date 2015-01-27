@@ -144,6 +144,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-4297. Enable Java assertions when running tests.
     (Tsz Wo Nicholas Sze via wheat9)
 
+    HADOOP-10626. Limit Returning Attributes for LDAP search. (Jason Hubbard
+    via atm)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
