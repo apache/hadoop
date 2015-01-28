@@ -423,6 +423,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11469. KMS should skip default.key.acl and whitelist.key.acl when
     loading key acl. (Dian Fu via yliu)
 
+    HADOOP-11316. "mvn package -Pdist,docs -DskipTests -Dtar" fails because
+    of non-ascii characters. (ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
