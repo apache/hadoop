@@ -397,6 +397,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3011. Possible IllegalArgumentException in ResourceLocalizationService
     might lead NM to crash. (Varun Saxena via jianhe)
 
+    YARN-3103. AMRMClientImpl does not update AMRM token properly. (Jason Lowe
+    via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
