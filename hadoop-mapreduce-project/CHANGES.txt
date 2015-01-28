@@ -82,6 +82,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-3283. mapred classpath CLI does not display the complete classpath
     (Varun Saxena via cnauroth)
 
+    MAPREDUCE-6230. Fixed RMContainerAllocator to update the new AMRMToken
+    service name properly. (Jason Lowe via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
