@@ -99,7 +99,7 @@ public class WriteManager {
     this.fileContextCache = new OpenFileCtxCache(config, streamTimeout);
   }
 
-  void startAsyncDataSerivce() {
+  void startAsyncDataService() {
     if (asyncDataServiceStarted) {
       return;
     }
@@ -137,7 +137,7 @@ public class WriteManager {
     FileHandle fileHandle = request.getHandle();
     OpenFileCtx openFileCtx = fileContextCache.get(fileHandle);
     if (openFileCtx == null) {
-      LOG.info("No opened stream for fileId:" + fileHandle.getFileId());
+      LOG.info("No opened stream for fileId: " + fileHandle.getFileId());
 
       String fileIdPath = Nfs3Utils.getFileIdPath(fileHandle.getFileId());
       HdfsDataOutputStream fos = null;
@@ -153,14 +153,14 @@ public class WriteManager {
       } catch (RemoteException e) {
         IOException io = e.unwrapRemoteException();
         if (io instanceof AlreadyBeingCreatedException) {
-          LOG.warn("Can't append file:" + fileIdPath
-              + ". Possibly the file is being closed. Drop the request:"
+          LOG.warn("Can't append file: " + fileIdPath
+              + ". Possibly the file is being closed. Drop the request: "
               + request + ", wait for the client to retry...");
           return;
         }
         throw e;
       } catch (IOException e) {
-        LOG.error("Can't apapend to file:" + fileIdPath, e);
+        LOG.error("Can't append to file: " + fileIdPath, e);
         if (fos != null) {
           fos.close();
         }
@@ -185,7 +185,7 @@ public class WriteManager {
         try {
           fos.close();
         } catch (IOException e) {
-          LOG.error("Can't close stream for fileId:" + handle.getFileId(), e);
+          LOG.error("Can't close stream for fileId: " + handle.getFileId(), e);
         }
         // Notify client to retry
         WccData fileWcc = new WccData(latestAttr.getWccAttr(), latestAttr);
@@ -198,7 +198,7 @@ public class WriteManager {
       }
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Opened stream for appending file:" + fileHandle.getFileId());
+        LOG.debug("Opened stream for appending file: " + fileHandle.getFileId());
       }
     }
 
@@ -217,7 +217,7 @@ public class WriteManager {
 
     if (openFileCtx == null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("No opened stream for fileId:" + fileHandle.getFileId()
+        LOG.debug("No opened stream for fileId: " + fileHandle.getFileId()
             + " commitOffset=" + commitOffset
             + ". Return success in this case.");
       }
@@ -251,8 +251,8 @@ public class WriteManager {
         status = Nfs3Status.NFS3_OK;
         break;
       default:
-        LOG.error("Should not get commit return code:" + ret.name());
-        throw new RuntimeException("Should not get commit return code:"
+        LOG.error("Should not get commit return code: " + ret.name());
+        throw new RuntimeException("Should not get commit return code: "
             + ret.name());
       }
     }
@@ -266,7 +266,7 @@ public class WriteManager {
     OpenFileCtx openFileCtx = fileContextCache.get(fileHandle);
 
     if (openFileCtx == null) {
-      LOG.info("No opened stream for fileId:" + fileHandle.getFileId()
+      LOG.info("No opened stream for fileId: " + fileHandle.getFileId()
           + " commitOffset=" + commitOffset + ". Return success in this case.");
       status = Nfs3Status.NFS3_OK;
       
@@ -292,8 +292,8 @@ public class WriteManager {
         status = Nfs3Status.NFS3_OK;
         break;
       default:
-        LOG.error("Should not get commit return code:" + ret.name());
-        throw new RuntimeException("Should not get commit return code:"
+        LOG.error("Should not get commit return code: " + ret.name());
+        throw new RuntimeException("Should not get commit return code: "
             + ret.name());
       }
     }

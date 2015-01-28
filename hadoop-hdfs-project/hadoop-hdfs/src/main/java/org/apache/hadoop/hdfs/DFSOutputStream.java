@@ -357,9 +357,9 @@ public class DFSOutputStream extends FSOutputSummer
     
     @Override
     public String toString() {
-      return "packet seqno:" + this.seqno +
-      " offsetInBlock:" + this.offsetInBlock + 
-      " lastPacketInBlock:" + this.lastPacketInBlock +
+      return "packet seqno: " + this.seqno +
+      " offsetInBlock: " + this.offsetInBlock +
+      " lastPacketInBlock: " + this.lastPacketInBlock +
       " lastByteOffsetInBlock: " + this.getLastByteOffsetBlock();
     }
   }
@@ -2008,7 +2008,7 @@ public class DFSOutputStream extends FSOutputSummer
 
         if (DFSClient.LOG.isDebugEnabled()) {
           DFSClient.LOG.debug(
-            "DFSClient flush() :" +
+            "DFSClient flush(): " +
             " bytesCurBlock " + bytesCurBlock +
             " lastFlushOffset " + lastFlushOffset);
         }
@@ -2092,7 +2092,7 @@ public class DFSOutputStream extends FSOutputSummer
       DFSClient.LOG.warn("Error while syncing", e);
       synchronized (this) {
         if (!isClosed()) {
-          lastException.set(new IOException("IOException flush:" + e));
+          lastException.set(new IOException("IOException flush: " + e));
           closeThreads(true);
         }
       }

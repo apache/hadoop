@@ -523,6 +523,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7611. deleteSnapshot and delete of a file can leave orphaned blocks
     in the blocksMap on NameNode restart. (jing9 and Byron Wong)
 
+    HDFS-7423. various typos and message formatting fixes in nfs daemon and
+    doc. (Charles Lamb via yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
