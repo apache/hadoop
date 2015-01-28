@@ -1194,7 +1194,9 @@ public class MiniDFSCluster {
         } catch (InterruptedException e) {
         }
         if (++i > 10) {
-          throw new IOException("Timed out waiting for Mini HDFS Cluster to start");
+          final String msg = "Timed out waiting for Mini HDFS Cluster to start";
+          LOG.error(msg);
+          throw new IOException(msg);
         }
       }
     }

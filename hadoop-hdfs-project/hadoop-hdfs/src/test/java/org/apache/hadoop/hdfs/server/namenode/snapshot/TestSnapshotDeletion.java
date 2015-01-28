@@ -1122,4 +1122,31 @@ public class TestSnapshotDeletion {
     // wait till the cluster becomes active
     cluster.waitClusterUp();
   }
+
+  @Test
+  public void testCorrectNumberOfBlocksAfterRestart() throws IOException {
+    final Path foo = new Path("/foo");
+    final Path bar = new Path(foo, "bar");
+    final Path file = new Path(foo, "file");
+    final String snapshotName = "ss0";
+
+    DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, seed);
+    hdfs.mkdirs(bar);
+    hdfs.setQuota(foo, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    hdfs.setQuota(bar, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+    hdfs.allowSnapshot(foo);
+
+    hdfs.createSnapshot(foo, snapshotName);
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    hdfs.deleteSnapshot(foo, snapshotName);
+    hdfs.delete(bar, true);
+    hdfs.delete(foo, true);
+
+    long numberOfBlocks = cluster.getNamesystem().getBlocksTotal();
+    cluster.restartNameNode(0);
+    assertEquals(numberOfBlocks, cluster.getNamesystem().getBlocksTotal());
+  }
 }

@@ -520,6 +520,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7677. DistributedFileSystem#truncate should resolve symlinks. (yliu)
 
+    HDFS-7611. deleteSnapshot and delete of a file can leave orphaned blocks
+    in the blocksMap on NameNode restart. (jing9 and Byron Wong)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
