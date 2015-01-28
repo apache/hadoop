@@ -625,9 +625,12 @@ class FSDirRenameOp {
         NameNode.stateChangeLog.warn("DIR* FSDirRenameOp.unprotectedRenameTo:" +
             error);
         throw new IOException(error);
+      } else {
+        // update the quota count if necessary
+        fsd.updateCountForDelete(srcChild, srcIIP);
+        srcIIP = INodesInPath.replace(srcIIP, srcIIP.length() - 1, null);
+        return removedNum;
       }
-      srcIIP = INodesInPath.replace(srcIIP, srcIIP.length() - 1, null);
-      return removedNum;
     }
 
     boolean removeSrc4OldRename() throws IOException {
@@ -638,6 +641,8 @@ class FSDirRenameOp {
             " can not be removed");
         return false;
       } else {
+        // update the quota count if necessary
+        fsd.updateCountForDelete(srcChild, srcIIP);
         srcIIP = INodesInPath.replace(srcIIP, srcIIP.length() - 1, null);
         return true;
       }
@@ -647,6 +652,8 @@ class FSDirRenameOp {
       long removedNum = fsd.removeLastINode(dstIIP);
       if (removedNum != -1) {
         oldDstChild = dstIIP.getLastINode();
+        // update the quota count if necessary
+        fsd.updateCountForDelete(oldDstChild, dstIIP);
         dstIIP = INodesInPath.replace(dstIIP, dstIIP.length() - 1, null);
       }
       return removedNum;

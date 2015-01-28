@@ -223,20 +223,25 @@ class FSDirDeleteOp {
     // set the parent's modification time
     final INodeDirectory parent = targetNode.getParent();
     parent.updateModificationTime(mtime, latestSnapshot);
+
+    fsd.updateCountForDelete(targetNode, iip);
     if (removed == 0) {
       return 0;
     }
 
-    // collect block
+    // collect block and update quota
     if (!targetNode.isInLatestSnapshot(latestSnapshot)) {
       targetNode.destroyAndCollectBlocks(collectedBlocks, removedINodes);
     } else {
       Quota.Counts counts = targetNode.cleanSubtree(CURRENT_STATE_ID,
           latestSnapshot, collectedBlocks, removedINodes, true);
-      parent.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
-          -counts.get(Quota.DISKSPACE), true);
       removed = counts.get(Quota.NAMESPACE);
+      // TODO: quota verification may fail the deletion here. We should not
+      // count the snapshot diff into quota usage in the future.
+      fsd.updateCount(iip, -counts.get(Quota.NAMESPACE),
+          -counts.get(Quota.DISKSPACE), true);
     }
+
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
           + iip.getPath() + " is removed");

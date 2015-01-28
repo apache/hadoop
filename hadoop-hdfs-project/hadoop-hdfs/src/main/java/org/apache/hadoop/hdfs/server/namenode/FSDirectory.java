@@ -601,7 +601,22 @@ public class FSDirectory implements Closeable {
       writeUnlock();
     }
   }
-  
+
+  /**
+   * Update the quota usage after deletion. The quota update is only necessary
+   * when image/edits have been loaded and the file/dir to be deleted is not
+   * contained in snapshots.
+   */
+  void updateCountForDelete(final INode inode, final INodesInPath iip)
+      throws QuotaExceededException {
+    if (getFSNamesystem().isImageLoaded() &&
+        !inode.isInLatestSnapshot(iip.getLatestSnapshotId())) {
+      Quota.Counts counts = inode.computeQuotaUsage();
+      updateCount(iip, -counts.get(Quota.NAMESPACE),
+          -counts.get(Quota.DISKSPACE), false);
+    }
+  }
+
   void updateCount(INodesInPath iip, long nsDelta, long dsDelta,
       boolean checkQuota) throws QuotaExceededException {
     updateCount(iip, iip.length() - 1, nsDelta, dsDelta, checkQuota);
@@ -904,11 +919,12 @@ public class FSDirectory implements Closeable {
 
   /**
    * Remove the last inode in the path from the namespace.
-   * Count of each ancestor with quota is also updated.
+   * Note: the caller needs to update the ancestors' quota count.
+   *
    * @return -1 for failing to remove;
    *          0 for removing a reference whose referred inode has other 
    *            reference nodes;
-   *         >0 otherwise. 
+   *          1 otherwise.
    */
   long removeLastINode(final INodesInPath iip) throws QuotaExceededException {
     final int latestSnapshot = iip.getLatestSnapshotId();
@@ -917,19 +933,9 @@ public class FSDirectory implements Closeable {
     if (!parent.removeChild(last, latestSnapshot)) {
       return -1;
     }
-    
-    if (!last.isInLatestSnapshot(latestSnapshot)) {
-      final Quota.Counts counts = last.computeQuotaUsage();
-      updateCountNoQuotaCheck(iip, iip.length() - 1,
-          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
 
-      if (INodeReference.tryRemoveReference(last) > 0) {
-        return 0;
-      } else {
-        return counts.get(Quota.NAMESPACE);
-      }
-    }
-    return 1;
+    return (!last.isInLatestSnapshot(latestSnapshot)
+        && INodeReference.tryRemoveReference(last) > 0) ? 0 : 1;
   }
 
   static String normalizePath(String src) {
