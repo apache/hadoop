@@ -16,34 +16,33 @@
  * limitations under the License.
  */
 
-#ifndef LIBHDFS3_PLATFORM_H
-#define LIBHDFS3_PLATFORM_H
+/*
+ * Implement get_cpuid() in Windows.
+ */
 
-#define THREAD_LOCAL __thread
-#define ATTRIBUTE_NORETURN __attribute__ ((noreturn))
-#define ATTRIBUTE_NOINLINE __attribute__ ((noinline))
+#ifndef _LIBHDFS3_CPUID_HEADER_
+#define _LIBHDFS3_CPUID_HEADER_
 
-#define GCC_VERSION (__GNUC__ * 10000 \
-                     + __GNUC_MINOR__ * 100 \
-                     + __GNUC_PATCHLEVEL__)
+#include <intrin.h>
 
-#cmakedefine LIBUNWIND_FOUND
-#cmakedefine HAVE_DLADDR
-#cmakedefine OS_LINUX
-#cmakedefine OS_MACOSX
-#cmakedefine ENABLE_FRAME_POINTER
-#cmakedefine HAVE_SYMBOLIZE
-#cmakedefine NEED_BOOST
-#cmakedefine STRERROR_R_RETURN_INT
-
-// defined by gcc
-#if defined(__ELF__) && defined(OS_LINUX)
-# define HAVE_SYMBOLIZE
-#elif defined(OS_MACOSX) && defined(HAVE_DLADDR)
-// Use dladdr to symbolize.
-# define HAVE_SYMBOLIZE
+#if ((defined(__X86__) || defined(__i386__) || defined(i386) || defined(_M_IX86) || defined(__386__) || defined(__x86_64__) || defined(_M_X64)))
+int __get_cpuid(unsigned int __level, unsigned int *__eax,
+    unsigned int *__ebx, unsigned int *__ecx, unsigned int *__edx) {
+    int CPUInfo[4] = { *__eax, *__ebx, *__ecx, *__edx };
+    __cpuid(CPUInfo, 0);
+    // check if the CPU supports the cpuid instruction.
+    if (CPUInfo[0] != 0) {
+        __cpuid(CPUInfo, __level);
+        *__eax = CPUInfo[0];
+        *__ebx = CPUInfo[1];
+        *__ecx = CPUInfo[2];
+        *__edx = CPUInfo[3];
+        return 1;
+	}
+    return 0;
+}
+#else
+#error Unimplemented __get_cpuid() for non-x86 processor!
 #endif
-
-#define STACK_LENGTH 64
 
 #endif
