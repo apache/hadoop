@@ -271,6 +271,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7683. Combine usages and percent stats in NameNode UI.
     (Vinayakumar B via wheat9)
 
+    HDFS-7675. Remove unused member DFSClient#spanReceiverHost (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
