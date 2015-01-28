@@ -23,6 +23,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7056. Snapshot support for truncate. (Plamen Jeliazkov and shv)
 
+    HDFS-6673. Add delimited format support to PB OIV tool. (Eddy Xu via wang)
+
   IMPROVEMENTS
 
     HDFS-7055. Add tracing to DFSInputStream (cmccabe)

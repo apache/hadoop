@@ -65,6 +65,10 @@ public class OfflineImageViewerPB {
       + "    -step defines the granularity of the distribution. (2MB by default)\n"
       + "  * Web: Run a viewer to expose read-only WebHDFS API.\n"
       + "    -addr specifies the address to listen. (localhost:5978 by default)\n"
+      + "  * Delimited: Generate a text file with all of the elements common\n"
+      + "    to both inodes and inodes-under-construction, separated by a\n"
+      + "    delimiter. The default delimiter is \\t, though this may be\n"
+      + "    changed via the -delimiter argument.\n"
       + "\n"
       + "Required command line arguments:\n"
       + "-i,--inputFile <arg>   FSImage file to process.\n"
@@ -74,8 +78,12 @@ public class OfflineImageViewerPB {
       + "                       file exists, it will be overwritten.\n"
       + "                       (output to stdout by default)\n"
       + "-p,--processor <arg>   Select which type of processor to apply\n"
-      + "                       against image file. (XML|FileDistribution|Web)\n"
+      + "                       against image file. (XML|FileDistribution|Web|Delimited)\n"
       + "                       (Web by default)\n"
+      + "-delimiter <arg>       Delimiting string to use with Delimited processor\n"
+      + "-t,--temp <arg>        Use temporary dir to cache intermediate result to generate\n"
+      + "                       Delimited outputs. If not set, Delimited processor constructs\n"
+      + "                       the namespace in memory before outputting text."
       + "-h,--help              Display usage information and exit\n";
 
   /**
@@ -97,6 +105,8 @@ public class OfflineImageViewerPB {
     options.addOption("maxSize", true, "");
     options.addOption("step", true, "");
     options.addOption("addr", true, "");
+    options.addOption("delimiter", true, "");
+    options.addOption("t", "temp", true, "");
 
     return options;
   }
@@ -141,6 +151,9 @@ public class OfflineImageViewerPB {
     String inputFile = cmd.getOptionValue("i");
     String processor = cmd.getOptionValue("p", "Web");
     String outputFile = cmd.getOptionValue("o", "-");
+    String delimiter = cmd.getOptionValue("delimiter",
+        PBImageDelimitedTextWriter.DEFAULT_DELIMITER);
+    String tempPath = cmd.getOptionValue("t", "");
 
     Configuration conf = new Configuration();
     try (PrintStream out = outputFile.equals("-") ?
@@ -161,6 +174,12 @@ public class OfflineImageViewerPB {
           try (WebImageViewer viewer = new WebImageViewer(
               NetUtils.createSocketAddr(addr))) {
             viewer.start(inputFile);
+          }
+          break;
+        case "Delimited":
+          try (PBImageDelimitedTextWriter writer =
+              new PBImageDelimitedTextWriter(out, delimiter, tempPath)) {
+            writer.visit(new RandomAccessFile(inputFile, "r"));
           }
           break;
       }
