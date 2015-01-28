@@ -200,8 +200,11 @@ public class TestAMRMClient {
     // of testing.
     UserGroupInformation.setLoginUser(UserGroupInformation
       .createRemoteUser(UserGroupInformation.getCurrentUser().getUserName()));
-    appAttempt.getAMRMToken().setService(ClientRMProxy.getAMRMTokenService(conf));
+
+    // emulate RM setup of AMRM token in credentials by adding the token
+    // *before* setting the token service
     UserGroupInformation.getCurrentUser().addToken(appAttempt.getAMRMToken());
+    appAttempt.getAMRMToken().setService(ClientRMProxy.getAMRMTokenService(conf));
   }
   
   @After
@@ -1026,13 +1029,18 @@ public class TestAMRMClient {
         UserGroupInformation.getCurrentUser().getCredentials();
     Iterator<org.apache.hadoop.security.token.Token<?>> iter =
         credentials.getAllTokens().iterator();
+    org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> result = null;
     while (iter.hasNext()) {
       org.apache.hadoop.security.token.Token<?> token = iter.next();
       if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
-        return (org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>)
+        if (result != null) {
+          Assert.fail("credentials has more than one AMRM token."
+              + " token1: " + result + " token2: " + token);
+        }
+        result = (org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>)
             token;
       }
     }
-    return null;
+    return result;
   }
 }
