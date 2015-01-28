@@ -644,8 +644,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       if (ckoff > 0) {
         metaInFile.seek(ckoff);
       }
-      return new ReplicaInputStreams(
-          blockInFile.getFD(), metaInFile.getFD(), ref);
+      InputStream blockInStream = new FileInputStream(blockInFile.getFD());
+      try {
+        InputStream metaInStream = new FileInputStream(metaInFile.getFD());
+        return new ReplicaInputStreams(blockInStream, metaInStream, ref);
+      } catch (IOException e) {
+        IOUtils.cleanup(null, blockInStream);
+        throw e;
+      }
     } catch (IOException e) {
       IOUtils.cleanup(null, ref);
       throw e;
