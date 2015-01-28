@@ -33,11 +33,11 @@ public class ReplicaInputStreams implements Closeable {
   private final FsVolumeReference volumeRef;
 
   /** Create an object with a data input stream and a checksum input stream. */
-  public ReplicaInputStreams(FileDescriptor dataFd, FileDescriptor checksumFd,
+  public ReplicaInputStreams(InputStream dataStream, InputStream checksumStream,
       FsVolumeReference volumeRef) {
     this.volumeRef = volumeRef;
-    this.dataIn = new FileInputStream(dataFd);
-    this.checksumIn = new FileInputStream(checksumFd);
+    this.dataIn = dataStream;
+    this.checksumIn = checksumStream;
   }
 
   /** @return the data input stream. */
