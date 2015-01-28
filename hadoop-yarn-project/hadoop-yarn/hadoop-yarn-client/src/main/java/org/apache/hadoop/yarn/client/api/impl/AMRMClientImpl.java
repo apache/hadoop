@@ -755,11 +755,11 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         new org.apache.hadoop.security.token.Token<AMRMTokenIdentifier>(token
           .getIdentifier().array(), token.getPassword().array(), new Text(
           token.getKind()), new Text(token.getService()));
-    amrmToken.setService(ClientRMProxy.getAMRMTokenService(getConfig()));
+    // Preserve the token service sent by the RM when adding the token
+    // to ensure we replace the previous token setup by the RM.
+    // Afterwards we can update the service address for the RPC layer.
     UserGroupInformation currentUGI = UserGroupInformation.getCurrentUser();
-    if (UserGroupInformation.isSecurityEnabled()) {
-      currentUGI = UserGroupInformation.getLoginUser();
-    }
     currentUGI.addToken(amrmToken);
+    amrmToken.setService(ClientRMProxy.getAMRMTokenService(getConfig()));
   }
 }
