@@ -19,6 +19,7 @@
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_io_nativeio_NativeIO.h"
 #include "org_apache_hadoop_io_nativeio_NativeIO_POSIX.h"
+#include "exception.h"
 
 #ifdef UNIX
 #include <assert.h>
@@ -893,11 +894,7 @@ void throw_ioe(JNIEnv* env, int errnum)
   char message[80];
   jstring jstr_message;
 
-  if ((errnum >= 0) && (errnum < sys_nerr)) {
-    snprintf(message, sizeof(message), "%s", sys_errlist[errnum]);
-  } else {
-    snprintf(message, sizeof(message), "Unknown error %d", errnum);
-  }
+  snprintf(message,sizeof(message),"%s",terror(errnum));
 
   jobject errno_obj = errno_to_enum(env, errnum);
 

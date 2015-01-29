@@ -110,9 +110,15 @@ jthrowable newIOException(JNIEnv* env, const char *fmt, ...)
 
 const char* terror(int errnum)
 {
+
+#if defined(__sun)
+// MT-Safe under Solaris which doesn't support sys_errlist/sys_nerr
+  return strerror(errnum); 
+#else
   if ((errnum < 0) || (errnum >= sys_nerr)) {
     return "unknown error.";
   }
   return sys_errlist[errnum];
+#endif
 }
 
