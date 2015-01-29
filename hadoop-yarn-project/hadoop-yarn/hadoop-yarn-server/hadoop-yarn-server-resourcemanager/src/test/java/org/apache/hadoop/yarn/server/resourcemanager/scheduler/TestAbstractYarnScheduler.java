@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -274,6 +275,67 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       scheduler.nodes.remove(mockNode1.getNodeID());
       scheduler.updateMaximumAllocation(mockNode1, false);
       verifyMaximumResourceCapability(configuredMaximumResource, scheduler);
+    } finally {
+      rm.stop();
+    }
+  }
+
+  @Test
+  public void testMaxAllocationAfterUpdateNodeResource() throws IOException {
+    final int configuredMaxVCores = 20;
+    final int configuredMaxMemory = 10 * 1024;
+    Resource configuredMaximumResource = Resource.newInstance
+        (configuredMaxMemory, configuredMaxVCores);
+
+    configureScheduler();
+    YarnConfiguration conf = getConf();
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+        configuredMaxVCores);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        configuredMaxMemory);
+    conf.setLong(
+        YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS,
+        0);
+
+    MockRM rm = new MockRM(conf);
+    try {
+      rm.start();
+      AbstractYarnScheduler scheduler = (AbstractYarnScheduler) rm
+          .getResourceScheduler();
+      verifyMaximumResourceCapability(configuredMaximumResource, scheduler);
+
+      Resource resource1 = Resource.newInstance(2048, 5);
+      Resource resource2 = Resource.newInstance(4096, 10);
+      Resource resource3 = Resource.newInstance(512, 1);
+      Resource resource4 = Resource.newInstance(1024, 2);
+
+      RMNode node1 = MockNodes.newNodeInfo(
+          0, resource1, 1, "127.0.0.2");
+      scheduler.handle(new NodeAddedSchedulerEvent(node1));
+      RMNode node2 = MockNodes.newNodeInfo(
+          0, resource3, 2, "127.0.0.3");
+      scheduler.handle(new NodeAddedSchedulerEvent(node2));
+      verifyMaximumResourceCapability(resource1, scheduler);
+
+      // increase node1 resource
+      scheduler.updateNodeResource(node1, ResourceOption.newInstance(
+          resource2, 0));
+      verifyMaximumResourceCapability(resource2, scheduler);
+
+      // decrease node1 resource
+      scheduler.updateNodeResource(node1, ResourceOption.newInstance(
+          resource1, 0));
+      verifyMaximumResourceCapability(resource1, scheduler);
+
+      // increase node2 resource
+      scheduler.updateNodeResource(node2, ResourceOption.newInstance(
+          resource4, 0));
+      verifyMaximumResourceCapability(resource1, scheduler);
+
+      // decrease node2 resource
+      scheduler.updateNodeResource(node2, ResourceOption.newInstance(
+          resource3, 0));
+      verifyMaximumResourceCapability(resource1, scheduler);
     } finally {
       rm.stop();
     }
