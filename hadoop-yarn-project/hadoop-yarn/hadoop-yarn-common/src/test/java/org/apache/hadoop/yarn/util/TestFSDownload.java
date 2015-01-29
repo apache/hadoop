@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
@@ -67,7 +68,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -232,7 +232,7 @@ public class TestFSDownload {
     byte[] bytes = new byte[len];
     r.nextBytes(bytes);
 
-    File archiveFile = new File(p.toUri().getPath() + ".zip");
+    File archiveFile = new File(p.toUri().getPath() + ".ZIP");
     archiveFile.createNewFile();
     ZipOutputStream out = new ZipOutputStream(
         new FileOutputStream(archiveFile));
@@ -243,11 +243,11 @@ public class TestFSDownload {
 
     LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
     ret.setResource(ConverterUtils.getYarnUrlFromPath(new Path(p.toString()
-        + ".zip")));
+        + ".ZIP")));
     ret.setSize(len);
     ret.setType(LocalResourceType.ARCHIVE);
     ret.setVisibility(vis);
-    ret.setTimestamp(files.getFileStatus(new Path(p.toString() + ".zip"))
+    ret.setTimestamp(files.getFileStatus(new Path(p.toString() + ".ZIP"))
         .getModificationTime());
     return ret;
   }
@@ -474,8 +474,8 @@ public class TestFSDownload {
 
     int size = rand.nextInt(512) + 512;
     LocalResourceVisibility vis = LocalResourceVisibility.PRIVATE;
-
     Path p = new Path(basedir, "" + 1);
+    String strFileName = "";
     LocalResource rsrc = null;
     switch (fileType) {
     case TAR:
@@ -487,6 +487,7 @@ public class TestFSDownload {
       break;
     case ZIP:
       rsrc = createZipFile(files, p, size, rand, vis);
+      strFileName = p.getName() + ".ZIP";
       break;
     case TGZ:
       rsrc = createTgzFile(files, p, size, rand, vis);
@@ -509,6 +510,13 @@ public class TestFSDownload {
           FileStatus[] childFiles = files.getDefaultFileSystem().listStatus(
               filestatus.getPath());
           for (FileStatus childfile : childFiles) {
+            if(strFileName.endsWith(".ZIP") &&
+               childfile.getPath().getName().equals(strFileName) &&
+               !childfile.isDirectory()) {
+               Assert.fail("Failure...After unzip, there should have been a" +
+                 " directory formed with zip file name but found a file. "
+                 + childfile.getPath());
+            }
             if (childfile.getPath().getName().startsWith("tmp")) {
               Assert.fail("Tmp File should not have been there "
                   + childfile.getPath());
@@ -537,6 +545,21 @@ public class TestFSDownload {
   public void testDownloadArchiveZip() throws IOException, URISyntaxException,
       InterruptedException {
     downloadWithFileType(TEST_FILE_TYPE.ZIP);
+  }
+
+  /*
+   * To test fix for YARN-3029
+   */
+  @Test (timeout=10000)
+  public void testDownloadArchiveZipWithTurkishLocale() throws IOException,
+      URISyntaxException, InterruptedException {
+    Locale defaultLocale = Locale.getDefault();
+    // Set to Turkish
+    Locale turkishLocale = new Locale("tr", "TR");
+    Locale.setDefault(turkishLocale);
+    downloadWithFileType(TEST_FILE_TYPE.ZIP);
+    // Set the locale back to original default locale
+    Locale.setDefault(defaultLocale);
   }
 
   @Test (timeout=10000)

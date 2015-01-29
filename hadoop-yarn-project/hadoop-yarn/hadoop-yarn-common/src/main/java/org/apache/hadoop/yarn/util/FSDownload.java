@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -271,7 +272,7 @@ public class FSDownload implements Callable<Path> {
   private long unpack(File localrsrc, File dst) throws IOException {
     switch (resource.getType()) {
     case ARCHIVE: {
-      String lowerDst = dst.getName().toLowerCase();
+      String lowerDst = dst.getName().toLowerCase(Locale.ENGLISH);
       if (lowerDst.endsWith(".jar")) {
         RunJar.unJar(localrsrc, dst);
       } else if (lowerDst.endsWith(".zip")) {
@@ -290,7 +291,7 @@ public class FSDownload implements Callable<Path> {
     }
     break;
     case PATTERN: {
-      String lowerDst = dst.getName().toLowerCase();
+      String lowerDst = dst.getName().toLowerCase(Locale.ENGLISH);
       if (lowerDst.endsWith(".jar")) {
         String p = resource.getPattern();
         RunJar.unJar(localrsrc, dst,

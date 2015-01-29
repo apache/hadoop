@@ -403,6 +403,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3079. Scheduler should also update maximumAllocation when updateNodeResource.
     (Zhihai Xu via wangda)
 
+    YARN-3029. FSDownload.unpack() uses local locale for FS case conversion, may not
+    work everywhere. (Varun Saxena via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
