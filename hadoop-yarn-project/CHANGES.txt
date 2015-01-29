@@ -34,6 +34,9 @@ Trunk - Unreleased
 
     YARN-3002. YARN documentation needs updating post-shell rewrite (aw)
 
+    YARN-2428. LCE default banned user list should have yarn (Varun
+    Saxena via aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
