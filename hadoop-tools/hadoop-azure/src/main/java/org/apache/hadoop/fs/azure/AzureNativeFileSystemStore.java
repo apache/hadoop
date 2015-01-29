@@ -789,8 +789,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         STORAGE_EMULATOR_ACCOUNT_NAME_PROPERTY_NAME,
         DEFAULT_STORAGE_EMULATOR_ACCOUNT_NAME));
   }
-
-  static String getAccountKeyFromConfiguration(String accountName,
+  
+  @VisibleForTesting
+  public static String getAccountKeyFromConfiguration(String accountName,
       Configuration conf) throws KeyProviderException {
     String key = null;
     String keyProviderClass = conf.get(KEY_ACCOUNT_KEYPROVIDER_PREFIX
