@@ -32,6 +32,8 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6141. History server leveldb recovery store (jlowe)
 
+    MAPREDUCE-6150. Update document of Rumen (Masatake Iwasaki via aw)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
