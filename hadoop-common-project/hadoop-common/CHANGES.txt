@@ -438,6 +438,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-9907. Webapp http://hostname:port/metrics link is not working.
     (aajisaka)
 
+    HADOOP-11403. Avoid using sys_errlist on Solaris, which lacks support for it
+    (Malcolm Kavalsky via Colin P. McCabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
