@@ -61,6 +61,7 @@ public class Grep extends Configured implements Tool {
     try {
       
       grepJob.setJobName("grep-search");
+      grepJob.setJarByClass(Grep.class);
 
       FileInputFormat.setInputPaths(grepJob, args[0]);
 
@@ -78,6 +79,7 @@ public class Grep extends Configured implements Tool {
 
       Job sortJob = new Job(conf);
       sortJob.setJobName("grep-sort");
+      sortJob.setJarByClass(Grep.class);
 
       FileInputFormat.setInputPaths(sortJob, tempDir);
       sortJob.setInputFormatClass(SequenceFileInputFormat.class);
