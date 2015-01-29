@@ -432,6 +432,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11316. "mvn package -Pdist,docs -DskipTests -Dtar" fails because
     of non-ascii characters. (ozawa)
 
+    HADOOP-9907. Webapp http://hostname:port/metrics link is not working.
+    (aajisaka)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
