@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import java.util.ArrayList;
 import java.util.Map;
 
+import org.apache.hadoop.mapreduce.TaskType;
 import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
@@ -56,8 +58,8 @@ public class TestMapReduceChildJVM {
     Assert.assertEquals(
       "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
       " -Djava.net.preferIPv4Stack=true" +
-      " -Dhadoop.metrics.log.level=WARN" +
-      "  -Xmx200m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
+      " -Dhadoop.metrics.log.level=WARN " +
+      "  -Xmx820m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
       " -Dlog4j.configuration=container-log4j.properties" +
       " -Dyarn.app.container.log.dir=<LOG_DIR>" +
       " -Dyarn.app.container.log.filesize=0" +
@@ -67,7 +69,7 @@ public class TestMapReduceChildJVM {
       " attempt_0_0000_m_000000_0" +
       " 0" +
       " 1><LOG_DIR>/stdout" +
-      " 2><LOG_DIR>/stderr ]", app.myCommandLine);
+      " 2><LOG_DIR>/stderr ]", app.launchCmdList.get(0));
     
     Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
       app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
@@ -119,8 +121,8 @@ public class TestMapReduceChildJVM {
     Assert.assertEquals(
         "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
             " -Djava.net.preferIPv4Stack=true" +
-            " -Dhadoop.metrics.log.level=WARN" +
-            "  -Xmx200m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
+            " -Dhadoop.metrics.log.level=WARN " +
+            "  -Xmx820m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
             " -Dlog4j.configuration=container-log4j.properties" +
             " -Dyarn.app.container.log.dir=<LOG_DIR>" +
             " -Dyarn.app.container.log.filesize=0" +
@@ -134,7 +136,7 @@ public class TestMapReduceChildJVM {
             " attempt_0_0000_r_000000_0" +
             " 0" +
             " 1><LOG_DIR>/stdout" +
-            " 2><LOG_DIR>/stderr ]", app.myCommandLine);
+            " 2><LOG_DIR>/stderr ]", app.launchCmdList.get(0));
 
     Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
         app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
@@ -161,8 +163,8 @@ public class TestMapReduceChildJVM {
     Assert.assertEquals(
       "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
       " -Djava.net.preferIPv4Stack=true" +
-      " -Dhadoop.metrics.log.level=WARN" +
-      "  -Xmx200m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
+      " -Dhadoop.metrics.log.level=WARN " +
+      "  -Xmx820m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
       " -Dlog4j.configuration=" + testLogPropertieFile +
       " -Dyarn.app.container.log.dir=<LOG_DIR>" +
       " -Dyarn.app.container.log.filesize=0" +
@@ -172,12 +174,81 @@ public class TestMapReduceChildJVM {
       " attempt_0_0000_m_000000_0" +
       " 0" +
       " 1><LOG_DIR>/stdout" +
-      " 2><LOG_DIR>/stderr ]", app.myCommandLine);
+      " 2><LOG_DIR>/stderr ]", app.launchCmdList.get(0));
+  }
+
+  @Test
+  public void testAutoHeapSizes() throws Exception {
+    // Don't specify heap size or memory-mb
+    testAutoHeapSize(-1, -1, null);
+
+    // Don't specify heap size
+    testAutoHeapSize(512, 768, null);
+    testAutoHeapSize(100, 768, null);
+    testAutoHeapSize(512, 100, null);
+    // Specify heap size
+    testAutoHeapSize(512, 768, "-Xmx100m");
+    testAutoHeapSize(512, 768, "-Xmx500m");
+
+    // Specify heap size but not the memory
+    testAutoHeapSize(-1, -1, "-Xmx100m");
+    testAutoHeapSize(-1, -1, "-Xmx500m");
+  }
+
+  private void testAutoHeapSize(int mapMb, int redMb, String xmxArg)
+      throws Exception {
+    JobConf conf = new JobConf();
+    float heapRatio = conf.getFloat(MRJobConfig.HEAP_MEMORY_MB_RATIO,
+        MRJobConfig.DEFAULT_HEAP_MEMORY_MB_RATIO);
+
+    // Verify map and reduce java opts are not set by default
+    Assert.assertNull("Default map java opts!",
+        conf.get(MRJobConfig.MAP_JAVA_OPTS));
+    Assert.assertNull("Default reduce java opts!",
+        conf.get(MRJobConfig.REDUCE_JAVA_OPTS));
+    // Set the memory-mbs and java-opts
+    if (mapMb > 0) {
+      conf.setInt(MRJobConfig.MAP_MEMORY_MB, mapMb);
+    } else {
+      mapMb = conf.getMemoryRequired(TaskType.MAP);
+    }
+
+    if (redMb > 0) {
+      conf.setInt(MRJobConfig.REDUCE_MEMORY_MB, redMb);
+    } else {
+      redMb = conf.getMemoryRequired(TaskType.REDUCE);
+    }
+    if (xmxArg != null) {
+      conf.set(MRJobConfig.MAP_JAVA_OPTS, xmxArg);
+      conf.set(MRJobConfig.REDUCE_JAVA_OPTS, xmxArg);
+    }
+
+    // Submit job to let unspecified fields be picked up
+    MyMRApp app = new MyMRApp(1, 1, true, this.getClass().getName(), true);
+    Job job = app.submit(conf);
+    app.waitForState(job, JobState.SUCCEEDED);
+    app.verifyCompleted();
+
+    // Go through the tasks and verify the values are as expected
+    for (String cmd : app.launchCmdList) {
+      final boolean isMap = cmd.contains("_m_");
+      int heapMb;
+      if (xmxArg == null) {
+        heapMb = (int)(Math.ceil((isMap ? mapMb : redMb) * heapRatio));
+      } else {
+        final String javaOpts = conf.get(isMap
+            ? MRJobConfig.MAP_JAVA_OPTS
+            : MRJobConfig.REDUCE_JAVA_OPTS);
+        heapMb = JobConf.parseMaximumHeapSizeMB(javaOpts);
+      }
+      Assert.assertEquals("Incorrect heapsize in the command opts",
+          heapMb, JobConf.parseMaximumHeapSizeMB(cmd));
+    }
   }
 
   private static final class MyMRApp extends MRApp {
 
-    private String myCommandLine;
+    private ArrayList<String> launchCmdList = new ArrayList<>();
     private Map<String, String> cmdEnvironment;
 
     public MyMRApp(int maps, int reduces, boolean autoComplete,
@@ -196,7 +267,7 @@ public class TestMapReduceChildJVM {
                 launchEvent.getContainerLaunchContext();
             String cmdString = launchContext.getCommands().toString();
             LOG.info("launchContext " + cmdString);
-            myCommandLine = cmdString;
+            launchCmdList.add(cmdString);
             cmdEnvironment = launchContext.getEnvironment();
           }
           super.handle(event);

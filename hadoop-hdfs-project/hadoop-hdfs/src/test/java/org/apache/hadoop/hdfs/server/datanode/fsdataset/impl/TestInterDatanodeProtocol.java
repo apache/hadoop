@@ -184,8 +184,8 @@ public class TestInterDatanodeProtocol {
       InterDatanodeProtocol idp = DataNodeTestUtils.createInterDatanodeProtocolProxy(
           datanode, datanodeinfo[0], conf, useDnHostname);
       
-      //stop block scanner, so we could compare lastScanTime
-      DataNodeTestUtils.shutdownBlockScanner(datanode);
+      // Stop the block scanners.
+      datanode.getBlockScanner().removeAllVolumeScanners();
 
       //verify BlockMetaDataInfo
       ExtendedBlock b = locatedblock.getBlock();
@@ -198,7 +198,8 @@ public class TestInterDatanodeProtocol {
       //verify updateBlock
       ExtendedBlock newblock = new ExtendedBlock(b.getBlockPoolId(),
           b.getBlockId(), b.getNumBytes()/2, b.getGenerationStamp()+1);
-      idp.updateReplicaUnderRecovery(b, recoveryId, newblock.getNumBytes());
+      idp.updateReplicaUnderRecovery(b, recoveryId, b.getBlockId(),
+          newblock.getNumBytes());
       checkMetaInfo(newblock, datanode);
       
       // Verify correct null response trying to init recovery for a missing block
@@ -368,7 +369,8 @@ public class TestInterDatanodeProtocol {
             .getBlockId(), rri.getNumBytes() - 1, rri.getGenerationStamp());
         try {
           //update should fail
-          fsdataset.updateReplicaUnderRecovery(tmp, recoveryid, newlength);
+          fsdataset.updateReplicaUnderRecovery(tmp, recoveryid,
+              tmp.getBlockId(), newlength);
           Assert.fail();
         } catch(IOException ioe) {
           System.out.println("GOOD: getting " + ioe);
@@ -377,7 +379,8 @@ public class TestInterDatanodeProtocol {
 
       //update
       final String storageID = fsdataset.updateReplicaUnderRecovery(
-          new ExtendedBlock(b.getBlockPoolId(), rri), recoveryid, newlength);
+          new ExtendedBlock(b.getBlockPoolId(), rri), recoveryid,
+          rri.getBlockId(), newlength);
       assertTrue(storageID != null);
 
     } finally {

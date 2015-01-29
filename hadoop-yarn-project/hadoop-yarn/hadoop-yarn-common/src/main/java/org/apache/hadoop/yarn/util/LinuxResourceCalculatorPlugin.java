@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.util;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -147,9 +149,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
 
     // Read "/proc/memInfo" file
     BufferedReader in = null;
-    FileReader fReader = null;
+    InputStreamReader fReader = null;
     try {
-      fReader = new FileReader(procfsMemFile);
+      fReader = new InputStreamReader(
+          new FileInputStream(procfsMemFile), Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....
@@ -206,9 +209,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     }
     // Read "/proc/cpuinfo" file
     BufferedReader in = null;
-    FileReader fReader = null;
+    InputStreamReader fReader = null;
     try {
-      fReader = new FileReader(procfsCpuFile);
+      fReader = new InputStreamReader(
+          new FileInputStream(procfsCpuFile), Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....
@@ -253,9 +257,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private void readProcStatFile() {
     // Read "/proc/stat" file
     BufferedReader in = null;
-    FileReader fReader = null;
+    InputStreamReader fReader = null;
     try {
-      fReader = new FileReader(procfsStatFile);
+      fReader = new InputStreamReader(
+          new FileInputStream(procfsStatFile), Charset.forName("UTF-8"));
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // shouldn't happen....

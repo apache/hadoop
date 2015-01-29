@@ -163,9 +163,12 @@ abstract class AbstractINodeDiffList<N extends INode,
    *                  id, otherwise <=.
    * @return The id of the latest snapshot before the given snapshot.
    */
-  private final int getPrior(int anchorId, boolean exclusive) {
+  public final int getPrior(int anchorId, boolean exclusive) {
     if (anchorId == Snapshot.CURRENT_STATE_ID) {
-      return getLastSnapshotId();
+      int last = getLastSnapshotId();
+      if(exclusive && last == anchorId)
+        return Snapshot.NO_SNAPSHOT_ID;
+      return last;
     }
     final int i = Collections.binarySearch(diffs, anchorId);
     if (exclusive) { // must be the one before
@@ -290,10 +293,11 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** Save the snapshot copy to the latest snapshot. */
-  public void saveSelf2Snapshot(int latestSnapshotId, N currentINode,
+  public D saveSelf2Snapshot(int latestSnapshotId, N currentINode,
       A snapshotCopy) throws QuotaExceededException {
+    D diff = null;
     if (latestSnapshotId != Snapshot.CURRENT_STATE_ID) {
-      D diff = checkAndAddLatestSnapshotDiff(latestSnapshotId, currentINode);
+      diff = checkAndAddLatestSnapshotDiff(latestSnapshotId, currentINode);
       if (diff.snapshotINode == null) {
         if (snapshotCopy == null) {
           snapshotCopy = createSnapshotCopy(currentINode);
@@ -301,6 +305,7 @@ abstract class AbstractINodeDiffList<N extends INode,
         diff.saveSnapshotCopy(snapshotCopy);
       }
     }
+    return diff;
   }
   
   @Override

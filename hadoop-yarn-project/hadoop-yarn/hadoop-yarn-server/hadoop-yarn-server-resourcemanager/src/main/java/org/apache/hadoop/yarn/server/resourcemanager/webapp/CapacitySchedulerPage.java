@@ -114,14 +114,15 @@ class CapacitySchedulerPage extends RmView {
           _("Num Containers:", Integer.toString(lqinfo.getNumContainers())).
           _("Max Applications:", Integer.toString(lqinfo.getMaxApplications())).
           _("Max Applications Per User:", Integer.toString(lqinfo.getMaxApplicationsPerUser())).
-          _("Max Schedulable Applications:", Integer.toString(lqinfo.getMaxActiveApplications())).
-          _("Max Schedulable Applications Per User:", Integer.toString(lqinfo.getMaxActiveApplicationsPerUser())).
+          _("Max Application Master Resources:", lqinfo.getAMResourceLimit().toString()).
+          _("Max Application Master Resources Per User:", lqinfo.getUserAMResourceLimit().toString()).
           _("Configured Capacity:", percent(lqinfo.getCapacity() / 100)).
           _("Configured Max Capacity:", percent(lqinfo.getMaxCapacity() / 100)).
           _("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
           _("Configured User Limit Factor:", String.format("%.1f", lqinfo.getUserLimitFactor())).
           _r("Active Users: ", activeUserList.toString()).
-          _("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels()));
+          _("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
+          _("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled");
 
       html._(InfoBlock.class);
 

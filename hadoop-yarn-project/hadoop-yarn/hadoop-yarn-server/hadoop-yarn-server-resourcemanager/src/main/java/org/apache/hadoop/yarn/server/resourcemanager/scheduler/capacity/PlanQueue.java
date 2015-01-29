@@ -37,8 +37,6 @@ import org.slf4j.LoggerFactory;
  */
 public class PlanQueue extends ParentQueue {
 
-  public static final String DEFAULT_QUEUE_SUFFIX = "-default";
-
   private static final Logger LOG = LoggerFactory.getLogger(PlanQueue.class);
 
   private int maxAppsForReservation;

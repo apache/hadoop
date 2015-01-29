@@ -81,9 +81,7 @@ case "${COMMAND}" in
     set -- "${COMMAND}" "$@"
   ;;
   classpath)
-    hadoop_finalize
-    echo "${CLASSPATH}"
-    exit
+    hadoop_do_classpath_subcommand "$@"
   ;;
   daemonlog)
     CLASS=org.apache.hadoop.log.LogLevel
@@ -210,9 +208,13 @@ fi
 # Note that we are replacing ' ' with '\ ' so that when we exec
 # stuff it works
 #
-hadoop_add_param HADOOP_OPTS yarn.log.dir "-Dyarn.log.dir=${HADOOP_LOG_DIR/ /\ }"
+YARN_LOG_DIR=$HADOOP_LOG_DIR
+hadoop_translate_cygwin_path YARN_LOG_DIR
+hadoop_add_param HADOOP_OPTS yarn.log.dir "-Dyarn.log.dir=${YARN_LOG_DIR/ /\ }"
 hadoop_add_param HADOOP_OPTS yarn.log.file "-Dyarn.log.file=${HADOOP_LOGFILE/ /\ }"
-hadoop_add_param HADOOP_OPTS yarn.home.dir "-Dyarn.home.dir=${HADOOP_YARN_HOME/ /\ }"
+YARN_HOME_DIR=$HADOOP_YARN_HOME
+hadoop_translate_cygwin_path YARN_HOME_DIR
+hadoop_add_param HADOOP_OPTS yarn.home.dir "-Dyarn.home.dir=${YARN_HOME_DIR/ /\ }"
 hadoop_add_param HADOOP_OPTS yarn.root.logger "-Dyarn.root.logger=${YARN_ROOT_LOGGER:-INFO,console}"
 
 hadoop_finalize

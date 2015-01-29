@@ -33,7 +33,7 @@ public class FileSetUtils {
    * @param list List of all elements
    * @return String containing every element, comma-separated
    */
-  private static String getCommaSeparatedList(List list) {
+  private static String getCommaSeparatedList(List<String> list) {
     StringBuilder buffer = new StringBuilder();
     String separator = "";
     for (Object e : list) {

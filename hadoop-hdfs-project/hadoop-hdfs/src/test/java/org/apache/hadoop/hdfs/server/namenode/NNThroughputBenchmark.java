@@ -977,7 +977,7 @@ public class NNThroughputBenchmark implements Tool {
       // fill remaining slots with blocks that do not exist
       for(int idx = blocks.size()-1; idx >= nrBlocks; idx--)
         blocks.set(idx, new Block(blocks.size() - idx, 0, 0));
-      blockReportList = new BlockListAsLongs(blocks,null).getBlockListAsLongs();
+      blockReportList = new BlockListAsLongs(blocks).getBlockListAsLongs();
     }
 
     long[] getBlockReportList() {

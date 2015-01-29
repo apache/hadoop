@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
@@ -516,6 +517,15 @@ public class FSLeafQueue extends FSQueue {
     }
   }
 
+  /** Allows setting weight for a dynamically created queue
+   * Currently only used for reservation based queues
+   * @param weight queue weight
+   */
+  public void setWeights(float weight) {
+    scheduler.getAllocationConfiguration().setQueueWeight(getName(),
+        new ResourceWeights(weight));
+  }
+
   /**
    * Helper method to check if the queue should preempt containers
    *
@@ -544,9 +554,9 @@ public class FSLeafQueue extends FSQueue {
   }
 
   private boolean isStarved(Resource share) {
-    Resource desiredShare = Resources.min(FairScheduler.getResourceCalculator(),
+    Resource desiredShare = Resources.min(scheduler.getResourceCalculator(),
         scheduler.getClusterResource(), share, getDemand());
-    return Resources.lessThan(FairScheduler.getResourceCalculator(),
+    return Resources.lessThan(scheduler.getResourceCalculator(),
         scheduler.getClusterResource(), getResourceUsage(), desiredShare);
   }
 }

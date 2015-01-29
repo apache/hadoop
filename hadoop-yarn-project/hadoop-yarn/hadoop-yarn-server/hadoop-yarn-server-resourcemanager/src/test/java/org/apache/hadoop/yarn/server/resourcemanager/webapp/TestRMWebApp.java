@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.MockAsm;
-import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.MemoryRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -179,7 +179,7 @@ public class TestRMWebApp {
          return nodesMap;
        }
      }; 
-    rmContext.setNodeLabelManager(new MemoryRMNodeLabelsManager());
+    rmContext.setNodeLabelManager(new NullRMNodeLabelsManager());
     return rmContext;
   }
 
@@ -211,7 +211,7 @@ public class TestRMWebApp {
         null, new RMContainerTokenSecretManager(conf),
         new NMTokenSecretManagerInRM(conf),
         new ClientToAMTokenSecretManagerInRM(), null);
-    rmContext.setNodeLabelManager(new MemoryRMNodeLabelsManager());
+    rmContext.setNodeLabelManager(new NullRMNodeLabelsManager());
     cs.setRMContext(rmContext);
     cs.init(conf);
     return cs;

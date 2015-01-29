@@ -69,7 +69,8 @@ public class MetricsCollectorImpl implements MetricsCollector,
     return rbs.iterator();
   }
 
-  void clear() { rbs.clear(); }
+  @InterfaceAudience.Private
+  public void clear() { rbs.clear(); }
 
   MetricsCollectorImpl setRecordFilter(MetricsFilter rf) {
     recordFilter = rf;

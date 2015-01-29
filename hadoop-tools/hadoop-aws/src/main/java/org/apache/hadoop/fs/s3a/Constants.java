@@ -28,7 +28,17 @@ public class Constants {
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS = "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
-  
+
+  //use a custom endpoint?
+  public static final String ENDPOINT = "fs.s3a.endpoint";
+  //connect to s3 through a proxy server?
+  public static final String PROXY_HOST = "fs.s3a.proxy.host";
+  public static final String PROXY_PORT = "fs.s3a.proxy.port";
+  public static final String PROXY_USERNAME = "fs.s3a.proxy.username";
+  public static final String PROXY_PASSWORD = "fs.s3a.proxy.password";
+  public static final String PROXY_DOMAIN = "fs.s3a.proxy.domain";
+  public static final String PROXY_WORKSTATION = "fs.s3a.proxy.workstation";
+
   // number of times we should retry errors
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
   public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
@@ -40,6 +50,23 @@ public class Constants {
   // number of records to get while paging through a directory listing
   public static final String MAX_PAGING_KEYS = "fs.s3a.paging.maximum";
   public static final int DEFAULT_MAX_PAGING_KEYS = 5000;
+
+  // the maximum number of threads to allow in the pool used by TransferManager
+  public static final String MAX_THREADS = "fs.s3a.threads.max";
+  public static final int DEFAULT_MAX_THREADS = 256;
+
+  // the number of threads to keep in the pool used by TransferManager
+  public static final String CORE_THREADS = "fs.s3a.threads.core";
+  public static final int DEFAULT_CORE_THREADS = DEFAULT_MAXIMUM_CONNECTIONS;
+
+  // when the number of threads is greater than the core, this is the maximum time
+  // that excess idle threads will wait for new tasks before terminating.
+  public static final String KEEPALIVE_TIME = "fs.s3a.threads.keepalivetime";
+  public static final int DEFAULT_KEEPALIVE_TIME = 60;
+
+  // the maximum number of tasks that the LinkedBlockingQueue can hold
+  public static final String MAX_TOTAL_TASKS = "fs.s3a.max.total.tasks";
+  public static final int DEFAULT_MAX_TOTAL_TASKS = 1000;
 
   // size of each of or multipart pieces in bytes
   public static final String MULTIPART_SIZE = "fs.s3a.multipart.size";

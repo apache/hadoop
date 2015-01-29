@@ -197,7 +197,7 @@ public class TestTimelineClient {
         ce.getMessage().contains("Connection retries limit exceeded"));
       // we would expect this exception here, check if the client has retried
       Assert.assertTrue("Retry filter didn't perform any retries! ", client
-        .connectionRetry.retried);
+        .connectionRetry.getRetired());
     }
   }
 
@@ -272,7 +272,7 @@ public class TestTimelineClient {
             .getMessage().contains("Connection retries limit exceeded"));
     // we would expect this exception here, check if the client has retried
     Assert.assertTrue("Retry filter didn't perform any retries! ",
-        client.connectionRetry.retried);
+        client.connectionRetry.getRetired());
   }
 
   private static ClientResponse mockEntityClientResponse(

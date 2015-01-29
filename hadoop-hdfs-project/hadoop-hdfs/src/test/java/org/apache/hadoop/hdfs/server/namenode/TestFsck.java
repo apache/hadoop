@@ -345,7 +345,7 @@ public class TestFsck {
         totalMissingBlocks += ctFile.getTotalMissingBlocks();
       }
       for (CorruptedTestFile ctFile : ctFiles) {
-        ctFile.removeBlocks();
+        ctFile.removeBlocks(cluster);
       }
       // Wait for fsck to discover all the missing blocks
       while (true) {
@@ -432,14 +432,15 @@ public class TestFsck {
       return content;
     }
     
-    public void removeBlocks() throws AccessControlException,
-        FileNotFoundException, UnresolvedLinkException, IOException {
+    public void removeBlocks(MiniDFSCluster cluster)
+        throws AccessControlException, FileNotFoundException,
+        UnresolvedLinkException, IOException {
       for (int corruptIdx : blocksToCorrupt) {
         // Corrupt a block by deleting it
         ExtendedBlock block = dfsClient.getNamenode().getBlockLocations(
             name, blockSize * corruptIdx, Long.MAX_VALUE).get(0).getBlock();
         for (int i = 0; i < numDataNodes; i++) {
-          File blockFile = MiniDFSCluster.getBlockFile(i, block);
+          File blockFile = cluster.getBlockFile(i, block);
           if(blockFile != null && blockFile.exists()) {
             assertTrue(blockFile.delete());
           }
@@ -517,7 +518,7 @@ public class TestFsck {
       ExtendedBlock block = dfsClient.getNamenode().getBlockLocations(
           corruptFileName, 0, Long.MAX_VALUE).get(0).getBlock();
       for (int i=0; i<4; i++) {
-        File blockFile = MiniDFSCluster.getBlockFile(i, block);
+        File blockFile = cluster.getBlockFile(i, block);
         if(blockFile != null && blockFile.exists()) {
           assertTrue(blockFile.delete());
         }
@@ -647,7 +648,7 @@ public class TestFsck {
     assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
     
     // corrupt replicas
-    File blockFile = MiniDFSCluster.getBlockFile(0, block);
+    File blockFile = cluster.getBlockFile(0, block);
     if (blockFile != null && blockFile.exists()) {
       RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
       FileChannel channel = raFile.getChannel();
@@ -1303,7 +1304,7 @@ public class TestFsck {
 
       // corrupt replicas
       block = DFSTestUtil.getFirstBlock(dfs, path);
-      File blockFile = MiniDFSCluster.getBlockFile(0, block);
+      File blockFile = cluster.getBlockFile(0, block);
       if (blockFile != null && blockFile.exists()) {
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
         FileChannel channel = raFile.getChannel();

@@ -574,10 +574,11 @@ public class TransferFsImage {
 
     LOG.info("Deleting temporary files: " + files);
     for (File file : files) {
-      file.delete(); // ignore the return value
+      if (!file.delete()) {
+        LOG.warn("Deleting " + file + " has failed");
+      }
     }
   }
-
 
   private static MD5Hash parseMD5Header(HttpURLConnection connection) {
     String header = connection.getHeaderField(MD5_HEADER);

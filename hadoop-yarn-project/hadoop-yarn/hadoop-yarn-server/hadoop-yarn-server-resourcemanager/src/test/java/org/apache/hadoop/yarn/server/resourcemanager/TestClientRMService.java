@@ -553,8 +553,17 @@ public class TestClientRMService {
     YarnScheduler yarnScheduler = mock(YarnScheduler.class);
     RMContext rmContext = mock(RMContext.class);
     mockRMContext(yarnScheduler, rmContext);
+
+    ApplicationACLsManager mockAclsManager = mock(ApplicationACLsManager.class);
+    QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
+    when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
+        any(QueueACL.class), anyString())).thenReturn(true);
+    when(mockAclsManager.checkAccess(any(UserGroupInformation.class),
+        any(ApplicationAccessType.class), anyString(),
+        any(ApplicationId.class))).thenReturn(true);
+
     ClientRMService rmService = new ClientRMService(rmContext, yarnScheduler,
-        null, null, null, null);
+        null, mockAclsManager, mockQueueACLsManager, null);
     GetQueueInfoRequest request = recordFactory
         .newRecordInstance(GetQueueInfoRequest.class);
     request.setQueueName("testqueue");
@@ -567,6 +576,26 @@ public class TestClientRMService {
     request.setIncludeApplications(true);
     // should not throw exception on nonexistent queue
     queueInfo = rmService.getQueueInfo(request);
+
+    // Case where user does not have application access
+    ApplicationACLsManager mockAclsManager1 =
+        mock(ApplicationACLsManager.class);
+    QueueACLsManager mockQueueACLsManager1 =
+        mock(QueueACLsManager.class);
+    when(mockQueueACLsManager1.checkAccess(any(UserGroupInformation.class),
+        any(QueueACL.class), anyString())).thenReturn(false);
+    when(mockAclsManager1.checkAccess(any(UserGroupInformation.class),
+        any(ApplicationAccessType.class), anyString(),
+        any(ApplicationId.class))).thenReturn(false);
+
+    ClientRMService rmService1 = new ClientRMService(rmContext, yarnScheduler,
+        null, mockAclsManager1, mockQueueACLsManager1, null);
+    request.setQueueName("testqueue");
+    request.setIncludeApplications(true);
+    GetQueueInfoResponse queueInfo1 = rmService1.getQueueInfo(request);
+    List<ApplicationReport> applications1 = queueInfo1.getQueueInfo()
+        .getApplications();
+    Assert.assertEquals(0, applications1.size());
   }
 
   private static final UserGroupInformation owner =

@@ -307,7 +307,7 @@ public class CommonConfigurationKeysPublic {
   public static final String  HADOOP_SECURITY_IMPERSONATION_PROVIDER_CLASS =
     "hadoop.security.impersonation.provider.class";
 
-  //  <!--- KMSClientProvider configurations —>
+  //  <!-- KMSClientProvider configurations -->
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String KMS_CLIENT_ENC_KEY_CACHE_SIZE =
       "hadoop.security.kms.client.encrypted.key.cache.size";

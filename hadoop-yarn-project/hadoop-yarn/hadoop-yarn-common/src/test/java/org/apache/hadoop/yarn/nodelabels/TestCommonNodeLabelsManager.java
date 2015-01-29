@@ -26,6 +26,8 @@ import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -41,7 +43,9 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
   @Before
   public void before() {
     mgr = new DummyCommonNodeLabelsManager();
-    mgr.init(new Configuration());
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    mgr.init(conf);
     mgr.start();
   }
 
@@ -280,5 +284,118 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
         ImmutableMap.of(toNodeId("n1"), toSet("p2")));
     mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("n1"), toSet("  p2 ")));
     Assert.assertTrue(mgr.getNodeLabels().isEmpty());
+  }
+  
+  @Test(timeout = 5000)
+  public void testReplaceLabelsOnHostsShouldUpdateNodesBelongTo()
+      throws IOException {
+    mgr.addToCluserNodeLabels(toSet("p1", "p2", "p3"));
+    mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p1", "p2")));
+    assertMapEquals(
+        mgr.getNodeLabels(),
+        ImmutableMap.of(toNodeId("n1"), toSet("p1", "p2")));
+    
+    // Replace labels on n1:1 to P2
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p2"),
+        toNodeId("n1:2"), toSet("p2")));
+    assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
+        toSet("p1", "p2"), toNodeId("n1:1"), toSet("p2"), toNodeId("n1:2"),
+        toSet("p2")));
+    
+    // Replace labels on n1 to P1, both n1:1/n1 will be P1 now
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1")));
+    assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
+        toSet("p1"), toNodeId("n1:1"), toSet("p1"), toNodeId("n1:2"),
+        toSet("p1")));
+    
+    // Set labels on n1:1 to P2 again to verify if add/remove works
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p2")));
+    
+    // Add p3 to n1, should makes n1:1 to be p2/p3, and n1:2 to be p1/p3
+    mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1"), toSet("p3")));
+    assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
+        toSet("p1", "p3"), toNodeId("n1:1"), toSet("p2", "p3"),
+        toNodeId("n1:2"), toSet("p1", "p3")));
+    
+    // Remove P3 from n1, should makes n1:1 to be p2, and n1:2 to be p1
+    mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("n1"), toSet("p3")));
+    assertMapEquals(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n1"),
+        toSet("p1"), toNodeId("n1:1"), toSet("p2"), toNodeId("n1:2"),
+        toSet("p1")));
+  }
+
+  private void assertNodeLabelsDisabledErrorMessage(IOException e) {
+    Assert.assertEquals(CommonNodeLabelsManager.NODE_LABELS_NOT_ENABLED_ERR,
+        e.getMessage());
+  }
+  
+  @Test(timeout = 5000)
+  public void testNodeLabelsDisabled() throws IOException {
+    DummyCommonNodeLabelsManager mgr = new DummyCommonNodeLabelsManager();
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, false);
+    mgr.init(conf);
+    mgr.start();
+    boolean caught = false;
+    
+    // add labels
+    try {
+      mgr.addToCluserNodeLabels(ImmutableSet.of("x"));
+    } catch (IOException e) {
+      assertNodeLabelsDisabledErrorMessage(e);
+      caught = true;
+    }
+    // check exception caught
+    Assert.assertTrue(caught);
+    caught = false;
+    
+    // remove labels
+    try {
+      mgr.removeFromClusterNodeLabels(ImmutableSet.of("x"));
+    } catch (IOException e) {
+      assertNodeLabelsDisabledErrorMessage(e);
+      caught = true;
+    }
+    // check exception caught
+    Assert.assertTrue(caught);
+    caught = false;
+    
+    // add labels to node
+    try {
+      mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("host", 0),
+          CommonNodeLabelsManager.EMPTY_STRING_SET));
+    } catch (IOException e) {
+      assertNodeLabelsDisabledErrorMessage(e);
+      caught = true;
+    }
+    // check exception caught
+    Assert.assertTrue(caught);
+    caught = false;
+    
+    // remove labels from node
+    try {
+      mgr.removeLabelsFromNode(ImmutableMap.of(NodeId.newInstance("host", 0),
+          CommonNodeLabelsManager.EMPTY_STRING_SET));
+    } catch (IOException e) {
+      assertNodeLabelsDisabledErrorMessage(e);
+      caught = true;
+    }
+    // check exception caught
+    Assert.assertTrue(caught);
+    caught = false;
+    
+    // replace labels on node
+    try {
+      mgr.replaceLabelsOnNode(ImmutableMap.of(NodeId.newInstance("host", 0),
+          CommonNodeLabelsManager.EMPTY_STRING_SET));
+    } catch (IOException e) {
+      assertNodeLabelsDisabledErrorMessage(e);
+      caught = true;
+    }
+    // check exception caught
+    Assert.assertTrue(caught);
+    caught = false;
+    
+    mgr.close();
   }
 }

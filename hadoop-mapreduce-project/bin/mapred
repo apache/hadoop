@@ -78,9 +78,7 @@ case ${COMMAND} in
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
   classpath)
-    hadoop_finalize
-    echo "${CLASSPATH}"
-    exit 0
+    hadoop_do_classpath_subcommand "$@" 
   ;;
   distcp)
     CLASS=org.apache.hadoop.tools.DistCp

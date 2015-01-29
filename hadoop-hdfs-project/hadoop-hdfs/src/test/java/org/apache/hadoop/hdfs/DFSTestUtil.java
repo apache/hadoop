@@ -1132,6 +1132,9 @@ public class DFSTestUtil {
     FSDataOutputStream s = filesystem.create(pathFileCreate);
     // OP_CLOSE 9
     s.close();
+    // OP_APPEND 47
+    FSDataOutputStream s2 = filesystem.append(pathFileCreate, 4096, null);
+    s2.close();
     // OP_SET_STORAGE_POLICY 45
     filesystem.setStoragePolicy(pathFileCreate,
         HdfsConstants.HOT_STORAGE_POLICY_NAME);
@@ -1194,7 +1197,13 @@ public class DFSTestUtil {
     DFSTestUtil.createFile(filesystem, pathConcatFiles[1], length, replication,
         seed);
     filesystem.concat(pathConcatTarget, pathConcatFiles);
-    
+
+    // OP_TRUNCATE 46
+    length = blockSize * 2;
+    DFSTestUtil.createFile(filesystem, pathFileCreate, length, replication,
+        seed);
+    filesystem.truncate(pathFileCreate, blockSize);
+
     // OP_SYMLINK 17
     Path pathSymlink = new Path("/file_symlink");
     fc.createSymlink(pathConcatTarget, pathSymlink, false);
@@ -1630,5 +1639,21 @@ public class DFSTestUtil {
         return (dd.isAlive == alive);
       }
     }, 100, waitTime);
+  }
+
+ /**
+   * Change the length of a block at datanode dnIndex
+   */
+  public static boolean changeReplicaLength(MiniDFSCluster cluster,
+      ExtendedBlock blk, int dnIndex, int lenDelta) throws IOException {
+    File blockFile = cluster.getBlockFile(dnIndex, blk);
+    if (blockFile != null && blockFile.exists()) {
+      RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
+      raFile.setLength(raFile.length()+lenDelta);
+      raFile.close();
+      return true;
+    }
+    LOG.info("failed to change length of block " + blk);
+    return false;
   }
 }

@@ -563,19 +563,8 @@ public abstract class TaskAttemptImpl implements
     stateMachine = stateMachineFactory.make(this);
   }
 
-  private int getMemoryRequired(Configuration conf, TaskType taskType) {
-    int memory = 1024;
-    if (taskType == TaskType.MAP)  {
-      memory =
-          conf.getInt(MRJobConfig.MAP_MEMORY_MB,
-              MRJobConfig.DEFAULT_MAP_MEMORY_MB);
-    } else if (taskType == TaskType.REDUCE) {
-      memory =
-          conf.getInt(MRJobConfig.REDUCE_MEMORY_MB,
-              MRJobConfig.DEFAULT_REDUCE_MEMORY_MB);
-    }
-    
-    return memory;
+  private int getMemoryRequired(JobConf conf, TaskType taskType) {
+    return conf.getMemoryRequired(TypeConverter.fromYarn(taskType));
   }
 
   private int getCpuRequired(Configuration conf, TaskType taskType) {

@@ -386,4 +386,10 @@
     <Bug pattern="REC_CATCH_EXCEPTION"/>
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.conf.Configuration"/>
+    <Method name="loadProperty"/>
+    <Bug pattern="NP_NULL_PARAM_DEREF"/>
+  </Match>
+
 </FindBugsFilter>

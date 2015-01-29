@@ -21,7 +21,9 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 
+import javax.ws.rs.HEAD;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -175,13 +177,14 @@ class RamDiskAsyncLazyPersistService {
   void submitLazyPersistTask(String bpId, long blockId,
       long genStamp, long creationTime,
       File metaFile, File blockFile,
-      FsVolumeImpl targetVolume) throws IOException {
+      FsVolumeReference target) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("LazyWriter schedule async task to persist RamDisk block pool id: "
           + bpId + " block id: " + blockId);
     }
 
-    File lazyPersistDir  = targetVolume.getLazyPersistDir(bpId);
+    FsVolumeImpl volume = (FsVolumeImpl)target.getVolume();
+    File lazyPersistDir  = volume.getLazyPersistDir(bpId);
     if (!lazyPersistDir.exists() && !lazyPersistDir.mkdirs()) {
       FsDatasetImpl.LOG.warn("LazyWriter failed to create " + lazyPersistDir);
       throw new IOException("LazyWriter fail to find or create lazy persist dir: "
@@ -190,8 +193,8 @@ class RamDiskAsyncLazyPersistService {
 
     ReplicaLazyPersistTask lazyPersistTask = new ReplicaLazyPersistTask(
         bpId, blockId, genStamp, creationTime, blockFile, metaFile,
-        targetVolume, lazyPersistDir);
-    execute(targetVolume.getCurrentDir(), lazyPersistTask);
+        target, lazyPersistDir);
+    execute(volume.getCurrentDir(), lazyPersistTask);
   }
 
   class ReplicaLazyPersistTask implements Runnable {
@@ -201,13 +204,13 @@ class RamDiskAsyncLazyPersistService {
     final long creationTime;
     final File blockFile;
     final File metaFile;
-    final FsVolumeImpl targetVolume;
+    final FsVolumeReference targetVolume;
     final File lazyPersistDir;
 
     ReplicaLazyPersistTask(String bpId, long blockId,
         long genStamp, long creationTime,
         File blockFile, File metaFile,
-        FsVolumeImpl targetVolume, File lazyPersistDir) {
+        FsVolumeReference targetVolume, File lazyPersistDir) {
       this.bpId = bpId;
       this.blockId = blockId;
       this.genStamp = genStamp;
@@ -229,14 +232,15 @@ class RamDiskAsyncLazyPersistService {
     @Override
     public void run() {
       boolean succeeded = false;
-      try {
+      final FsDatasetImpl dataset = (FsDatasetImpl)datanode.getFSDataset();
+      try (FsVolumeReference ref = this.targetVolume) {
         // No FsDatasetImpl lock for the file copy
         File targetFiles[] = FsDatasetImpl.copyBlockFiles(
             blockId, genStamp, metaFile, blockFile, lazyPersistDir, true);
 
         // Lock FsDataSetImpl during onCompleteLazyPersist callback
-        datanode.getFSDataset().onCompleteLazyPersist(bpId, blockId,
-            creationTime, targetFiles, targetVolume);
+        dataset.onCompleteLazyPersist(bpId, blockId,
+                creationTime, targetFiles, (FsVolumeImpl)ref.getVolume());
         succeeded = true;
       } catch (Exception e){
         FsDatasetImpl.LOG.warn(
@@ -244,7 +248,7 @@ class RamDiskAsyncLazyPersistService {
             + bpId + "block Id: " + blockId, e);
       } finally {
         if (!succeeded) {
-          datanode.getFSDataset().onFailLazyPersist(bpId, blockId);
+          dataset.onFailLazyPersist(bpId, blockId);
         }
       }
     }

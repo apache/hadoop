@@ -160,7 +160,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   private final long blockSize;
   private final int bufferSize;
   private final boolean aixCompatMode;
-  private Statistics statistics;
   private String writeDumpDir; // The dir save dump files
 
   private final RpcCallCache rpcCallCache;
@@ -245,7 +244,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       pauseMonitor.start();
       metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
     }
-    writeManager.startAsyncDataSerivce();
+    writeManager.startAsyncDataService();
     try {
       infoServer.start();
     } catch (IOException e) {
@@ -330,8 +329,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     FileHandle handle = request.getHandle();
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("GETATTR for fileId: " + handle.getFileId());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("GETATTR for fileId: " + handle.getFileId() + " client: "
+          + remoteAddress);
     }
 
     Nfs3FileAttributes attrs = null;
@@ -355,7 +355,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       return response;
     }
     if (attrs == null) {
-      LOG.error("Can't get path for fileId:" + handle.getFileId());
+      LOG.error("Can't get path for fileId: " + handle.getFileId());
       response.setStatus(Nfs3Status.NFS3ERR_STALE);
       return response;
     }
@@ -371,7 +371,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     if (setMode && updateFields.contains(SetAttrField.MODE)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("set new mode:" + newAttr.getMode());
+        LOG.debug("set new mode: " + newAttr.getMode());
       }
       dfsClient.setPermission(fileIdPath,
           new FsPermission((short) (newAttr.getMode())));
@@ -391,7 +391,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         .getMilliSeconds() : -1;
     if (atime != -1 || mtime != -1) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("set atime:" + +atime + " mtime:" + mtime);
+        LOG.debug("set atime: " + +atime + " mtime: " + mtime);
       }
       dfsClient.setTimes(fileIdPath, mtime, atime);
     }
@@ -423,7 +423,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     FileHandle handle = request.getHandle();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS SETATTR fileId: " + handle.getFileId());
+      LOG.debug("NFS SETATTR fileId: " + handle.getFileId() + " client: "
+          + remoteAddress);
     }
 
     if (request.getAttr().getUpdateFields().contains(SetAttrField.SIZE)) {
@@ -438,7 +439,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     try {
       preOpAttr = Nfs3Utils.getFileAttr(dfsClient, fileIdPath, iug);
       if (preOpAttr == null) {
-        LOG.info("Can't get path for fileId:" + handle.getFileId());
+        LOG.info("Can't get path for fileId: " + handle.getFileId());
         response.setStatus(Nfs3Status.NFS3ERR_STALE);
         return response;
       }
@@ -509,7 +510,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     String fileName = request.getName();
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS LOOKUP dir fileId: " + dirHandle.getFileId() + " name: "
-          + fileName);
+          + fileName + " client: " + remoteAddress);
     }
 
     try {
@@ -518,7 +519,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           dirHandle, fileName);
       if (postOpObjAttr == null) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("NFS LOOKUP fileId: " + dirHandle.getFileId() + " name:"
+          LOG.debug("NFS LOOKUP fileId: " + dirHandle.getFileId() + " name: "
               + fileName + " does not exist");
         }
         Nfs3FileAttributes postOpDirAttr = Nfs3Utils.getFileAttr(dfsClient,
@@ -530,7 +531,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       Nfs3FileAttributes postOpDirAttr = Nfs3Utils.getFileAttr(dfsClient,
           dirFileIdPath, iug);
       if (postOpDirAttr == null) {
-        LOG.info("Can't get path for dir fileId:" + dirHandle.getFileId());
+        LOG.info("Can't get path for dir fileId: " + dirHandle.getFileId());
         return new LOOKUP3Response(Nfs3Status.NFS3ERR_STALE);
       }
       FileHandle fileHandle = new FileHandle(postOpObjAttr.getFileId());
@@ -577,7 +578,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     Nfs3FileAttributes attrs;
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS ACCESS fileId: " + handle.getFileId());
+      LOG.debug("NFS ACCESS fileId: " + handle.getFileId() + " client: "
+          + remoteAddress);
     }
 
     try {
@@ -585,7 +587,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       attrs = writeManager.getFileAttr(dfsClient, handle, iug);
 
       if (attrs == null) {
-        LOG.error("Can't get path for fileId:" + handle.getFileId());
+        LOG.error("Can't get path for fileId: " + handle.getFileId());
         return new ACCESS3Response(Nfs3Status.NFS3ERR_STALE);
       }
       int access = Nfs3Utils.getAccessRightsForUserGroup(
@@ -643,7 +645,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     FileHandle handle = request.getHandle();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS READLINK fileId: " + handle.getFileId());
+      LOG.debug("NFS READLINK fileId: " + handle.getFileId() + " client: "
+          + remoteAddress);
     }
 
     String fileIdPath = Nfs3Utils.getFileIdPath(handle);
@@ -653,15 +656,15 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       Nfs3FileAttributes postOpAttr = Nfs3Utils.getFileAttr(dfsClient,
           fileIdPath, iug);
       if (postOpAttr == null) {
-        LOG.info("Can't get path for fileId:" + handle.getFileId());
+        LOG.info("Can't get path for fileId: " + handle.getFileId());
         return new READLINK3Response(Nfs3Status.NFS3ERR_STALE);
       }
       if (postOpAttr.getType() != NfsFileType.NFSLNK.toValue()) {
-        LOG.error("Not a symlink, fileId:" + handle.getFileId());
+        LOG.error("Not a symlink, fileId: " + handle.getFileId());
         return new READLINK3Response(Nfs3Status.NFS3ERR_INVAL);
       }
       if (target == null) {
-        LOG.error("Symlink target should not be null, fileId:"
+        LOG.error("Symlink target should not be null, fileId: "
             + handle.getFileId());
         return new READLINK3Response(Nfs3Status.NFS3ERR_SERVERFAULT);
       }
@@ -722,7 +725,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     FileHandle handle = request.getHandle();
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS READ fileId: " + handle.getFileId() + " offset: " + offset
-          + " count: " + count);
+          + " count: " + count + " client: " + remoteAddress);
     }
 
     Nfs3FileAttributes attrs;
@@ -735,13 +738,13 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
             Nfs3Utils.getFileIdPath(handle), iug);
       } catch (IOException e) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Get error accessing file, fileId:" + handle.getFileId(), e);
+          LOG.debug("Get error accessing file, fileId: " + handle.getFileId(), e);
         }
         return new READ3Response(Nfs3Status.NFS3ERR_IO);
       }
       if (attrs == null) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Can't get path for fileId:" + handle.getFileId());
+          LOG.debug("Can't get path for fileId: " + handle.getFileId());
         }
         return new READ3Response(Nfs3Status.NFS3ERR_NOENT);
       }
@@ -802,8 +805,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       attrs = Nfs3Utils.getFileAttr(dfsClient, Nfs3Utils.getFileIdPath(handle),
           iug);
       if (readCount < count) {
-        LOG.info("Partical read. Asked offset:" + offset + " count:" + count
-            + " and read back:" + readCount + "file size:" + attrs.getSize());
+        LOG.info("Partical read. Asked offset: " + offset + " count: " + count
+            + " and read back: " + readCount + " file size: "
+            + attrs.getSize());
       }
       // HDFS returns -1 for read beyond file size.
       if (readCount < 0) {
@@ -862,15 +866,15 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     FileHandle handle = request.getHandle();
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS WRITE fileId: " + handle.getFileId() + " offset: "
-          + offset + " length:" + count + " stableHow:" + stableHow.getValue()
-          + " xid:" + xid);
+          + offset + " length: " + count + " stableHow: " + stableHow.getValue()
+          + " xid: " + xid + " client: " + remoteAddress);
     }
 
     Nfs3FileAttributes preOpAttr = null;
     try {
       preOpAttr = writeManager.getFileAttr(dfsClient, handle, iug);
       if (preOpAttr == null) {
-        LOG.error("Can't get path for fileId:" + handle.getFileId());
+        LOG.error("Can't get path for fileId: " + handle.getFileId());
         return new WRITE3Response(Nfs3Status.NFS3ERR_STALE);
       }
 
@@ -881,7 +885,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       }
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("requesed offset=" + offset + " and current filesize="
+        LOG.debug("requested offset=" + offset + " and current filesize="
             + preOpAttr.getSize());
       }
 
@@ -936,7 +940,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     String fileName = request.getName();
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS CREATE dir fileId: " + dirHandle.getFileId()
-          + " filename: " + fileName);
+          + " filename: " + fileName + " client: " + remoteAddress);
     }
 
     int createMode = request.getMode();
@@ -944,7 +948,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         && request.getObjAttr().getUpdateFields().contains(SetAttrField.SIZE)
         && request.getObjAttr().getSize() != 0) {
       LOG.error("Setting file size is not supported when creating file: "
-          + fileName + " dir fileId:" + dirHandle.getFileId());
+          + fileName + " dir fileId: " + dirHandle.getFileId());
       return new CREATE3Response(Nfs3Status.NFS3ERR_INVAL);
     }
 
@@ -957,7 +961,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     try {
       preOpDirAttr = Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
       if (preOpDirAttr == null) {
-        LOG.error("Can't get path for dirHandle:" + dirHandle);
+        LOG.error("Can't get path for dirHandle: " + dirHandle);
         return new CREATE3Response(Nfs3Status.NFS3ERR_STALE);
       }
 
@@ -981,7 +985,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       fos = dfsClient.createWrappedOutputStream(
           dfsClient.create(fileIdPath, permission, flag, false, replication,
               blockSize, null, bufferSize, null),
-          statistics);
+          null);
 
       if ((createMode == Nfs3Constant.CREATE_UNCHECKED)
           || (createMode == Nfs3Constant.CREATE_GUARDED)) {
@@ -1009,7 +1013,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         fos = null;
       } else {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Opened stream for file:" + fileName + ", fileId:"
+          LOG.debug("Opened stream for file: " + fileName + ", fileId: "
               + fileHandle.getFileId());
         }
       }
@@ -1020,7 +1024,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         try {
           fos.close();
         } catch (IOException e1) {
-          LOG.error("Can't close stream for dirFileId:" + dirHandle.getFileId()
+          LOG.error("Can't close stream for dirFileId: " + dirHandle.getFileId()
               + " filename: " + fileName, e1);
         }
       }
@@ -1029,7 +1033,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           dirWcc = Nfs3Utils.createWccData(Nfs3Utils.getWccAttr(preOpDirAttr),
               dfsClient, dirFileIdPath, iug);
         } catch (IOException e1) {
-          LOG.error("Can't get postOpDirAttr for dirFileId:"
+          LOG.error("Can't get postOpDirAttr for dirFileId: "
               + dirHandle.getFileId(), e1);
         }
       }
@@ -1067,6 +1071,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
     FileHandle dirHandle = request.getHandle();
     String fileName = request.getName();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("NFS MKDIR dirId: " + dirHandle.getFileId() + " filename: "
+          + fileName + " client: " + remoteAddress);
+    }
 
     if (request.getObjAttr().getUpdateFields().contains(SetAttrField.SIZE)) {
       LOG.error("Setting file size is not supported when mkdir: " + fileName
@@ -1082,7 +1090,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     try {
       preOpDirAttr = Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
       if (preOpDirAttr == null) {
-        LOG.info("Can't get path for dir fileId:" + dirHandle.getFileId());
+        LOG.info("Can't get path for dir fileId: " + dirHandle.getFileId());
         return new MKDIR3Response(Nfs3Status.NFS3ERR_STALE);
       }
 
@@ -1165,7 +1173,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     String fileName = request.getName();
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS REMOVE dir fileId: " + dirHandle.getFileId()
-          + " fileName: " + fileName);
+          + " fileName: " + fileName + " client: " + remoteAddress);
     }
 
     String dirFileIdPath = Nfs3Utils.getFileIdPath(dirHandle);
@@ -1174,7 +1182,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     try {
       preOpDirAttr =  Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
       if (preOpDirAttr == null) {
-        LOG.info("Can't get path for dir fileId:" + dirHandle.getFileId());
+        LOG.info("Can't get path for dir fileId: " + dirHandle.getFileId());
         return new REMOVE3Response(Nfs3Status.NFS3ERR_STALE);
       }
 
@@ -1246,7 +1254,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS RMDIR dir fileId: " + dirHandle.getFileId()
-          + " fileName: " + fileName);
+          + " fileName: " + fileName + " client: " + remoteAddress);
     }
 
     String dirFileIdPath = Nfs3Utils.getFileIdPath(dirHandle);
@@ -1255,7 +1263,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     try {
       preOpDirAttr = Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
       if (preOpDirAttr == null) {
-        LOG.info("Can't get path for dir fileId:" + dirHandle.getFileId());
+        LOG.info("Can't get path for dir fileId: " + dirHandle.getFileId());
         return new RMDIR3Response(Nfs3Status.NFS3ERR_STALE);
       }
 
@@ -1333,7 +1341,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     String toName = request.getToName();
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS RENAME from: " + fromHandle.getFileId() + "/" + fromName
-          + " to: " + toHandle.getFileId() + "/" + toName);
+          + " to: " + toHandle.getFileId() + "/" + toName + " client: "
+          + remoteAddress);
     }
 
     String fromDirFileIdPath = Nfs3Utils.getFileIdPath(fromHandle);
@@ -1345,14 +1354,14 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     try {
       fromPreOpAttr = Nfs3Utils.getFileAttr(dfsClient, fromDirFileIdPath, iug);
       if (fromPreOpAttr == null) {
-        LOG.info("Can't get path for fromHandle fileId:"
+        LOG.info("Can't get path for fromHandle fileId: "
             + fromHandle.getFileId());
         return new RENAME3Response(Nfs3Status.NFS3ERR_STALE);
       }
 
       toPreOpAttr = Nfs3Utils.getFileAttr(dfsClient, toDirFileIdPath, iug);
       if (toPreOpAttr == null) {
-        LOG.info("Can't get path for toHandle fileId:" + toHandle.getFileId());
+        LOG.info("Can't get path for toHandle fileId: " + toHandle.getFileId());
         return new RENAME3Response(Nfs3Status.NFS3ERR_STALE);
       }
 
@@ -1431,7 +1440,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     // Don't do any name check to source path, just leave it to HDFS
     String linkIdPath = linkDirIdPath + "/" + name;
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS SYMLINK, target: " + symData + " link: " + linkIdPath);
+      LOG.debug("NFS SYMLINK, target: " + symData + " link: " + linkIdPath
+          + " client: " + remoteAddress);
     }
 
     try {
@@ -1453,7 +1463,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           objAttr.getFileId()), objAttr, dirWcc);
 
     } catch (IOException e) {
-      LOG.warn("Exception:" + e);
+      LOG.warn("Exception: " + e);
       int status = mapErrorStatus(e);
       response.setStatus(status);
       return response;
@@ -1519,18 +1529,18 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     FileHandle handle = request.getHandle();
     long cookie = request.getCookie();
     if (cookie < 0) {
-      LOG.error("Invalid READDIR request, with negitve cookie:" + cookie);
+      LOG.error("Invalid READDIR request, with negative cookie: " + cookie);
       return new READDIR3Response(Nfs3Status.NFS3ERR_INVAL);
     }
     long count = request.getCount();
     if (count <= 0) {
-      LOG.info("Nonpositive count in invalid READDIR request:" + count);
+      LOG.info("Nonpositive count in invalid READDIR request: " + count);
       return new READDIR3Response(Nfs3Status.NFS3_OK);
     }
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS READDIR fileId: " + handle.getFileId() + " cookie: "
-          + cookie + " count: " + count);
+          + cookie + " count: " + count + " client: " + remoteAddress);
     }
 
     HdfsFileStatus dirStatus;
@@ -1541,11 +1551,11 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       String dirFileIdPath = Nfs3Utils.getFileIdPath(handle);
       dirStatus = dfsClient.getFileInfo(dirFileIdPath);
       if (dirStatus == null) {
-        LOG.info("Can't get path for fileId:" + handle.getFileId());
+        LOG.info("Can't get path for fileId: " + handle.getFileId());
         return new READDIR3Response(Nfs3Status.NFS3ERR_STALE);
       }
       if (!dirStatus.isDir()) {
-        LOG.error("Can't readdir for regular file, fileId:"
+        LOG.error("Can't readdir for regular file, fileId: "
             + handle.getFileId());
         return new READDIR3Response(Nfs3Status.NFS3ERR_NOTDIR);
       }
@@ -1578,7 +1588,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
         if (dotdotStatus == null) {
           // This should not happen
-          throw new IOException("Can't get path for handle path:"
+          throw new IOException("Can't get path for handle path: "
               + dotdotFileIdPath);
         }
         dotdotFileId = dotdotStatus.getFileId();
@@ -1596,7 +1606,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       dlisting = listPaths(dfsClient, dirFileIdPath, startAfter);
       postOpAttr = Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
       if (postOpAttr == null) {
-        LOG.error("Can't get path for fileId:" + handle.getFileId());
+        LOG.error("Can't get path for fileId: " + handle.getFileId());
         return new READDIR3Response(Nfs3Status.NFS3ERR_STALE);
       }
     } catch (IOException e) {
@@ -1677,23 +1687,24 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     FileHandle handle = request.getHandle();
     long cookie = request.getCookie();
     if (cookie < 0) {
-      LOG.error("Invalid READDIRPLUS request, with negitve cookie:" + cookie);
+      LOG.error("Invalid READDIRPLUS request, with negative cookie: " + cookie);
       return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_INVAL);
     }
     long dirCount = request.getDirCount();
     if (dirCount <= 0) {
-      LOG.info("Nonpositive dircount in invalid READDIRPLUS request:" + dirCount);
+      LOG.info("Nonpositive dircount in invalid READDIRPLUS request: " + dirCount);
       return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_INVAL);
     }
     int maxCount = request.getMaxCount();
     if (maxCount <= 0) {
-      LOG.info("Nonpositive maxcount in invalid READDIRPLUS request:" + maxCount);
+      LOG.info("Nonpositive maxcount in invalid READDIRPLUS request: " + maxCount);
       return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_INVAL);
     }
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS READDIRPLUS fileId: " + handle.getFileId() + " cookie: "
-          + cookie + " dirCount: " + dirCount + " maxCount: " + maxCount);
+          + cookie + " dirCount: " + dirCount + " maxCount: " + maxCount
+          + " client: " + remoteAddress);
     }
 
     HdfsFileStatus dirStatus;
@@ -1705,11 +1716,11 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       String dirFileIdPath = Nfs3Utils.getFileIdPath(handle);
       dirStatus = dfsClient.getFileInfo(dirFileIdPath);
       if (dirStatus == null) {
-        LOG.info("Can't get path for fileId:" + handle.getFileId());
+        LOG.info("Can't get path for fileId: " + handle.getFileId());
         return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_STALE);
       }
       if (!dirStatus.isDir()) {
-        LOG.error("Can't readdirplus for regular file, fileId:"
+        LOG.error("Can't readdirplus for regular file, fileId: "
             + handle.getFileId());
         return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_NOTDIR);
       }
@@ -1740,7 +1751,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
         if (dotdotStatus == null) {
           // This should not happen
-          throw new IOException("Can't get path for handle path:"
+          throw new IOException("Can't get path for handle path: "
               + dotdotFileIdPath);
         }
         dotdotFileId = dotdotStatus.getFileId();
@@ -1758,7 +1769,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       dlisting = listPaths(dfsClient, dirFileIdPath, startAfter);
       postOpDirAttr = Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
       if (postOpDirAttr == null) {
-        LOG.info("Can't get path for fileId:" + handle.getFileId());
+        LOG.info("Can't get path for fileId: " + handle.getFileId());
         return new READDIRPLUS3Response(Nfs3Status.NFS3ERR_STALE);
       }
     } catch (IOException e) {
@@ -1790,7 +1801,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         try {
           attr = writeManager.getFileAttr(dfsClient, childHandle, iug);
         } catch (IOException e) {
-          LOG.error("Can't get file attributes for fileId:" + fileId, e);
+          LOG.error("Can't get file attributes for fileId: " + fileId, e);
           continue;
         }
         entries[i] = new READDIRPLUS3Response.EntryPlus3(fileId,
@@ -1807,7 +1818,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         try {
           attr = writeManager.getFileAttr(dfsClient, childHandle, iug);
         } catch (IOException e) {
-          LOG.error("Can't get file attributes for fileId:" + fileId, e);
+          LOG.error("Can't get file attributes for fileId: " + fileId, e);
           continue;
         }
         entries[i] = new READDIRPLUS3Response.EntryPlus3(fileId,
@@ -1852,7 +1863,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     FileHandle handle = request.getHandle();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS FSSTAT fileId: " + handle.getFileId());
+      LOG.debug("NFS FSSTAT fileId: " + handle.getFileId() + " client: "
+          + remoteAddress);
     }
 
     try {
@@ -1863,7 +1875,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       Nfs3FileAttributes attrs = writeManager.getFileAttr(dfsClient, handle,
           iug);
       if (attrs == null) {
-        LOG.info("Can't get path for fileId:" + handle.getFileId());
+        LOG.info("Can't get path for fileId: " + handle.getFileId());
         return new FSSTAT3Response(Nfs3Status.NFS3ERR_STALE);
       }
 
@@ -1926,7 +1938,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
 
     FileHandle handle = request.getHandle();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS FSINFO fileId: " + handle.getFileId());
+      LOG.debug("NFS FSINFO fileId: " + handle.getFileId() + " client: "
+          + remoteAddress);
     }
 
     try {
@@ -1943,7 +1956,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       Nfs3FileAttributes attrs = Nfs3Utils.getFileAttr(dfsClient,
           Nfs3Utils.getFileIdPath(handle), iug);
       if (attrs == null) {
-        LOG.info("Can't get path for fileId:" + handle.getFileId());
+        LOG.info("Can't get path for fileId: " + handle.getFileId());
         return new FSINFO3Response(Nfs3Status.NFS3ERR_STALE);
       }
 
@@ -1992,14 +2005,15 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     Nfs3FileAttributes attrs;
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("NFS PATHCONF fileId: " + handle.getFileId());
+      LOG.debug("NFS PATHCONF fileId: " + handle.getFileId() + " client: "
+          + remoteAddress);
     }
 
     try {
       attrs = Nfs3Utils.getFileAttr(dfsClient, Nfs3Utils.getFileIdPath(handle),
           iug);
       if (attrs == null) {
-        LOG.info("Can't get path for fileId:" + handle.getFileId());
+        LOG.info("Can't get path for fileId: " + handle.getFileId());
         return new PATHCONF3Response(Nfs3Status.NFS3ERR_STALE);
       }
 
@@ -2043,7 +2057,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     FileHandle handle = request.getHandle();
     if (LOG.isDebugEnabled()) {
       LOG.debug("NFS COMMIT fileId: " + handle.getFileId() + " offset="
-          + request.getOffset() + " count=" + request.getCount());
+          + request.getOffset() + " count=" + request.getCount() + " client: "
+          + remoteAddress);
     }
 
     String fileIdPath = Nfs3Utils.getFileIdPath(handle);
@@ -2051,7 +2066,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     try {
       preOpAttr = Nfs3Utils.getFileAttr(dfsClient, fileIdPath, iug);
       if (preOpAttr == null) {
-        LOG.info("Can't get path for fileId:" + handle.getFileId());
+        LOG.info("Can't get path for fileId: " + handle.getFileId());
         return new COMMIT3Response(Nfs3Status.NFS3ERR_STALE);
       }
 

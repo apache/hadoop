@@ -26,7 +26,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -49,10 +48,8 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PacketReceiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
@@ -125,6 +122,8 @@ class BlockReceiver implements Closeable {
 
   private boolean syncOnClose;
   private long restartBudget;
+  /** the reference of the volume where the block receiver writes to */
+  private ReplicaHandler replicaHandler;
 
   /**
    * for replaceBlock response
@@ -179,48 +178,42 @@ class BlockReceiver implements Closeable {
       // Open local disk out
       //
       if (isDatanode) { //replication or move
-        replicaInfo = datanode.data.createTemporary(storageType, block);
+        replicaHandler = datanode.data.createTemporary(storageType, block);
       } else {
         switch (stage) {
         case PIPELINE_SETUP_CREATE:
-          replicaInfo = datanode.data.createRbw(storageType, block, allowLazyPersist);
+          replicaHandler = datanode.data.createRbw(storageType, block, allowLazyPersist);
           datanode.notifyNamenodeReceivingBlock(
-              block, replicaInfo.getStorageUuid());
+              block, replicaHandler.getReplica().getStorageUuid());
           break;
         case PIPELINE_SETUP_STREAMING_RECOVERY:
-          replicaInfo = datanode.data.recoverRbw(
+          replicaHandler = datanode.data.recoverRbw(
               block, newGs, minBytesRcvd, maxBytesRcvd);
           block.setGenerationStamp(newGs);
           break;
         case PIPELINE_SETUP_APPEND:
-          replicaInfo = datanode.data.append(block, newGs, minBytesRcvd);
-          if (datanode.blockScanner != null) { // remove from block scanner
-            datanode.blockScanner.deleteBlock(block.getBlockPoolId(),
-                block.getLocalBlock());
-          }
+          replicaHandler = datanode.data.append(block, newGs, minBytesRcvd);
           block.setGenerationStamp(newGs);
           datanode.notifyNamenodeReceivingBlock(
-              block, replicaInfo.getStorageUuid());
+              block, replicaHandler.getReplica().getStorageUuid());
           break;
         case PIPELINE_SETUP_APPEND_RECOVERY:
-          replicaInfo = datanode.data.recoverAppend(block, newGs, minBytesRcvd);
-          if (datanode.blockScanner != null) { // remove from block scanner
-            datanode.blockScanner.deleteBlock(block.getBlockPoolId(),
-                block.getLocalBlock());
-          }
+          replicaHandler = datanode.data.recoverAppend(block, newGs, minBytesRcvd);
           block.setGenerationStamp(newGs);
           datanode.notifyNamenodeReceivingBlock(
-              block, replicaInfo.getStorageUuid());
+              block, replicaHandler.getReplica().getStorageUuid());
           break;
         case TRANSFER_RBW:
         case TRANSFER_FINALIZED:
           // this is a transfer destination
-          replicaInfo = datanode.data.createTemporary(storageType, block);
+          replicaHandler =
+              datanode.data.createTemporary(storageType, block);
           break;
         default: throw new IOException("Unsupported stage " + stage + 
               " while receiving block " + block + " from " + inAddr);
         }
       }
+      replicaInfo = replicaHandler.getReplica();
       this.dropCacheBehindWrites = (cachingStrategy.getDropBehind() == null) ?
         datanode.getDnConf().dropCacheBehindWrites :
           cachingStrategy.getDropBehind();
@@ -338,6 +331,10 @@ class BlockReceiver implements Closeable {
     }
     finally{
       IOUtils.closeStream(out);
+    }
+    if (replicaHandler != null) {
+      IOUtils.cleanup(null, replicaHandler);
+      replicaHandler = null;
     }
     if (measuredFlushTime) {
       datanode.metrics.addFlushNanos(flushTotalNanos);
@@ -950,15 +947,12 @@ class BlockReceiver implements Closeable {
     //
     byte[] buf = new byte[sizePartialChunk];
     byte[] crcbuf = new byte[checksumSize];
-    ReplicaInputStreams instr = null;
-    try { 
-      instr = datanode.data.getTmpInputStreams(block, blkoff, ckoff);
+    try (ReplicaInputStreams instr =
+        datanode.data.getTmpInputStreams(block, blkoff, ckoff)) {
       IOUtils.readFully(instr.getDataIn(), buf, 0, sizePartialChunk);
 
       // open meta file and read in crc value computer earlier
       IOUtils.readFully(instr.getChecksumIn(), crcbuf, 0, crcbuf.length);
-    } finally {
-      IOUtils.closeStream(instr);
     }
 
     // compute crc of partial chunk from data read in the block file.
@@ -1244,28 +1238,7 @@ class BlockReceiver implements Closeable {
 
           if (lastPacketInBlock) {
             // Finalize the block and close the block file
-            try {
-              finalizeBlock(startTime);
-            } catch (ReplicaNotFoundException e) {
-              // Verify that the exception is due to volume removal.
-              FsVolumeSpi volume;
-              synchronized (datanode.data) {
-                volume = datanode.data.getVolume(block);
-              }
-              if (volume == null) {
-                // ReplicaInfo has been removed due to the corresponding data
-                // volume has been removed. Don't need to check disk error.
-                LOG.info(myString
-                    + ": BlockReceiver is interrupted because the block pool "
-                    + block.getBlockPoolId() + " has been removed.", e);
-                sendAckUpstream(ack, expected, totalAckTimeNanos, 0,
-                    Status.OOB_INTERRUPTED);
-                running = false;
-                receiverThread.interrupt();
-                continue;
-              }
-              throw e;
-            }
+            finalizeBlock(startTime);
           }
 
           sendAckUpstream(ack, expected, totalAckTimeNanos,

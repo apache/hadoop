@@ -189,7 +189,7 @@ hdfs mover [-p <files/dirs> | -f <local file name>]
   * Command:
 
 +------------------------------------------+
-hdfs storagepolicies
+hdfs storagepolicies -listPolicies
 +------------------------------------------+
 
   * Arguments: none.
@@ -201,16 +201,16 @@ hdfs storagepolicies
   * Command:
 
 +------------------------------------------+
-hdfs dfsadmin -setStoragePolicy <path> <policyName>
+hdfs storagepolicies -setStoragePolicy -path <path> -policy <policy>
 +------------------------------------------+
 
   * Arguments:
 
-*----------------------+-----------------------------------------------------+
-| <<<\<path\>>>>       | The path referring to either a directory or a file. |
-*----------------------+-----------------------------------------------------+
-| <<<\<policyName\>>>> | The name of the storage policy.                     |
-*----------------------+-----------------------------------------------------+
+*--------------------------+-----------------------------------------------------+
+| <<<-path \<path\>>>>     | The path referring to either a directory or a file. |
+*--------------------------+-----------------------------------------------------+
+| <<<-policy \<policy\>>>> | The name of the storage policy.                     |
+*--------------------------+-----------------------------------------------------+
 
   []
 
@@ -221,13 +221,13 @@ hdfs dfsadmin -setStoragePolicy <path> <policyName>
   * Command:
 
 +------------------------------------------+
-hdfs dfsadmin -getStoragePolicy <path>
+hdfs storagepolicies -getStoragePolicy -path <path>
 +------------------------------------------+
 
   * Arguments:
 
-*----------------------+-----------------------------------------------------+
-| <<<\<path\>>>>       | The path referring to either a directory or a file. |
-*----------------------+-----------------------------------------------------+
+*----------------------------+-----------------------------------------------------+
+| <<<-path \<path\>>>>       | The path referring to either a directory or a file. |
+*----------------------------+-----------------------------------------------------+
 
   []

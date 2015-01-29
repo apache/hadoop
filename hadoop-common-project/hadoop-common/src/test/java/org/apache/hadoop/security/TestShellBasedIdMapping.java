@@ -41,6 +41,13 @@ public class TestShellBasedIdMapping {
   private static final Map<Integer, Integer> EMPTY_PASS_THROUGH_MAP =
       new PassThroughMap<Integer>();
   
+  private void createStaticMapFile(final File smapFile, final String smapStr)
+      throws IOException {
+    OutputStream out = new FileOutputStream(smapFile);
+    out.write(smapStr.getBytes());
+    out.close();
+  }
+
   @Test
   public void testStaticMapParsing() throws IOException {
     File tempStaticMapFile = File.createTempFile("nfs-", ".map");
@@ -55,12 +62,13 @@ public class TestShellBasedIdMapping {
         "uid 13 302\n" +
         "gid\t11\t201\n" + // Tabs instead of spaces.
         "\n" + // Entirely empty line.
-        "gid 12 202";
-    OutputStream out = new FileOutputStream(tempStaticMapFile);
-    out.write(staticMapFileContents.getBytes());
-    out.close();
-    StaticMapping parsedMap = ShellBasedIdMapping.parseStaticMap(tempStaticMapFile);
-    
+        "gid 12 202\n" +
+        "uid 4294967294 123\n" +
+        "gid 4294967295 321";
+    createStaticMapFile(tempStaticMapFile, staticMapFileContents);
+
+    StaticMapping parsedMap =
+        ShellBasedIdMapping.parseStaticMap(tempStaticMapFile);    
     assertEquals(10, (int)parsedMap.uidMapping.get(100));
     assertEquals(11, (int)parsedMap.uidMapping.get(201));
     assertEquals(12, (int)parsedMap.uidMapping.get(301));
@@ -71,6 +79,10 @@ public class TestShellBasedIdMapping {
     assertEquals(10000, (int)parsedMap.uidMapping.get(10001));
     // Ensure pass-through of unmapped IDs works.
     assertEquals(1000, (int)parsedMap.uidMapping.get(1000));
+    
+    assertEquals(-2, (int)parsedMap.uidMapping.get(123));
+    assertEquals(-1, (int)parsedMap.gidMapping.get(321));
+    
   }
   
   @Test
@@ -112,6 +124,78 @@ public class TestShellBasedIdMapping {
     assertEquals(200, (int)gMap.inverse().get("mapred"));
     assertEquals("mapred2", gMap.get(498));
     assertEquals(498, (int)gMap.inverse().get("mapred2"));
+  }
+
+  // Test staticMap refreshing
+  @Test
+  public void testStaticMapUpdate() throws IOException {
+    File tempStaticMapFile = File.createTempFile("nfs-", ".map");
+    tempStaticMapFile.delete();
+    Configuration conf = new Configuration();
+    conf.setLong(IdMappingConstant.USERGROUPID_UPDATE_MILLIS_KEY, 1000);    
+    conf.set(IdMappingConstant.STATIC_ID_MAPPING_FILE_KEY,
+        tempStaticMapFile.getPath());
+
+    ShellBasedIdMapping refIdMapping =
+        new ShellBasedIdMapping(conf, true);
+    ShellBasedIdMapping incrIdMapping = new ShellBasedIdMapping(conf);
+
+    BiMap<Integer, String> uidNameMap = refIdMapping.getUidNameMap();
+    BiMap<Integer, String> gidNameMap = refIdMapping.getGidNameMap();
+
+    // Force empty map, to see effect of incremental map update of calling
+    // getUid()
+    incrIdMapping.clearNameMaps();
+    uidNameMap = refIdMapping.getUidNameMap();
+    {
+      BiMap.Entry<Integer, String> me = uidNameMap.entrySet().iterator().next();
+      Integer id = me.getKey();
+      String name = me.getValue();
+
+      // The static map is empty, so the id found for "name" would be
+      // the same as "id"
+      Integer nid = incrIdMapping.getUid(name);
+      assertEquals(id, nid);
+      
+      // Clear map and update staticMap file
+      incrIdMapping.clearNameMaps();
+      Integer rid = id + 10000;
+      String smapStr = "uid " + rid + " " + id;
+      createStaticMapFile(tempStaticMapFile, smapStr);
+
+      // Now the id found for "name" should be the id specified by
+      // the staticMap
+      nid = incrIdMapping.getUid(name);
+      assertEquals(rid, nid);
+    }
+
+    // Force empty map, to see effect of incremental map update of calling
+    // getGid()
+    incrIdMapping.clearNameMaps();
+    gidNameMap = refIdMapping.getGidNameMap();
+    {
+      BiMap.Entry<Integer, String> me = gidNameMap.entrySet().iterator().next();
+      Integer id = me.getKey();
+      String name = me.getValue();
+
+      // The static map is empty, so the id found for "name" would be
+      // the same as "id"
+      Integer nid = incrIdMapping.getGid(name);
+      assertEquals(id, nid);
+
+      // Clear map and update staticMap file
+      incrIdMapping.clearNameMaps();
+      Integer rid = id + 10000;
+      String smapStr = "gid " + rid + " " + id;
+      // Sleep a bit to avoid that two changes have the same modification time
+      try {Thread.sleep(1000);} catch (InterruptedException e) {}
+      createStaticMapFile(tempStaticMapFile, smapStr);
+
+      // Now the id found for "name" should be the id specified by
+      // the staticMap
+      nid = incrIdMapping.getGid(name);
+      assertEquals(rid, nid);
+    }
   }
 
   @Test

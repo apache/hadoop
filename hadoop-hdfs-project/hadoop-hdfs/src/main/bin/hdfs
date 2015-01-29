@@ -49,7 +49,7 @@ function hadoop_usage
   echo "  secondarynamenode    run the DFS secondary namenode"
   echo "  snapshotDiff         diff two snapshots of a directory or diff the"
   echo "                       current directory contents with a snapshot"
-  echo "  storagepolicies      get all the existing block storage policies"
+  echo "  storagepolicies      list/get/set block storage policies"
   echo "  version              print the version"
   echo "  zkfc                 run the ZK Failover Controller daemon"
   echo ""
@@ -94,9 +94,7 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.hdfs.tools.CacheAdmin
   ;;
   classpath)
-    hadoop_finalize
-    echo "${CLASSPATH}"
-    exit
+    hadoop_do_classpath_subcommand "$@"
   ;;
   crypto)
     CLASS=org.apache.hadoop.hdfs.tools.CryptoAdmin
@@ -228,7 +226,7 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
   ;;
   storagepolicies)
-    CLASS=org.apache.hadoop.hdfs.tools.GetStoragePolicies
+    CLASS=org.apache.hadoop.hdfs.tools.StoragePolicyAdmin
   ;;
   version)
     CLASS=org.apache.hadoop.util.VersionInfo

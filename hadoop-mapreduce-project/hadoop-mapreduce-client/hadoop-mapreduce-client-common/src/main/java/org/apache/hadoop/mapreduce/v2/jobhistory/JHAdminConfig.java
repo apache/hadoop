@@ -197,6 +197,13 @@ public class JHAdminConfig {
   public static final String MR_HS_FS_STATE_STORE_URI =
       MR_HISTORY_PREFIX + "recovery.store.fs.uri";
 
+  /**
+   * The local path where server state will be stored when
+   * HistoryServerLeveldbStateStoreService is configured as the state store
+   */
+  public static final String MR_HS_LEVELDB_STATE_STORE_PATH =
+      MR_HISTORY_PREFIX + "recovery.store.leveldb.path";
+
   /** Whether to use fixed ports with the minicluster. */
   public static final String MR_HISTORY_MINICLUSTER_FIXED_PORTS = MR_HISTORY_PREFIX
        + "minicluster.fixed.ports";

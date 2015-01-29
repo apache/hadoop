@@ -178,7 +178,7 @@ public class PacketReceiver implements Closeable {
     if (curHeader == null) {
       curHeader = new PacketHeader();
     }
-    curHeader.setFieldsFromData(dataPlusChecksumLen, headerBuf);
+    curHeader.setFieldsFromData(payloadLen, headerBuf);
     
     // Compute the sub-slices of the packet
     int checksumLen = dataPlusChecksumLen - curHeader.getDataLen();

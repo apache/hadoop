@@ -144,6 +144,14 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public Resource getUsedResources();
   
   /**
+   * Get the currently utilized resources which allocated at nodes with label
+   * specified
+   * 
+   * @return used resources by the queue and it's children
+   */
+  public Resource getUsedResourceByLabel(String nodeLabel);
+  
+  /**
    * Get the current run-state of the queue
    * @return current run-state
    */
@@ -292,4 +300,10 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @return capacity by node label
    */
   public float getCapacityByNodeLabel(String nodeLabel);
+
+  /**
+   * Check whether <em>disable_preemption</em> property is set for this queue
+   * @return true if <em>disable_preemption</em> is set, false if not
+   */
+  public boolean getPreemptionDisabled();
 }

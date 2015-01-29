@@ -18,6 +18,8 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
+    HDFS-3689. Add support for variable length block. (jing9)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -124,6 +126,23 @@ Trunk (Unreleased)
 
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
+
+    HDFS-5782. Change BlockListAsLongs constructor to take Replica as parameter
+    type instead of concrete classes Block and ReplicaInfo.  (David Powell
+    and Joe Pallas via szetszwo)
+
+    HDFS-7591. hdfs classpath command should support same options as hadoop
+    classpath (Varun Saxena via Arpit Agarwal)
+
+    HDFS-5631. Change BlockMetadataHeader.readHeader(..), ChunkChecksum
+    class and constructor to public; and fix FsDatasetSpi to use generic type
+    instead of FsVolumeImpl.  (David Powell and Joe Pallas via szetszwo)
+
+    HDFS-7430. Rewrite the BlockScanner to use O(1) memory and use multiple
+    threads (cmccabe)
+
+    HDFS-7681. Change ReplicaInputStreams constructor to take InputStream(s)
+    instead of FileDescriptor(s).  (Joe Pallas via szetszwo)
 
   OPTIMIZATIONS
 
@@ -257,6 +276,19 @@ Trunk (Unreleased)
 
     HDFS-7407. Minor typo in privileged pid/out/log names (aw)
 
+    HDFS-7581. HDFS documentation needs updating post-shell rewrite (aw)
+
+    HADOOP-11484. hadoop-mapreduce-client-nativetask fails to build on ARM
+    AARCH64 due to x86 asm statements (Edward Nevill via Colin P. McCabe)
+
+    HDFS-7667. Various typos and improvements to HDFS Federation doc
+    (Charles Lamb via aw)
+
+    HDFS-3750. API docs don't include HDFS (Jolly Chen via aw)
+
+    HDFS-7320. The appearance of hadoop-hdfs-httpfs site docs is inconsistent 
+    (Masatake Iwasaki via aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -275,6 +307,12 @@ Release 2.7.0 - UNRELEASED
     HDFS-7424. Add web UI for NFS gateway (brandonli)
     
     HDFS-7449. Add metrics to NFS gateway (brandonli)
+
+    HDFS-3107. Introduce truncate. (Plamen Jeliazkov via shv)
+
+    HDFS-7056. Snapshot support for truncate. (Plamen Jeliazkov and shv)
+
+    HDFS-6673. Add delimited format support to PB OIV tool. (Eddy Xu via wang)
 
   IMPROVEMENTS
 
@@ -476,10 +514,59 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7530. Allow renaming of encryption zone roots. (Charles Lamb via wang)
 
+    HDFS-7484. Make FSDirectory#addINode take existing INodes as its parameter.
+    (jing9)
+
+    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
+    (ozawa)
+
+    HADOOP-11470. Remove some uses of obsolete guava APIs from the hadoop
+    codebase. (Sangjin Lee via Colin P. McCabe)
+
+    HDFS-7182. JMX metrics aren't accessible when NN is busy. (Ming Ma via jing9)
+
+    HDFS-7323. Move the get/setStoragePolicy commands out from dfsadmin.
+    (jing9 via yliu)
+
+    HDFS-7326: Add documentation for hdfs debug commands (Vijay Bhat via Colin
+    P. McCabe)
+
+    HDFS-7598. Remove dependency on old version of guava in
+    TestDFSClientCache#testEviction. (Sangjin Lee via Colin P. McCabe)
+
+    HDFS-7600. Refine hdfs admin classes to reuse common code. (jing9)
+
+    HDFS-2219. Change fsck to support fully qualified paths so that a 
+    particular namenode in a federated cluster with multiple namenodes
+    can be specified in the path parameter.  (szetszwo)
+
+    HDFS-7457. DatanodeID generates excessive garbage. (daryn via kihwal)
+
+    HDFS-7189. Add trace spans for DFSClient metadata operations. (Colin P.
+    McCabe via yliu)
+
+    HDFS-7573. Consolidate the implementation of delete() into a single class.
+    (wheat9)
+
+    HDFS-7640. Print NFS Client in the NFS log. (Brandon Li via wheat9)
+
+    HDFS-7623. Add htrace configuration properties to core-default.xml and
+    update user doc about how to enable htrace. (yliu)
+
+    HDFS-7224. Allow reuse of NN connections via webhdfs (Eric Payne via
+    kihwal)
+
+    HDFS-7683. Combine usages and percent stats in NameNode UI.
+    (Vinayakumar B via wheat9)
+
+    HDFS-7675. Remove unused member DFSClient#spanReceiverHost (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
     (Vinayakumar B via wheat9)
+
+    HDFS-7615. Remove longReadLock (kihwal)
 
   BUG FIXES
 
@@ -627,6 +714,108 @@ Release 2.7.0 - UNRELEASED
     HDFS-7557. Fix spacing for a few keys in DFSConfigKeys.java 
     (Colin P.McCabe)
 
+    HDFS-7560. ACLs removed by removeDefaultAcl() will be back after NameNode
+    restart/failover. (Vinayakumar B via cnauroth)
+
+    HDFS-7456. De-duplicate AclFeature instances with same AclEntries do reduce
+    memory footprint of NameNode (vinayakumarb)
+
+    HDFS-7563. NFS gateway parseStaticMap NumberFormatException 
+    (Yongjun Zhang via brandonli)
+
+    HDFS-7572. TestLazyPersistFiles#testDnRestartWithSavedReplicas is flaky on
+    Windows. (Arpit Agarwal via cnauroth)
+
+    HDFS-7583. Fix findbug in TransferFsImage.java (vinayakumarb)
+
+    HDFS-7564. NFS gateway dynamically reload UID/GID mapping file /etc/nfs.map
+    (Yongjun Zhang via brandonli)
+
+    HDFS-7561. TestFetchImage should write fetched-image-dir under target.
+    (Liang Xie via shv)
+
+    HDFS-7589. Break the dependency between libnative_mini_dfs and libhdfs.
+    (Zhanwei Wang via cnauroth)
+
+    HDFS-7579. Improve log reporting during block report rpc failure.
+    (Charles Lamb via cnauroth)
+
+    HDFS-7596. NameNode should prune dead storages from storageMap.
+    (Arpit Agarwal via cnauroth)
+
+    HDFS-7533. Datanode sometimes does not shutdown on receiving upgrade
+    shutdown command (Eric Payne via kihwal)
+
+    HDFS-5445. PacketReceiver populates the packetLen field in PacketHeader
+    incorrectly (Jonathan Mace via Colin P. McCabe)
+
+    HDFS-7470. SecondaryNameNode need twice memory when calling
+    reloadFromImageFile. (zhaoyunjiong via cnauroth)
+
+    HDFS-7585. Get TestEnhancedByteBufferAccess working on CPU architectures
+    with page sizes other than 4096 (Sam Liu via Colin P. McCabe)
+
+    HDFS-7635. Remove TestCorruptFilesJsp from branch-2. (cnauroth)
+
+    HDFS-7632. MiniDFSCluster configures DataNode data directories incorrectly if
+    using more than 1 DataNode and more than 2 storage locations per DataNode.
+    (cnauroth)
+
+    HDFS-7637. Fix the check condition for reserved path. (Yi Liu via jing9)
+
+    HDFS-7641. Update archival storage user doc for list/set/get block storage
+    policies. (yliu)
+
+    HDFS-7496. Fix FsVolume removal race conditions on the DataNode by
+    reference-counting the volume instances (lei via cmccabe)
+
+    HDFS-7610. Fix removal of dynamically added DN volumes (Lei (Eddy) Xu via
+    Colin P. McCabe)
+
+    HDFS-7548. Corrupt block reporting delayed until datablock scanner thread
+    detects it (Rushabh Shah via kihwal)
+
+    HDFS-7575. Upgrade should generate a unique storage ID for each
+    volume. (Arpit Agarwal)
+
+    HDFS-3519. Checkpoint upload may interfere with a concurrent saveNamespace.
+    (Ming Ma via cnauroth)
+
+    HDFS-7660. BlockReceiver#close() might be called multiple times, which
+    causes the fsvolume reference being released incorrectly. (Lei Xu via
+    yliu)
+
+    HDFS-7644. minor typo in HttpFS doc (Charles Lamb via aw)
+
+    HDFS-7606. Fix potential NPE in INodeFile.getBlocks(). (Byron Wong via shv)
+
+    HDFS-7638: Small fix and few refinements for FSN#truncate. (yliu)
+
+    HDFS-7634. Disallow truncation of Lazy persist files. (Yi Liu via
+    Arpit Agarwal)
+
+    HDFS-7643. Test case to ensure lazy persist files cannot be truncated.
+    (Yi Liu via Arpit Agarwal)
+
+    HDFS-7659. truncate should check negative value of the new length.
+    (Yi Liu via shv)
+
+    HDFS-7676. Fix TestFileTruncate to avoid bug of HDFS-7611. (shv)
+
+    HDFS-49. MiniDFSCluster.stopDataNode will always shut down a node in
+    the cluster if a matching name is not found. (stevel)
+
+    HDFS-7566. Remove obsolete entries from hdfs-default.xml (Ray Chiang
+    via aw)
+
+    HDFS-7677. DistributedFileSystem#truncate should resolve symlinks. (yliu)
+
+    HDFS-7611. deleteSnapshot and delete of a file can leave orphaned blocks
+    in the blocksMap on NameNode restart. (jing9 and Byron Wong)
+
+    HDFS-7423. various typos and message formatting fixes in nfs daemon and
+    doc. (Charles Lamb via yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -653,6 +842,9 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-7443. Datanode upgrade to BLOCKID_BASED_LAYOUT fails if duplicate
     block files are present in the same volume (cmccabe)
+
+    HDFS-3443. Fix NPE when namenode transition to active during startup by
+    adding checkNNStartup() in NameNodeRpcServer.  (Vinayakumar B via szetszwo)
 
 Release 2.6.0 - 2014-11-18
 

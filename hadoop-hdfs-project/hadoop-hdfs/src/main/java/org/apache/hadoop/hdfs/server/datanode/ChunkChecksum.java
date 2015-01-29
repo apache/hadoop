@@ -26,12 +26,12 @@ package org.apache.hadoop.hdfs.server.datanode;
  *     the checksum applies for the last chunk, or bytes 512 - 1023
  */
 
-class ChunkChecksum {
+public class ChunkChecksum {
   private final long dataLength;
   // can be null if not available
   private final byte[] checksum;
 
-  ChunkChecksum(long dataLength, byte[] checksum) {
+  public ChunkChecksum(long dataLength, byte[] checksum) {
     this.dataLength = dataLength;
     this.checksum = checksum;
   }

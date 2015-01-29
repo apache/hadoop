@@ -172,9 +172,15 @@ target_link_libraries(test_libhdfs_write
 
 add_library(native_mini_dfs
     main/native/libhdfs/native_mini_dfs.c
+    main/native/libhdfs/common/htable.c
+    main/native/libhdfs/exception.c
+    main/native/libhdfs/jni_helper.c
+    ${OS_DIR}/mutexes.c
+    ${OS_DIR}/thread_local_storage.c
 )
 target_link_libraries(native_mini_dfs
-    hdfs
+    ${JAVA_JVM_LIBRARY}
+    ${OS_LINK_LIBRARIES}
 )
 
 add_executable(test_native_mini_dfs

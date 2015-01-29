@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.nodelabels;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -40,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -51,6 +53,7 @@ import org.apache.hadoop.yarn.nodelabels.event.RemoveClusterNodeLabels;
 import org.apache.hadoop.yarn.nodelabels.event.UpdateNodeToLabelsMappingsEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 
 public class CommonNodeLabelsManager extends AbstractService {
@@ -63,6 +66,14 @@ public class CommonNodeLabelsManager extends AbstractService {
   private static final Pattern LABEL_PATTERN = Pattern
       .compile("^[0-9a-zA-Z][0-9a-zA-Z-_]*");
   public static final int WILDCARD_PORT = 0;
+  
+  /**
+   * Error messages
+   */
+  @VisibleForTesting
+  public static final String NODE_LABELS_NOT_ENABLED_ERR =
+      "Node-label-based scheduling is disabled. Please check "
+          + YarnConfiguration.NODE_LABELS_ENABLED;
 
   /**
    * If a user doesn't specify label of a queue or node, it belongs
@@ -72,8 +83,8 @@ public class CommonNodeLabelsManager extends AbstractService {
 
   protected Dispatcher dispatcher;
 
-  protected ConcurrentMap<String, Label> labelCollections =
-      new ConcurrentHashMap<String, Label>();
+  protected ConcurrentMap<String, NodeLabel> labelCollections =
+      new ConcurrentHashMap<String, NodeLabel>();
   protected ConcurrentMap<String, Host> nodeCollections =
       new ConcurrentHashMap<String, Host>();
 
@@ -81,14 +92,7 @@ public class CommonNodeLabelsManager extends AbstractService {
   protected final WriteLock writeLock;
 
   protected NodeLabelsStore store;
-
-  protected static class Label {
-    public Resource resource;
-
-    protected Label() {
-      this.resource = Resource.newInstance(0, 0);
-    }
-  }
+  private boolean nodeLabelsEnabled = false;
 
   /**
    * A <code>Host</code> can have multiple <code>Node</code>s 
@@ -137,6 +141,12 @@ public class CommonNodeLabelsManager extends AbstractService {
       c.running = running;
       return c;
     }
+  }
+  
+  private enum NodeLabelUpdateOperation {
+    ADD,
+    REMOVE,
+    REPLACE
   }
 
   private final class ForwardingEventHandler implements
@@ -194,9 +204,15 @@ public class CommonNodeLabelsManager extends AbstractService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    initNodeLabelStore(conf);
+    // set if node labels enabled
+    nodeLabelsEnabled =
+        conf.getBoolean(YarnConfiguration.NODE_LABELS_ENABLED,
+            YarnConfiguration.DEFAULT_NODE_LABELS_ENABLED);
+    if (nodeLabelsEnabled) {
+      initNodeLabelStore(conf);
+    }
     
-    labelCollections.put(NO_LABEL, new Label());
+    labelCollections.put(NO_LABEL, new NodeLabel(NO_LABEL));
   }
 
   protected void initNodeLabelStore(Configuration conf) throws Exception {
@@ -251,6 +267,10 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   @SuppressWarnings("unchecked")
   public void addToCluserNodeLabels(Set<String> labels) throws IOException {
+    if (!nodeLabelsEnabled) {
+      LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
+      throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
+    }
     if (null == labels || labels.isEmpty()) {
       return;
     }
@@ -266,7 +286,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     for (String label : labels) {
       // shouldn't overwrite it to avoid changing the Label.resource
       if (this.labelCollections.get(label) == null) {
-        this.labelCollections.put(label, new Label());
+        this.labelCollections.put(label, new NodeLabel(label));
         newLabels.add(label);
       }
     }
@@ -298,45 +318,6 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
   }
   
-  @SuppressWarnings("unchecked")
-  protected void internalAddLabelsToNode(
-      Map<NodeId, Set<String>> addedLabelsToNode) throws IOException {
-    // do add labels to nodes
-    Map<NodeId, Set<String>> newNMToLabels =
-        new HashMap<NodeId, Set<String>>();
-    for (Entry<NodeId, Set<String>> entry : addedLabelsToNode.entrySet()) {
-      NodeId nodeId = entry.getKey();
-      Set<String> labels = entry.getValue();
- 
-      createHostIfNonExisted(nodeId.getHost());
-      if (nodeId.getPort() == WILDCARD_PORT) {
-        Host host = nodeCollections.get(nodeId.getHost());
-        host.labels.addAll(labels);
-        newNMToLabels.put(nodeId, host.labels);
-      } else {
-        createNodeIfNonExisted(nodeId);
-        Node nm = getNMInNodeSet(nodeId);
-        if (nm.labels == null) {
-          nm.labels = new HashSet<String>();
-        }
-        nm.labels.addAll(labels);
-        newNMToLabels.put(nodeId, nm.labels);
-      }
-    }
-
-    if (null != dispatcher) {
-      dispatcher.getEventHandler().handle(
-          new UpdateNodeToLabelsMappingsEvent(newNMToLabels));
-    }
-
-    // shows node->labels we added
-    LOG.info("addLabelsToNode:");
-    for (Entry<NodeId, Set<String>> entry : newNMToLabels.entrySet()) {
-      LOG.info("  NM=" + entry.getKey() + ", labels=["
-          + StringUtils.join(entry.getValue().iterator(), ",") + "]");
-    }
-  }
-  
   /**
    * add more labels to nodes
    * 
@@ -344,9 +325,13 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   public void addLabelsToNode(Map<NodeId, Set<String>> addedLabelsToNode)
       throws IOException {
+    if (!nodeLabelsEnabled) {
+      LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
+      throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
+    }
     addedLabelsToNode = normalizeNodeIdToLabels(addedLabelsToNode);
     checkAddLabelsToNode(addedLabelsToNode);
-    internalAddLabelsToNode(addedLabelsToNode);
+    internalUpdateLabelsOnNodes(addedLabelsToNode, NodeLabelUpdateOperation.ADD);
   }
   
   protected void checkRemoveFromClusterNodeLabels(
@@ -410,6 +395,11 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   public void removeFromClusterNodeLabels(Collection<String> labelsToRemove)
       throws IOException {
+    if (!nodeLabelsEnabled) {
+      LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
+      throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
+    }
+    
     labelsToRemove = normalizeLabels(labelsToRemove);
     
     checkRemoveFromClusterNodeLabels(labelsToRemove);
@@ -477,24 +467,75 @@ public class CommonNodeLabelsManager extends AbstractService {
   }
   
   @SuppressWarnings("unchecked")
-  protected void internalRemoveLabelsFromNode(
-      Map<NodeId, Set<String>> removeLabelsFromNode) {
-    // do remove labels from nodes
+  protected void internalUpdateLabelsOnNodes(
+      Map<NodeId, Set<String>> nodeToLabels, NodeLabelUpdateOperation op)
+      throws IOException {
+    // do update labels from nodes
     Map<NodeId, Set<String>> newNMToLabels =
         new HashMap<NodeId, Set<String>>();
-    for (Entry<NodeId, Set<String>> entry : removeLabelsFromNode.entrySet()) {
+    for (Entry<NodeId, Set<String>> entry : nodeToLabels.entrySet()) {
       NodeId nodeId = entry.getKey();
       Set<String> labels = entry.getValue();
       
+      createHostIfNonExisted(nodeId.getHost());
       if (nodeId.getPort() == WILDCARD_PORT) {
         Host host = nodeCollections.get(nodeId.getHost());
-        host.labels.removeAll(labels);
+        switch (op) {
+        case REMOVE: 
+          host.labels.removeAll(labels);
+          for (Node node : host.nms.values()) {
+            if (node.labels != null) {
+              node.labels.removeAll(labels);
+            }
+          }
+          break;
+        case ADD:
+          host.labels.addAll(labels);
+          for (Node node : host.nms.values()) {
+            if (node.labels != null) {
+              node.labels.addAll(labels);
+            }
+          }
+          break;
+        case REPLACE:
+          host.labels.clear();
+          host.labels.addAll(labels);
+          for (Node node : host.nms.values()) {
+            node.labels = null;
+          }
+          break;
+        default:
+          break;
+        }
         newNMToLabels.put(nodeId, host.labels);
       } else {
-        Node nm = getNMInNodeSet(nodeId);
-        if (nm.labels != null) {
-          nm.labels.removeAll(labels);
+        if (EnumSet.of(NodeLabelUpdateOperation.ADD,
+            NodeLabelUpdateOperation.REPLACE).contains(op)) {
+          // Add and replace
+          createNodeIfNonExisted(nodeId);
+          Node nm = getNMInNodeSet(nodeId);
+          if (nm.labels == null) {
+            nm.labels = new HashSet<String>();
+          }
+          switch (op) {
+          case ADD:
+            nm.labels.addAll(labels);
+            break;
+          case REPLACE:
+            nm.labels.clear();
+            nm.labels.addAll(labels);
+            break;
+          default:
+            break;
+          }
           newNMToLabels.put(nodeId, nm.labels);
+        } else {
+          // remove
+          Node nm = getNMInNodeSet(nodeId);
+          if (nm.labels != null) {
+            nm.labels.removeAll(labels);
+            newNMToLabels.put(nodeId, nm.labels);
+          }
         }
       }
     }
@@ -505,7 +546,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
 
     // shows node->labels we added
-    LOG.info("removeLabelsFromNode:");
+    LOG.info(op.name() + " labels on nodes:");
     for (Entry<NodeId, Set<String>> entry : newNMToLabels.entrySet()) {
       LOG.info("  NM=" + entry.getKey() + ", labels=["
           + StringUtils.join(entry.getValue().iterator(), ",") + "]");
@@ -521,11 +562,17 @@ public class CommonNodeLabelsManager extends AbstractService {
   public void
       removeLabelsFromNode(Map<NodeId, Set<String>> removeLabelsFromNode)
           throws IOException {
+    if (!nodeLabelsEnabled) {
+      LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
+      throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
+    }
+    
     removeLabelsFromNode = normalizeNodeIdToLabels(removeLabelsFromNode);
     
     checkRemoveLabelsFromNode(removeLabelsFromNode);
 
-    internalRemoveLabelsFromNode(removeLabelsFromNode);
+    internalUpdateLabelsOnNodes(removeLabelsFromNode,
+        NodeLabelUpdateOperation.REMOVE);
   }
   
   protected void checkReplaceLabelsOnNode(
@@ -547,47 +594,7 @@ public class CommonNodeLabelsManager extends AbstractService {
       }
     }
   }
-  
-  @SuppressWarnings("unchecked")
-  protected void internalReplaceLabelsOnNode(
-      Map<NodeId, Set<String>> replaceLabelsToNode) throws IOException {
-    // do replace labels to nodes
-    Map<NodeId, Set<String>> newNMToLabels = new HashMap<NodeId, Set<String>>();
-    for (Entry<NodeId, Set<String>> entry : replaceLabelsToNode.entrySet()) {
-      NodeId nodeId = entry.getKey();
-      Set<String> labels = entry.getValue();
 
-      createHostIfNonExisted(nodeId.getHost());      
-      if (nodeId.getPort() == WILDCARD_PORT) {
-        Host host = nodeCollections.get(nodeId.getHost());
-        host.labels.clear();
-        host.labels.addAll(labels);
-        newNMToLabels.put(nodeId, host.labels);
-      } else {
-        createNodeIfNonExisted(nodeId);
-        Node nm = getNMInNodeSet(nodeId);
-        if (nm.labels == null) {
-          nm.labels = new HashSet<String>();
-        }
-        nm.labels.clear();
-        nm.labels.addAll(labels);
-        newNMToLabels.put(nodeId, nm.labels);
-      }
-    }
-
-    if (null != dispatcher) {
-      dispatcher.getEventHandler().handle(
-          new UpdateNodeToLabelsMappingsEvent(newNMToLabels));
-    }
-
-    // shows node->labels we added
-    LOG.info("setLabelsToNode:");
-    for (Entry<NodeId, Set<String>> entry : newNMToLabels.entrySet()) {
-      LOG.info("  NM=" + entry.getKey() + ", labels=["
-          + StringUtils.join(entry.getValue().iterator(), ",") + "]");
-    }
-  }
-  
   /**
    * replace labels to nodes
    * 
@@ -595,11 +602,17 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   public void replaceLabelsOnNode(Map<NodeId, Set<String>> replaceLabelsToNode)
       throws IOException {
+    if (!nodeLabelsEnabled) {
+      LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
+      throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
+    }
+    
     replaceLabelsToNode = normalizeNodeIdToLabels(replaceLabelsToNode);
     
     checkReplaceLabelsOnNode(replaceLabelsToNode);
 
-    internalReplaceLabelsOnNode(replaceLabelsToNode);
+    internalUpdateLabelsOnNodes(replaceLabelsToNode,
+        NodeLabelUpdateOperation.REPLACE);
   }
 
   /**

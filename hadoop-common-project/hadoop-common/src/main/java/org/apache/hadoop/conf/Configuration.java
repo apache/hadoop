@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.conf;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -50,6 +52,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -178,6 +181,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     LogFactory.getLog("org.apache.hadoop.conf.Configuration.deprecation");
 
   private boolean quietmode = true;
+
+  private static final String DEFAULT_STRING_CHECK =
+    "testingforemptydefaultvalue";
+
+  private boolean allowNullValueProperties = false;
   
   private static class Resource {
     private final Object resource;
@@ -221,7 +229,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * List of configuration parameters marked <b>final</b>. 
    */
-  private Set<String> finalParameters = new HashSet<String>();
+  private Set<String> finalParameters = Collections.newSetFromMap(
+      new ConcurrentHashMap<String, Boolean>());
   
   private boolean loadDefaults = true;
   
@@ -251,7 +260,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Stores the mapping of key to the resource which modifies or loads 
    * the key most recently
    */
-  private HashMap<String, String[]> updatingResource;
+  private Map<String, String[]> updatingResource;
  
   /**
    * Class to keep the information about the keys which replace the deprecated
@@ -678,7 +687,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
-    updatingResource = new HashMap<String, String[]>();
+    updatingResource = new ConcurrentHashMap<String, String[]>();
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
@@ -701,8 +710,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
        this.overlay = (Properties)other.overlay.clone();
      }
 
-     this.updatingResource = new HashMap<String, String[]>(other.updatingResource);
-     this.finalParameters = new HashSet<String>(other.finalParameters);
+     this.updatingResource = new ConcurrentHashMap<String, String[]>(
+         other.updatingResource);
+     this.finalParameters = Collections.newSetFromMap(
+         new ConcurrentHashMap<String, Boolean>());
+     this.finalParameters.addAll(other.finalParameters);
    }
    
     synchronized(Configuration.class) {
@@ -896,7 +908,38 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     return result;
   }
-  
+
+  /**
+   * Set Configuration to allow keys without values during setup.  Intended
+   * for use during testing.
+   *
+   * @param val If true, will allow Configuration to store keys without values
+   */
+  @VisibleForTesting
+  public void setAllowNullValueProperties( boolean val ) {
+    this.allowNullValueProperties = val;
+  }
+
+  /**
+   * Return existence of the <code>name</code> property, but only for
+   * names which have no valid value, usually non-existent or commented
+   * out in XML.
+   *
+   * @param name the property name
+   * @return true if the property <code>name</code> exists without value
+   */
+  @VisibleForTesting
+  public boolean onlyKeyExists(String name) {
+    String[] names = handleDeprecation(deprecationContext.get(), name);
+    for(String n : names) {
+      if ( getProps().getProperty(n,DEFAULT_STRING_CHECK)
+               .equals(DEFAULT_STRING_CHECK) ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * Get the value of the <code>name</code> property as a trimmed <code>String</code>, 
    * <code>null</code> if no such property exists. 
@@ -2276,20 +2319,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return final parameter set.
    */
   public Set<String> getFinalParameters() {
-    return new HashSet<String>(finalParameters);
+    Set<String> setFinalParams = Collections.newSetFromMap(
+        new ConcurrentHashMap<String, Boolean>());
+    setFinalParams.addAll(finalParameters);
+    return setFinalParams;
   }
 
   protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
-      HashMap<String, String[]> backup = 
-        new HashMap<String, String[]>(updatingResource);
+      Map<String, String[]> backup =
+          new ConcurrentHashMap<String, String[]>(updatingResource);
       loadResources(properties, resources, quietmode);
-      if (overlay!= null) {
+
+      if (overlay != null) {
         properties.putAll(overlay);
         for (Map.Entry<Object,Object> item: overlay.entrySet()) {
           String key = (String)item.getKey();
-          updatingResource.put(key, backup.get(key));
+          String[] source = backup.get(key);
+          if(source != null) {
+            updatingResource.put(key, source);
+          }
         }
       }
     }
@@ -2327,9 +2377,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     // code.
     Map<String,String> result = new HashMap<String,String>();
     for(Map.Entry<Object,Object> item: getProps().entrySet()) {
-      if (item.getKey() instanceof String && 
+      if (item.getKey() instanceof String &&
           item.getValue() instanceof String) {
-        result.put((String) item.getKey(), (String) item.getValue());
+          result.put((String) item.getKey(), (String) item.getValue());
       }
     }
     return result.entrySet().iterator();
@@ -2535,16 +2585,21 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   
   private void loadProperty(Properties properties, String name, String attr,
       String value, boolean finalParameter, String[] source) {
-    if (value != null) {
+    if (value != null || allowNullValueProperties) {
       if (!finalParameters.contains(attr)) {
+        if (value==null && allowNullValueProperties) {
+          value = DEFAULT_STRING_CHECK;
+        }
         properties.setProperty(attr, value);
-        updatingResource.put(attr, source);
+        if(source != null) {
+          updatingResource.put(attr, source);
+        }
       } else if (!value.equals(properties.getProperty(attr))) {
         LOG.warn(name+":an attempt to override final parameter: "+attr
             +";  Ignoring.");
       }
     }
-    if (finalParameter) {
+    if (finalParameter && attr != null) {
       finalParameters.add(attr);
     }
   }
@@ -2747,7 +2802,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       String value = org.apache.hadoop.io.Text.readString(in);
       set(key, value); 
       String sources[] = WritableUtils.readCompressedStringArray(in);
-      updatingResource.put(key, sources);
+      if(sources != null) {
+        updatingResource.put(key, sources);
+      }
     }
   }
 

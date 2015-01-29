@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -352,6 +353,21 @@ public class INodesInPath {
     return DFSUtil.byteArray2PathString(path, 0, pos);
   }
 
+  /**
+   * @param offset start endpoint (inclusive)
+   * @param length number of path components
+   * @return sub-list of the path
+   */
+  public List<String> getPath(int offset, int length) {
+    Preconditions.checkArgument(offset >= 0 && length >= 0 && offset + length
+        <= path.length);
+    ImmutableList.Builder<String> components = ImmutableList.builder();
+    for (int i = offset; i < offset + length; i++) {
+      components.add(DFSUtil.bytes2String(path[i]));
+    }
+    return components.build();
+  }
+
   public int length() {
     return inodes.length;
   }
@@ -363,27 +379,17 @@ public class INodesInPath {
   /**
    * @param length number of ancestral INodes in the returned INodesInPath
    *               instance
-   * @return the INodesInPath instance containing ancestral INodes
+   * @return the INodesInPath instance containing ancestral INodes. Note that
+   * this method only handles non-snapshot paths.
    */
   private INodesInPath getAncestorINodesInPath(int length) {
     Preconditions.checkArgument(length >= 0 && length < inodes.length);
+    Preconditions.checkState(!isSnapshot());
     final INode[] anodes = new INode[length];
-    final byte[][] apath;
-    final boolean isSnapshot;
-    final int snapshotId;
-    int dotSnapshotIndex = getDotSnapshotIndex();
-    if (this.isSnapshot && length >= dotSnapshotIndex + 1) {
-      apath = new byte[length + 1][];
-      isSnapshot = true;
-      snapshotId = this.snapshotId;
-    } else {
-      apath = new byte[length][];
-      isSnapshot = false;
-      snapshotId = this.isSnapshot ? CURRENT_STATE_ID : this.snapshotId;
-    }
+    final byte[][] apath = new byte[length][];
     System.arraycopy(this.inodes, 0, anodes, 0, length);
-    System.arraycopy(this.path, 0, apath, 0, apath.length);
-    return new INodesInPath(anodes, apath, isSnapshot, snapshotId);
+    System.arraycopy(this.path, 0, apath, 0, length);
+    return new INodesInPath(anodes, apath, false, snapshotId);
   }
 
   /**
@@ -395,19 +401,23 @@ public class INodesInPath {
         null;
   }
 
-  private int getDotSnapshotIndex() {
-    if (isSnapshot) {
-      for (int i = 0; i < path.length; i++) {
-        if (isDotSnapshotDir(path[i])) {
-          return i;
-        }
+  /**
+   * @return a new INodesInPath instance that only contains exisitng INodes.
+   * Note that this method only handles non-snapshot paths.
+   */
+  public INodesInPath getExistingINodes() {
+    Preconditions.checkState(!isSnapshot());
+    int i = 0;
+    for (; i < inodes.length; i++) {
+      if (inodes[i] == null) {
+        break;
       }
-      throw new IllegalStateException("The path " + getPath()
-          + " is a snapshot path but does not contain "
-          + HdfsConstants.DOT_SNAPSHOT_DIR);
-    } else {
-      return -1;
     }
+    INode[] existing = new INode[i];
+    byte[][] existingPath = new byte[i][];
+    System.arraycopy(inodes, 0, existing, 0, i);
+    System.arraycopy(path, 0, existingPath, 0, i);
+    return new INodesInPath(existing, existingPath, false, snapshotId);
   }
 
   /**

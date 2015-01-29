@@ -312,16 +312,20 @@ public class WebHdfsFileSystem extends FileSystem
     if (in == null) {
       throw new IOException("The " + (useErrorStream? "error": "input") + " stream is null.");
     }
-    final String contentType = c.getContentType();
-    if (contentType != null) {
-      final MediaType parsed = MediaType.valueOf(contentType);
-      if (!MediaType.APPLICATION_JSON_TYPE.isCompatible(parsed)) {
-        throw new IOException("Content-Type \"" + contentType
-            + "\" is incompatible with \"" + MediaType.APPLICATION_JSON
-            + "\" (parsed=\"" + parsed + "\")");
+    try {
+      final String contentType = c.getContentType();
+      if (contentType != null) {
+        final MediaType parsed = MediaType.valueOf(contentType);
+        if (!MediaType.APPLICATION_JSON_TYPE.isCompatible(parsed)) {
+          throw new IOException("Content-Type \"" + contentType
+              + "\" is incompatible with \"" + MediaType.APPLICATION_JSON
+              + "\" (parsed=\"" + parsed + "\")");
+        }
       }
+      return (Map<?, ?>)JSON.parse(new InputStreamReader(in, Charsets.UTF_8));
+    } finally {
+      in.close();
     }
-    return (Map<?, ?>)JSON.parse(new InputStreamReader(in, Charsets.UTF_8));
   }
 
   private static Map<?, ?> validateResponse(final HttpOpParam.Op op,

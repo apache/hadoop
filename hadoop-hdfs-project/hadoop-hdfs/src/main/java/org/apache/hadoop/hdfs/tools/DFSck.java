@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -229,14 +230,14 @@ public class DFSck extends Configured implements Tool {
    * @return Returns http address or null if failure.
    * @throws IOException if we can't determine the active NN address
    */
-  private URI getCurrentNamenodeAddress() throws IOException {
+  private URI getCurrentNamenodeAddress(Path target) throws IOException {
     //String nnAddress = null;
     Configuration conf = getConf();
 
     //get the filesystem object to verify it is an HDFS system
-    FileSystem fs;
+    final FileSystem fs;
     try {
-      fs = FileSystem.get(conf);
+      fs = target.getFileSystem(conf);
     } catch (IOException ioe) {
       System.err.println("FileSystem is inaccessible due to:\n"
           + StringUtils.stringifyException(ioe));
@@ -253,16 +254,6 @@ public class DFSck extends Configured implements Tool {
 
   private int doWork(final String[] args) throws IOException {
     final StringBuilder url = new StringBuilder();
-    
-    URI namenodeAddress = getCurrentNamenodeAddress();
-    if (namenodeAddress == null) {
-      //Error message already output in {@link #getCurrentNamenodeAddress()}
-      System.err.println("DFSck exiting.");
-      return 0;
-    }
-
-    url.append(namenodeAddress.toString());
-    System.err.println("Connecting to namenode via " + url.toString());
     
     url.append("/fsck?ugi=").append(ugi.getShortUserName());
     String dir = null;
@@ -309,7 +300,20 @@ public class DFSck extends Configured implements Tool {
     if (null == dir) {
       dir = "/";
     }
-    url.append("&path=").append(URLEncoder.encode(dir, "UTF-8"));
+
+    final Path dirpath = new Path(dir);
+    final URI namenodeAddress = getCurrentNamenodeAddress(dirpath);
+    if (namenodeAddress == null) {
+      //Error message already output in {@link #getCurrentNamenodeAddress()}
+      System.err.println("DFSck exiting.");
+      return 0;
+    }
+
+    url.insert(0, namenodeAddress.toString());
+    url.append("&path=").append(URLEncoder.encode(
+        Path.getPathWithoutSchemeAndAuthority(dirpath).toString(), "UTF-8"));
+    System.err.println("Connecting to namenode via " + url.toString());
+
     if (doListCorruptFileBlocks) {
       return listCorruptFileBlocks(dir, url.toString());
     }

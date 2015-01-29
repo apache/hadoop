@@ -143,7 +143,7 @@ class FSDirAclOp {
     try {
       iip = fsd.getINodesInPath4Write(src);
       fsd.checkOwner(pc, iip);
-      List<AclEntry> newAcl = unprotectedSetAcl(fsd, src, aclSpec);
+      List<AclEntry> newAcl = unprotectedSetAcl(fsd, src, aclSpec, false);
       fsd.getEditLog().logSetAcl(src, newAcl);
     } finally {
       fsd.writeUnlock();
@@ -185,7 +185,7 @@ class FSDirAclOp {
   }
 
   static List<AclEntry> unprotectedSetAcl(
-      FSDirectory fsd, String src, List<AclEntry> aclSpec)
+      FSDirectory fsd, String src, List<AclEntry> aclSpec, boolean fromEdits)
       throws IOException {
     assert fsd.hasWriteLock();
     final INodesInPath iip = fsd.getINodesInPath4Write(
@@ -199,9 +199,11 @@ class FSDirAclOp {
 
     INode inode = FSDirectory.resolveLastINode(iip);
     int snapshotId = iip.getLatestSnapshotId();
-    List<AclEntry> existingAcl = AclStorage.readINodeLogicalAcl(inode);
-    List<AclEntry> newAcl = AclTransformation.replaceAclEntries(existingAcl,
-      aclSpec);
+    List<AclEntry> newAcl = aclSpec;
+    if (!fromEdits) {
+      List<AclEntry> existingAcl = AclStorage.readINodeLogicalAcl(inode);
+      newAcl = AclTransformation.replaceAclEntries(existingAcl, aclSpec);
+    }
     AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
     return newAcl;
   }

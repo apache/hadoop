@@ -227,7 +227,7 @@ public class TestCachingStrategy {
       // verify that we dropped everything from the cache during file creation.
       ExtendedBlock block = cluster.getNameNode().getRpcServer().getBlockLocations(
           TEST_PATH, 0, Long.MAX_VALUE).get(0).getBlock();
-      String fadvisedFileName = MiniDFSCluster.getBlockFile(0, block).getName();
+      String fadvisedFileName = cluster.getBlockFile(0, block).getName();
       Stats stats = tracker.getStats(fadvisedFileName);
       stats.assertDroppedInRange(0, TEST_PATH_LEN - WRITE_PACKET_SIZE);
       stats.clear();
@@ -272,7 +272,7 @@ public class TestCachingStrategy {
       // verify that we dropped everything from the cache during file creation.
       ExtendedBlock block = cluster.getNameNode().getRpcServer().getBlockLocations(
           TEST_PATH, 0, Long.MAX_VALUE).get(0).getBlock();
-      String fadvisedFileName = MiniDFSCluster.getBlockFile(0, block).getName();
+      String fadvisedFileName = cluster.getBlockFile(0, block).getName();
       Stats stats = tracker.getStats(fadvisedFileName);
       stats.assertDroppedInRange(0, TEST_PATH_LEN - WRITE_PACKET_SIZE);
       stats.clear();
@@ -313,7 +313,7 @@ public class TestCachingStrategy {
       // specify any policy, we should have done drop-behind.
       ExtendedBlock block = cluster.getNameNode().getRpcServer().getBlockLocations(
           TEST_PATH, 0, Long.MAX_VALUE).get(0).getBlock();
-      String fadvisedFileName = MiniDFSCluster.getBlockFile(0, block).getName();
+      String fadvisedFileName = cluster.getBlockFile(0, block).getName();
       Stats stats = tracker.getStats(fadvisedFileName);
       stats.assertDroppedInRange(0, TEST_PATH_LEN - WRITE_PACKET_SIZE);
       stats.clear();
@@ -355,7 +355,7 @@ public class TestCachingStrategy {
       // verify that we did not drop everything from the cache during file creation.
       ExtendedBlock block = cluster.getNameNode().getRpcServer().getBlockLocations(
           TEST_PATH, 0, Long.MAX_VALUE).get(0).getBlock();
-      String fadvisedFileName = MiniDFSCluster.getBlockFile(0, block).getName();
+      String fadvisedFileName = cluster.getBlockFile(0, block).getName();
       Stats stats = tracker.getStats(fadvisedFileName);
       Assert.assertNull(stats);
       

@@ -106,9 +106,8 @@ public class ApplicationHistoryServer extends CompositeService {
     } catch(IOException ie) {
       throw new YarnRuntimeException("Failed to login", ie);
     }
-
-    startWebApp();
     super.serviceStart();
+    startWebApp();
   }
 
   @Override

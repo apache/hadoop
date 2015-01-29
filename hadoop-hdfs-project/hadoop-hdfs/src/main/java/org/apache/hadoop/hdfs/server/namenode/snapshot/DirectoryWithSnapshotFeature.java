@@ -28,6 +28,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.AclStorage;
 import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
@@ -317,6 +318,10 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       // this diff has been deleted
       Quota.Counts counts = Quota.Counts.newInstance();
       counts.add(diff.destroyDeletedList(collectedBlocks, removedINodes));
+      INodeDirectoryAttributes snapshotINode = getSnapshotINode();
+      if (snapshotINode != null && snapshotINode.getAclFeature() != null) {
+        AclStorage.removeAclFeature(snapshotINode.getAclFeature());
+      }
       return counts;
     }
   }

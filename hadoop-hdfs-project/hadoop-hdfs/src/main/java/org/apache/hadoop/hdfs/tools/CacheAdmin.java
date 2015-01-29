@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CacheFlag;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -53,11 +52,6 @@ import com.google.common.base.Joiner;
 @InterfaceAudience.Private
 public class CacheAdmin extends Configured implements Tool {
 
-  /**
-   * Maximum length for printed lines
-   */
-  private static final int MAX_LINE_WIDTH = 80;
-
   public CacheAdmin() {
     this(null);
   }
@@ -69,16 +63,17 @@ public class CacheAdmin extends Configured implements Tool {
   @Override
   public int run(String[] args) throws IOException {
     if (args.length == 0) {
-      printUsage(false);
+      AdminHelper.printUsage(false, "cacheadmin", COMMANDS);
       return 1;
     }
-    Command command = determineCommand(args[0]);
+    AdminHelper.Command command = AdminHelper.determineCommand(args[0],
+        COMMANDS);
     if (command == null) {
       System.err.println("Can't understand command '" + args[0] + "'");
       if (!args[0].startsWith("-")) {
         System.err.println("Command names must start with dashes.");
       }
-      printUsage(false);
+      AdminHelper.printUsage(false, "cacheadmin", COMMANDS);
       return 1;
     }
     List<String> argsList = new LinkedList<String>();
@@ -88,7 +83,7 @@ public class CacheAdmin extends Configured implements Tool {
     try {
       return command.run(getConf(), argsList);
     } catch (IllegalArgumentException e) {
-      System.err.println(prettifyException(e));
+      System.err.println(AdminHelper.prettifyException(e));
       return -1;
     }
   }
@@ -98,64 +93,9 @@ public class CacheAdmin extends Configured implements Tool {
     System.exit(cacheAdmin.run(argsArray));
   }
 
-  private static DistributedFileSystem getDFS(Configuration conf)
+  private static CacheDirectiveInfo.Expiration parseExpirationString(String ttlString)
       throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    if (!(fs instanceof DistributedFileSystem)) {
-      throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-      " is not an HDFS file system");
-    }
-    return (DistributedFileSystem)fs;
-  }
-
-  /**
-   * NN exceptions contain the stack trace as part of the exception message.
-   * When it's a known error, pretty-print the error and squish the stack trace.
-   */
-  private static String prettifyException(Exception e) {
-    return e.getClass().getSimpleName() + ": "
-        + e.getLocalizedMessage().split("\n")[0];
-  }
-
-  private static TableListing getOptionDescriptionListing() {
-    TableListing listing = new TableListing.Builder()
-    .addField("").addField("", true)
-    .wrapWidth(MAX_LINE_WIDTH).hideHeaders().build();
-    return listing;
-  }
-
-  /**
-   * Parses a time-to-live value from a string
-   * @return The ttl in milliseconds
-   * @throws IOException if it could not be parsed
-   */
-  private static Long parseTtlString(String maxTtlString) throws IOException {
-    Long maxTtl = null;
-    if (maxTtlString != null) {
-      if (maxTtlString.equalsIgnoreCase("never")) {
-        maxTtl = CachePoolInfo.RELATIVE_EXPIRY_NEVER;
-      } else {
-        maxTtl = DFSUtil.parseRelativeTime(maxTtlString);
-      }
-    }
-    return maxTtl;
-  }
-
-  private static Long parseLimitString(String limitString) {
-    Long limit = null;
-    if (limitString != null) {
-      if (limitString.equalsIgnoreCase("unlimited")) {
-        limit = CachePoolInfo.LIMIT_UNLIMITED;
-      } else {
-        limit = Long.parseLong(limitString);
-      }
-    }
-    return limit;
-  }
-
-  private static Expiration parseExpirationString(String ttlString)
-      throws IOException {
-    Expiration ex = null;
+    CacheDirectiveInfo.Expiration ex = null;
     if (ttlString != null) {
       if (ttlString.equalsIgnoreCase("never")) {
         ex = CacheDirectiveInfo.Expiration.NEVER;
@@ -167,14 +107,8 @@ public class CacheAdmin extends Configured implements Tool {
     return ex;
   }
 
-  interface Command {
-    String getName();
-    String getShortUsage();
-    String getLongUsage();
-    int run(Configuration conf, List<String> args) throws IOException;
-  }
-
-  private static class AddCacheDirectiveInfoCommand implements Command {
+  private static class AddCacheDirectiveInfoCommand
+      implements AdminHelper.Command {
     @Override
     public String getName() {
       return "-addDirective";
@@ -190,7 +124,7 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      TableListing listing = getOptionDescriptionListing();
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<path>", "A path to cache. The path can be " +
           "a directory or a file.");
       listing.addRow("<pool-name>", "The pool to which the directive will be " +
@@ -252,7 +186,7 @@ public class CacheAdmin extends Configured implements Tool {
         return 1;
       }
         
-      DistributedFileSystem dfs = getDFS(conf);
+      DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       CacheDirectiveInfo directive = builder.build();
       EnumSet<CacheFlag> flags = EnumSet.noneOf(CacheFlag.class);
       if (force) {
@@ -262,7 +196,7 @@ public class CacheAdmin extends Configured implements Tool {
         long id = dfs.addCacheDirective(directive, flags);
         System.out.println("Added cache directive " + id);
       } catch (IOException e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
 
@@ -270,7 +204,8 @@ public class CacheAdmin extends Configured implements Tool {
     }
   }
 
-  private static class RemoveCacheDirectiveInfoCommand implements Command {
+  private static class RemoveCacheDirectiveInfoCommand
+      implements AdminHelper.Command {
     @Override
     public String getName() {
       return "-removeDirective";
@@ -283,7 +218,7 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      TableListing listing = getOptionDescriptionListing();
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<id>", "The id of the cache directive to remove.  " + 
         "You must have write permission on the pool of the " +
         "directive in order to remove it.  To see a list " +
@@ -318,19 +253,20 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println("Usage is " + getShortUsage());
         return 1;
       }
-      DistributedFileSystem dfs = getDFS(conf);
+      DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         dfs.getClient().removeCacheDirective(id);
         System.out.println("Removed cached directive " + id);
       } catch (IOException e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       return 0;
     }
   }
 
-  private static class ModifyCacheDirectiveInfoCommand implements Command {
+  private static class ModifyCacheDirectiveInfoCommand
+      implements AdminHelper.Command {
     @Override
     public String getName() {
       return "-modifyDirective";
@@ -345,7 +281,7 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      TableListing listing = getOptionDescriptionListing();
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<id>", "The ID of the directive to modify (required)");
       listing.addRow("<path>", "A path to cache. The path can be " +
           "a directory or a file. (optional)");
@@ -415,7 +351,7 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println("No modifications were specified.");
         return 1;
       }
-      DistributedFileSystem dfs = getDFS(conf);
+      DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       EnumSet<CacheFlag> flags = EnumSet.noneOf(CacheFlag.class);
       if (force) {
         flags.add(CacheFlag.FORCE);
@@ -424,14 +360,15 @@ public class CacheAdmin extends Configured implements Tool {
         dfs.modifyCacheDirective(builder.build(), flags);
         System.out.println("Modified cache directive " + idString);
       } catch (IOException e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       return 0;
     }
   }
 
-  private static class RemoveCacheDirectiveInfosCommand implements Command {
+  private static class RemoveCacheDirectiveInfosCommand
+      implements AdminHelper.Command {
     @Override
     public String getName() {
       return "-removeDirectives";
@@ -444,7 +381,7 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      TableListing listing = getOptionDescriptionListing();
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("-path <path>", "The path of the cache directives to remove.  " +
         "You must have write permission on the pool of the directive in order " +
         "to remove it.  To see a list of cache directives, use the " +
@@ -468,7 +405,7 @@ public class CacheAdmin extends Configured implements Tool {
       }
       int exitCode = 0;
       try {
-        DistributedFileSystem dfs = getDFS(conf);
+        DistributedFileSystem dfs = AdminHelper.getDFS(conf);
         RemoteIterator<CacheDirectiveEntry> iter =
             dfs.listCacheDirectives(
                 new CacheDirectiveInfo.Builder().
@@ -480,12 +417,12 @@ public class CacheAdmin extends Configured implements Tool {
             System.out.println("Removed cache directive " +
                 entry.getInfo().getId());
           } catch (IOException e) {
-            System.err.println(prettifyException(e));
+            System.err.println(AdminHelper.prettifyException(e));
             exitCode = 2;
           }
         }
       } catch (IOException e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         exitCode = 2;
       }
       if (exitCode == 0) {
@@ -496,7 +433,8 @@ public class CacheAdmin extends Configured implements Tool {
     }
   }
 
-  private static class ListCacheDirectiveInfoCommand implements Command {
+  private static class ListCacheDirectiveInfoCommand
+      implements AdminHelper.Command {
     @Override
     public String getName() {
       return "-listDirectives";
@@ -510,7 +448,7 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      TableListing listing = getOptionDescriptionListing();
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("-stats", "List path-based cache directive statistics.");
       listing.addRow("<path>", "List only " +
           "cache directives with this path. " +
@@ -559,7 +497,7 @@ public class CacheAdmin extends Configured implements Tool {
       }
       TableListing tableListing = tableBuilder.build();
       try {
-        DistributedFileSystem dfs = getDFS(conf);
+        DistributedFileSystem dfs = AdminHelper.getDFS(conf);
         RemoteIterator<CacheDirectiveEntry> iter =
             dfs.listCacheDirectives(builder.build());
         int numEntries = 0;
@@ -587,7 +525,7 @@ public class CacheAdmin extends Configured implements Tool {
             row.add("" + stats.getFilesNeeded());
             row.add("" + stats.getFilesCached());
           }
-          tableListing.addRow(row.toArray(new String[0]));
+          tableListing.addRow(row.toArray(new String[row.size()]));
           numEntries++;
         }
         System.out.print(String.format("Found %d entr%s%n",
@@ -596,14 +534,14 @@ public class CacheAdmin extends Configured implements Tool {
           System.out.print(tableListing);
         }
       } catch (IOException e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       return 0;
     }
   }
 
-  private static class AddCachePoolCommand implements Command {
+  private static class AddCachePoolCommand implements AdminHelper.Command {
 
     private static final String NAME = "-addPool";
 
@@ -621,7 +559,7 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      TableListing listing = getOptionDescriptionListing();
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
 
       listing.addRow("<name>", "Name of the new pool.");
       listing.addRow("<owner>", "Username of the owner of the pool. " +
@@ -669,13 +607,13 @@ public class CacheAdmin extends Configured implements Tool {
         info.setMode(new FsPermission(mode));
       }
       String limitString = StringUtils.popOptionWithArgument("-limit", args);
-      Long limit = parseLimitString(limitString);
+      Long limit = AdminHelper.parseLimitString(limitString);
       if (limit != null) {
         info.setLimit(limit);
       }
       String maxTtlString = StringUtils.popOptionWithArgument("-maxTtl", args);
       try {
-        Long maxTtl = parseTtlString(maxTtlString);
+        Long maxTtl = AdminHelper.parseTtlString(maxTtlString);
         if (maxTtl != null) {
           info.setMaxRelativeExpiryMs(maxTtl);
         }
@@ -691,11 +629,11 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println("Usage is " + getShortUsage());
         return 1;
       }
-      DistributedFileSystem dfs = getDFS(conf);
+      DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         dfs.addCachePool(info);
       } catch (IOException e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       System.out.println("Successfully added cache pool " + name + ".");
@@ -703,7 +641,7 @@ public class CacheAdmin extends Configured implements Tool {
     }
   }
 
-  private static class ModifyCachePoolCommand implements Command {
+  private static class ModifyCachePoolCommand implements AdminHelper.Command {
 
     @Override
     public String getName() {
@@ -719,7 +657,7 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      TableListing listing = getOptionDescriptionListing();
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
 
       listing.addRow("<name>", "Name of the pool to modify.");
       listing.addRow("<owner>", "Username of the owner of the pool");
@@ -733,7 +671,7 @@ public class CacheAdmin extends Configured implements Tool {
       return getShortUsage() + "\n" +
           WordUtils.wrap("Modifies the metadata of an existing cache pool. " +
           "See usage of " + AddCachePoolCommand.NAME + " for more details.",
-          MAX_LINE_WIDTH) + "\n\n" +
+          AdminHelper.MAX_LINE_WIDTH) + "\n\n" +
           listing.toString();
     }
 
@@ -745,11 +683,11 @@ public class CacheAdmin extends Configured implements Tool {
       Integer mode = (modeString == null) ?
           null : Integer.parseInt(modeString, 8);
       String limitString = StringUtils.popOptionWithArgument("-limit", args);
-      Long limit = parseLimitString(limitString);
+      Long limit = AdminHelper.parseLimitString(limitString);
       String maxTtlString = StringUtils.popOptionWithArgument("-maxTtl", args);
-      Long maxTtl = null;
+      Long maxTtl;
       try {
-        maxTtl = parseTtlString(maxTtlString);
+        maxTtl = AdminHelper.parseTtlString(maxTtlString);
       } catch (IOException e) {
         System.err.println(
             "Error while parsing maxTtl value: " + e.getMessage());
@@ -794,11 +732,11 @@ public class CacheAdmin extends Configured implements Tool {
             "change in the cache pool.");
         return 1;
       }
-      DistributedFileSystem dfs = getDFS(conf);
+      DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         dfs.modifyCachePool(info);
       } catch (IOException e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       System.out.print("Successfully modified cache pool " + name);
@@ -827,7 +765,7 @@ public class CacheAdmin extends Configured implements Tool {
     }
   }
 
-  private static class RemoveCachePoolCommand implements Command {
+  private static class RemoveCachePoolCommand implements AdminHelper.Command {
 
     @Override
     public String getName() {
@@ -843,7 +781,7 @@ public class CacheAdmin extends Configured implements Tool {
     public String getLongUsage() {
       return getShortUsage() + "\n" +
           WordUtils.wrap("Remove a cache pool. This also uncaches paths " +
-              "associated with the pool.\n\n", MAX_LINE_WIDTH) +
+              "associated with the pool.\n\n", AdminHelper.MAX_LINE_WIDTH) +
           "<name>  Name of the cache pool to remove.\n";
     }
 
@@ -861,11 +799,11 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println("Usage is " + getShortUsage());
         return 1;
       }
-      DistributedFileSystem dfs = getDFS(conf);
+      DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         dfs.removeCachePool(name);
       } catch (IOException e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       System.out.println("Successfully removed cache pool " + name + ".");
@@ -873,7 +811,7 @@ public class CacheAdmin extends Configured implements Tool {
     }
   }
 
-  private static class ListCachePoolsCommand implements Command {
+  private static class ListCachePoolsCommand implements AdminHelper.Command {
 
     @Override
     public String getName() {
@@ -887,15 +825,14 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getLongUsage() {
-      TableListing listing = getOptionDescriptionListing();
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("-stats", "Display additional cache pool statistics.");
       listing.addRow("<name>", "If specified, list only the named cache pool.");
 
       return getShortUsage() + "\n" +
           WordUtils.wrap("Display information about one or more cache pools, " +
-              "e.g. name, owner, group, permissions, etc.", MAX_LINE_WIDTH) +
-          "\n\n" +
-          listing.toString();
+              "e.g. name, owner, group, permissions, etc.",
+              AdminHelper.MAX_LINE_WIDTH) + "\n\n" + listing.toString();
     }
 
     @Override
@@ -908,7 +845,7 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println("Usage is " + getShortUsage());
         return 1;
       }
-      DistributedFileSystem dfs = getDFS(conf);
+      DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       TableListing.Builder builder = new TableListing.Builder().
           addField("NAME", Justification.LEFT).
           addField("OWNER", Justification.LEFT).
@@ -949,7 +886,7 @@ public class CacheAdmin extends Configured implements Tool {
             String maxTtlString = null;
 
             if (maxTtl != null) {
-              if (maxTtl.longValue() == CachePoolInfo.RELATIVE_EXPIRY_NEVER) {
+              if (maxTtl == CachePoolInfo.RELATIVE_EXPIRY_NEVER) {
                 maxTtlString  = "never";
               } else {
                 maxTtlString = DFSUtil.durationToString(maxTtl);
@@ -964,7 +901,7 @@ public class CacheAdmin extends Configured implements Tool {
               row.add(Long.toString(stats.getFilesNeeded()));
               row.add(Long.toString(stats.getFilesCached()));
             }
-            listing.addRow(row.toArray(new String[] {}));
+            listing.addRow(row.toArray(new String[row.size()]));
             ++numResults;
             if (name != null) {
               break;
@@ -972,7 +909,7 @@ public class CacheAdmin extends Configured implements Tool {
           }
         }
       } catch (IOException e) {
-        System.err.println(prettifyException(e));
+        System.err.println(AdminHelper.prettifyException(e));
         return 2;
       }
       System.out.print(String.format("Found %d result%s.%n", numResults,
@@ -985,61 +922,7 @@ public class CacheAdmin extends Configured implements Tool {
     }
   }
 
-  private static class HelpCommand implements Command {
-    @Override
-    public String getName() {
-      return "-help";
-    }
-
-    @Override
-    public String getShortUsage() {
-      return "[-help <command-name>]\n";
-    }
-
-    @Override
-    public String getLongUsage() {
-      TableListing listing = getOptionDescriptionListing();
-      listing.addRow("<command-name>", "The command for which to get " +
-          "detailed help. If no command is specified, print detailed help for " +
-          "all commands");
-      return getShortUsage() + "\n" +
-        "Get detailed help about a command.\n\n" +
-        listing.toString();
-    }
-
-    @Override
-    public int run(Configuration conf, List<String> args) throws IOException {
-      if (args.size() == 0) {
-        for (Command command : COMMANDS) {
-          System.err.println(command.getLongUsage());
-        }
-        return 0;
-      }
-      if (args.size() != 1) {
-        System.out.println("You must give exactly one argument to -help.");
-        return 0;
-      }
-      String commandName = args.get(0);
-      // prepend a dash to match against the command names
-      Command command = determineCommand("-"+commandName);
-      if (command == null) {
-        System.err.print("Sorry, I don't know the command '" +
-          commandName + "'.\n");
-        System.err.print("Valid help command names are:\n");
-        String separator = "";
-        for (Command c : COMMANDS) {
-          System.err.print(separator + c.getName().substring(1));
-          separator = ", ";
-        }
-        System.err.print("\n");
-        return 1;
-      }
-      System.err.print(command.getLongUsage());
-      return 0;
-    }
-  }
-
-  private static final Command[] COMMANDS = {
+  private static final AdminHelper.Command[] COMMANDS = {
     new AddCacheDirectiveInfoCommand(),
     new ModifyCacheDirectiveInfoCommand(),
     new ListCacheDirectiveInfoCommand(),
@@ -1048,29 +931,6 @@ public class CacheAdmin extends Configured implements Tool {
     new AddCachePoolCommand(),
     new ModifyCachePoolCommand(),
     new RemoveCachePoolCommand(),
-    new ListCachePoolsCommand(),
-    new HelpCommand(),
+    new ListCachePoolsCommand()
   };
-
-  private static void printUsage(boolean longUsage) {
-    System.err.println(
-        "Usage: bin/hdfs cacheadmin [COMMAND]");
-    for (Command command : COMMANDS) {
-      if (longUsage) {
-        System.err.print(command.getLongUsage());
-      } else {
-        System.err.print("          " + command.getShortUsage());
-      }
-    }
-    System.err.println();
-  }
-
-  private static Command determineCommand(String commandName) {
-    for (int i = 0; i < COMMANDS.length; i++) {
-      if (COMMANDS[i].getName().equals(commandName)) {
-        return COMMANDS[i];
-      }
-    }
-    return null;
-  }
 }

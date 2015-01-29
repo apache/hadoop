@@ -203,6 +203,7 @@ public interface ClientProtocol {
    * Append to the end of the file. 
    * @param src path of the file being created.
    * @param clientName name of the current client.
+   * @param flag indicates whether the data is appended to a new block.
    * @return wrapper with information about the last partial block and file
    *    status if any
    * @throws AccessControlException if permission to append file is 
@@ -225,10 +226,10 @@ public interface ClientProtocol {
    * @throws UnsupportedOperationException if append is not supported
    */
   @AtMostOnce
-  public LastBlockWithStatus append(String src, String clientName)
-      throws AccessControlException, DSQuotaExceededException,
-      FileNotFoundException, SafeModeException, UnresolvedLinkException,
-      SnapshotAccessControlException, IOException;
+  public LastBlockWithStatus append(String src, String clientName,
+      EnumSetWritable<CreateFlag> flag) throws AccessControlException,
+      DSQuotaExceededException, FileNotFoundException, SafeModeException,
+      UnresolvedLinkException, SnapshotAccessControlException, IOException;
 
   /**
    * Set replication for an existing file.
@@ -521,7 +522,37 @@ public interface ClientProtocol {
       FileAlreadyExistsException, FileNotFoundException,
       NSQuotaExceededException, ParentNotDirectoryException, SafeModeException,
       UnresolvedLinkException, SnapshotAccessControlException, IOException;
-  
+
+  /**
+   * Truncate file src to new size.
+   * <ul>
+   * <li>Fails if src is a directory.
+   * <li>Fails if src does not exist.
+   * <li>Fails if src is not closed.
+   * <li>Fails if new size is greater than current size.
+   * </ul>
+   * <p>
+   * This implementation of truncate is purely a namespace operation if truncate
+   * occurs at a block boundary. Requires DataNode block recovery otherwise.
+   * <p>
+   * @param src  existing file
+   * @param newLength  the target size
+   *
+   * @return true if client does not need to wait for block recovery,
+   * false if client needs to wait for block recovery.
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If file <code>src</code> is not found
+   * @throws SafeModeException truncate not allowed in safemode
+   * @throws UnresolvedLinkException If <code>src</code> contains a symlink
+   * @throws SnapshotAccessControlException if path is in RO snapshot
+   * @throws IOException If an I/O error occurred
+   */
+  @Idempotent
+  public boolean truncate(String src, long newLength, String clientName)
+      throws AccessControlException, FileNotFoundException, SafeModeException,
+      UnresolvedLinkException, SnapshotAccessControlException, IOException;
+
   /**
    * Delete the given file or directory from the file system.
    * <p>

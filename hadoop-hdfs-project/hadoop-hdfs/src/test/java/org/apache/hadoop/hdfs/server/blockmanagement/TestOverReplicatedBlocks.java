@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
-import org.apache.hadoop.hdfs.TestDatanodeBlockScanner;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -54,6 +53,7 @@ public class TestOverReplicatedBlocks {
   @Test
   public void testProcesOverReplicateBlock() throws Exception {
     Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 100L);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
     conf.set(
         DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
@@ -68,16 +68,17 @@ public class TestOverReplicatedBlocks {
       
       // corrupt the block on datanode 0
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
-      assertTrue(TestDatanodeBlockScanner.corruptReplica(block, 0));
+      assertTrue(cluster.corruptReplica(0, block));
       DataNodeProperties dnProps = cluster.stopDataNode(0);
       // remove block scanner log to trigger block scanning
-      File scanLog = new File(MiniDFSCluster.getFinalizedDir(
+      File scanCursor = new File(new File(MiniDFSCluster.getFinalizedDir(
           cluster.getInstanceStorageDir(0, 0),
-          cluster.getNamesystem().getBlockPoolId()).getParent().toString()
-          + "/../dncp_block_verification.log.prev");
+          cluster.getNamesystem().getBlockPoolId()).getParent()).getParent(),
+          "scanner.cursor");
       //wait for one minute for deletion to succeed;
-      for(int i=0; !scanLog.delete(); i++) {
-        assertTrue("Could not delete log file in one minute", i < 60);
+      for(int i = 0; !scanCursor.delete(); i++) {
+        assertTrue("Could not delete " + scanCursor.getAbsolutePath() +
+            " in one minute", i < 60);
         try {
           Thread.sleep(1000);
         } catch (InterruptedException ignored) {}

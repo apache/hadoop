@@ -786,19 +786,35 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*Print statistics about the file/directory at &lt;path&gt; in the specified format.( )*</expected-output>
+          <expected-output>^( |\t)*Print statistics about the file/directory at &lt;path&gt;( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*Format accepts filesize in blocks \(%b\), group name of owner\(%g\), filename \(%n\),( )*</expected-output>
+          <expected-output>^( |\t)*in the specified format. Format accepts filesize in( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*block size \(%o\), replication \(%r\), user name of owner\(%u\), modification date( )*</expected-output>
+          <expected-output>^( |\t)*blocks \(%b\), type \(%F\), group name of owner \(%g\),( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*\(%y, %Y\)( )*</expected-output>
+          <expected-output>^( |\t)*name \(%n\), block size \(%o\), replication \(%r\), user name( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*of owner \(%u\), modification date \(%y, %Y\).( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*%y shows UTC date as "yyyy-MM-dd HH:mm:ss" and( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*%Y shows milliseconds since January 1, 1970 UTC.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*If the format is not specified, %y is used by default.( )*</expected-output>
         </comparator>
       </comparators>
     </test>

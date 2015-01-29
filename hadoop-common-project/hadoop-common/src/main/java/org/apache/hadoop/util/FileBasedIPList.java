@@ -50,7 +50,7 @@ public class FileBasedIPList implements IPList {
 
   public FileBasedIPList(String fileName) {
     this.fileName = fileName;
-    String[] lines = new String[0];
+    String[] lines;
     try {
       lines = readLines(fileName);
     } catch (IOException e) {

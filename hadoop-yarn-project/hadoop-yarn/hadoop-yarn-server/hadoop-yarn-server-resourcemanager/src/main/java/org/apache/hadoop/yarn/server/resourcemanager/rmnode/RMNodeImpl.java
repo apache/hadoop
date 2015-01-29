@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -447,6 +448,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     case UNHEALTHY:
       metrics.decrNumUnhealthyNMs();
       break;
+    default:
+      LOG.debug("Unexpected previous node state");    
     }
   }
 
@@ -461,6 +464,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       case UNHEALTHY:
         metrics.decrNumUnhealthyNMs();
         break;
+      default:
+        LOG.debug("Unexpected inital state");
     }
 
     switch (finalState) {
@@ -476,6 +481,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     case UNHEALTHY:
       metrics.incrNumUnhealthyNMs();
       break;
+    default:
+      LOG.debug("Unexpected final state");
     }
   }
 
@@ -582,6 +589,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             case UNHEALTHY:
               ClusterMetrics.getMetrics().decrNumUnhealthyNMs();
               break;
+            default:
+              LOG.debug("Unexpected Rmnode state");
             }
             rmNode.context.getRMNodes().put(newNode.getNodeID(), newNode);
             rmNode.context.getDispatcher().getEventHandler().handle(
@@ -858,9 +867,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   @Override
   public Set<String> getNodeLabels() {
-    if (context.getNodeLabelManager() == null) {
+    RMNodeLabelsManager nlm = context.getNodeLabelManager();
+    if (nlm == null || nlm.getLabelsOnNode(nodeId) == null) {
       return CommonNodeLabelsManager.EMPTY_STRING_SET;
     }
-    return context.getNodeLabelManager().getLabelsOnNode(nodeId);
+    return nlm.getLabelsOnNode(nodeId);
   }
  }

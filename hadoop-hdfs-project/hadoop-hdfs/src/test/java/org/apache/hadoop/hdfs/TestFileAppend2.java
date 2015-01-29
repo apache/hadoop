@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -24,14 +25,18 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -67,11 +72,7 @@ public class TestFileAppend2 {
   final int numberOfFiles = 50;
   final int numThreads = 10;
   final int numAppendsPerThread = 20;
-/***
-  int numberOfFiles = 1;
-  int numThreads = 1;
-  int numAppendsPerThread = 2000;
-****/
+
   Workload[] workload = null;
   final ArrayList<Path> testFiles = new ArrayList<Path>();
   volatile static boolean globalStatus = true;
@@ -229,16 +230,170 @@ public class TestFileAppend2 {
     }
   }
 
+  /**
+   * Creates one file, writes a few bytes to it and then closed it.
+   * Reopens the same file for appending using append2 API, write all blocks and
+   * then close. Verify that all data exists in file.
+   */
+  @Test
+  public void testSimpleAppend2() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    if (simulatedStorage) {
+      SimulatedFSDataset.setFactory(conf);
+    }
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 50);
+    fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      { // test appending to a file.
+        // create a new file.
+        Path file1 = new Path("/simpleAppend.dat");
+        FSDataOutputStream stm = AppendTestUtil.createFile(fs, file1, 1);
+        System.out.println("Created file simpleAppend.dat");
+
+        // write to file
+        int mid = 186;   // io.bytes.per.checksum bytes
+        System.out.println("Writing " + mid + " bytes to file " + file1);
+        stm.write(fileContents, 0, mid);
+        stm.close();
+        System.out.println("Wrote and Closed first part of file.");
+
+        // write to file
+        int mid2 = 607;   // io.bytes.per.checksum bytes
+        System.out.println("Writing " + mid + " bytes to file " + file1);
+        stm = fs.append(file1,
+            EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null);
+        stm.write(fileContents, mid, mid2-mid);
+        stm.close();
+        System.out.println("Wrote and Closed second part of file.");
+
+        // write the remainder of the file
+        stm = fs.append(file1,
+            EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null);
+        // ensure getPos is set to reflect existing size of the file
+        assertTrue(stm.getPos() > 0);
+        System.out.println("Writing " + (AppendTestUtil.FILE_SIZE - mid2) +
+            " bytes to file " + file1);
+        stm.write(fileContents, mid2, AppendTestUtil.FILE_SIZE - mid2);
+        System.out.println("Written second part of file");
+        stm.close();
+        System.out.println("Wrote and Closed second part of file.");
+
+        // verify that entire file is good
+        AppendTestUtil.checkFullFile(fs, file1, AppendTestUtil.FILE_SIZE,
+            fileContents, "Read 2");
+        // also make sure there three different blocks for the file
+        List<LocatedBlock> blocks = fs.getClient().getLocatedBlocks(
+            file1.toString(), 0L).getLocatedBlocks();
+        assertEquals(12, blocks.size()); // the block size is 1024
+        assertEquals(mid, blocks.get(0).getBlockSize());
+        assertEquals(mid2 - mid, blocks.get(1).getBlockSize());
+        for (int i = 2; i < 11; i++) {
+          assertEquals(AppendTestUtil.BLOCK_SIZE, blocks.get(i).getBlockSize());
+        }
+        assertEquals((AppendTestUtil.FILE_SIZE - mid2)
+            % AppendTestUtil.BLOCK_SIZE, blocks.get(11).getBlockSize());
+      }
+
+      { // test appending to an non-existing file.
+        FSDataOutputStream out = null;
+        try {
+          out = fs.append(new Path("/non-existing.dat"),
+              EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null);
+          fail("Expected to have FileNotFoundException");
+        } catch(java.io.FileNotFoundException fnfe) {
+          System.out.println("Good: got " + fnfe);
+          fnfe.printStackTrace(System.out);
+        } finally {
+          IOUtils.closeStream(out);
+        }
+      }
+
+      { // test append permission.
+        // set root to all writable
+        Path root = new Path("/");
+        fs.setPermission(root, new FsPermission((short)0777));
+        fs.close();
+
+        // login as a different user
+        final UserGroupInformation superuser =
+          UserGroupInformation.getCurrentUser();
+        String username = "testappenduser";
+        String group = "testappendgroup";
+        assertFalse(superuser.getShortUserName().equals(username));
+        assertFalse(Arrays.asList(superuser.getGroupNames()).contains(group));
+        UserGroupInformation appenduser = UserGroupInformation
+            .createUserForTesting(username, new String[] { group });
+
+        fs = (DistributedFileSystem) DFSTestUtil.getFileSystemAs(appenduser,
+            conf);
+
+        // create a file
+        Path dir = new Path(root, getClass().getSimpleName());
+        Path foo = new Path(dir, "foo.dat");
+        FSDataOutputStream out = null;
+        int offset = 0;
+        try {
+          out = fs.create(foo);
+          int len = 10 + AppendTestUtil.nextInt(100);
+          out.write(fileContents, offset, len);
+          offset += len;
+        } finally {
+          IOUtils.closeStream(out);
+        }
+
+        // change dir and foo to minimal permissions.
+        fs.setPermission(dir, new FsPermission((short)0100));
+        fs.setPermission(foo, new FsPermission((short)0200));
+
+        // try append, should success
+        out = null;
+        try {
+          out = fs.append(foo,
+              EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null);
+          int len = 10 + AppendTestUtil.nextInt(100);
+          out.write(fileContents, offset, len);
+          offset += len;
+        } finally {
+          IOUtils.closeStream(out);
+        }
+
+        // change dir and foo to all but no write on foo.
+        fs.setPermission(foo, new FsPermission((short)0577));
+        fs.setPermission(dir, new FsPermission((short)0777));
+
+        // try append, should fail
+        out = null;
+        try {
+          out = fs.append(foo,
+              EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null);
+          fail("Expected to have AccessControlException");
+        } catch(AccessControlException ace) {
+          System.out.println("Good: got " + ace);
+          ace.printStackTrace(System.out);
+        } finally {
+          IOUtils.closeStream(out);
+        }
+      }
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
+
   //
   // an object that does a bunch of appends to files
   //
   class Workload extends Thread {
     private final int id;
     private final MiniDFSCluster cluster;
+    private final boolean appendToNewBlock;
 
-    Workload(MiniDFSCluster cluster, int threadIndex) {
+    Workload(MiniDFSCluster cluster, int threadIndex, boolean append2) {
       id = threadIndex;
       this.cluster = cluster;
+      this.appendToNewBlock = append2;
     }
 
     // create a bunch of files. Write to them and then verify.
@@ -261,7 +416,7 @@ public class TestFileAppend2 {
         long len = 0;
         int sizeToAppend = 0;
         try {
-          FileSystem fs = cluster.getFileSystem();
+          DistributedFileSystem fs = cluster.getFileSystem();
 
           // add a random number of bytes to file
           len = fs.getFileStatus(testfile).getLen();
@@ -285,7 +440,9 @@ public class TestFileAppend2 {
                              " appending " + sizeToAppend + " bytes " +
                              " to file " + testfile +
                              " of size " + len);
-          FSDataOutputStream stm = fs.append(testfile);
+          FSDataOutputStream stm = appendToNewBlock ? fs.append(testfile,
+                  EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null)
+              : fs.append(testfile);
           stm.write(fileContents, (int)len, sizeToAppend);
           stm.close();
 
@@ -298,7 +455,7 @@ public class TestFileAppend2 {
                                  " expected size " + (len + sizeToAppend) +
                                  " waiting for namenode metadata update.");
               Thread.sleep(5000);
-            } catch (InterruptedException e) {;}
+            } catch (InterruptedException e) {}
           }
 
           assertTrue("File " + testfile + " size is " + 
@@ -306,7 +463,7 @@ public class TestFileAppend2 {
                      " but expected " + (len + sizeToAppend),
                     fs.getFileStatus(testfile).getLen() == (len + sizeToAppend));
 
-          AppendTestUtil.checkFullFile(fs, testfile, (int)(len + sizeToAppend),
+          AppendTestUtil.checkFullFile(fs, testfile, (int) (len + sizeToAppend),
               fileContents, "Read 2");
         } catch (Throwable e) {
           globalStatus = false;
@@ -331,10 +488,8 @@ public class TestFileAppend2 {
 
   /**
    * Test that appends to files at random offsets.
-   * @throws IOException an exception might be thrown
    */
-  @Test
-  public void testComplexAppend() throws IOException {
+  private void testComplexAppend(boolean appendToNewBlock) throws IOException {
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
@@ -366,7 +521,7 @@ public class TestFileAppend2 {
       // Create threads and make them run workload concurrently.
       workload = new Workload[numThreads];
       for (int i = 0; i < numThreads; i++) {
-        workload[i] = new Workload(cluster, i);
+        workload[i] = new Workload(cluster, i, appendToNewBlock);
         workload[i].start();
       }
 
@@ -389,5 +544,15 @@ public class TestFileAppend2 {
     // this test failed.
     //
     assertTrue("testComplexAppend Worker encountered exceptions.", globalStatus);
+  }
+
+  @Test
+  public void testComplexAppend() throws IOException {
+    testComplexAppend(false);
+  }
+
+  @Test
+  public void testComplexAppend2() throws IOException {
+    testComplexAppend(true);
   }
 }

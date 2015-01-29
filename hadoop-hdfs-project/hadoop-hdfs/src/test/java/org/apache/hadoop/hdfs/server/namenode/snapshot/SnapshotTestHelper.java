@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
-import org.apache.hadoop.hdfs.server.datanode.DataBlockScanner;
+import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
@@ -89,7 +89,7 @@ public class SnapshotTestHelper {
     GenericTestUtils.disableLog(LogFactory.getLog(DirectoryScanner.class));
     GenericTestUtils.disableLog(LogFactory.getLog(MetricsSystemImpl.class));
     
-    GenericTestUtils.disableLog(DataBlockScanner.LOG);
+    GenericTestUtils.disableLog(BlockScanner.LOG);
     GenericTestUtils.disableLog(HttpServer2.LOG);
     GenericTestUtils.disableLog(DataNode.LOG);
     GenericTestUtils.disableLog(BlockPoolSliceStorage.LOG);

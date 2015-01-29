@@ -357,9 +357,9 @@ public class DFSOutputStream extends FSOutputSummer
     
     @Override
     public String toString() {
-      return "packet seqno:" + this.seqno +
-      " offsetInBlock:" + this.offsetInBlock + 
-      " lastPacketInBlock:" + this.lastPacketInBlock +
+      return "packet seqno: " + this.seqno +
+      " offsetInBlock: " + this.offsetInBlock +
+      " lastPacketInBlock: " + this.lastPacketInBlock +
       " lastByteOffsetInBlock: " + this.getLastByteOffsetBlock();
     }
   }
@@ -426,15 +426,16 @@ public class DFSOutputStream extends FSOutputSummer
     /**
      * construction with tracing info
      */
-    private DataStreamer(HdfsFileStatus stat, Span span) {
+    private DataStreamer(HdfsFileStatus stat, ExtendedBlock block, Span span) {
       isAppend = false;
       isLazyPersistFile = isLazyPersist(stat);
+      this.block = block;
       stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
       traceSpan = span;
     }
     
     /**
-     * Construct a data streamer for append
+     * Construct a data streamer for appending to the last partial block
      * @param lastBlock last block of the file to be appended
      * @param stat status of the file to be appended
      * @param bytesPerChecksum number of bytes per checksum
@@ -1716,7 +1717,7 @@ public class DFSOutputStream extends FSOutputSummer
     if (Trace.isTracing()) {
       traceSpan = Trace.startSpan(this.getClass().getSimpleName()).detach();
     }
-    streamer = new DataStreamer(stat, traceSpan);
+    streamer = new DataStreamer(stat, null, traceSpan);
     if (favoredNodes != null && favoredNodes.length != 0) {
       streamer.setFavoredNodes(favoredNodes);
     }
@@ -1773,7 +1774,7 @@ public class DFSOutputStream extends FSOutputSummer
   }
 
   /** Construct a new output stream for append. */
-  private DFSOutputStream(DFSClient dfsClient, String src,
+  private DFSOutputStream(DFSClient dfsClient, String src, boolean toNewBlock,
       Progressable progress, LocatedBlock lastBlock, HdfsFileStatus stat,
       DataChecksum checksum) throws IOException {
     this(dfsClient, src, progress, stat, checksum);
@@ -1785,21 +1786,24 @@ public class DFSOutputStream extends FSOutputSummer
     }
 
     // The last partial block of the file has to be filled.
-    if (lastBlock != null) {
+    if (!toNewBlock && lastBlock != null) {
       // indicate that we are appending to an existing block
       bytesCurBlock = lastBlock.getBlockSize();
       streamer = new DataStreamer(lastBlock, stat, bytesPerChecksum, traceSpan);
     } else {
-      computePacketChunkSize(dfsClient.getConf().writePacketSize, bytesPerChecksum);
-      streamer = new DataStreamer(stat, traceSpan);
+      computePacketChunkSize(dfsClient.getConf().writePacketSize,
+          bytesPerChecksum);
+      streamer = new DataStreamer(stat,
+          lastBlock != null ? lastBlock.getBlock() : null, traceSpan);
     }
     this.fileEncryptionInfo = stat.getFileEncryptionInfo();
   }
 
   static DFSOutputStream newStreamForAppend(DFSClient dfsClient, String src,
-      int buffersize, Progressable progress, LocatedBlock lastBlock,
-      HdfsFileStatus stat, DataChecksum checksum) throws IOException {
-    final DFSOutputStream out = new DFSOutputStream(dfsClient, src,
+      boolean toNewBlock, int bufferSize, Progressable progress,
+      LocatedBlock lastBlock, HdfsFileStatus stat, DataChecksum checksum)
+      throws IOException {
+    final DFSOutputStream out = new DFSOutputStream(dfsClient, src, toNewBlock,
         progress, lastBlock, stat, checksum);
     out.start();
     return out;
@@ -1995,35 +1999,37 @@ public class DFSOutputStream extends FSOutputSummer
       long toWaitFor;
       long lastBlockLength = -1L;
       boolean updateLength = syncFlags.contains(SyncFlag.UPDATE_LENGTH);
+      boolean endBlock = syncFlags.contains(SyncFlag.END_BLOCK);
       synchronized (this) {
-        // flush checksum buffer, but keep checksum buffer intact
-        int numKept = flushBuffer(true, true);
+        // flush checksum buffer, but keep checksum buffer intact if we do not
+        // need to end the current block
+        int numKept = flushBuffer(!endBlock, true);
         // bytesCurBlock potentially incremented if there was buffered data
 
         if (DFSClient.LOG.isDebugEnabled()) {
-          DFSClient.LOG.debug(
-            "DFSClient flush() :" +
-            " bytesCurBlock " + bytesCurBlock +
-            " lastFlushOffset " + lastFlushOffset);
+          DFSClient.LOG.debug("DFSClient flush(): "
+              + " bytesCurBlock=" + bytesCurBlock
+              + " lastFlushOffset=" + lastFlushOffset
+              + " createNewBlock=" + endBlock);
         }
         // Flush only if we haven't already flushed till this offset.
         if (lastFlushOffset != bytesCurBlock) {
           assert bytesCurBlock > lastFlushOffset;
           // record the valid offset of this flush
           lastFlushOffset = bytesCurBlock;
-          if (isSync && currentPacket == null) {
+          if (isSync && currentPacket == null && !endBlock) {
             // Nothing to send right now,
             // but sync was requested.
-            // Send an empty packet
+            // Send an empty packet if we do not end the block right now
             currentPacket = createPacket(packetSize, chunksPerPacket,
                 bytesCurBlock, currentSeqno++);
           }
         } else {
-          if (isSync && bytesCurBlock > 0) {
+          if (isSync && bytesCurBlock > 0 && !endBlock) {
             // Nothing to send right now,
             // and the block was partially written,
             // and sync was requested.
-            // So send an empty sync packet.
+            // So send an empty sync packet if we do not end the block right now
             currentPacket = createPacket(packetSize, chunksPerPacket,
                 bytesCurBlock, currentSeqno++);
           } else if (currentPacket != null) {
@@ -2036,10 +2042,21 @@ public class DFSOutputStream extends FSOutputSummer
           currentPacket.syncBlock = isSync;
           waitAndQueueCurrentPacket();          
         }
-        // Restore state of stream. Record the last flush offset 
-        // of the last full chunk that was flushed.
-        //
-        bytesCurBlock -= numKept;
+        if (endBlock && bytesCurBlock > 0) {
+          // Need to end the current block, thus send an empty packet to
+          // indicate this is the end of the block and reset bytesCurBlock
+          currentPacket = createPacket(0, 0, bytesCurBlock, currentSeqno++);
+          currentPacket.lastPacketInBlock = true;
+          currentPacket.syncBlock = shouldSyncBlock || isSync;
+          waitAndQueueCurrentPacket();
+          bytesCurBlock = 0;
+          lastFlushOffset = 0;
+        } else {
+          // Restore state of stream. Record the last flush offset
+          // of the last full chunk that was flushed.
+          bytesCurBlock -= numKept;
+        }
+
         toWaitFor = lastQueuedSeqno;
       } // end synchronized
 
@@ -2058,8 +2075,8 @@ public class DFSOutputStream extends FSOutputSummer
       // namenode.
       if (persistBlocks.getAndSet(false) || updateLength) {
         try {
-          dfsClient.namenode.fsync(src, fileId,
-              dfsClient.clientName, lastBlockLength);
+          dfsClient.namenode.fsync(src, fileId, dfsClient.clientName,
+              lastBlockLength);
         } catch (IOException ioe) {
           DFSClient.LOG.warn("Unable to persist blocks in hflush for " + src, ioe);
           // If we got an error here, it might be because some other thread called
@@ -2086,7 +2103,7 @@ public class DFSOutputStream extends FSOutputSummer
       DFSClient.LOG.warn("Error while syncing", e);
       synchronized (this) {
         if (!isClosed()) {
-          lastException.set(new IOException("IOException flush:" + e));
+          lastException.set(new IOException("IOException flush: " + e));
           closeThreads(true);
         }
       }

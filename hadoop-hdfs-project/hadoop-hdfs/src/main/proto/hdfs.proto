@@ -554,8 +554,9 @@ enum ReplicaStateProto {
  * Block that needs to be recovered with at a given location
  */
 message RecoveringBlockProto {
-  required uint64 newGenStamp = 1;      // New genstamp post recovery
-  required LocatedBlockProto block = 2; // Block to be recovered
+  required uint64 newGenStamp = 1;        // New genstamp post recovery
+  required LocatedBlockProto block = 2;   // Block to be recovered
+  optional BlockProto truncateBlock = 3;  // New block for recovery (truncate)
 }
 
 /**

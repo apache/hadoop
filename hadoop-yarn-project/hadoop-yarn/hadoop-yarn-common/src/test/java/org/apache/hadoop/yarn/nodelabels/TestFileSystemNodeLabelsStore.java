@@ -63,6 +63,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
   public void before() throws IOException {
     mgr = new MockNodeLabelManager();
     conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     File tempDir = File.createTempFile("nlb", ".tmp");
     tempDir.delete();
     tempDir.mkdirs();

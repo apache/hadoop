@@ -26,7 +26,7 @@ public class TestKMSACLs {
 
   @Test
   public void testDefaults() {
-    KMSACLs acls = new KMSACLs(new Configuration(false));
+    final KMSACLs acls = new KMSACLs(new Configuration(false));
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
       Assert.assertTrue(acls.hasAccess(type,
           UserGroupInformation.createRemoteUser("foo")));
@@ -35,11 +35,11 @@ public class TestKMSACLs {
 
   @Test
   public void testCustom() {
-    Configuration conf = new Configuration(false);
+    final Configuration conf = new Configuration(false);
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
       conf.set(type.getAclConfigKey(), type.toString() + " ");
     }
-    KMSACLs acls = new KMSACLs(conf);
+    final KMSACLs acls = new KMSACLs(conf);
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
       Assert.assertTrue(acls.hasAccess(type,
           UserGroupInformation.createRemoteUser(type.toString())));
@@ -48,4 +48,16 @@ public class TestKMSACLs {
     }
   }
 
+  @Test
+  public void testKeyAclConfigurationLoad() {
+    final Configuration conf = new Configuration(false);
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "test_key_1.MANAGEMENT", "CREATE");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "test_key_2.ALL", "CREATE");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "test_key_3.NONEXISTOPERATION", "CREATE");
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "MANAGEMENT", "ROLLOVER");
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT", "DECRYPT_EEK");
+    final KMSACLs acls = new KMSACLs(conf);
+    Assert.assertTrue("expected key ACL size is 2 but got " + acls.keyAcls.size(),
+        acls.keyAcls.size() == 2);
+  }
 }

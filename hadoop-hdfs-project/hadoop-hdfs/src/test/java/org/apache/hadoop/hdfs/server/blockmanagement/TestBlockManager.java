@@ -571,11 +571,13 @@ public class TestBlockManager {
     reset(node);
     bm.getDatanodeManager().registerDatanode(nodeReg);
     verify(node).updateRegInfo(nodeReg);
-    assertEquals(0, ds.getBlockReportCount()); // ready for report again
     // send block report, should be processed after restart
     reset(node);
     bm.processReport(node, new DatanodeStorage(ds.getStorageID()),
-        new BlockListAsLongs(null, null));
+                     new BlockListAsLongs(null, null));
+    // Reinitialize as registration with empty storage list pruned
+    // node.storageMap.
+    ds = node.getStorageInfos()[0];
     assertEquals(1, ds.getBlockReportCount());
   }
   

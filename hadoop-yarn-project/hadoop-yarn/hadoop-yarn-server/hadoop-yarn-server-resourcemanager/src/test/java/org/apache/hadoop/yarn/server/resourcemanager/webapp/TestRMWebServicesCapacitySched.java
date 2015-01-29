@@ -82,8 +82,6 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     int numContainers;
     int maxApplications;
     int maxApplicationsPerUser;
-    int maxActiveApplications;
-    int maxActiveApplicationsPerUser;
     int userLimit;
     float userLimitFactor;
   }
@@ -303,10 +301,6 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(qElem, "maxApplications");
       lqi.maxApplicationsPerUser =
           WebServicesTestUtils.getXmlInt(qElem, "maxApplicationsPerUser");
-      lqi.maxActiveApplications =
-          WebServicesTestUtils.getXmlInt(qElem, "maxActiveApplications");
-      lqi.maxActiveApplicationsPerUser =
-          WebServicesTestUtils.getXmlInt(qElem, "maxActiveApplicationsPerUser");
       lqi.userLimit = WebServicesTestUtils.getXmlInt(qElem, "userLimit");
       lqi.userLimitFactor =
           WebServicesTestUtils.getXmlFloat(qElem, "userLimitFactor");
@@ -353,7 +347,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     int numExpectedElements = 13;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 23;
+      numExpectedElements = 24;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
@@ -386,8 +380,6 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       lqi.numContainers = info.getInt("numContainers");
       lqi.maxApplications = info.getInt("maxApplications");
       lqi.maxApplicationsPerUser = info.getInt("maxApplicationsPerUser");
-      lqi.maxActiveApplications = info.getInt("maxActiveApplications");
-      lqi.maxActiveApplicationsPerUser = info.getInt("maxActiveApplicationsPerUser");
       lqi.userLimit = info.getInt("userLimit");
       lqi.userLimitFactor = (float) info.getDouble("userLimitFactor");
       verifyLeafQueueGeneric(q, lqi);
@@ -449,10 +441,6 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         (float)expectedMaxAppsPerUser,
         (float)info.maxApplicationsPerUser, info.userLimitFactor);
 
-    assertTrue("maxActiveApplications doesn't match",
-        info.maxActiveApplications > 0);
-    assertTrue("maxActiveApplicationsPerUser doesn't match",
-        info.maxActiveApplicationsPerUser > 0);
     assertEquals("userLimit doesn't match", csConf.getUserLimit(q),
         info.userLimit);
     assertEquals("userLimitFactor doesn't match",

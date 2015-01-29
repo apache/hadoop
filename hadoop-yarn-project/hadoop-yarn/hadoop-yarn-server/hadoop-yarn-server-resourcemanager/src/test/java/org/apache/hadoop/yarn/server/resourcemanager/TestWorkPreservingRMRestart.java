@@ -500,6 +500,8 @@ public class TestWorkPreservingRMRestart {
     rm1.clearQueueMetrics(app1_2);
     rm1.clearQueueMetrics(app2);
 
+    csConf.set("yarn.scheduler.capacity.root.Default.QueueB.state", "STOPPED");
+
     // Re-start RM
     rm2 = new MockRM(csConf, memStore);
     rm2.start();
@@ -837,7 +839,7 @@ public class TestWorkPreservingRMRestart {
   // Test if RM on recovery receives the container release request from AM
   // before it receives the container status reported by NM for recovery. this
   // container should not be recovered.
-  @Test (timeout = 30000)
+  @Test (timeout = 50000)
   public void testReleasedContainerNotRecovered() throws Exception {
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);

@@ -29,9 +29,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -96,6 +98,15 @@ public class FSImage implements Closeable {
   final private Configuration conf;
 
   protected NNStorageRetentionManager archivalManager;
+
+  /* Used to make sure there are no concurrent checkpoints for a given txid
+   * The checkpoint here could be one of the following operations.
+   * a. checkpoint when NN is in standby.
+   * b. admin saveNameSpace operation.
+   * c. download checkpoint file from any remote checkpointer.
+  */
+  private final Set<Long> currentlyCheckpointing =
+      Collections.<Long>synchronizedSet(new HashSet<Long>());
 
   /**
    * Construct an FSImage
@@ -1058,18 +1069,26 @@ public class FSImage implements Closeable {
       editLog.endCurrentLogSegment(true);
     }
     long imageTxId = getLastAppliedOrWrittenTxId();
+    if (!addToCheckpointing(imageTxId)) {
+      throw new IOException(
+          "FS image is being downloaded from another NN at txid " + imageTxId);
+    }
     try {
-      saveFSImageInAllDirs(source, nnf, imageTxId, canceler);
-      storage.writeAll();
-    } finally {
-      if (editLogWasOpen) {
-        editLog.startLogSegmentAndWriteHeaderTxn(imageTxId + 1);
-        // Take this opportunity to note the current transaction.
-        // Even if the namespace save was cancelled, this marker
-        // is only used to determine what transaction ID is required
-        // for startup. So, it doesn't hurt to update it unnecessarily.
-        storage.writeTransactionIdFileToStorage(imageTxId + 1);
+      try {
+        saveFSImageInAllDirs(source, nnf, imageTxId, canceler);
+        storage.writeAll();
+      } finally {
+        if (editLogWasOpen) {
+          editLog.startLogSegmentAndWriteHeaderTxn(imageTxId + 1);
+          // Take this opportunity to note the current transaction.
+          // Even if the namespace save was cancelled, this marker
+          // is only used to determine what transaction ID is required
+          // for startup. So, it doesn't hurt to update it unnecessarily.
+          storage.writeTransactionIdFileToStorage(imageTxId + 1);
+        }
       }
+    } finally {
+      removeFromCheckpointing(imageTxId);
     }
   }
 
@@ -1078,7 +1097,22 @@ public class FSImage implements Closeable {
    */
   protected synchronized void saveFSImageInAllDirs(FSNamesystem source, long txid)
       throws IOException {
-    saveFSImageInAllDirs(source, NameNodeFile.IMAGE, txid, null);
+    if (!addToCheckpointing(txid)) {
+      throw new IOException(("FS image is being downloaded from another NN"));
+    }
+    try {
+      saveFSImageInAllDirs(source, NameNodeFile.IMAGE, txid, null);
+    } finally {
+      removeFromCheckpointing(txid);
+    }
+  }
+
+  public boolean addToCheckpointing(long txid) {
+    return currentlyCheckpointing.add(txid);
+  }
+
+  public void removeFromCheckpointing(long txid) {
+    currentlyCheckpointing.remove(txid);
   }
 
   private synchronized void saveFSImageInAllDirs(FSNamesystem source,

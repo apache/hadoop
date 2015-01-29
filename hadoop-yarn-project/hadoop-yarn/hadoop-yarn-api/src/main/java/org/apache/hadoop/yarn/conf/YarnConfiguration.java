@@ -356,18 +356,18 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE =
       10;
 
-  //Delegation token related keys
-  public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 
+  //RM delegation token related keys
+  public static final String RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY =
     RM_PREFIX + "delegation.key.update-interval";
-  public static final long    DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT = 
+  public static final long RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT =
     24*60*60*1000; // 1 day
-  public static final String  DELEGATION_TOKEN_RENEW_INTERVAL_KEY = 
+  public static final String RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY =
     RM_PREFIX + "delegation.token.renew-interval";
-  public static final long    DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT = 
+  public static final long RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT =
     24*60*60*1000;  // 1 day
-  public static final String  DELEGATION_TOKEN_MAX_LIFETIME_KEY = 
+  public static final String RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY =
      RM_PREFIX + "delegation.token.max-lifetime";
-  public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT = 
+  public static final long RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
     7*24*60*60*1000; // 7 days
   
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
@@ -378,7 +378,7 @@ public class YarnConfiguration extends Configuration {
       + "work-preserving-recovery.enabled";
   @Private
   public static final boolean DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED =
-      false;
+      true;
 
   public static final String RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS =
       RM_PREFIX + "work-preserving-recovery.scheduling-wait-ms";
@@ -822,6 +822,20 @@ public class YarnConfiguration extends Configuration {
       "container-monitor.procfs-tree.smaps-based-rss.enabled";
   public static final boolean DEFAULT_PROCFS_USE_SMAPS_BASED_RSS_ENABLED =
       false;
+
+  /** Enable/disable container metrics. */
+  @Private
+  public static final String NM_CONTAINER_METRICS_ENABLE =
+      NM_PREFIX + "container-metrics.enable";
+  @Private
+  public static final boolean DEFAULT_NM_CONTAINER_METRICS_ENABLE = true;
+
+  /** Container metrics flush period. -1 for flush on completion. */
+  @Private
+  public static final String NM_CONTAINER_METRICS_PERIOD_MS =
+      NM_PREFIX + "container-metrics.period-ms";
+  @Private
+  public static final int DEFAULT_NM_CONTAINER_METRICS_PERIOD_MS = -1;
   
   /** Prefix for all node manager disk health checker configs. */
   private static final String NM_DISK_HEALTH_CHECK_PREFIX =
@@ -1137,7 +1151,7 @@ public class YarnConfiguration extends Configuration {
    * OS environment expansion syntax.
    * </p>
    * <p>
-   * Note: Use {@link DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH} for
+   * Note: Use {@link #DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH} for
    * cross-platform practice i.e. submit an application from a Windows client to
    * a Linux/Unix server or vice versa.
    * </p>
@@ -1190,6 +1204,11 @@ public class YarnConfiguration extends Configuration {
       YARN_MC_PREFIX + "control-resource-monitoring";
   public static final boolean
       DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING = false;
+
+  /** Allow changing the memory for the NodeManager in the MiniYARNCluster */
+  public static final String YARN_MINICLUSTER_NM_PMEM_MB =
+      YARN_MC_PREFIX + YarnConfiguration.NM_PMEM_MB;
+  public static final int DEFAULT_YARN_MINICLUSTER_NM_PMEM_MB = 4 * 1024;
 
   /** The log directory for the containers */
   public static final String YARN_APP_CONTAINER_LOG_DIR =
@@ -1365,6 +1384,36 @@ public class YarnConfiguration extends Configuration {
 
   public static final long
       DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS = 1000;
+
+  /** Flag to enable recovery of timeline service */
+  public static final String TIMELINE_SERVICE_RECOVERY_ENABLED =
+      TIMELINE_SERVICE_PREFIX + "recovery.enabled";
+  public static final boolean DEFAULT_TIMELINE_SERVICE_RECOVERY_ENABLED = false;
+
+  /** Timeline service state store class */
+  public static final String TIMELINE_SERVICE_STATE_STORE_CLASS =
+      TIMELINE_SERVICE_PREFIX + "state-store-class";
+
+  public static final String TIMELINE_SERVICE_LEVELDB_STATE_STORE_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "leveldb-state-store.";
+
+  /** Timeline service state store leveldb path */
+  public static final String TIMELINE_SERVICE_LEVELDB_STATE_STORE_PATH =
+      TIMELINE_SERVICE_LEVELDB_STATE_STORE_PREFIX + "path";
+
+  // Timeline delegation token related keys
+  public static final String  TIMELINE_DELEGATION_KEY_UPDATE_INTERVAL =
+      TIMELINE_SERVICE_PREFIX + "delegation.key.update-interval";
+  public static final long    DEFAULT_TIMELINE_DELEGATION_KEY_UPDATE_INTERVAL =
+      24*60*60*1000; // 1 day
+  public static final String  TIMELINE_DELEGATION_TOKEN_RENEW_INTERVAL =
+      TIMELINE_SERVICE_PREFIX + "delegation.token.renew-interval";
+  public static final long    DEFAULT_TIMELINE_DELEGATION_TOKEN_RENEW_INTERVAL =
+      24*60*60*1000;  // 1 day
+  public static final String  TIMELINE_DELEGATION_TOKEN_MAX_LIFETIME =
+      TIMELINE_SERVICE_PREFIX + "delegation.token.max-lifetime";
+  public static final long    DEFAULT_TIMELINE_DELEGATION_TOKEN_MAX_LIFETIME =
+      7*24*60*60*1000; // 7 days
 
   // ///////////////////////////////
   // Shared Cache Configs
@@ -1604,14 +1653,10 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_HTTP_POLICY_DEFAULT = HttpConfig.Policy.HTTP_ONLY
       .name();
   
-  public static final String NODE_LABELS_PREFIX = YARN_PREFIX + "node-labels.";
-
   /**
-   * Class for RMNodeLabelsManager Please note this value should be consistent
-   * in client nodes and RM node(s)
+   * Node-labels configurations
    */
-  public static final String RM_NODE_LABELS_MANAGER_CLASS = NODE_LABELS_PREFIX
-      + "manager-class";
+  public static final String NODE_LABELS_PREFIX = YARN_PREFIX + "node-labels.";
   
   /** URI for NodeLabelManager */
   public static final String FS_NODE_LABELS_STORE_ROOT_DIR = NODE_LABELS_PREFIX
@@ -1620,6 +1665,14 @@ public class YarnConfiguration extends Configuration {
       NODE_LABELS_PREFIX + "fs-store.retry-policy-spec";
   public static final String DEFAULT_FS_NODE_LABELS_STORE_RETRY_POLICY_SPEC =
       "2000, 500";
+  
+  /**
+   * Flag to indicate if the node labels feature enabled, by default it's
+   * disabled
+   */
+  public static final String NODE_LABELS_ENABLED = NODE_LABELS_PREFIX
+      + "enabled";
+  public static final boolean DEFAULT_NODE_LABELS_ENABLED = false;
 
   public YarnConfiguration() {
     super();

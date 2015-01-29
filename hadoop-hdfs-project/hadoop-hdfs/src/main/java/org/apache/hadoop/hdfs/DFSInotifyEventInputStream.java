@@ -26,6 +26,9 @@ import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.inotify.MissingEventsException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.util.Time;
+import org.htrace.Sampler;
+import org.htrace.Trace;
+import org.htrace.TraceScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,6 +47,11 @@ public class DFSInotifyEventInputStream {
   public static Logger LOG = LoggerFactory.getLogger(DFSInotifyEventInputStream
       .class);
 
+  /**
+   * The trace sampler to use when making RPCs to the NameNode.
+   */
+  private final Sampler<?> traceSampler;
+
   private final ClientProtocol namenode;
   private Iterator<EventBatch> it;
   private long lastReadTxid;
@@ -59,12 +67,15 @@ public class DFSInotifyEventInputStream {
 
   private static final int INITIAL_WAIT_MS = 10;
 
-  DFSInotifyEventInputStream(ClientProtocol namenode) throws IOException {
-    this(namenode, namenode.getCurrentEditLogTxid()); // only consider new txn's
+  DFSInotifyEventInputStream(Sampler<?> traceSampler, ClientProtocol namenode)
+        throws IOException {
+    // Only consider new transaction IDs.
+    this(traceSampler, namenode, namenode.getCurrentEditLogTxid());
   }
 
-  DFSInotifyEventInputStream(ClientProtocol namenode, long lastReadTxid)
-      throws IOException {
+  DFSInotifyEventInputStream(Sampler traceSampler, ClientProtocol namenode,
+        long lastReadTxid) throws IOException {
+    this.traceSampler = traceSampler;
     this.namenode = namenode;
     this.it = Iterators.emptyIterator();
     this.lastReadTxid = lastReadTxid;
@@ -87,39 +98,45 @@ public class DFSInotifyEventInputStream {
    * The next available batch of events will be returned.
    */
   public EventBatch poll() throws IOException, MissingEventsException {
-    // need to keep retrying until the NN sends us the latest committed txid
-    if (lastReadTxid == -1) {
-      LOG.debug("poll(): lastReadTxid is -1, reading current txid from NN");
-      lastReadTxid = namenode.getCurrentEditLogTxid();
-      return null;
-    }
-    if (!it.hasNext()) {
-      EventBatchList el = namenode.getEditsFromTxid(lastReadTxid + 1);
-      if (el.getLastTxid() != -1) {
-        // we only want to set syncTxid when we were actually able to read some
-        // edits on the NN -- otherwise it will seem like edits are being
-        // generated faster than we can read them when the problem is really
-        // that we are temporarily unable to read edits
-        syncTxid = el.getSyncTxid();
-        it = el.getBatches().iterator();
-        long formerLastReadTxid = lastReadTxid;
-        lastReadTxid = el.getLastTxid();
-        if (el.getFirstTxid() != formerLastReadTxid + 1) {
-          throw new MissingEventsException(formerLastReadTxid + 1,
-              el.getFirstTxid());
-        }
-      } else {
-        LOG.debug("poll(): read no edits from the NN when requesting edits " +
-          "after txid {}", lastReadTxid);
+    TraceScope scope =
+        Trace.startSpan("inotifyPoll", traceSampler);
+    try {
+      // need to keep retrying until the NN sends us the latest committed txid
+      if (lastReadTxid == -1) {
+        LOG.debug("poll(): lastReadTxid is -1, reading current txid from NN");
+        lastReadTxid = namenode.getCurrentEditLogTxid();
         return null;
       }
-    }
+      if (!it.hasNext()) {
+        EventBatchList el = namenode.getEditsFromTxid(lastReadTxid + 1);
+        if (el.getLastTxid() != -1) {
+          // we only want to set syncTxid when we were actually able to read some
+          // edits on the NN -- otherwise it will seem like edits are being
+          // generated faster than we can read them when the problem is really
+          // that we are temporarily unable to read edits
+          syncTxid = el.getSyncTxid();
+          it = el.getBatches().iterator();
+          long formerLastReadTxid = lastReadTxid;
+          lastReadTxid = el.getLastTxid();
+          if (el.getFirstTxid() != formerLastReadTxid + 1) {
+            throw new MissingEventsException(formerLastReadTxid + 1,
+                el.getFirstTxid());
+          }
+        } else {
+          LOG.debug("poll(): read no edits from the NN when requesting edits " +
+            "after txid {}", lastReadTxid);
+          return null;
+        }
+      }
 
-    if (it.hasNext()) { // can be empty if el.getLastTxid != -1 but none of the
-      // newly seen edit log ops actually got converted to events
-      return it.next();
-    } else {
-      return null;
+      if (it.hasNext()) { // can be empty if el.getLastTxid != -1 but none of the
+        // newly seen edit log ops actually got converted to events
+        return it.next();
+      } else {
+        return null;
+      }
+    } finally {
+      scope.close();
     }
   }
 
@@ -163,25 +180,29 @@ public class DFSInotifyEventInputStream {
    */
   public EventBatch poll(long time, TimeUnit tu) throws IOException,
       InterruptedException, MissingEventsException {
-    long initialTime = Time.monotonicNow();
-    long totalWait = TimeUnit.MILLISECONDS.convert(time, tu);
-    long nextWait = INITIAL_WAIT_MS;
+    TraceScope scope = Trace.startSpan("inotifyPollWithTimeout", traceSampler);
     EventBatch next = null;
-    while ((next = poll()) == null) {
-      long timeLeft = totalWait - (Time.monotonicNow() - initialTime);
-      if (timeLeft <= 0) {
-        LOG.debug("timed poll(): timed out");
-        break;
-      } else if (timeLeft < nextWait * 2) {
-        nextWait = timeLeft;
-      } else {
-        nextWait *= 2;
+    try {
+      long initialTime = Time.monotonicNow();
+      long totalWait = TimeUnit.MILLISECONDS.convert(time, tu);
+      long nextWait = INITIAL_WAIT_MS;
+      while ((next = poll()) == null) {
+        long timeLeft = totalWait - (Time.monotonicNow() - initialTime);
+        if (timeLeft <= 0) {
+          LOG.debug("timed poll(): timed out");
+          break;
+        } else if (timeLeft < nextWait * 2) {
+          nextWait = timeLeft;
+        } else {
+          nextWait *= 2;
+        }
+        LOG.debug("timed poll(): poll() returned null, sleeping for {} ms",
+            nextWait);
+        Thread.sleep(nextWait);
       }
-      LOG.debug("timed poll(): poll() returned null, sleeping for {} ms",
-          nextWait);
-      Thread.sleep(nextWait);
+    } finally {
+      scope.close();
     }
-
     return next;
   }
 
@@ -196,16 +217,21 @@ public class DFSInotifyEventInputStream {
    */
   public EventBatch take() throws IOException, InterruptedException,
       MissingEventsException {
+    TraceScope scope = Trace.startSpan("inotifyTake", traceSampler);
     EventBatch next = null;
-    int nextWaitMin = INITIAL_WAIT_MS;
-    while ((next = poll()) == null) {
-      // sleep for a random period between nextWaitMin and nextWaitMin * 2
-      // to avoid stampedes at the NN if there are multiple clients
-      int sleepTime = nextWaitMin + rng.nextInt(nextWaitMin);
-      LOG.debug("take(): poll() returned null, sleeping for {} ms", sleepTime);
-      Thread.sleep(sleepTime);
-      // the maximum sleep is 2 minutes
-      nextWaitMin = Math.min(60000, nextWaitMin * 2);
+    try {
+      int nextWaitMin = INITIAL_WAIT_MS;
+      while ((next = poll()) == null) {
+        // sleep for a random period between nextWaitMin and nextWaitMin * 2
+        // to avoid stampedes at the NN if there are multiple clients
+        int sleepTime = nextWaitMin + rng.nextInt(nextWaitMin);
+        LOG.debug("take(): poll() returned null, sleeping for {} ms", sleepTime);
+        Thread.sleep(sleepTime);
+        // the maximum sleep is 2 minutes
+        nextWaitMin = Math.min(60000, nextWaitMin * 2);
+      }
+    } finally {
+      scope.close();
     }
 
     return next;

@@ -316,7 +316,7 @@ public class DataNode extends ReconfigurableBase
   BlockPoolTokenSecretManager blockPoolTokenSecretManager;
   private boolean hasAnyBlockPoolRegistered = false;
   
-  volatile DataBlockScanner blockScanner = null;
+  private final BlockScanner blockScanner;
   private DirectoryScanner directoryScanner = null;
   
   /** Activated plug-ins. */
@@ -365,6 +365,7 @@ public class DataNode extends ReconfigurableBase
     this.usersWithLocalPathAccess = null;
     this.connectToDnViaHostname = false;
     this.getHdfsBlockLocationsEnabled = false;
+    this.blockScanner = new BlockScanner(this, conf);
   }
 
   /**
@@ -375,6 +376,7 @@ public class DataNode extends ReconfigurableBase
            final List<StorageLocation> dataDirs,
            final SecureResources resources) throws IOException {
     super(conf);
+    this.blockScanner = new BlockScanner(this, conf);
     this.lastDiskErrorCheck = 0;
     this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
         DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
@@ -671,7 +673,8 @@ public class DataNode extends ReconfigurableBase
     this.infoServer.setAttribute("datanode", this);
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     this.infoServer.addServlet(null, "/blockScannerReport",
-                               DataBlockScanner.Servlet.class);
+                               BlockScanner.Servlet.class);
+
     this.infoServer.start();
     InetSocketAddress jettyAddr = infoServer.getConnectorAddress(0);
 
@@ -772,56 +775,12 @@ public class DataNode extends ReconfigurableBase
     // Not a superuser.
     throw new AccessControlException();
   }
-  
-/**
- * Initialize the datanode's periodic scanners:
- *     {@link DataBlockScanner}
- *     {@link DirectoryScanner}
- * They report results on a per-blockpool basis but do their scanning 
- * on a per-Volume basis to minimize competition for disk iops.
- * 
- * @param conf - Configuration has the run intervals and other 
- *               parameters for these periodic scanners
- */
-  private void initPeriodicScanners(Configuration conf) {
-    initDataBlockScanner(conf);
-    initDirectoryScanner(conf);
-  }
-  
+
   private void shutdownPeriodicScanners() {
     shutdownDirectoryScanner();
-    shutdownDataBlockScanner();
+    blockScanner.removeAllVolumeScanners();
   }
-  
-  /**
-   * See {@link DataBlockScanner}
-   */
-  private synchronized void initDataBlockScanner(Configuration conf) {
-    if (blockScanner != null) {
-      return;
-    }
-    String reason = null;
-    assert data != null;
-    if (conf.getInt(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY,
-                    DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT) < 0) {
-      reason = "verification is turned off by configuration";
-    } else if ("SimulatedFSDataset".equals(data.getClass().getSimpleName())) {
-      reason = "verifcation is not supported by SimulatedFSDataset";
-    } 
-    if (reason == null) {
-      blockScanner = new DataBlockScanner(this, data, conf);
-      blockScanner.start();
-    } else {
-      LOG.info("Periodic Block Verification scan disabled because " + reason);
-    }
-  }
-  
-  private void shutdownDataBlockScanner() {
-    if (blockScanner != null) {
-      blockScanner.shutdown();
-    }
-  }
-  
+
   /**
    * See {@link DirectoryScanner}
    */
@@ -1250,9 +1209,8 @@ public class DataNode extends ReconfigurableBase
       // registering anywhere. If that's the case, we wouldn't have
       // a block pool id
       String bpId = bpos.getBlockPoolId();
-      if (blockScanner != null) {
-        blockScanner.removeBlockPool(bpId);
-      }
+
+      blockScanner.disableBlockPoolId(bpId);
 
       if (data != null) {
         data.shutdownBlockPool(bpId);
@@ -1296,9 +1254,9 @@ public class DataNode extends ReconfigurableBase
     // failures.
     checkDiskError();
 
-    initPeriodicScanners(conf);
-    
+    initDirectoryScanner(conf);
     data.addBlockPool(nsInfo.getBlockPoolID(), conf);
+    blockScanner.enableBlockPoolId(bpos.getBlockPoolId());
   }
 
   BPOfferService[] getAllBpOs() {
@@ -1618,9 +1576,13 @@ public class DataNode extends ReconfigurableBase
     // in order to avoid any further acceptance of requests, but the peers
     // for block writes are not closed until the clients are notified.
     if (dataXceiverServer != null) {
-      xserver.sendOOBToPeers();
-      ((DataXceiverServer) this.dataXceiverServer.getRunnable()).kill();
-      this.dataXceiverServer.interrupt();
+      try {
+        xserver.sendOOBToPeers();
+        ((DataXceiverServer) this.dataXceiverServer.getRunnable()).kill();
+        this.dataXceiverServer.interrupt();
+      } catch (Throwable e) {
+        // Ignore, since the out of band messaging is advisory.
+      }
     }
 
     // Interrupt the checkDiskErrorThread and terminate it.
@@ -2164,10 +2126,6 @@ public class DataNode extends ReconfigurableBase
       LOG.warn("Cannot find BPOfferService for reporting block received for bpid="
           + block.getBlockPoolId());
     }
-    FsVolumeSpi volume = getFSDataset().getVolume(block);
-    if (blockScanner != null && !volume.isTransientStorage()) {
-      blockScanner.addBlock(block);
-    }
   }
 
   /** Start a single datanode daemon and wait for it to finish.
@@ -2441,8 +2399,9 @@ public class DataNode extends ReconfigurableBase
     return data;
   }
 
+  @VisibleForTesting
   /** @return the block scanner. */
-  public DataBlockScanner getBlockScanner() {
+  public BlockScanner getBlockScanner() {
     return blockScanner;
   }
 
@@ -2526,14 +2485,16 @@ public class DataNode extends ReconfigurableBase
    */
   @Override // InterDatanodeProtocol
   public String updateReplicaUnderRecovery(final ExtendedBlock oldBlock,
-      final long recoveryId, final long newLength) throws IOException {
+      final long recoveryId, final long newBlockId, final long newLength)
+      throws IOException {
     final String storageID = data.updateReplicaUnderRecovery(oldBlock,
-        recoveryId, newLength);
+        recoveryId, newBlockId, newLength);
     // Notify the namenode of the updated block info. This is important
     // for HA, since otherwise the standby node may lose track of the
     // block locations until the next block report.
     ExtendedBlock newBlock = new ExtendedBlock(oldBlock);
     newBlock.setGenerationStamp(recoveryId);
+    newBlock.setBlockId(newBlockId);
     newBlock.setNumBytes(newLength);
     notifyNamenodeReceivedBlock(newBlock, "", storageID);
     return storageID;
@@ -2555,10 +2516,12 @@ public class DataNode extends ReconfigurableBase
       this.rInfo = rInfo;
     }
 
-    void updateReplicaUnderRecovery(String bpid, long recoveryId, long newLength 
-        ) throws IOException {
+    void updateReplicaUnderRecovery(String bpid, long recoveryId,
+                                    long newBlockId, long newLength)
+        throws IOException {
       final ExtendedBlock b = new ExtendedBlock(bpid, rInfo);
-      storageID = datanode.updateReplicaUnderRecovery(b, recoveryId, newLength);
+      storageID = datanode.updateReplicaUnderRecovery(b, recoveryId, newBlockId,
+          newLength);
     }
 
     @Override
@@ -2640,8 +2603,12 @@ public class DataNode extends ReconfigurableBase
     final String bpid = block.getBlockPoolId();
     DatanodeProtocolClientSideTranslatorPB nn =
       getActiveNamenodeForBP(block.getBlockPoolId());
-    
+
     long recoveryId = rBlock.getNewGenerationStamp();
+    boolean isTruncateRecovery = rBlock.getNewBlock() != null;
+    long blockId = (isTruncateRecovery) ?
+        rBlock.getNewBlock().getBlockId() : block.getBlockId();
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("block=" + block + ", (length=" + block.getNumBytes()
           + "), syncList=" + syncList);
@@ -2675,7 +2642,7 @@ public class DataNode extends ReconfigurableBase
     // Calculate list of nodes that will participate in the recovery
     // and the new block size
     List<BlockRecord> participatingList = new ArrayList<BlockRecord>();
-    final ExtendedBlock newBlock = new ExtendedBlock(bpid, block.getBlockId(),
+    final ExtendedBlock newBlock = new ExtendedBlock(bpid, blockId,
         -1, recoveryId);
     switch(bestState) {
     case FINALIZED:
@@ -2705,12 +2672,15 @@ public class DataNode extends ReconfigurableBase
     case TEMPORARY:
       assert false : "bad replica state: " + bestState;
     }
+    if(isTruncateRecovery)
+      newBlock.setNumBytes(rBlock.getNewBlock().getNumBytes());
 
     List<DatanodeID> failedList = new ArrayList<DatanodeID>();
     final List<BlockRecord> successList = new ArrayList<BlockRecord>();
     for(BlockRecord r : participatingList) {
       try {
-        r.updateReplicaUnderRecovery(bpid, recoveryId, newBlock.getNumBytes());
+        r.updateReplicaUnderRecovery(bpid, recoveryId, blockId,
+            newBlock.getNumBytes());
         successList.add(r);
       } catch (IOException e) {
         InterDatanodeProtocol.LOG.warn("Failed to updateBlock (newblock="

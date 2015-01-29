@@ -18,28 +18,8 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.readReverseOrderedLong;
-import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.writeReverseOrderedLong;
-import static org.fusesource.leveldbjni.JniDBFactory.bytes;
-
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,30 +33,31 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
+import org.apache.hadoop.yarn.api.records.timeline.*;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
+import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyBuilder;
+import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyParser;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
 import org.fusesource.leveldbjni.JniDBFactory;
-import org.iq80.leveldb.DB;
-import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Options;
-import org.iq80.leveldb.ReadOptions;
-import org.iq80.leveldb.WriteBatch;
-import org.iq80.leveldb.WriteOptions;
+import org.iq80.leveldb.*;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.readReverseOrderedLong;
+import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.writeReverseOrderedLong;
+import static org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.prefixMatches;
+import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 
 /**
  * <p>An implementation of an application timeline store backed by leveldb.</p>
@@ -140,25 +121,25 @@ public class LeveldbTimelineStore extends AbstractService
   @VisibleForTesting
   static final String FILENAME = "leveldb-timeline-store.ldb";
 
-  private static final byte[] START_TIME_LOOKUP_PREFIX = "k".getBytes();
-  private static final byte[] ENTITY_ENTRY_PREFIX = "e".getBytes();
-  private static final byte[] INDEXED_ENTRY_PREFIX = "i".getBytes();
+  private static final byte[] START_TIME_LOOKUP_PREFIX = "k".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] ENTITY_ENTRY_PREFIX = "e".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] INDEXED_ENTRY_PREFIX = "i".getBytes(Charset.forName("UTF-8"));
 
-  private static final byte[] EVENTS_COLUMN = "e".getBytes();
-  private static final byte[] PRIMARY_FILTERS_COLUMN = "f".getBytes();
-  private static final byte[] OTHER_INFO_COLUMN = "i".getBytes();
-  private static final byte[] RELATED_ENTITIES_COLUMN = "r".getBytes();
+  private static final byte[] EVENTS_COLUMN = "e".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] PRIMARY_FILTERS_COLUMN = "f".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] OTHER_INFO_COLUMN = "i".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] RELATED_ENTITIES_COLUMN = "r".getBytes(Charset.forName("UTF-8"));
   private static final byte[] INVISIBLE_REVERSE_RELATED_ENTITIES_COLUMN =
-      "z".getBytes();
-  private static final byte[] DOMAIN_ID_COLUMN = "d".getBytes();
+      "z".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] DOMAIN_ID_COLUMN = "d".getBytes(Charset.forName("UTF-8"));
 
-  private static final byte[] DOMAIN_ENTRY_PREFIX = "d".getBytes();
-  private static final byte[] OWNER_LOOKUP_PREFIX = "o".getBytes();
-  private static final byte[] DESCRIPTION_COLUMN = "d".getBytes();
-  private static final byte[] OWNER_COLUMN = "o".getBytes();
-  private static final byte[] READER_COLUMN = "r".getBytes();
-  private static final byte[] WRITER_COLUMN = "w".getBytes();
-  private static final byte[] TIMESTAMP_COLUMN = "t".getBytes();
+  private static final byte[] DOMAIN_ENTRY_PREFIX = "d".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] OWNER_LOOKUP_PREFIX = "o".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] DESCRIPTION_COLUMN = "d".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] OWNER_COLUMN = "o".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] READER_COLUMN = "r".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] WRITER_COLUMN = "w".getBytes(Charset.forName("UTF-8"));
+  private static final byte[] TIMESTAMP_COLUMN = "t".getBytes(Charset.forName("UTF-8"));
 
   private static final byte[] EMPTY_BYTES = new byte[0];
   
@@ -357,102 +338,6 @@ public class LeveldbTimelineStore extends AbstractService
     }
   }
 
-  private static class KeyBuilder {
-    private static final int MAX_NUMBER_OF_KEY_ELEMENTS = 10;
-    private byte[][] b;
-    private boolean[] useSeparator;
-    private int index;
-    private int length;
-
-    public KeyBuilder(int size) {
-      b = new byte[size][];
-      useSeparator = new boolean[size];
-      index = 0;
-      length = 0;
-    }
-
-    public static KeyBuilder newInstance() {
-      return new KeyBuilder(MAX_NUMBER_OF_KEY_ELEMENTS);
-    }
-
-    public KeyBuilder add(String s) {
-      return add(s.getBytes(), true);
-    }
-
-    public KeyBuilder add(byte[] t) {
-      return add(t, false);
-    }
-
-    public KeyBuilder add(byte[] t, boolean sep) {
-      b[index] = t;
-      useSeparator[index] = sep;
-      length += t.length;
-      if (sep) {
-        length++;
-      }
-      index++;
-      return this;
-    }
-
-    public byte[] getBytes() throws IOException {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream(length);
-      for (int i = 0; i < index; i++) {
-        baos.write(b[i]);
-        if (i < index-1 && useSeparator[i]) {
-          baos.write(0x0);
-        }
-      }
-      return baos.toByteArray();
-    }
-
-    public byte[] getBytesForLookup() throws IOException {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream(length);
-      for (int i = 0; i < index; i++) {
-        baos.write(b[i]);
-        if (useSeparator[i]) {
-          baos.write(0x0);
-        }
-      }
-      return baos.toByteArray();
-    }
-  }
-
-  private static class KeyParser {
-    private final byte[] b;
-    private int offset;
-
-    public KeyParser(byte[] b, int offset) {
-      this.b = b;
-      this.offset = offset;
-    }
-
-    public String getNextString() throws IOException {
-      if (offset >= b.length) {
-        throw new IOException(
-            "tried to read nonexistent string from byte array");
-      }
-      int i = 0;
-      while (offset+i < b.length && b[offset+i] != 0x0) {
-        i++;
-      }
-      String s = new String(b, offset, i);
-      offset = offset + i + 1;
-      return s;
-    }
-
-    public long getNextLong() throws IOException {
-      if (offset+8 >= b.length) {
-        throw new IOException("byte array ran out when trying to read long");
-      }
-      long l = readReverseOrderedLong(b, offset);
-      offset += 8;
-      return l;
-    }
-
-    public int getOffset() {
-      return offset;
-    }
-  }
 
   @Override
   public TimelineEntity getEntity(String entityId, String entityType,
@@ -556,7 +441,7 @@ public class LeveldbTimelineStore extends AbstractService
         }
       } else if (key[prefixlen] == DOMAIN_ID_COLUMN[0]) {
         byte[] v = iterator.peekNext().getValue();
-        String domainId = new String(v);
+        String domainId = new String(v, Charset.forName("UTF-8"));
         entity.setDomainId(domainId);
       } else {
         if (key[prefixlen] !=
@@ -658,18 +543,6 @@ public class LeveldbTimelineStore extends AbstractService
       IOUtils.cleanup(LOG, iterator);
     }
     return events;
-  }
-
-  /**
-   * Returns true if the byte array begins with the specified prefix.
-   */
-  private static boolean prefixMatches(byte[] prefix, int prefixlen,
-      byte[] b) {
-    if (b.length < prefixlen) {
-      return false;
-    }
-    return WritableComparator.compareBytes(prefix, 0, prefixlen, b, 0,
-        prefixlen) == 0;
   }
 
   @Override
@@ -918,7 +791,7 @@ public class LeveldbTimelineStore extends AbstractService
               if (domainIdBytes == null) {
                 domainId = TimelineDataManager.DEFAULT_DOMAIN_ID;
               } else {
-                domainId = new String(domainIdBytes);
+                domainId = new String(domainIdBytes, Charset.forName("UTF-8"));
               }
               if (!domainId.equals(entity.getDomainId())) {
                 // in this case the entity will be put, but the relation will be
@@ -973,9 +846,9 @@ public class LeveldbTimelineStore extends AbstractService
           return;
         }
       } else {
-        writeBatch.put(key, entity.getDomainId().getBytes());
+        writeBatch.put(key, entity.getDomainId().getBytes(Charset.forName("UTF-8")));
         writePrimaryFilterEntries(writeBatch, primaryFilters, key,
-            entity.getDomainId().getBytes());
+            entity.getDomainId().getBytes(Charset.forName("UTF-8")));
       }
       db.write(writeBatch);
     } catch (DBException de) {
@@ -1007,7 +880,7 @@ public class LeveldbTimelineStore extends AbstractService
           // This is the new entity, the domain should be the same
         byte[] key = createDomainIdKey(relatedEntity.getId(),
             relatedEntity.getType(), relatedEntityStartTime);
-        db.put(key, entity.getDomainId().getBytes());
+        db.put(key, entity.getDomainId().getBytes(Charset.forName("UTF-8")));
         db.put(createRelatedEntityKey(relatedEntity.getId(),
             relatedEntity.getType(), relatedEntityStartTime,
             entity.getEntityId(), entity.getEntityType()), EMPTY_BYTES);
@@ -1334,7 +1207,7 @@ public class LeveldbTimelineStore extends AbstractService
    * to the end of the array (for parsing other info keys).
    */
   private static String parseRemainingKey(byte[] b, int offset) {
-    return new String(b, offset, b.length - offset);
+    return new String(b, offset, b.length - offset, Charset.forName("UTF-8"));
   }
 
   /**
@@ -1717,8 +1590,10 @@ public class LeveldbTimelineStore extends AbstractService
       byte[] ownerLookupEntryKey = createOwnerLookupKey(
           domain.getOwner(), domain.getId(), DESCRIPTION_COLUMN);
       if (domain.getDescription() != null) {
-        writeBatch.put(domainEntryKey, domain.getDescription().getBytes());
-        writeBatch.put(ownerLookupEntryKey, domain.getDescription().getBytes());
+        writeBatch.put(domainEntryKey, domain.getDescription().
+                       getBytes(Charset.forName("UTF-8")));
+        writeBatch.put(ownerLookupEntryKey, domain.getDescription().
+                       getBytes(Charset.forName("UTF-8")));
       } else {
         writeBatch.put(domainEntryKey, EMPTY_BYTES);
         writeBatch.put(ownerLookupEntryKey, EMPTY_BYTES);
@@ -1729,16 +1604,17 @@ public class LeveldbTimelineStore extends AbstractService
       ownerLookupEntryKey = createOwnerLookupKey(
           domain.getOwner(), domain.getId(), OWNER_COLUMN);
       // Null check for owner is done before
-      writeBatch.put(domainEntryKey, domain.getOwner().getBytes());
-      writeBatch.put(ownerLookupEntryKey, domain.getOwner().getBytes());
+      writeBatch.put(domainEntryKey, domain.getOwner().getBytes(Charset.forName("UTF-8")));
+      writeBatch.put(ownerLookupEntryKey, domain.getOwner().getBytes(Charset.forName("UTF-8")));
 
       // Write readers
       domainEntryKey = createDomainEntryKey(domain.getId(), READER_COLUMN);
       ownerLookupEntryKey = createOwnerLookupKey(
           domain.getOwner(), domain.getId(), READER_COLUMN);
       if (domain.getReaders() != null && domain.getReaders().length() > 0) {
-        writeBatch.put(domainEntryKey, domain.getReaders().getBytes());
-        writeBatch.put(ownerLookupEntryKey, domain.getReaders().getBytes());
+        writeBatch.put(domainEntryKey, domain.getReaders().getBytes(Charset.forName("UTF-8")));
+        writeBatch.put(ownerLookupEntryKey, domain.getReaders().
+                       getBytes(Charset.forName("UTF-8")));
       } else {
         writeBatch.put(domainEntryKey, EMPTY_BYTES);
         writeBatch.put(ownerLookupEntryKey, EMPTY_BYTES);
@@ -1749,8 +1625,9 @@ public class LeveldbTimelineStore extends AbstractService
       ownerLookupEntryKey = createOwnerLookupKey(
           domain.getOwner(), domain.getId(), WRITER_COLUMN);
       if (domain.getWriters() != null && domain.getWriters().length() > 0) {
-        writeBatch.put(domainEntryKey, domain.getWriters().getBytes());
-        writeBatch.put(ownerLookupEntryKey, domain.getWriters().getBytes());
+        writeBatch.put(domainEntryKey, domain.getWriters().getBytes(Charset.forName("UTF-8")));
+        writeBatch.put(ownerLookupEntryKey, domain.getWriters().
+                       getBytes(Charset.forName("UTF-8")));
       } else {
         writeBatch.put(domainEntryKey, EMPTY_BYTES);
         writeBatch.put(ownerLookupEntryKey, EMPTY_BYTES);
@@ -1887,13 +1764,13 @@ public class LeveldbTimelineStore extends AbstractService
       byte[] value = iterator.peekNext().getValue();
       if (value != null && value.length > 0) {
         if (key[prefix.length] == DESCRIPTION_COLUMN[0]) {
-          domain.setDescription(new String(value));
+          domain.setDescription(new String(value, Charset.forName("UTF-8")));
         } else if (key[prefix.length] == OWNER_COLUMN[0]) {
-          domain.setOwner(new String(value));
+          domain.setOwner(new String(value, Charset.forName("UTF-8")));
         } else if (key[prefix.length] == READER_COLUMN[0]) {
-          domain.setReaders(new String(value));
+          domain.setReaders(new String(value, Charset.forName("UTF-8")));
         } else if (key[prefix.length] == WRITER_COLUMN[0]) {
-          domain.setWriters(new String(value));
+          domain.setWriters(new String(value, Charset.forName("UTF-8")));
         } else if (key[prefix.length] == TIMESTAMP_COLUMN[0]) {
           domain.setCreatedTime(readReverseOrderedLong(value, 0));
           domain.setModifiedTime(readReverseOrderedLong(value, 8));

@@ -284,6 +284,7 @@ public class TestKMS {
       password = null;
     }
 
+    conf.set("hadoop.kms.authentication.token.validity", "1");
     if (kerberos) {
       conf.set("hadoop.kms.authentication.type", "kerberos");
       conf.set("hadoop.kms.authentication.kerberos.keytab",
@@ -337,6 +338,11 @@ public class TestKMS {
                 final KeyProvider kp = new KMSClientProvider(uri, conf);
                 // getKeys() empty
                 Assert.assertTrue(kp.getKeys().isEmpty());
+
+                Thread.sleep(4000);
+                Token<?>[] tokens = ((KMSClientProvider)kp).addDelegationTokens("myuser", new Credentials());
+                Assert.assertEquals(1, tokens.length);
+                Assert.assertEquals("kms-dt", tokens[0].getKind().toString());
                 return null;
               }
             });
@@ -346,6 +352,7 @@ public class TestKMS {
           // getKeys() empty
           Assert.assertTrue(kp.getKeys().isEmpty());
 
+          Thread.sleep(4000);
           Token<?>[] tokens = ((KMSClientProvider)kp).addDelegationTokens("myuser", new Credentials());
           Assert.assertEquals(1, tokens.length);
           Assert.assertEquals("kms-dt", tokens[0].getKind().toString());
