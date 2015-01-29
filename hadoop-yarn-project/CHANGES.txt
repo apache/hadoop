@@ -185,6 +185,9 @@ Release 2.7.0 - UNRELEASED
     scheduler web UI and queue initialize/refresh logging. 
     (Eric Payne via wangda)
 
+    YARN-3108. ApplicationHistoryServer doesn't process -D arguments (Chang Li
+    via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
