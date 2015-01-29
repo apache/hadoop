@@ -1,0 +1,4 @@
+  BREAKDOWN OF HADOOP-11264 SUBTASKS AND RELATED JIRAS (Common part of HDFS-7285)
+
+    HADOOP-11514. Raw Erasure Coder API for concrete encoding and decoding
+    (Kai Zheng via umamahesh)
