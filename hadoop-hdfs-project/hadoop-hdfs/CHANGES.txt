@@ -275,6 +275,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7675. Remove unused member DFSClient#spanReceiverHost (cmccabe)
 
+    HDFS-7603. The background replication queue initialization may not let
+    others run (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

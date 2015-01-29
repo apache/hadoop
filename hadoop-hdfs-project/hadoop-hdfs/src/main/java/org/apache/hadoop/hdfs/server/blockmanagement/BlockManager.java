@@ -2615,6 +2615,9 @@ public class BlockManager {
     long totalBlocks = blocksMap.size();
     replicationQueuesInitProgress = 0;
     long totalProcessed = 0;
+    long sleepDuration =
+        Math.max(1, Math.min(numBlocksPerIteration/1000, 10000));
+
     while (namesystem.isRunning() && !Thread.currentThread().isInterrupted()) {
       int processed = 0;
       namesystem.writeLockInterruptibly();
@@ -2671,6 +2674,8 @@ public class BlockManager {
         }
       } finally {
         namesystem.writeUnlock();
+        // Make sure it is out of the write lock for sufficiently long time.
+        Thread.sleep(sleepDuration);
       }
     }
     if (Thread.currentThread().isInterrupted()) {
