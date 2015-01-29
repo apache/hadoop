@@ -482,7 +482,7 @@ public final class AzureBlobStorageTestAccount {
     return conf;
   }
 
-  static CloudStorageAccount createTestAccount()
+  public static CloudStorageAccount createTestAccount()
       throws URISyntaxException, KeyProviderException
   {
     return createTestAccount(createTestConfiguration());
