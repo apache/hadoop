@@ -1184,6 +1184,57 @@ public class TestIPC {
     }
   }
 
+  @Test
+  public void testMaxConnections() throws Exception {
+    conf.setInt("ipc.server.max.connections", 5);
+    Server server = null;
+    Thread connectors[] = new Thread[10];
+
+    try {
+      server = new TestServer(3, false);
+      final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      assertEquals(0, server.getNumOpenConnections());
+
+      for (int i = 0; i < 10; i++) {
+        connectors[i] = new Thread() {
+          @Override
+          public void run() {
+            Socket sock = null;
+            try {
+              sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
+              NetUtils.connect(sock, addr, 3000);
+              try {
+                Thread.sleep(4000);
+              } catch (InterruptedException ie) { }
+            } catch (IOException ioe) {
+            } finally {
+              if (sock != null) {
+                try {
+                  sock.close();
+                } catch (IOException ioe) { }
+              }
+            }
+          }
+        };
+        connectors[i].start();
+      }
+
+      Thread.sleep(1000);
+      // server should only accept up to 5 connections
+      assertEquals(5, server.getNumOpenConnections());
+
+      for (int i = 0; i < 10; i++) {
+        connectors[i].join();
+      }
+    } finally {
+      if (server != null) {
+        server.stop();
+      }
+      conf.setInt("ipc.server.max.connections", 0);
+    }
+  }
+
   private void assertRetriesOnSocketTimeouts(Configuration conf,
       int maxTimeoutRetries) throws IOException {
     SocketFactory mockFactory = Mockito.mock(SocketFactory.class);

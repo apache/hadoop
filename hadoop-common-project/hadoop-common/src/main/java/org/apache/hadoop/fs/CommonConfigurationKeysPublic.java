@@ -227,6 +227,11 @@ public class CommonConfigurationKeysPublic {
     "ipc.server.tcpnodelay";
   /** Default value for IPC_SERVER_TCPNODELAY_KEY */
   public static final boolean IPC_SERVER_TCPNODELAY_DEFAULT = true;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  IPC_SERVER_MAX_CONNECTIONS_KEY =
+    "ipc.server.max.connections";
+  /** Default value for IPC_SERVER_MAX_CONNECTIONS_KEY */
+  public static final int     IPC_SERVER_MAX_CONNECTIONS_DEFAULT = 0;
 
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY =
