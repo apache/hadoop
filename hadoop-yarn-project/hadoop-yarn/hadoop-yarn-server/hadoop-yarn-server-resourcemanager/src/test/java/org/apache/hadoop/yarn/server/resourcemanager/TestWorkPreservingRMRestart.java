@@ -321,7 +321,7 @@ public class TestWorkPreservingRMRestart {
       1e-8);
     // assert user consumed resources.
     assertEquals(usedResource, leafQueue.getUser(app.getUser())
-      .getTotalConsumedResources());
+      .getUsed());
   }
 
   private void checkFifoQueue(ResourceManager rm,
