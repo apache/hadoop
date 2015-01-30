@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.retry.RetryInvocationHandler;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
@@ -60,6 +61,7 @@ import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -70,12 +72,9 @@ import com.google.common.base.Supplier;
  */
 public class TestPipelinesFailover {
   static {
-    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LogFactory.getLog(BlockManager.class)).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LogFactory.getLog(
-        "org.apache.hadoop.io.retry.RetryInvocationHandler")).getLogger().setLevel(Level.ALL);
-
-    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(LogFactory.getLog(RetryInvocationHandler
+            .class), Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
   }
   
   protected static final Log LOG = LogFactory.getLog(
