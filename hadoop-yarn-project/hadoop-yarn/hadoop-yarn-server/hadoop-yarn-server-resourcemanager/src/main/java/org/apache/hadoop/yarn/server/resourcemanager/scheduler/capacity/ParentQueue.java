@@ -256,7 +256,7 @@ public class ParentQueue extends AbstractCSQueue {
         "numChildQueue= " + childQueues.size() + ", " + 
         "capacity=" + capacity + ", " +  
         "absoluteCapacity=" + absoluteCapacity + ", " +
-        "usedResources=" + usedResources + 
+        "usedResources=" + queueUsage.getUsed() + 
         "usedCapacity=" + getUsedCapacity() + ", " + 
         "numApps=" + getNumApplications() + ", " + 
         "numContainers=" + getNumContainers();
@@ -463,7 +463,7 @@ public class ParentQueue extends AbstractCSQueue {
             " queue=" + getQueueName() + 
             " usedCapacity=" + getUsedCapacity() +
             " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() +
-            " used=" + usedResources + 
+            " used=" + queueUsage.getUsed() + 
             " cluster=" + clusterResource);
 
       } else {
@@ -506,19 +506,16 @@ public class ParentQueue extends AbstractCSQueue {
     
     boolean canAssign = true;
     for (String label : labelCanAccess) {
-      if (!usedResourcesByNodeLabels.containsKey(label)) {
-        usedResourcesByNodeLabels.put(label, Resources.createResource(0));
-      }
       float currentAbsoluteLabelUsedCapacity =
           Resources.divide(resourceCalculator, clusterResource,
-              usedResourcesByNodeLabels.get(label),
+              queueUsage.getUsed(label),
               labelManager.getResourceByLabel(label, clusterResource));
       // if any of the label doesn't beyond limit, we can allocate on this node
       if (currentAbsoluteLabelUsedCapacity >= 
             getAbsoluteMaximumCapacityByNodeLabel(label)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug(getQueueName() + " used=" + usedResources
-              + " current-capacity (" + usedResourcesByNodeLabels.get(label) + ") "
+          LOG.debug(getQueueName() + " used=" + queueUsage.getUsed()
+              + " current-capacity (" + queueUsage.getUsed(label) + ") "
               + " >= max-capacity ("
               + labelManager.getResourceByLabel(label, clusterResource) + ")");
         }
@@ -540,16 +537,16 @@ public class ParentQueue extends AbstractCSQueue {
           .getReservedMB(), getMetrics().getReservedVirtualCores());
       float capacityWithoutReservedCapacity = Resources.divide(
           resourceCalculator, clusterResource,
-          Resources.subtract(usedResources, reservedResources),
+          Resources.subtract(queueUsage.getUsed(), reservedResources),
           clusterResource);
 
       if (capacityWithoutReservedCapacity <= absoluteMaxCapacity) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("parent: try to use reserved: " + getQueueName()
-            + " usedResources: " + usedResources.getMemory()
+            + " usedResources: " + queueUsage.getUsed().getMemory()
             + " clusterResources: " + clusterResource.getMemory()
             + " reservedResources: " + reservedResources.getMemory()
-            + " currentCapacity " + ((float) usedResources.getMemory())
+            + " currentCapacity " + ((float) queueUsage.getUsed().getMemory())
             / clusterResource.getMemory()
             + " potentialNewWithoutReservedCapacity: "
             + capacityWithoutReservedCapacity + " ( " + " max-capacity: "
@@ -645,7 +642,7 @@ public class ParentQueue extends AbstractCSQueue {
             " queue=" + getQueueName() + 
             " usedCapacity=" + getUsedCapacity() +
             " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() +
-            " used=" + usedResources + 
+            " used=" + queueUsage.getUsed() + 
             " cluster=" + clusterResource);
       }
 
@@ -735,7 +732,7 @@ public class ParentQueue extends AbstractCSQueue {
           .getResource(), node.getLabels());
       LOG.info("movedContainer" + " queueMoveIn=" + getQueueName()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
-          + getAbsoluteUsedCapacity() + " used=" + usedResources + " cluster="
+          + getAbsoluteUsedCapacity() + " used=" + queueUsage.getUsed() + " cluster="
           + clusterResource);
       // Inform the parent
       if (parent != null) {
@@ -755,7 +752,7 @@ public class ParentQueue extends AbstractCSQueue {
           node.getLabels());
       LOG.info("movedContainer" + " queueMoveOut=" + getQueueName()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
-          + getAbsoluteUsedCapacity() + " used=" + usedResources + " cluster="
+          + getAbsoluteUsedCapacity() + " used=" + queueUsage.getUsed() + " cluster="
           + clusterResource);
       // Inform the parent
       if (parent != null) {

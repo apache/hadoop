@@ -202,33 +202,33 @@ public class TestCSQueueUtils {
     LOG.info("t2 l2q2 " + result);
     
     //some usage, but below the base capacity
-    Resources.addTo(root.getUsedResources(), Resources.multiply(clusterResource, 0.1f));
-    Resources.addTo(l1q2.getUsedResources(), Resources.multiply(clusterResource, 0.1f));
+    root.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.1f));
+    l1q2.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.1f));
     result = CSQueueUtils.getAbsoluteMaxAvailCapacity(
       resourceCalculator, clusterResource, l2q2);
     assertEquals( 0.4f, result, 0.000001f);
     LOG.info("t2 l2q2 " + result);
     
     //usage gt base on parent sibling
-    Resources.addTo(root.getUsedResources(), Resources.multiply(clusterResource, 0.3f));
-    Resources.addTo(l1q2.getUsedResources(), Resources.multiply(clusterResource, 0.3f));
+    root.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.3f));
+    l1q2.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.3f));
     result = CSQueueUtils.getAbsoluteMaxAvailCapacity(
       resourceCalculator, clusterResource, l2q2);
     assertEquals( 0.3f, result, 0.000001f);
     LOG.info("t2 l2q2 " + result);
     
     //same as last, but with usage also on direct parent
-    Resources.addTo(root.getUsedResources(), Resources.multiply(clusterResource, 0.1f));
-    Resources.addTo(l1q1.getUsedResources(), Resources.multiply(clusterResource, 0.1f));
+    root.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.1f));
+    l1q1.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.1f));
     result = CSQueueUtils.getAbsoluteMaxAvailCapacity(
       resourceCalculator, clusterResource, l2q2);
     assertEquals( 0.3f, result, 0.000001f);
     LOG.info("t2 l2q2 " + result);
     
     //add to direct sibling, below the threshold of effect at present
-    Resources.addTo(root.getUsedResources(), Resources.multiply(clusterResource, 0.2f));
-    Resources.addTo(l1q1.getUsedResources(), Resources.multiply(clusterResource, 0.2f));
-    Resources.addTo(l2q1.getUsedResources(), Resources.multiply(clusterResource, 0.2f));
+    root.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.2f));
+    l1q1.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.2f));
+    l2q1.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.2f));
     result = CSQueueUtils.getAbsoluteMaxAvailCapacity(
       resourceCalculator, clusterResource, l2q2);
     assertEquals( 0.3f, result, 0.000001f);
@@ -236,9 +236,9 @@ public class TestCSQueueUtils {
     
     //add to direct sibling, now above the threshold of effect
     //(it's cumulative with prior tests)
-    Resources.addTo(root.getUsedResources(), Resources.multiply(clusterResource, 0.2f));
-    Resources.addTo(l1q1.getUsedResources(), Resources.multiply(clusterResource, 0.2f));
-    Resources.addTo(l2q1.getUsedResources(), Resources.multiply(clusterResource, 0.2f));
+    root.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.2f));
+    l1q1.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.2f));
+    l2q1.getResourceUsage().incUsed(Resources.multiply(clusterResource, 0.2f));
     result = CSQueueUtils.getAbsoluteMaxAvailCapacity(
       resourceCalculator, clusterResource, l2q2);
     assertEquals( 0.1f, result, 0.000001f);
