@@ -1,0 +1,4 @@
+  BREAKDOWN OF HDFS-7285 SUBTASKS AND RELATED JIRAS
+
+    HDFS-7347. Configurable erasure coding policy for individual files and
+    directories ( Zhe Zhang via vinayakumarb )
