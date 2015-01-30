@@ -106,6 +106,7 @@
       <item name="Hadoop Streaming" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopStreaming.html"/>
       <item name="Hadoop Archives" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopArchives.html"/>
       <item name="DistCp" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistCp.html"/>
+      <item name="GridMix" href="hadoop-gridmix/GridMix.html"/>
       <item name="Rumen" href="hadoop-rumen/Rumen.html"/>
     </menu>
 
