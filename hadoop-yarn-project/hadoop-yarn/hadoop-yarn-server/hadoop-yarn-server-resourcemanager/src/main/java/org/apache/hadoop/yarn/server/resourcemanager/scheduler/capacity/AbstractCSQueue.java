@@ -35,10 +35,11 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.apache.hadoop.yarn.util.resource.Resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 
 public abstract class AbstractCSQueue implements CSQueue {
@@ -64,16 +65,17 @@ public abstract class AbstractCSQueue implements CSQueue {
   Set<String> accessibleLabels;
   RMNodeLabelsManager labelManager;
   String defaultLabelExpression;
-  Resource usedResources = Resources.createResource(0, 0);
   Map<String, Float> absoluteCapacityByNodeLabels;
   Map<String, Float> capacitiyByNodeLabels;
-  Map<String, Resource> usedResourcesByNodeLabels = new HashMap<String, Resource>();
   Map<String, Float> absoluteMaxCapacityByNodeLabels;
   Map<String, Float> maxCapacityByNodeLabels;
   
   Map<QueueACL, AccessControlList> acls = 
       new HashMap<QueueACL, AccessControlList>();
   boolean reservationsContinueLooking;
+
+  // Track resource usage-by-label like used-resource/pending-resource, etc.
+  ResourceUsage queueUsage;
   
   private final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
@@ -120,6 +122,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     maxCapacityByNodeLabels =
         cs.getConfiguration().getMaximumNodeLabelCapacities(getQueuePath(),
             accessibleLabels, labelManager);
+    queueUsage = new ResourceUsage();
   }
   
   @Override
@@ -153,8 +156,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public synchronized Resource getUsedResources() {
-    return usedResources;
+  public Resource getUsedResources() {
+    return queueUsage.getUsed();
   }
 
   public synchronized int getNumContainers() {
@@ -344,22 +347,13 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   synchronized void allocateResource(Resource clusterResource, 
       Resource resource, Set<String> nodeLabels) {
-    Resources.addTo(usedResources, resource);
     
     // Update usedResources by labels
     if (nodeLabels == null || nodeLabels.isEmpty()) {
-      if (!usedResourcesByNodeLabels.containsKey(RMNodeLabelsManager.NO_LABEL)) {
-        usedResourcesByNodeLabels.put(RMNodeLabelsManager.NO_LABEL,
-            Resources.createResource(0));
-      }
-      Resources.addTo(usedResourcesByNodeLabels.get(RMNodeLabelsManager.NO_LABEL),
-          resource);
+      queueUsage.incUsed(resource);
     } else {
       for (String label : Sets.intersection(accessibleLabels, nodeLabels)) {
-        if (!usedResourcesByNodeLabels.containsKey(label)) {
-          usedResourcesByNodeLabels.put(label, Resources.createResource(0));
-        }
-        Resources.addTo(usedResourcesByNodeLabels.get(label), resource);
+        queueUsage.incUsed(label, resource);
       }
     }
 
@@ -370,23 +364,12 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   protected synchronized void releaseResource(Resource clusterResource,
       Resource resource, Set<String> nodeLabels) {
-    // Update queue metrics
-    Resources.subtractFrom(usedResources, resource);
-
     // Update usedResources by labels
     if (null == nodeLabels || nodeLabels.isEmpty()) {
-      if (!usedResourcesByNodeLabels.containsKey(RMNodeLabelsManager.NO_LABEL)) {
-        usedResourcesByNodeLabels.put(RMNodeLabelsManager.NO_LABEL,
-            Resources.createResource(0));
-      }
-      Resources.subtractFrom(
-          usedResourcesByNodeLabels.get(RMNodeLabelsManager.NO_LABEL), resource);
+      queueUsage.decUsed(resource);
     } else {
       for (String label : Sets.intersection(accessibleLabels, nodeLabels)) {
-        if (!usedResourcesByNodeLabels.containsKey(label)) {
-          usedResourcesByNodeLabels.put(label, Resources.createResource(0));
-        }
-        Resources.subtractFrom(usedResourcesByNodeLabels.get(label), resource);
+        queueUsage.decUsed(label, resource);
       }
     }
 
@@ -452,6 +435,11 @@ public abstract class AbstractCSQueue implements CSQueue {
   
   @Private
   public Resource getUsedResourceByLabel(String nodeLabel) {
-    return usedResourcesByNodeLabels.get(nodeLabel);
+    return queueUsage.getUsed(nodeLabel);
+  }
+  
+  @VisibleForTesting
+  public ResourceUsage getResourceUsage() {
+    return queueUsage;
   }
 }
