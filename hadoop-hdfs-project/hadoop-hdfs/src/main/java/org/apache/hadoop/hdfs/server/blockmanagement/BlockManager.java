@@ -38,7 +38,6 @@ import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -89,6 +88,8 @@ import org.apache.hadoop.util.Time;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
@@ -96,7 +97,7 @@ import com.google.common.collect.Sets;
 @InterfaceAudience.Private
 public class BlockManager {
 
-  static final Log LOG = LogFactory.getLog(BlockManager.class);
+  static final Logger LOG = LoggerFactory.getLogger(BlockManager.class);
   public static final Log blockLog = NameNode.blockStateChangeLog;
 
   private static final String QUEUE_REASON_CORRUPT_STATE =
@@ -3622,7 +3623,8 @@ public class BlockManager {
             LOG.info("Stopping ReplicationMonitor for testing.");
             break;
           }
-          LOG.fatal("ReplicationMonitor thread received Runtime exception. ", t);
+          LOG.error("ReplicationMonitor thread received Runtime exception. ",
+              t);
           terminate(1, t);
         }
       }

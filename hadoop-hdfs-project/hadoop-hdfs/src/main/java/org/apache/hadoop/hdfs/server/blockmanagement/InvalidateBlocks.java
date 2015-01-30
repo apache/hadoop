@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -37,6 +36,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.DFSUtil;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
 
 /**
  * Keeps a Collection for every named machine containing blocks
@@ -67,7 +67,7 @@ class InvalidateBlocks {
     printBlockDeletionTime(BlockManager.LOG);
   }
 
-  private void printBlockDeletionTime(final Log log) {
+  private void printBlockDeletionTime(final Logger log) {
     log.info(DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY
         + " is set to " + DFSUtil.durationToString(pendingPeriodInMs));
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy MMM dd HH:mm:ss");

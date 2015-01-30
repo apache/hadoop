@@ -278,6 +278,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7603. The background replication queue initialization may not let
     others run (kihwal)
 
+    HDFS-7706. Switch BlockManager logging to use slf4j. (wang)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

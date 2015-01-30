@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.text.SimpleDateFormat;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
@@ -29,6 +28,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
@@ -42,7 +42,7 @@ import org.mockito.internal.util.reflection.Whitebox;
  */
 public class TestPendingInvalidateBlock {
   {
-    ((Log4JLogger)BlockManager.LOG).getLogger().setLevel(Level.DEBUG);    
+    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.DEBUG);
   }
 
   private static final int BLOCKSIZE = 1024;
