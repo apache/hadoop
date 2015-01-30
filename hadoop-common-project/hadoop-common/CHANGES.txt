@@ -441,6 +441,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11403. Avoid using sys_errlist on Solaris, which lacks support for it
     (Malcolm Kavalsky via Colin P. McCabe)
 
+    HADOOP-11523. StorageException complaining " no lease ID" when updating
+    FolderLastModifiedTime in WASB. (Duo Xu via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
