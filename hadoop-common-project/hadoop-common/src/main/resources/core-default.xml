@@ -1670,4 +1670,15 @@ for ldap providers in the same way as above does.
   </description>
 </property>
 
+ <property>
+  <name>ipc.server.max.connections</name>
+  <value>0</value>
+  <description>The maximum number of concurrent connections a server is allowed
+    to accept. If this limit is exceeded, incoming connections will first fill
+    the listen queue and then may go to an OS-specific listen overflow queue. 
+    The client may fail or timeout, but the server can avoid running out of file
+    descriptors using this feature. 0 means no limit.
+  </description>
+</property>
+
 </configuration>
