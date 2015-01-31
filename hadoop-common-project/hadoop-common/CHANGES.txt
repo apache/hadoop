@@ -449,6 +449,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11523. StorageException complaining " no lease ID" when updating
     FolderLastModifiedTime in WASB. (Duo Xu via cnauroth)
 
+    HADOOP-11432. Fix SymlinkBaseTest#testCreateLinkUsingPartQualPath2.
+    (Liang Xie via gera)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
