@@ -783,9 +783,9 @@
         <version>0.1.42</version>
       </dependency>
       <dependency>
-        <groupId>org.htrace</groupId>
+        <groupId>org.apache.htrace</groupId>
         <artifactId>htrace-core</artifactId>
-        <version>3.0.4</version>
+        <version>3.1.0-incubating</version>
       </dependency>
       <dependency>
         <groupId>org.jdom</groupId>
