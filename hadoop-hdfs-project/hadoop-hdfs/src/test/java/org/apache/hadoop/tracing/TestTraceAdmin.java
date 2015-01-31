@@ -72,12 +72,12 @@ public class TestTraceAdmin {
       Assert.assertEquals("ret:0, Added trace span receiver 1 with " +
           "configuration local-file-span-receiver.path = " + tracePath + NEWLINE,
           runTraceCommand(trace, "-add", "-host", getHostPortForNN(cluster),
-              "-class", "org.htrace.impl.LocalFileSpanReceiver",
+              "-class", "org.apache.htrace.impl.LocalFileSpanReceiver",
               "-Clocal-file-span-receiver.path=" + tracePath));
       String list =
           runTraceCommand(trace, "-list", "-host", getHostPortForNN(cluster));
       Assert.assertTrue(list.startsWith("ret:0"));
-      Assert.assertTrue(list.contains("1   org.htrace.impl.LocalFileSpanReceiver"));
+      Assert.assertTrue(list.contains("1   org.apache.htrace.impl.LocalFileSpanReceiver"));
       Assert.assertEquals("ret:0, Removed trace span receiver 1" + NEWLINE,
           runTraceCommand(trace, "-remove", "1", "-host",
               getHostPortForNN(cluster)));

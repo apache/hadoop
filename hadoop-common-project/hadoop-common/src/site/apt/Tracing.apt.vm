@@ -60,7 +60,7 @@ public void receiveSpan(Span span);
 +----
   <property>
     <name>hadoop.htrace.spanreceiver.classes</name>
-    <value>org.htrace.impl.LocalFileSpanReceiver</value>
+    <value>org.apache.htrace.impl.LocalFileSpanReceiver</value>
   </property>
   <property>
     <name>hadoop.htrace.local-file-span-receiver.path</name>
@@ -131,11 +131,11 @@ public void receiveSpan(Span span);
 +----
   $ hadoop trace -list -host 192.168.56.2:9000
   ID  CLASS
-  1   org.htrace.impl.LocalFileSpanReceiver
+  1   org.apache.htrace.impl.LocalFileSpanReceiver
 
   $ hadoop trace -list -host 192.168.56.2:50020
   ID  CLASS
-  1   org.htrace.impl.LocalFileSpanReceiver
+  1   org.apache.htrace.impl.LocalFileSpanReceiver
 +----
 
   <<<hadoop trace -remove>>> removes span receiver from server.
@@ -156,7 +156,7 @@ public void receiveSpan(Span span);
 
   $ hadoop trace -list -host 192.168.56.2:9000
   ID  CLASS
-  2   org.htrace.impl.LocalFileSpanReceiver
+  2   org.apache.htrace.impl.LocalFileSpanReceiver
 +----
 
 
@@ -172,9 +172,9 @@ public void receiveSpan(Span span);
 +----
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.tracing.SpanReceiverHost;
-import org.htrace.Sampler;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.Sampler;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 ...
 
@@ -200,9 +200,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.tracing.SpanReceiverHost;
 import org.apache.hadoop.util.ToolRunner;
-import org.htrace.Sampler;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.Sampler;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 public class TracingFsShell {
   public static void main(String argv[]) throws Exception {
