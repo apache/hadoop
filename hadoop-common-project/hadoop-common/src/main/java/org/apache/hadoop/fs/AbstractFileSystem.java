@@ -45,11 +45,12 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class provides an interface for implementors of a Hadoop file system
@@ -79,6 +80,9 @@ public abstract class AbstractFileSystem {
   
   /** The statistics for this file system. */
   protected Statistics statistics;
+
+  @VisibleForTesting
+  static final String NO_ABSTRACT_FS_ERROR = "No AbstractFileSystem configured for scheme";
   
   private final URI myUri;
   
@@ -154,8 +158,8 @@ public abstract class AbstractFileSystem {
     Class<?> clazz = conf.getClass(fsImplConf, null);
     if (clazz == null) {
       throw new UnsupportedFileSystemException(String.format(
-          "%s=null: No AbstractFileSystem configured for scheme: %s",
-          fsImplConf, uri.getScheme()));
+          "%s=null: %s: %s",
+          fsImplConf, NO_ABSTRACT_FS_ERROR, uri.getScheme()));
     }
     return (AbstractFileSystem) newInstance(clazz, uri, conf);
   }
