@@ -445,10 +445,14 @@ public class FSDirectory implements Closeable {
    * Add a block to the file. Returns a reference to the added block.
    */
   BlockInfo addBlock(String path, INodesInPath inodesInPath, Block block,
-      DatanodeStorageInfo[] targets) throws IOException {
+                     DatanodeStorageInfo[] targets,
+                     boolean isStriped) throws IOException {
     writeLock();
     try {
       final INodeFile fileINode = inodesInPath.getLastINode().asFile();
+      short numLocations = isStriped ?
+          HdfsConstants.NUM_DATA_BLOCKS + HdfsConstants.NUM_PARITY_BLOCKS :
+          fileINode.getFileReplication();
       Preconditions.checkState(fileINode.isUnderConstruction());
 
       // check quota limits and updated space consumed
@@ -458,7 +462,7 @@ public class FSDirectory implements Closeable {
       BlockInfoUnderConstruction blockInfo =
         new BlockInfoUnderConstruction(
             block,
-            fileINode.getFileReplication(),
+            numLocations,
             BlockUCState.UNDER_CONSTRUCTION,
             targets);
       getBlockManager().addBlockCollection(blockInfo, fileINode);
