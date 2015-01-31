@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.util.SequentialNumber;
 
 /**
@@ -53,6 +52,11 @@ public class SequentialBlockIdGenerator extends SequentialNumber {
     // block IDs. Skip over the conflicts.
     while(isValidBlock(b)) {
       b.setBlockId(super.nextValue());
+    }
+    if (b.getBlockId() < 0) {
+      BlockManager.LOG.warn("All positive block IDs are used, " +
+          "wrapping to negative IDs, " +
+          "which might conflict with erasure coded block groups.");
     }
     return b.getBlockId();
   }

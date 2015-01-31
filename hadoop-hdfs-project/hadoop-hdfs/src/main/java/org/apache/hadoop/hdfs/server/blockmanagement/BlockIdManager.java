@@ -53,10 +53,12 @@ public class BlockIdManager {
    * The global block ID space for this file system.
    */
   private final SequentialBlockIdGenerator blockIdGenerator;
+  private final SequentialBlockGroupIdGenerator blockGroupIdGenerator;
 
   public BlockIdManager(BlockManager blockManager) {
     this.generationStampV1Limit = GenerationStamp.GRANDFATHER_GENERATION_STAMP;
     this.blockIdGenerator = new SequentialBlockIdGenerator(blockManager);
+    this.blockGroupIdGenerator = new SequentialBlockGroupIdGenerator(blockManager);
   }
 
   /**
@@ -188,6 +190,10 @@ public class BlockIdManager {
    */
   public long nextBlockId() {
     return blockIdGenerator.nextValue();
+  }
+
+  public long nextBlockGroupId() {
+    return blockGroupIdGenerator.nextValue();
   }
 
   public boolean isGenStampInFuture(Block block) {

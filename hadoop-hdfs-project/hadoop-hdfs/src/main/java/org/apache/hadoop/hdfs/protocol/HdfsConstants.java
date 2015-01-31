@@ -180,4 +180,8 @@ public class HdfsConstants {
   public static final byte WARM_STORAGE_POLICY_ID = 5;
   public static final byte EC_STORAGE_POLICY_ID = 4;
   public static final byte COLD_STORAGE_POLICY_ID = 2;
+
+  public static final byte NUM_DATA_BLOCKS = 3;
+  public static final byte NUM_PARITY_BLOCKS = 2;
+  public static final byte MAX_BLOCKS_IN_GROUP = 16;
 }
