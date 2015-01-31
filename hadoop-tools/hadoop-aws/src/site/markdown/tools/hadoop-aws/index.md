@@ -172,7 +172,7 @@ If you do any of these: change your credentials immediately!
 
     <property>
       <name>fs.s3a.connection.timeout</name>
-      <value>5000</value>
+      <value>50000</value>
       <description>Socket connection timeout in seconds.</description>
     </property>
 

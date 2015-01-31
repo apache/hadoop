@@ -179,6 +179,9 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-11488. Difference in default connection timeout for S3A FS
+    (Daisuke Kobayashi via harsh)
+
     HADOOP-11256. Some site docs have inconsistent appearance (Masatake 
     Iwasaki via aw)
 
