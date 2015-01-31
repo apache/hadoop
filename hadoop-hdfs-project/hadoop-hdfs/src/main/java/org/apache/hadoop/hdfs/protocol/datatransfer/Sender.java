@@ -48,8 +48,8 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
-import org.htrace.Trace;
-import org.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.Span;
 
 import com.google.protobuf.Message;
 

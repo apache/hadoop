@@ -73,11 +73,11 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.IdentityHashStore;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.htrace.Span;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
 
 /****************************************************************
  * DFSInputStream provides bytes from a named file.  It handles 
