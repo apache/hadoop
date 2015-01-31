@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -275,7 +276,7 @@ public class ZKRMStateStore extends RMStateStore {
     createConnection();
 
     // ensure root dirs exist
-    createRootDir(znodeWorkingPath);
+    createRootDirRecursively(znodeWorkingPath);
     createRootDir(zkRootNodePath);
     if (HAUtil.isHAEnabled(getConfig())){
       fence();
@@ -1143,4 +1144,18 @@ public class ZKRMStateStore extends RMStateStore {
     setDataWithRetries(amrmTokenSecretManagerRoot, stateData, -1);
   }
 
+  /**
+   * Utility function to ensure that the configured base znode exists.
+   * This recursively creates the znode as well as all of its parents.
+   */
+  private void createRootDirRecursively(String path) throws Exception {
+    String pathParts[] = path.split("/");
+    Preconditions.checkArgument(pathParts.length >= 1 && pathParts[0].isEmpty(),
+        "Invalid path: %s", path);
+    StringBuilder sb = new StringBuilder();
+    for (int i = 1; i < pathParts.length; i++) {
+      sb.append("/").append(pathParts[i]);
+      createRootDir(sb.toString());
+    }
+  }
 }
