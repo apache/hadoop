@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -118,7 +120,7 @@ public class YarnClientImpl extends YarnClient {
   protected long submitPollIntervalMillis;
   private long asyncApiPollIntervalMillis;
   private long asyncApiPollTimeoutMillis;
-  private AHSClient historyClient;
+  protected AHSClient historyClient;
   private boolean historyServiceEnabled;
   protected TimelineClient timelineClient;
   @VisibleForTesting
@@ -647,24 +649,79 @@ public class YarnClientImpl extends YarnClient {
   public List<ContainerReport> getContainers(
       ApplicationAttemptId applicationAttemptId) throws YarnException,
       IOException {
+    List<ContainerReport> containersForAttempt =
+        new ArrayList<ContainerReport>();
+    boolean appNotFoundInRM = false;
     try {
-      GetContainersRequest request = Records
-          .newRecord(GetContainersRequest.class);
+      GetContainersRequest request =
+          Records.newRecord(GetContainersRequest.class);
       request.setApplicationAttemptId(applicationAttemptId);
       GetContainersResponse response = rmClient.getContainers(request);
-      return response.getContainerList();
+      containersForAttempt.addAll(response.getContainerList());
     } catch (YarnException e) {
-      if (!historyServiceEnabled) {
-        // Just throw it as usual if historyService is not enabled.
+      if (e.getClass() != ApplicationNotFoundException.class
+          || !historyServiceEnabled) {
+        // If Application is not in RM and history service is enabled then we
+        // need to check with history service else throw exception.
         throw e;
       }
-      // Even if history-service is enabled, treat all exceptions still the same
-      // except the following
-      if (e.getClass() != ApplicationNotFoundException.class) {
-        throw e;
-      }
-      return historyClient.getContainers(applicationAttemptId);
+      appNotFoundInRM = true;
     }
+
+    if (historyServiceEnabled) {
+      // Check with AHS even if found in RM because to capture info of finished
+      // containers also
+      List<ContainerReport> containersListFromAHS = null;
+      try {
+        containersListFromAHS =
+            historyClient.getContainers(applicationAttemptId);
+      } catch (IOException e) {
+        // History service access might be enabled but system metrics publisher
+        // is disabled hence app not found exception is possible
+        if (appNotFoundInRM) {
+          // app not found in bothM and RM then propagate the exception.
+          throw e;
+        }
+      }
+
+      if (null != containersListFromAHS && containersListFromAHS.size() > 0) {
+        // remove duplicates
+
+        Set<ContainerId> containerIdsToBeKeptFromAHS =
+            new HashSet<ContainerId>();
+        Iterator<ContainerReport> tmpItr = containersListFromAHS.iterator();
+        while (tmpItr.hasNext()) {
+          containerIdsToBeKeptFromAHS.add(tmpItr.next().getContainerId());
+        }
+
+        Iterator<ContainerReport> rmContainers =
+            containersForAttempt.iterator();
+        while (rmContainers.hasNext()) {
+          ContainerReport tmp = rmContainers.next();
+          containerIdsToBeKeptFromAHS.remove(tmp.getContainerId());
+          // Remove containers from AHS as container from RM will have latest
+          // information
+        }
+
+        if (containerIdsToBeKeptFromAHS.size() > 0
+            && containersListFromAHS.size() != containerIdsToBeKeptFromAHS
+                .size()) {
+          Iterator<ContainerReport> containersFromHS =
+              containersListFromAHS.iterator();
+          while (containersFromHS.hasNext()) {
+            ContainerReport containerReport = containersFromHS.next();
+            if (containerIdsToBeKeptFromAHS.contains(containerReport
+                .getContainerId())) {
+              containersForAttempt.add(containerReport);
+            }
+          }
+        } else if (containersListFromAHS.size() == containerIdsToBeKeptFromAHS
+            .size()) {
+          containersForAttempt.addAll(containersListFromAHS);
+        }
+      }
+    }
+    return containersForAttempt;
   }
 
   @Override
