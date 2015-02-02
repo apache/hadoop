@@ -504,7 +504,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Callback from RamDiskAsyncLazyPersistService upon async lazy persist task end
    */
    public void onCompleteLazyPersist(String bpId, long blockId,
-      long creationTime, File[] savedFiles, FsVolumeImpl targetVolume);
+      long creationTime, File[] savedFiles, V targetVolume);
 
    /**
     * Callback from RamDiskAsyncLazyPersistService upon async lazy persist task fail

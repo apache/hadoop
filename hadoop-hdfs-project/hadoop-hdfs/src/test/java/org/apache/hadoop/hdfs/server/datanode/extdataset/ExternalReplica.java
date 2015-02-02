@@ -16,31 +16,50 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.datanode.extdataset;
 
-/**
- * holder class that holds checksum bytes and the length in a block at which
- * the checksum bytes end
- * 
- * ex: length = 1023 and checksum is 4 bytes which is for 512 bytes, then
- *     the checksum applies for the last chunk, or bytes 512 - 1023
- */
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.datanode.Replica;
 
-public class ChunkChecksum {
-  private final long dataLength;
-  // can be null if not available
-  private final byte[] checksum;
+public class ExternalReplica implements Replica {
 
-  public ChunkChecksum(long dataLength, byte[] checksum) {
-    this.dataLength = dataLength;
-    this.checksum = checksum;
+  @Override
+  public long getBlockId() {
+    return 0;
   }
 
-  public long getDataLength() {
-    return dataLength;
+  @Override
+  public long getGenerationStamp() {
+    return 0;
   }
 
-  public byte[] getChecksum() {
-    return checksum;
+  @Override
+  public ReplicaState getState() {
+    return ReplicaState.FINALIZED;
+  }
+
+  @Override
+  public long getNumBytes() {
+    return 0;
+  }
+
+  @Override
+  public long getBytesOnDisk() {
+    return 0;
+  }
+
+  @Override
+  public long getVisibleLength() {
+    return 0;
+  }
+
+  @Override
+  public String getStorageUuid() {
+    return null;
+  }
+
+  @Override
+  public boolean isOnTransientStorage() {
+    return false;
   }
 }

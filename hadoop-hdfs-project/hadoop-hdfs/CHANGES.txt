@@ -280,6 +280,10 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7706. Switch BlockManager logging to use slf4j. (wang)
 
+    HDFS-5631. Change BlockMetadataHeader.readHeader(..), ChunkChecksum
+    class and constructor to public; and fix FsDatasetSpi to use generic type
+    instead of FsVolumeImpl.  (David Powell and Joe Pallas via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
