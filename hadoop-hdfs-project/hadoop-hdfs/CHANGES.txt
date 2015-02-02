@@ -127,22 +127,11 @@ Trunk (Unreleased)
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
 
-    HDFS-5782. Change BlockListAsLongs constructor to take Replica as parameter
-    type instead of concrete classes Block and ReplicaInfo.  (David Powell
-    and Joe Pallas via szetszwo)
-
     HDFS-7591. hdfs classpath command should support same options as hadoop
     classpath (Varun Saxena via Arpit Agarwal)
 
-    HDFS-5631. Change BlockMetadataHeader.readHeader(..), ChunkChecksum
-    class and constructor to public; and fix FsDatasetSpi to use generic type
-    instead of FsVolumeImpl.  (David Powell and Joe Pallas via szetszwo)
-
     HDFS-7430. Rewrite the BlockScanner to use O(1) memory and use multiple
     threads (cmccabe)
-
-    HDFS-7681. Change ReplicaInputStreams constructor to take InputStream(s)
-    instead of FileDescriptor(s).  (Joe Pallas via szetszwo)
 
   OPTIMIZATIONS
 
@@ -565,6 +554,17 @@ Release 2.7.0 - UNRELEASED
     others run (kihwal)
 
     HDFS-7706. Switch BlockManager logging to use slf4j. (wang)
+
+    HDFS-5631. Change BlockMetadataHeader.readHeader(..), ChunkChecksum
+    class and constructor to public; and fix FsDatasetSpi to use generic type
+    instead of FsVolumeImpl.  (David Powell and Joe Pallas via szetszwo)
+
+    HDFS-5782. Change BlockListAsLongs constructor to take Replica as parameter
+    type instead of concrete classes Block and ReplicaInfo.  (David Powell
+    and Joe Pallas via szetszwo)
+
+    HDFS-7681. Change ReplicaInputStreams constructor to take InputStream(s)
+    instead of FileDescriptor(s).  (Joe Pallas via szetszwo)
 
   OPTIMIZATIONS
 
