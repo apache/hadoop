@@ -573,17 +573,15 @@ public class SaslRpcClient {
     }
 
     @Override
-    public int read(byte[] buf, int off, int len) throws IOException {
-      synchronized(unwrappedRpcBuffer) {
-        // fill the buffer with the next RPC message
-        if (unwrappedRpcBuffer.remaining() == 0) {
-          readNextRpcPacket();
-        }
-        // satisfy as much of the request as possible
-        int readLen = Math.min(len, unwrappedRpcBuffer.remaining());
-        unwrappedRpcBuffer.get(buf, off, readLen);
-        return readLen;
+    public synchronized int read(byte[] buf, int off, int len) throws IOException {
+      // fill the buffer with the next RPC message
+      if (unwrappedRpcBuffer.remaining() == 0) {
+        readNextRpcPacket();
       }
+      // satisfy as much of the request as possible
+      int readLen = Math.min(len, unwrappedRpcBuffer.remaining());
+      unwrappedRpcBuffer.get(buf, off, readLen);
+      return readLen;
     }
     
     // all messages must be RPC SASL wrapped, else an exception is thrown
