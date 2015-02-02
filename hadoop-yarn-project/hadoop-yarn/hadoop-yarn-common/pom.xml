@@ -213,6 +213,7 @@
             <exclude>src/main/resources/webapps/node/.keep</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.9.4/css/jui-dt.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.9.4/css/demo_table.css</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.9.4/images/Sorting icons.psd</exclude>
             <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
           </excludes>
         </configuration>

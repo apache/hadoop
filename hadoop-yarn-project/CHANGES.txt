@@ -414,6 +414,8 @@ Release 2.7.0 - UNRELEASED
 
     YARN-3077. Fixed RM to create zk root path recursively. (Chun Chen via jianhe)
 
+    YARN-3113. Release audit warning for Sorting icons.psd. (stevel via kihwal)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
