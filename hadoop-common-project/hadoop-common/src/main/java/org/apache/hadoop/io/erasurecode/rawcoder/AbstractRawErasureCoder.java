@@ -24,26 +24,26 @@ package org.apache.hadoop.io.erasurecode.rawcoder;
  */
 public abstract class AbstractRawErasureCoder implements RawErasureCoder {
 
-  private int dataSize;
-  private int paritySize;
+  private int numDataUnits;
+  private int numParityUnits;
   private int chunkSize;
 
   @Override
   public void initialize(int numDataUnits, int numParityUnits,
                          int chunkSize) {
-    this.dataSize = numDataUnits;
-    this.paritySize = numParityUnits;
+    this.numDataUnits = numDataUnits;
+    this.numParityUnits = numParityUnits;
     this.chunkSize = chunkSize;
   }
 
   @Override
   public int getNumDataUnits() {
-    return dataSize;
+    return numDataUnits;
   }
 
   @Override
   public int getNumParityUnits() {
-    return paritySize;
+    return numParityUnits;
   }
 
   @Override
