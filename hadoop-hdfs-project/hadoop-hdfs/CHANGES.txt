@@ -542,6 +542,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7423. various typos and message formatting fixes in nfs daemon and
     doc. (Charles Lamb via yliu)
 
+    HDFS-7696. In FsDatasetImpl, the getBlockInputStream(..) and
+    getTmpInputStreams(..) methods may leak file descriptors.  (szetszwo)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
