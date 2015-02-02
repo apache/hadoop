@@ -25,9 +25,6 @@ Trunk - Unreleased
     YARN-1471. The SLS simulator is not running the preemption policy 
     for CapacityScheduler (Carlo Curino via cdouglas)
 
-    YARN-2216 TestRMApplicationHistoryWriter sometimes fails in trunk.
-    (Zhijie Shen via xgong)
-
     YARN-2436. [post-HADOOP-9902] yarn application help doesn't work (aw)
 
     YARN-2525. yarn logs command gives error on trunk (Akira AJISAKA via aw)
@@ -1702,6 +1699,9 @@ Release 2.5.0 - 2014-08-11
 
     YARN-1726. ResourceSchedulerWrapper broken due to AbstractYarnScheduler. 
     (Wei Yan via kasha)
+
+    YARN-2216. TestRMApplicationHistoryWriter sometimes fails in trunk.
+    (Zhijie Shen via xgong)
 
 Release 2.4.1 - 2014-06-23 
 
