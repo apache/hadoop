@@ -2,3 +2,6 @@
 
     HADOOP-11514. Raw Erasure Coder API for concrete encoding and decoding
     (Kai Zheng via umamahesh)
+
+    HADOOP-11534. Minor improvements for raw erasure coders
+    ( Kai Zheng via vinayakumarb )
