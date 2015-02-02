@@ -163,6 +163,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11498. Bump the version of HTrace to 3.1.0-incubating (Masatake
     Iwasaki via Colin P. McCabe)
 
+    HADOOP-11442. hadoop-azure: Create test jar.
+    (Shashank Khandelwal via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
