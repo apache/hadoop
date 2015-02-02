@@ -22,13 +22,54 @@
 package org.apache.hadoop.metrics.ganglia;
 
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext;
 
+import java.net.MulticastSocket;
+
 public class TestGangliaContext {
+  @Test
+  public void testShouldCreateDatagramSocketByDefault() throws Exception {
+    GangliaContext context = new GangliaContext();
+    context.init("gangliaContext", ContextFactory.getFactory());
+    assertFalse("Created MulticastSocket", context.datagramSocket instanceof MulticastSocket);
+  }
+
+  @Test
+  public void testShouldCreateDatagramSocketIfMulticastIsDisabled() throws Exception {
+    GangliaContext context = new GangliaContext();
+    ContextFactory factory = ContextFactory.getFactory();
+    factory.setAttribute("gangliaContext.multicast", "false");
+    context.init("gangliaContext", factory);
+    assertFalse("Created MulticastSocket", context.datagramSocket instanceof MulticastSocket);
+  }
+
+  @Test
+  public void testShouldCreateMulticastSocket() throws Exception {
+    GangliaContext context = new GangliaContext();
+    ContextFactory factory = ContextFactory.getFactory();
+    factory.setAttribute("gangliaContext.multicast", "true");
+    context.init("gangliaContext", factory);
+    assertTrue("Did not create MulticastSocket", context.datagramSocket instanceof MulticastSocket);
+    MulticastSocket multicastSocket = (MulticastSocket) context.datagramSocket;
+    assertEquals("Did not set default TTL", multicastSocket.getTimeToLive(), 1);
+  }
+
+  @Test
+  public void testShouldSetMulticastSocketTtl() throws Exception {
+    GangliaContext context = new GangliaContext();
+    ContextFactory factory = ContextFactory.getFactory();
+    factory.setAttribute("gangliaContext.multicast", "true");
+    factory.setAttribute("gangliaContext.multicast.ttl", "10");
+    context.init("gangliaContext", factory);
+    MulticastSocket multicastSocket = (MulticastSocket) context.datagramSocket;
+    assertEquals("Did not set TTL", multicastSocket.getTimeToLive(), 10);
+  }
   
   @Test
   public void testCloseShouldCloseTheSocketWhichIsCreatedByInit() throws Exception {
