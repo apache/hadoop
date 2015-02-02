@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -137,7 +138,22 @@ public class TestRuntimeEstimators {
 
     estimator.contextualize(conf, myAppContext);
 
+    conf.setLong(MRJobConfig.SPECULATIVE_RETRY_AFTER_NO_SPECULATE, 500L);
+    conf.setLong(MRJobConfig.SPECULATIVE_RETRY_AFTER_SPECULATE, 5000L);
+    conf.setDouble(MRJobConfig.SPECULATIVECAP_RUNNING_TASKS, 0.1);
+    conf.setDouble(MRJobConfig.SPECULATIVECAP_TOTAL_TASKS, 0.001);
+    conf.setInt(MRJobConfig.SPECULATIVE_MINIMUM_ALLOWED_TASKS, 5);
     speculator = new DefaultSpeculator(conf, myAppContext, estimator, clock);
+    Assert.assertEquals("wrong SPECULATIVE_RETRY_AFTER_NO_SPECULATE value",
+        500L, speculator.getSoonestRetryAfterNoSpeculate());
+    Assert.assertEquals("wrong SPECULATIVE_RETRY_AFTER_SPECULATE value",
+        5000L, speculator.getSoonestRetryAfterSpeculate());
+    Assert.assertEquals(speculator.getProportionRunningTasksSpeculatable(),
+        0.1, 0.00001);
+    Assert.assertEquals(speculator.getProportionTotalTasksSpeculatable(),
+        0.001, 0.00001);
+    Assert.assertEquals("wrong SPECULATIVE_MINIMUM_ALLOWED_TASKS value",
+        5, speculator.getMinimumAllowedSpeculativeTasks());
 
     dispatcher.register(Speculator.EventType.class, speculator);
 

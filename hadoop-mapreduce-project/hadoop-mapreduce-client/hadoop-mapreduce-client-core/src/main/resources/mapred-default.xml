@@ -490,11 +490,40 @@
   <description>If true, then multiple instances of some reduce tasks 
                may be executed in parallel.</description>
 </property>
+
 <property>
-  <name>mapreduce.job.speculative.speculativecap</name>
+  <name>mapreduce.job.speculative.speculative-cap-running-tasks</name>
   <value>0.1</value>
   <description>The max percent (0-1) of running tasks that
   can be speculatively re-executed at any time.</description>
+</property>
+
+<property>
+  <name>mapreduce.job.speculative.speculative-cap-total-tasks</name>
+  <value>0.01</value>
+  <description>The max percent (0-1) of all tasks that
+  can be speculatively re-executed at any time.</description>
+</property>
+
+<property>
+  <name>mapreduce.job.speculative.minimum-allowed-tasks</name>
+  <value>10</value>
+  <description>The minimum allowed tasks that
+  can be speculatively re-executed at any time.</description>
+</property>
+
+<property>
+  <name>mapreduce.job.speculative.retry-after-no-speculate</name>
+  <value>1000</value>
+  <description>The waiting time(ms) to do next round of speculation
+  if there is no task speculated in this round.</description>
+</property>
+
+<property>
+  <name>mapreduce.job.speculative.retry-after-speculate</name>
+  <value>15000</value>
+  <description>The waiting time(ms) to do next round of speculation
+  if there are tasks speculated in this round.</description>
 </property>
 
 <property>
@@ -513,16 +542,6 @@
   <description>The number of standard deviations by which a task's
   ave progress-rates must be lower than the average of all running tasks'
   for the task to be considered too slow.
-  </description>
-</property>
-
-<property>
-  <name>mapreduce.job.speculative.slownodethreshold</name>
-  <value>1.0</value>
-  <description>The number of standard deviations by which a Task 
-  Tracker's average map and reduce progress-rates (finishTime-dispatchTime)
-  must be lower than the average of all successful map/reduce task's for
-  the NodeManager to be considered too slow to give a speculative task to.
   </description>
 </property>
 
