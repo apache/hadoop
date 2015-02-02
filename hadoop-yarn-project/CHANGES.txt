@@ -188,6 +188,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3108. ApplicationHistoryServer doesn't process -D arguments (Chang Li
     via jeagles)
 
+    YARN-2808. Made YARN CLI list attempt’s finished containers of a running
+    application. (Naganarasimha G R via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

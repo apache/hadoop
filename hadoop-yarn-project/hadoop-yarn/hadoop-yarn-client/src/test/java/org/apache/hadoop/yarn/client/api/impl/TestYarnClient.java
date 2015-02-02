@@ -91,6 +91,7 @@ import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.client.api.AHSClient;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
@@ -338,6 +339,9 @@ public class TestYarnClient {
   @Test(timeout = 10000)
   public void testGetContainers() throws YarnException, IOException {
     Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
+        true);
+    
     final YarnClient client = new MockYarnClient();
     client.init(conf);
     client.start();
@@ -351,6 +355,17 @@ public class TestYarnClient {
         (ContainerId.newContainerId(appAttemptId, 1)));
     Assert.assertEquals(reports.get(1).getContainerId(),
         (ContainerId.newContainerId(appAttemptId, 2)));
+    Assert.assertEquals(reports.get(2).getContainerId(),
+        (ContainerId.newContainerId(appAttemptId, 3)));
+    
+    //First2 containers should come from RM with updated state information and 
+    // 3rd container is not there in RM and should
+    Assert.assertEquals(ContainerState.RUNNING,
+        (reports.get(0).getContainerState()));
+    Assert.assertEquals(ContainerState.RUNNING,
+        (reports.get(1).getContainerState()));
+    Assert.assertEquals(ContainerState.COMPLETE,
+        (reports.get(2).getContainerState()));
     client.stop();
   }
 
@@ -383,6 +398,9 @@ public class TestYarnClient {
       new HashMap<ApplicationId, List<ApplicationAttemptReport>>();
     private HashMap<ApplicationAttemptId, List<ContainerReport>> containers = 
       new HashMap<ApplicationAttemptId, List<ContainerReport>>();
+    private HashMap<ApplicationAttemptId, List<ContainerReport>> containersFromAHS =
+      new HashMap<ApplicationAttemptId, List<ContainerReport>>();
+
     GetApplicationsResponse mockAppResponse =
       mock(GetApplicationsResponse.class);
     GetApplicationAttemptsResponse mockAppAttemptsResponse = 
@@ -428,6 +446,9 @@ public class TestYarnClient {
 
         when(rmClient.getContainerReport(any(GetContainerReportRequest.class)))
             .thenReturn(mockContainerResponse);
+        
+        historyClient = mock(AHSClient.class);
+        
       } catch (YarnException e) {
         Assert.fail("Exception is not expected.");
       } catch (IOException e) {
@@ -501,15 +522,37 @@ public class TestYarnClient {
       ContainerReport container = ContainerReport.newInstance(
           ContainerId.newContainerId(attempt.getApplicationAttemptId(), 1), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
-          "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+          "diagnosticInfo", "logURL", 0, ContainerState.RUNNING);
       containerReports.add(container);
 
       ContainerReport container1 = ContainerReport.newInstance(
           ContainerId.newContainerId(attempt.getApplicationAttemptId(), 2), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
-          "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+          "diagnosticInfo", "logURL", 0, ContainerState.RUNNING);
       containerReports.add(container1);
       containers.put(attempt.getApplicationAttemptId(), containerReports);
+      
+      //add containers to be sent from AHS
+      List<ContainerReport> containerReportsForAHS =
+          new ArrayList<ContainerReport>();
+      
+      container = ContainerReport.newInstance(
+          ContainerId.newContainerId(attempt.getApplicationAttemptId(), 1), null,
+          NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
+          "diagnosticInfo", "logURL", 0, null);
+      containerReportsForAHS.add(container);
+
+      container1 = ContainerReport.newInstance(
+          ContainerId.newContainerId(attempt.getApplicationAttemptId(), 2), null,
+          NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
+          "diagnosticInfo", "HSlogURL", 0, null);
+      containerReportsForAHS.add(container1);
+      ContainerReport container2 = ContainerReport.newInstance(
+          ContainerId.newContainerId(attempt.getApplicationAttemptId(),3), null,
+          NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
+          "diagnosticInfo", "HSlogURL", 0, ContainerState.COMPLETE);
+      containerReportsForAHS.add(container2);
+      containersFromAHS.put(attempt.getApplicationAttemptId(), containerReportsForAHS);
 
       ApplicationId applicationId2 = ApplicationId.newInstance(1234, 6);
       ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
@@ -586,7 +629,14 @@ public class TestYarnClient {
             IOException {
       when(mockContainersResponse.getContainerList()).thenReturn(
         getContainersReport(appAttemptId));
+      when(historyClient.getContainers(any(ApplicationAttemptId.class)))
+      .thenReturn(getContainersFromAHS(appAttemptId));
       return super.getContainers(appAttemptId);
+    }
+
+    private List<ContainerReport> getContainersFromAHS(
+        ApplicationAttemptId appAttemptId) {
+      return containersFromAHS.get(appAttemptId);
     }
 
     @Override
