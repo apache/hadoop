@@ -112,8 +112,8 @@ class InvalidateBlocks {
     if (set.add(block)) {
       numBlocks++;
       if (log) {
-        NameNode.blockStateChangeLog.info("BLOCK* " + getClass().getSimpleName()
-            + ": add " + block + " to " + datanode);
+        NameNode.blockStateChangeLog.info("BLOCK* {}: add {} to {}",
+            getClass().getSimpleName(), block, datanode);
       }
     }
   }

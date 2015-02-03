@@ -491,7 +491,7 @@ public class DatanodeManager {
     if (!node.getXferAddr().equals(nodeID.getXferAddr())) {
       final UnregisteredNodeException e = new UnregisteredNodeException(
           nodeID, node);
-      NameNode.stateChangeLog.fatal("BLOCK* NameSystem.getDatanode: "
+      NameNode.stateChangeLog.error("BLOCK* NameSystem.getDatanode: "
                                     + e.getLocalizedMessage());
       throw e;
     }

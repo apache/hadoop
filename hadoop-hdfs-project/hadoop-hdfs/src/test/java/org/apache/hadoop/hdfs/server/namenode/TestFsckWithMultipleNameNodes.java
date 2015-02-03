@@ -23,7 +23,6 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,9 +43,7 @@ import org.junit.Test;
 public class TestFsckWithMultipleNameNodes {
   static final Log LOG = LogFactory.getLog(TestFsckWithMultipleNameNodes.class);
   {
-    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.OFF);
-    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.OFF);
-    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.OFF);
+    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
   }
 
   

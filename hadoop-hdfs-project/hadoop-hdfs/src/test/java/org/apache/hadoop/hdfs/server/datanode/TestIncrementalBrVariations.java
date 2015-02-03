@@ -79,12 +79,13 @@ public class TestIncrementalBrVariations {
   private DatanodeRegistration dn0Reg;  // DataNodeRegistration for dn0
 
   static {
-    ((Log4JLogger) NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) BlockManager.blockLog).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) NameNode.blockStateChangeLog).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) DataNode.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) TestIncrementalBrVariations.LOG).getLogger().setLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.ALL);
+    GenericTestUtils.setLogLevel(BlockManager.blockLog, Level.ALL);
+    GenericTestUtils.setLogLevel(NameNode.blockStateChangeLog, Level.ALL);
+    GenericTestUtils
+        .setLogLevel(LogFactory.getLog(FSNamesystem.class), Level.ALL);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(TestIncrementalBrVariations.LOG, Level.ALL);
   }
 
   @Before

@@ -73,18 +73,15 @@ public class CorruptReplicasMap{
     }
     
     if (!nodes.keySet().contains(dn)) {
-      NameNode.blockStateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
-                                   blk.getBlockName() +
-                                   " added as corrupt on " + dn +
-                                   " by " + Server.getRemoteIp() +
-                                   reasonText);
+      NameNode.blockStateChangeLog.info(
+          "BLOCK NameSystem.addToCorruptReplicasMap: {} added as corrupt on "
+              + "{} by {} {}", blk.getBlockName(), dn, Server.getRemoteIp(),
+          reasonText);
     } else {
-      NameNode.blockStateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
-                                   "duplicate requested for " + 
-                                   blk.getBlockName() + " to add as corrupt " +
-                                   "on " + dn +
-                                   " by " + Server.getRemoteIp() +
-                                   reasonText);
+      NameNode.blockStateChangeLog.info(
+          "BLOCK NameSystem.addToCorruptReplicasMap: duplicate requested for" +
+              " {} to add as corrupt on {} by {} {}", blk.getBlockName(), dn,
+              Server.getRemoteIp(), reasonText);
     }
     // Add the node or update the reason.
     nodes.put(dn, reasonCode);

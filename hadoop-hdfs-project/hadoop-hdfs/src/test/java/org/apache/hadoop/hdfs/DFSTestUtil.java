@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha
         .ConfiguredFailoverProxyProvider;
@@ -1659,8 +1660,11 @@ public class DFSTestUtil {
   }
 
   public static void setNameNodeLogLevel(Level level) {
-    GenericTestUtils.setLogLevel(LogFactory.getLog(FSNamesystem.class), level);
-    GenericTestUtils.setLogLevel(LogFactory.getLog(BlockManager.class), level);
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, level);
+    GenericTestUtils.setLogLevel(BlockManager.LOG, level);
+    GenericTestUtils.setLogLevel(LeaseManager.LOG, level);
+    GenericTestUtils.setLogLevel(NameNode.LOG, level);
     GenericTestUtils.setLogLevel(NameNode.stateChangeLog, level);
+    GenericTestUtils.setLogLevel(NameNode.blockStateChangeLog, level);
   }
 }
