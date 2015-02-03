@@ -97,8 +97,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class BlockManager {
 
-  static final Logger LOG = LoggerFactory.getLogger(BlockManager.class);
-  public static final Log blockLog = NameNode.blockStateChangeLog;
+  public static final Logger LOG = LoggerFactory.getLogger(BlockManager.class);
+  public static final Logger blockLog = NameNode.blockStateChangeLog;
 
   private static final String QUEUE_REASON_CORRUPT_STATE =
     "it has the wrong state or generation stamp";
@@ -1003,8 +1003,8 @@ public class BlockManager {
       final long size) throws UnregisteredNodeException {
     final DatanodeDescriptor node = getDatanodeManager().getDatanode(datanode);
     if (node == null) {
-      blockLog.warn("BLOCK* getBlocks: "
-          + "Asking for blocks from an unrecorded node " + datanode);
+      blockLog.warn("BLOCK* getBlocks: Asking for blocks from an" +
+          " unrecorded node {}", datanode);
       throw new HadoopIllegalArgumentException(
           "Datanode " + datanode + " not found.");
     }
@@ -1093,8 +1093,7 @@ public class BlockManager {
       datanodes.append(node).append(" ");
     }
     if (datanodes.length() != 0) {
-      blockLog.info("BLOCK* addToInvalidates: " + b + " "
-          + datanodes);
+      blockLog.info("BLOCK* addToInvalidates: {} {}", b, datanodes.toString());
     }
   }
 
@@ -1127,8 +1126,7 @@ public class BlockManager {
       // ignore the request for now. This could happen when BlockScanner
       // thread of Datanode reports bad block before Block reports are sent
       // by the Datanode on startup
-      blockLog.info("BLOCK* findAndMarkBlockAsCorrupt: "
-          + blk + " not found");
+      blockLog.info("BLOCK* findAndMarkBlockAsCorrupt: {} not found", blk);
       return;
     }
 
@@ -1157,8 +1155,8 @@ public class BlockManager {
 
     BlockCollection bc = b.corrupted.getBlockCollection();
     if (bc == null) {
-      blockLog.info("BLOCK markBlockAsCorrupt: " + b
-          + " cannot be marked as corrupt as it does not belong to any file");
+      blockLog.info("BLOCK markBlockAsCorrupt: {} cannot be marked as" +
+          " corrupt as it does not belong to any file", b);
       addToInvalidates(b.corrupted, node);
       return;
     } 
@@ -1205,7 +1203,7 @@ public class BlockManager {
    */
   private boolean invalidateBlock(BlockToMarkCorrupt b, DatanodeInfo dn
       ) throws IOException {
-    blockLog.info("BLOCK* invalidateBlock: " + b + " on " + dn);
+    blockLog.info("BLOCK* invalidateBlock: {} on {}", b, dn);
     DatanodeDescriptor node = getDatanodeManager().getDatanode(dn);
     if (node == null) {
       throw new IOException("Cannot invalidate " + b
@@ -1219,20 +1217,22 @@ public class BlockManager {
           "invalidation of " + b + " on " + dn + " because " +
           nr.replicasOnStaleNodes() + " replica(s) are located on nodes " +
           "with potentially out-of-date block reports");
+      blockLog.info("BLOCK* invalidateBlocks: postponing " +
+          "invalidation of {} on {} because {} replica(s) are located on " +
+          "nodes with potentially out-of-date block reports", b, dn,
+          nr.replicasOnStaleNodes());
       postponeBlock(b.corrupted);
       return false;
     } else if (nr.liveReplicas() >= 1) {
       // If we have at least one copy on a live node, then we can delete it.
       addToInvalidates(b.corrupted, dn);
       removeStoredBlock(b.stored, node);
-      if(blockLog.isDebugEnabled()) {
-        blockLog.debug("BLOCK* invalidateBlocks: "
-            + b + " on " + dn + " listed for deletion.");
-      }
+      blockLog.debug("BLOCK* invalidateBlocks: {} on {} listed for deletion.",
+          b, dn);
       return true;
     } else {
-      blockLog.info("BLOCK* invalidateBlocks: " + b
-          + " on " + dn + " is the only copy and was not deleted");
+      blockLog.info("BLOCK* invalidateBlocks: {} on {} is the only copy and" +
+          " was not deleted", b, dn);
       return false;
     }
   }
@@ -1364,8 +1364,8 @@ public class BlockManager {
                    (blockHasEnoughRacks(block)) ) {
                 neededReplications.remove(block, priority); // remove from neededReplications
                 neededReplications.decrementReplicationIndex(priority);
-                blockLog.info("BLOCK* Removing " + block
-                    + " from neededReplications as it has enough replicas");
+                blockLog.info("BLOCK* Removing {} from neededReplications as" +
+                        " it has enough replicas", block);
                 continue;
               }
             }
@@ -1436,8 +1436,8 @@ public class BlockManager {
               neededReplications.remove(block, priority); // remove from neededReplications
               neededReplications.decrementReplicationIndex(priority);
               rw.targets = null;
-              blockLog.info("BLOCK* Removing " + block
-                  + " from neededReplications as it has enough replicas");
+              blockLog.info("BLOCK* Removing {} from neededReplications as" +
+                      " it has enough replicas", block);
               continue;
             }
           }
@@ -1461,11 +1461,8 @@ public class BlockManager {
           // replications that fail after an appropriate amount of time.
           pendingReplications.increment(block,
               DatanodeStorageInfo.toDatanodeDescriptors(targets));
-          if(blockLog.isDebugEnabled()) {
-            blockLog.debug(
-                "BLOCK* block " + block
-                + " is moved from neededReplications to pendingReplications");
-          }
+          blockLog.debug("BLOCK* block {} is moved from neededReplications to "
+                  + "pendingReplications", block);
 
           // remove from neededReplications
           if(numEffectiveReplicas + targets.length >= requiredReplication) {
@@ -1488,16 +1485,13 @@ public class BlockManager {
             targetList.append(' ');
             targetList.append(targets[k].getDatanodeDescriptor());
           }
-          blockLog.info("BLOCK* ask " + rw.srcNode
-              + " to replicate " + rw.block + " to " + targetList);
+          blockLog.info("BLOCK* ask {} to replicate {} to {}", rw.srcNode,
+              rw.block, targetList);
         }
       }
     }
-    if(blockLog.isDebugEnabled()) {
-        blockLog.debug(
-          "BLOCK* neededReplications = " + neededReplications.size()
-          + " pendingReplications = " + pendingReplications.size());
-    }
+    blockLog.debug("BLOCK* neededReplications = {} pendingReplications = {}",
+        neededReplications.size(), pendingReplications.size());
 
     return scheduledWork;
   }
@@ -1795,8 +1789,8 @@ public class BlockManager {
       if (namesystem.isInStartupSafeMode()
           && storageInfo.getBlockReportCount() > 0) {
         blockLog.info("BLOCK* processReport: "
-            + "discarded non-initial block report from " + nodeID
-            + " because namenode still in startup phase");
+            + "discarded non-initial block report from {}"
+            + " because namenode still in startup phase", nodeID);
         return !node.hasStaleStorages();
       }
 
@@ -1816,9 +1810,8 @@ public class BlockManager {
 
     if (invalidatedBlocks != null) {
       for (Block b : invalidatedBlocks) {
-        blockLog.info("BLOCK* processReport: " + b + " on " + node
-                          + " size " + b.getNumBytes()
-                          + " does not belong to any file");
+        blockLog.info("BLOCK* processReport: {} on node {} size {} does not " +
+            "belong to any file", b, node, b.getNumBytes());
       }
     }
 
@@ -1827,10 +1820,10 @@ public class BlockManager {
     if (metrics != null) {
       metrics.addBlockReport((int) (endTime - startTime));
     }
-    blockLog.info("BLOCK* processReport: from storage " + storage.getStorageID()
-        + " node " + nodeID + ", blocks: " + newReport.getNumberOfBlocks()
-        + ", hasStaleStorages: " + node.hasStaleStorages()
-        + ", processing time: " + (endTime - startTime) + " msecs");
+    blockLog.info("BLOCK* processReport: from storage {} node {}, " +
+        "blocks: {}, hasStaleStorage: {}, processing time: {} msecs", storage
+        .getStorageID(), nodeID, newReport.getNumberOfBlocks(),
+        node.hasStaleStorages(), (endTime - startTime));
     return !node.hasStaleStorages();
   }
 
@@ -1937,8 +1930,8 @@ public class BlockManager {
       numBlocksLogged++;
     }
     if (numBlocksLogged > maxNumBlocksToLog) {
-      blockLog.info("BLOCK* processReport: logged info for " + maxNumBlocksToLog
-          + " of " + numBlocksLogged + " reported.");
+      blockLog.info("BLOCK* processReport: logged info for {} of {} " +
+          "reported.", maxNumBlocksToLog, numBlocksLogged);
     }
     for (Block b : toInvalidate) {
       addToInvalidates(b, node);
@@ -2417,9 +2410,9 @@ public class BlockManager {
     }
     if (storedBlock == null || storedBlock.getBlockCollection() == null) {
       // If this block does not belong to anyfile, then we are done.
-      blockLog.info("BLOCK* addStoredBlock: " + block + " on "
-          + node + " size " + block.getNumBytes()
-          + " but it does not belong to any file");
+      blockLog.info("BLOCK* addStoredBlock: {} on {} size {} but it does not" +
+          " belong to any file", block, node, block.getNumBytes());
+
       // we could add this block to invalidate set of this datanode.
       // it will happen in next block report otherwise.
       return block;
@@ -2441,6 +2434,8 @@ public class BlockManager {
       blockLog.warn("BLOCK* addStoredBlock: " + "block " + storedBlock
           + " moved to storageType " + storageInfo.getStorageType()
           + " on node " + node);
+      blockLog.warn("BLOCK* addStoredBlock: block {} moved to storageType " +
+          "{} on node {}", storedBlock, storageInfo.getStorageType(), node);
     } else {
       // if the same block is added again and the replica was corrupt
       // previously because of a wrong gen stamp, remove it from the
@@ -2448,9 +2443,9 @@ public class BlockManager {
       corruptReplicas.removeFromCorruptReplicasMap(block, node,
           Reason.GENSTAMP_MISMATCH);
       curReplicaDelta = 0;
-      blockLog.warn("BLOCK* addStoredBlock: "
-          + "Redundant addStoredBlock request received for " + storedBlock
-          + " on " + node + " size " + storedBlock.getNumBytes());
+      blockLog.warn("BLOCK* addStoredBlock: Redundant addStoredBlock request"
+              + " received for {} on node {} size {}", storedBlock, node,
+          storedBlock.getNumBytes());
     }
 
     // Now check for completion of blocks and safe block count
@@ -2518,7 +2513,7 @@ public class BlockManager {
     storedBlock.appendStringTo(sb);
     sb.append(" size " )
       .append(storedBlock.getNumBytes());
-    blockLog.info(sb);
+    blockLog.info(sb.toString());
   }
   /**
    * Invalidate corrupt replicas.
@@ -2548,8 +2543,8 @@ public class BlockManager {
           removedFromBlocksMap = false;
         }
       } catch (IOException e) {
-        blockLog.info("invalidateCorruptReplicas "
-            + "error in deleting bad block " + blk + " on " + node, e);
+        blockLog.info("invalidateCorruptReplicas error in deleting bad block"
+            + " {} on {}", blk, node, e);
         removedFromBlocksMap = false;
       }
     }
@@ -2881,7 +2876,7 @@ public class BlockManager {
       //
       addToInvalidates(b, cur.getDatanodeDescriptor());
       blockLog.info("BLOCK* chooseExcessReplicates: "
-                +"("+cur+", "+b+") is added to invalidated blocks set");
+                +"({}, {}) is added to invalidated blocks set", cur, b);
     }
   }
 
@@ -2915,11 +2910,8 @@ public class BlockManager {
     }
     if (excessBlocks.add(block)) {
       excessBlocksCount.incrementAndGet();
-      if(blockLog.isDebugEnabled()) {
-        blockLog.debug("BLOCK* addToExcessReplicate:"
-            + " (" + dn + ", " + block
-            + ") is added to excessReplicateMap");
-      }
+      blockLog.debug("BLOCK* addToExcessReplicate: ({}, {}) is added to"
+          + " excessReplicateMap", dn, block);
     }
   }
 
@@ -2928,17 +2920,12 @@ public class BlockManager {
    * removed block is still valid.
    */
   public void removeStoredBlock(Block block, DatanodeDescriptor node) {
-    if(blockLog.isDebugEnabled()) {
-      blockLog.debug("BLOCK* removeStoredBlock: "
-          + block + " from " + node);
-    }
+    blockLog.debug("BLOCK* removeStoredBlock: {} from {}", block, node);
     assert (namesystem.hasWriteLock());
     {
       if (!blocksMap.removeNode(block, node)) {
-        if(blockLog.isDebugEnabled()) {
-          blockLog.debug("BLOCK* removeStoredBlock: "
-              + block + " has already been removed from node " + node);
-        }
+        blockLog.debug("BLOCK* removeStoredBlock: {} has already been" +
+            " removed from node {}", block, node);
         return;
       }
 
@@ -2963,10 +2950,8 @@ public class BlockManager {
       if (excessBlocks != null) {
         if (excessBlocks.remove(block)) {
           excessBlocksCount.decrementAndGet();
-          if(blockLog.isDebugEnabled()) {
-            blockLog.debug("BLOCK* removeStoredBlock: "
-                + block + " is removed from excessBlocks");
-          }
+          blockLog.debug("BLOCK* removeStoredBlock: {} is removed from " +
+              "excessBlocks", block);
           if (excessBlocks.size() == 0) {
             excessReplicateMap.remove(node.getDatanodeUuid());
           }
@@ -3019,8 +3004,8 @@ public class BlockManager {
     if (delHint != null && delHint.length() != 0) {
       delHintNode = datanodeManager.getDatanode(delHint);
       if (delHintNode == null) {
-        blockLog.warn("BLOCK* blockReceived: " + block
-            + " is expected to be removed from an unrecorded node " + delHint);
+        blockLog.warn("BLOCK* blockReceived: {} is expected to be removed " +
+            "from an unrecorded node {}", block, delHint);
       }
     }
 
@@ -3059,13 +3044,12 @@ public class BlockManager {
       numBlocksLogged++;
     }
     if (numBlocksLogged > maxNumBlocksToLog) {
-      blockLog.info("BLOCK* addBlock: logged info for " + maxNumBlocksToLog
-          + " of " + numBlocksLogged + " reported.");
+      blockLog.info("BLOCK* addBlock: logged info for {} of {} reported.",
+          maxNumBlocksToLog, numBlocksLogged);
     }
     for (Block b : toInvalidate) {
-      blockLog.info("BLOCK* addBlock: block "
-          + b + " on " + node + " size " + b.getNumBytes()
-          + " does not belong to any file");
+      blockLog.info("BLOCK* addBlock: block {} on node {} size {} does not " +
+          "belong to any file", b, node, b.getNumBytes());
       addToInvalidates(b, node);
     }
     for (BlockToMarkCorrupt b : toCorrupt) {
@@ -3088,10 +3072,8 @@ public class BlockManager {
     int receiving = 0;
     final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
     if (node == null || !node.isAlive) {
-      blockLog
-          .warn("BLOCK* processIncrementalBlockReport"
-              + " is received from dead or unregistered node "
-              + nodeID);
+      blockLog.warn("BLOCK* processIncrementalBlockReport"
+              + " is received from dead or unregistered node {}", nodeID);
       throw new IOException(
           "Got incremental block report from unregistered or dead node");
     }
@@ -3130,17 +3112,12 @@ public class BlockManager {
         assert false : msg; // if assertions are enabled, throw.
         break;
       }
-      if (blockLog.isDebugEnabled()) {
-        blockLog.debug("BLOCK* block "
-            + (rdbi.getStatus()) + ": " + rdbi.getBlock()
-            + " is received from " + nodeID);
-      }
+      blockLog.debug("BLOCK* block {}: {} is received from {}",
+          rdbi.getStatus(), rdbi.getBlock(), nodeID);
     }
-    if (blockLog.isDebugEnabled()) {
-      blockLog.debug("*BLOCK* NameNode.processIncrementalBlockReport: " + "from "
-        + nodeID + " receiving: " + receiving + ", " + " received: " + received
-        + ", " + " deleted: " + deleted);
-    }
+    blockLog.debug("*BLOCK* NameNode.processIncrementalBlockReport: from "
+            + "{} receiving: {}, received: {}, deleted: {}", nodeID, receiving,
+        received, deleted);
   }
 
   /**
@@ -3464,10 +3441,8 @@ public class BlockManager {
     } finally {
       namesystem.writeUnlock();
     }
-    if (blockLog.isInfoEnabled()) {
-      blockLog.info("BLOCK* " + getClass().getSimpleName()
-          + ": ask " + dn + " to delete " + toInvalidate);
-    }
+    blockLog.info("BLOCK* {}: ask {} to delete {}", getClass().getSimpleName(),
+        dn, toInvalidate);
     return toInvalidate.size();
   }
 

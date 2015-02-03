@@ -291,6 +291,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7681. Change ReplicaInputStreams constructor to take InputStream(s)
     instead of FileDescriptor(s).  (Joe Pallas via szetszwo)
 
+    HDFS-7712. Switch blockStateChangeLog to use slf4j. (wang)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

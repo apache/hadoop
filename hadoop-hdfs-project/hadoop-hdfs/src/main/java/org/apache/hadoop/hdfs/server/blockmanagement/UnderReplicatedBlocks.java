@@ -202,15 +202,12 @@ class UnderReplicatedBlocks implements Iterable<Block> {
           expectedReplicas == 1) {
         corruptReplOneBlocks++;
       }
-      if(NameNode.blockStateChangeLog.isDebugEnabled()) {
-        NameNode.blockStateChangeLog.debug(
-          "BLOCK* NameSystem.UnderReplicationBlock.add:"
-          + block
-          + " has only " + curReplicas
-          + " replicas and need " + expectedReplicas
-          + " replicas so is added to neededReplications"
-          + " at priority level " + priLevel);
-      }
+      NameNode.blockStateChangeLog.debug(
+          "BLOCK* NameSystem.UnderReplicationBlock.add: {}"
+              + " has only {} replicas and need {} replicas so is added to" +
+              " neededReplications at priority level {}", block, curReplicas,
+          expectedReplicas, priLevel);
+
       return true;
     }
     return false;
@@ -254,24 +251,18 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   boolean remove(Block block, int priLevel) {
     if(priLevel >= 0 && priLevel < LEVEL 
         && priorityQueues.get(priLevel).remove(block)) {
-      if(NameNode.blockStateChangeLog.isDebugEnabled()) {
-        NameNode.blockStateChangeLog.debug(
-          "BLOCK* NameSystem.UnderReplicationBlock.remove: "
-          + "Removing block " + block
-          + " from priority queue "+ priLevel);
-      }
+      NameNode.blockStateChangeLog.debug(
+        "BLOCK* NameSystem.UnderReplicationBlock.remove: Removing block {}" +
+            " from priority queue {}", block, priLevel);
       return true;
     } else {
       // Try to remove the block from all queues if the block was
       // not found in the queue for the given priority level.
       for (int i = 0; i < LEVEL; i++) {
         if (priorityQueues.get(i).remove(block)) {
-          if(NameNode.blockStateChangeLog.isDebugEnabled()) {
-            NameNode.blockStateChangeLog.debug(
-              "BLOCK* NameSystem.UnderReplicationBlock.remove: "
-              + "Removing block " + block
-              + " from priority queue "+ i);
-          }
+          NameNode.blockStateChangeLog.debug(
+              "BLOCK* NameSystem.UnderReplicationBlock.remove: Removing block" +
+                  " {} from priority queue {}", block, priLevel);
           return true;
         }
       }
@@ -317,15 +308,12 @@ class UnderReplicatedBlocks implements Iterable<Block> {
       remove(block, oldPri);
     }
     if(priorityQueues.get(curPri).add(block)) {
-      if(NameNode.blockStateChangeLog.isDebugEnabled()) {
-        NameNode.blockStateChangeLog.debug(
-          "BLOCK* NameSystem.UnderReplicationBlock.update:"
-          + block
-          + " has only "+ curReplicas
-          + " replicas and needs " + curExpectedReplicas
-          + " replicas so is added to neededReplications"
-          + " at priority level " + curPri);
-      }
+      NameNode.blockStateChangeLog.debug(
+          "BLOCK* NameSystem.UnderReplicationBlock.update: {} has only {} " +
+              "replicas and needs {} replicas so is added to " +
+              "neededReplications at priority level {}", block, curReplicas,
+          curExpectedReplicas, curPri);
+
     }
     if (oldPri != curPri || expectedReplicasDelta != 0) {
       // corruptReplOneBlocks could possibly change
