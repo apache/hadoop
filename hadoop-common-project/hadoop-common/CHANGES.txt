@@ -28,6 +28,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11490. Expose truncate API via FileSystem and shell command.
     (Milan Desai via shv)
 
+    HADOOP-11045. Introducing a tool to detect flaky tests of hadoop jenkins testing
+    job. (Yongjun Zhang and Todd Lipcon via ozawa)
+
   IMPROVEMENTS
 
     HADOOP-11483. HardLink.java should use the jdk7 createLink method (aajisaka)
