@@ -633,7 +633,7 @@ class FSDirRenameOp {
       }
     }
 
-    boolean removeSrc4OldRename() throws IOException {
+    boolean removeSrc4OldRename() {
       final long removedSrc = fsd.removeLastINode(srcIIP);
       if (removedSrc == -1) {
         NameNode.stateChangeLog.warn("DIR* FSDirRenameOp.unprotectedRenameTo: "
@@ -648,7 +648,7 @@ class FSDirRenameOp {
       }
     }
 
-    long removeDst() throws IOException {
+    long removeDst() {
       long removedNum = fsd.removeLastINode(dstIIP);
       if (removedNum != -1) {
         oldDstChild = dstIIP.getLastINode();
@@ -735,8 +735,8 @@ class FSDirRenameOp {
         filesDeleted = true;
       } else {
         filesDeleted = oldDstChild.cleanSubtree(Snapshot.CURRENT_STATE_ID,
-            dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes,
-            true).get(Quota.NAMESPACE) >= 0;
+            dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes)
+            .get(Quota.NAMESPACE) >= 0;
       }
       fsd.getFSNamesystem().removeLeasesAndINodes(src, removedINodes, false);
       return filesDeleted;

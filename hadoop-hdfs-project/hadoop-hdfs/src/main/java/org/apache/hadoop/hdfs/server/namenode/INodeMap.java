@@ -22,8 +22,6 @@ import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.Quota.Counts;
 import org.apache.hadoop.util.GSet;
@@ -95,8 +93,7 @@ public class INodeMap {
         "", "", new FsPermission((short) 0)), 0, 0) {
       
       @Override
-      void recordModification(int latestSnapshotId)
-          throws QuotaExceededException {
+      void recordModification(int latestSnapshotId) {
       }
       
       @Override
@@ -119,8 +116,7 @@ public class INodeMap {
       
       @Override
       public Counts cleanSubtree(int snapshotId, int priorSnapshotId,
-          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
-          boolean countDiffChange) throws QuotaExceededException {
+          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
         return null;
       }
 

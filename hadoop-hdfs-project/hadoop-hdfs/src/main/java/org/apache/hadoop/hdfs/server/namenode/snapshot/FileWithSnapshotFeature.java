@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -117,8 +116,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
   
   public Quota.Counts cleanFile(final INodeFile file, final int snapshotId,
       int priorSnapshotId, final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final boolean countDiffChange)
-      throws QuotaExceededException {
+      final List<INode> removedINodes) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       // delete the current file while the file has snapshot feature
       if (!isCurrentFileDeleted()) {
@@ -130,7 +128,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
     } else { // delete the snapshot
       priorSnapshotId = getDiffs().updatePrior(snapshotId, priorSnapshotId);
       return diffs.deleteSnapshotDiff(snapshotId, priorSnapshotId, file,
-          collectedBlocks, removedINodes, countDiffChange);
+          collectedBlocks, removedINodes);
     }
   }
   

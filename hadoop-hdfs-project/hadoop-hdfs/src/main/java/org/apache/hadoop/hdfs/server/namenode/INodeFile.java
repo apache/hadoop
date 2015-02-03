@@ -306,13 +306,11 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public void recordModification(final int latestSnapshotId)
-      throws QuotaExceededException {
+  public void recordModification(final int latestSnapshotId) {
     recordModification(latestSnapshotId, false);
   }
 
-  public void recordModification(final int latestSnapshotId, boolean withBlocks)
-      throws QuotaExceededException {
+  public void recordModification(final int latestSnapshotId, boolean withBlocks) {
     if (isInLatestSnapshot(latestSnapshotId)
         && !shouldRecordInSrcSnapshot(latestSnapshotId)) {
       // the file is in snapshot, create a snapshot feature if it does not have
@@ -491,12 +489,11 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public Quota.Counts cleanSubtree(final int snapshot, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final boolean countDiffChange)
-      throws QuotaExceededException {
+      final List<INode> removedINodes) {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       return sf.cleanFile(this, snapshot, priorSnapshotId, collectedBlocks,
-          removedINodes, countDiffChange);
+          removedINodes);
     }
     Quota.Counts counts = Quota.Counts.newInstance();
     if (snapshot == CURRENT_STATE_ID) {
@@ -554,11 +551,9 @@ public class INodeFile extends INodeWithAdditionalFields
     if (sf != null) {
       FileDiffList fileDiffList = sf.getDiffs();
       int last = fileDiffList.getLastSnapshotId();
-      List<FileDiff> diffs = fileDiffList.asList();
 
       if (lastSnapshotId == Snapshot.CURRENT_STATE_ID
           || last == Snapshot.CURRENT_STATE_ID) {
-        nsDelta += diffs.size();
         dsDelta = diskspaceConsumed();
       } else if (last < lastSnapshotId) {
         dsDelta = computeFileSize(true, false) * getFileReplication();

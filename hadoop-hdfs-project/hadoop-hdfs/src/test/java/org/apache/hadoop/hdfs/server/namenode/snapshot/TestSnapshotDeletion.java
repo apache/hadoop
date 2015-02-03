@@ -263,7 +263,7 @@ public class TestSnapshotDeletion {
     BlockInfo[] blocks = temp.getBlocks();
     hdfs.delete(tempDir, true);
     // check dir's quota usage
-    checkQuotaUsageComputation(dir, 9L, BLOCKSIZE * REPLICATION * 3);
+    checkQuotaUsageComputation(dir, 8, BLOCKSIZE * REPLICATION * 3);
     // check blocks of tempFile
     for (BlockInfo b : blocks) {
       assertNull(blockmanager.getBlockCollection(b));
@@ -279,7 +279,7 @@ public class TestSnapshotDeletion {
     // create snapshot s1
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s1");
     // check dir's quota usage
-    checkQuotaUsageComputation(dir, 14L, BLOCKSIZE * REPLICATION * 4);
+    checkQuotaUsageComputation(dir, 9L, BLOCKSIZE * REPLICATION * 4);
     
     // get two snapshots for later use
     Snapshot snapshot0 = fsdir.getINode(dir.toString()).asDirectory()
@@ -295,7 +295,7 @@ public class TestSnapshotDeletion {
     hdfs.delete(noChangeDirParent, true);
     // while deletion, we add a diff for metaChangeFile2 as its snapshot copy
     // for s1, we also add diffs for both sub and noChangeDirParent
-    checkQuotaUsageComputation(dir, 17L, BLOCKSIZE * REPLICATION * 4);
+    checkQuotaUsageComputation(dir, 9L, BLOCKSIZE * REPLICATION * 4);
     
     // check the snapshot copy of noChangeDir 
     Path snapshotNoChangeDir = SnapshotTestHelper.getSnapshotPath(dir, "s1",
@@ -337,11 +337,11 @@ public class TestSnapshotDeletion {
     final INodeFile newFileNode = TestSnapshotBlocksMap.assertBlockCollection(
         newFile.toString(), 1, fsdir, blockmanager);
     blocks = newFileNode.getBlocks();
-    checkQuotaUsageComputation(dir, 18L, BLOCKSIZE * REPLICATION * 5);
+    checkQuotaUsageComputation(dir, 10L, BLOCKSIZE * REPLICATION * 5);
     hdfs.delete(sub, true);
     // while deletion, we add diff for subsub and metaChangeFile1, and remove
     // newFile
-    checkQuotaUsageComputation(dir, 19L, BLOCKSIZE * REPLICATION * 4);
+    checkQuotaUsageComputation(dir, 9L, BLOCKSIZE * REPLICATION * 4);
     for (BlockInfo b : blocks) {
       assertNull(blockmanager.getBlockCollection(b));
     }
@@ -426,13 +426,13 @@ public class TestSnapshotDeletion {
     // create snapshot s1 for sub
     SnapshotTestHelper.createSnapshot(hdfs, sub, snapshotName);
     // check quota usage computation
-    checkQuotaUsageComputation(sub, 4, BLOCKSIZE * REPLICATION * 2);
+    checkQuotaUsageComputation(sub, 3, BLOCKSIZE * REPLICATION * 2);
     // delete s1
     hdfs.deleteSnapshot(sub, snapshotName);
     checkQuotaUsageComputation(sub, 3, BLOCKSIZE * REPLICATION * 2);
     // now we can create a snapshot with the same name
     hdfs.createSnapshot(sub, snapshotName);
-    checkQuotaUsageComputation(sub, 4, BLOCKSIZE * REPLICATION * 2);
+    checkQuotaUsageComputation(sub, 3, BLOCKSIZE * REPLICATION * 2);
     
     // create a new file under sub
     Path newFile = new Path(sub, "newFile");
@@ -440,14 +440,14 @@ public class TestSnapshotDeletion {
     // create another snapshot s2
     String snapshotName2 = "s2";
     hdfs.createSnapshot(sub, snapshotName2);
-    checkQuotaUsageComputation(sub, 6, BLOCKSIZE * REPLICATION * 3);
+    checkQuotaUsageComputation(sub, 4, BLOCKSIZE * REPLICATION * 3);
     // Get the filestatus of sub under snapshot s2
     Path ss = SnapshotTestHelper
         .getSnapshotPath(sub, snapshotName2, "newFile");
     FileStatus statusBeforeDeletion = hdfs.getFileStatus(ss);
     // delete s1
     hdfs.deleteSnapshot(sub, snapshotName);
-    checkQuotaUsageComputation(sub, 5, BLOCKSIZE * REPLICATION * 3);
+    checkQuotaUsageComputation(sub, 4, BLOCKSIZE * REPLICATION * 3);
     FileStatus statusAfterDeletion = hdfs.getFileStatus(ss);
     System.out.println("Before deletion: " + statusBeforeDeletion.toString()
         + "\n" + "After deletion: " + statusAfterDeletion.toString());
@@ -483,28 +483,28 @@ public class TestSnapshotDeletion {
     
     // create snapshot s0 on dir
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s0");
-    checkQuotaUsageComputation(dir, 8, 3 * BLOCKSIZE * REPLICATION);
+    checkQuotaUsageComputation(dir, 7, 3 * BLOCKSIZE * REPLICATION);
     
     // delete /TestSnapshot/sub/noChangeDir/metaChangeDir/toDeleteFile
     hdfs.delete(toDeleteFile, true);
     // the deletion adds diff of toDeleteFile and metaChangeDir
-    checkQuotaUsageComputation(dir, 10, 3 * BLOCKSIZE * REPLICATION);
+    checkQuotaUsageComputation(dir, 7, 3 * BLOCKSIZE * REPLICATION);
     // change metadata of /TestSnapshot/sub/noChangeDir/metaChangeDir and
     // /TestSnapshot/sub/noChangeDir/metaChangeFile
     hdfs.setReplication(metaChangeFile, REPLICATION_1);
     hdfs.setOwner(metaChangeDir, "unknown", "unknown");
-    checkQuotaUsageComputation(dir, 11, 3 * BLOCKSIZE * REPLICATION);
+    checkQuotaUsageComputation(dir, 7, 3 * BLOCKSIZE * REPLICATION);
     
     // create snapshot s1 on dir
     hdfs.createSnapshot(dir, "s1");
-    checkQuotaUsageComputation(dir, 12, 3 * BLOCKSIZE * REPLICATION);
+    checkQuotaUsageComputation(dir, 7, 3 * BLOCKSIZE * REPLICATION);
     
     // delete snapshot s0
     hdfs.deleteSnapshot(dir, "s0");
     // namespace: remove toDeleteFile and its diff, metaChangeFile's diff, 
     // metaChangeDir's diff, dir's diff. diskspace: remove toDeleteFile, and 
     // metaChangeFile's replication factor decreases
-    checkQuotaUsageComputation(dir, 7, 2 * BLOCKSIZE * REPLICATION - BLOCKSIZE);
+    checkQuotaUsageComputation(dir, 6, 2 * BLOCKSIZE * REPLICATION - BLOCKSIZE);
     for (BlockInfo b : blocks) {
       assertNull(blockmanager.getBlockCollection(b));
     }
@@ -679,21 +679,21 @@ public class TestSnapshotDeletion {
     // create another snapshot
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s2");
     
-    checkQuotaUsageComputation(dir, 11, BLOCKSIZE * 2 * REPLICATION);
+    checkQuotaUsageComputation(dir, 7, BLOCKSIZE * 2 * REPLICATION);
     
     // delete subsubdir and subDir2
     hdfs.delete(subsubDir, true);
     hdfs.delete(subDir2, true);
     
     // add diff of s2 to subDir1, subsubDir, and subDir2
-    checkQuotaUsageComputation(dir, 14, BLOCKSIZE * 2 * REPLICATION);
+    checkQuotaUsageComputation(dir, 7, BLOCKSIZE * 2 * REPLICATION);
     
     // delete snapshot s2
     hdfs.deleteSnapshot(dir, "s2");
     
     // delete s2 diff in dir, subDir2, and subsubDir. Delete newFile, newDir,
     // and newFile2. Rename s2 diff to s1 for subDir1 
-    checkQuotaUsageComputation(dir, 8, 0);
+    checkQuotaUsageComputation(dir, 4, 0);
     // Check rename of snapshot diff in subDir1
     Path subdir1_s1 = SnapshotTestHelper.getSnapshotPath(dir, "s1",
         subDir1.getName());
@@ -714,7 +714,6 @@ public class TestSnapshotDeletion {
       int dirNodeNum) throws Exception {
     Path modDir = modDirStr.isEmpty() ? snapshotRoot : new Path(snapshotRoot,
         modDirStr);
-    final int delta = modDirStr.isEmpty() ? 0 : 1;
     Path file10 = new Path(modDir, "file10");
     Path file11 = new Path(modDir, "file11");
     Path file12 = new Path(modDir, "file12");
@@ -728,72 +727,59 @@ public class TestSnapshotDeletion {
 
     // create snapshot s1 for snapshotRoot
     SnapshotTestHelper.createSnapshot(hdfs, snapshotRoot, "s1");
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 5, 8 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 4, 8 * BLOCKSIZE);
     
     // delete file11
     hdfs.delete(file11, true);
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 6 + delta,
-        8 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 4, 8 * BLOCKSIZE);
     
     // modify file12
     hdfs.setReplication(file12, REPLICATION);
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7 + delta,
-        9 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 4, 9 * BLOCKSIZE);
     
     // modify file13
     hdfs.setReplication(file13, REPLICATION);
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 8 + delta,
-        10 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 4, 10 * BLOCKSIZE);
     
     // create file14
     DFSTestUtil.createFile(hdfs, file14, BLOCKSIZE, REPLICATION, seed);
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 9 + delta,
-        13 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 5, 13 * BLOCKSIZE);
     
     // create file15
     DFSTestUtil.createFile(hdfs, file15, BLOCKSIZE, REPLICATION, seed);
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 10 + delta,
-        16 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 6, 16 * BLOCKSIZE);
     
     // create snapshot s2 for snapshotRoot
     hdfs.createSnapshot(snapshotRoot, "s2");
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 11 + delta,
-        16 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 6, 16 * BLOCKSIZE);
     
     // create file11 again: (0, d) + (c, 0)
     DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION, seed);
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 12 + delta * 2,
-        19 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7, 19 * BLOCKSIZE);
     
     // delete file12
     hdfs.delete(file12, true);
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 13 + delta * 2,
-        19 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7, 19 * BLOCKSIZE);
     
     // modify file13
     hdfs.setReplication(file13, (short) (REPLICATION - 2));
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 14 + delta * 2,
-        19 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7, 19 * BLOCKSIZE);
     
     // delete file14: (c, 0) + (0, d)
     hdfs.delete(file14, true);
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 15 + delta * 2,
-        19 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7, 19 * BLOCKSIZE);
     
     // modify file15
     hdfs.setReplication(file15, REPLICATION_1);
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 16 + delta * 2,
-        19 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7, 19 * BLOCKSIZE);
     
     // create snapshot s3 for snapshotRoot
     hdfs.createSnapshot(snapshotRoot, "s3");
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 17 + delta * 2,
-        19 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7, 19 * BLOCKSIZE);
     
     // modify file10, to check if the posterior diff was set correctly
     hdfs.setReplication(file10, REPLICATION);
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 18 + delta * 2,
-        20 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 7, 20 * BLOCKSIZE);
     
     Path file10_s1 = SnapshotTestHelper.getSnapshotPath(snapshotRoot, "s1",
         modDirStr + "file10");
@@ -819,8 +805,7 @@ public class TestSnapshotDeletion {
     
     // delete s2, in which process we need to combine the diff in s2 to s1
     hdfs.deleteSnapshot(snapshotRoot, "s2");
-    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 12 + delta,
-        14 * BLOCKSIZE);
+    checkQuotaUsageComputation(snapshotRoot, dirNodeNum + 6, 14 * BLOCKSIZE);
     
     // check the correctness of s1
     FileStatus statusAfterDeletion10 = hdfs.getFileStatus(file10_s1);
@@ -873,23 +858,23 @@ public class TestSnapshotDeletion {
     
     // create snapshot s1 for sub1, and change the metadata of sub1
     SnapshotTestHelper.createSnapshot(hdfs, sub, "s1");
-    checkQuotaUsageComputation(sub, 3, BLOCKSIZE * 3);
+    checkQuotaUsageComputation(sub, 2, BLOCKSIZE * 3);
     hdfs.setOwner(sub, "user2", "group2");
-    checkQuotaUsageComputation(sub, 3, BLOCKSIZE * 3);
+    checkQuotaUsageComputation(sub, 2, BLOCKSIZE * 3);
     
     // create snapshot s2 for sub1, but do not modify sub1 afterwards
     hdfs.createSnapshot(sub, "s2");
-    checkQuotaUsageComputation(sub, 4, BLOCKSIZE * 3);
+    checkQuotaUsageComputation(sub, 2, BLOCKSIZE * 3);
     
     // create snapshot s3 for sub1, and change the metadata of sub1
     hdfs.createSnapshot(sub, "s3");
-    checkQuotaUsageComputation(sub, 5, BLOCKSIZE * 3);
+    checkQuotaUsageComputation(sub, 2, BLOCKSIZE * 3);
     hdfs.setOwner(sub, "user3", "group3");
-    checkQuotaUsageComputation(sub, 5, BLOCKSIZE * 3);
+    checkQuotaUsageComputation(sub, 2, BLOCKSIZE * 3);
     
     // delete snapshot s3
     hdfs.deleteSnapshot(sub, "s3");
-    checkQuotaUsageComputation(sub, 4, BLOCKSIZE * 3);
+    checkQuotaUsageComputation(sub, 2, BLOCKSIZE * 3);
     
     // check sub1's metadata in snapshot s2
     FileStatus statusOfS2 = hdfs.getFileStatus(new Path(sub,
@@ -899,7 +884,7 @@ public class TestSnapshotDeletion {
     
     // delete snapshot s2
     hdfs.deleteSnapshot(sub, "s2");
-    checkQuotaUsageComputation(sub, 3, BLOCKSIZE * 3);
+    checkQuotaUsageComputation(sub, 2, BLOCKSIZE * 3);
     
     // check sub1's metadata in snapshot s1
     FileStatus statusOfS1 = hdfs.getFileStatus(new Path(sub,
@@ -957,34 +942,34 @@ public class TestSnapshotDeletion {
     
     // create snapshot s0 on sub
     SnapshotTestHelper.createSnapshot(hdfs, sub, "s0");
-    checkQuotaUsageComputation(sub, 5, BLOCKSIZE * 6);
+    checkQuotaUsageComputation(sub, 4, BLOCKSIZE * 6);
     // make some changes on both sub and subsub
     final Path subFile1 = new Path(sub, "file1");
     final Path subsubFile1 = new Path(subsub, "file1");
     DFSTestUtil.createFile(hdfs, subFile1, BLOCKSIZE, REPLICATION_1, seed);
     DFSTestUtil.createFile(hdfs, subsubFile1, BLOCKSIZE, REPLICATION, seed);
-    checkQuotaUsageComputation(sub, 8, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(sub, 6, BLOCKSIZE * 11);
     
     // create snapshot s1 on sub
     SnapshotTestHelper.createSnapshot(hdfs, sub, "s1");
-    checkQuotaUsageComputation(sub, 9, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(sub, 6, BLOCKSIZE * 11);
     
     // create snapshot s2 on dir
     SnapshotTestHelper.createSnapshot(hdfs, dir, "s2");
-    checkQuotaUsageComputation(dir, 11, BLOCKSIZE * 11);
-    checkQuotaUsageComputation(sub, 9, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(dir, 7, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(sub, 6, BLOCKSIZE * 11);
     
     // make changes on subsub and subsubFile1
     hdfs.setOwner(subsub, "unknown", "unknown");
     hdfs.setReplication(subsubFile1, REPLICATION_1);
-    checkQuotaUsageComputation(dir, 13, BLOCKSIZE * 11);
-    checkQuotaUsageComputation(sub, 11, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(dir, 7, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(sub, 6, BLOCKSIZE * 11);
     
     // make changes on sub
     hdfs.delete(subFile1, true);
-    checkQuotaUsageComputation(new Path("/"), 16, BLOCKSIZE * 11);
-    checkQuotaUsageComputation(dir, 15, BLOCKSIZE * 11);
-    checkQuotaUsageComputation(sub, 13, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(new Path("/"), 8, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(dir, 7, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(sub, 6, BLOCKSIZE * 11);
     
     Path subsubSnapshotCopy = SnapshotTestHelper.getSnapshotPath(dir, "s2",
         sub.getName() + Path.SEPARATOR + subsub.getName());
@@ -1003,9 +988,9 @@ public class TestSnapshotDeletion {
     
     // delete snapshot s2
     hdfs.deleteSnapshot(dir, "s2");
-    checkQuotaUsageComputation(new Path("/"), 14, BLOCKSIZE * 11);
-    checkQuotaUsageComputation(dir, 13, BLOCKSIZE * 11);
-    checkQuotaUsageComputation(sub, 12, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(new Path("/"), 8, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(dir, 7, BLOCKSIZE * 11);
+    checkQuotaUsageComputation(sub, 6, BLOCKSIZE * 11);
     
     // no snapshot copy for s2
     try {

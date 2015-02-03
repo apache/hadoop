@@ -611,13 +611,12 @@ public class FSDirectory implements Closeable {
    * when image/edits have been loaded and the file/dir to be deleted is not
    * contained in snapshots.
    */
-  void updateCountForDelete(final INode inode, final INodesInPath iip)
-      throws QuotaExceededException {
+  void updateCountForDelete(final INode inode, final INodesInPath iip) {
     if (getFSNamesystem().isImageLoaded() &&
         !inode.isInLatestSnapshot(iip.getLatestSnapshotId())) {
       Quota.Counts counts = inode.computeQuotaUsage();
-      updateCount(iip, -counts.get(Quota.NAMESPACE),
-          -counts.get(Quota.DISKSPACE), false);
+      unprotectedUpdateCount(iip, iip.length() - 1,
+          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
     }
   }
 
@@ -656,8 +655,8 @@ public class FSDirectory implements Closeable {
    * update quota of each inode and check to see if quota is exceeded. 
    * See {@link #updateCount(INodesInPath, long, long, boolean)}
    */ 
-  private void updateCountNoQuotaCheck(INodesInPath inodesInPath,
-      int numOfINodes, long nsDelta, long dsDelta) {
+  void updateCountNoQuotaCheck(INodesInPath inodesInPath, int numOfINodes,
+      long nsDelta, long dsDelta) {
     assert hasWriteLock();
     try {
       updateCount(inodesInPath, numOfINodes, nsDelta, dsDelta, false);
@@ -855,7 +854,8 @@ public class FSDirectory implements Closeable {
    * Add a child to the end of the path specified by INodesInPath.
    * @return an INodesInPath instance containing the new INode
    */
-  INodesInPath addLastINode(INodesInPath existing, INode inode,
+  @VisibleForTesting
+  public INodesInPath addLastINode(INodesInPath existing, INode inode,
       boolean checkQuota) throws QuotaExceededException {
     assert existing.getLastINode() != null &&
         existing.getLastINode().isDirectory();
@@ -930,7 +930,8 @@ public class FSDirectory implements Closeable {
    *            reference nodes;
    *          1 otherwise.
    */
-  long removeLastINode(final INodesInPath iip) throws QuotaExceededException {
+  @VisibleForTesting
+  public long removeLastINode(final INodesInPath iip) {
     final int latestSnapshot = iip.getLatestSnapshotId();
     final INode last = iip.getLastINode();
     final INodeDirectory parent = iip.getINode(-2).asDirectory();

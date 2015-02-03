@@ -23,10 +23,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.server.namenode.AclFeature;
-import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 
 /**
  * An {@link INode} representing a symbolic link.
@@ -47,7 +44,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
 
   @Override
-  void recordModification(int latestSnapshotId) throws QuotaExceededException {
+  void recordModification(int latestSnapshotId) {
     if (isInLatestSnapshot(latestSnapshotId)) {
       INodeDirectory parent = getParent();
       parent.saveChild2Snapshot(this, latestSnapshotId, new INodeSymlink(this));
@@ -77,7 +74,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   @Override
   public Quota.Counts cleanSubtree(final int snapshotId, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final boolean countDiffChange) {
+      final List<INode> removedINodes) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID
         && priorSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
       destroyAndCollectBlocks(collectedBlocks, removedINodes);
