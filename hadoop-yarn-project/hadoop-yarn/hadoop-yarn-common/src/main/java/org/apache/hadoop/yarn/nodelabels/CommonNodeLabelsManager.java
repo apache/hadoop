@@ -121,15 +121,17 @@ public class CommonNodeLabelsManager extends AbstractService {
     public Set<String> labels;
     public Resource resource;
     public boolean running;
+    public NodeId nodeId;
     
-    protected Node() {
+    protected Node(NodeId nodeid) {
       labels = null;
       resource = Resource.newInstance(0, 0);
       running = false;
+      nodeId = nodeid;
     }
     
     public Node copy() {
-      Node c = new Node();
+      Node c = new Node(nodeId);
       if (labels != null) {
         c.labels =
             Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
@@ -465,7 +467,27 @@ public class CommonNodeLabelsManager extends AbstractService {
       }
     }
   }
-  
+
+  private void addNodeToLabels(NodeId node, Set<String> labels) {
+    for(String l : labels) {
+      labelCollections.get(l).addNodeId(node);
+    }
+  }
+
+  private void removeNodeFromLabels(NodeId node, Set<String> labels) {
+    for(String l : labels) {
+      labelCollections.get(l).removeNodeId(node);
+    }
+  }
+
+  private void replaceNodeForLabels(NodeId node, Set<String> oldLabels,
+      Set<String> newLabels) {
+    if(oldLabels != null) {
+      removeNodeFromLabels(node, oldLabels);
+    }
+    addNodeToLabels(node, newLabels);
+  }
+
   @SuppressWarnings("unchecked")
   protected void internalUpdateLabelsOnNodes(
       Map<NodeId, Set<String>> nodeToLabels, NodeLabelUpdateOperation op)
@@ -473,6 +495,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     // do update labels from nodes
     Map<NodeId, Set<String>> newNMToLabels =
         new HashMap<NodeId, Set<String>>();
+    Set<String> oldLabels;
     for (Entry<NodeId, Set<String>> entry : nodeToLabels.entrySet()) {
       NodeId nodeId = entry.getKey();
       Set<String> labels = entry.getValue();
@@ -481,26 +504,32 @@ public class CommonNodeLabelsManager extends AbstractService {
       if (nodeId.getPort() == WILDCARD_PORT) {
         Host host = nodeCollections.get(nodeId.getHost());
         switch (op) {
-        case REMOVE: 
+        case REMOVE:
+          removeNodeFromLabels(nodeId, labels);
           host.labels.removeAll(labels);
           for (Node node : host.nms.values()) {
             if (node.labels != null) {
               node.labels.removeAll(labels);
             }
+            removeNodeFromLabels(node.nodeId, labels);
           }
           break;
         case ADD:
+          addNodeToLabels(nodeId, labels);
           host.labels.addAll(labels);
           for (Node node : host.nms.values()) {
             if (node.labels != null) {
               node.labels.addAll(labels);
             }
+            addNodeToLabels(node.nodeId, labels);
           }
           break;
         case REPLACE:
+          replaceNodeForLabels(nodeId, host.labels, labels);
           host.labels.clear();
           host.labels.addAll(labels);
           for (Node node : host.nms.values()) {
+            replaceNodeForLabels(node.nodeId, node.labels, labels);
             node.labels = null;
           }
           break;
@@ -514,14 +543,20 @@ public class CommonNodeLabelsManager extends AbstractService {
           // Add and replace
           createNodeIfNonExisted(nodeId);
           Node nm = getNMInNodeSet(nodeId);
-          if (nm.labels == null) {
-            nm.labels = new HashSet<String>();
-          }
           switch (op) {
           case ADD:
+            addNodeToLabels(nodeId, labels);
+            if (nm.labels == null) { 
+              nm.labels = new HashSet<String>();
+            }
             nm.labels.addAll(labels);
             break;
           case REPLACE:
+            oldLabels = getLabelsByNode(nodeId);
+            replaceNodeForLabels(nodeId, oldLabels, labels);
+            if (nm.labels == null) { 
+              nm.labels = new HashSet<String>();
+            }
             nm.labels.clear();
             nm.labels.addAll(labels);
             break;
@@ -531,6 +566,7 @@ public class CommonNodeLabelsManager extends AbstractService {
           newNMToLabels.put(nodeId, nm.labels);
         } else {
           // remove
+          removeNodeFromLabels(nodeId, labels);
           Node nm = getNMInNodeSet(nodeId);
           if (nm.labels != null) {
             nm.labels.removeAll(labels);
@@ -647,6 +683,52 @@ public class CommonNodeLabelsManager extends AbstractService {
   }
 
   /**
+   * Get mapping of labels to nodes for all the labels.
+   *
+   * @return labels to nodes map
+   */
+  public Map<String, Set<NodeId>> getLabelsToNodes() {
+    try {
+      readLock.lock();
+      return getLabelsToNodes(labelCollections.keySet());
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
+   * Get mapping of labels to nodes for specified set of labels.
+   *
+   * @param labels set of labels for which labels to nodes mapping will be
+   *        returned.
+   * @return labels to nodes map
+   */
+  public Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels) {
+    try {
+      readLock.lock();
+      Map<String, Set<NodeId>> labelsToNodes =
+          new HashMap<String, Set<NodeId>>();
+      for (String label : labels) {
+        if(label.equals(NO_LABEL)) {
+          continue;
+        }
+        NodeLabel nodeLabelInfo = labelCollections.get(label);
+        if(nodeLabelInfo != null) {
+          Set<NodeId> nodeIds = nodeLabelInfo.getAssociatedNodeIds();
+          if (!nodeIds.isEmpty()) {
+            labelsToNodes.put(label, nodeIds);
+          }
+        } else {
+          LOG.warn("getLabelsToNodes : Label [" + label + "] cannot be found");
+        }
+      }      
+      return Collections.unmodifiableMap(labelsToNodes);
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
    * Get existing valid labels in repository
    * 
    * @return existing valid labels in repository
@@ -741,7 +823,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
     Node nm = host.nms.get(nodeId);
     if (null == nm) {
-      host.nms.put(nodeId, new Node());
+      host.nms.put(nodeId, new Node(nodeId));
     }
   }
   

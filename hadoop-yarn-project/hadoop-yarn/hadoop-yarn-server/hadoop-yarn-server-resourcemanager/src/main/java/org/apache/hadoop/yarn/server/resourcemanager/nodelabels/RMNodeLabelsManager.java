@@ -200,6 +200,17 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       Node nm = getNMInNodeSet(nodeId);
       nm.resource = resource;
       nm.running = true;
+
+      // Add node in labelsCollection
+      Set<String> labelsForNode = getLabelsByNode(nodeId);
+      if (labelsForNode != null) {
+        for (String label : labelsForNode) {
+          NodeLabel labelInfo = labelCollections.get(label);
+          if(labelInfo != null) {
+            labelInfo.addNodeId(nodeId);
+          }
+        }
+      }
       
       // get the node after edition
       Map<String, Host> after = cloneNodeMap(ImmutableSet.of(nodeId));

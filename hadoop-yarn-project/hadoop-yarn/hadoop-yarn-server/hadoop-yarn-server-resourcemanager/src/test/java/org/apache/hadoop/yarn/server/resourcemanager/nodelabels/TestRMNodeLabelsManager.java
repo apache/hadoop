@@ -464,4 +464,31 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     checkNodeLabelInfo(infos, "y", 1, 10);
     checkNodeLabelInfo(infos, "z", 0, 0);
   }
+  
+  @Test(timeout = 5000)
+  public void testLabelsToNodesOnNodeActiveDeactive() throws Exception {
+    // Activate a node without assigning any labels
+    mgr.activateNode(NodeId.newInstance("n1", 1), Resource.newInstance(10, 0));
+    Assert.assertTrue(mgr.getLabelsToNodes().isEmpty());
+    assertLabelsToNodesEquals(
+        mgr.getLabelsToNodes(), transposeNodeToLabels(mgr.getNodeLabels()));
+
+    // Add labels and replace labels on node
+    mgr.addToCluserNodeLabels(toSet("p1", "p2", "p3"));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1"),
+        toNodeId("n2"), toSet("p2"), toNodeId("n3"), toSet("p3")));
+    assertLabelsToNodesEquals(
+        mgr.getLabelsToNodes(), transposeNodeToLabels(mgr.getNodeLabels()));
+
+    // Activate a node for which host to label mapping exists
+    mgr.activateNode(NodeId.newInstance("n1", 2), Resource.newInstance(10, 0));
+    assertLabelsToNodesEquals(
+        mgr.getLabelsToNodes(), transposeNodeToLabels(mgr.getNodeLabels()));
+
+    // Deactivate a node. Label mapping should still exist.
+    mgr.deactivateNode(NodeId.newInstance("n1", 1));
+    assertLabelsToNodesEquals(
+        mgr.getLabelsToNodes(), transposeNodeToLabels(mgr.getNodeLabels()));
+  }
+
 }

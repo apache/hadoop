@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.nodelabels;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.junit.Assert;
@@ -37,6 +39,37 @@ public class NodeLabelTestBase {
       Assert.assertTrue(m2.containsKey(k));
       assertCollectionEquals(m1.get(k), m2.get(k));
     }
+  }
+
+  public static void assertLabelsToNodesEquals(Map<String, Set<NodeId>> m1,
+      ImmutableMap<String, Set<NodeId>> m2) {
+    Assert.assertEquals(m1.size(), m2.size());
+    for (String k : m1.keySet()) {
+      Assert.assertTrue(m2.containsKey(k));
+      Set<NodeId> s1 = new HashSet<NodeId>(m1.get(k));
+      Set<NodeId> s2 = new HashSet<NodeId>(m2.get(k));
+      Assert.assertEquals(s1, s2);
+      Assert.assertTrue(s1.containsAll(s2));
+    }
+  }
+
+  public static ImmutableMap<String, Set<NodeId>> transposeNodeToLabels(
+      Map<NodeId, Set<String>> mapNodeToLabels) {
+    Map<String, Set<NodeId>> mapLabelsToNodes =
+        new HashMap<String, Set<NodeId>>();
+    for(Entry<NodeId, Set<String>> entry : mapNodeToLabels.entrySet()) {
+      NodeId node = entry.getKey();
+      Set<String> setLabels = entry.getValue();
+      for(String label : setLabels) {
+        Set<NodeId> setNode = mapLabelsToNodes.get(label);
+        if (setNode == null) {
+          setNode = new HashSet<NodeId>();
+        }
+        setNode.add(NodeId.newInstance(node.getHost(), node.getPort()));
+        mapLabelsToNodes.put(label, setNode);
+      }
+    }
+    return ImmutableMap.copyOf(mapLabelsToNodes);
   }
 
   public static void assertMapContains(Map<NodeId, Set<String>> m1,
