@@ -56,14 +56,10 @@ public class ResourceUsage {
   private enum ResourceType {
     USED(0), PENDING(1), AMUSED(2), RESERVED(3), HEADROOM(4);
 
-    private int value;
+    private int idx;
 
     private ResourceType(int value) {
-      this.value = value;
-    }
-
-    public int getValue() {
-      return this.value;
+      this.idx = value;
     }
   }
 
@@ -77,22 +73,6 @@ public class ResourceUsage {
         resArr[i] = Resource.newInstance(0, 0);
       }
     }
-
-    public Resource get(ResourceType type) {
-      return resArr[type.getValue()];
-    }
-
-    public void set(ResourceType type, Resource res) {
-      resArr[type.getValue()] = res;
-    }
-
-    public void inc(ResourceType type, Resource res) {
-      Resources.addTo(resArr[type.getValue()], res);
-    }
-
-    public void dec(ResourceType type, Resource res) {
-      Resources.subtractFrom(resArr[type.getValue()], res);
-    }
   }
 
   /*
@@ -103,11 +83,11 @@ public class ResourceUsage {
   }
 
   public Resource getUsed(String label) {
-    return internalGet(label, ResourceType.USED);
+    return _get(label, ResourceType.USED);
   }
 
   public void incUsed(String label, Resource res) {
-    internalInc(label, ResourceType.USED, res);
+    _inc(label, ResourceType.USED, res);
   }
 
   public void incUsed(Resource res) {
@@ -119,7 +99,7 @@ public class ResourceUsage {
   }
 
   public void decUsed(String label, Resource res) {
-    internalDec(label, ResourceType.USED, res);
+    _dec(label, ResourceType.USED, res);
   }
 
   public void setUsed(Resource res) {
@@ -127,7 +107,7 @@ public class ResourceUsage {
   }
 
   public void setUsed(String label, Resource res) {
-    internalSet(label, ResourceType.USED, res);
+    _set(label, ResourceType.USED, res);
   }
 
   /*
@@ -138,11 +118,11 @@ public class ResourceUsage {
   }
 
   public Resource getPending(String label) {
-    return internalGet(label, ResourceType.PENDING);
+    return _get(label, ResourceType.PENDING);
   }
 
   public void incPending(String label, Resource res) {
-    internalInc(label, ResourceType.PENDING, res);
+    _inc(label, ResourceType.PENDING, res);
   }
 
   public void incPending(Resource res) {
@@ -154,7 +134,7 @@ public class ResourceUsage {
   }
 
   public void decPending(String label, Resource res) {
-    internalDec(label, ResourceType.PENDING, res);
+    _dec(label, ResourceType.PENDING, res);
   }
 
   public void setPending(Resource res) {
@@ -162,7 +142,7 @@ public class ResourceUsage {
   }
 
   public void setPending(String label, Resource res) {
-    internalSet(label, ResourceType.PENDING, res);
+    _set(label, ResourceType.PENDING, res);
   }
 
   /*
@@ -173,11 +153,11 @@ public class ResourceUsage {
   }
 
   public Resource getReserved(String label) {
-    return internalGet(label, ResourceType.RESERVED);
+    return _get(label, ResourceType.RESERVED);
   }
 
   public void incReserved(String label, Resource res) {
-    internalInc(label, ResourceType.RESERVED, res);
+    _inc(label, ResourceType.RESERVED, res);
   }
 
   public void incReserved(Resource res) {
@@ -189,7 +169,7 @@ public class ResourceUsage {
   }
 
   public void decReserved(String label, Resource res) {
-    internalDec(label, ResourceType.RESERVED, res);
+    _dec(label, ResourceType.RESERVED, res);
   }
 
   public void setReserved(Resource res) {
@@ -197,7 +177,7 @@ public class ResourceUsage {
   }
 
   public void setReserved(String label, Resource res) {
-    internalSet(label, ResourceType.RESERVED, res);
+    _set(label, ResourceType.RESERVED, res);
   }
 
   /*
@@ -208,11 +188,11 @@ public class ResourceUsage {
   }
 
   public Resource getHeadroom(String label) {
-    return internalGet(label, ResourceType.HEADROOM);
+    return _get(label, ResourceType.HEADROOM);
   }
 
   public void incHeadroom(String label, Resource res) {
-    internalInc(label, ResourceType.HEADROOM, res);
+    _inc(label, ResourceType.HEADROOM, res);
   }
 
   public void incHeadroom(Resource res) {
@@ -224,7 +204,7 @@ public class ResourceUsage {
   }
 
   public void decHeadroom(String label, Resource res) {
-    internalDec(label, ResourceType.HEADROOM, res);
+    _dec(label, ResourceType.HEADROOM, res);
   }
 
   public void setHeadroom(Resource res) {
@@ -232,7 +212,7 @@ public class ResourceUsage {
   }
 
   public void setHeadroom(String label, Resource res) {
-    internalSet(label, ResourceType.HEADROOM, res);
+    _set(label, ResourceType.HEADROOM, res);
   }
 
   /*
@@ -243,11 +223,11 @@ public class ResourceUsage {
   }
 
   public Resource getAMUsed(String label) {
-    return internalGet(label, ResourceType.AMUSED);
+    return _get(label, ResourceType.AMUSED);
   }
 
   public void incAMUsed(String label, Resource res) {
-    internalInc(label, ResourceType.AMUSED, res);
+    _inc(label, ResourceType.AMUSED, res);
   }
 
   public void incAMUsed(Resource res) {
@@ -259,7 +239,7 @@ public class ResourceUsage {
   }
 
   public void decAMUsed(String label, Resource res) {
-    internalDec(label, ResourceType.AMUSED, res);
+    _dec(label, ResourceType.AMUSED, res);
   }
 
   public void setAMUsed(Resource res) {
@@ -267,7 +247,7 @@ public class ResourceUsage {
   }
 
   public void setAMUsed(String label, Resource res) {
-    internalSet(label, ResourceType.AMUSED, res);
+    _set(label, ResourceType.AMUSED, res);
   }
 
   private static Resource normalize(Resource res) {
@@ -277,14 +257,14 @@ public class ResourceUsage {
     return res;
   }
 
-  private Resource internalGet(String label, ResourceType type) {
+  private Resource _get(String label, ResourceType type) {
     try {
       readLock.lock();
       UsageByLabel usage = usages.get(label);
       if (null == usage) {
         return Resources.none();
       }
-      return normalize(usage.get(type));
+      return normalize(usage.resArr[type.idx]);
     } finally {
       readLock.unlock();
     }
@@ -300,31 +280,31 @@ public class ResourceUsage {
     return usages.get(label);
   }
 
-  private void internalSet(String label, ResourceType type, Resource res) {
+  private void _set(String label, ResourceType type, Resource res) {
     try {
       writeLock.lock();
       UsageByLabel usage = getAndAddIfMissing(label);
-      usage.set(type, res);
+      usage.resArr[type.idx] = res;
     } finally {
       writeLock.unlock();
     }
   }
 
-  private void internalInc(String label, ResourceType type, Resource res) {
+  private void _inc(String label, ResourceType type, Resource res) {
     try {
       writeLock.lock();
       UsageByLabel usage = getAndAddIfMissing(label);
-      usage.inc(type, res);
+      Resources.addTo(usage.resArr[type.idx], res);
     } finally {
       writeLock.unlock();
     }
   }
 
-  private void internalDec(String label, ResourceType type, Resource res) {
+  private void _dec(String label, ResourceType type, Resource res) {
     try {
       writeLock.lock();
       UsageByLabel usage = getAndAddIfMissing(label);
-      usage.dec(type, res);
+      Resources.subtractFrom(usage.resArr[type.idx], res);
     } finally {
       writeLock.unlock();
     }
