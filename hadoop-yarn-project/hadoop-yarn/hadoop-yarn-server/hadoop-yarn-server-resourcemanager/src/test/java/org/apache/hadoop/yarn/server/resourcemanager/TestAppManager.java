@@ -572,7 +572,7 @@ public class TestAppManager{
     when(app.getUser()).thenReturn("Multiline\n\n\r\rUserName");
     when(app.getQueue()).thenReturn("Multiline\n\n\r\rQueueName");
     when(app.getState()).thenReturn(RMAppState.RUNNING);
-
+    when(app.getApplicationType()).thenReturn("MAPREDUCE");
     RMAppMetrics metrics =
         new RMAppMetrics(Resource.newInstance(1234, 56), 10, 1, 16384, 64);
     when(app.getRMAppMetrics()).thenReturn(metrics);
@@ -593,6 +593,7 @@ public class TestAppManager{
     Assert.assertTrue(msg.contains("preemptedAMContainers=1"));
     Assert.assertTrue(msg.contains("preemptedNonAMContainers=10"));
     Assert.assertTrue(msg.contains("preemptedResources=<memory:1234\\, vCores:56>"));
+    Assert.assertTrue(msg.contains("applicationType=MAPREDUCE"));
  }
 
   private static ResourceScheduler mockResourceScheduler() {
