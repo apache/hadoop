@@ -68,6 +68,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.base.Charsets;
 
 /**
  * a archive creation utility.
@@ -237,7 +238,6 @@ public class HadoopArchives implements Tool {
       ArrayList<FileSplit> splits = new ArrayList<FileSplit>(numSplits);
       LongWritable key = new LongWritable();
       final HarEntry value = new HarEntry();
-      SequenceFile.Reader reader = null;
       // the remaining bytes in the file split
       long remaining = fstatus.getLen();
       // the count of sizes calculated till now
@@ -249,8 +249,7 @@ public class HadoopArchives implements Tool {
       long targetSize = totalSize/numSplits;
       // create splits of size target size so that all the maps 
       // have equals sized data to read and write to.
-      try {
-        reader = new SequenceFile.Reader(fs, src, jconf);
+      try (SequenceFile.Reader reader = new SequenceFile.Reader(fs, src, jconf)) {
         while(reader.next(key, value)) {
           if (currentCount + key.get() > targetSize && currentCount != 0){
             long size = lastPos - startPos;
@@ -266,9 +265,6 @@ public class HadoopArchives implements Tool {
         if (remaining != 0) {
           splits.add(new FileSplit(src, startPos, remaining, (String[])null));
         }
-      }
-      finally { 
-        reader.close();
       }
       return splits.toArray(new FileSplit[splits.size()]);
     }
@@ -741,7 +737,7 @@ public class HadoopArchives implements Tool {
         indexStream = fs.create(index);
         outStream = fs.create(masterIndex);
         String version = VERSION + " \n";
-        outStream.write(version.getBytes());
+        outStream.write(version.getBytes(Charsets.UTF_8));
         
       } catch(IOException e) {
         throw new RuntimeException(e);
@@ -760,7 +756,7 @@ public class HadoopArchives implements Tool {
       while(values.hasNext()) {
         Text value = values.next();
         String towrite = value.toString() + "\n";
-        indexStream.write(towrite.getBytes());
+        indexStream.write(towrite.getBytes(Charsets.UTF_8));
         written++;
         if (written > numIndexes -1) {
           // every 1000 indexes we report status
@@ -769,7 +765,7 @@ public class HadoopArchives implements Tool {
           endIndex = keyVal;
           String masterWrite = startIndex + " " + endIndex + " " + startPos 
                               +  " " + indexStream.getPos() + " \n" ;
-          outStream.write(masterWrite.getBytes());
+          outStream.write(masterWrite.getBytes(Charsets.UTF_8));
           startPos = indexStream.getPos();
           startIndex = endIndex;
           written = 0;
@@ -782,7 +778,7 @@ public class HadoopArchives implements Tool {
       if (written > 0) {
         String masterWrite = startIndex + " " + keyVal + " " + startPos  +
                              " " + indexStream.getPos() + " \n";
-        outStream.write(masterWrite.getBytes());
+        outStream.write(masterWrite.getBytes(Charsets.UTF_8));
       }
       // close the streams
       outStream.close();
