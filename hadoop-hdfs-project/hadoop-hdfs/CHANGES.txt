@@ -548,6 +548,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-6651. Deletion failure can leak inodes permanently.
     (Jing Zhao via wheat9)
 
+    HDFS-7707. Edit log corruption due to delayed block removal again.
+    (Yongjun Zhang via kihwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
