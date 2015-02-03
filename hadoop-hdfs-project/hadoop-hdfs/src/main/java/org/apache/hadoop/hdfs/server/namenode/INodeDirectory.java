@@ -28,7 +28,6 @@ import java.util.Map;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
@@ -352,8 +351,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   @Override
-  public void recordModification(int latestSnapshotId)
-      throws QuotaExceededException {
+  public void recordModification(int latestSnapshotId) {
     if (isInLatestSnapshot(latestSnapshotId)
         && !shouldRecordInSrcSnapshot(latestSnapshotId)) {
       // add snapshot feature if necessary
@@ -372,7 +370,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * @return the child inode, which may be replaced.
    */
   public INode saveChild2Snapshot(final INode child, final int latestSnapshotId,
-      final INode snapshotCopy) throws QuotaExceededException {
+      final INode snapshotCopy) {
     if (latestSnapshotId == Snapshot.CURRENT_STATE_ID) {
       return child;
     }
@@ -471,8 +469,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
   /**
    * Remove the specified child from this directory.
    */
-  public boolean removeChild(INode child, int latestSnapshotId)
-      throws QuotaExceededException {
+  public boolean removeChild(INode child, int latestSnapshotId) {
     if (isInLatestSnapshot(latestSnapshotId)) {
       // create snapshot feature if necessary
       DirectoryWithSnapshotFeature sf = this.getDirectoryWithSnapshotFeature();
@@ -737,8 +734,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
   /** Call cleanSubtree(..) recursively down the subtree. */
   public Quota.Counts cleanSubtreeRecursively(final int snapshot,
       int prior, final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final Map<INode, INode> excludedNodes, 
-      final boolean countDiffChange) throws QuotaExceededException {
+      final List<INode> removedINodes, final Map<INode, INode> excludedNodes) {
     Quota.Counts counts = Quota.Counts.newInstance();
     // in case of deletion snapshot, since this call happens after we modify
     // the diff list, the snapshot to be deleted has been combined or renamed
@@ -753,7 +749,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
         continue;
       } else {
         Quota.Counts childCounts = child.cleanSubtree(snapshot, prior,
-            collectedBlocks, removedINodes, countDiffChange);
+            collectedBlocks, removedINodes);
         counts.add(childCounts);
       }
     }
@@ -780,13 +776,12 @@ public class INodeDirectory extends INodeWithAdditionalFields
   @Override
   public Quota.Counts cleanSubtree(final int snapshotId, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final boolean countDiffChange)
-      throws QuotaExceededException {
+      final List<INode> removedINodes) {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     // there is snapshot data
     if (sf != null) {
       return sf.cleanDirectory(this, snapshotId, priorSnapshotId,
-          collectedBlocks, removedINodes, countDiffChange);
+          collectedBlocks, removedINodes);
     }
     // there is no snapshot data
     if (priorSnapshotId == Snapshot.NO_SNAPSHOT_ID
@@ -799,7 +794,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
     } else {
       // process recursively down the subtree
       Quota.Counts counts = cleanSubtreeRecursively(snapshotId, priorSnapshotId,
-          collectedBlocks, removedINodes, null, countDiffChange);
+          collectedBlocks, removedINodes, null);
       if (isQuotaSet()) {
         getDirectoryWithQuotaFeature().addSpaceConsumed2Cache(
             -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));

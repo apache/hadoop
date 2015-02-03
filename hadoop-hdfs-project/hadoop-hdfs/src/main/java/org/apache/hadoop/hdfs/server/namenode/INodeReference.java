@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeat
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
+import org.mortbay.log.Log;
 
 /**
  * An anonymous reference to an inode.
@@ -265,8 +266,7 @@ public abstract class INodeReference extends INode {
   }
   
   @Override
-  public final INode updateModificationTime(long mtime, int latestSnapshotId) 
-      throws QuotaExceededException {
+  public final INode updateModificationTime(long mtime, int latestSnapshotId) {
     return referred.updateModificationTime(mtime, latestSnapshotId);
   }
   
@@ -296,17 +296,15 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  final void recordModification(int latestSnapshotId)
-      throws QuotaExceededException {
+  final void recordModification(int latestSnapshotId) {
     referred.recordModification(latestSnapshotId);
   }
 
   @Override // used by WithCount
   public Quota.Counts cleanSubtree(int snapshot, int prior,
-      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes,
-      final boolean countDiffChange) throws QuotaExceededException {
+      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
     return referred.cleanSubtree(snapshot, prior, collectedBlocks,
-        removedINodes, countDiffChange);
+        removedINodes);
   }
 
   @Override // used by WithCount
@@ -537,8 +535,7 @@ public abstract class INodeReference extends INode {
     @Override
     public Quota.Counts cleanSubtree(final int snapshot, int prior,
         final BlocksMapUpdateInfo collectedBlocks,
-        final List<INode> removedINodes, final boolean countDiffChange)
-        throws QuotaExceededException {
+        final List<INode> removedINodes) {
       // since WithName node resides in deleted list acting as a snapshot copy,
       // the parameter snapshot must be non-null
       Preconditions.checkArgument(snapshot != Snapshot.CURRENT_STATE_ID);
@@ -554,11 +551,15 @@ public abstract class INodeReference extends INode {
       }
 
       Quota.Counts counts = getReferredINode().cleanSubtree(snapshot, prior,
-          collectedBlocks, removedINodes, false);
+          collectedBlocks, removedINodes);
       INodeReference ref = getReferredINode().getParentReference();
       if (ref != null) {
-        ref.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
-            -counts.get(Quota.DISKSPACE), true);
+        try {
+          ref.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
+              -counts.get(Quota.DISKSPACE), true);
+        } catch (QuotaExceededException e) {
+          Log.warn("Should not have QuotaExceededException");
+        }
       }
       
       if (snapshot < lastSnapshotId) {
@@ -597,7 +598,7 @@ public abstract class INodeReference extends INode {
           }
           try {
             Quota.Counts counts = referred.cleanSubtree(snapshot, prior,
-                collectedBlocks, removedINodes, false);
+                collectedBlocks, removedINodes);
             INodeReference ref = getReferredINode().getParentReference();
             if (ref != null) {
               ref.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
@@ -653,8 +654,7 @@ public abstract class INodeReference extends INode {
     
     @Override
     public Quota.Counts cleanSubtree(int snapshot, int prior,
-        BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
-        final boolean countDiffChange) throws QuotaExceededException {
+        BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
       if (snapshot == Snapshot.CURRENT_STATE_ID
           && prior == Snapshot.NO_SNAPSHOT_ID) {
         Quota.Counts counts = Quota.Counts.newInstance();
@@ -676,7 +676,7 @@ public abstract class INodeReference extends INode {
           return Quota.Counts.newInstance();
         }
         return getReferredINode().cleanSubtree(snapshot, prior,
-            collectedBlocks, removedINodes, countDiffChange);
+            collectedBlocks, removedINodes);
       }
     }
     
@@ -714,15 +714,11 @@ public abstract class INodeReference extends INode {
           Preconditions.checkState(file.isWithSnapshot());
           // make sure we mark the file as deleted
           file.getFileWithSnapshotFeature().deleteCurrentFile();
-          try {
-            // when calling cleanSubtree of the referred node, since we 
-            // compute quota usage updates before calling this destroy 
-            // function, we use true for countDiffChange
-            referred.cleanSubtree(snapshot, prior, collectedBlocks,
-                removedINodes, true);
-          } catch (QuotaExceededException e) {
-            LOG.error("should not exceed quota while snapshot deletion", e);
-          }
+          // when calling cleanSubtree of the referred node, since we
+          // compute quota usage updates before calling this destroy
+          // function, we use true for countDiffChange
+          referred.cleanSubtree(snapshot, prior, collectedBlocks,
+              removedINodes);
         } else if (referred.isDirectory()) {
           // similarly, if referred is a directory, it must be an
           // INodeDirectory with snapshot

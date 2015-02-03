@@ -215,7 +215,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       int prior = Snapshot.findLatestSnapshot(snapshotRoot, snapshot.getId());
       try {
         Quota.Counts counts = snapshotRoot.cleanSubtree(snapshot.getId(),
-            prior, collectedBlocks, removedINodes, true);
+            prior, collectedBlocks, removedINodes);
         INodeDirectory parent = snapshotRoot.getParent();
         if (parent != null) {
           // there will not be any WithName node corresponding to the deleted
