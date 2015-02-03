@@ -494,10 +494,11 @@ public class ContainerImpl implements Container {
           YarnConfiguration.NM_VMEM_PMEM_RATIO,
           YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
       long vmemBytes = (long) (pmemRatio * pmemBytes);
+      int cpuVcores = getResource().getVirtualCores();
 
       dispatcher.getEventHandler().handle(
           new ContainerStartMonitoringEvent(containerId,
-              vmemBytes, pmemBytes));
+              vmemBytes, pmemBytes, cpuVcores));
   }
 
   private void addDiagnostics(String... diags) {
