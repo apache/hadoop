@@ -432,7 +432,8 @@ public final class DistSum extends Configured implements Tool {
 
   /** Create a job */
   private Job createJob(String name, Summation sigma) throws IOException {
-    final Job job = new Job(getConf(), parameters.remoteDir + "/" + name);
+    final Job job = Job.getInstance(getConf(), parameters.remoteDir + "/" +
+                                    name);
     final Configuration jobconf = job.getConfiguration();
     job.setJarByClass(DistSum.class);
     jobconf.setInt(N_PARTS, parameters.nParts);

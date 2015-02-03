@@ -120,7 +120,7 @@ public class Job extends JobContextImpl implements JobContext {
    */
   @Deprecated
   public Job() throws IOException {
-    this(new Configuration());
+    this(new JobConf(new Configuration()));
   }
 
   /**
@@ -136,7 +136,7 @@ public class Job extends JobContextImpl implements JobContext {
    */
   @Deprecated
   public Job(Configuration conf, String jobName) throws IOException {
-    this(conf);
+    this(new JobConf(conf));
     setJobName(jobName);
   }
 

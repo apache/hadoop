@@ -315,7 +315,7 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
   /** Create and setup a job */
   private static Job createJob(String name, Configuration conf
       ) throws IOException {
-    final Job job = new Job(conf, NAME + "_" + name);
+    final Job job = Job.getInstance(conf, NAME + "_" + name);
     final Configuration jobconf = job.getConfiguration();
     job.setJarByClass(BaileyBorweinPlouffe.class);
 

@@ -189,8 +189,7 @@ public class WordStandardDeviation extends Configured implements Tool {
 
     Configuration conf = getConf();
 
-    @SuppressWarnings("deprecation")
-    Job job = new Job(conf, "word stddev");
+    Job job = Job.getInstance(conf, "word stddev");
     job.setJarByClass(WordStandardDeviation.class);
     job.setMapperClass(WordStandardDeviationMapper.class);
     job.setCombinerClass(WordStandardDeviationReducer.class);

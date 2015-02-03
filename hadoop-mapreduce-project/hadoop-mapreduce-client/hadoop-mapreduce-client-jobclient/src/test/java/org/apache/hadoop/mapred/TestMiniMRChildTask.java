@@ -185,7 +185,7 @@ public class TestMiniMRChildTask {
     
     // Launch job with default option for temp dir. 
     // i.e. temp dir is ./tmp 
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     job.addFileToClassPath(APP_JAR);
     job.setJarByClass(TestMiniMRChildTask.class);
     job.setMaxMapAttempts(1); // speed up failures
@@ -537,7 +537,7 @@ public class TestMiniMRChildTask {
     conf.set(mapTaskJavaOptsKey, mapTaskJavaOpts);
     conf.set(reduceTaskJavaOptsKey, reduceTaskJavaOpts);
 
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     job.addFileToClassPath(APP_JAR);
     job.setJarByClass(TestMiniMRChildTask.class);
     job.setMaxMapAttempts(1); // speed up failures

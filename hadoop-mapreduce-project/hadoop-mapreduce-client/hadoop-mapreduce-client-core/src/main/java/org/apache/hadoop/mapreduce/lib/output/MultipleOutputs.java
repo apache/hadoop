@@ -503,7 +503,7 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
     
     // The following trick leverages the instantiation of a record writer via
     // the job thus supporting arbitrary output formats.
-    Job job = new Job(context.getConfiguration());
+    Job job = Job.getInstance(context.getConfiguration());
     job.setOutputFormatClass(getNamedOutputFormatClass(context, nameOutput));
     job.setOutputKeyClass(getNamedOutputKeyClass(context, nameOutput));
     job.setOutputValueClass(getNamedOutputValueClass(context, nameOutput));

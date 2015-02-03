@@ -547,7 +547,7 @@ public class TestMRJobs {
     myConf.setInt(MRJobConfig.NUM_MAPS, 1);
     myConf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 2); //reduce the number of attempts
 
-    Job job = new Job(myConf);
+    Job job = Job.getInstance(myConf);
 
     job.setJarByClass(FailingMapper.class);
     job.setJobName("failmapper");
