@@ -83,7 +83,7 @@ public class TotalOrderPartitioner<K extends WritableComparable<?>,V>
         ? FileSystem.getLocal(conf)     // assume in DistributedCache
         : partFile.getFileSystem(conf);
 
-      Job job = new Job(conf);
+      Job job = Job.getInstance(conf);
       Class<K> keyClass = (Class<K>)job.getMapOutputKeyClass();
       K[] splitPoints = readPartitions(fs, partFile, keyClass, conf);
       if (splitPoints.length != job.getNumReduceTasks() - 1) {

@@ -53,7 +53,7 @@ public class DelegatingInputFormat<K, V> extends InputFormat<K, V> {
   public List<InputSplit> getSplits(JobContext job) 
       throws IOException, InterruptedException {
     Configuration conf = job.getConfiguration();
-    Job jobCopy =new Job(conf);
+    Job jobCopy = Job.getInstance(conf);
     List<InputSplit> splits = new ArrayList<InputSplit>();
     Map<Path, InputFormat> formatMap = 
       MultipleInputs.getInputFormatMap(job);

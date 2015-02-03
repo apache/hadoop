@@ -39,6 +39,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6143. add configuration for mapreduce speculative execution in
     MR2 (zxu via rkanter)
 
+    MAPREDUCE-5800. Use Job#getInstance instead of deprecated constructors
+    (aajisaka)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 

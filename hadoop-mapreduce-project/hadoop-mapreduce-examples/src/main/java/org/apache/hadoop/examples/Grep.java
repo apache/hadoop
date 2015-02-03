@@ -56,7 +56,7 @@ public class Grep extends Configured implements Tool {
     if (args.length == 4)
       conf.set(RegexMapper.GROUP, args[3]);
 
-    Job grepJob = new Job(conf);
+    Job grepJob = Job.getInstance(conf);
     
     try {
       
@@ -77,7 +77,7 @@ public class Grep extends Configured implements Tool {
 
       grepJob.waitForCompletion(true);
 
-      Job sortJob = new Job(conf);
+      Job sortJob = Job.getInstance(conf);
       sortJob.setJobName("grep-sort");
       sortJob.setJarByClass(Grep.class);
 

@@ -73,7 +73,7 @@ public abstract class CombineFileInputFormat<K, V>
   public InputSplit[] getSplits(JobConf job, int numSplits) 
     throws IOException {
     List<org.apache.hadoop.mapreduce.InputSplit> newStyleSplits =
-      super.getSplits(new Job(job));
+      super.getSplits(Job.getInstance(job));
     InputSplit[] ret = new InputSplit[newStyleSplits.size()];
     for(int pos = 0; pos < newStyleSplits.size(); ++pos) {
       org.apache.hadoop.mapreduce.lib.input.CombineFileSplit newStyleSplit = 
@@ -129,7 +129,7 @@ public abstract class CombineFileInputFormat<K, V>
    * @throws IOException if zero items.
    */
   protected FileStatus[] listStatus(JobConf job) throws IOException {
-    List<FileStatus> result = super.listStatus(new Job(job));
+    List<FileStatus> result = super.listStatus(Job.getInstance(job));
     return result.toArray(new FileStatus[result.size()]);
   }
 

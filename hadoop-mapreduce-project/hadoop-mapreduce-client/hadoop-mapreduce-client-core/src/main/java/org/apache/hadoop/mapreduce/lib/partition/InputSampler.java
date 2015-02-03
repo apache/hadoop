@@ -348,7 +348,7 @@ public class InputSampler<K,V> extends Configured implements Tool  {
    * Configures a JobConf instance and calls {@link #writePartitionFile}.
    */
   public int run(String[] args) throws Exception {
-    Job job = new Job(getConf());
+    Job job = Job.getInstance(getConf());
     ArrayList<String> otherArgs = new ArrayList<String>();
     Sampler<K,V> sampler = null;
     for(int i=0; i < args.length; ++i) {

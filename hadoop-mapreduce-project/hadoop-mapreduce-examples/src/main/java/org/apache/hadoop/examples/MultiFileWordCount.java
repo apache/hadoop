@@ -229,7 +229,7 @@ public class MultiFileWordCount extends Configured implements Tool {
       return 2;
     }
 
-    Job job = new Job(getConf());
+    Job job = Job.getInstance(getConf());
     job.setJobName("MultiFileWordCount");
     job.setJarByClass(MultiFileWordCount.class);
 

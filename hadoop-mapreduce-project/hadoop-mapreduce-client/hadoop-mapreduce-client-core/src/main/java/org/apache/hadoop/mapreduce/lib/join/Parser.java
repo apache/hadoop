@@ -323,7 +323,7 @@ public abstract static class Node extends ComposableInputFormat {
     }
 
     private Configuration getConf(Configuration jconf) throws IOException {
-      Job job = new Job(jconf);
+      Job job = Job.getInstance(jconf);
       FileInputFormat.setInputPaths(job, indir);
       return job.getConfiguration();
     }
