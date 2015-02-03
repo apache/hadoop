@@ -433,6 +433,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-3113. Release audit warning for Sorting icons.psd. (stevel via kihwal)
 
+    YARN-3056. Add verification for containerLaunchDuration
+    in TestNodeManagerMetrics. (zhihai xu via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
