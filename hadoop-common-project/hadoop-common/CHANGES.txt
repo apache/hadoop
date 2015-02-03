@@ -464,6 +464,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10181. GangliaContext does not work with multicast ganglia setup.
     (Andrew Johnson via cnauroth)
 
+    HADOOP-11529. Fix findbugs warnings in hadoop-archives.
+    (Masatake Iwasaki via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
