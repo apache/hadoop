@@ -191,6 +191,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2808. Made YARN CLI list attempt’s finished containers of a running
     application. (Naganarasimha G R via zjshen)
 
+    YARN-3085. Application summary should include the application type (Rohith
+    via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
