@@ -203,6 +203,8 @@ Release 2.7.0 - UNRELEASED
     YARN-3075. NodeLabelsManager implementation to retrieve label to node 
     mapping (Varun Saxena via wangda)
 
+    YARN-1393. SLS: Add how-to-use instructions. (Wei Yan via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
