@@ -227,6 +227,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
@@ -6023,13 +6024,22 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     INode tmpChild = file;
     INodeDirectory tmpParent = file.getParent();
     while (true) {
-      if (tmpParent == null ||
-          tmpParent.searchChildren(tmpChild.getLocalNameBytes()) < 0) {
+      if (tmpParent == null) {
         return true;
       }
+
+      INode childINode = tmpParent.getChild(tmpChild.getLocalNameBytes(),
+          Snapshot.CURRENT_STATE_ID);
+      if (childINode == null || !childINode.equals(tmpChild)) {
+        // a newly created INode with the same name as an already deleted one
+        // would be a different INode than the deleted one
+        return true;
+      }
+
       if (tmpParent.isRoot()) {
         break;
       }
+
       tmpChild = tmpParent;
       tmpParent = tmpParent.getParent();
     }
