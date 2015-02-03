@@ -411,7 +411,7 @@ public class BackupNode extends NameNode {
       errorMsg = "Incompatible build versions: active name-node BV = " 
         + nsInfo.getBuildVersion() + "; backup node BV = "
         + Storage.getBuildVersion();
-      LOG.fatal(errorMsg);
+      LOG.error(errorMsg);
       throw new IOException(errorMsg);
     }
     assert HdfsConstants.NAMENODE_LAYOUT_VERSION == nsInfo.getLayoutVersion() :
