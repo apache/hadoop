@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
@@ -48,8 +47,7 @@ public class FileDiffList extends
   }
 
   public void saveSelf2Snapshot(int latestSnapshotId, INodeFile iNodeFile,
-      INodeFileAttributes snapshotCopy, boolean withBlocks)
-          throws QuotaExceededException {
+      INodeFileAttributes snapshotCopy, boolean withBlocks) {
     final FileDiff diff =
         super.saveSelf2Snapshot(latestSnapshotId, iNodeFile, snapshotCopy);
     if(withBlocks)  // Store blocks if this is the first update

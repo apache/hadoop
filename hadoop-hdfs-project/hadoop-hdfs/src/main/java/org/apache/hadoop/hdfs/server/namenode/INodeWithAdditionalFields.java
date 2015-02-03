@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
@@ -239,8 +238,7 @@ public abstract class INodeWithAdditionalFields extends INode
 
   /** Update modification time if it is larger than the current value. */
   @Override
-  public final INode updateModificationTime(long mtime, int latestSnapshotId) 
-      throws QuotaExceededException {
+  public final INode updateModificationTime(long mtime, int latestSnapshotId) {
     Preconditions.checkState(isDirectory());
     if (mtime <= modificationTime) {
       return this;
