@@ -194,6 +194,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3085. Application summary should include the application type (Rohith
     via jlowe)
 
+    YARN-3022. Expose Container resource information from NodeManager for
+    monitoring (adhoot via ranter)
+
   OPTIMIZATIONS
 
   BUG FIXES
