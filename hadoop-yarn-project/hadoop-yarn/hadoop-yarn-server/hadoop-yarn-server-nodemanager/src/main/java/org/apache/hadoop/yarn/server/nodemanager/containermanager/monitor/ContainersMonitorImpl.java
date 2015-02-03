@@ -219,14 +219,17 @@ public class ContainersMonitorImpl extends AbstractService implements
     private ResourceCalculatorProcessTree pTree;
     private long vmemLimit;
     private long pmemLimit;
+    private int cpuVcores;
 
     public ProcessTreeInfo(ContainerId containerId, String pid,
-        ResourceCalculatorProcessTree pTree, long vmemLimit, long pmemLimit) {
+        ResourceCalculatorProcessTree pTree, long vmemLimit, long pmemLimit,
+        int cpuVcores) {
       this.containerId = containerId;
       this.pid = pid;
       this.pTree = pTree;
       this.vmemLimit = vmemLimit;
       this.pmemLimit = pmemLimit;
+      this.cpuVcores = cpuVcores;
     }
 
     public ContainerId getContainerId() {
@@ -258,6 +261,14 @@ public class ContainersMonitorImpl extends AbstractService implements
      */
     public long getPmemLimit() {
       return this.pmemLimit;
+    }
+
+    /**
+     * Return the number of cpu vcores assigned
+     * @return
+     */
+    public int getCpuVcores() {
+      return this.cpuVcores;
     }
   }
 
@@ -362,7 +373,8 @@ public class ContainersMonitorImpl extends AbstractService implements
         synchronized (containersToBeRemoved) {
           for (ContainerId containerId : containersToBeRemoved) {
             if (containerMetricsEnabled) {
-              ContainerMetrics.forContainer(containerId).finished();
+              ContainerMetrics.forContainer(
+                  containerId, containerMetricsPeriodMs).finished();
             }
             trackingContainers.remove(containerId);
             LOG.info("Stopping resource-monitoring for " + containerId);
@@ -397,6 +409,17 @@ public class ContainersMonitorImpl extends AbstractService implements
                     ResourceCalculatorProcessTree.getResourceCalculatorProcessTree(pId, processTreeClass, conf);
                 ptInfo.setPid(pId);
                 ptInfo.setProcessTree(pt);
+
+                if (containerMetricsEnabled) {
+                  ContainerMetrics usageMetrics = ContainerMetrics
+                      .forContainer(containerId, containerMetricsPeriodMs);
+                  int cpuVcores = ptInfo.getCpuVcores();
+                  final int vmemLimit = (int) (ptInfo.getVmemLimit() >> 20);
+                  final int pmemLimit = (int) (ptInfo.getPmemLimit() >> 20);
+                  usageMetrics.recordResourceLimit(
+                      vmemLimit, pmemLimit, cpuVcores);
+                  usageMetrics.recordProcessId(pId);
+                }
               }
             }
             // End of initializing any uninitialized processTrees
@@ -576,7 +599,8 @@ public class ContainersMonitorImpl extends AbstractService implements
       synchronized (this.containersToBeAdded) {
         ProcessTreeInfo processTreeInfo =
             new ProcessTreeInfo(containerId, null, null,
-                startEvent.getVmemLimit(), startEvent.getPmemLimit());
+                startEvent.getVmemLimit(), startEvent.getPmemLimit(),
+                startEvent.getCpuVcores());
         this.containersToBeAdded.put(containerId, processTreeInfo);
       }
       break;
