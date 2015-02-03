@@ -200,6 +200,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3098. Created common QueueCapacities class in Capacity Scheduler to
     track capacities-by-labels of queues. (Wangda Tan via jianhe)
 
+    YARN-3075. NodeLabelsManager implementation to retrieve label to node 
+    mapping (Varun Saxena via wangda)
+
   OPTIMIZATIONS
 
   BUG FIXES
