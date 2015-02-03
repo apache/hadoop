@@ -431,13 +431,6 @@ public class TestBlockScanner {
       info.shouldRun = true;
       info.notify();
     }
-    Thread.sleep(5000);
-    synchronized (info) {
-      long endMs = Time.monotonicNow();
-      // Should scan no more than one block a second.
-      long maxBlocksScanned = ((endMs + 999 - startMs) / 1000);
-      assertTrue(info.blocksScanned < maxBlocksScanned);
-    }
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
@@ -446,6 +439,17 @@ public class TestBlockScanner {
         }
       }
     }, 1, 30000);
+    Thread.sleep(2000);
+    synchronized (info) {
+      long endMs = Time.monotonicNow();
+      // Should scan no more than one block a second.
+      long seconds = ((endMs + 999 - startMs) / 1000);
+      long maxBlocksScanned = seconds * 1;
+      assertTrue("The number of blocks scanned is too large.  Scanned " +
+          info.blocksScanned + " blocks; only expected to scan at most " +
+          maxBlocksScanned + " in " + seconds + " seconds.",
+          info.blocksScanned <= maxBlocksScanned);
+    }
     ctx.close();
   }
 
@@ -657,24 +661,24 @@ public class TestBlockScanner {
   public void testCalculateNeededBytesPerSec() throws Exception {
     // If we didn't check anything the last hour, we should scan now.
     Assert.assertTrue(
-        VolumeScanner.calculateShouldScan(100, 0));
+        VolumeScanner.calculateShouldScan("test", 100, 0, 0, 60));
 
     // If, on average, we checked 101 bytes/s checked during the last hour,
     // stop checking now.
-    Assert.assertFalse(
-        VolumeScanner.calculateShouldScan(100, 101 * 3600));
+    Assert.assertFalse(VolumeScanner.
+        calculateShouldScan("test", 100, 101 * 3600, 1000, 5000));
 
     // Target is 1 byte / s, but we didn't scan anything in the last minute.
     // Should scan now.
-    Assert.assertTrue(
-        VolumeScanner.calculateShouldScan(1, 3540));
+    Assert.assertTrue(VolumeScanner.
+        calculateShouldScan("test", 1, 3540, 0, 60));
 
     // Target is 1000000 byte / s, but we didn't scan anything in the last
     // minute.  Should scan now.
-    Assert.assertTrue(
-        VolumeScanner.calculateShouldScan(100000L, 354000000L));
+    Assert.assertTrue(VolumeScanner.
+        calculateShouldScan("test", 100000L, 354000000L, 0, 60));
 
-    Assert.assertFalse(
-        VolumeScanner.calculateShouldScan(100000L, 365000000L));
+    Assert.assertFalse(VolumeScanner.
+        calculateShouldScan("test", 100000L, 365000000L, 0, 60));
   }
 }
