@@ -278,6 +278,9 @@ Trunk (Unreleased)
     HDFS-7320. The appearance of hadoop-hdfs-httpfs site docs is inconsistent 
     (Masatake Iwasaki via aw)
 
+    HDFS-7721. The HDFS BlockScanner may run fast during the first hour
+    (cmccabe)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
