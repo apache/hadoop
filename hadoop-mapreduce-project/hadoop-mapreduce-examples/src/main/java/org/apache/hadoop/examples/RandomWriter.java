@@ -261,7 +261,7 @@ public class RandomWriter extends Configured implements Tool {
     }
     conf.setInt(MRJobConfig.NUM_MAPS, numMaps);
 
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     
     job.setJarByClass(RandomWriter.class);
     job.setJobName("random-writer");

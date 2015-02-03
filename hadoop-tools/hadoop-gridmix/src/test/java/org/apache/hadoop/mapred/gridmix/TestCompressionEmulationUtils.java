@@ -157,7 +157,7 @@ public class TestCompressionEmulationUtils {
     // get the local job runner
     conf.setInt(MRJobConfig.NUM_MAPS, 1);
     
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     
     CompressionEmulationUtil.configure(job);
     job.setInputFormatClass(CustomInputFormat.class);

@@ -84,7 +84,7 @@ public class ControlledJob {
    * @throws IOException
    */
   public ControlledJob(Configuration conf) throws IOException {
-    this(new Job(conf), null);
+    this(Job.getInstance(conf), null);
   }
 	
   @Override
