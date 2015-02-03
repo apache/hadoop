@@ -225,7 +225,8 @@ Yarn Scheduler Load Simulator (SLS)
   input traces. The script to start the simulator is <<<slsrun.sh>>>.
 
 +----+
-$ $HADOOP_ROOT/share/hadoop/tools/sls/bin/slsrun.sh
+$ cd $HADOOP_ROOT/share/hadoop/tools/sls
+$ bin/slsrun.sh
     --input-rumen|--input-sls=<TRACE_FILE1,TRACE_FILE2,...>
     --output-dir=<SLS_SIMULATION_OUTPUT_DIRECTORY> [--nodes=<SLS_NODES_FILE>]
     [--track-jobs=<JOBID1,JOBID2,...>] [--print-simulation]
@@ -258,7 +259,7 @@ $ $HADOOP_ROOT/share/hadoop/tools/sls/bin/slsrun.sh
   convert rumen traces to sls traces.
 
 +----+
-$ $HADOOP_ROOT/share/hadoop/tools/sls/bin/rumen2sls.sh
+$ bin/rumen2sls.sh
     --rumen-file=<RUMEN_FILE>
     --output-dir=<SLS_OUTPUT_DIRECTORY>
     [--output-prefix=<SLS_FILE_PREFIX>]
