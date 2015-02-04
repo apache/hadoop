@@ -553,6 +553,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7707. Edit log corruption due to delayed block removal again.
     (Yongjun Zhang via kihwal)
 
+    HDFS-7734. Class cast exception in NameNode#main. (yliu via wang)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

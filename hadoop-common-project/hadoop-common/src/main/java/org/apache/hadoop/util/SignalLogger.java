@@ -42,10 +42,10 @@ public enum SignalLogger {
    * Our signal handler.
    */
   private static class Handler implements SignalHandler {
-    final private org.apache.commons.logging.Log LOG;
+    final private LogAdapter LOG;
     final private SignalHandler prevHandler;
 
-    Handler(String name, Log LOG) {
+    Handler(String name, LogAdapter LOG) {
       this.LOG = LOG;
       prevHandler = Signal.handle(new Signal(name), this);
     }
@@ -69,6 +69,10 @@ public enum SignalLogger {
    * @param LOG        The log4j logfile to use in the signal handlers.
    */
   public void register(final Log LOG) {
+    register(LogAdapter.create(LOG));
+  }
+
+  void register(final LogAdapter LOG) {
     if (registered) {
       throw new IllegalStateException("Can't re-install the signal handlers.");
     }

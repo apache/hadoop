@@ -1549,8 +1549,7 @@ public class NameNode implements NameNodeStatusMXBean {
     }
 
     try {
-      StringUtils.startupShutdownMessage(NameNode.class, argv,
-          (org.apache.commons.logging.Log) LogManager.getLogger(LOG.getName()));
+      StringUtils.startupShutdownMessage(NameNode.class, argv, LOG);
       NameNode namenode = createNameNode(argv, null);
       if (namenode != null) {
         namenode.join();
