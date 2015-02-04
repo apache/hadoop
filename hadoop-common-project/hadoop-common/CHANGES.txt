@@ -473,6 +473,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11546. Checkstyle failing: Unable to instantiate 
     DoubleCheckedLockingCheck. (ozawa)
 
+    HADOOP-11548. checknative should display a nicer error message when openssl
+    support is not compiled in. (Anu Engineer via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
