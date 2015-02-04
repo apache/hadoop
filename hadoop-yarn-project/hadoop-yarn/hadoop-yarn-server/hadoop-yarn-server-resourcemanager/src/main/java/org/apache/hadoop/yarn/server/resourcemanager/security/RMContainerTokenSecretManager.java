@@ -80,8 +80,8 @@ public class RMContainerTokenSecretManager extends
     if (rollingInterval <= activationDelay * 2) {
       throw new IllegalArgumentException(
           YarnConfiguration.RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS
-              + " should be more than 2 X "
-              + YarnConfiguration.RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS);
+              + " should be more than 3 X "
+              + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS);
     }
   }
 
