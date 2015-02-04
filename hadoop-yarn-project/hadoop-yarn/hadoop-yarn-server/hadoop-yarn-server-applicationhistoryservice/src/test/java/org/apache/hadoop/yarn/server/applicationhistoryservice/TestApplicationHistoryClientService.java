@@ -80,6 +80,10 @@ public class TestApplicationHistoryClientService {
         clientService.getClientHandler().getApplicationReport(request);
     ApplicationReport appReport = response.getApplicationReport();
     Assert.assertNotNull(appReport);
+    Assert.assertEquals(123, appReport.getApplicationResourceUsageReport()
+        .getMemorySeconds());
+    Assert.assertEquals(345, appReport.getApplicationResourceUsageReport()
+        .getVcoreSeconds());
     Assert.assertEquals("application_0_0001", appReport.getApplicationId()
       .toString());
     Assert.assertEquals("test app type",

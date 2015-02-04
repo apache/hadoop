@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -148,8 +149,18 @@ public class TestSystemMetricsPublisher {
             entity.getOtherInfo().get(
                 ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO));
       } else {
-        Assert.assertEquals("", entity.getOtherInfo().get(
-            ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO));
+        Assert.assertEquals(
+            "",
+            entity.getOtherInfo().get(
+                ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO));
+        Assert.assertEquals(
+            app.getRMAppMetrics().getMemorySeconds(),
+            Long.parseLong(entity.getOtherInfo()
+                .get(ApplicationMetricsConstants.APP_MEM_METRICS).toString()));
+        Assert.assertEquals(
+            app.getRMAppMetrics().getVcoreSeconds(),
+            Long.parseLong(entity.getOtherInfo()
+                .get(ApplicationMetricsConstants.APP_CPU_METRICS).toString()));
       }
       boolean hasCreatedEvent = false;
       boolean hasFinishedEvent = false;
@@ -340,6 +351,8 @@ public class TestSystemMetricsPublisher {
     when(app.getCurrentAppAttempt()).thenReturn(appAttempt);
     when(app.getFinalApplicationStatus()).thenReturn(
         FinalApplicationStatus.UNDEFINED);
+    when(app.getRMAppMetrics()).thenReturn(
+        new RMAppMetrics(null, 0, 0, Integer.MAX_VALUE, Long.MAX_VALUE));
     return app;
   }
 

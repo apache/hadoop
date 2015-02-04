@@ -436,6 +436,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3056. Add verification for containerLaunchDuration
     in TestNodeManagerMetrics. (zhihai xu via xgong)
 
+    YARN-2543. Made resource usage be published to the timeline server too.
+    (Naganarasimha G R via zjshen)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
