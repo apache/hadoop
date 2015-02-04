@@ -275,15 +275,19 @@ public class BlockPoolSliceStorage extends Storage {
   }
 
   /**
-   * Remove storage directories.
-   * @param storageDirs a set of storage directories to be removed.
+   * Remove block pool level storage directory.
+   * @param absPathToRemove the absolute path of the root for the block pool
+   *                        level storage to remove.
    */
-  void removeVolumes(Set<File> storageDirs) {
+  void remove(File absPathToRemove) {
+    Preconditions.checkArgument(absPathToRemove.isAbsolute());
+    LOG.info("Removing block level storage: " + absPathToRemove);
     for (Iterator<StorageDirectory> it = this.storageDirs.iterator();
          it.hasNext(); ) {
       StorageDirectory sd = it.next();
-      if (storageDirs.contains(sd.getRoot())) {
+      if (sd.getRoot().getAbsoluteFile().equals(absPathToRemove)) {
         it.remove();
+        break;
       }
     }
   }

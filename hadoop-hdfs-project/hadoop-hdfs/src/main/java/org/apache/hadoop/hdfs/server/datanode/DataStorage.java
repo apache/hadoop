@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -423,15 +422,21 @@ public class DataStorage extends Storage {
       dataDirs.add(sl.getFile());
     }
 
-    for (BlockPoolSliceStorage bpsStorage : this.bpStorageMap.values()) {
-      bpsStorage.removeVolumes(dataDirs);
-    }
-
     StringBuilder errorMsgBuilder = new StringBuilder();
     for (Iterator<StorageDirectory> it = this.storageDirs.iterator();
          it.hasNext(); ) {
       StorageDirectory sd = it.next();
       if (dataDirs.contains(sd.getRoot())) {
+        // Remove the block pool level storage first.
+        for (Map.Entry<String, BlockPoolSliceStorage> entry :
+            this.bpStorageMap.entrySet()) {
+          String bpid = entry.getKey();
+          BlockPoolSliceStorage bpsStorage = entry.getValue();
+          File bpRoot =
+              BlockPoolSliceStorage.getBpRoot(bpid, sd.getCurrentDir());
+          bpsStorage.remove(bpRoot.getAbsoluteFile());
+        }
+
         it.remove();
         try {
           sd.unlock();
