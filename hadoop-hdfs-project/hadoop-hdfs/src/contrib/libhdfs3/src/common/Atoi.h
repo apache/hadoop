@@ -26,13 +26,13 @@
 namespace hdfs {
 namespace internal {
 
-  Status StrToInt32(const char *str, int32_t *ret);
+Status StrToInt32(const char *str, int32_t *ret);
 
-  Status StrToInt64(const char *str, int64_t *ret);
+Status StrToInt64(const char *str, int64_t *ret);
 
-  Status StrToBool(const char *str, bool *ret);
+Status StrToBool(const char *str, bool *ret);
 
-  Status StrToDouble(const char *str, double *ret);
+Status StrToDouble(const char *str, double *ret);
 
 }
 }

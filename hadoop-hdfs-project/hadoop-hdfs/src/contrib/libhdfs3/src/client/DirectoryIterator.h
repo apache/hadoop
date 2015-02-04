@@ -48,7 +48,7 @@ private:
     std::string startAfter;
     std::vector<FileStatus> lists;
 
-    friend hdfs::internal::FileSystemImpl;
+    friend class hdfs::internal::FileSystemImpl;
 };
 }
 

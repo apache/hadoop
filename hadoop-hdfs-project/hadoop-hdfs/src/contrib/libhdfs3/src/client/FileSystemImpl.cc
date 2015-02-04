@@ -533,32 +533,6 @@ FileSystemStats FileSystemImpl::getFsStats() {
     return FileSystemStats(retval[0], retval[1], retval[2]);
 }
 
-static std::string ConstructTempFilePath(const std::string &path,
-                                         const std::string clientName) {
-    std::stringstream ss;
-    srand((unsigned int)time(NULL));
-    static atomic<uint32_t> count(0);
-    std::vector<std::string> components = StringSplit(path, "/");
-    ss << '/';
-
-    for (size_t i = components.size(); i > 0; --i) {
-        if (!components[i - 1].empty()) {
-            components[i - 1].clear();
-            break;
-        }
-    }
-
-    for (size_t i = 0; i < components.size(); ++i) {
-        if (!components[i].empty()) {
-            ss << components[i] << '/';
-        }
-    }
-
-    ss << "._client_" << clientName << "_random_" << rand() << "_count_"
-       << ++count << "_tid_" << pthread_self() << "_TRUNCATE_TMP";
-    return ss.str();
-}
-
 std::string FileSystemImpl::getDelegationToken(const char *renewer) {
     if (!nn) {
         THROW(HdfsIOException, "FileSystemImpl: not connected.");

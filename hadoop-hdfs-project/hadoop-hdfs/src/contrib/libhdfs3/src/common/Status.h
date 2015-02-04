@@ -43,7 +43,7 @@ public:
         return code;
     }
 
-    const char *getErrorMsg() {
+    const char *getErrorMsg() const {
         return msg.c_str();
     }
 
@@ -58,11 +58,11 @@ private:
 }
 
 #define RETURN_NOT_OK(expr) \
-    do { \
-        Status s = expr; \
-        if (s.isError()) { \
-            return s; \
-        } \
+    do {                    \
+        Status s = expr;    \
+        if (s.isError()) {  \
+            return s;       \
+        }                   \
     } while (0);
 
 #endif /* _HDFS_LIBHDFS3_COMMON_STATUS_H_ */

@@ -88,6 +88,14 @@ struct hdfsExtendedFileInfo {
     int flags;
 };
 
+/**
+ * not implemented yet
+ */
+const char* hdfsGetLastError()
+{
+    return "unknown error";
+}
+
 int hdfsFileIsOpenForRead(hdfsFile file)
 {
     return (file->type == HDFS_STREAM_INPUT);

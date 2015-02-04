@@ -57,10 +57,11 @@ public:
      * To read data from hdfs.
      * @param buf the buffer used to filled.
      * @param size buffer size.
-     * @return return the number of bytes filled in the buffer, it may less than
-     * size, -1 on error.
+     * @param done the number of bytes filled in the buffer, it may less than
+     *             size.
+     * @return the result status of this operation
      */
-    int32_t read(char *buf, int32_t size);
+    Status read(char *buf, int32_t size, int32_t *done);
 
     /**
      * To read data from hdfs, block until get the given size of bytes.
@@ -72,9 +73,10 @@ public:
 
     /**
      * Get how many bytes can be read without blocking.
-     * @return The number of bytes can be read without blocking, -1 on error.
+     * @param output The number of bytes can be read without blocking.
+     * @return the result status of this operation
      */
-    int64_t available();
+    Status available(int64_t *output);
 
     /**
      * To move the file point to the given position.
@@ -85,9 +87,10 @@ public:
 
     /**
      * To get the current file point position.
-     * @return the position of current file pointer, -1 on error.
+     * @param the position of current file pointer.
+     * @return the result status of this operation
      */
-    int64_t tell();
+    Status tell(int64_t *output);
 
     /**
      * Close the stream.
@@ -95,18 +98,11 @@ public:
      */
     Status close();
 
-    /**
-     * Get the error status of the last operation.
-     * @return the error status of the last operation.
-     */
-    Status getLastError();
-
 private:
     InputStream(const InputStream &other);
     InputStream &operator=(InputStream &other);
 
     internal::InputStreamImpl *impl;
-    Status lastError;
 };
 }
 

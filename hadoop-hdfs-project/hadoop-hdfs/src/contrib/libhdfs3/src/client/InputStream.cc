@@ -35,89 +35,82 @@ InputStream::~InputStream() {
 
 Status InputStream::open(FileSystem &fs, const std::string &path,
                          bool verifyChecksum) {
-    if (!fs.impl) {
-        THROW(HdfsIOException, "FileSystem: not connected.");
-    }
+    CHECK_PARAMETER(fs.impl, EIO, "FileSystem: not connected.");
 
     try {
         impl->open(fs.impl, path.c_str(), verifyChecksum);
     } catch (...) {
-        return lastError = CreateStatusFromException(current_exception());
+        return CreateStatusFromException(current_exception());
     }
 
-    return lastError = Status::OK();
+    return Status::OK();
 }
 
-int32_t InputStream::read(char *buf, int32_t size) {
-    int32_t retval = -1;
+Status InputStream::read(char *buf, int32_t size, int32_t *done) {
+    CHECK_PARAMETER(NULL != done, EINVAL, "invalid parameter \"output\"");
 
     try {
-        retval = impl->read(buf, size);
-        lastError = Status::OK();
+        *done = impl->read(buf, size);
+    } catch (const HdfsEndOfStream &e) {
+        *done = 0;
     } catch (...) {
-        lastError = CreateStatusFromException(current_exception());
+        return CreateStatusFromException(current_exception());
     }
 
-    return retval;
+    return Status::OK();
 }
 
 Status InputStream::readFully(char *buf, int64_t size) {
     try {
         impl->readFully(buf, size);
     } catch (...) {
-        return lastError = CreateStatusFromException(current_exception());
+        return CreateStatusFromException(current_exception());
     }
 
-    return lastError = Status::OK();
+    return Status::OK();
 }
 
-int64_t InputStream::available() {
-    int64_t retval = -1;
+Status InputStream::available(int64_t *output) {
+    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
 
     try {
-        retval = impl->available();
-        lastError = Status::OK();
+        *output = impl->available();
     } catch (...) {
-        lastError = CreateStatusFromException(current_exception());
+        return CreateStatusFromException(current_exception());
     }
 
-    return retval;
+    return Status::OK();
 }
 
 Status InputStream::seek(int64_t pos) {
     try {
         impl->seek(pos);
     } catch (...) {
-        return lastError = CreateStatusFromException(current_exception());
+        return CreateStatusFromException(current_exception());
     }
 
-    return lastError = Status::OK();
+    return Status::OK();
 }
 
-int64_t InputStream::tell() {
-    int64_t retval = -1;
+Status InputStream::tell(int64_t *output) {
+    CHECK_PARAMETER(NULL != output, EINVAL, "invalid parameter \"output\"");
 
     try {
-        retval = impl->tell();
-        lastError = Status::OK();
+        *output = impl->tell();
     } catch (...) {
-        lastError = CreateStatusFromException(current_exception());
+        return CreateStatusFromException(current_exception());
     }
 
-    return retval;
+    return Status::OK();
 }
 
 Status InputStream::close() {
     try {
         impl->close();
     } catch (...) {
-        return lastError = CreateStatusFromException(current_exception());
+        return CreateStatusFromException(current_exception());
     }
 
-    return lastError = Status::OK();
-}
-
-Status InputStream::getLastError() {
-    return lastError;
+    return Status::OK();
 }
 }

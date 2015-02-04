@@ -26,38 +26,36 @@ function(COPY_IF_CHANGED TARGET)
     endforeach()
 endfunction(COPY_IF_CHANGED TARGET)
 
-get_filename_component(R "${PROJECT_SOURCE_DIR}/../../../../../" REALPATH)
-
 COPY_IF_CHANGED("${CMAKE_BINARY_DIR}/common_pb"
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/GetUserMappingsProtocol.proto
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/HAServiceProtocol.proto
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/IpcConnectionContext.proto
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/ProtobufRpcEngine.proto
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/ProtocolInfo.proto
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/RefreshAuthorizationPolicyProtocol.proto
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/RefreshCallQueueProtocol.proto
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/RefreshUserMappingsProtocol.proto
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/RpcHeader.proto
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/Security.proto
-    ${R}/hadoop-common-project/hadoop-common/src/main/proto/ZKFCProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/GetUserMappingsProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/HAServiceProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/IpcConnectionContext.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/ProtobufRpcEngine.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/ProtocolInfo.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/RefreshAuthorizationPolicyProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/RefreshCallQueueProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/RefreshUserMappingsProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/RpcHeader.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/Security.proto
+    ${HADOOP_TOP_DIR}/hadoop-common-project/hadoop-common/src/main/proto/ZKFCProtocol.proto
 )
 
 COPY_IF_CHANGED("${CMAKE_BINARY_DIR}/hdfs_pb"
-    #${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/DatanodeProtocol.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/HAZKInfo.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/ClientDatanodeProtocol.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/acl.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/fsimage.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/hdfs.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/datatransfer.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/InterDatanodeProtocol.proto
-    #${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/QJournalProtocol.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/JournalProtocol.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/NamenodeProtocol.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/ClientNamenodeProtocol.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/xattr.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/encryption.proto
-    ${R}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/inotify.proto
+    #${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/DatanodeProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/HAZKInfo.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/ClientDatanodeProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/acl.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/fsimage.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/hdfs.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/datatransfer.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/InterDatanodeProtocol.proto
+    #${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/QJournalProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/JournalProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/NamenodeProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/ClientNamenodeProtocol.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/xattr.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/encryption.proto
+    ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/proto/inotify.proto
 )
 
 AUTO_SOURCES(PB_SOURCES "*.proto" "RECURSE" "${CMAKE_BINARY_DIR}")

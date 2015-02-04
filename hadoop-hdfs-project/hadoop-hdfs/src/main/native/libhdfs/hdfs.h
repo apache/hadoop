@@ -72,6 +72,15 @@ extern  "C" {
     struct hadoopRzBuffer;
 
     /**
+     * Return error information of last failed operation.
+     *
+     * @return A not NULL const string pointer of last error information
+     *         in the caller thread. Successful operations do not clear
+     *         this message.
+     */
+    const char* hdfsGetLastError();
+
+    /**
      * Determine if a file is open for read.
      *
      * @param file     The HDFS file

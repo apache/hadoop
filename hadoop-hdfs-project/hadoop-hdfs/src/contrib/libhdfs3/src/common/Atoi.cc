@@ -28,6 +28,9 @@
 using hdfs::Status;
 using std::ostringstream;
 
+namespace hdfs {
+namespace internal {
+
 Status StrToInt32(const char *str, int32_t *ret) {
     long retval;
     char *end = NULL;
@@ -105,4 +108,7 @@ Status StrToDouble(const char *str, double *ret) {
     }
     *ret = retval;
     return Status::OK();
+}
+
+}
 }

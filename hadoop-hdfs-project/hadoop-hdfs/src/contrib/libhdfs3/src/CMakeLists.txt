@@ -53,7 +53,11 @@ SET(libhdfs3_PROTO_FILES ${libhdfs3_PROTO_FILES} PARENT_SCOPE)
 INCLUDE(GenerateProtobufs.cmake)
 INCLUDE_DIRECTORIES("${CMAKE_BINARY_DIR}")
 
+SET(LIBHDFS_SRC_DIR ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/native/libhdfs/)
+INCLUDE_DIRECTORIES(${LIBHDFS_SRC_DIR})
+
 SET(HEADER 
+    ${LIBHDFS_SRC_DIR}/hdfs.h
     client/BlockLocation.h
     client/DirectoryIterator.h
     client/FileStatus.h
