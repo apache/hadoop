@@ -205,6 +205,19 @@ extends AMRMClientAsync<T> {
   public int getClusterNodeCount() {
     return client.getClusterNodeCount();
   }
+
+  /**
+   * Update application's blacklist with addition or removal resources.
+   *
+   * @param blacklistAdditions list of resources which should be added to the
+   *        application blacklist
+   * @param blacklistRemovals list of resources which should be removed from the
+   *        application blacklist
+   */
+  public void updateBlacklist(List<String> blacklistAdditions,
+                              List<String> blacklistRemovals) {
+    client.updateBlacklist(blacklistAdditions, blacklistRemovals);
+  }
   
   private class HeartbeatThread extends Thread {
     public HeartbeatThread() {

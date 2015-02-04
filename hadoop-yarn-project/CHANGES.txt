@@ -205,6 +205,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-1393. SLS: Add how-to-use instructions. (Wei Yan via kasha)
 
+    YARN-1723. AMRMClientAsync missing blacklist addition and removal
+    functionality. (Bartosz Ługowski via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
