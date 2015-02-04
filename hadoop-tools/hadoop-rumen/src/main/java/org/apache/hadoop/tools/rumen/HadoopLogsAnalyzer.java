@@ -559,7 +559,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
     input =
         maybeUncompressedPath(new Path(inputDirectoryPath, currentFileName));
 
-    return input != null;
+    return true;
   }
 
   private String readInputLine() throws IOException {
