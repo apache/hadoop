@@ -169,6 +169,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11442. hadoop-azure: Create test jar.
     (Shashank Khandelwal via cnauroth)
 
+    HADOOP-11544. Remove unused configuration keys for tracing. (Masatake
+    Iwasaki via aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
