@@ -98,6 +98,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6231. Grep example job is not working on a fully-distributed
     cluster. (aajisaka)
 
+    MAPREDUCE-6243. Fix findbugs warnings in hadoop-rumen. (Masatake Iwasaki
+    via aajisaka)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

@@ -67,7 +67,7 @@ public class MapAttempt20LineHistoryEventEmitter extends
         MapAttempt20LineHistoryEventEmitter that =
             (MapAttempt20LineHistoryEventEmitter) thatg;
 
-        if (finishTime != null && "success".equalsIgnoreCase(status)) {
+        if ("success".equalsIgnoreCase(status)) {
           return new MapAttemptFinishedEvent
             (taskAttemptID,
               that.originalTaskType, status,
