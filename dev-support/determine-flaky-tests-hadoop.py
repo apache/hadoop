@@ -92,10 +92,10 @@ def load_url_data(url):
     ourl = urllib.request.urlopen(url)
     codec = ourl.info().get_param('charset')
     content = ourl.read().decode(codec)
-    data = simplejson.loads(content)
+    data = simplejson.loads(content, strict=False)
   else:
     ourl = urllib2.urlopen(url)
-    data = simplejson.load(ourl)
+    data = simplejson.load(ourl, strict=False)
   return data
  
 """ List all builds of the target project. """
