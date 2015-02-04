@@ -63,6 +63,12 @@ public class ApplicationMetricsConstants {
 
   public static final String STATE_EVENT_INFO =
       "YARN_APPLICATION_STATE";
+  
+  public static final String APP_CPU_METRICS =
+      "YARN_APPLICATION_CPU_METRIC";
+  
+  public static final String APP_MEM_METRICS =
+      "YARN_APPLICATION_MEM_METRIC";
 
   public static final String LATEST_APP_ATTEMPT_EVENT_INFO =
       "YARN_APPLICATION_LATEST_APP_ATTEMPT";

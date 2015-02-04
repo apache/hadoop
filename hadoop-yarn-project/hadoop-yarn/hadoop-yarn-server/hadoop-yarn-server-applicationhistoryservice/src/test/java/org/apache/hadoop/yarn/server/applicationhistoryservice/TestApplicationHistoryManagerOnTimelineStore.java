@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -201,6 +202,12 @@ public class TestApplicationHistoryManagerOnTimelineStore {
             app.getOriginalTrackingUrl());
         Assert.assertEquals("test diagnostics info", app.getDiagnostics());
       }
+      ApplicationResourceUsageReport applicationResourceUsageReport =
+          app.getApplicationResourceUsageReport();
+      Assert.assertEquals(123,
+          applicationResourceUsageReport.getMemorySeconds());
+      Assert
+          .assertEquals(345, applicationResourceUsageReport.getVcoreSeconds());
       Assert.assertEquals(FinalApplicationStatus.UNDEFINED,
           app.getFinalApplicationStatus());
       Assert.assertEquals(YarnApplicationState.FINISHED,
@@ -416,6 +423,8 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     entityInfo.put(ApplicationMetricsConstants.QUEUE_ENTITY_INFO, "test queue");
     entityInfo.put(ApplicationMetricsConstants.SUBMITTED_TIME_ENTITY_INFO,
         Integer.MAX_VALUE + 1L);
+    entityInfo.put(ApplicationMetricsConstants.APP_MEM_METRICS,123);
+    entityInfo.put(ApplicationMetricsConstants.APP_CPU_METRICS,345);
     if (emptyACLs) {
       entityInfo.put(ApplicationMetricsConstants.APP_VIEW_ACLS_ENTITY_INFO, "");
     } else {

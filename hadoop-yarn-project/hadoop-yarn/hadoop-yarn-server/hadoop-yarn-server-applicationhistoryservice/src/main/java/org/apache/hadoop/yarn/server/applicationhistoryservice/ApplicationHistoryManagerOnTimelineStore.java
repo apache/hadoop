@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
@@ -222,6 +223,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     String diagnosticsInfo = null;
     FinalApplicationStatus finalStatus = FinalApplicationStatus.UNDEFINED;
     YarnApplicationState state = null;
+    ApplicationResourceUsageReport appResources = null;
     Map<ApplicationAccessType, String> appViewACLs =
         new HashMap<ApplicationAccessType, String>();
     Map<String, Object> entityInfo = entity.getOtherInfo();
@@ -259,6 +261,14 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         type =
             entityInfo.get(ApplicationMetricsConstants.TYPE_ENTITY_INFO)
                 .toString();
+      }
+      if (entityInfo.containsKey(ApplicationMetricsConstants.APP_CPU_METRICS)) {
+        long vcoreSeconds=Long.parseLong(entityInfo.get(
+                ApplicationMetricsConstants.APP_CPU_METRICS).toString());
+        long memorySeconds=Long.parseLong(entityInfo.get(
+                ApplicationMetricsConstants.APP_MEM_METRICS).toString());
+        appResources=ApplicationResourceUsageReport
+            .newInstance(0, 0, null, null, null, memorySeconds, vcoreSeconds);
       }
     }
     List<TimelineEvent> events = entity.getEvents();
@@ -310,7 +320,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     return new ApplicationReportExt(ApplicationReport.newInstance(
         ConverterUtils.toApplicationId(entity.getEntityId()),
         latestApplicationAttemptId, user, queue, name, null, -1, null, state,
-        diagnosticsInfo, null, createdTime, finishedTime, finalStatus, null,
+        diagnosticsInfo, null, createdTime, finishedTime, finalStatus, appResources,
         null, 1.0F, type, null), appViewACLs);
   }
 

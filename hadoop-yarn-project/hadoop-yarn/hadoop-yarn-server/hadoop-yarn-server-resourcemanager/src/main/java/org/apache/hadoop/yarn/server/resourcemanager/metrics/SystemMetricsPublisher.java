@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -120,7 +121,8 @@ public class SystemMetricsPublisher extends CompositeService {
               RMServerUtils.createApplicationState(state),
               app.getCurrentAppAttempt() == null ?
                   null : app.getCurrentAppAttempt().getAppAttemptId(),
-              finishedTime));
+              finishedTime,
+              app.getRMAppMetrics()));
     }
   }
 
@@ -276,6 +278,12 @@ public class SystemMetricsPublisher extends CompositeService {
       eventInfo.put(ApplicationMetricsConstants.LATEST_APP_ATTEMPT_EVENT_INFO,
           event.getLatestApplicationAttemptId().toString());
     }
+    RMAppMetrics appMetrics = event.getAppMetrics();
+    entity.addOtherInfo(ApplicationMetricsConstants.APP_CPU_METRICS,
+        appMetrics.getVcoreSeconds());
+    entity.addOtherInfo(ApplicationMetricsConstants.APP_MEM_METRICS,
+        appMetrics.getMemorySeconds());
+    
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
     putEntity(entity);
