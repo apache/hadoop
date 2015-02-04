@@ -638,4 +638,38 @@ public class TestDataNodeHotSwapVolumes {
       throw new IOException(exceptions.get(0).getCause());
     }
   }
+
+  @Test(timeout=60000)
+  public void testAddBackRemovedVolume()
+      throws IOException, TimeoutException, InterruptedException,
+      ReconfigurationException {
+    startDFSCluster(1, 2);
+    // Create some data on every volume.
+    createFile(new Path("/test"), 32);
+
+    DataNode dn = cluster.getDataNodes().get(0);
+    Configuration conf = dn.getConf();
+    String oldDataDir = conf.get(DFS_DATANODE_DATA_DIR_KEY);
+    String keepDataDir = oldDataDir.split(",")[0];
+    String removeDataDir = oldDataDir.split(",")[1];
+
+    dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, keepDataDir);
+    for (int i = 0; i < cluster.getNumNameNodes(); i++) {
+      String bpid = cluster.getNamesystem(i).getBlockPoolId();
+      BlockPoolSliceStorage bpsStorage =
+          dn.getStorage().getBPStorage(bpid);
+      // Make sure that there is no block pool level storage under removeDataDir.
+      for (int j = 0; j < bpsStorage.getNumStorageDirs(); j++) {
+        Storage.StorageDirectory sd = bpsStorage.getStorageDir(j);
+        assertFalse(sd.getRoot().getAbsolutePath().startsWith(
+            new File(removeDataDir).getAbsolutePath()
+        ));
+      }
+      assertEquals(dn.getStorage().getBPStorage(bpid).getNumStorageDirs(), 1);
+    }
+
+    // Bring the removed directory back. It only successes if all metadata about
+    // this directory were removed from the previous step.
+    dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, oldDataDir);
+  }
 }

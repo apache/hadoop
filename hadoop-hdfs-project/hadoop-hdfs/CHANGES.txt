@@ -555,6 +555,10 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7734. Class cast exception in NameNode#main. (yliu via wang)
 
+    HDFS-7719. BlockPoolSliceStorage#removeVolumes fails to remove some
+    in-memory state associated with volumes. (Lei (Eddy) Xu via Colin P.
+    McCabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
