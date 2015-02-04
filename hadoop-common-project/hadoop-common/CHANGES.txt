@@ -476,6 +476,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11548. checknative should display a nicer error message when openssl
     support is not compiled in. (Anu Engineer via cnauroth)
 
+    HADOOP-11547. hadoop-common native compilation fails on Windows due to
+    missing support for __attribute__ declaration. (cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

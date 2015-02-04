@@ -19,6 +19,19 @@
 
 #include <jni.h> /* for jthrowable */
 #include <stdarg.h> /* for va_list */
+#include "org_apache_hadoop.h"
+
+#ifdef WINDOWS
+/*
+ * gcc-style type-checked format arguments are not supported on Windows, so just
+ * stub this macro.
+ */
+#define TYPE_CHECKED_PRINTF_FORMAT(formatArg, varArgs)
+# else
+/* Use gcc type-checked format arguments. */
+#define TYPE_CHECKED_PRINTF_FORMAT(formatArg, varArgs) \
+  __attribute__((format(printf, formatArg, varArgs)))
+#endif
 
 /**
  * Create a new Exception.
@@ -48,7 +61,7 @@ jthrowable newExceptionV(JNIEnv* env, const char *name,
  * @return              The RuntimeException
  */
 jthrowable newException(JNIEnv* env, const char *name, const char *fmt, ...)
-    __attribute__((format(printf, 3, 4)));
+    TYPE_CHECKED_PRINTF_FORMAT(3, 4);
 
 /**
  * Create a new RuntimeException.
@@ -62,7 +75,7 @@ jthrowable newException(JNIEnv* env, const char *name, const char *fmt, ...)
  * @return              The RuntimeException
  */
 jthrowable newRuntimeException(JNIEnv* env, const char *fmt, ...)
-    __attribute__((format(printf, 2, 3)));
+    TYPE_CHECKED_PRINTF_FORMAT(2, 3);
 
 /**
  * Create a new IOException.
@@ -77,7 +90,7 @@ jthrowable newRuntimeException(JNIEnv* env, const char *fmt, ...)
  *                      to create the NativeIOException.
  */
 jthrowable newIOException(JNIEnv* env, const char *fmt, ...)
-    __attribute__((format(printf, 2, 3)));
+    TYPE_CHECKED_PRINTF_FORMAT(2, 3);
 
 /**
  * Thread-safe strerror alternative.
@@ -87,4 +100,5 @@ jthrowable newIOException(JNIEnv* env, const char *fmt, ...)
  */
 const char* terror(int errnum);
 
+#undef TYPE_CHECKED_PRINTF_FORMAT
 #endif
