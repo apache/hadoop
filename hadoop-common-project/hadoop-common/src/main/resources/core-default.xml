@@ -1654,18 +1654,6 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
-  <name>hadoop.htrace.sampler</name>
-  <value>NeverSampler</value>
-  <description>
-    Configure the samplers for HTrace, the value can be NeverSampler,
-    AlwaysSampler or ProbabilitySampler. NeverSampler: HTrace is OFF 
-    for all spans; AlwaysSampler: HTrace is ON for all spans;
-    ProbabilitySampler: HTrace is ON for some percentage% of top-level 
-    spans.
-  </description>
-</property>
-
-<property>
   <name>hadoop.htrace.spanreceiver.classes</name>
   <value></value>
   <description>
