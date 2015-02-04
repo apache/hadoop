@@ -113,6 +113,7 @@ public class CryptoInputStream extends FilterInputStream implements
   public CryptoInputStream(InputStream in, CryptoCodec codec,
       int bufferSize, byte[] key, byte[] iv, long streamOffset) throws IOException {
     super(in);
+    CryptoStreamUtils.checkCodec(codec);
     this.bufferSize = CryptoStreamUtils.checkBufferSize(codec, bufferSize);
     this.codec = codec;
     this.key = key.clone();

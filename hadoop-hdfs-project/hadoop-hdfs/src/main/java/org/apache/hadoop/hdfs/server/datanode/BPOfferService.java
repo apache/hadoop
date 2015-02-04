@@ -656,9 +656,6 @@ class BPOfferService {
       //
       Block toDelete[] = bcmd.getBlocks();
       try {
-        if (dn.blockScanner != null) {
-          dn.blockScanner.deleteBlocks(bcmd.getBlockPoolId(), toDelete);
-        }
         // using global fsdataset
         dn.getFSDataset().invalidate(bcmd.getBlockPoolId(), toDelete);
       } catch(IOException e) {

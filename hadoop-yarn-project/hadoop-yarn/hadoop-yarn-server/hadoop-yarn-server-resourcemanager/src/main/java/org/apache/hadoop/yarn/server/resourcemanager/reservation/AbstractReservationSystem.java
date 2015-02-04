@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -203,6 +204,8 @@ public abstract class AbstractReservationSystem extends AbstractService
     // currently only capacity scheduler is supported
     if (scheduler instanceof CapacityScheduler) {
       return CapacitySchedulerPlanFollower.class.getName();
+    } else if (scheduler instanceof FairScheduler) {
+      return FairSchedulerPlanFollower.class.getName();
     }
     return null;
   }
@@ -322,9 +325,10 @@ public abstract class AbstractReservationSystem extends AbstractService
    * @param scheduler the scheduler for which the reservation system is required
    */
   public static String getDefaultReservationSystem(ResourceScheduler scheduler) {
-    // currently only capacity scheduler is supported
     if (scheduler instanceof CapacityScheduler) {
       return CapacityReservationSystem.class.getName();
+    } else if (scheduler instanceof FairScheduler) {
+      return FairReservationSystem.class.getName();
     }
     return null;
   }

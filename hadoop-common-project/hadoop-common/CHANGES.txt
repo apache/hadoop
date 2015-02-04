@@ -11,18 +11,14 @@ Trunk (Unreleased)
 
     HADOOP-9902. Shell script rewrite (aw)
 
+    HADOOP-10950. rework heap management vars (John Smith via aw)
+
   NEW FEATURES
 
-    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
-    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
-    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
-    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
+    HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via aw)
 
-    HADOOP-10728. Metrics system for Windows Azure Storage Filesystem.
-    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
-    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
-    Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
-    
+    HADOOP-11353. Add support for .hadooprc (aw)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
@@ -127,12 +123,6 @@ Trunk (Unreleased)
     HADOOP-11092. hadoop shell commands should print usage if not given a
     a class (aw)
 
-    HADOOP-10809. hadoop-azure: page blob support. (Dexter Bradshaw,
-    Mostafa Elhemali, Eric Hanson, and Mike Liddell via cnauroth)
-
-    HADOOP-11188. hadoop-azure: automatically expand page blobs when they become
-    full. (Eric Hanson via cnauroth)
-
     HADOOP-11231. Remove dead code in ServletUtil. (Li Lu via wheat9)
 
     HADOOP-11025. hadoop-daemons.sh should just call hdfs directly (Masatake
@@ -148,7 +138,18 @@ Trunk (Unreleased)
     HADOOP-11081. Document hadoop properties expected to be set by the shell 
     code in *-env.sh (aw)
 
+    HADOOP-11352 Clean up test-patch.sh to disable "+1 contrib tests"
+    (Akira AJISAKA via stevel)
+
+    HADOOP-10788. Rewrite kms to use new shell framework (John Smith via aw)
+
+    HADOOP-11058. Missing HADOOP_CONF_DIR generates strange results
+    (Masatake Iwasaki via aw)
+
   BUG FIXES
+
+    HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
+    (Jason Lowe via raviprak)
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
     (Junping Du via llu)
@@ -319,19 +320,9 @@ Trunk (Unreleased)
     HADOOP-10625. Trim configuration names when putting/getting them
     to properties. (Wangda Tan via xgong)
 
-    HADOOP-10689. InputStream is not closed in
-    AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
-
-    HADOOP-10690. Lack of synchronization on access to InputStream in
-    NativeAzureFileSystem#NativeAzureFsInputStream#close().
-    (Chen He via cnauroth)
-
     HADOOP-10831. UserProvider is not thread safe. (Benoy Antony via umamahesh)
 
     HADOOP-10834. Typo in CredentialShell usage. (Benoy Antony via umamahesh)
-
-    HADOOP-10840. Fix OutOfMemoryError caused by metrics system in Azure File
-    System. (Shanyu Zhao via cnauroth)
 
     HADOOP-11002. shell escapes are incompatible with previous releases (aw)
 
@@ -347,9 +338,6 @@ Trunk (Unreleased)
     HADOOP-11022. User replaced functions get lost 2-3 levels deep (e.g., 
     sbin) (aw)
 
-    HADOOP-11248. Add hadoop configuration to disable Azure Filesystem metrics
-    collection. (Shanyu Zhao via cnauroth)
-
     HADOOP-11284. Fix variable name mismatches in hadoop-functions.sh (Masatake
     Iwasaki via aw)
 
@@ -357,6 +345,12 @@ Trunk (Unreleased)
 
     HADOOP-11296. hadoop-daemons.sh throws 'host1: bash: host3: 
     command not found...' (vinayakumarb)
+
+    HADOOP-11380. Restore Rack Awareness documenation (aw)
+
+    HADOOP-11397. Can't override HADOOP_IDENT_STRING (Kengo Seki via aw)
+
+    HADOOP-10908. Common needs updates for shell rewrite (aw)
 
   OPTIMIZATIONS
 
@@ -377,9 +371,27 @@ Release 2.7.0 - UNRELEASED
     HADOOP-7984. Add hadoop --loglevel option to change log level.
     (Akira AJISAKA via cnauroth)
 
+    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
+
+    HADOOP-10728. Metrics system for Windows Azure Storage Filesystem.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
+
     HADOOP-8989. hadoop fs -find feature (Jonathan Allen via aw)
 
+    HADOOP-11490. Expose truncate API via FileSystem and shell command.
+    (Milan Desai via shv)
+
+    HADOOP-11045. Introducing a tool to detect flaky tests of hadoop jenkins testing
+    job. (Yongjun Zhang and Todd Lipcon via ozawa)
+
   IMPROVEMENTS
+
+    HADOOP-11483. HardLink.java should use the jdk7 createLink method (aajisaka)
 
     HADOOP-11156. DelegateToFileSystem should implement
     getFsStatus(final Path f). (Zhihai Xu via wang)
@@ -418,12 +430,132 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11313. Adding a document about NativeLibraryChecker.
     (Tsuyoshi OZAWA via cnauroth)
 
+    HADOOP-11287. Simplify UGI#reloginFromKeytab for Java 7+.
+    (Li Lu via wheat9)
+
+    HADOOP-10476) Bumping the findbugs version to 3.0.0. (wheat9)
+
+    HADOOP-11410. Make the rpath of libhadoop.so configurable (cmccabe)
+
+    HADOOP-11416. Move ChunkedArrayList into hadoop-common (cmccabe)
+
+    HADOOP-10840. Fix OutOfMemoryError caused by metrics system in Azure File
+    System. (Shanyu Zhao via cnauroth)
+
+    HADOOP-11248. Add hadoop configuration to disable Azure Filesystem metrics
+    collection. (Shanyu Zhao via cnauroth)
+
+    HADOOP-11421. Add IOUtils#listDirectory (cmccabe)
+
+    HADOOP-11427. ChunkedArrayList: fix removal via iterator and implement get
+    (cmccabe)
+
+    HADOOP-11430. Add GenericTestUtils#disableLog, GenericTestUtils#setLogLevel
+    (cmccabe)
+
+    HADOOP-11422. Check CryptoCodec is AES-CTR for Crypto input/output stream
+    (Yi Liu via Colin P. McCabe)
+
+    HADOOP-11213. Typos in html pages: SecureMode and EncryptedShuffle. 
+    (Wei Yan via kasha)
+
+    HADOOP-11395. Add site documentation for Azure Storage FileSystem
+    integration. (Chris Nauroth via Arpit Agarwal)
+
+    HDFS-7555. Remove the support of unmanaged connectors in HttpServer2.
+    (wheat9)
+
+    HADOOP-11399. Java Configuration file and .xml files should be
+    automatically cross-compared (rchiang via rkanter)
+
+    HADOOP-11455. KMS and Credential CLI should request confirmation for
+    deletion by default. (Charles Lamb via yliu)
+
+    HADOOP-11390 Metrics 2 ganglia provider to include hostname in
+    unresolved address problems. (Varun Saxena via stevel)
+
+    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
+    (ozawa)
+
+    HADOOP-11464. Reinstate support for launching Hadoop processes on Windows
+    using Cygwin. (cnauroth)
+
+    HADOOP-9992. Modify the NN loadGenerator to optionally run as a MapReduce job
+    (Akshay Radia via brandonli)
+
+    HADOOP-11465. Fix findbugs warnings in hadoop-gridmix. (Varun Saxena via
+    Arpit Agarwal)
+
+    HADOOP-11481. ClassCastException while using a key created by keytool to
+    create encryption zone. (Charles Lamb via Colin P. Mccabe)
+
+    HADOOP-8757. Metrics should disallow names with invalid characters
+    (rchiang via rkanter)
+
+    HADOOP-11261 Set custom endpoint for S3A. (Thomas Demoor via stevel)
+
+    HADOOP-11171 Enable using a proxy server to connect to S3a.
+    (Thomas Demoor via stevel)
+
+    HADOOP-11489 Dropping dependency on io.netty from hadoop-nfs' pom.xml
+    (Ted Yu via ozawa)
+
+    HADOOP-11419 Improve hadoop-maven-plugins. (Herve Boutemy via stevel)
+
+    HADOOP-11450. Cleanup DistCpV1 not to use deprecated methods and fix
+    javadocs. (Varun Saxena via ozawa)
+
+    HADOOP-4297. Enable Java assertions when running tests.
+    (Tsz Wo Nicholas Sze via wheat9)
+
+    HADOOP-10626. Limit Returning Attributes for LDAP search. (Jason Hubbard
+    via atm)
+
+    HADOOP-11317. Increment SLF4J version to 1.7.10. (Tim Robertson via ozawa)
+
+    HADOOP-10525. Remove DRFA.MaxBackupIndex config from log4j.properties
+    (aajisaka)
+
+    HADOOP-10574. Bump the maven plugin versions too -moving the numbers into
+    properties. (aajisaka)
+
+    HADOOP-11441. Hadoop-azure: Change few methods scope to public.
+    (Shashank Khandelwal via cnauroth)
+
+    HADOOP-9137. Support connection limiting in IPC server (kihwal)
+
+    HADOOP-11498. Bump the version of HTrace to 3.1.0-incubating (Masatake
+    Iwasaki via Colin P. McCabe)
+
+    HADOOP-11442. hadoop-azure: Create test jar.
+    (Shashank Khandelwal via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
     (Wilfred Spiegelenburg via wang)
 
+    HADOOP-11238. Update the NameNode's Group Cache in the background when
+    possible (Chris Li via Colin P. McCabe)
+
+    HADOOP-10809. hadoop-azure: page blob support. (Dexter Bradshaw,
+    Mostafa Elhemali, Eric Hanson, and Mike Liddell via cnauroth)
+
+    HADOOP-11188. hadoop-azure: automatically expand page blobs when they become
+    full. (Eric Hanson via cnauroth)
+
   BUG FIXES
+
+    HADOOP-11488. Difference in default connection timeout for S3A FS
+    (Daisuke Kobayashi via harsh)
+
+    HADOOP-11256. Some site docs have inconsistent appearance (Masatake 
+    Iwasaki via aw)
+
+    HADOOP-11318. Update the document for hadoop fs -stat (aajisaka)
+
+    HADOOP 11400. GraphiteSink does not reconnect to Graphite after 'broken pipe' 
+    (Kamil Gorlo via raviprak)
 
     HADOOP-11236. NFS: Fix javadoc warning in RpcProgram.java (Abhiraj Butala via harsh)
 
@@ -520,6 +652,192 @@ Release 2.7.0 - UNRELEASED
     (Ted Yu via jing9)
 
     HADOOP-11329. Add JAVA_LIBRARY_PATH to KMS startup options. (Arun Suresh via wang)
+
+    HADOOP-11363 Hadoop maven surefire-plugin uses must set heap size. (stevel)
+
+    HADOOP-10134 [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in doc
+    comments. (apurtell via stevel)
+
+    HADOOP-11367. Fix warnings from findbugs 3.0 in hadoop-streaming. (Li Lu via wheat9)
+
+    HADOOP-11369. Fix new findbugs warnings in hadoop-mapreduce-client,
+    non-core directories. (Li Lu via wheat9)
+
+    HADOOP-11368. Fix SSLFactory truststore reloader thread leak in
+    KMSClientProvider. (Arun Suresh via wang)
+
+    HADOOP-11372. Fix new findbugs warnings in mapreduce-examples.
+    (Li Lu via wheat9)
+
+    HADOOP-11273. TestMiniKdc failure: login options not compatible with IBM
+    JDK. (Gao Zhong Liang via wheat9)
+
+    HADOOP-11379. Fix new findbugs warnings in hadoop-auth*. (Li Lu via wheat9)
+
+    HADOOP-11378. Fix new findbugs warnings in hadoop-kms. (Li Lu via wheat9)
+
+    HADOOP-11349. RawLocalFileSystem leaks file descriptor while creating a
+    file if creat succeeds but chmod fails. (Varun Saxena via Colin P. McCabe)
+
+    HADOOP-11381. Fix findbugs warnings in hadoop-distcp, hadoop-aws,
+    hadoop-azure, and hadoop-openstack. (Li Lu via wheat9)
+
+    HADOOP-10482. Fix various findbugs warnings in hadoop-common. (wheat9)
+
+    HADOOP-11388. Remove deprecated o.a.h.metrics.file.FileContext.
+    (Li Lu via wheat9)
+
+    HADOOP-11386. Replace \n by %n in format hadoop-common format strings.
+    (Li Lu via wheat9)
+
+    HADOOP-11211. mapreduce.job.classloader.system.classes semantics should be
+    be order-independent. (Yitong Zhou via gera)
+
+    HADOOP-11389. Clean up byte to string encoding issues in hadoop-common.
+    (wheat9)
+
+    HADOOP-11394. hadoop-aws documentation missing. (cnauroth)
+
+    HADOOP-11396. Provide navigation in the site documentation linking to the
+    Hadoop Compatible File Systems. (cnauroth)
+
+    HADOOP-11412 POMs mention "The Apache Software License" rather than
+    "Apache License". (Herve Boutemy via stevel)
+
+    HADOOP-11321. copyToLocal cannot save a file to an SMB share unless the user
+    has Full Control permissions. (cnauroth)
+
+    HADOOP-11420. Use latest maven-site-plugin and replace link to svn with
+    link to git. (Herve Boutemy via wheat9)
+
+    HADOOP-10689. InputStream is not closed in
+    AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
+
+    HADOOP-10690. Lack of synchronization on access to InputStream in
+    NativeAzureFileSystem#NativeAzureFsInputStream#close().
+    (Chen He via cnauroth)
+
+    HADOOP-11358. Tests for encryption/decryption with IV calculation
+    overflow. (yliu)
+
+    HADOOP-11125. Remove redundant tests in TestOsSecureRandom.
+    (Masanori Oyama via wheat9)
+
+    HADOOP-11385. Prevent cross site scripting attack on JMXJSONServlet.
+    (wheat9)
+
+    HADOOP-11409. FileContext.getFileContext can stack overflow if default fs
+    misconfigured (Gera Shegalov via jlowe)
+
+    HADOOP-11428. Remove obsolete reference to Cygwin in BUILDING.txt.
+    (Arpit Agarwal via wheat9)
+
+    HADOOP-11431. clean up redundant maven-site-plugin configuration.
+    (Herve Boutemy via wheat9)
+
+    HADOOP-11429. Findbugs warnings in hadoop extras.
+    (Varun Saxena via wheat9)
+
+    HADOOP-11414. FileBasedIPList#readLines() can leak file descriptors.
+    (ozawa)
+
+    HADOOP-11283. SequenceFile.Writer can leak file descriptors in
+    DistCpV1#setup(). (Varun Saxena via ozawa)
+
+    HADOOP-11448. Fix findbugs warnings in FileBasedIPList. (ozawa)
+
+    HADOOP-11039. ByteBufferReadable API doc is inconsistent with the
+    implementations. (Yi Liu via Colin P. McCabe)
+
+    HADOOP-11446. S3AOutputStream should use shared thread pool to
+    avoid OutOfMemoryError. (Ted Yu via stevel)	
+
+    HADOOP-11459. Fix recent findbugs in ActiveStandbyElector, NetUtils
+    and ShellBasedIdMapping (vinayakumarb)
+
+    HADOOP-11445. Bzip2Codec: Data block is skipped when position of newly
+    created stream is equal to start of split (Ankit Kamboj via jlowe)
+
+    HADOOP-11462. TestSocketIOWithTimeout needs change for PowerPC platform.
+    (Ayappan via cnauroth)
+
+    HADOOP-11350. The size of header buffer of HttpServer is too small when
+    HTTPS is enabled. (Benoy Antony via wheat9)
+
+    HADOOP-10542 Potential null pointer dereference in Jets3tFileSystemStore
+    retrieveBlock(). (Ted Yu via stevel)	
+
+    HADOOP-10668. TestZKFailoverControllerStress#testExpireBackAndForth
+    occasionally fails. (Ming Ma via cnauroth)
+
+    HADOOP-11327. BloomFilter#not() omits the last bit, resulting in an
+    incorrect filter (Eric Payne via jlowe)
+
+    HADOOP-11209. Configuration#updatingResource/finalParameters are not
+    thread-safe. (Varun Saxena via ozawa)
+
+    HADOOP-11500. InputStream is left unclosed in ApplicationClassLoader.
+    (Ted Yu via ozawa)
+
+    HADOOP-11008. Remove duplicated description about proxy-user in site 
+    documents (Masatake Iwasaki via aw)
+
+    HADOOP-11493. Fix some typos in kms-acls.xml description.
+    (Charles Lamb via aajisaka)
+
+    HADOOP-11507 Hadoop RPC Authentication problem with different user locale.
+    (Talat UYARER via stevel)
+
+    HADOOP-11482. Use correct UGI when KMSClientProvider is called by a proxy
+    user. Contributed by Arun Suresh.
+
+    HADOOP-11499. Check of executorThreadsStarted in
+    ValueQueue#submitRefillTask() evades lock acquisition (Ted Yu via jlowe)
+
+    HADOOP-6221 RPC Client operations cannot be interrupted. (stevel)
+
+    HADOOP-11509. Change parsing sequence in GenericOptionsParser to parse -D
+    parameters before -files. (xgong)
+
+    HADOOP-11469. KMS should skip default.key.acl and whitelist.key.acl when
+    loading key acl. (Dian Fu via yliu)
+
+    HADOOP-11316. "mvn package -Pdist,docs -DskipTests -Dtar" fails because
+    of non-ascii characters. (ozawa)
+
+    HADOOP-9907. Webapp http://hostname:port/metrics link is not working.
+    (aajisaka)
+
+    HADOOP-11403. Avoid using sys_errlist on Solaris, which lacks support for it
+    (Malcolm Kavalsky via Colin P. McCabe)
+
+    HADOOP-11523. StorageException complaining " no lease ID" when updating
+    FolderLastModifiedTime in WASB. (Duo Xu via cnauroth)
+
+    HADOOP-11432. Fix SymlinkBaseTest#testCreateLinkUsingPartQualPath2.
+    (Liang Xie via gera)
+
+    HADOOP-10181. GangliaContext does not work with multicast ganglia setup.
+    (Andrew Johnson via cnauroth)
+
+    HADOOP-11529. Fix findbugs warnings in hadoop-archives.
+    (Masatake Iwasaki via wheat9)
+
+Release 2.6.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-11466. FastByteComparisons: do not use UNSAFE_COMPARER on the SPARC
+    architecture because it is slower there (Suman Somasundar via Colin P.
+    McCabe)
 
 Release 2.6.0 - 2014-11-18
 

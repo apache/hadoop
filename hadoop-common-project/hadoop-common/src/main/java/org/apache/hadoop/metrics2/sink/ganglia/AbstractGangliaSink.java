@@ -19,16 +19,13 @@
 package org.apache.hadoop.metrics2.sink.ganglia;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.MetricsSink;
@@ -62,7 +59,11 @@ public abstract class AbstractGangliaSink implements MetricsSink {
   public static final int DEFAULT_DMAX = 0;
   public static final GangliaSlope DEFAULT_SLOPE = GangliaSlope.both;
   public static final int DEFAULT_PORT = 8649;
+  public static final boolean DEFAULT_MULTICAST_ENABLED = false;
+  public static final int DEFAULT_MULTICAST_TTL = 1;
   public static final String SERVERS_PROPERTY = "servers";
+  public static final String MULTICAST_ENABLED_PROPERTY = "multicast";
+  public static final String MULTICAST_TTL_PROPERTY = "multicast.ttl";
   public static final int BUFFER_SIZE = 1500; // as per libgmond.c
   public static final String SUPPORT_SPARSE_METRICS_PROPERTY = "supportsparse";
   public static final boolean SUPPORT_SPARSE_METRICS_DEFAULT = false;
@@ -71,6 +72,8 @@ public abstract class AbstractGangliaSink implements MetricsSink {
   private String hostName = "UNKNOWN.example.com";
   private DatagramSocket datagramSocket;
   private List<? extends SocketAddress> metricsServers;
+  private boolean multicastEnabled;
+  private int multicastTtl;
   private byte[] buffer = new byte[BUFFER_SIZE];
   private int offset;
   private boolean supportSparseMetrics = SUPPORT_SPARSE_METRICS_DEFAULT;
@@ -132,6 +135,9 @@ public abstract class AbstractGangliaSink implements MetricsSink {
     // load the gannglia servers from properties
     metricsServers = Servers.parse(conf.getString(SERVERS_PROPERTY),
         DEFAULT_PORT);
+    multicastEnabled = conf.getBoolean(MULTICAST_ENABLED_PROPERTY,
+            DEFAULT_MULTICAST_ENABLED);
+    multicastTtl = conf.getInt(MULTICAST_TTL_PROPERTY, DEFAULT_MULTICAST_TTL);
 
     // extract the Ganglia conf per metrics
     gangliaConfMap = new HashMap<String, GangliaConf>();
@@ -141,9 +147,15 @@ public abstract class AbstractGangliaSink implements MetricsSink {
     loadGangliaConf(GangliaConfType.slope);
 
     try {
-      datagramSocket = new DatagramSocket();
-    } catch (SocketException se) {
-      LOG.error(se);
+      if (multicastEnabled) {
+        LOG.info("Enabling multicast for Ganglia with TTL " + multicastTtl);
+        datagramSocket = new MulticastSocket();
+        ((MulticastSocket) datagramSocket).setTimeToLive(multicastTtl);
+      } else {
+        datagramSocket = new DatagramSocket();
+      }
+    } catch (IOException e) {
+      LOG.error(e);
     }
 
     // see if sparseMetrics is supported. Default is false
@@ -223,7 +235,7 @@ public abstract class AbstractGangliaSink implements MetricsSink {
    * @param s the string to be written to buffer at offset location
    */
   protected void xdr_string(String s) {
-    byte[] bytes = s.getBytes();
+    byte[] bytes = s.getBytes(Charsets.UTF_8);
     int len = bytes.length;
     xdr_int(len);
     System.arraycopy(bytes, 0, buffer, offset, len);
@@ -256,6 +268,12 @@ public abstract class AbstractGangliaSink implements MetricsSink {
   protected void emitToGangliaHosts() throws IOException {
     try {
       for (SocketAddress socketAddress : metricsServers) {
+        if (socketAddress == null || !(socketAddress instanceof InetSocketAddress))
+          throw new IllegalArgumentException("Unsupported Address type");
+        InetSocketAddress inetAddress = (InetSocketAddress)socketAddress;
+        if(inetAddress.isUnresolved()) {
+          throw new UnknownHostException("Unresolved host: " + inetAddress);
+        }
         DatagramPacket packet =
           new DatagramPacket(buffer, offset, socketAddress);
         datagramSocket.send(packet);
@@ -286,5 +304,13 @@ public abstract class AbstractGangliaSink implements MetricsSink {
    */
   void setDatagramSocket(DatagramSocket datagramSocket) {
     this.datagramSocket = datagramSocket;
+  }
+
+  /**
+   * Used only by unit tests
+   * @return the datagramSocket for this sink
+   */
+  DatagramSocket getDatagramSocket() {
+    return datagramSocket;
   }
 }

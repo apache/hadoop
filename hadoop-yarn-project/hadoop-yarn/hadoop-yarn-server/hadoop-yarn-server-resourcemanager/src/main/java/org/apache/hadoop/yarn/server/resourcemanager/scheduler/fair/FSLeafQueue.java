@@ -23,6 +23,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
@@ -34,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
@@ -50,6 +54,10 @@ public class FSLeafQueue extends FSQueue {
       new ArrayList<FSAppAttempt>();
   private final List<FSAppAttempt> nonRunnableApps =
       new ArrayList<FSAppAttempt>();
+  // get a lock with fair distribution for app list updates
+  private final ReadWriteLock rwl = new ReentrantReadWriteLock(true);
+  private final Lock readLock = rwl.readLock();
+  private final Lock writeLock = rwl.writeLock();
   
   private Resource demand = Resources.createResource(0);
   
@@ -72,16 +80,26 @@ public class FSLeafQueue extends FSQueue {
   }
   
   public void addApp(FSAppAttempt app, boolean runnable) {
-    if (runnable) {
-      runnableApps.add(app);
-    } else {
-      nonRunnableApps.add(app);
+    writeLock.lock();
+    try {
+      if (runnable) {
+        runnableApps.add(app);
+      } else {
+        nonRunnableApps.add(app);
+      }
+    } finally {
+      writeLock.unlock();
     }
   }
   
   // for testing
   void addAppSchedulable(FSAppAttempt appSched) {
-    runnableApps.add(appSched);
+    writeLock.lock();
+    try {
+      runnableApps.add(appSched);
+    } finally {
+      writeLock.unlock();
+    }
   }
   
   /**
@@ -89,36 +107,108 @@ public class FSLeafQueue extends FSQueue {
    * @return whether or not the app was runnable
    */
   public boolean removeApp(FSAppAttempt app) {
-    if (runnableApps.remove(app)) {
-      // Update AM resource usage
-      if (app.isAmRunning() && app.getAMResource() != null) {
-        Resources.subtractFrom(amResourceUsage, app.getAMResource());
+    boolean runnable = false;
+
+    // Remove app from runnable/nonRunnable list while holding the write lock
+    writeLock.lock();
+    try {
+      runnable = runnableApps.remove(app);
+      if (!runnable) {
+        // removeNonRunnableApp acquires the write lock again, which is fine
+        if (!removeNonRunnableApp(app)) {
+          throw new IllegalStateException("Given app to remove " + app +
+              " does not exist in queue " + this);
+        }
       }
-      return true;
-    } else if (nonRunnableApps.remove(app)) {
-      return false;
-    } else {
-      throw new IllegalStateException("Given app to remove " + app +
-          " does not exist in queue " + this);
+    } finally {
+      writeLock.unlock();
+    }
+
+    // Update AM resource usage if needed
+    if (runnable && app.isAmRunning() && app.getAMResource() != null) {
+      Resources.subtractFrom(amResourceUsage, app.getAMResource());
+    }
+
+    return runnable;
+  }
+
+  /**
+   * Removes the given app if it is non-runnable and belongs to this queue
+   * @return true if the app is removed, false otherwise
+   */
+  public boolean removeNonRunnableApp(FSAppAttempt app) {
+    writeLock.lock();
+    try {
+      return nonRunnableApps.remove(app);
+    } finally {
+      writeLock.unlock();
     }
   }
-  
-  public Collection<FSAppAttempt> getRunnableAppSchedulables() {
-    return runnableApps;
+
+  public boolean isRunnableApp(FSAppAttempt attempt) {
+    readLock.lock();
+    try {
+      return runnableApps.contains(attempt);
+    } finally {
+      readLock.unlock();
+    }
   }
-  
-  public List<FSAppAttempt> getNonRunnableAppSchedulables() {
-    return nonRunnableApps;
+
+  public boolean isNonRunnableApp(FSAppAttempt attempt) {
+    readLock.lock();
+    try {
+      return nonRunnableApps.contains(attempt);
+    } finally {
+      readLock.unlock();
+    }
   }
-  
+
+  public void resetPreemptedResources() {
+    readLock.lock();
+    try {
+      for (FSAppAttempt attempt : runnableApps) {
+        attempt.resetPreemptedResources();
+      }
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public void clearPreemptedResources() {
+    readLock.lock();
+    try {
+      for (FSAppAttempt attempt : runnableApps) {
+        attempt.clearPreemptedResources();
+      }
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public List<FSAppAttempt> getCopyOfNonRunnableAppSchedulables() {
+    List<FSAppAttempt> appsToReturn = new ArrayList<FSAppAttempt>();
+    readLock.lock();
+    try {
+      appsToReturn.addAll(nonRunnableApps);
+    } finally {
+      readLock.unlock();
+    }
+    return appsToReturn;
+  }
+
   @Override
   public void collectSchedulerApplications(
       Collection<ApplicationAttemptId> apps) {
-    for (FSAppAttempt appSched : runnableApps) {
-      apps.add(appSched.getApplicationAttemptId());
-    }
-    for (FSAppAttempt appSched : nonRunnableApps) {
-      apps.add(appSched.getApplicationAttemptId());
+    readLock.lock();
+    try {
+      for (FSAppAttempt appSched : runnableApps) {
+        apps.add(appSched.getApplicationAttemptId());
+      }
+      for (FSAppAttempt appSched : nonRunnableApps) {
+        apps.add(appSched.getApplicationAttemptId());
+      }
+    } finally {
+      readLock.unlock();
     }
   }
 
@@ -133,7 +223,12 @@ public class FSLeafQueue extends FSQueue {
   
   @Override
   public void recomputeShares() {
-    policy.computeShares(getRunnableAppSchedulables(), getFairShare());
+    readLock.lock();
+    try {
+      policy.computeShares(runnableApps, getFairShare());
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override
@@ -144,11 +239,16 @@ public class FSLeafQueue extends FSQueue {
   @Override
   public Resource getResourceUsage() {
     Resource usage = Resources.createResource(0);
-    for (FSAppAttempt app : runnableApps) {
-      Resources.addTo(usage, app.getResourceUsage());
-    }
-    for (FSAppAttempt app : nonRunnableApps) {
-      Resources.addTo(usage, app.getResourceUsage());
+    readLock.lock();
+    try {
+      for (FSAppAttempt app : runnableApps) {
+        Resources.addTo(usage, app.getResourceUsage());
+      }
+      for (FSAppAttempt app : nonRunnableApps) {
+        Resources.addTo(usage, app.getResourceUsage());
+      }
+    } finally {
+      readLock.unlock();
     }
     return usage;
   }
@@ -164,17 +264,22 @@ public class FSLeafQueue extends FSQueue {
     Resource maxRes = scheduler.getAllocationConfiguration()
         .getMaxResources(getName());
     demand = Resources.createResource(0);
-    for (FSAppAttempt sched : runnableApps) {
-      if (Resources.equals(demand, maxRes)) {
-        break;
+    readLock.lock();
+    try {
+      for (FSAppAttempt sched : runnableApps) {
+        if (Resources.equals(demand, maxRes)) {
+          break;
+        }
+        updateDemandForApp(sched, maxRes);
       }
-      updateDemandForApp(sched, maxRes);
-    }
-    for (FSAppAttempt sched : nonRunnableApps) {
-      if (Resources.equals(demand, maxRes)) {
-        break;
+      for (FSAppAttempt sched : nonRunnableApps) {
+        if (Resources.equals(demand, maxRes)) {
+          break;
+        }
+        updateDemandForApp(sched, maxRes);
       }
-      updateDemandForApp(sched, maxRes);
+    } finally {
+      readLock.unlock();
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("The updated demand for " + getName() + " is " + demand
@@ -198,7 +303,8 @@ public class FSLeafQueue extends FSQueue {
   public Resource assignContainer(FSSchedulerNode node) {
     Resource assigned = Resources.none();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Node " + node.getNodeName() + " offered to queue: " + getName());
+      LOG.debug("Node " + node.getNodeName() + " offered to queue: " +
+          getName());
     }
 
     if (!assignContainerPreCheck(node)) {
@@ -206,16 +312,29 @@ public class FSLeafQueue extends FSQueue {
     }
 
     Comparator<Schedulable> comparator = policy.getComparator();
-    Collections.sort(runnableApps, comparator);
-    for (FSAppAttempt sched : runnableApps) {
-      if (SchedulerAppUtils.isBlacklisted(sched, node, LOG)) {
-        continue;
-      }
+    writeLock.lock();
+    try {
+      Collections.sort(runnableApps, comparator);
+    } finally {
+      writeLock.unlock();
+    }
+    // Release write lock here for better performance and avoiding deadlocks.
+    // runnableApps can be in unsorted state because of this section,
+    // but we can accept it in practice since the probability is low.
+    readLock.lock();
+    try {
+      for (FSAppAttempt sched : runnableApps) {
+        if (SchedulerAppUtils.isBlacklisted(sched, node, LOG)) {
+          continue;
+        }
 
-      assigned = sched.assignContainer(node);
-      if (!assigned.equals(Resources.none())) {
-        break;
+        assigned = sched.assignContainer(node);
+        if (!assigned.equals(Resources.none())) {
+          break;
+        }
       }
+    } finally {
+      readLock.unlock();
     }
     return assigned;
   }
@@ -237,11 +356,16 @@ public class FSLeafQueue extends FSQueue {
     // Choose the app that is most over fair share
     Comparator<Schedulable> comparator = policy.getComparator();
     FSAppAttempt candidateSched = null;
-    for (FSAppAttempt sched : runnableApps) {
-      if (candidateSched == null ||
-          comparator.compare(sched, candidateSched) > 0) {
-        candidateSched = sched;
+    readLock.lock();
+    try {
+      for (FSAppAttempt sched : runnableApps) {
+        if (candidateSched == null ||
+            comparator.compare(sched, candidateSched) > 0) {
+          candidateSched = sched;
+        }
       }
+    } finally {
+      readLock.unlock();
     }
 
     // Preempt from the selected app
@@ -291,9 +415,58 @@ public class FSLeafQueue extends FSQueue {
 
   @Override
   public int getNumRunnableApps() {
-    return runnableApps.size();
+    readLock.lock();
+    try {
+      return runnableApps.size();
+    } finally {
+      readLock.unlock();
+    }
   }
-  
+
+  public int getNumNonRunnableApps() {
+    readLock.lock();
+    try {
+      return nonRunnableApps.size();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public int getNumPendingApps() {
+    int numPendingApps = 0;
+    readLock.lock();
+    try {
+      for (FSAppAttempt attempt : runnableApps) {
+        if (attempt.isPending()) {
+          numPendingApps++;
+        }
+      }
+      numPendingApps += nonRunnableApps.size();
+    } finally {
+      readLock.unlock();
+    }
+    return numPendingApps;
+  }
+
+  /**
+   * TODO: Based on how frequently this is called, we might want to club
+   * counting pending and active apps in the same method.
+   */
+  public int getNumActiveApps() {
+    int numActiveApps = 0;
+    readLock.lock();
+    try {
+      for (FSAppAttempt attempt : runnableApps) {
+        if (!attempt.isPending()) {
+          numActiveApps++;
+        }
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return numActiveApps;
+  }
+
   @Override
   public ActiveUsersManager getActiveUsersManager() {
     return activeUsersManager;
@@ -344,6 +517,15 @@ public class FSLeafQueue extends FSQueue {
     }
   }
 
+  /** Allows setting weight for a dynamically created queue
+   * Currently only used for reservation based queues
+   * @param weight queue weight
+   */
+  public void setWeights(float weight) {
+    scheduler.getAllocationConfiguration().setQueueWeight(getName(),
+        new ResourceWeights(weight));
+  }
+
   /**
    * Helper method to check if the queue should preempt containers
    *
@@ -372,9 +554,9 @@ public class FSLeafQueue extends FSQueue {
   }
 
   private boolean isStarved(Resource share) {
-    Resource desiredShare = Resources.min(FairScheduler.getResourceCalculator(),
+    Resource desiredShare = Resources.min(scheduler.getResourceCalculator(),
         scheduler.getClusterResource(), share, getDemand());
-    return Resources.lessThan(FairScheduler.getResourceCalculator(),
+    return Resources.lessThan(scheduler.getResourceCalculator(),
         scheduler.getClusterResource(), getResourceUsage(), desiredShare);
   }
 }

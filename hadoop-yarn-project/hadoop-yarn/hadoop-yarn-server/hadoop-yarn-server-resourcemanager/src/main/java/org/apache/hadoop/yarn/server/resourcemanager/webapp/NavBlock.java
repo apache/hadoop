@@ -33,7 +33,8 @@ public class NavBlock extends HtmlBlock {
         h3("Cluster").
         ul().
           li().a(url("cluster"), "About")._().
-          li().a(url("nodes"), "Nodes")._();
+          li().a(url("nodes"), "Nodes")._().
+          li().a(url("nodelabels"), "Node Labels")._();
     UL<LI<UL<DIV<Hamlet>>>> subAppsList = mainList.
           li().a(url("apps"), "Applications").
             ul();
@@ -50,6 +51,6 @@ public class NavBlock extends HtmlBlock {
           li().a("/conf", "Configuration")._().
           li().a("/logs", "Local logs")._().
           li().a("/stacks", "Server stacks")._().
-          li().a("/metrics", "Server metrics")._()._()._();
+          li().a("/jmx?qry=Hadoop:*", "Server metrics")._()._()._();
   }
 }

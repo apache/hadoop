@@ -114,7 +114,7 @@ public class TestBlockHasMultipleReplicasOnSameDN {
     }
 
     for (int i = 0; i < cluster.getStoragesPerDatanode(); ++i) {
-      BlockListAsLongs bll = new BlockListAsLongs(blocks, null);
+      BlockListAsLongs bll = new BlockListAsLongs(blocks);
       FsVolumeSpi v = dn.getFSDataset().getVolumes().get(i);
       DatanodeStorage dns = new DatanodeStorage(v.getStorageID());
       reports[i] = new StorageBlockReport(dns, bll.getBlockListAsLongs());

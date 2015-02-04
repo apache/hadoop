@@ -55,7 +55,7 @@ public class CompositeContext extends AbstractMetricsContext {
     int nKids;
     try {
       String sKids = getAttribute(ARITY_LABEL);
-      nKids = Integer.valueOf(sKids);
+      nKids = Integer.parseInt(sKids);
     } catch (Exception e) {
       LOG.error("Unable to initialize composite metric " + contextName +
                 ": could not init arity", e);

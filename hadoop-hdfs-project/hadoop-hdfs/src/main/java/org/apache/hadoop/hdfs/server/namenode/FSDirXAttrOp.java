@@ -66,21 +66,21 @@ class FSDirXAttrOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     XAttrPermissionFilter.checkPermissionForApi(
         pc, xAttr, FSDirectory.isReservedRawName(src));
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(
-        src);
+    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     src = fsd.resolvePath(pc, src, pathComponents);
-    final INodesInPath iip = fsd.getINodesInPath4Write(src);
-    checkXAttrChangeAccess(fsd, iip, xAttr, pc);
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
     xAttrs.add(xAttr);
+    INodesInPath iip;
     fsd.writeLock();
     try {
+      iip = fsd.getINodesInPath4Write(src);
+      checkXAttrChangeAccess(fsd, iip, xAttr, pc);
       unprotectedSetXAttrs(fsd, src, xAttrs, flag);
     } finally {
       fsd.writeUnlock();
     }
     fsd.getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
-    return fsd.getAuditFileInfo(src, false);
+    return fsd.getAuditFileInfo(iip);
   }
 
   static List<XAttr> getXAttrs(FSDirectory fsd, final String srcArg,
@@ -164,14 +164,16 @@ class FSDirXAttrOp {
         pc, xAttr, FSDirectory.isReservedRawName(src));
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(
         src);
-    src = fsd.resolvePath(pc, src, pathComponents);
-    final INodesInPath iip = fsd.getINodesInPath4Write(src);
-    checkXAttrChangeAccess(fsd, iip, xAttr, pc);
 
     List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
     xAttrs.add(xAttr);
+    INodesInPath iip;
     fsd.writeLock();
     try {
+      src = fsd.resolvePath(pc, src, pathComponents);
+      iip = fsd.getINodesInPath4Write(src);
+      checkXAttrChangeAccess(fsd, iip, xAttr, pc);
+
       List<XAttr> removedXAttrs = unprotectedRemoveXAttrs(fsd, src, xAttrs);
       if (removedXAttrs != null && !removedXAttrs.isEmpty()) {
         fsd.getEditLog().logRemoveXAttrs(src, removedXAttrs, logRetryCache);
@@ -182,7 +184,7 @@ class FSDirXAttrOp {
     } finally {
       fsd.writeUnlock();
     }
-    return fsd.getAuditFileInfo(src, false);
+    return fsd.getAuditFileInfo(iip);
   }
 
   static List<XAttr> unprotectedRemoveXAttrs(
@@ -191,7 +193,7 @@ class FSDirXAttrOp {
     assert fsd.hasWriteLock();
     INodesInPath iip = fsd.getINodesInPath4Write(
         FSDirectory.normalizePath(src), true);
-    INode inode = FSDirectory.resolveLastINode(src, iip);
+    INode inode = FSDirectory.resolveLastINode(iip);
     int snapshotId = iip.getLatestSnapshotId();
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
     List<XAttr> removedXAttrs = Lists.newArrayListWithCapacity(toRemove.size());
@@ -260,8 +262,9 @@ class FSDirXAttrOp {
       final EnumSet<XAttrSetFlag> flag)
       throws IOException {
     assert fsd.hasWriteLock();
-    INodesInPath iip = fsd.getINodesInPath4Write(FSDirectory.normalizePath(src), true);
-    INode inode = FSDirectory.resolveLastINode(src, iip);
+    INodesInPath iip = fsd.getINodesInPath4Write(FSDirectory.normalizePath(src),
+        true);
+    INode inode = FSDirectory.resolveLastINode(iip);
     int snapshotId = iip.getLatestSnapshotId();
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
     List<XAttr> newXAttrs = setINodeXAttrs(fsd, existingXAttrs, xAttrs, flag);
@@ -444,8 +447,8 @@ class FSDirXAttrOp {
     String srcs = FSDirectory.normalizePath(src);
     fsd.readLock();
     try {
-      INodesInPath iip = fsd.getLastINodeInPath(srcs, true);
-      INode inode = FSDirectory.resolveLastINode(src, iip);
+      INodesInPath iip = fsd.getINodesInPath(srcs, true);
+      INode inode = FSDirectory.resolveLastINode(iip);
       int snapshotId = iip.getPathSnapshotId();
       return XAttrStorage.readINodeXAttrs(inode, snapshotId);
     } finally {

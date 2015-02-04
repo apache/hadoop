@@ -24,12 +24,14 @@ public class ContainerStartMonitoringEvent extends ContainersMonitorEvent {
 
   private final long vmemLimit;
   private final long pmemLimit;
+  private final int cpuVcores;
 
   public ContainerStartMonitoringEvent(ContainerId containerId,
-      long vmemLimit, long pmemLimit) {
+      long vmemLimit, long pmemLimit, int cpuVcores) {
     super(containerId, ContainersMonitorEventType.START_MONITORING_CONTAINER);
     this.vmemLimit = vmemLimit;
     this.pmemLimit = pmemLimit;
+    this.cpuVcores = cpuVcores;
   }
 
   public long getVmemLimit() {
@@ -40,4 +42,7 @@ public class ContainerStartMonitoringEvent extends ContainersMonitorEvent {
     return this.pmemLimit;
   }
 
+  public int getCpuVcores() {
+    return this.cpuVcores;
+  }
 }

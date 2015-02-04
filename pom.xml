@@ -68,7 +68,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
 
   <licenses>
     <license>
-      <name>The Apache Software License, Version 2.0</name>
+      <name>Apache License, Version 2.0</name>
       <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
     </license>
   </licenses>
@@ -89,6 +89,20 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <!-- platform encoding override -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- maven plugin versions -->
+    <maven-deploy-plugin.version>2.8.1</maven-deploy-plugin.version>
+    <maven-site-plugin.version>3.4</maven-site-plugin.version>
+    <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
+    <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
+    <maven-dependency-plugin.version>2.8</maven-dependency-plugin.version>
+    <maven-enforcer-plugin.version>1.3.1</maven-enforcer-plugin.version>
+    <maven-javadoc-plugin.version>2.9.1</maven-javadoc-plugin.version>
+    <apache-rat-plugin.version>0.10</apache-rat-plugin.version>
+    <wagon-ssh.version>1.0</wagon-ssh.version>
+    <maven-clover2-plugin.version>3.3.0</maven-clover2-plugin.version>
+    <maven-bundle-plugin.version>2.5.0</maven-bundle-plugin.version>
+    <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
   </properties>
 
   <modules>
@@ -112,12 +126,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.4</version>
+          <version>${maven-dependency-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.3.1</version>
+          <version>${maven-enforcer-plugin.version}</version>
           <configuration>
             <rules>
               <requireMavenVersion>
@@ -132,37 +146,32 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.3</version>
+          <version>${maven-assembly-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-deploy-plugin</artifactId>
-          <version>2.5</version>
+          <version>${maven-deploy-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>0.7</version>
+          <version>${apache-rat-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-antrun-plugin</artifactId>
-          <version>1.7</version>
+          <version>${maven-antrun-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
-          <version>3.3</version>
+          <version>${maven-site-plugin.version}</version>
           <dependencies>
             <dependency><!-- add support for ssh/scp -->
               <groupId>org.apache.maven.wagon</groupId>
               <artifactId>wagon-ssh</artifactId>
-              <version>1.0</version>
-            </dependency>
-            <dependency> <!-- add support for markdown -->
-              <groupId>org.apache.maven.doxia</groupId>
-              <artifactId>doxia-module-markdown</artifactId>
-              <version>1.3</version>
+              <version>${wagon-ssh.version}</version>
             </dependency>
           </dependencies>
         </plugin>
@@ -171,7 +180,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
+          <version>${lifecycle-mapping.version}</version>
           <configuration>
             <lifecycleMappingMetadata>
               <pluginExecutions>
@@ -276,12 +285,12 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         <plugin>
           <groupId>com.atlassian.maven.plugins</groupId>
           <artifactId>maven-clover2-plugin</artifactId>
-          <version>3.0.5</version>
+          <version>${maven-clover2-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>
           <artifactId>maven-bundle-plugin</artifactId>
-          <version>2.4.0</version>
+          <version>${maven-bundle-plugin.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -330,7 +339,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       </plugin>
       <plugin>
         <artifactId>maven-site-plugin</artifactId>
-        <version>3.3</version>
         <executions>
           <execution>
             <id>attach-descriptor</id>
@@ -358,7 +366,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.8.1</version>
+        <version>${maven-javadoc-plugin.version}</version>
         <inherited>false</inherited>
         <reportSets>
           <reportSet>
@@ -373,11 +381,15 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
               <reportOutputDirectory>${project.build.directory}/site</reportOutputDirectory>
               <destDir>hadoop-project/api</destDir>
               <!-- Non-public APIs -->
-              <excludePackageNames>org.apache.hadoop.authentication*,org.apache.hadoop.hdfs*,org.apache.hadoop.mapreduce.v2.proto,org.apache.hadoop.yarn.proto,org.apache.hadoop.yarn.server*,org.apache.hadoop.yarn.webapp*</excludePackageNames>
+              <excludePackageNames>org.apache.hadoop.authentication*,org.apache.hadoop.mapreduce.v2.proto,org.apache.hadoop.yarn.proto,org.apache.hadoop.yarn.server*,org.apache.hadoop.yarn.webapp*</excludePackageNames>
               <groups>
                 <group>
                   <title>Common</title>
                   <packages>org.apache.hadoop*</packages>
+                </group>
+                <group>
+                  <title>HDFS</title>
+                  <packages>org.apache.hadoop.hdfs*</packages>
                 </group>
                 <group>
                   <title>MapReduce</title>
@@ -417,7 +429,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.4</version>
+        <version>${maven-dependency-plugin.version}</version>
         <reportSets>
           <reportSet>
             <reports>

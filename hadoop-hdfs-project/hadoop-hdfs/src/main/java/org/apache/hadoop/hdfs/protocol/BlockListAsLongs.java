@@ -25,7 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.datanode.Replica;
 
 /**
  * This class provides an interface for accessing list of blocks that
@@ -85,8 +85,8 @@ public class BlockListAsLongs implements Iterable<Block> {
    * @param finalized - list of finalized blocks
    * @param uc - list of under construction blocks
    */
-  public BlockListAsLongs(final List<? extends Block> finalized,
-                          final List<ReplicaInfo> uc) {
+  public BlockListAsLongs(final List<? extends Replica> finalized,
+                          final List<? extends Replica> uc) {
     int finalizedSize = finalized == null ? 0 : finalized.size();
     int ucSize = uc == null ? 0 : uc.size();
     int len = HEADER_SIZE
@@ -113,8 +113,34 @@ public class BlockListAsLongs implements Iterable<Block> {
     }
   }
 
+  /**
+   * Create block report from a list of finalized blocks.  Used by
+   * NNThroughputBenchmark.
+   *
+   * @param blocks - list of finalized blocks
+   */
+  public BlockListAsLongs(final List<? extends Block> blocks) {
+    int finalizedSize = blocks == null ? 0 : blocks.size();
+    int len = HEADER_SIZE
+              + (finalizedSize + 1) * LONGS_PER_FINALIZED_BLOCK;
+
+    blockList = new long[len];
+
+    // set the header
+    blockList[0] = finalizedSize;
+    blockList[1] = 0;
+
+    // set finalized blocks
+    for (int i = 0; i < finalizedSize; i++) {
+      setBlock(i, blocks.get(i));
+    }
+
+    // set invalid delimiting block
+    setDelimitingBlock(finalizedSize);
+  }
+
   public BlockListAsLongs() {
-    this(null);
+    this((long[])null);
   }
 
   /**
@@ -279,18 +305,30 @@ public class BlockListAsLongs implements Iterable<Block> {
   /**
    * Set the indexTh block
    * @param index - the index of the block to set
-   * @param b - the block is set to the value of the this block
+   * @param r - the block is set to the value of the this Replica
    */
-  private <T extends Block> void setBlock(final int index, final T b) {
+  private void setBlock(final int index, final Replica r) {
+    int pos = index2BlockId(index);
+    blockList[pos] = r.getBlockId();
+    blockList[pos + 1] = r.getNumBytes();
+    blockList[pos + 2] = r.getGenerationStamp();
+    if(index < getNumberOfFinalizedReplicas())
+      return;
+    assert r.getState() != ReplicaState.FINALIZED :
+      "Must be under-construction replica.";
+    blockList[pos + 3] = r.getState().getValue();
+  }
+
+  /**
+   * Set the indexTh block
+   * @param index - the index of the block to set
+   * @param b - the block is set to the value of the this Block
+   */
+  private void setBlock(final int index, final Block b) {
     int pos = index2BlockId(index);
     blockList[pos] = b.getBlockId();
     blockList[pos + 1] = b.getNumBytes();
     blockList[pos + 2] = b.getGenerationStamp();
-    if(index < getNumberOfFinalizedReplicas())
-      return;
-    assert ((ReplicaInfo)b).getState() != ReplicaState.FINALIZED :
-      "Must be under-construction replica.";
-    blockList[pos + 3] = ((ReplicaInfo)b).getState().getValue();
   }
 
   /**

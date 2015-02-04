@@ -27,6 +27,7 @@ import java.util.Vector;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -99,36 +100,7 @@ public class MapReduceChildJVM {
   }
 
   private static String getChildJavaOpts(JobConf jobConf, boolean isMapTask) {
-    String userClasspath = "";
-    String adminClasspath = "";
-    if (isMapTask) {
-      userClasspath = 
-          jobConf.get(
-              JobConf.MAPRED_MAP_TASK_JAVA_OPTS, 
-              jobConf.get(
-                  JobConf.MAPRED_TASK_JAVA_OPTS, 
-                  JobConf.DEFAULT_MAPRED_TASK_JAVA_OPTS)
-          );
-      adminClasspath = 
-          jobConf.get(
-              MRJobConfig.MAPRED_MAP_ADMIN_JAVA_OPTS,
-              MRJobConfig.DEFAULT_MAPRED_ADMIN_JAVA_OPTS);
-    } else {
-      userClasspath =
-          jobConf.get(
-              JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, 
-              jobConf.get(
-                  JobConf.MAPRED_TASK_JAVA_OPTS,
-                  JobConf.DEFAULT_MAPRED_TASK_JAVA_OPTS)
-              );
-      adminClasspath =
-          jobConf.get(
-              MRJobConfig.MAPRED_REDUCE_ADMIN_JAVA_OPTS,
-              MRJobConfig.DEFAULT_MAPRED_ADMIN_JAVA_OPTS);
-    }
-    
-    // Add admin classpath first so it can be overridden by user.
-    return adminClasspath + " " + userClasspath;
+    return jobConf.getTaskJavaOpts(isMapTask ? TaskType.MAP : TaskType.REDUCE);
   }
 
   public static List<String> getVMCommand(

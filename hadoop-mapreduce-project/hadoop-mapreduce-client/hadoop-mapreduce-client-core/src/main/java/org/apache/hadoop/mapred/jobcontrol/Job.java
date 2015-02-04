@@ -51,7 +51,7 @@ public class Job extends ControlledJob {
    */
   @SuppressWarnings("unchecked")
   public Job(JobConf jobConf, ArrayList<?> dependingJobs) throws IOException {
-    super(new org.apache.hadoop.mapreduce.Job(jobConf), 
+    super(org.apache.hadoop.mapreduce.Job.getInstance(jobConf),
           (List<ControlledJob>) dependingJobs);
   }
 
@@ -93,7 +93,7 @@ public class Job extends ControlledJob {
    */
   public synchronized void setJobConf(JobConf jobConf) {
     try {
-      super.setJob(new org.apache.hadoop.mapreduce.Job(jobConf));
+      super.setJob(org.apache.hadoop.mapreduce.Job.getInstance(jobConf));
     } catch (IOException ioe) { 
       LOG.info("Exception" + ioe);
     }

@@ -17,29 +17,25 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.StorageType.DEFAULT;
@@ -240,8 +236,29 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     makeTestFile(path, BLOCK_SIZE, true);
 
     try {
-      client.append(path.toString(), BUFFER_LENGTH, null, null).close();
+      client.append(path.toString(), BUFFER_LENGTH,
+          EnumSet.of(CreateFlag.APPEND), null, null).close();
       fail("Append to LazyPersist file did not fail as expected");
+    } catch (Throwable t) {
+      LOG.info("Got expected exception ", t);
+    }
+  }
+
+  /**
+   * Truncate to lazy persist file is denied.
+   * @throws IOException
+   */
+  @Test
+  public void testTruncateIsDenied() throws IOException {
+    startUpCluster(true, -1);
+    final String METHOD_NAME = GenericTestUtils.getMethodName();
+    Path path = new Path("/" + METHOD_NAME + ".dat");
+
+    makeTestFile(path, BLOCK_SIZE, true);
+
+    try {
+      client.truncate(path.toString(), BLOCK_SIZE/2);
+      fail("Truncate to LazyPersist file did not fail as expected");
     } catch (Throwable t) {
       LOG.info("Got expected exception ", t);
     }
@@ -304,37 +321,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
 
     // Make sure that there is a saved copy of the replica on persistent
     // storage.
-    final String bpid = cluster.getNamesystem().getBlockPoolId();
-    List<? extends FsVolumeSpi> volumes =
-        cluster.getDataNodes().get(0).getFSDataset().getVolumes();
-
-    final Set<Long> persistedBlockIds = new HashSet<Long>();
-
-    // Make sure at least one non-transient volume has a saved copy of
-    // the replica.
-    for (FsVolumeSpi v : volumes) {
-      if (v.isTransientStorage()) {
-        continue;
-      }
-
-      FsVolumeImpl volume = (FsVolumeImpl) v;
-      File lazyPersistDir = volume.getBlockPoolSlice(bpid).getLazypersistDir();
-
-      for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
-        File targetDir = DatanodeUtil.idToBlockDir(lazyPersistDir, lb.getBlock().getBlockId());
-        File blockFile = new File(targetDir, lb.getBlock().getBlockName());
-        if (blockFile.exists()) {
-          // Found a persisted copy for this block!
-          boolean added = persistedBlockIds.add(lb.getBlock().getBlockId());
-          assertThat(added, is(true));
-        } else {
-          LOG.error(blockFile + " not found");
-        }
-      }
-    }
-
-    // We should have found a persisted copy for each located block.
-    assertThat(persistedBlockIds.size(), is(locatedBlocks.getLocatedBlocks().size()));
+    ensureLazyPersistBlocksAreSaved(locatedBlocks);
   }
 
   /**
@@ -663,6 +650,7 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     LOG.info("Restarting the DataNode");
     cluster.restartDataNode(0, true);
     cluster.waitActive();
+    triggerBlockReport();
 
     // Ensure that the replica is now on persistent storage.
     ensureFileReplicasOnStorageType(path1, DEFAULT);

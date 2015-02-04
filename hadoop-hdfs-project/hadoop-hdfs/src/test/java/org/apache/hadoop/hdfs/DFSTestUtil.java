@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha
         .ConfiguredFailoverProxyProvider;
@@ -81,6 +82,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.log4j.Level;
 import org.junit.Assume;
 import org.mockito.internal.util.reflection.Whitebox;
 
@@ -687,11 +689,6 @@ public class DFSTestUtil {
     return ((DFSOutputStream) out.getWrappedStream()).getBlockToken();
   }
 
-  static void setLogLevel2All(org.apache.commons.logging.Log log) {
-    ((org.apache.commons.logging.impl.Log4JLogger)log
-        ).getLogger().setLevel(org.apache.log4j.Level.ALL);
-  }
-
   public static String readFile(File f) throws IOException {
     StringBuilder b = new StringBuilder();
     BufferedReader in = new BufferedReader(new FileReader(f));
@@ -1137,6 +1134,9 @@ public class DFSTestUtil {
     FSDataOutputStream s = filesystem.create(pathFileCreate);
     // OP_CLOSE 9
     s.close();
+    // OP_APPEND 47
+    FSDataOutputStream s2 = filesystem.append(pathFileCreate, 4096, null);
+    s2.close();
     // OP_SET_STORAGE_POLICY 45
     filesystem.setStoragePolicy(pathFileCreate,
         HdfsConstants.HOT_STORAGE_POLICY_NAME);
@@ -1199,7 +1199,13 @@ public class DFSTestUtil {
     DFSTestUtil.createFile(filesystem, pathConcatFiles[1], length, replication,
         seed);
     filesystem.concat(pathConcatTarget, pathConcatFiles);
-    
+
+    // OP_TRUNCATE 46
+    length = blockSize * 2;
+    DFSTestUtil.createFile(filesystem, pathFileCreate, length, replication,
+        seed);
+    filesystem.truncate(pathFileCreate, blockSize);
+
     // OP_SYMLINK 17
     Path pathSymlink = new Path("/file_symlink");
     fc.createSymlink(pathConcatTarget, pathSymlink, false);
@@ -1635,5 +1641,30 @@ public class DFSTestUtil {
         return (dd.isAlive == alive);
       }
     }, 100, waitTime);
+  }
+
+ /**
+   * Change the length of a block at datanode dnIndex
+   */
+  public static boolean changeReplicaLength(MiniDFSCluster cluster,
+      ExtendedBlock blk, int dnIndex, int lenDelta) throws IOException {
+    File blockFile = cluster.getBlockFile(dnIndex, blk);
+    if (blockFile != null && blockFile.exists()) {
+      RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
+      raFile.setLength(raFile.length()+lenDelta);
+      raFile.close();
+      return true;
+    }
+    LOG.info("failed to change length of block " + blk);
+    return false;
+  }
+
+  public static void setNameNodeLogLevel(Level level) {
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, level);
+    GenericTestUtils.setLogLevel(BlockManager.LOG, level);
+    GenericTestUtils.setLogLevel(LeaseManager.LOG, level);
+    GenericTestUtils.setLogLevel(NameNode.LOG, level);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, level);
+    GenericTestUtils.setLogLevel(NameNode.blockStateChangeLog, level);
   }
 }

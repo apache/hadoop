@@ -92,6 +92,15 @@ function hadoop_find_confdir
   hadoop_debug "HADOOP_CONF_DIR=${HADOOP_CONF_DIR}"
 }
 
+function hadoop_verify_confdir
+{
+  # Check only log4j.properties by default.
+  # --loglevel does not work without logger settings in log4j.log4j.properties.
+  if [[ ! -f "${HADOOP_CONF_DIR}/log4j.properties" ]]; then
+    hadoop_error "WARNING: log4j.properties is not found. HADOOP_CONF_DIR may be incomplete."
+  fi
+}
+
 function hadoop_exec_hadoopenv
 {
   # NOTE: This function is not user replaceable.
@@ -110,6 +119,17 @@ function hadoop_exec_userfuncs
 
   if [[ -e "${HADOOP_CONF_DIR}/hadoop-user-functions.sh" ]]; then
     . "${HADOOP_CONF_DIR}/hadoop-user-functions.sh"
+  fi
+}
+
+function hadoop_exec_hadooprc
+{
+  # Read the user's settings.  This provides for users to override 
+  # and/or append hadoop-env.sh. It is not meant as a complete system override.
+
+  if [[ -f "${HOME}/.hadooprc" ]]; then
+    hadoop_debug "Applying the user's .hadooprc"
+    . "${HOME}/.hadooprc"
   fi
 }
 
@@ -152,7 +172,7 @@ function hadoop_basic_init
     export HADOOP_MAPRED_HOME="${HADOOP_PREFIX}"
   fi
   
-  HADOOP_IDENT_STRING=${HADOP_IDENT_STRING:-$USER}
+  HADOOP_IDENT_STRING=${HADOOP_IDENT_STRING:-$USER}
   HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-"${HADOOP_PREFIX}/logs"}
   HADOOP_LOGFILE=${HADOOP_LOGFILE:-hadoop.log}
   HADOOP_LOGLEVEL=${HADOOP_LOGLEVEL:-INFO}
@@ -162,7 +182,6 @@ function hadoop_basic_init
   HADOOP_ROOT_LOGGER=${HADOOP_ROOT_LOGGER:-${HADOOP_LOGLEVEL},console}
   HADOOP_DAEMON_ROOT_LOGGER=${HADOOP_DAEMON_ROOT_LOGGER:-${HADOOP_LOGLEVEL},RFA}
   HADOOP_SECURITY_LOGGER=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}
-  HADOOP_HEAPSIZE=${HADOOP_HEAPSIZE:-1024}
   HADOOP_SSH_OPTS=${HADOOP_SSH_OPTS:-"-o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=10s"}
   HADOOP_SECURE_LOG_DIR=${HADOOP_SECURE_LOG_DIR:-${HADOOP_LOG_DIR}}
   HADOOP_SECURE_PID_DIR=${HADOOP_SECURE_PID_DIR:-${HADOOP_PID_DIR}}
@@ -543,8 +562,10 @@ function hadoop_os_tricks
 {
   local bindv6only
 
-  # some OSes have special needs. here's some out of the box
-  # examples for OS X and Linux. Vendors, replace this with your special sauce.
+  # Some OSes have special needs.  Here's some out of the box examples for OS X,
+  # Linux and Windows on Cygwin.
+  # Vendors, replace this with your special sauce.
+  HADOOP_IS_CYGWIN=false
   case ${HADOOP_OS_TYPE} in
     Darwin)
       if [[ -z "${JAVA_HOME}" ]]; then
@@ -575,6 +596,10 @@ function hadoop_os_tricks
       # down to prevent vmem explosion.
       export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
     ;;
+    CYGWIN*)
+      # Flag that we're running on Cygwin to trigger path translation later.
+      HADOOP_IS_CYGWIN=true
+    ;;
   esac
 }
 
@@ -597,23 +622,56 @@ function hadoop_java_setup
     hadoop_error "ERROR: $JAVA is not executable."
     exit 1
   fi
-  # shellcheck disable=SC2034
-  JAVA_HEAP_MAX=-Xmx1g
-  HADOOP_HEAPSIZE=${HADOOP_HEAPSIZE:-1024}
-  
-  # check envvars which might override default args
-  if [[ -n "$HADOOP_HEAPSIZE" ]]; then
-    # shellcheck disable=SC2034
-    JAVA_HEAP_MAX="-Xmx${HADOOP_HEAPSIZE}m"
-  fi
 }
 
 function hadoop_finalize_libpaths
 {
   if [[ -n "${JAVA_LIBRARY_PATH}" ]]; then
+    hadoop_translate_cygwin_path JAVA_LIBRARY_PATH
     hadoop_add_param HADOOP_OPTS java.library.path \
     "-Djava.library.path=${JAVA_LIBRARY_PATH}"
     export LD_LIBRARY_PATH
+  fi
+}
+
+function hadoop_finalize_hadoop_heap
+{
+  if [[ -n "${HADOOP_HEAPSIZE_MAX}" ]]; then
+    if [[ "${HADOOP_HEAPSIZE_MAX}" =~ ^[0-9]+$ ]]; then
+      HADOOP_HEAPSIZE_MAX="${HADOOP_HEAPSIZE_MAX}m"
+    fi
+    hadoop_add_param HADOOP_OPTS Xmx "-Xmx${HADOOP_HEAPSIZE_MAX}"
+  fi
+
+  # backwards compatibility
+  if [[ -n "${HADOOP_HEAPSIZE}" ]]; then
+    if [[ "${HADOOP_HEAPSIZE}" =~ ^[0-9]+$ ]]; then
+      HADOOP_HEAPSIZE="${HADOOP_HEAPSIZE}m"
+    fi
+    hadoop_add_param HADOOP_OPTS Xmx "-Xmx${HADOOP_HEAPSIZE}"
+  fi
+
+  if [[ -n "${HADOOP_HEAPSIZE_MIN}" ]]; then
+    if [[ "${HADOOP_HEAPSIZE_MIN}" =~ ^[0-9]+$ ]]; then
+      HADOOP_HEAPSIZE_MIN="${HADOOP_HEAPSIZE_MIN}m"
+    fi
+    hadoop_add_param HADOOP_OPTS Xms "-Xms${HADOOP_HEAPSIZE_MIN}"
+  fi
+}
+
+# Accepts a variable name.  If running on Cygwin, sets the variable value to the
+# equivalent translated Windows path by running the cygpath utility.  If the
+# second argument is true, then the variable is treated as a path list.
+function hadoop_translate_cygwin_path
+{
+  if [[ "${HADOOP_IS_CYGWIN}" = "true" ]]; then
+    if [[ "$2" = "true" ]]; then
+      #shellcheck disable=SC2016
+      eval "$1"='$(cygpath -p -w "${!1}" 2>/dev/null)'
+    else
+      #shellcheck disable=SC2016
+      eval "$1"='$(cygpath -w "${!1}" 2>/dev/null)'
+    fi
   fi
 }
 
@@ -622,9 +680,13 @@ function hadoop_finalize_libpaths
 #
 function hadoop_finalize_hadoop_opts
 {
+  hadoop_translate_cygwin_path HADOOP_LOG_DIR
   hadoop_add_param HADOOP_OPTS hadoop.log.dir "-Dhadoop.log.dir=${HADOOP_LOG_DIR}"
   hadoop_add_param HADOOP_OPTS hadoop.log.file "-Dhadoop.log.file=${HADOOP_LOGFILE}"
-  hadoop_add_param HADOOP_OPTS hadoop.home.dir "-Dhadoop.home.dir=${HADOOP_PREFIX}"
+  HADOOP_HOME=${HADOOP_PREFIX}
+  hadoop_translate_cygwin_path HADOOP_HOME
+  export HADOOP_HOME
+  hadoop_add_param HADOOP_OPTS hadoop.home.dir "-Dhadoop.home.dir=${HADOOP_HOME}"
   hadoop_add_param HADOOP_OPTS hadoop.id.str "-Dhadoop.id.str=${HADOOP_IDENT_STRING}"
   hadoop_add_param HADOOP_OPTS hadoop.root.logger "-Dhadoop.root.logger=${HADOOP_ROOT_LOGGER}"
   hadoop_add_param HADOOP_OPTS hadoop.policy.file "-Dhadoop.policy.file=${HADOOP_POLICYFILE}"
@@ -638,6 +700,26 @@ function hadoop_finalize_classpath
   # user classpath gets added at the last minute. this allows
   # override of CONF dirs and more
   hadoop_add_to_classpath_userpath
+  hadoop_translate_cygwin_path CLASSPATH true
+}
+
+function hadoop_finalize_catalina_opts
+{
+
+  local prefix=${HADOOP_CATALINA_PREFIX}
+
+  hadoop_add_param CATALINA_OPTS hadoop.home.dir "-Dhadoop.home.dir=${HADOOP_PREFIX}"
+  if [[ -n "${JAVA_LIBRARY_PATH}" ]]; then
+    hadoop_add_param CATALINA_OPTS java.library.path "-Djava.library.path=${JAVA_LIBRARY_PATH}"
+  fi
+  hadoop_add_param CATALINA_OPTS "${prefix}.home.dir" "-D${prefix}.home.dir=${HADOOP_PREFIX}"
+  hadoop_add_param CATALINA_OPTS "${prefix}.config.dir" "-D${prefix}.config.dir=${HADOOP_CATALINA_CONFIG}"
+  hadoop_add_param CATALINA_OPTS "${prefix}.log.dir" "-D${prefix}.log.dir=${HADOOP_CATALINA_LOG}"
+  hadoop_add_param CATALINA_OPTS "${prefix}.temp.dir" "-D${prefix}.temp.dir=${HADOOP_CATALINA_TEMP}"
+  hadoop_add_param CATALINA_OPTS "${prefix}.admin.port" "-D${prefix}.admin.port=${HADOOP_CATALINA_ADMIN_PORT}"
+  hadoop_add_param CATALINA_OPTS "${prefix}.http.port" "-D${prefix}.http.port=${HADOOP_CATALINA_HTTP_PORT}"
+  hadoop_add_param CATALINA_OPTS "${prefix}.max.threads" "-D${prefix}.max.threads=${HADOOP_CATALINA_MAX_THREADS}"
+  hadoop_add_param CATALINA_OPTS "${prefix}.ssl.keystore.file" "-D${prefix}.ssl.keystore.file=${HADOOP_CATALINA_SSL_KEYSTORE_FILE}"
 }
 
 function hadoop_finalize
@@ -646,7 +728,15 @@ function hadoop_finalize
   # override of CONF dirs and more
   hadoop_finalize_classpath
   hadoop_finalize_libpaths
+  hadoop_finalize_hadoop_heap
   hadoop_finalize_hadoop_opts
+
+  hadoop_translate_cygwin_path HADOOP_PREFIX
+  hadoop_translate_cygwin_path HADOOP_CONF_DIR
+  hadoop_translate_cygwin_path HADOOP_COMMON_HOME
+  hadoop_translate_cygwin_path HADOOP_HDFS_HOME
+  hadoop_translate_cygwin_path HADOOP_YARN_HOME
+  hadoop_translate_cygwin_path HADOOP_MAPRED_HOME
 }
 
 function hadoop_exit_with_usage
@@ -1138,3 +1228,26 @@ function hadoop_secure_daemon_handler
   esac
 }
 
+function hadoop_verify_user
+{
+  local command=$1
+  local uservar="HADOOP_${command}_USER"
+
+  if [[ -n ${!uservar} ]]; then
+    if [[ ${!uservar} !=  ${USER} ]]; then
+      hadoop_error "ERROR: ${command} can only be executed by ${!uservar}."
+      exit 1
+    fi
+  fi
+}
+
+function hadoop_do_classpath_subcommand
+{
+  if [[ "$#" -gt 0 ]]; then
+    CLASS=org.apache.hadoop.util.Classpath
+  else
+    hadoop_finalize
+    echo "${CLASSPATH}"
+    exit 0
+  fi
+}

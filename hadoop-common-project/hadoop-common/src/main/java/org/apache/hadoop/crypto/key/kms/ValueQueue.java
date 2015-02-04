@@ -308,11 +308,13 @@ public class ValueQueue <E> {
       final Queue<E> keyQueue) throws InterruptedException {
     if (!executorThreadsStarted) {
       synchronized (this) {
-        // To ensure all requests are first queued, make coreThreads =
-        // maxThreads
-        // and pre-start all the Core Threads.
-        executor.prestartAllCoreThreads();
-        executorThreadsStarted = true;
+        if (!executorThreadsStarted) {
+          // To ensure all requests are first queued, make coreThreads =
+          // maxThreads
+          // and pre-start all the Core Threads.
+          executor.prestartAllCoreThreads();
+          executorThreadsStarted = true;
+        }
       }
     }
     // The submit/execute method of the ThreadPoolExecutor is bypassed and

@@ -88,7 +88,7 @@ import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.htrace.Trace;
+import org.apache.htrace.Trace;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -846,6 +846,12 @@ public class Client {
           LOG.warn("Failed to connect to server: " + server + ": "
               + action.reason, ioe);
         }
+        throw ioe;
+      }
+
+      // Throw the exception if the thread is interrupted
+      if (Thread.currentThread().isInterrupted()) {
+        LOG.warn("Interrupted while trying for connection");
         throw ioe;
       }
 

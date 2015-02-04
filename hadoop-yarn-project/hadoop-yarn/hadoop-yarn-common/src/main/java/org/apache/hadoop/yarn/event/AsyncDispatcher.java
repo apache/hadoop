@@ -34,6 +34,8 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Dispatches {@link Event}s in a separate thread. Currently only single thread
  * does that. Potentially there could be multiple channels for each event type
@@ -181,8 +183,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       if (exitOnDispatchException
           && (ShutdownHookManager.get().isShutdownInProgress()) == false
           && stopped == false) {
-        LOG.info("Exiting, bbye..");
-        System.exit(-1);
+        Thread shutDownThread = new Thread(createShutDownThread());
+        shutDownThread.setName("AsyncDispatcher ShutDown handler");
+        shutDownThread.start();
       }
     }
   }
@@ -270,5 +273,20 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       listofHandlers.add(handler);
     }
 
+  }
+
+  Runnable createShutDownThread() {
+    return new Runnable() {
+      @Override
+      public void run() {
+        LOG.info("Exiting, bbye..");
+        System.exit(-1);
+      }
+    };
+  }
+
+  @VisibleForTesting
+  protected boolean isDrained() {
+    return this.drained;
   }
 }

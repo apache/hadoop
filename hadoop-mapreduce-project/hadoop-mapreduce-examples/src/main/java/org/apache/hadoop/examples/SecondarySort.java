@@ -214,7 +214,7 @@ public class SecondarySort {
       System.err.println("Usage: secondarysort <in> <out>");
       System.exit(2);
     }
-    Job job = new Job(conf, "secondary sort");
+    Job job = Job.getInstance(conf, "secondary sort");
     job.setJarByClass(SecondarySort.class);
     job.setMapperClass(MapClass.class);
     job.setReducerClass(Reduce.class);

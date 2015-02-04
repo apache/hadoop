@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
-import org.apache.hadoop.hdfs.util.ChunkedArrayList;
+import org.apache.hadoop.util.ChunkedArrayList;
 
 import java.io.IOException;
 import java.util.List;
@@ -45,7 +45,7 @@ class FSDirSnapshotOp {
     }
     final byte[] bytes = DFSUtil.string2Bytes(snapshotName);
     fsd.verifyINodeName(bytes);
-    fsd.verifyMaxComponentLength(bytes, path, 0);
+    fsd.verifyMaxComponentLength(bytes, path);
   }
 
   /** Allow snapshot on a directory. */

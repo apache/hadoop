@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.MemoryApplicationHistoryStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
@@ -70,6 +71,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
+import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -119,6 +122,7 @@ public class MiniYARNCluster extends CompositeService {
   private int numLocalDirs;
   // Number of nm-log-dirs per nodemanager
   private int numLogDirs;
+  private boolean enableAHS;
 
   /**
    * @param testName name of the test
@@ -126,13 +130,15 @@ public class MiniYARNCluster extends CompositeService {
    * @param numNodeManagers the number of node managers in the cluster
    * @param numLocalDirs the number of nm-local-dirs per nodemanager
    * @param numLogDirs the number of nm-log-dirs per nodemanager
+   * @param enableAHS enable ApplicationHistoryServer or not
    */
   public MiniYARNCluster(
       String testName, int numResourceManagers, int numNodeManagers,
-      int numLocalDirs, int numLogDirs) {
+      int numLocalDirs, int numLogDirs, boolean enableAHS) {
     super(testName.replace("$", ""));
     this.numLocalDirs = numLocalDirs;
     this.numLogDirs = numLogDirs;
+    this.enableAHS = enableAHS;
     String testSubDir = testName.replace("$", "");
     File targetWorkDir = new File("target", testSubDir);
     try {
@@ -180,6 +186,20 @@ public class MiniYARNCluster extends CompositeService {
 
     resourceManagers = new ResourceManager[numResourceManagers];
     nodeManagers = new NodeManager[numNodeManagers];
+  }
+
+  /**
+   * @param testName name of the test
+   * @param numResourceManagers the number of resource managers in the cluster
+   * @param numNodeManagers the number of node managers in the cluster
+   * @param numLocalDirs the number of nm-local-dirs per nodemanager
+   * @param numLogDirs the number of nm-log-dirs per nodemanager
+   */
+  public MiniYARNCluster(
+      String testName, int numResourceManagers, int numNodeManagers,
+      int numLocalDirs, int numLogDirs) {
+    this(testName, numResourceManagers, numNodeManagers, numLocalDirs,
+        numLogDirs, false);
   }
 
   /**
@@ -242,8 +262,8 @@ public class MiniYARNCluster extends CompositeService {
       addService(new NodeManagerWrapper(index));
     }
 
-    if(conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false)) {
-        addService(new ApplicationHistoryServerWrapper());
+    if (enableAHS) {
+      addService(new ApplicationHistoryServerWrapper());
     }
     
     super.serviceInit(
@@ -488,8 +508,10 @@ public class MiniYARNCluster extends CompositeService {
       String logDirsString = prepareDirs("log", numLogDirs);
       config.set(YarnConfiguration.NM_LOG_DIRS, logDirsString);
 
-      // By default AM + 2 containers
-      config.setInt(YarnConfiguration.NM_PMEM_MB, 4*1024);
+      config.setInt(YarnConfiguration.NM_PMEM_MB, config.getInt(
+          YarnConfiguration.YARN_MINICLUSTER_NM_PMEM_MB,
+          YarnConfiguration.DEFAULT_YARN_MINICLUSTER_NM_PMEM_MB));
+
       config.set(YarnConfiguration.NM_ADDRESS,
           MiniYARNCluster.getHostname() + ":0");
       config.set(YarnConfiguration.NM_LOCALIZER_ADDRESS,
@@ -664,6 +686,8 @@ public class MiniYARNCluster extends CompositeService {
           MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
       conf.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
           MemoryTimelineStore.class, TimelineStore.class);
+      conf.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
+          MemoryTimelineStateStore.class, TimelineStateStore.class);
       appHistoryServer.init(conf);
       super.serviceInit(conf);
     }

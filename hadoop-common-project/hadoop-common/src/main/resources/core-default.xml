@@ -719,7 +719,7 @@ for ldap providers in the same way as above does.
 
 <property>
   <name>fs.s3a.connection.timeout</name>
-  <value>5000</value>
+  <value>50000</value>
   <description>Socket connection timeout in seconds.</description>
 </property>
 
@@ -1650,6 +1650,41 @@ for ldap providers in the same way as above does.
   <description>
     Cache expiry time for a Key, after which the cache Queue for this
     key will be dropped. Default = 12hrs
+  </description>
+</property>
+
+<property>
+  <name>hadoop.htrace.sampler</name>
+  <value>NeverSampler</value>
+  <description>
+    Configure the samplers for HTrace, the value can be NeverSampler,
+    AlwaysSampler or ProbabilitySampler. NeverSampler: HTrace is OFF 
+    for all spans; AlwaysSampler: HTrace is ON for all spans;
+    ProbabilitySampler: HTrace is ON for some percentage% of top-level 
+    spans.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.htrace.spanreceiver.classes</name>
+  <value></value>
+  <description>
+    A comma separated list of the fully-qualified class name of classes 
+    implementing SpanReceiver. The tracing system works by collecting 
+    information in structs called 'Spans'. It is up to you to choose 
+    how you want to receive this information by implementing the 
+    SpanReceiver interface.
+  </description>
+</property>
+
+ <property>
+  <name>ipc.server.max.connections</name>
+  <value>0</value>
+  <description>The maximum number of concurrent connections a server is allowed
+    to accept. If this limit is exceeded, incoming connections will first fill
+    the listen queue and then may go to an OS-specific listen overflow queue. 
+    The client may fail or timeout, but the server can avoid running out of file
+    descriptors using this feature. 0 means no limit.
   </description>
 </property>
 

@@ -23,12 +23,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -274,7 +276,7 @@ public class ZKRMStateStore extends RMStateStore {
     createConnection();
 
     // ensure root dirs exist
-    createRootDir(znodeWorkingPath);
+    createRootDirRecursively(znodeWorkingPath);
     createRootDir(zkRootNodePath);
     if (HAUtil.isHAEnabled(getConfig())){
       fence();
@@ -697,12 +699,11 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected synchronized void storeRMDelegationTokenAndSequenceNumberState(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
+  protected synchronized void storeRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
     ArrayList<Op> opList = new ArrayList<Op>();
-    addStoreOrUpdateOps(
-        opList, rmDTIdentifier, renewDate, latestSequenceNumber, false);
+    addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, false);
     doMultiWithRetries(opList);
   }
 
@@ -726,29 +727,27 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateRMDelegationTokenAndSequenceNumberInternal(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
+  protected synchronized void updateRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
     ArrayList<Op> opList = new ArrayList<Op>();
     String nodeRemovePath =
         getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
             + rmDTIdentifier.getSequenceNumber());
     if (existsWithRetries(nodeRemovePath, true) == null) {
       // in case znode doesn't exist
-      addStoreOrUpdateOps(
-          opList, rmDTIdentifier, renewDate, latestSequenceNumber, false);
+      addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, false);
       LOG.debug("Attempted to update a non-existing znode " + nodeRemovePath);
     } else {
       // in case znode exists
-      addStoreOrUpdateOps(
-          opList, rmDTIdentifier, renewDate, latestSequenceNumber, true);
+      addStoreOrUpdateOps(opList, rmDTIdentifier, renewDate, true);
     }
     doMultiWithRetries(opList);
   }
 
   private void addStoreOrUpdateOps(ArrayList<Op> opList,
       RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber, boolean isUpdate) throws Exception {
+      boolean isUpdate) throws Exception {
     // store RM delegation token
     String nodeCreatePath =
         getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
@@ -768,16 +767,15 @@ public class ZKRMStateStore extends RMStateStore {
       } else {
         opList.add(Op.create(nodeCreatePath, identifierData.toByteArray(), zkAcl,
             CreateMode.PERSISTENT));
+        // Update Sequence number only while storing DT
+        seqOut.writeInt(rmDTIdentifier.getSequenceNumber());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug((isUpdate ? "Storing " : "Updating ") +
+                    dtSequenceNumberPath + ". SequenceNumber: "
+                    + rmDTIdentifier.getSequenceNumber());
+        }
+        opList.add(Op.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1));
       }
-
-
-     seqOut.writeInt(latestSequenceNumber);
-     if (LOG.isDebugEnabled()) {
-        LOG.debug((isUpdate ? "Storing " : "Updating ") + dtSequenceNumberPath +
-            ". SequenceNumber: " + latestSequenceNumber);
-      }
-
-     opList.add(Op.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1));
     } finally {
       seqOs.close();
     }
@@ -1056,6 +1054,8 @@ public class ZKRMStateStore extends RMStateStore {
       switch (code) {
         case CONNECTIONLOSS:
         case OPERATIONTIMEOUT:
+        case SESSIONEXPIRED:
+        case SESSIONMOVED:
           return true;
         default:
           break;
@@ -1084,6 +1084,7 @@ public class ZKRMStateStore extends RMStateStore {
           if (shouldRetry(ke.code()) && ++retry < numRetries) {
             LOG.info("Retrying operation on ZK. Retry no. " + retry);
             Thread.sleep(zkRetryInterval);
+            createConnection();
             continue;
           }
           LOG.info("Maxed out ZK retries. Giving up!");
@@ -1105,7 +1106,7 @@ public class ZKRMStateStore extends RMStateStore {
         }
         if (useDefaultFencingScheme) {
           zkClient.addAuthInfo(zkRootNodeAuthScheme,
-              (zkRootNodeUsername + ":" + zkRootNodePassword).getBytes());
+              (zkRootNodeUsername + ":" + zkRootNodePassword).getBytes(Charset.forName("UTF-8")));
         }
       } catch (IOException ioe) {
         // Retry in case of network failures
@@ -1135,22 +1136,26 @@ public class ZKRMStateStore extends RMStateStore {
 
   @Override
   public synchronized void storeOrUpdateAMRMTokenSecretManagerState(
-      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
-      boolean isUpdate) {
-    if(isFencedState()) {
-      LOG.info("State store is in Fenced state. Can't store/update " +
-               "AMRMToken Secret Manager state.");
-      return;
-    }	
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState, boolean isUpdate)
+      throws Exception {
     AMRMTokenSecretManagerState data =
         AMRMTokenSecretManagerState.newInstance(amrmTokenSecretManagerState);
     byte[] stateData = data.getProto().toByteArray();
-    try {
-      setDataWithRetries(amrmTokenSecretManagerRoot, stateData, -1);
-    } catch (Exception ex) {
-      LOG.info("Error storing info for AMRMTokenSecretManager", ex);
-      notifyStoreOperationFailed(ex);
-    }
+    setDataWithRetries(amrmTokenSecretManagerRoot, stateData, -1);
   }
 
+  /**
+   * Utility function to ensure that the configured base znode exists.
+   * This recursively creates the znode as well as all of its parents.
+   */
+  private void createRootDirRecursively(String path) throws Exception {
+    String pathParts[] = path.split("/");
+    Preconditions.checkArgument(pathParts.length >= 1 && pathParts[0].isEmpty(),
+        "Invalid path: %s", path);
+    StringBuilder sb = new StringBuilder();
+    for (int i = 1; i < pathParts.length; i++) {
+      sb.append("/").append(pathParts[i]);
+      createRootDir(sb.toString());
+    }
+  }
 }

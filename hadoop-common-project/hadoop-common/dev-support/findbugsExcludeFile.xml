@@ -241,6 +241,16 @@
        <Method name="writeVLong" />
        <Bug pattern="SF_SWITCH_FALLTHROUGH" />
      </Match>
+     <Match>
+       <Class name="org.apache.hadoop.io.Text" />
+       <Method name="bytesToCodePoint" />
+       <Bug pattern="SF_SWITCH_NO_DEFAULT" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.util.PureJavaCrc32C" />
+       <Method name="update" />
+       <Bug pattern="SF_SWITCH_NO_DEFAULT" />
+     </Match>
     <!--
 	  The switch condition fall through is intentional and for performance
 	  purposes.
@@ -374,6 +384,12 @@
     <Class name="org.apache.hadoop.util.HttpExceptionUtils"/>
     <Method name="validateResponse"/>
     <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.conf.Configuration"/>
+    <Method name="loadProperty"/>
+    <Bug pattern="NP_NULL_PARAM_DEREF"/>
   </Match>
 
 </FindBugsFilter>

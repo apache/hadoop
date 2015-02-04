@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
+import org.apache.hadoop.yarn.server.sharedcachemanager.webapp.SCMWebServer;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -76,6 +77,9 @@ public class SharedCacheManager extends CompositeService {
 
     SCMAdminProtocolService saps = createSCMAdminProtocolService(cs);
     addService(saps);
+
+    SCMWebServer webUI = createSCMWebServer(this);
+    addService(webUI);
 
     // init metrics
     DefaultMetricsSystem.initialize("SharedCacheManager");
@@ -121,6 +125,10 @@ public class SharedCacheManager extends CompositeService {
     return new SCMAdminProtocolService(cleanerService);
   }
 
+  private SCMWebServer createSCMWebServer(SharedCacheManager scm) {
+    return new SCMWebServer(scm);
+  }
+
   @Override
   protected void serviceStop() throws Exception {
 
@@ -151,25 +159,5 @@ public class SharedCacheManager extends CompositeService {
       LOG.fatal("Error starting SharedCacheManager", t);
       System.exit(-1);
     }
-  }
-
-  @Private
-  @SuppressWarnings("unchecked")
-  public static AppChecker createAppCheckerService(Configuration conf) {
-    Class<? extends AppChecker> defaultCheckerClass;
-    try {
-      defaultCheckerClass =
-          (Class<? extends AppChecker>) Class
-              .forName(YarnConfiguration.DEFAULT_SCM_APP_CHECKER_CLASS);
-    } catch (Exception e) {
-      throw new YarnRuntimeException("Invalid default scm app checker class"
-          + YarnConfiguration.DEFAULT_SCM_APP_CHECKER_CLASS, e);
-    }
-
-    AppChecker checker =
-        ReflectionUtils.newInstance(conf.getClass(
-            YarnConfiguration.SCM_APP_CHECKER_CLASS, defaultCheckerClass,
-            AppChecker.class), conf);
-    return checker;
   }
 }

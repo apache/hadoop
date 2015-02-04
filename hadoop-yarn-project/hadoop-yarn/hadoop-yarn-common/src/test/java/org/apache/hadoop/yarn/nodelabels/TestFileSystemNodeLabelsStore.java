@@ -63,6 +63,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
   public void before() throws IOException {
     mgr = new MockNodeLabelManager();
     conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     File tempDir = File.createTempFile("nlb", ".tmp");
     tempDir.delete();
     tempDir.mkdirs();
@@ -115,6 +116,11 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     assertMapContains(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n2"),
         toSet("p2"), toNodeId("n4"), toSet("p4"), toNodeId("n6"), toSet("p6"),
         toNodeId("n7"), toSet("p6")));
+    assertLabelsToNodesEquals(mgr.getLabelsToNodes(),
+            ImmutableMap.of(
+            "p6", toSet(toNodeId("n6"), toNodeId("n7")),
+            "p4", toSet(toNodeId("n4")),
+            "p2", toSet(toNodeId("n2"))));
 
     // stutdown mgr and start a new mgr
     mgr.stop();
@@ -129,6 +135,11 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     assertMapContains(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n2"),
         toSet("p2"), toNodeId("n4"), toSet("p4"), toNodeId("n6"), toSet("p6"),
         toNodeId("n7"), toSet("p6")));
+    assertLabelsToNodesEquals(mgr.getLabelsToNodes(),
+            ImmutableMap.of(
+            "p6", toSet(toNodeId("n6"), toNodeId("n7")),
+            "p4", toSet(toNodeId("n4")),
+            "p2", toSet(toNodeId("n2"))));
     mgr.stop();
   }
 
@@ -168,6 +179,11 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     assertMapContains(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n2"),
         toSet("p2"), toNodeId("n4"), toSet("p4"), toNodeId("n6"), toSet("p6"),
         toNodeId("n7"), toSet("p6")));
+    assertLabelsToNodesEquals(mgr.getLabelsToNodes(),
+            ImmutableMap.of(
+            "p6", toSet(toNodeId("n6"), toNodeId("n7")),
+            "p4", toSet(toNodeId("n4")),
+            "p2", toSet(toNodeId("n2"))));
     mgr.stop();
   }
   
@@ -217,7 +233,12 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
     assertMapContains(mgr.getNodeLabels(), ImmutableMap.of(toNodeId("n2"),
         toSet("p2"), toNodeId("n4"), toSet("p4"), toNodeId("n6"), toSet("p6"),
         toNodeId("n7"), toSet("p6")));
-    
+    assertLabelsToNodesEquals(mgr.getLabelsToNodes(),
+        ImmutableMap.of(
+        "p6", toSet(toNodeId("n6"), toNodeId("n7")),
+        "p4", toSet(toNodeId("n4")),
+        "p2", toSet(toNodeId("n2"))));
+
     /*
      * Add label p7,p8 then shutdown
      */

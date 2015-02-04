@@ -164,4 +164,11 @@ public interface FSNamesystemMBean {
    */
   public int getNumStaleStorages();
 
+  /**
+   * Returns a nested JSON object listing the top users for different RPC 
+   * operations over tracked time windows.
+   * 
+   * @return JSON string
+   */
+  public String getTopUserOpCounts();
 }

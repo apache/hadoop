@@ -872,9 +872,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
     createApplicationWithAMResource(appAttemptId, "default", "user1", null);
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getRunnableAppSchedulables().size());
+        .getNumRunnableApps());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
-        .getRunnableAppSchedulables().size());
+        .getNumRunnableApps());
     assertEquals("root.user1", resourceManager.getRMContext().getRMApps()
         .get(appAttemptId.getApplicationId()).getQueue());
   }
@@ -888,11 +888,11 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
     createApplicationWithAMResource(appAttemptId, "default", "user2", null);
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getRunnableAppSchedulables().size());
+        .getNumRunnableApps());
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("default", true)
-        .getRunnableAppSchedulables().size());
+        .getNumRunnableApps());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user2", true)
-        .getRunnableAppSchedulables().size());
+        .getNumRunnableApps());
   }
 
   @Test
@@ -1370,7 +1370,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // That queue should have one app
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getRunnableAppSchedulables().size());
+        .getNumRunnableApps());
 
     AppAttemptRemovedSchedulerEvent appRemovedEvent1 = new AppAttemptRemovedSchedulerEvent(
         createAppAttemptId(1, 1), RMAppAttemptState.FINISHED, false);
@@ -1380,7 +1380,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
     // Queue should have no apps
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getRunnableAppSchedulables().size());
+        .getNumRunnableApps());
   }
 
   @Test
@@ -2124,7 +2124,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // The user1 queue should inherit the configurations from the root queue
     FSLeafQueue userQueue =
         scheduler.getQueueManager().getLeafQueue("user1", true);
-    assertEquals(1, userQueue.getRunnableAppSchedulables().size());
+    assertEquals(1, userQueue.getNumRunnableApps());
     assertEquals(10000, userQueue.getMinSharePreemptionTimeout());
     assertEquals(15000, userQueue.getFairSharePreemptionTimeout());
     assertEquals(.6f, userQueue.getFairSharePreemptionThreshold(), 0.001);
@@ -3023,21 +3023,15 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   private void verifyAppRunnable(ApplicationAttemptId attId, boolean runnable) {
     FSAppAttempt app = scheduler.getSchedulerApp(attId);
     FSLeafQueue queue = app.getQueue();
-    Collection<FSAppAttempt> runnableApps =
-        queue.getRunnableAppSchedulables();
-    Collection<FSAppAttempt> nonRunnableApps =
-        queue.getNonRunnableAppSchedulables();
-    assertEquals(runnable, runnableApps.contains(app));
-    assertEquals(!runnable, nonRunnableApps.contains(app));
+    assertEquals(runnable, queue.isRunnableApp(app));
+    assertEquals(!runnable, queue.isNonRunnableApp(app));
   }
   
   private void verifyQueueNumRunnable(String queueName, int numRunnableInQueue,
       int numNonRunnableInQueue) {
     FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue(queueName, false);
-    assertEquals(numRunnableInQueue,
-        queue.getRunnableAppSchedulables().size());
-    assertEquals(numNonRunnableInQueue,
-        queue.getNonRunnableAppSchedulables().size());
+    assertEquals(numRunnableInQueue, queue.getNumRunnableApps());
+    assertEquals(numNonRunnableInQueue, queue.getNumNonRunnableApps());
   }
   
   @Test
@@ -3584,23 +3578,23 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     
     // Should get put into jerry
     createSchedulingRequest(1024, "jerry", "someuser");
-    assertEquals(1, jerryQueue.getRunnableAppSchedulables().size());
+    assertEquals(1, jerryQueue.getNumRunnableApps());
 
     // Should get forced into default
     createSchedulingRequest(1024, "newqueue", "someuser");
-    assertEquals(1, jerryQueue.getRunnableAppSchedulables().size());
-    assertEquals(1, defaultQueue.getRunnableAppSchedulables().size());
+    assertEquals(1, jerryQueue.getNumRunnableApps());
+    assertEquals(1, defaultQueue.getNumRunnableApps());
     
     // Would get put into someuser because of user-as-default-queue, but should
     // be forced into default
     createSchedulingRequest(1024, "default", "someuser");
-    assertEquals(1, jerryQueue.getRunnableAppSchedulables().size());
-    assertEquals(2, defaultQueue.getRunnableAppSchedulables().size());
+    assertEquals(1, jerryQueue.getNumRunnableApps());
+    assertEquals(2, defaultQueue.getNumRunnableApps());
     
     // Should get put into jerry because of user-as-default-queue
     createSchedulingRequest(1024, "default", "jerry");
-    assertEquals(2, jerryQueue.getRunnableAppSchedulables().size());
-    assertEquals(2, defaultQueue.getRunnableAppSchedulables().size());
+    assertEquals(2, jerryQueue.getNumRunnableApps());
+    assertEquals(2, defaultQueue.getNumRunnableApps());
   }
 
   @Test
@@ -3843,8 +3837,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.moveApplication(appId, "queue2");
     FSAppAttempt app = scheduler.getSchedulerApp(appAttId);
     assertSame(targetQueue, app.getQueue());
-    assertFalse(oldQueue.getRunnableAppSchedulables().contains(app));
-    assertTrue(targetQueue.getRunnableAppSchedulables().contains(app));
+    assertFalse(oldQueue.isRunnableApp(app));
+    assertTrue(targetQueue.isRunnableApp(app));
     assertEquals(Resource.newInstance(0, 0), oldQueue.getResourceUsage());
     assertEquals(Resource.newInstance(1024, 1), targetQueue.getResourceUsage());
     assertEquals(0, oldQueue.getNumRunnableApps());
@@ -3893,12 +3887,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         createSchedulingRequest(1024, 1, "queue1", "user1", 3);
     
     FSAppAttempt app = scheduler.getSchedulerApp(appAttId);
-    assertTrue(oldQueue.getNonRunnableAppSchedulables().contains(app));
+    assertTrue(oldQueue.isNonRunnableApp(app));
     
     scheduler.moveApplication(appAttId.getApplicationId(), "queue2");
-    assertFalse(oldQueue.getNonRunnableAppSchedulables().contains(app));
-    assertFalse(targetQueue.getNonRunnableAppSchedulables().contains(app));
-    assertTrue(targetQueue.getRunnableAppSchedulables().contains(app));
+    assertFalse(oldQueue.isNonRunnableApp(app));
+    assertFalse(targetQueue.isNonRunnableApp(app));
+    assertTrue(targetQueue.isRunnableApp(app));
     assertEquals(1, targetQueue.getNumRunnableApps());
     assertEquals(1, queueMgr.getRootQueue().getNumRunnableApps());
   }

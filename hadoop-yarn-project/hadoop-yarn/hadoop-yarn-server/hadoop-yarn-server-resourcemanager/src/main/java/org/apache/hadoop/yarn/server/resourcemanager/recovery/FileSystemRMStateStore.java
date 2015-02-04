@@ -60,8 +60,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.AM
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.EpochPBImpl;
-import org.apache.hadoop.yarn.util.ConverterUtils;
-
 import com.google.common.annotations.VisibleForTesting;
 
 @Private
@@ -141,8 +139,8 @@ public class FileSystemRMStateStore extends RMStateStore {
   @Override
   protected synchronized Version loadVersion() throws Exception {
     Path versionNodePath = getNodePath(rootDirPath, VERSION_NODE);
-    if (fs.exists(versionNodePath)) {
-      FileStatus status = fs.getFileStatus(versionNodePath);
+    FileStatus status = getFileStatus(versionNodePath);
+    if (status != null) {
       byte[] data = readFile(versionNodePath, status.getLen());
       Version version =
           new VersionPBImpl(VersionProto.parseFrom(data));
@@ -167,9 +165,9 @@ public class FileSystemRMStateStore extends RMStateStore {
   public synchronized long getAndIncrementEpoch() throws Exception {
     Path epochNodePath = getNodePath(rootDirPath, EPOCH_NODE);
     long currentEpoch = 0;
-    if (fs.exists(epochNodePath)) {
+    FileStatus status = getFileStatus(epochNodePath);
+    if (status != null) {
       // load current epoch
-      FileStatus status = fs.getFileStatus(epochNodePath);
       byte[] data = readFile(epochNodePath, status.getLen());
       Epoch epoch = new EpochPBImpl(EpochProto.parseFrom(data));
       currentEpoch = epoch.getEpoch();
@@ -203,13 +201,11 @@ public class FileSystemRMStateStore extends RMStateStore {
     checkAndResumeUpdateOperation(amrmTokenSecretManagerRoot);
     Path amrmTokenSecretManagerStateDataDir =
         new Path(amrmTokenSecretManagerRoot, AMRMTOKEN_SECRET_MANAGER_NODE);
-    FileStatus status;
-    try {
-      status = fs.getFileStatus(amrmTokenSecretManagerStateDataDir);
-      assert status.isFile();
-    } catch (FileNotFoundException ex) {
+    FileStatus status = getFileStatus(amrmTokenSecretManagerStateDataDir);
+    if (status == null) {
       return;
     }
+    assert status.isFile();
     byte[] data = readFile(amrmTokenSecretManagerStateDataDir, status.getLen());
     AMRMTokenSecretManagerStatePBImpl stateData =
         new AMRMTokenSecretManagerStatePBImpl(
@@ -452,11 +448,10 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void storeRMDelegationTokenAndSequenceNumberState(
-      RMDelegationTokenIdentifier identifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
-    storeOrUpdateRMDelegationTokenAndSequenceNumberState(
-        identifier, renewDate,latestSequenceNumber, false);
+  public synchronized void storeRMDelegationTokenState(
+      RMDelegationTokenIdentifier identifier, Long renewDate)
+      throws Exception {
+    storeOrUpdateRMDelegationTokenState(identifier, renewDate, false);
   }
 
   @Override
@@ -469,16 +464,15 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateRMDelegationTokenAndSequenceNumberInternal(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
-    storeOrUpdateRMDelegationTokenAndSequenceNumberState(
-        rmDTIdentifier, renewDate,latestSequenceNumber, true);
+  protected synchronized void updateRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
+    storeOrUpdateRMDelegationTokenState(rmDTIdentifier, renewDate, true);
   }
 
-  private void storeOrUpdateRMDelegationTokenAndSequenceNumberState(
+  private void storeOrUpdateRMDelegationTokenState(
       RMDelegationTokenIdentifier identifier, Long renewDate,
-      int latestSequenceNumber, boolean isUpdate) throws Exception {
+      boolean isUpdate) throws Exception {
     Path nodeCreatePath =
         getNodePath(rmDTSecretManagerRoot,
           DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber());
@@ -490,23 +484,24 @@ public class FileSystemRMStateStore extends RMStateStore {
     } else {
       LOG.info("Storing RMDelegationToken_" + identifier.getSequenceNumber());
       writeFile(nodeCreatePath, identifierData.toByteArray());
-    }
 
-    // store sequence number
-    Path latestSequenceNumberPath = getNodePath(rmDTSecretManagerRoot,
-          DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX + latestSequenceNumber);
-    LOG.info("Storing " + DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX
-        + latestSequenceNumber);
-    if (dtSequenceNumberPath == null) {
-      if (!createFile(latestSequenceNumberPath)) {
-        throw new Exception("Failed to create " + latestSequenceNumberPath);
+      // store sequence number
+      Path latestSequenceNumberPath = getNodePath(rmDTSecretManagerRoot,
+            DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX
+            + identifier.getSequenceNumber());
+      LOG.info("Storing " + DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX
+          + identifier.getSequenceNumber());
+      if (dtSequenceNumberPath == null) {
+        if (!createFile(latestSequenceNumberPath)) {
+          throw new Exception("Failed to create " + latestSequenceNumberPath);
+        }
+      } else {
+        if (!renameFile(dtSequenceNumberPath, latestSequenceNumberPath)) {
+          throw new Exception("Failed to rename " + dtSequenceNumberPath);
+        }
       }
-    } else {
-      if (!renameFile(dtSequenceNumberPath, latestSequenceNumberPath)) {
-        throw new Exception("Failed to rename " + dtSequenceNumberPath);
-      }
+      dtSequenceNumberPath = latestSequenceNumberPath;
     }
-    dtSequenceNumberPath = latestSequenceNumberPath;
   }
 
   @Override
@@ -560,6 +555,14 @@ public class FileSystemRMStateStore extends RMStateStore {
       return data;
     } finally {
       IOUtils.cleanup(LOG, fsIn);
+    }
+  }
+
+  private FileStatus getFileStatus(Path path) throws Exception {
+    try {
+      return fs.getFileStatus(path);
+    } catch (FileNotFoundException e) {
+      return null;
     }
   }
 
@@ -624,22 +627,17 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   @Override
   public synchronized void storeOrUpdateAMRMTokenSecretManagerState(
-      AMRMTokenSecretManagerState amrmTokenSecretManagerState,
-      boolean isUpdate){
+      AMRMTokenSecretManagerState amrmTokenSecretManagerState, boolean isUpdate)
+      throws Exception {
     Path nodeCreatePath =
         getNodePath(amrmTokenSecretManagerRoot, AMRMTOKEN_SECRET_MANAGER_NODE);
     AMRMTokenSecretManagerState data =
         AMRMTokenSecretManagerState.newInstance(amrmTokenSecretManagerState);
     byte[] stateData = data.getProto().toByteArray();
-    try {
-      if (isUpdate) {
-        updateFile(nodeCreatePath, stateData);
-      } else {
-        writeFile(nodeCreatePath, stateData);
-      }
-    } catch (Exception ex) {
-      LOG.info("Error storing info for AMRMTokenSecretManager", ex);
-      notifyStoreOperationFailed(ex);
+    if (isUpdate) {
+      updateFile(nodeCreatePath, stateData);
+    } else {
+      writeFile(nodeCreatePath, stateData);
     }
   }
 

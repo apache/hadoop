@@ -22,6 +22,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.oncrpc.XDR;
@@ -72,10 +73,8 @@ public class FileHandle {
       return;
     }
 
-    byte[] in = s.getBytes();
-    for (int i = 0; i < in.length; i++) {
-      digest.update(in[i]);
-    }
+    byte[] in = s.getBytes(Charsets.UTF_8);
+    digest.update(in);
 
     byte[] digestbytes = digest.digest();
     for (int i = 0; i < 16; i++) {

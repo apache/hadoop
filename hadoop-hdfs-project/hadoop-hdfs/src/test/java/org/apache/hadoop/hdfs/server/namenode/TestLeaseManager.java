@@ -62,9 +62,11 @@ public class TestLeaseManager {
    */
   @Test (timeout=1000)
   public void testCheckLeaseNotInfiniteLoop() {
+    FSDirectory dir = Mockito.mock(FSDirectory.class);
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     Mockito.when(fsn.isRunning()).thenReturn(true);
     Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Mockito.when(fsn.getFSDirectory()).thenReturn(dir);
     LeaseManager lm = new LeaseManager(fsn);
 
     //Make sure the leases we are going to add exceed the hard limit

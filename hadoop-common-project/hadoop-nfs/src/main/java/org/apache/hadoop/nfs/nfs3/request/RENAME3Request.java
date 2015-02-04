@@ -19,6 +19,7 @@ package org.apache.hadoop.nfs.nfs3.request;
 
 import java.io.IOException;
 
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;
 
@@ -66,10 +67,10 @@ public class RENAME3Request extends NFS3Request {
   @Override
   public void serialize(XDR xdr) {
     fromDirHandle.serialize(xdr);
-    xdr.writeInt(fromName.getBytes().length);
-    xdr.writeFixedOpaque(fromName.getBytes());
+    xdr.writeInt(fromName.getBytes(Charsets.UTF_8).length);
+    xdr.writeFixedOpaque(fromName.getBytes(Charsets.UTF_8));
     toDirHandle.serialize(xdr);
-    xdr.writeInt(toName.getBytes().length);
-    xdr.writeFixedOpaque(toName.getBytes());
+    xdr.writeInt(toName.getBytes(Charsets.UTF_8).length);
+    xdr.writeFixedOpaque(toName.getBytes(Charsets.UTF_8));
   }
 }

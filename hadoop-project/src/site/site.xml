@@ -38,7 +38,7 @@
   <body>
     <links position="left">
       <item name="Wiki" href="http://wiki.apache.org/hadoop" />
-      <item name="SVN" href="https://svn.apache.org/repos/asf/hadoop/" />
+      <item name="git" href="https://git-wip-us.apache.org/repos/asf/hadoop.git" />
     </links>
 
     <breadcrumbs position="left">
@@ -60,7 +60,7 @@
     <menu name="Common" inherit="top">
       <item name="CLI Mini Cluster" href="hadoop-project-dist/hadoop-common/CLIMiniCluster.html"/>
       <item name="Native Libraries" href="hadoop-project-dist/hadoop-common/NativeLibraries.html"/>
-      <item name="Superusers" href="hadoop-project-dist/hadoop-common/Superusers.html"/>
+      <item name="Proxy User" href="hadoop-project-dist/hadoop-common/Superusers.html"/>
       <item name="Secure Mode" href="hadoop-project-dist/hadoop-common/SecureMode.html"/>
       <item name="Service Level Authorization" href="hadoop-project-dist/hadoop-common/ServiceLevelAuth.html"/>
       <item name="HTTP Authentication" href="hadoop-project-dist/hadoop-common/HttpAuthentication.html"/>
@@ -105,6 +105,8 @@
       <item name="Hadoop Streaming" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopStreaming.html"/>
       <item name="Hadoop Archives" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopArchives.html"/>
       <item name="DistCp" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistCp.html"/>
+      <item name="GridMix" href="hadoop-gridmix/GridMix.html"/>
+      <item name="Rumen" href="hadoop-rumen/Rumen.html"/>
     </menu>
 
     <menu name="MapReduce REST APIs" inherit="top">
@@ -113,6 +115,7 @@
     </menu>
 
     <menu name="YARN" inherit="top">
+      <item name="Overview" href="hadoop-yarn/hadoop-yarn-site/index.html"/>
       <item name="YARN Architecture" href="hadoop-yarn/hadoop-yarn-site/YARN.html"/>
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
       <item name="Fair Scheduler" href="hadoop-yarn/hadoop-yarn-site/FairScheduler.html"/>
@@ -125,6 +128,9 @@
       <item name="Scheduler Load Simulator" href="hadoop-sls/SchedulerLoadSimulator.html"/>
       <item name="NodeManager Restart" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRestart.html"/>
       <item name="DockerContainerExecutor" href="hadoop-yarn/hadoop-yarn-site/DockerContainerExecutor.html"/>
+      <item name="Using CGroups" href="hadoop-yarn/hadoop-yarn-site/NodeManagerCGroups.html"/>
+      <item name="Secure Containers" href="hadoop-yarn/hadoop-yarn-site/SecureContainer.html"/>
+      <item name="Registry" href="hadoop-yarn/hadoop-yarn-site/registry/index.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">
@@ -133,6 +139,12 @@
       <item name="Node Manager" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html"/>
     </menu>
     
+    <menu name="Hadoop Compatible File Systems" inherit="top">
+      <item name="Amazon S3" href="hadoop-aws/tools/hadoop-aws/index.html"/>
+      <item name="Azure Blob Storage" href="hadoop-azure/index.html"/>
+      <item name="OpenStack Swift" href="hadoop-openstack/index.html"/>
+    </menu>
+
     <menu name="Auth" inherit="top">
       <item name="Overview" href="hadoop-auth/index.html"/>
       <item name="Examples" href="hadoop-auth/Examples.html"/>

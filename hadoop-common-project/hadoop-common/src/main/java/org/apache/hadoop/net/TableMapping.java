@@ -20,13 +20,16 @@ package org.apache.hadoop.net;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -96,9 +99,10 @@ public class TableMapping extends CachedDNSToSwitchMapping {
         return null;
       }
   
-      BufferedReader reader = null;
-      try {
-        reader = new BufferedReader(new FileReader(filename));
+
+      try (BufferedReader reader =
+               new BufferedReader(new InputStreamReader(
+                   new FileInputStream(filename), Charsets.UTF_8))) {
         String line = reader.readLine();
         while (line != null) {
           line = line.trim();
@@ -115,15 +119,6 @@ public class TableMapping extends CachedDNSToSwitchMapping {
       } catch (Exception e) {
         LOG.warn(filename + " cannot be read.", e);
         return null;
-      } finally {
-        if (reader != null) {
-          try {
-            reader.close();
-          } catch (IOException e) {
-            LOG.warn(filename + " cannot be read.", e);
-            return null;
-          }
-        }
       }
       return loadMap;
     }

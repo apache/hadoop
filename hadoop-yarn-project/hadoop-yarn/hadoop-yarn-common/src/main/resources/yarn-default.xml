@@ -229,32 +229,32 @@
 
   <property>
     <description>The minimum allocation for every container request at the RM,
-    in MBs. Memory requests lower than this won't take effect,
-    and the specified value will get allocated at minimum.</description>
+    in MBs. Memory requests lower than this will throw a
+    InvalidResourceRequestException.</description>
     <name>yarn.scheduler.minimum-allocation-mb</name>
     <value>1024</value>
   </property>
 
   <property>
     <description>The maximum allocation for every container request at the RM,
-    in MBs. Memory requests higher than this won't take effect,
-    and will get capped to this value.</description>
+    in MBs. Memory requests higher than this will throw a
+    InvalidResourceRequestException.</description>
     <name>yarn.scheduler.maximum-allocation-mb</name>
     <value>8192</value>
   </property>
 
   <property>
     <description>The minimum allocation for every container request at the RM,
-    in terms of virtual CPU cores. Requests lower than this won't take effect,
-    and the specified value will get allocated the minimum.</description>
+    in terms of virtual CPU cores. Requests lower than this will throw a
+    InvalidResourceRequestException.</description>
     <name>yarn.scheduler.minimum-allocation-vcores</name>
     <value>1</value>
   </property>
 
   <property>
     <description>The maximum allocation for every container request at the RM,
-    in terms of virtual CPU cores. Requests higher than this won't take effect,
-    and will get capped to this value.</description>
+    in terms of virtual CPU cores. Requests higher than this will throw a
+    InvalidResourceRequestException.</description>
     <name>yarn.scheduler.maximum-allocation-vcores</name>
     <value>32</value>
   </property>
@@ -271,7 +271,7 @@
     to YARN for experimenting the feature.
     </description>
     <name>yarn.resourcemanager.work-preserving-recovery.enabled</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 
   <property>
@@ -1378,6 +1378,26 @@
     <value>1000</value>
   </property>
 
+  <property>
+    <description>Enable timeline server to recover state after starting. If
+    true, then yarn.timeline-service.state-store-class must be specified.
+    </description>
+    <name>yarn.timeline-service.recovery.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Store class name for timeline state store.</description>
+    <name>yarn.timeline-service.state-store-class</name>
+    <value>org.apache.hadoop.yarn.server.timeline.recovery.LeveldbTimelineStateStore</value>
+  </property>
+
+  <property>
+    <description>Store file name for leveldb state store.</description>
+    <name>yarn.timeline-service.leveldb-state-store.path</name>
+    <value>${hadoop.tmp.dir}/yarn/timeline</value>
+  </property>
+
   <!--  Shared Cache Configuration -->
   <property>
     <description>Whether the shared cache is enabled</description>
@@ -1442,6 +1462,12 @@
     <description>The number of threads used to handle SCM admin interface (1 by default)</description>
     <name>yarn.sharedcache.admin.thread-count</name>
     <value>1</value>
+  </property>
+
+  <property>
+    <description>The address of the web application in the SCM (shared cache manager)</description>
+    <name>yarn.sharedcache.webapp.address</name>
+    <value>0.0.0.0:8788</value>
   </property>
 
   <property>

@@ -59,10 +59,6 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
@@ -81,8 +77,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetClusterNodeLabelsResponsePBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetNodesToLabelsResponsePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
@@ -348,14 +342,10 @@ public class AdminService extends CompositeService implements
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
       throws YarnException, StandbyException {
     String argName = "refreshQueues";
+    final String msg = "refresh queues.";
     UserGroupInformation user = checkAcls(argName);
 
-    if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "ResourceManager is not active. Can not refresh queues.");
-      throwStandbyException();
-    }
+    checkRMStatus(user.getShortUserName(), argName, msg);
 
     RefreshQueuesResponse response =
         recordFactory.newRecordInstance(RefreshQueuesResponse.class);
@@ -370,11 +360,7 @@ public class AdminService extends CompositeService implements
           "AdminService");
       return response;
     } catch (IOException ioe) {
-      LOG.info("Exception refreshing queues ", ioe);
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "Exception refreshing queues");
-      throw RPCUtil.getRemoteException(ioe);
+      throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
     }
   }
 
@@ -382,14 +368,10 @@ public class AdminService extends CompositeService implements
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
       throws YarnException, StandbyException {
     String argName = "refreshNodes";
+    final String msg = "refresh nodes.";
     UserGroupInformation user = checkAcls("refreshNodes");
 
-    if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "ResourceManager is not active. Can not refresh nodes.");
-      throwStandbyException();
-    }
+    checkRMStatus(user.getShortUserName(), argName, msg);
 
     try {
       Configuration conf =
@@ -400,10 +382,7 @@ public class AdminService extends CompositeService implements
           "AdminService");
       return recordFactory.newRecordInstance(RefreshNodesResponse.class);
     } catch (IOException ioe) {
-      LOG.info("Exception refreshing nodes ", ioe);
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService", "Exception refreshing nodes");
-      throw RPCUtil.getRemoteException(ioe);
+      throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
     }
   }
 
@@ -414,12 +393,7 @@ public class AdminService extends CompositeService implements
     String argName = "refreshSuperUserGroupsConfiguration";
     UserGroupInformation user = checkAcls(argName);
 
-    if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "ResourceManager is not active. Can not refresh super-user-groups.");
-      throwStandbyException();
-    }
+    checkRMStatus(user.getShortUserName(), argName, "refresh super-user-groups.");
 
     // Accept hadoop common configs in core-site.xml as well as RM specific
     // configurations in yarn-site.xml
@@ -443,12 +417,7 @@ public class AdminService extends CompositeService implements
     String argName = "refreshUserToGroupsMappings";
     UserGroupInformation user = checkAcls(argName);
 
-    if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "ResourceManager is not active. Can not refresh user-groups.");
-      throwStandbyException();
-    }
+    checkRMStatus(user.getShortUserName(), argName, "refresh user-groups.");
 
     Groups.getUserToGroupsMappingService(
         getConfiguration(new Configuration(false),
@@ -471,11 +440,8 @@ public class AdminService extends CompositeService implements
     String argName = "refreshAdminAcls";
     UserGroupInformation user = checkAcls(argName);
 
-    if (checkRMHAState && !isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "ResourceManager is not active. Can not refresh user-groups.");
-      throwStandbyException();
+    if (checkRMHAState) {
+      checkRMStatus(user.getShortUserName(), argName, "refresh Admin ACLs.");
     }
     Configuration conf =
         getConfiguration(new Configuration(false),
@@ -502,13 +468,9 @@ public class AdminService extends CompositeService implements
     }
 
     String argName = "refreshServiceAcls";
-    if (!isRMActive()) {
-      RMAuditLogger.logFailure(UserGroupInformation.getCurrentUser()
-          .getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "ResourceManager is not active. Can not refresh Service ACLs.");
-      throwStandbyException();
-    }
+    UserGroupInformation user = checkAcls(argName);
+
+    checkRMStatus(user.getShortUserName(), argName, "refresh Service ACLs.");
 
     PolicyProvider policyProvider = RMPolicyProvider.getInstance();
     Configuration conf =
@@ -543,12 +505,7 @@ public class AdminService extends CompositeService implements
     String argName = "updateNodeResource";
     UserGroupInformation user = checkAcls(argName);
     
-    if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "ResourceManager is not active. Can not update node resource.");
-      throwStandbyException();
-    }
+    checkRMStatus(user.getShortUserName(), argName, "update node resource.");
     
     Map<NodeId, ResourceOption> nodeResourceMap = request.getNodeResourceMap();
     Set<NodeId> nodeIds = nodeResourceMap.keySet();
@@ -641,14 +598,10 @@ public class AdminService extends CompositeService implements
   public AddToClusterNodeLabelsResponse addToClusterNodeLabels(AddToClusterNodeLabelsRequest request)
       throws YarnException, IOException {
     String argName = "addToClusterNodeLabels";
+    final String msg = "add labels.";
     UserGroupInformation user = checkAcls(argName);
 
-    if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "ResourceManager is not active. Can not add labels.");
-      throwStandbyException();
-    }
+    checkRMStatus(user.getShortUserName(), argName, msg);
 
     AddToClusterNodeLabelsResponse response =
         recordFactory.newRecordInstance(AddToClusterNodeLabelsResponse.class);
@@ -658,10 +611,7 @@ public class AdminService extends CompositeService implements
           .logSuccess(user.getShortUserName(), argName, "AdminService");
       return response;
     } catch (IOException ioe) {
-      LOG.info("Exception add labels", ioe);
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService", "Exception add label");
-      throw RPCUtil.getRemoteException(ioe);
+      throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
     }
   }
 
@@ -669,14 +619,10 @@ public class AdminService extends CompositeService implements
   public RemoveFromClusterNodeLabelsResponse removeFromClusterNodeLabels(
       RemoveFromClusterNodeLabelsRequest request) throws YarnException, IOException {
     String argName = "removeFromClusterNodeLabels";
+    final String msg = "remove labels.";
     UserGroupInformation user = checkAcls(argName);
 
-    if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "ResourceManager is not active. Can not remove labels.");
-      throwStandbyException();
-    }
+    checkRMStatus(user.getShortUserName(), argName, msg);
 
     RemoveFromClusterNodeLabelsResponse response =
         recordFactory.newRecordInstance(RemoveFromClusterNodeLabelsResponse.class);
@@ -686,10 +632,7 @@ public class AdminService extends CompositeService implements
           .logSuccess(user.getShortUserName(), argName, "AdminService");
       return response;
     } catch (IOException ioe) {
-      LOG.info("Exception remove labels", ioe);
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService", "Exception remove label");
-      throw RPCUtil.getRemoteException(ioe);
+      throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
     }
   }
 
@@ -697,14 +640,10 @@ public class AdminService extends CompositeService implements
   public ReplaceLabelsOnNodeResponse replaceLabelsOnNode(
       ReplaceLabelsOnNodeRequest request) throws YarnException, IOException {
     String argName = "replaceLabelsOnNode";
+    final String msg = "set node to labels.";
     UserGroupInformation user = checkAcls(argName);
 
-    if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "ResourceManager is not active. Can not set node to labels.");
-      throwStandbyException();
-    }
+    checkRMStatus(user.getShortUserName(), argName, msg);
 
     ReplaceLabelsOnNodeResponse response =
         recordFactory.newRecordInstance(ReplaceLabelsOnNodeResponse.class);
@@ -715,11 +654,24 @@ public class AdminService extends CompositeService implements
           .logSuccess(user.getShortUserName(), argName, "AdminService");
       return response;
     } catch (IOException ioe) {
-      LOG.info("Exception set node to labels. ", ioe);
-      RMAuditLogger.logFailure(user.getShortUserName(), argName,
-          adminAcl.toString(), "AdminService",
-          "Exception set node to labels.");
-      throw RPCUtil.getRemoteException(ioe);
+      throw logAndWrapException(ioe, user.getShortUserName(), argName, msg);
     }
+  }
+
+  private void checkRMStatus(String user, String argName, String msg)
+      throws StandbyException {
+    if (!isRMActive()) {
+      RMAuditLogger.logFailure(user, argName, adminAcl.toString(), 
+          "AdminService", "ResourceManager is not active. Can not " + msg);
+      throwStandbyException();
+    }
+  }
+
+  private YarnException logAndWrapException(IOException ioe, String user,
+      String argName, String msg) throws YarnException {
+    LOG.info("Exception " + msg, ioe);
+    RMAuditLogger.logFailure(user, argName, adminAcl.toString(), 
+        "AdminService", "Exception " + msg);
+    return RPCUtil.getRemoteException(ioe);
   }
 }

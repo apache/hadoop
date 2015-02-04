@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.NoSuchElementException;
 
 import org.apache.hadoop.examples.pi.Container;
 import org.apache.hadoop.examples.pi.Util;
@@ -255,7 +256,13 @@ public final class Bellard {
         public boolean hasNext() {return i < parts.length;}
         /** {@inheritDoc} */
         @Override
-        public Summation next() {return parts[i++];}
+        public Summation next() throws NoSuchElementException {
+          if (hasNext()) {
+            return parts[i++];
+          } else {
+            throw new NoSuchElementException("Sum's iterator does not have next!");
+          }
+        }
         /** Unsupported */
         @Override
         public void remove() {throw new UnsupportedOperationException();}

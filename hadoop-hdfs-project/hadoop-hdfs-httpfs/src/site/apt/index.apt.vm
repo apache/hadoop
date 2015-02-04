@@ -64,7 +64,7 @@ Hadoop HDFS over HTTP - Documentation Sets ${project.version}
 
   HttpFS was inspired by Hadoop HDFS proxy.
 
-  HttpFS can be seening as a full rewrite of Hadoop HDFS proxy.
+  HttpFS can be seen as a full rewrite of Hadoop HDFS proxy.
 
   Hadoop HDFS proxy provides a subset of file system operations (read only),
   HttpFS provides support for all file system operations.

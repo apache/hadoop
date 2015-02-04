@@ -192,10 +192,17 @@ class DataXceiver extends Receiver implements Runnable {
           HdfsConstants.SMALL_BUFFER_SIZE);
         socketOut = saslStreams.out;
       } catch (InvalidMagicNumberException imne) {
-        LOG.info("Failed to read expected encryption handshake from client " +
-            "at " + peer.getRemoteAddressString() + ". Perhaps the client " +
-            "is running an older version of Hadoop which does not support " +
-            "encryption");
+        if (imne.isHandshake4Encryption()) {
+          LOG.info("Failed to read expected encryption handshake from client " +
+              "at " + peer.getRemoteAddressString() + ". Perhaps the client " +
+              "is running an older version of Hadoop which does not support " +
+              "encryption");
+        } else {
+          LOG.info("Failed to read expected SASL data transfer protection " +
+              "handshake from client at " + peer.getRemoteAddressString() + 
+              ". Perhaps the client is running an older version of Hadoop " +
+              "which does not support SASL data transfer protection");
+        }
         return;
       }
       

@@ -116,3 +116,36 @@ Hadoop MapReduce Next Generation - Distributed Cache Deploy
   change to something like the following:
 
     <<<$HADOOP_CONF_DIR,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/mapreduce/*,$PWD/hadoop-mapreduce-${project.version}.tar.gz/hadoop-mapreduce-${project.version}/share/hadoop/mapreduce/lib/*,$HADOOP_COMMON_HOME/share/hadoop/common/*,$HADOOP_COMMON_HOME/share/hadoop/common/lib/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,$HADOOP_YARN_HOME/share/hadoop/yarn/*,$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*>>>
+
+** NOTE: 
+
+  If shuffle encryption is also enabled in the cluster, then we could meet the problem that MR job get failed with exception like below: 
+  
++---+
+2014-10-10 02:17:16,600 WARN [fetcher#1] org.apache.hadoop.mapreduce.task.reduce.Fetcher: Failed to connect to junpingdu-centos5-3.cs1cloud.internal:13562 with 1 map outputs
+javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+    at com.sun.net.ssl.internal.ssl.Alerts.getSSLException(Alerts.java:174)
+    at com.sun.net.ssl.internal.ssl.SSLSocketImpl.fatal(SSLSocketImpl.java:1731)
+    at com.sun.net.ssl.internal.ssl.Handshaker.fatalSE(Handshaker.java:241)
+    at com.sun.net.ssl.internal.ssl.Handshaker.fatalSE(Handshaker.java:235)
+    at com.sun.net.ssl.internal.ssl.ClientHandshaker.serverCertificate(ClientHandshaker.java:1206)
+    at com.sun.net.ssl.internal.ssl.ClientHandshaker.processMessage(ClientHandshaker.java:136)
+    at com.sun.net.ssl.internal.ssl.Handshaker.processLoop(Handshaker.java:593)
+    at com.sun.net.ssl.internal.ssl.Handshaker.process_record(Handshaker.java:529)
+    at com.sun.net.ssl.internal.ssl.SSLSocketImpl.readRecord(SSLSocketImpl.java:925)
+    at com.sun.net.ssl.internal.ssl.SSLSocketImpl.performInitialHandshake(SSLSocketImpl.java:1170)
+    at com.sun.net.ssl.internal.ssl.SSLSocketImpl.startHandshake(SSLSocketImpl.java:1197)
+    at com.sun.net.ssl.internal.ssl.SSLSocketImpl.startHandshake(SSLSocketImpl.java:1181)
+    at sun.net.www.protocol.https.HttpsClient.afterConnect(HttpsClient.java:434)
+    at sun.net.www.protocol.https.AbstractDelegateHttpsURLConnection.setNewClient(AbstractDelegateHttpsURLConnection.java:81)
+    at sun.net.www.protocol.https.AbstractDelegateHttpsURLConnection.setNewClient(AbstractDelegateHttpsURLConnection.java:61)
+    at sun.net.www.protocol.http.HttpURLConnection.writeRequests(HttpURLConnection.java:584)
+    at sun.net.www.protocol.http.HttpURLConnection.getInputStream(HttpURLConnection.java:1193)
+    at java.net.HttpURLConnection.getResponseCode(HttpURLConnection.java:379)
+    at sun.net.www.protocol.https.HttpsURLConnectionImpl.getResponseCode(HttpsURLConnectionImpl.java:318)
+    at org.apache.hadoop.mapreduce.task.reduce.Fetcher.verifyConnection(Fetcher.java:427)
+....
+
++---+
+
+  This is because MR client (deployed from HDFS) cannot access ssl-client.xml in local FS under directory of $HADOOP_CONF_DIR. To fix the problem, we can add the directory with ssl-client.xml to the classpath of MR which is specified in "mapreduce.application.classpath" as mentioned above. To avoid MR application being affected by other local configurations, it is better to create a dedicated directory for putting ssl-client.xml, e.g. a sub-directory under $HADOOP_CONF_DIR, like: $HADOOP_CONF_DIR/security.

@@ -238,6 +238,14 @@ public class BlockManagerTestUtil {
     return dn.updateStorage(s);
   }
 
+  /**
+   * Call heartbeat check function of HeartbeatManager
+   * @param bm the BlockManager to manipulate
+   */
+  public static void rescanPostponedMisreplicatedBlocks(BlockManager bm) {
+    bm.rescanPostponedMisreplicatedBlocks();
+  }
+
   public static DatanodeDescriptor getLocalDatanodeDescriptor(
       boolean initializeStorage) {
     DatanodeDescriptor dn = new DatanodeDescriptor(DFSTestUtil.getLocalDatanodeID());

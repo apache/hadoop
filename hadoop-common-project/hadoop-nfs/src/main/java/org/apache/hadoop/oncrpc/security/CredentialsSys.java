@@ -20,6 +20,7 @@ package org.apache.hadoop.oncrpc.security;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.oncrpc.XDR;
 
 /** Credential used by AUTH_SYS */
@@ -93,7 +94,7 @@ public class CredentialsSys extends Credentials {
   @Override
   public void write(XDR xdr) {
     // mStamp + mHostName.length + mHostName + mUID + mGID + mAuxGIDs.count
-    mCredentialsLength = 20 + mHostName.getBytes().length;
+    mCredentialsLength = 20 + mHostName.getBytes(Charsets.UTF_8).length;
     // mAuxGIDs
     if (mAuxGIDs != null && mAuxGIDs.length > 0) {
       mCredentialsLength += mAuxGIDs.length * 4;

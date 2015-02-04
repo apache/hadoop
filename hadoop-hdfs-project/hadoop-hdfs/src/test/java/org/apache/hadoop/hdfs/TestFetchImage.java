@@ -26,19 +26,26 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 public class TestFetchImage {
   
   private static final File FETCHED_IMAGE_FILE = new File(
-      System.getProperty("build.test.dir"), "fetched-image-dir");
+      System.getProperty("test.build.dir"), "target/fetched-image-dir");
   // Shamelessly stolen from NNStorage.
   private static final Pattern IMAGE_REGEX = Pattern.compile("fsimage_(\\d+)");
+
+  @AfterClass
+  public static void cleanup() {
+    FileUtil.fullyDelete(FETCHED_IMAGE_FILE);
+  }
 
   /**
    * Download a few fsimages using `hdfs dfsadmin -fetchImage ...' and verify

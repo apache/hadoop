@@ -31,7 +31,7 @@ import java.util.List;
 @Mojo(name="protoc", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
 public class ProtocMojo extends AbstractMojo {
 
-  @Parameter(defaultValue="${project}")
+  @Parameter(defaultValue="${project}", readonly=true)
   private MavenProject project;
 
   @Parameter
@@ -43,7 +43,7 @@ public class ProtocMojo extends AbstractMojo {
   @Parameter(required=true)
   private FileSet source;
 
-  @Parameter
+  @Parameter(defaultValue="protoc")
   private String protocCommand;
 
   @Parameter(required=true)
@@ -51,9 +51,6 @@ public class ProtocMojo extends AbstractMojo {
 
   public void execute() throws MojoExecutionException {
     try {
-      if (protocCommand == null || protocCommand.trim().isEmpty()) {
-        protocCommand = "protoc";
-      }
       List<String> command = new ArrayList<String>();
       command.add(protocCommand);
       command.add("--version");

@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
+import org.apache.hadoop.yarn.server.timeline.recovery.TimelineStateStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
 import org.junit.After;
 import org.junit.Assert;
@@ -48,6 +50,8 @@ public class TestApplicationHistoryServer {
     Configuration config = new YarnConfiguration();
     config.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
         MemoryTimelineStore.class, TimelineStore.class);
+    config.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
+        MemoryTimelineStateStore.class, TimelineStateStore.class);
     config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, "localhost:0");
     try {
       try {
@@ -102,6 +106,32 @@ public class TestApplicationHistoryServer {
     }
   }
 
+ //test launch method with -D arguments
+ @Test(timeout = 60000)
+ public void testLaunchWithArguments() throws Exception {
+   ExitUtil.disableSystemExit();
+   ApplicationHistoryServer historyServer = null;
+   try {
+     // Not able to modify the config of this test case,
+     // but others have been customized to avoid conflicts
+     String[] args = new String[2];
+     args[0]="-D" + YarnConfiguration.TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS + "=4000";
+     args[1]="-D" + YarnConfiguration.TIMELINE_SERVICE_TTL_MS + "=200";
+     historyServer =
+         ApplicationHistoryServer.launchAppHistoryServer(args);
+     Configuration conf = historyServer.getConfig();
+     assertEquals("4000", conf.get(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS));
+     assertEquals("200", conf.get(YarnConfiguration.TIMELINE_SERVICE_TTL_MS));
+   } catch (ExitUtil.ExitException e) {
+     assertEquals(0, e.status);
+     ExitUtil.resetFirstExitException();
+     fail();
+   } finally {
+     if (historyServer != null) {
+       historyServer.stop();
+     }
+   }
+ }
   @Test(timeout = 240000)
   public void testFilterOverrides() throws Exception {
 
@@ -128,6 +158,8 @@ public class TestApplicationHistoryServer {
       Configuration config = new YarnConfiguration();
       config.setClass(YarnConfiguration.TIMELINE_SERVICE_STORE,
           MemoryTimelineStore.class, TimelineStore.class);
+      config.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
+          MemoryTimelineStateStore.class, TimelineStateStore.class);
       config.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS, "localhost:0");
       try {
         config.set("hadoop.http.filter.initializers", filterInitializer);

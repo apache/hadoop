@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
@@ -50,7 +51,7 @@ class FSDirStatAndListingOp {
     FSPermissionChecker pc = fsd.getPermissionChecker();
     byte[][] pathComponents = FSDirectory
         .getPathComponentsForReservedPath(srcArg);
-    final String startAfterString = new String(startAfter);
+    final String startAfterString = new String(startAfter, Charsets.UTF_8);
     final String src = fsd.resolvePath(pc, srcArg, pathComponents);
     final INodesInPath iip = fsd.getINodesInPath(src, true);
 
@@ -71,14 +72,14 @@ class FSDirStatAndListingOp {
 
     boolean isSuperUser = true;
     if (fsd.isPermissionEnabled()) {
-      if (fsd.isDir(src)) {
+      if (iip.getLastINode() != null && iip.getLastINode().isDirectory()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ_EXECUTE);
       } else {
         fsd.checkTraverse(pc, iip);
       }
       isSuperUser = pc.isSuperUser();
     }
-    return getListing(fsd, src, startAfter, needLocation, isSuperUser);
+    return getListing(fsd, iip, src, startAfter, needLocation, isSuperUser);
   }
 
   /**
@@ -122,9 +123,7 @@ class FSDirStatAndListingOp {
     if (fsd.isPermissionEnabled()) {
       fsd.checkTraverse(pc, iip);
     }
-    INode[] inodes = iip.getINodes();
-    return !INodeFile.valueOf(inodes[inodes.length - 1],
-        src).isUnderConstruction();
+    return !INodeFile.valueOf(iip.getLastINode(), src).isUnderConstruction();
   }
 
   static ContentSummary getContentSummary(
@@ -132,12 +131,17 @@ class FSDirStatAndListingOp {
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = fsd.getPermissionChecker();
     src = fsd.resolvePath(pc, src, pathComponents);
-    final INodesInPath iip = fsd.getINodesInPath(src, true);
+    final INodesInPath iip = fsd.getINodesInPath(src, false);
     if (fsd.isPermissionEnabled()) {
       fsd.checkPermission(pc, iip, false, null, null, null,
           FsAction.READ_EXECUTE);
     }
-    return getContentSummaryInt(fsd, src);
+    return getContentSummaryInt(fsd, iip);
+  }
+
+  private static byte getStoragePolicyID(byte inodePolicy, byte parentPolicy) {
+    return inodePolicy != BlockStoragePolicySuite.ID_UNSPECIFIED ? inodePolicy :
+        parentPolicy;
   }
 
   /**
@@ -149,14 +153,15 @@ class FSDirStatAndListingOp {
    * that at least this.lsLimit block locations are in the response
    *
    * @param fsd FSDirectory
+   * @param iip the INodesInPath instance containing all the INodes along the
+   *            path
    * @param src the directory name
    * @param startAfter the name to start listing after
    * @param needLocation if block locations are returned
    * @return a partial listing starting after startAfter
    */
-  private static DirectoryListing getListing(
-      FSDirectory fsd, String src, byte[] startAfter, boolean needLocation,
-      boolean isSuperUser)
+  private static DirectoryListing getListing(FSDirectory fsd, INodesInPath iip,
+      String src, byte[] startAfter, boolean needLocation, boolean isSuperUser)
       throws IOException {
     String srcs = FSDirectory.normalizePath(src);
     final boolean isRawPath = FSDirectory.isReservedRawName(src);
@@ -166,10 +171,8 @@ class FSDirStatAndListingOp {
       if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
         return getSnapshotsListing(fsd, srcs, startAfter);
       }
-      final INodesInPath inodesInPath = fsd.getINodesInPath(srcs, true);
-      final INode[] inodes = inodesInPath.getINodes();
-      final int snapshot = inodesInPath.getPathSnapshotId();
-      final INode targetNode = inodes[inodes.length - 1];
+      final int snapshot = iip.getPathSnapshotId();
+      final INode targetNode = iip.getLastINode();
       if (targetNode == null)
         return null;
       byte parentStoragePolicy = isSuperUser ?
@@ -180,7 +183,7 @@ class FSDirStatAndListingOp {
         return new DirectoryListing(
             new HdfsFileStatus[]{createFileStatus(fsd,
                 HdfsFileStatus.EMPTY_NAME, targetNode, needLocation,
-                parentStoragePolicy, snapshot, isRawPath, inodesInPath)}, 0);
+                parentStoragePolicy, snapshot, isRawPath, iip)}, 0);
       }
 
       final INodeDirectory dirInode = targetNode.asDirectory();
@@ -198,8 +201,8 @@ class FSDirStatAndListingOp {
             cur.getLocalStoragePolicyID():
             BlockStoragePolicySuite.ID_UNSPECIFIED;
         listing[i] = createFileStatus(fsd, cur.getLocalNameBytes(), cur,
-            needLocation, fsd.getStoragePolicyID(curPolicy,
-                parentStoragePolicy), snapshot, isRawPath, inodesInPath);
+            needLocation, getStoragePolicyID(curPolicy,
+                parentStoragePolicy), snapshot, isRawPath, iip);
         listingCnt++;
         if (needLocation) {
             // Once we  hit lsLimit locations, stop.
@@ -261,30 +264,46 @@ class FSDirStatAndListingOp {
   /** Get the file info for a specific file.
    * @param fsd FSDirectory
    * @param src The string representation of the path to the file
-   * @param resolveLink whether to throw UnresolvedLinkException
    * @param isRawPath true if a /.reserved/raw pathname was passed by the user
    * @param includeStoragePolicy whether to include storage policy
    * @return object containing information regarding the file
    *         or null if file not found
    */
   static HdfsFileStatus getFileInfo(
+      FSDirectory fsd, INodesInPath src, boolean isRawPath,
+      boolean includeStoragePolicy)
+      throws IOException {
+    fsd.readLock();
+    try {
+      final INode i = src.getLastINode();
+      byte policyId = includeStoragePolicy && i != null && !i.isSymlink() ?
+          i.getStoragePolicyID() : BlockStoragePolicySuite.ID_UNSPECIFIED;
+      return i == null ? null : createFileStatus(
+          fsd, HdfsFileStatus.EMPTY_NAME, i, policyId,
+          src.getPathSnapshotId(), isRawPath, src);
+    } finally {
+      fsd.readUnlock();
+    }
+  }
+
+  static HdfsFileStatus getFileInfo(
       FSDirectory fsd, String src, boolean resolveLink, boolean isRawPath,
       boolean includeStoragePolicy)
     throws IOException {
     String srcs = FSDirectory.normalizePath(src);
+    if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
+      if (fsd.getINode4DotSnapshot(srcs) != null) {
+        return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
+            HdfsFileStatus.EMPTY_NAME, -1L, 0, null,
+            BlockStoragePolicySuite.ID_UNSPECIFIED);
+      }
+      return null;
+    }
+
     fsd.readLock();
     try {
-      if (srcs.endsWith(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR)) {
-        return getFileInfo4DotSnapshot(fsd, srcs);
-      }
-      final INodesInPath inodesInPath = fsd.getINodesInPath(srcs, resolveLink);
-      final INode[] inodes = inodesInPath.getINodes();
-      final INode i = inodes[inodes.length - 1];
-      byte policyId = includeStoragePolicy && i != null && !i.isSymlink() ?
-          i.getStoragePolicyID() : BlockStoragePolicySuite.ID_UNSPECIFIED;
-      return i == null ? null : createFileStatus(fsd,
-          HdfsFileStatus.EMPTY_NAME, i, policyId,
-          inodesInPath.getPathSnapshotId(), isRawPath, inodesInPath);
+      final INodesInPath iip = fsd.getINodesInPath(srcs, resolveLink);
+      return getFileInfo(fsd, iip, isRawPath, includeStoragePolicy);
     } finally {
       fsd.readUnlock();
     }
@@ -405,7 +424,7 @@ class FSDirStatAndListingOp {
           fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
 
       loc = fsd.getFSNamesystem().getBlockManager().createLocatedBlocks(
-          fileNode.getBlocks(), fileSize, isUc, 0L, size, false,
+          fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size, false,
           inSnapshot, feInfo);
       if (loc == null) {
         loc = new LocatedBlocks();
@@ -457,14 +476,13 @@ class FSDirStatAndListingOp {
     return perm;
   }
 
-  private static ContentSummary getContentSummaryInt(
-      FSDirectory fsd, String src) throws IOException {
-    String srcs = FSDirectory.normalizePath(src);
+  private static ContentSummary getContentSummaryInt(FSDirectory fsd,
+      INodesInPath iip) throws IOException {
     fsd.readLock();
     try {
-      INode targetNode = fsd.getNode(srcs, false);
+      INode targetNode = iip.getLastINode();
       if (targetNode == null) {
-        throw new FileNotFoundException("File does not exist: " + srcs);
+        throw new FileNotFoundException("File does not exist: " + iip.getPath());
       }
       else {
         // Make it relinquish locks everytime contentCountLimit entries are

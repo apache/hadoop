@@ -172,7 +172,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           .add("vcoreSeconds", metrics.getVcoreSeconds())
           .add("preemptedAMContainers", metrics.getNumAMContainersPreempted())
           .add("preemptedNonAMContainers", metrics.getNumNonAMContainersPreempted())
-          .add("preemptedResources", metrics.getResourcePreempted());
+          .add("preemptedResources", metrics.getResourcePreempted())
+          .add("applicationType", app.getApplicationType());
       return summary;
     }
 

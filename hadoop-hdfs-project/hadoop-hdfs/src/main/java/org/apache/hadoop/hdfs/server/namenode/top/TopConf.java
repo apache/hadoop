@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.top;
 
+import java.util.concurrent.TimeUnit;
+
+import com.google.common.primitives.Ints;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -27,34 +30,34 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public final class TopConf {
+  /**
+   * Whether TopMetrics are enabled
+   */
+  public final boolean isEnabled;
 
-  public static final String TOP_METRICS_REGISTRATION_NAME = "topusers";
-  public static final String TOP_METRICS_RECORD_NAME = "topparam";
   /**
-   * A meta command representing the total number of commands
+   * A meta command representing the total number of calls to all commands
    */
-  public static final String CMD_TOTAL = "total";
-  /**
-   * A meta user representing all users
-   */
-  public static String ALL_USERS = "ALL";
+  public static final String ALL_CMDS = "*";
 
   /**
    * nntop reporting periods in milliseconds
    */
-  public final long[] nntopReportingPeriodsMs;
+  public final int[] nntopReportingPeriodsMs;
 
   public TopConf(Configuration conf) {
+    isEnabled = conf.getBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY,
+        DFSConfigKeys.NNTOP_ENABLED_DEFAULT);
     String[] periodsStr = conf.getTrimmedStrings(
         DFSConfigKeys.NNTOP_WINDOWS_MINUTES_KEY,
         DFSConfigKeys.NNTOP_WINDOWS_MINUTES_DEFAULT);
-    nntopReportingPeriodsMs = new long[periodsStr.length];
+    nntopReportingPeriodsMs = new int[periodsStr.length];
     for (int i = 0; i < periodsStr.length; i++) {
-      nntopReportingPeriodsMs[i] = Integer.parseInt(periodsStr[i]) *
-          60L * 1000L; //min to ms
+      nntopReportingPeriodsMs[i] = Ints.checkedCast(
+          TimeUnit.MINUTES.toMillis(Integer.parseInt(periodsStr[i])));
     }
-    for (long aPeriodMs: nntopReportingPeriodsMs) {
-      Preconditions.checkArgument(aPeriodMs >= 60L * 1000L,
+    for (int aPeriodMs: nntopReportingPeriodsMs) {
+      Preconditions.checkArgument(aPeriodMs >= TimeUnit.MINUTES.toMillis(1),
           "minimum reporting period is 1 min!");
     }
   }

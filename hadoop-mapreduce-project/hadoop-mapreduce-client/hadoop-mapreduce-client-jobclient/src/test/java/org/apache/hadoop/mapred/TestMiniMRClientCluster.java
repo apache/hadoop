@@ -187,7 +187,7 @@ public class TestMiniMRClientCluster {
   }
 
   public static Job createJob() throws IOException {
-    final Job baseJob = new Job(mrCluster.getConfig());
+    final Job baseJob = Job.getInstance(mrCluster.getConfig());
     baseJob.setOutputKeyClass(Text.class);
     baseJob.setOutputValueClass(IntWritable.class);
     baseJob.setMapperClass(MyMapper.class);

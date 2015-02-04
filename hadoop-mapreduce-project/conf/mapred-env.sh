@@ -52,17 +52,14 @@
 # Job History Server specific parameters
 ###
 
-# Specify the max heapsize for the Job History Server using a numerical value
-# in the scale of MB. For example, to specify an jvm option of -Xmx1000m, set
-# the value to 1000.
-# This value will be overridden by an Xmx setting specified in either
-# MAPRED_OPTS, HADOOP_OPTS, and/or HADOOP_JOB_HISTORYSERVER_OPTS.
-# If not specified, the default value will be picked from either HADOOP_HEAPSIZE
-# or the built-in default.
-#
-#export HADOOP_JOB_HISTORYSERVER_HEAPSIZE=1000
+# Specify the max heapsize for the JobHistoryServer.  If no units are
+# given, it will be assumed to be in MB.
+# This value will be overridden by an Xmx setting specified in either YARN_OPTS,
+# HADOOP_OPTS, and/or HADOOP_JOB_HISTORYSERVER_OPTS.
+# Default is the same as HADOOP_HEAPSIZE_MAX.
+#export HADOOP_JOB_HISTORYSERVER_HEAPSIZE=
 
-# Specify the JVM options to be used when starting the ResourceManager.
+# Specify the JVM options to be used when starting the HistoryServer.
 # These options will be appended to the options specified as YARN_OPTS
 # and therefore may override any similar flags set in YARN_OPTS
 #export HADOOP_JOB_HISTORYSERVER_OPTS=

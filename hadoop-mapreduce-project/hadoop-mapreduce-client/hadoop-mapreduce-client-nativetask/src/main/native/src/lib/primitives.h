@@ -97,11 +97,18 @@ inline void simple_memcpy(void * dest, const void * src, size_t len) {
  * little-endian to big-endian or vice versa
  */
 inline uint32_t bswap(uint32_t val) {
+#ifdef __aarch64__
+  __asm__("rev %w[dst], %w[src]" : [dst]"=r"(val) : [src]"r"(val));
+#else
   __asm__("bswap %0" : "=r" (val) : "0" (val));
+#endif
   return val;
 }
 
 inline uint64_t bswap64(uint64_t val) {
+#ifdef __aarch64__
+  __asm__("rev %[dst], %[src]" : [dst]"=r"(val) : [src]"r"(val));
+#else
 #ifdef __X64
   __asm__("bswapq %0" : "=r" (val) : "0" (val));
 #else
@@ -114,6 +121,7 @@ inline uint64_t bswap64(uint64_t val) {
 
   return (lower << 32) + higher;
 
+#endif
 #endif
   return val;
 }

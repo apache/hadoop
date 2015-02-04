@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -87,7 +88,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreAMRMTokenEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreRMDTEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreRMDTMasterKeyEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -130,7 +134,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
     UserGroupInformation.setConfiguration(conf);
-    conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
+    conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
     rmAddr = new InetSocketAddress("localhost", 8032);
     Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
@@ -1457,7 +1462,12 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
       @Override
       protected void handleStoreEvent(RMStateStoreEvent event) {
         // Block app saving request.
-        while (wait);
+        // Skip if synchronous updation of DTToken
+        if (!(event instanceof RMStateStoreAMRMTokenEvent)
+            && !(event instanceof RMStateStoreRMDTEvent)
+            && !(event instanceof RMStateStoreRMDTMasterKeyEvent)) {
+          while (wait);
+        }
         super.handleStoreEvent(event);
       }
     };
@@ -2048,8 +2058,22 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   // 4. Get cluster and node lobel, it should be present by recovering it
   @Test(timeout = 20000)
   public void testRMRestartRecoveringNodeLabelManager() throws Exception {
+    // Initial FS node label store root dir to a random tmp dir
+    File nodeLabelFsStoreDir =
+        new File("target", this.getClass().getSimpleName()
+            + "-testRMRestartRecoveringNodeLabelManager");
+    if (nodeLabelFsStoreDir.exists()) {
+      FileUtils.deleteDirectory(nodeLabelFsStoreDir);
+    }
+    nodeLabelFsStoreDir.deleteOnExit();
+    
+    String nodeLabelFsStoreDirURI = nodeLabelFsStoreDir.toURI().toString(); 
+    conf.set(YarnConfiguration.FS_NODE_LABELS_STORE_ROOT_DIR,
+        nodeLabelFsStoreDirURI);
+    
     MemoryRMStateStore memStore = new MemoryRMStateStore();
     memStore.init(conf);
+    conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     MockRM rm1 = new MockRM(conf, memStore) {
       @Override
       protected RMNodeLabelsManager createNodeLabelManager() {

@@ -219,9 +219,9 @@ public class SwiftTestUtils extends org.junit.Assert {
         byte actual = dest[i];
         byte expected = src[i];
         String letter = toChar(actual);
-        String line = String.format("[%04d] %2x %s\n", i, actual, letter);
+        String line = String.format("[%04d] %2x %s%n", i, actual, letter);
         if (expected != actual) {
-          line = String.format("[%04d] %2x %s -expected %2x %s\n",
+          line = String.format("[%04d] %2x %s -expected %2x %s%n",
                                i,
                                actual,
                                letter,

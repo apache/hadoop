@@ -60,7 +60,6 @@ public class Path implements Comparable {
 
   /**
    * Pathnames with scheme and relative path are illegal.
-   * @param path to be checked
    */
   void checkNotSchemeWithRelative() {
     if (toUri().isAbsolute() && !isUriPathAbsolute()) {

@@ -48,10 +48,10 @@ public abstract class SchedulingPolicy {
    * Returns a {@link SchedulingPolicy} instance corresponding to the passed clazz
    */
   public static SchedulingPolicy getInstance(Class<? extends SchedulingPolicy> clazz) {
-    SchedulingPolicy policy = instances.get(clazz);
-    if (policy == null) {
-      policy = ReflectionUtils.newInstance(clazz, null);
-      instances.put(clazz, policy);
+    SchedulingPolicy policy = ReflectionUtils.newInstance(clazz, null);
+    SchedulingPolicy policyRet = instances.putIfAbsent(clazz, policy);
+    if(policyRet != null) {
+      return policyRet;
     }
     return policy;
   }

@@ -19,6 +19,7 @@
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_io_nativeio_NativeIO.h"
 #include "org_apache_hadoop_io_nativeio_NativeIO_POSIX.h"
+#include "exception.h"
 
 #ifdef UNIX
 #include <assert.h>
@@ -516,6 +517,86 @@ cleanup:
 
 /*
  * Class:     org_apache_hadoop_io_nativeio_NativeIO_Windows
+ * Method:    createDirectoryWithMode0
+ * Signature: (Ljava/lang/String;I)V
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT void JNICALL
+  Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_createDirectoryWithMode0
+  (JNIEnv *env, jclass clazz, jstring j_path, jint mode)
+{
+#ifdef WINDOWS
+  DWORD dwRtnCode = ERROR_SUCCESS;
+
+  LPCWSTR path = (LPCWSTR) (*env)->GetStringChars(env, j_path, NULL);
+  if (!path) {
+    goto done;
+  }
+
+  dwRtnCode = CreateDirectoryWithMode(path, mode);
+
+done:
+  if (path) {
+    (*env)->ReleaseStringChars(env, j_path, (const jchar*) path);
+  }
+  if (dwRtnCode != ERROR_SUCCESS) {
+    throw_ioe(env, dwRtnCode);
+  }
+#else
+  THROW(env, "java/io/IOException",
+    "The function Windows.createDirectoryWithMode0() is not supported on this platform");
+#endif
+}
+
+/*
+ * Class:     org_apache_hadoop_io_nativeio_NativeIO_Windows
+ * Method:    createFileWithMode0
+ * Signature: (Ljava/lang/String;JJJI)Ljava/io/FileDescriptor;
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT jobject JNICALL
+  Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_createFileWithMode0
+  (JNIEnv *env, jclass clazz, jstring j_path,
+  jlong desiredAccess, jlong shareMode, jlong creationDisposition, jint mode)
+{
+#ifdef WINDOWS
+  DWORD dwRtnCode = ERROR_SUCCESS;
+  HANDLE hFile = INVALID_HANDLE_VALUE;
+  jobject fd = NULL;
+
+  LPCWSTR path = (LPCWSTR) (*env)->GetStringChars(env, j_path, NULL);
+  if (!path) {
+    goto done;
+  }
+
+  dwRtnCode = CreateFileWithMode(path, desiredAccess, shareMode,
+      creationDisposition, mode, &hFile);
+  if (dwRtnCode != ERROR_SUCCESS) {
+    goto done;
+  }
+
+  fd = fd_create(env, (long) hFile);
+
+done:
+  if (path) {
+    (*env)->ReleaseStringChars(env, j_path, (const jchar*) path);
+  }
+  if (dwRtnCode != ERROR_SUCCESS) {
+    throw_ioe(env, dwRtnCode);
+  }
+  return fd;
+#else
+  THROW(env, "java/io/IOException",
+    "The function Windows.createFileWithMode0() is not supported on this platform");
+#endif
+}
+
+/*
+ * Class:     org_apache_hadoop_io_nativeio_NativeIO_Windows
  * Method:    createFile
  * Signature: (Ljava/lang/String;JJJ)Ljava/io/FileDescriptor;
  *
@@ -813,11 +894,7 @@ void throw_ioe(JNIEnv* env, int errnum)
   char message[80];
   jstring jstr_message;
 
-  if ((errnum >= 0) && (errnum < sys_nerr)) {
-    snprintf(message, sizeof(message), "%s", sys_errlist[errnum]);
-  } else {
-    snprintf(message, sizeof(message), "Unknown error %d", errnum);
-  }
+  snprintf(message,sizeof(message),"%s",terror(errnum));
 
   jobject errno_obj = errno_to_enum(env, errnum);
 

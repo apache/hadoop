@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
@@ -219,7 +218,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final AclFeature getAclFeature(int snapshotId) {
+  public final AclFeature getAclFeature(int snapshotId) {
     if (snapshotId != Snapshot.CURRENT_STATE_ID) {
       return getSnapshotINode(snapshotId).getAclFeature();
     }
@@ -239,8 +238,7 @@ public abstract class INodeWithAdditionalFields extends INode
 
   /** Update modification time if it is larger than the current value. */
   @Override
-  public final INode updateModificationTime(long mtime, int latestSnapshotId) 
-      throws QuotaExceededException {
+  public final INode updateModificationTime(long mtime, int latestSnapshotId) {
     Preconditions.checkState(isDirectory());
     if (mtime <= modificationTime) {
       return this;
@@ -330,6 +328,7 @@ public abstract class INodeWithAdditionalFields extends INode
     AclFeature f = getAclFeature();
     Preconditions.checkNotNull(f);
     removeFeature(f);
+    AclStorage.removeAclFeature(f);
   }
 
   public void addAclFeature(AclFeature f) {
@@ -337,7 +336,7 @@ public abstract class INodeWithAdditionalFields extends INode
     if (f1 != null)
       throw new IllegalStateException("Duplicated ACLFeature");
 
-    addFeature(f);
+    addFeature(AclStorage.addAclFeature(f));
   }
   
   @Override

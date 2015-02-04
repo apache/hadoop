@@ -54,7 +54,9 @@ public class TestCommitBlockSynchronization {
     // set file's parent as root and put the file to inodeMap, so
     // FSNamesystem's isFileDeleted() method will return false on this file
     if (file.getParent() == null) {
-      INodeDirectory parent = mock(INodeDirectory.class);
+      INodeDirectory mparent = mock(INodeDirectory.class);
+      INodeDirectory parent = new INodeDirectory(mparent.getId(), new byte[0],
+          mparent.getPermissionStatus(), mparent.getAccessTime());
       parent.setLocalName(new byte[0]);
       parent.addChild(file);
       file.setParent(parent);
@@ -71,6 +73,7 @@ public class TestCommitBlockSynchronization {
     doReturn(true).when(file).isUnderConstruction();
 
     doReturn(blockInfo).when(namesystemSpy).getStoredBlock(any(Block.class));
+    doReturn(blockInfo).when(file).getLastBlock();
     doReturn("").when(namesystemSpy).closeFileCommitBlocks(
         any(INodeFile.class), any(BlockInfo.class));
     doReturn(mock(FSEditLog.class)).when(namesystemSpy).getEditLog();
@@ -105,6 +108,7 @@ public class TestCommitBlockSynchronization {
     completedBlockInfo.setGenerationStamp(genStamp);
     doReturn(completedBlockInfo).when(namesystemSpy)
         .getStoredBlock(any(Block.class));
+    doReturn(completedBlockInfo).when(file).getLastBlock();
 
     // Repeat the call to make sure it does not throw
     namesystemSpy.commitBlockSynchronization(
@@ -176,6 +180,7 @@ public class TestCommitBlockSynchronization {
     completedBlockInfo.setGenerationStamp(genStamp);
     doReturn(completedBlockInfo).when(namesystemSpy)
         .getStoredBlock(any(Block.class));
+    doReturn(completedBlockInfo).when(file).getLastBlock();
 
     namesystemSpy.commitBlockSynchronization(
         lastBlock, genStamp, length, true, false, newTargets, null);

@@ -60,7 +60,7 @@ public class FairSchedulerTestBase {
     }
   }
 
-  protected final static String TEST_DIR =
+  public final static String TEST_DIR =
       new File(System.getProperty("test.build.data", "/tmp")).getAbsolutePath();
 
   private static RecordFactory
@@ -74,7 +74,7 @@ public class FairSchedulerTestBase {
   protected ResourceManager resourceManager;
 
   // Helper methods
-  protected Configuration createConfiguration() {
+  public Configuration createConfiguration() {
     Configuration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
         ResourceScheduler.class);

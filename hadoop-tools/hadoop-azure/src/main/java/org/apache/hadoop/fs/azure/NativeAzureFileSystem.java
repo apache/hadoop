@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -153,7 +154,7 @@ public class NativeAzureFileSystem extends FileSystem {
             "Error reading pending rename file contents -- "
                 + "maximum file size exceeded");
       }
-      String contents = new String(bytes, 0, l);
+      String contents = new String(bytes, 0, l, Charset.forName("UTF-8"));
 
       // parse the JSON
       ObjectMapper objMapper = new ObjectMapper();
@@ -253,7 +254,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // Write file.
       try {
         output = fs.create(path);
-        output.write(contents.getBytes());
+        output.write(contents.getBytes(Charset.forName("UTF-8")));
       } catch (IOException e) {
         throw new IOException("Unable to write RenamePending file for folder rename from "
             + srcKey + " to " + dstKey, e);
@@ -2039,7 +2040,37 @@ public class NativeAzureFileSystem extends FileSystem {
               createPermissionStatus(FsPermission.getDefault()));
         }
 
-        store.updateFolderLastModifiedTime(parentKey, null);
+        if (store.isAtomicRenameKey(parentKey)) {
+          SelfRenewingLease lease = null;
+          try {
+            lease = leaseSourceFolder(parentKey);
+            store.updateFolderLastModifiedTime(parentKey, lease);
+          } catch (AzureException e) {
+            String errorCode = "";
+            try {
+              StorageException e2 = (StorageException) e.getCause();
+              errorCode = e2.getErrorCode();
+            } catch (Exception e3) {
+              // do nothing if cast fails
+            }
+            if (errorCode.equals("BlobNotFound")) {
+              throw new FileNotFoundException("Folder does not exist: " + parentKey);
+            }
+            LOG.warn("Got unexpected exception trying to get lease on "
+                + parentKey + ". " + e.getMessage());
+            throw e;
+          } finally {
+            try {
+              if (lease != null) {
+                lease.free();
+              }
+            } catch (Exception e) {
+              LOG.error("Unable to free lease on " + parentKey, e);
+            }
+          }
+        } else {
+          store.updateFolderLastModifiedTime(parentKey, null);
+        }
       }
     }
   }

@@ -208,6 +208,7 @@ ResourceManager High Availability
 +---+
 
    If automatic failover is enabled, you can not use manual transition command.
+   Though you can override this by --forcemanual flag, you need caution.
 
 +---+
  $ yarn rmadmin -transitionToStandby rm1

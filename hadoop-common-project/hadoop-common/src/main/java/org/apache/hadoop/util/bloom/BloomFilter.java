@@ -157,7 +157,7 @@ public class BloomFilter extends Filter {
 
   @Override
   public void not() {
-    bits.flip(0, vectorSize - 1);
+    bits.flip(0, vectorSize);
   }
 
   @Override

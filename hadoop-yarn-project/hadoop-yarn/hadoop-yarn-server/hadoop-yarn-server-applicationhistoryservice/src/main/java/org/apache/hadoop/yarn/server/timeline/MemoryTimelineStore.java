@@ -398,7 +398,7 @@ public class MemoryTimelineStore
   public void put(TimelineDomain domain) throws IOException {
     TimelineDomain domainToReplace =
         domainsById.get(domain.getId());
-    long currentTimestamp = System.currentTimeMillis();
+    Long currentTimestamp = System.currentTimeMillis();
     TimelineDomain domainToStore = createTimelineDomain(
         domain.getId(), domain.getDescription(), domain.getOwner(),
         domain.getReaders(), domain.getWriters(),

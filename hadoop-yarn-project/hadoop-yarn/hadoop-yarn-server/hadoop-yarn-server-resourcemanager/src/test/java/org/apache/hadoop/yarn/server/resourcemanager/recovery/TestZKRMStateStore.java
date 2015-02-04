@@ -33,6 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -42,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -56,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestZKRMStateStore extends RMStateStoreTestBase {
@@ -99,7 +103,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
     public RMStateStore getRMStateStore() throws Exception {
       YarnConfiguration conf = new YarnConfiguration();
-      workingZnode = "/Test";
+      workingZnode = "/jira/issue/3077/rmstore";
       conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
       this.client = createClient();
@@ -142,6 +146,52 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     testAppDeletion(zkTester);
     testDeleteStore(zkTester);
     testAMRMTokenSecretManagerStateStore(zkTester);
+  }
+
+  @Test (timeout = 60000)
+  public void testCheckMajorVersionChange() throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester() {
+      Version VERSION_INFO = Version.newInstance(Integer.MAX_VALUE, 0);
+
+      @Override
+      public Version getCurrentVersion() throws Exception {
+        return VERSION_INFO;
+      }
+
+      @Override
+      public RMStateStore getRMStateStore() throws Exception {
+        YarnConfiguration conf = new YarnConfiguration();
+        workingZnode = "/jira/issue/3077/rmstore";
+        conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
+        conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
+        this.client = createClient();
+        this.store = new TestZKRMStateStoreInternal(conf, workingZnode) {
+          Version storedVersion = null;
+
+          @Override
+          public Version getCurrentVersion() {
+            return VERSION_INFO;
+          }
+
+          @Override
+          protected synchronized Version loadVersion() throws Exception {
+            return storedVersion;
+          }
+
+          @Override
+          protected synchronized void storeVersion() throws Exception {
+            storedVersion = VERSION_INFO;
+          }
+        };
+        return this.store;
+      }
+
+    };
+    // default version
+    RMStateStore store = zkTester.getRMStateStore();
+    Version defaultVersion = zkTester.getCurrentVersion();
+    store.checkVersion();
+    Assert.assertEquals(defaultVersion, store.loadVersion());
   }
 
   private Configuration createHARMConf(
@@ -282,7 +332,42 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     store.removeApplication(mockApp);
     assertEquals("RMStateStore should have been in fenced state",
             true, store.isFencedState());
- 
+
+    // store RM delegation token;
+    RMDelegationTokenIdentifier dtId1 =
+        new RMDelegationTokenIdentifier(new Text("owner1"),
+            new Text("renewer1"), new Text("realuser1"));
+    Long renewDate1 = new Long(System.currentTimeMillis()); 
+    dtId1.setSequenceNumber(1111);
+    store.storeRMDelegationToken(dtId1, renewDate1);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    store.updateRMDelegationToken(dtId1, renewDate1);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // remove delegation key;
+    store.removeRMDelegationToken(dtId1);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // store delegation master key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    store.storeRMDTMasterKey(key);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // remove delegation master key;
+    store.removeRMDTMasterKey(key);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
+    // store or update AMRMToken;
+    store.storeOrUpdateAMRMTokenSecretManager(null, false);
+    assertEquals("RMStateStore should have been in fenced state", true,
+        store.isFencedState());
+
     store.close();
   }
 }

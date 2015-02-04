@@ -466,7 +466,7 @@ public class TestStandbyCheckpoints {
         throws IOException {
       CompressionOutputStream ret = super.createOutputStream(out);
       CompressionOutputStream spy = Mockito.spy(ret);
-      Mockito.doAnswer(new GenericTestUtils.SleepAnswer(2))
+      Mockito.doAnswer(new GenericTestUtils.SleepAnswer(5))
         .when(spy).write(Mockito.<byte[]>any(), Mockito.anyInt(), Mockito.anyInt());
       return spy;
     }

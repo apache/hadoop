@@ -164,7 +164,7 @@ public class ValueAggregatorJob {
       conf.set(MRJobConfig.JAR, userJarFile);
     }
 
-    Job theJob = new Job(conf);
+    Job theJob = Job.getInstance(conf);
     if (userJarFile == null) {
       theJob.setJarByClass(ValueAggregator.class);
     } 

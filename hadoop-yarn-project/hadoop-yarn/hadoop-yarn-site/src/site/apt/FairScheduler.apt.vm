@@ -375,7 +375,7 @@ Allocation file format
 
   <queueMaxAMShareDefault>0.5</queueMaxAMShareDefault>
 
-  <!—- Queue 'secondary_group_queueue' is a parent queue and may have
+  <!-- Queue 'secondary_group_queue' is a parent queue and may have
        user queues under it -->
   <queue name="secondary_group_queue" type="parent">
   <weight>3.0</weight>

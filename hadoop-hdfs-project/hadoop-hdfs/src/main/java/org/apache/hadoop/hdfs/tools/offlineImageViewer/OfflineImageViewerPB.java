@@ -18,9 +18,8 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.EOFException;
-import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.PrintStream;
 import java.io.RandomAccessFile;
 
 import org.apache.commons.cli.CommandLine;
@@ -33,7 +32,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 
 /**
@@ -67,6 +65,10 @@ public class OfflineImageViewerPB {
       + "    -step defines the granularity of the distribution. (2MB by default)\n"
       + "  * Web: Run a viewer to expose read-only WebHDFS API.\n"
       + "    -addr specifies the address to listen. (localhost:5978 by default)\n"
+      + "  * Delimited: Generate a text file with all of the elements common\n"
+      + "    to both inodes and inodes-under-construction, separated by a\n"
+      + "    delimiter. The default delimiter is \\t, though this may be\n"
+      + "    changed via the -delimiter argument.\n"
       + "\n"
       + "Required command line arguments:\n"
       + "-i,--inputFile <arg>   FSImage file to process.\n"
@@ -76,8 +78,12 @@ public class OfflineImageViewerPB {
       + "                       file exists, it will be overwritten.\n"
       + "                       (output to stdout by default)\n"
       + "-p,--processor <arg>   Select which type of processor to apply\n"
-      + "                       against image file. (XML|FileDistribution|Web)\n"
+      + "                       against image file. (XML|FileDistribution|Web|Delimited)\n"
       + "                       (Web by default)\n"
+      + "-delimiter <arg>       Delimiting string to use with Delimited processor\n"
+      + "-t,--temp <arg>        Use temporary dir to cache intermediate result to generate\n"
+      + "                       Delimited outputs. If not set, Delimited processor constructs\n"
+      + "                       the namespace in memory before outputting text."
       + "-h,--help              Display usage information and exit\n";
 
   /**
@@ -99,6 +105,8 @@ public class OfflineImageViewerPB {
     options.addOption("maxSize", true, "");
     options.addOption("step", true, "");
     options.addOption("addr", true, "");
+    options.addOption("delimiter", true, "");
+    options.addOption("t", "temp", true, "");
 
     return options;
   }
@@ -143,37 +151,43 @@ public class OfflineImageViewerPB {
     String inputFile = cmd.getOptionValue("i");
     String processor = cmd.getOptionValue("p", "Web");
     String outputFile = cmd.getOptionValue("o", "-");
-
-    PrintWriter out = outputFile.equals("-") ?
-        new PrintWriter(System.out) : new PrintWriter(new File(outputFile));
+    String delimiter = cmd.getOptionValue("delimiter",
+        PBImageDelimitedTextWriter.DEFAULT_DELIMITER);
+    String tempPath = cmd.getOptionValue("t", "");
 
     Configuration conf = new Configuration();
-    try {
-      if (processor.equals("FileDistribution")) {
-        long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
-        int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
-        new FileDistributionCalculator(conf, maxSize, step, out)
-            .visit(new RandomAccessFile(inputFile, "r"));
-      } else if (processor.equals("XML")) {
-        new PBImageXmlWriter(conf, out).visit(new RandomAccessFile(inputFile,
-            "r"));
-      } else if (processor.equals("Web")) {
-        String addr = cmd.getOptionValue("addr", "localhost:5978");
-        WebImageViewer viewer = new WebImageViewer(NetUtils.createSocketAddr
-                (addr));
-        try {
-          viewer.start(inputFile);
-        } finally {
-          viewer.close();
-        }
+    try (PrintStream out = outputFile.equals("-") ?
+        System.out : new PrintStream(outputFile, "UTF-8")) {
+      switch (processor) {
+        case "FileDistribution":
+          long maxSize = Long.parseLong(cmd.getOptionValue("maxSize", "0"));
+          int step = Integer.parseInt(cmd.getOptionValue("step", "0"));
+          new FileDistributionCalculator(conf, maxSize, step, out).visit(
+              new RandomAccessFile(inputFile, "r"));
+          break;
+        case "XML":
+          new PBImageXmlWriter(conf, out).visit(
+              new RandomAccessFile(inputFile, "r"));
+          break;
+        case "Web":
+          String addr = cmd.getOptionValue("addr", "localhost:5978");
+          try (WebImageViewer viewer = new WebImageViewer(
+              NetUtils.createSocketAddr(addr))) {
+            viewer.start(inputFile);
+          }
+          break;
+        case "Delimited":
+          try (PBImageDelimitedTextWriter writer =
+              new PBImageDelimitedTextWriter(out, delimiter, tempPath)) {
+            writer.visit(new RandomAccessFile(inputFile, "r"));
+          }
+          break;
       }
       return 0;
     } catch (EOFException e) {
       System.err.println("Input file ended unexpectedly. Exiting");
     } catch (IOException e) {
       System.err.println("Encountered exception.  Exiting: " + e.getMessage());
-    } finally {
-      IOUtils.cleanup(null, out);
     }
     return -1;
   }

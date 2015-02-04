@@ -81,9 +81,6 @@ public class ImageServlet extends HttpServlet {
   private static final String LATEST_FSIMAGE_VALUE = "latest";
   private static final String IMAGE_FILE_TYPE = "imageFile";
 
-  private static final Set<Long> currentlyDownloadingCheckpoints =
-    Collections.synchronizedSet(new HashSet<Long>());
-  
   @Override
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
@@ -467,17 +464,20 @@ public class ImageServlet extends HttpServlet {
 
               final NameNodeFile nnf = parsedParams.getNameNodeFile();
 
-              if (!currentlyDownloadingCheckpoints.add(txid)) {
+              if (!nnImage.addToCheckpointing(txid)) {
                 response.sendError(HttpServletResponse.SC_CONFLICT,
-                    "Another checkpointer is already in the process of uploading a"
-                        + " checkpoint made at transaction ID " + txid);
+                    "Either current namenode is checkpointing or another"
+                        + " checkpointer is already in the process of "
+                        + "uploading a checkpoint made at transaction ID "
+                        + txid);
                 return null;
               }
               try {
                 if (nnImage.getStorage().findImageFile(nnf, txid) != null) {
                   response.sendError(HttpServletResponse.SC_CONFLICT,
-                      "Another checkpointer already uploaded an checkpoint "
-                          + "for txid " + txid);
+                      "Either current namenode has checkpointed or "
+                          + "another checkpointer already uploaded an "
+                          + "checkpoint for txid " + txid);
                   return null;
                 }
 
@@ -502,7 +502,7 @@ public class ImageServlet extends HttpServlet {
                   stream.close();
                 }
               } finally {
-                currentlyDownloadingCheckpoints.remove(txid);
+                nnImage.removeFromCheckpointing(txid);
               }
               return null;
             }

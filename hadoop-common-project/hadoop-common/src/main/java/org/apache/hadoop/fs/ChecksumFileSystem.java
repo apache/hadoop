@@ -352,6 +352,11 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     throw new IOException("Not supported");
   }
 
+  @Override
+  public boolean truncate(Path f, long newLength) throws IOException {
+    throw new IOException("Not supported");
+  }
+
   /**
    * Calculated the length of the checksum file in bytes.
    * @param size the length of the data file in bytes
@@ -379,17 +384,19 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
                           int bufferSize,
                           short replication,
                           long blockSize,
-                          Progressable progress)
+                          Progressable progress,
+                          FsPermission permission)
       throws IOException {
       super(DataChecksum.newDataChecksum(DataChecksum.Type.CRC32,
           fs.getBytesPerSum()));
       int bytesPerSum = fs.getBytesPerSum();
-      this.datas = fs.getRawFileSystem().create(file, overwrite, bufferSize, 
-                                         replication, blockSize, progress);
+      this.datas = fs.getRawFileSystem().create(file, permission, overwrite,
+                                         bufferSize, replication, blockSize,
+                                         progress);
       int sumBufferSize = fs.getSumBufferSize(bytesPerSum, bufferSize);
-      this.sums = fs.getRawFileSystem().create(fs.getChecksumFile(file), true, 
-                                               sumBufferSize, replication,
-                                               blockSize);
+      this.sums = fs.getRawFileSystem().create(fs.getChecksumFile(file),
+                                               permission, true, sumBufferSize,
+                                               replication, blockSize, null);
       sums.write(CHECKSUM_VERSION, 0, CHECKSUM_VERSION.length);
       sums.writeInt(bytesPerSum);
     }
@@ -448,7 +455,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     if (writeChecksum) {
       out = new FSDataOutputStream(
           new ChecksumFSOutputSummer(this, f, overwrite, bufferSize, replication,
-              blockSize, progress), null);
+              blockSize, progress, permission), null);
     } else {
       out = fs.create(f, permission, overwrite, bufferSize, replication,
           blockSize, progress);
@@ -457,9 +464,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       if (fs.exists(checkFile)) {
         fs.delete(checkFile, true);
       }
-    }
-    if (permission != null) {
-      setPermission(f, permission);
     }
     return out;
   }

@@ -607,14 +607,19 @@ public class PBHelper {
       return null;
     }
     LocatedBlockProto lb = PBHelper.convert((LocatedBlock)b);
-    return RecoveringBlockProto.newBuilder().setBlock(lb)
-        .setNewGenStamp(b.getNewGenerationStamp()).build();
+    RecoveringBlockProto.Builder builder = RecoveringBlockProto.newBuilder();
+    builder.setBlock(lb).setNewGenStamp(b.getNewGenerationStamp());
+    if(b.getNewBlock() != null)
+      builder.setTruncateBlock(PBHelper.convert(b.getNewBlock()));
+    return builder.build();
   }
 
   public static RecoveringBlock convert(RecoveringBlockProto b) {
     ExtendedBlock block = convert(b.getBlock().getB());
     DatanodeInfo[] locs = convert(b.getBlock().getLocsList());
-    return new RecoveringBlock(block, locs, b.getNewGenStamp());
+    return (b.hasTruncateBlock()) ?
+        new RecoveringBlock(block, locs, PBHelper.convert(b.getTruncateBlock())) :
+        new RecoveringBlock(block, locs, b.getNewGenStamp());
   }
   
   public static DatanodeInfoProto.AdminState convert(
@@ -1368,6 +1373,9 @@ public class PBHelper {
     if (flag.contains(CreateFlag.LAZY_PERSIST)) {
       value |= CreateFlagProto.LAZY_PERSIST.getNumber();
     }
+    if (flag.contains(CreateFlag.NEW_BLOCK)) {
+      value |= CreateFlagProto.NEW_BLOCK.getNumber();
+    }
     return value;
   }
   
@@ -1388,7 +1396,11 @@ public class PBHelper {
         == CreateFlagProto.LAZY_PERSIST_VALUE) {
       result.add(CreateFlag.LAZY_PERSIST);
     }
-    return new EnumSetWritable<CreateFlag>(result);
+    if ((flag & CreateFlagProto.NEW_BLOCK_VALUE)
+        == CreateFlagProto.NEW_BLOCK_VALUE) {
+      result.add(CreateFlag.NEW_BLOCK);
+    }
+    return new EnumSetWritable<CreateFlag>(result, CreateFlag.class);
   }
 
   public static int convertCacheFlags(EnumSet<CacheFlag> flags) {
@@ -2566,6 +2578,7 @@ public class PBHelper {
                 .replication(create.getReplication())
                 .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
                     create.getSymlinkTarget())
+                .defaultBlockSize(create.getDefaultBlockSize())
                 .overwrite(create.getOverwrite()).build());
             break;
           case EVENT_METADATA:
@@ -2592,19 +2605,26 @@ public class PBHelper {
           case EVENT_RENAME:
             InotifyProtos.RenameEventProto rename =
                 InotifyProtos.RenameEventProto.parseFrom(p.getContents());
-            events.add(new Event.RenameEvent(rename.getSrcPath(),
-                rename.getDestPath(), rename.getTimestamp()));
+            events.add(new Event.RenameEvent.Builder()
+                  .srcPath(rename.getSrcPath())
+                  .dstPath(rename.getDestPath())
+                  .timestamp(rename.getTimestamp())
+                  .build());
             break;
           case EVENT_APPEND:
-            InotifyProtos.AppendEventProto reopen =
+            InotifyProtos.AppendEventProto append =
                 InotifyProtos.AppendEventProto.parseFrom(p.getContents());
-            events.add(new Event.AppendEvent(reopen.getPath()));
+            events.add(new Event.AppendEvent.Builder().path(append.getPath())
+                .newBlock(append.hasNewBlock() && append.getNewBlock())
+                .build());
             break;
           case EVENT_UNLINK:
             InotifyProtos.UnlinkEventProto unlink =
                 InotifyProtos.UnlinkEventProto.parseFrom(p.getContents());
-            events.add(new Event.UnlinkEvent(unlink.getPath(),
-                unlink.getTimestamp()));
+            events.add(new Event.UnlinkEvent.Builder()
+                  .path(unlink.getPath())
+                  .timestamp(unlink.getTimestamp())
+                  .build());
             break;
           default:
             throw new RuntimeException("Unexpected inotify event type: " +
@@ -2650,6 +2670,7 @@ public class PBHelper {
                         .setReplication(ce2.getReplication())
                         .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
                             "" : ce2.getSymlinkTarget())
+                        .setDefaultBlockSize(ce2.getDefaultBlockSize())
                         .setOverwrite(ce2.getOverwrite()).build().toByteString()
                 ).build());
             break;
@@ -2696,10 +2717,10 @@ public class PBHelper {
             Event.AppendEvent re2 = (Event.AppendEvent) e;
             events.add(InotifyProtos.EventProto.newBuilder()
                 .setType(InotifyProtos.EventType.EVENT_APPEND)
-                .setContents(
-                    InotifyProtos.AppendEventProto.newBuilder()
-                        .setPath(re2.getPath()).build().toByteString()
-                ).build());
+                .setContents(InotifyProtos.AppendEventProto.newBuilder()
+                    .setPath(re2.getPath())
+                    .setNewBlock(re2.toNewBlock()).build().toByteString())
+                .build());
             break;
           case UNLINK:
             Event.UnlinkEvent ue = (Event.UnlinkEvent) e;

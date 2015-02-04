@@ -31,10 +31,10 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
-import org.htrace.Span;
-import org.htrace.Trace;
-import org.htrace.TraceInfo;
-import org.htrace.TraceScope;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceInfo;
+import org.apache.htrace.TraceScope;
 
 /**
  * Static utilities for dealing with the protocol buffers used by the

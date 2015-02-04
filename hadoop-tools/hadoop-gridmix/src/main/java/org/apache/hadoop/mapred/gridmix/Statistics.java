@@ -119,7 +119,23 @@ public class Statistics implements Component<Statistics.JobStats> {
     }
     return new JobStats(maps, reds, job);
   }
-  
+
+  private static void addToNumMapsSubmitted(int numMaps) {
+    numMapsSubmitted += numMaps;
+  }
+
+  private static void addToNumReducesSubmitted(int numReduces) {
+    numReducesSubmitted += numReduces;
+  }
+
+  private static void subtractFromNumMapsSubmitted(int numMaps) {
+    numMapsSubmitted -= numMaps;
+  }
+
+  private static void subtractFromNumReducesSubmitted(int numReduces) {
+    numReducesSubmitted -= numReduces;
+  }
+
   /**
    * Add a submitted job for monitoring.
    */
@@ -131,8 +147,8 @@ public class Statistics implements Component<Statistics.JobStats> {
       return;
     }
     submittedJobsMap.put(seq, stats);
-    numMapsSubmitted += stats.getNoOfMaps();
-    numReducesSubmitted += stats.getNoOfReds();
+    addToNumMapsSubmitted(stats.getNoOfMaps());
+    addToNumReducesSubmitted(stats.getNoOfReds());
   }
 
   /**
@@ -156,8 +172,8 @@ public class Statistics implements Component<Statistics.JobStats> {
     }
     
     // update the total number of submitted map/reduce task count
-    numMapsSubmitted -= stat.getNoOfMaps();
-    numReducesSubmitted -= stat.getNoOfReds();
+    subtractFromNumMapsSubmitted(stat.getNoOfMaps());
+    subtractFromNumReducesSubmitted(stat.getNoOfReds());
     
     completedJobsInCurrentInterval++;
     //check if we have reached the maximum level of job completions.

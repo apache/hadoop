@@ -49,7 +49,7 @@ public class S3AOutputStream extends OutputStream {
   private boolean closed;
   private String key;
   private String bucket;
-  private AmazonS3Client client;
+  private TransferManager transfers;
   private Progressable progress;
   private long partSize;
   private int partSizeThreshold;
@@ -61,14 +61,14 @@ public class S3AOutputStream extends OutputStream {
 
   public static final Logger LOG = S3AFileSystem.LOG;
 
-  public S3AOutputStream(Configuration conf, AmazonS3Client client, 
+  public S3AOutputStream(Configuration conf, TransferManager transfers,
     S3AFileSystem fs, String bucket, String key, Progressable progress, 
     CannedAccessControlList cannedACL, FileSystem.Statistics statistics, 
     String serverSideEncryptionAlgorithm)
       throws IOException {
     this.bucket = bucket;
     this.key = key;
-    this.client = client;
+    this.transfers = transfers;
     this.progress = progress;
     this.fs = fs;
     this.cannedACL = cannedACL;
@@ -114,13 +114,6 @@ public class S3AOutputStream extends OutputStream {
 
 
     try {
-      TransferManagerConfiguration transferConfiguration = new TransferManagerConfiguration();
-      transferConfiguration.setMinimumUploadPartSize(partSize);
-      transferConfiguration.setMultipartUploadThreshold(partSizeThreshold);
-
-      TransferManager transfers = new TransferManager(client);
-      transfers.setConfiguration(transferConfiguration);
-
       final ObjectMetadata om = new ObjectMetadata();
       if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
         om.setServerSideEncryption(serverSideEncryptionAlgorithm);

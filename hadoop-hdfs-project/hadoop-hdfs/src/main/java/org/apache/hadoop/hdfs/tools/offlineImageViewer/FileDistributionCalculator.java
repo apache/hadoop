@@ -21,7 +21,7 @@ import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
+import java.io.PrintStream;
 import java.io.RandomAccessFile;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.LimitInputStream;
 
 import com.google.common.base.Preconditions;
@@ -67,7 +66,7 @@ final class FileDistributionCalculator {
   private final Configuration conf;
   private final long maxSize;
   private final int steps;
-  private final PrintWriter out;
+  private final PrintStream out;
 
   private final int[] distribution;
   private int totalFiles;
@@ -77,7 +76,7 @@ final class FileDistributionCalculator {
   private long maxFileSize;
 
   FileDistributionCalculator(Configuration conf, long maxSize, int steps,
-      PrintWriter out) {
+      PrintStream out) {
     this.conf = conf;
     this.maxSize = maxSize == 0 ? MAX_SIZE_DEFAULT : maxSize;
     this.steps = steps == 0 ? INTERVAL_DEFAULT : steps;
@@ -96,9 +95,7 @@ final class FileDistributionCalculator {
     }
 
     FileSummary summary = FSImageUtil.loadSummary(file);
-    FileInputStream in = null;
-    try {
-      in = new FileInputStream(file.getFD());
+    try (FileInputStream in = new FileInputStream(file.getFD())) {
       for (FileSummary.Section s : summary.getSectionsList()) {
         if (SectionName.fromString(s.getName()) != SectionName.INODE) {
           continue;
@@ -111,8 +108,6 @@ final class FileDistributionCalculator {
         run(is);
         output();
       }
-    } finally {
-      IOUtils.cleanup(null, in);
     }
   }
 

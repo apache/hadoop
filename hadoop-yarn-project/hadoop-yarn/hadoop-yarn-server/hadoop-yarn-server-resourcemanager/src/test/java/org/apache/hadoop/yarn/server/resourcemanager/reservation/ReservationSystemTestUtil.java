@@ -23,11 +23,12 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -40,12 +41,16 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ReservationDefinitionPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ReservationRequestsPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -100,6 +105,83 @@ public class ReservationSystemTestUtil {
         .assertTrue(newPlan.getReservationAgent() instanceof GreedyReservationAgent);
     Assert
         .assertTrue(newPlan.getSharingPolicy() instanceof CapacityOverTimePolicy);
+  }
+
+  public static void setupFSAllocationFile(String allocationFile)
+      throws IOException {
+    PrintWriter out = new PrintWriter(new FileWriter(allocationFile));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"default\">");
+    out.println("<weight>1</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a\">");
+    out.println("<weight>1</weight>");
+    out.println("<queue name=\"a1\">");
+    out.println("<weight>3</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a2\">");
+    out.println("<weight>7</weight>");
+    out.println("</queue>");
+    out.println("</queue>");
+    out.println("<queue name=\"dedicated\">");
+    out.println("<reservation></reservation>");
+    out.println("<weight>8</weight>");
+    out.println("</queue>");
+    out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
+    out.println("</allocations>");
+    out.close();
+  }
+
+  public static void updateFSAllocationFile(String allocationFile)
+      throws IOException {
+    PrintWriter out = new PrintWriter(new FileWriter(allocationFile));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"default\">");
+    out.println("<weight>5</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a\">");
+    out.println("<weight>5</weight>");
+    out.println("<queue name=\"a1\">");
+    out.println("<weight>3</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"a2\">");
+    out.println("<weight>7</weight>");
+    out.println("</queue>");
+    out.println("</queue>");
+    out.println("<queue name=\"dedicated\">");
+    out.println("<reservation></reservation>");
+    out.println("<weight>80</weight>");
+    out.println("</queue>");
+    out.println("<queue name=\"reservation\">");
+    out.println("<reservation></reservation>");
+    out.println("<weight>10</weight>");
+    out.println("</queue>");
+    out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
+    out.println("</allocations>");
+    out.close();
+  }
+
+  public static FairScheduler setupFairScheduler(
+      ReservationSystemTestUtil testUtil,
+      RMContext rmContext, Configuration conf, int numContainers) throws
+      IOException {
+    FairScheduler scheduler = new FairScheduler();
+    scheduler.setRMContext(rmContext);
+
+    when(rmContext.getScheduler()).thenReturn(scheduler);
+
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, rmContext);
+
+
+    Resource resource = testUtil.calculateClusterResource(numContainers);
+    RMNode node1 = MockNodes.newNodeInfo(1, resource, 1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+    return scheduler;
   }
 
   @SuppressWarnings("unchecked")

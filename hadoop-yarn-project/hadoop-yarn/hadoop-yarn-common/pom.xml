@@ -143,6 +143,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>com.sun.jersey.jersey-test-framework</groupId>
+      <artifactId>jersey-test-framework-grizzly2</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
     </dependency>
@@ -208,6 +213,7 @@
             <exclude>src/main/resources/webapps/node/.keep</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.9.4/css/jui-dt.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.9.4/css/demo_table.css</exclude>
+            <exclude>src/main/resources/webapps/static/dt-1.9.4/images/Sorting icons.psd</exclude>
             <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
           </excludes>
         </configuration>

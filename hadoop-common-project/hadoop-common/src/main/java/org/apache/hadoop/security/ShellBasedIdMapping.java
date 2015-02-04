@@ -22,11 +22,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -73,6 +75,10 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
 
   private final File staticMappingFile;
   private StaticMapping staticMapping = null;
+  // Last time the static map was modified, measured time difference in
+  // milliseconds since midnight, January 1, 1970 UTC
+  private long lastModificationTimeStaticMap = 0;
+  
   private boolean constructFullMapAtInit = false;
 
   // Used for parsing the static mapping file.
@@ -86,7 +92,6 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
   // Maps for id to name map. Guarded by this object monitor lock
   private BiMap<Integer, String> uidNameMap = HashBiMap.create();
   private BiMap<Integer, String> gidNameMap = HashBiMap.create();
-
   private long lastUpdateTime = 0; // Last time maps were updated
 
   /*
@@ -116,7 +121,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
         conf.get(IdMappingConstant.STATIC_ID_MAPPING_FILE_KEY,
             IdMappingConstant.STATIC_ID_MAPPING_FILE_DEFAULT);
     staticMappingFile = new File(staticFilePath);
-
+    updateStaticMapping();
     updateMaps();
   }
 
@@ -181,7 +186,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
       final Integer key, final String value,
       final Integer ekey, final String evalue) {    
       LOG.warn("\n" + header + String.format(
-          "new entry (%d, %s), existing entry: (%d, %s).\n%s\n%s",
+          "new entry (%d, %s), existing entry: (%d, %s).%n%s%n%s",
           key, value, ekey, evalue,
           "The new entry is to be ignored for the following reason.",
           DUPLICATE_NAME_ID_DEBUG_INFO));
@@ -217,7 +222,9 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
     try {
       Process process = Runtime.getRuntime().exec(
           new String[] { "bash", "-c", command });
-      br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+      br = new BufferedReader(
+          new InputStreamReader(process.getInputStream(),
+                                Charset.defaultCharset()));
       String line = null;
       while ((line = br.readLine()) != null) {
         String[] nameId = line.split(regex);
@@ -286,20 +293,42 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
     return true;
   }
 
-  private void initStaticMapping() throws IOException {
-    staticMapping = new StaticMapping(
-        new HashMap<Integer, Integer>(), new HashMap<Integer, Integer>());
+  private synchronized void updateStaticMapping() throws IOException {
+    final boolean init = (staticMapping == null);
+    //
+    // if the static mapping file
+    //   - was modified after last update, load the map again;
+    //   - did not exist but was added since last update, load the map;
+    //   - existed before but deleted since last update, clear the map
+    //
     if (staticMappingFile.exists()) {
-      LOG.info("Using '" + staticMappingFile + "' for static UID/GID mapping...");
-      staticMapping = parseStaticMap(staticMappingFile);
+      // check modification time, reload the file if the last modification
+      // time changed since prior load.
+      long lmTime = staticMappingFile.lastModified();
+      if (lmTime != lastModificationTimeStaticMap) {
+        LOG.info(init? "Using " : "Reloading " + "'" + staticMappingFile
+            + "' for static UID/GID mapping...");
+        lastModificationTimeStaticMap = lmTime;
+        staticMapping = parseStaticMap(staticMappingFile);        
+      }
     } else {
-      LOG.info("Not doing static UID/GID mapping because '" + staticMappingFile
-          + "' does not exist.");
+      if (init) {
+        staticMapping = new StaticMapping(new HashMap<Integer, Integer>(),
+            new HashMap<Integer, Integer>());
+      }
+      if (lastModificationTimeStaticMap != 0 || init) {
+        // print the following log at initialization or when the static
+        // mapping file was deleted after prior load
+        LOG.info("Not doing static UID/GID mapping because '"
+            + staticMappingFile + "' does not exist.");
+      }
+      lastModificationTimeStaticMap = 0;
+      staticMapping.clear();
     }
-  }  
+  }
 
   /*
-   * Reset the maps to empty.
+   * Refresh static map, and reset the other maps to empty.
    * For testing code, a full map may be re-constructed here when the object
    * was created with constructFullMapAtInit being set to true.
    */
@@ -310,15 +339,16 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
 
     if (constructFullMapAtInit) {
       loadFullMaps();
+      // set constructFullMapAtInit to false to allow testing code to
+      // do incremental update to maps after initial construction
+      constructFullMapAtInit = false;
     } else {
+      updateStaticMapping();
       clearNameMaps();
     }
   }
   
   synchronized private void loadFullUserMap() throws IOException {
-    if (staticMapping == null) {
-      initStaticMapping();
-    }
     BiMap<Integer, String> uMap = HashBiMap.create();
     if (OS.startsWith("Mac")) {
       updateMapInternal(uMap, "user", MAC_GET_ALL_USERS_CMD, "\\s+",
@@ -332,9 +362,6 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
   }
 
   synchronized private void loadFullGroupMap() throws IOException {
-    if (staticMapping == null) {
-      initStaticMapping();
-    }
     BiMap<Integer, String> gMap = HashBiMap.create();
 
     if (OS.startsWith("Mac")) {
@@ -349,7 +376,6 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
   }
 
   synchronized private void loadFullMaps() throws IOException {
-    initStaticMapping();
     loadFullUserMap();
     loadFullGroupMap();
   }
@@ -439,9 +465,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
     }
 
     boolean updated = false;
-    if (staticMapping == null) {
-      initStaticMapping();
-    }
+    updateStaticMapping();
 
     if (OS.startsWith("Linux")) {
       if (isGrp) {
@@ -477,9 +501,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
     }
     
     boolean updated = false;
-    if (staticMapping == null) {
-      initStaticMapping();
-    }
+    updateStaticMapping();
 
     if (OS.startsWith("Linux")) {
       if (isGrp) {
@@ -543,6 +565,15 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
       this.uidMapping = new PassThroughMap<Integer>(uidMapping);
       this.gidMapping = new PassThroughMap<Integer>(gidMapping);
     }
+
+    public void clear() {
+      uidMapping.clear();
+      gidMapping.clear();
+    }
+
+    public boolean isNonEmpty() {
+      return uidMapping.size() > 0 || gidMapping.size() > 0;
+    }
   }
   
   static StaticMapping parseStaticMap(File staticMapFile)
@@ -552,7 +583,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
     Map<Integer, Integer> gidMapping = new HashMap<Integer, Integer>();
     
     BufferedReader in = new BufferedReader(new InputStreamReader(
-        new FileInputStream(staticMapFile)));
+        new FileInputStream(staticMapFile), Charsets.UTF_8));
     
     try {
       String line = null;
@@ -574,8 +605,8 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
         // We know the line is fine to parse without error checking like this
         // since it matched the regex above.
         String firstComponent = lineMatcher.group(1);
-        int remoteId = Integer.parseInt(lineMatcher.group(2));
-        int localId = Integer.parseInt(lineMatcher.group(3));
+        int remoteId = parseId(lineMatcher.group(2));
+        int localId = parseId(lineMatcher.group(3));
         if (firstComponent.equals("uid")) {
           uidMapping.put(localId, remoteId);
         } else {

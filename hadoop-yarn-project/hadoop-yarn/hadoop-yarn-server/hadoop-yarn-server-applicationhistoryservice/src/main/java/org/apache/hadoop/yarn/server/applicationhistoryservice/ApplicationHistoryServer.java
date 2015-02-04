@@ -33,6 +33,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -106,9 +107,8 @@ public class ApplicationHistoryServer extends CompositeService {
     } catch(IOException ie) {
       throw new YarnRuntimeException("Failed to login", ie);
     }
-
-    startWebApp();
     super.serviceStart();
+    startWebApp();
   }
 
   @Override
@@ -154,6 +154,7 @@ public class ApplicationHistoryServer extends CompositeService {
         new CompositeServiceShutdownHook(appHistoryServer),
         SHUTDOWN_HOOK_PRIORITY);
       YarnConfiguration conf = new YarnConfiguration();
+      new GenericOptionsParser(conf, args);
       appHistoryServer.init(conf);
       appHistoryServer.start();
     } catch (Throwable t) {

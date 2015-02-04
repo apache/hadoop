@@ -50,7 +50,7 @@ public class CheckUploadContentTypeFilter implements Filter {
 
   /**
    * Initializes the filter.
-   * <p/>
+   * <p>
    * This implementation is a NOP.
    *
    * @param config filter configuration.
@@ -103,7 +103,7 @@ public class CheckUploadContentTypeFilter implements Filter {
 
   /**
    * Destroys the filter.
-   * <p/>
+   * <p>
    * This implementation is a NOP.
    */
   @Override

@@ -84,7 +84,8 @@ class WriteCtx {
   private long dumpFileOffset;
   
   private volatile DataState dataState;
-
+  public final long startTime;
+  
   public DataState getDataState() {
     return dataState;
   }
@@ -235,6 +236,7 @@ class WriteCtx {
     this.replied = replied;
     this.dataState = dataState;
     raf = null;
+    this.startTime = System.nanoTime();
   }
   
   @Override

@@ -9,8 +9,6 @@
 //      to
 //        package org.apache.hadoop.util;
 //   2. Removed author tags to clear hadoop author tag warning
-//        author <a href="mailto:kenney@apache.org">Kenney Westerhof</a>
-//        author <a href="mailto:hboutemy@apache.org">Hervé Boutemy</a>
 //
 package org.apache.hadoop.util;
 
@@ -194,6 +192,8 @@ public class ComparableVersion
                         break;
                     case 'm':
                         value = "milestone";
+                        break;
+                    default:
                         break;
                 }
             }

@@ -39,6 +39,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -93,9 +94,9 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
-import org.htrace.Span;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -241,8 +242,6 @@ public class DFSOutputStream extends FSOutputSummer
     /**
      * Create a new packet.
      * 
-     * @param pktSize maximum size of the packet, 
-     *                including checksum data and actual data.
      * @param chunksPerPkt maximum number of chunks per packet.
      * @param offsetInBlock offset in bytes into the HDFS block.
      */
@@ -358,9 +357,9 @@ public class DFSOutputStream extends FSOutputSummer
     
     @Override
     public String toString() {
-      return "packet seqno:" + this.seqno +
-      " offsetInBlock:" + this.offsetInBlock + 
-      " lastPacketInBlock:" + this.lastPacketInBlock +
+      return "packet seqno: " + this.seqno +
+      " offsetInBlock: " + this.offsetInBlock +
+      " lastPacketInBlock: " + this.lastPacketInBlock +
       " lastByteOffsetInBlock: " + this.getLastByteOffsetBlock();
     }
   }
@@ -405,7 +404,8 @@ public class DFSOutputStream extends FSOutputSummer
     private String[] favoredNodes;
     volatile boolean hasError = false;
     volatile int errorIndex = -1;
-    volatile int restartingNodeIndex = -1; // Restarting node index
+    // Restarting node index
+    AtomicInteger restartingNodeIndex = new AtomicInteger(-1);
     private long restartDeadline = 0; // Deadline of DN restart
     private BlockConstructionStage stage;  // block construction stage
     private long bytesSent = 0; // number of bytes that've been sent
@@ -426,15 +426,16 @@ public class DFSOutputStream extends FSOutputSummer
     /**
      * construction with tracing info
      */
-    private DataStreamer(HdfsFileStatus stat, Span span) {
+    private DataStreamer(HdfsFileStatus stat, ExtendedBlock block, Span span) {
       isAppend = false;
       isLazyPersistFile = isLazyPersist(stat);
+      this.block = block;
       stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
       traceSpan = span;
     }
     
     /**
-     * Construct a data streamer for append
+     * Construct a data streamer for appending to the last partial block
      * @param lastBlock last block of the file to be appended
      * @param stat status of the file to be appended
      * @param bytesPerChecksum number of bytes per checksum
@@ -556,7 +557,7 @@ public class DFSOutputStream extends FSOutputSummer
         try {
           // process datanode IO errors if any
           boolean doSleep = false;
-          if (hasError && (errorIndex >= 0 || restartingNodeIndex >= 0)) {
+          if (hasError && (errorIndex >= 0 || restartingNodeIndex.get() >= 0)) {
             doSleep = processDatanodeError();
           }
 
@@ -699,7 +700,7 @@ public class DFSOutputStream extends FSOutputSummer
           }
         } catch (Throwable e) {
           // Log warning if there was a real error.
-          if (restartingNodeIndex == -1) {
+          if (restartingNodeIndex.get() == -1) {
             DFSClient.LOG.warn("DataStreamer Exception", e);
           }
           if (e instanceof IOException) {
@@ -708,7 +709,7 @@ public class DFSOutputStream extends FSOutputSummer
             setLastException(new IOException("DataStreamer Exception: ",e));
           }
           hasError = true;
-          if (errorIndex == -1 && restartingNodeIndex == -1) {
+          if (errorIndex == -1 && restartingNodeIndex.get() == -1) {
             // Not a datanode issue
             streamerClosed = true;
           }
@@ -806,7 +807,7 @@ public class DFSOutputStream extends FSOutputSummer
 
     /** Set the restarting node index. Called by responder */
     synchronized void setRestartingNodeIndex(int idx) {
-      restartingNodeIndex = idx;
+      restartingNodeIndex.set(idx);
       // If the data streamer has already set the primary node
       // bad, clear it. It is likely that the write failed due to
       // the DN shutdown. Even if it was a real failure, the pipeline
@@ -821,7 +822,7 @@ public class DFSOutputStream extends FSOutputSummer
      */
     synchronized void tryMarkPrimaryDatanodeFailed() {
       // There should be no existing error and no ongoing restart.
-      if ((errorIndex == -1) && (restartingNodeIndex == -1)) {
+      if ((errorIndex == -1) && (restartingNodeIndex.get() == -1)) {
         errorIndex = 0;
       }
     }
@@ -962,7 +963,7 @@ public class DFSOutputStream extends FSOutputSummer
               synchronized (dataQueue) {
                 dataQueue.notifyAll();
               }
-              if (restartingNodeIndex == -1) {
+              if (restartingNodeIndex.get() == -1) {
                 DFSClient.LOG.warn("DFSOutputStream ResponseProcessor exception "
                      + " for block " + block, e);
               }
@@ -1186,7 +1187,7 @@ public class DFSOutputStream extends FSOutputSummer
         // Sleep before reconnect if a dn is restarting.
         // This process will be repeated until the deadline or the datanode
         // starts back up.
-        if (restartingNodeIndex >= 0) {
+        if (restartingNodeIndex.get() >= 0) {
           // 4 seconds or the configured deadline period, whichever is shorter.
           // This is the retry interval and recovery will be retried in this
           // interval until timeout or success.
@@ -1196,7 +1197,7 @@ public class DFSOutputStream extends FSOutputSummer
             Thread.sleep(delay);
           } catch (InterruptedException ie) {
             lastException.set(new IOException("Interrupted while waiting for " +
-                "datanode to restart. " + nodes[restartingNodeIndex]));
+                "datanode to restart. " + nodes[restartingNodeIndex.get()]));
             streamerClosed = true;
             return false;
           }
@@ -1237,21 +1238,21 @@ public class DFSOutputStream extends FSOutputSummer
           setPipeline(newnodes, newStorageTypes, newStorageIDs);
 
           // Just took care of a node error while waiting for a node restart
-          if (restartingNodeIndex >= 0) {
+          if (restartingNodeIndex.get() >= 0) {
             // If the error came from a node further away than the restarting
             // node, the restart must have been complete.
-            if (errorIndex > restartingNodeIndex) {
-              restartingNodeIndex = -1;
-            } else if (errorIndex < restartingNodeIndex) {
+            if (errorIndex > restartingNodeIndex.get()) {
+              restartingNodeIndex.set(-1);
+            } else if (errorIndex < restartingNodeIndex.get()) {
               // the node index has shifted.
-              restartingNodeIndex--;
+              restartingNodeIndex.decrementAndGet();
             } else {
               // this shouldn't happen...
               assert false;
             }
           }
 
-          if (restartingNodeIndex == -1) {
+          if (restartingNodeIndex.get() == -1) {
             hasError = false;
           }
           lastException.set(null);
@@ -1293,10 +1294,10 @@ public class DFSOutputStream extends FSOutputSummer
           success = createBlockOutputStream(nodes, storageTypes, newGS, isRecovery);
         }
 
-        if (restartingNodeIndex >= 0) {
+        if (restartingNodeIndex.get() >= 0) {
           assert hasError == true;
           // check errorIndex set above
-          if (errorIndex == restartingNodeIndex) {
+          if (errorIndex == restartingNodeIndex.get()) {
             // ignore, if came from the restarting node
             errorIndex = -1;
           }
@@ -1306,8 +1307,8 @@ public class DFSOutputStream extends FSOutputSummer
           }
           // expired. declare the restarting node dead
           restartDeadline = 0;
-          int expiredNodeIndex = restartingNodeIndex;
-          restartingNodeIndex = -1;
+          int expiredNodeIndex = restartingNodeIndex.get();
+          restartingNodeIndex.set(-1);
           DFSClient.LOG.warn("Datanode did not restart in time: " +
               nodes[expiredNodeIndex]);
           // Mark the restarting node as failed. If there is any other failed
@@ -1459,7 +1460,7 @@ public class DFSOutputStream extends FSOutputSummer
           // from the local datanode. Thus it is safe to treat this as a
           // regular node error.
           if (PipelineAck.isRestartOOBStatus(pipelineStatus) &&
-            restartingNodeIndex == -1) {
+            restartingNodeIndex.get() == -1) {
             checkRestart = true;
             throw new IOException("A datanode is restarting.");
           }
@@ -1476,10 +1477,10 @@ public class DFSOutputStream extends FSOutputSummer
           assert null == blockStream : "Previous blockStream unclosed";
           blockStream = out;
           result =  true; // success
-          restartingNodeIndex = -1;
+          restartingNodeIndex.set(-1);
           hasError = false;
         } catch (IOException ie) {
-          if (restartingNodeIndex == -1) {
+          if (restartingNodeIndex.get() == -1) {
             DFSClient.LOG.info("Exception in createBlockOutputStream", ie);
           }
           if (ie instanceof InvalidEncryptionKeyException && refetchEncryptionKey > 0) {
@@ -1511,10 +1512,10 @@ public class DFSOutputStream extends FSOutputSummer
           if (checkRestart && shouldWaitForRestart(errorIndex)) {
             restartDeadline = dfsClient.getConf().datanodeRestartTimeout +
                 Time.now();
-            restartingNodeIndex = errorIndex;
+            restartingNodeIndex.set(errorIndex);
             errorIndex = -1;
             DFSClient.LOG.info("Waiting for the datanode to be restarted: " +
-                nodes[restartingNodeIndex]);
+                nodes[restartingNodeIndex.get()]);
           }
           hasError = true;
           setLastException(ie);
@@ -1716,7 +1717,7 @@ public class DFSOutputStream extends FSOutputSummer
     if (Trace.isTracing()) {
       traceSpan = Trace.startSpan(this.getClass().getSimpleName()).detach();
     }
-    streamer = new DataStreamer(stat, traceSpan);
+    streamer = new DataStreamer(stat, null, traceSpan);
     if (favoredNodes != null && favoredNodes.length != 0) {
       streamer.setFavoredNodes(favoredNodes);
     }
@@ -1773,7 +1774,7 @@ public class DFSOutputStream extends FSOutputSummer
   }
 
   /** Construct a new output stream for append. */
-  private DFSOutputStream(DFSClient dfsClient, String src,
+  private DFSOutputStream(DFSClient dfsClient, String src, boolean toNewBlock,
       Progressable progress, LocatedBlock lastBlock, HdfsFileStatus stat,
       DataChecksum checksum) throws IOException {
     this(dfsClient, src, progress, stat, checksum);
@@ -1785,21 +1786,24 @@ public class DFSOutputStream extends FSOutputSummer
     }
 
     // The last partial block of the file has to be filled.
-    if (lastBlock != null) {
+    if (!toNewBlock && lastBlock != null) {
       // indicate that we are appending to an existing block
       bytesCurBlock = lastBlock.getBlockSize();
       streamer = new DataStreamer(lastBlock, stat, bytesPerChecksum, traceSpan);
     } else {
-      computePacketChunkSize(dfsClient.getConf().writePacketSize, bytesPerChecksum);
-      streamer = new DataStreamer(stat, traceSpan);
+      computePacketChunkSize(dfsClient.getConf().writePacketSize,
+          bytesPerChecksum);
+      streamer = new DataStreamer(stat,
+          lastBlock != null ? lastBlock.getBlock() : null, traceSpan);
     }
     this.fileEncryptionInfo = stat.getFileEncryptionInfo();
   }
 
   static DFSOutputStream newStreamForAppend(DFSClient dfsClient, String src,
-      int buffersize, Progressable progress, LocatedBlock lastBlock,
-      HdfsFileStatus stat, DataChecksum checksum) throws IOException {
-    final DFSOutputStream out = new DFSOutputStream(dfsClient, src,
+      boolean toNewBlock, int bufferSize, Progressable progress,
+      LocatedBlock lastBlock, HdfsFileStatus stat, DataChecksum checksum)
+      throws IOException {
+    final DFSOutputStream out = new DFSOutputStream(dfsClient, src, toNewBlock,
         progress, lastBlock, stat, checksum);
     out.start();
     return out;
@@ -1995,35 +1999,37 @@ public class DFSOutputStream extends FSOutputSummer
       long toWaitFor;
       long lastBlockLength = -1L;
       boolean updateLength = syncFlags.contains(SyncFlag.UPDATE_LENGTH);
+      boolean endBlock = syncFlags.contains(SyncFlag.END_BLOCK);
       synchronized (this) {
-        // flush checksum buffer, but keep checksum buffer intact
-        int numKept = flushBuffer(true, true);
+        // flush checksum buffer, but keep checksum buffer intact if we do not
+        // need to end the current block
+        int numKept = flushBuffer(!endBlock, true);
         // bytesCurBlock potentially incremented if there was buffered data
 
         if (DFSClient.LOG.isDebugEnabled()) {
-          DFSClient.LOG.debug(
-            "DFSClient flush() :" +
-            " bytesCurBlock " + bytesCurBlock +
-            " lastFlushOffset " + lastFlushOffset);
+          DFSClient.LOG.debug("DFSClient flush(): "
+              + " bytesCurBlock=" + bytesCurBlock
+              + " lastFlushOffset=" + lastFlushOffset
+              + " createNewBlock=" + endBlock);
         }
         // Flush only if we haven't already flushed till this offset.
         if (lastFlushOffset != bytesCurBlock) {
           assert bytesCurBlock > lastFlushOffset;
           // record the valid offset of this flush
           lastFlushOffset = bytesCurBlock;
-          if (isSync && currentPacket == null) {
+          if (isSync && currentPacket == null && !endBlock) {
             // Nothing to send right now,
             // but sync was requested.
-            // Send an empty packet
+            // Send an empty packet if we do not end the block right now
             currentPacket = createPacket(packetSize, chunksPerPacket,
                 bytesCurBlock, currentSeqno++);
           }
         } else {
-          if (isSync && bytesCurBlock > 0) {
+          if (isSync && bytesCurBlock > 0 && !endBlock) {
             // Nothing to send right now,
             // and the block was partially written,
             // and sync was requested.
-            // So send an empty sync packet.
+            // So send an empty sync packet if we do not end the block right now
             currentPacket = createPacket(packetSize, chunksPerPacket,
                 bytesCurBlock, currentSeqno++);
           } else if (currentPacket != null) {
@@ -2036,10 +2042,21 @@ public class DFSOutputStream extends FSOutputSummer
           currentPacket.syncBlock = isSync;
           waitAndQueueCurrentPacket();          
         }
-        // Restore state of stream. Record the last flush offset 
-        // of the last full chunk that was flushed.
-        //
-        bytesCurBlock -= numKept;
+        if (endBlock && bytesCurBlock > 0) {
+          // Need to end the current block, thus send an empty packet to
+          // indicate this is the end of the block and reset bytesCurBlock
+          currentPacket = createPacket(0, 0, bytesCurBlock, currentSeqno++);
+          currentPacket.lastPacketInBlock = true;
+          currentPacket.syncBlock = shouldSyncBlock || isSync;
+          waitAndQueueCurrentPacket();
+          bytesCurBlock = 0;
+          lastFlushOffset = 0;
+        } else {
+          // Restore state of stream. Record the last flush offset
+          // of the last full chunk that was flushed.
+          bytesCurBlock -= numKept;
+        }
+
         toWaitFor = lastQueuedSeqno;
       } // end synchronized
 
@@ -2058,8 +2075,8 @@ public class DFSOutputStream extends FSOutputSummer
       // namenode.
       if (persistBlocks.getAndSet(false) || updateLength) {
         try {
-          dfsClient.namenode.fsync(src, fileId,
-              dfsClient.clientName, lastBlockLength);
+          dfsClient.namenode.fsync(src, fileId, dfsClient.clientName,
+              lastBlockLength);
         } catch (IOException ioe) {
           DFSClient.LOG.warn("Unable to persist blocks in hflush for " + src, ioe);
           // If we got an error here, it might be because some other thread called
@@ -2086,7 +2103,7 @@ public class DFSOutputStream extends FSOutputSummer
       DFSClient.LOG.warn("Error while syncing", e);
       synchronized (this) {
         if (!isClosed()) {
-          lastException.set(new IOException("IOException flush:" + e));
+          lastException.set(new IOException("IOException flush: " + e));
           closeThreads(true);
         }
       }

@@ -17,6 +17,37 @@
  */
 package org.apache.hadoop.http;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.http.HttpServer2.QuotingInputFilter.RequestQuoter;
+import org.apache.hadoop.http.resource.JerseyResource;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.Groups;
+import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
+import org.mortbay.jetty.Connector;
+import org.mortbay.util.ajax.JSON;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
@@ -33,45 +64,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-
-import org.junit.Assert;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.http.HttpServer2.QuotingInputFilter.RequestQuoter;
-import org.apache.hadoop.http.resource.JerseyResource;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AccessControlList;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.Whitebox;
-import org.mortbay.jetty.Connector;
-import org.mortbay.util.ajax.JSON;
-
-import static org.mockito.Mockito.*;
-
 public class TestHttpServer extends HttpServerFunctionalTest {
   static final Log LOG = LogFactory.getLog(TestHttpServer.class);
   private static HttpServer2 server;
-  private static URL baseUrl;
   private static final int MAX_THREADS = 10;
   
   @SuppressWarnings("serial")
@@ -122,17 +117,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       }
       out.close();
     }    
-  }
-
-  @SuppressWarnings("serial")
-  public static class LongHeaderServlet extends HttpServlet {
-    @Override
-    public void doGet(HttpServletRequest request,
-                      HttpServletResponse response
-    ) throws ServletException, IOException {
-      Assert.assertEquals(63 * 1024, request.getHeader("longheader").length());
-      response.setStatus(HttpServletResponse.SC_OK);
-    }
   }
 
   @SuppressWarnings("serial")
@@ -214,20 +198,10 @@ public class TestHttpServer extends HttpServerFunctionalTest {
                  readOutput(new URL(baseUrl, "/echomap?a=b&c<=d&a=>")));
   }
 
-  /** 
-   *  Test that verifies headers can be up to 64K long. 
-   *  The test adds a 63K header leaving 1K for other headers.
-   *  This is because the header buffer setting is for ALL headers,
-   *  names and values included. */
   @Test public void testLongHeader() throws Exception {
     URL url = new URL(baseUrl, "/longheader");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0 ; i < 63 * 1024; i++) {
-      sb.append("a");
-    }
-    conn.setRequestProperty("longheader", sb.toString());
-    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    testLongHeader(conn);
   }
 
   @Test public void testContentTypes() throws Exception {
@@ -426,8 +400,9 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.doReturn(null).when(request).getParameterValues("dummy");
     RequestQuoter requestQuoter = new RequestQuoter(request);
     String[] parameterValues = requestQuoter.getParameterValues("dummy");
-    Assert.assertEquals("It should return null "
-        + "when there are no values for the parameter", null, parameterValues);
+    Assert.assertNull(
+        "It should return null " + "when there are no values for the parameter",
+        parameterValues);
   }
 
   @Test
@@ -547,8 +522,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
       // not bound, ephemeral should return requested port (0 for ephemeral)
       List<?> listeners = (List<?>) Whitebox.getInternalState(server,
           "listeners");
-      Connector listener = (Connector) Whitebox.getInternalState(
-          listeners.get(0), "listener");
+      Connector listener = (Connector) listeners.get(0);
 
       assertEquals(port, listener.getPort());
       // verify hostname is what was given
@@ -581,17 +555,5 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertNotNull(conn.getHeaderField("Expires"));
     assertNotNull(conn.getHeaderField("Date"));
     assertEquals(conn.getHeaderField("Expires"), conn.getHeaderField("Date"));
-  }
-
-  /**
-   * HTTPServer.Builder should proceed if a external connector is available.
-   */
-  @Test
-  public void testHttpServerBuilderWithExternalConnector() throws Exception {
-    Connector c = mock(Connector.class);
-    doReturn("localhost").when(c).getHost();
-    HttpServer2 s = new HttpServer2.Builder().setName("test").setConnector(c)
-        .build();
-    s.stop();
   }
 }

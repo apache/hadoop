@@ -25,12 +25,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.htrace.HTraceConfiguration;
-import org.htrace.Sampler;
-import org.htrace.Span;
-import org.htrace.SpanReceiver;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.HTraceConfiguration;
+import org.apache.htrace.Sampler;
+import org.apache.htrace.Span;
+import org.apache.htrace.SpanReceiver;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -101,8 +101,6 @@ public class TestTracing {
     Assert.assertNotNull(s);
     long spanStart = s.getStartTimeMillis();
     long spanEnd = s.getStopTimeMillis();
-    Assert.assertTrue(spanStart - startTime < 100);
-    Assert.assertTrue(spanEnd - endTime < 100);
 
     // There should only be one trace id as it should all be homed in the
     // top trace.
@@ -272,7 +270,7 @@ public class TestTracing {
    */
   public static class SetSpanReceiver implements SpanReceiver {
 
-    public void configure(HTraceConfiguration conf) {
+    public SetSpanReceiver(HTraceConfiguration conf) {
     }
 
     public void receiveSpan(Span span) {

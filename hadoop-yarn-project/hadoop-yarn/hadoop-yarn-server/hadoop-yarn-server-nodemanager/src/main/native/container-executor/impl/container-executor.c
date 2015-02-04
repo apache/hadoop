@@ -38,7 +38,7 @@
 
 static const int DEFAULT_MIN_USERID = 1000;
 
-static const char* DEFAULT_BANNED_USERS[] = {"mapred", "hdfs", "bin", 0};
+static const char* DEFAULT_BANNED_USERS[] = {"yarn", "mapred", "hdfs", "bin", 0};
 
 //struct to store the user details
 struct passwd *user_detail = NULL;

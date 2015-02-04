@@ -198,7 +198,7 @@ public class DistributedPentomino extends Configured implements Tool {
     Path input = new Path(output + "_input");
     FileSystem fileSys = FileSystem.get(conf);
     try {
-      Job job = new Job(conf);
+      Job job = Job.getInstance(conf);
       FileInputFormat.setInputPaths(job, input);
       FileOutputFormat.setOutputPath(job, output);
       job.setJarByClass(PentMap.class);

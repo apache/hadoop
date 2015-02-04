@@ -89,7 +89,7 @@ public class Join extends Configured implements Tool {
        num_reduces = cluster.getTaskTrackers() * 
                        Integer.parseInt(join_reduces);
     }
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     job.setJobName("join");
     job.setJarByClass(Sort.class);
 

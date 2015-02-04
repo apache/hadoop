@@ -29,7 +29,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.InputStream;
-import java.io.PrintWriter;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -46,7 +45,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Supplier;
-import com.google.common.io.NullOutputStream;
 
 public class TestDataTransferKeepalive {
   final Configuration conf = new HdfsConfiguration();
@@ -223,7 +221,7 @@ public class TestDataTransferKeepalive {
         stms[i] = fs.open(TEST_FILE);
       }
       for (InputStream stm : stms) {
-        IOUtils.copyBytes(stm, new NullOutputStream(), 1024);
+        IOUtils.copyBytes(stm, new IOUtils.NullOutputStream(), 1024);
       }
     } finally {
       IOUtils.cleanup(null, stms);
@@ -245,9 +243,7 @@ public class TestDataTransferKeepalive {
   private void assertXceiverCount(int expected) {
     int count = getXceiverCountWithoutServer();
     if (count != expected) {
-      ReflectionUtils.printThreadInfo(
-          new PrintWriter(System.err),
-          "Thread dumps");
+      ReflectionUtils.printThreadInfo(System.err, "Thread dumps");
       fail("Expected " + expected + " xceivers, found " +
           count);
     }

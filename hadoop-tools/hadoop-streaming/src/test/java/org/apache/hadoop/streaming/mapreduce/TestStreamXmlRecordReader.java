@@ -109,7 +109,7 @@ public class TestStreamXmlRecordReader {
   @Test
   public void testStreamXmlRecordReader() throws Exception {
 
-    Job job = new Job();
+    Job job = Job.getInstance();
     Configuration conf = job.getConfiguration();
     job.setJarByClass(TestStreamXmlRecordReader.class);
     job.setMapperClass(Mapper.class);

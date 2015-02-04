@@ -30,10 +30,13 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 /**
@@ -52,7 +55,12 @@ public class MockNodes {
           // One unhealthy node per rack.
           list.add(nodeInfo(i, perNode, NodeState.UNHEALTHY));
         }
-        list.add(newNodeInfo(i, perNode));
+        if (j == 0) {
+          // One node with label
+          list.add(nodeInfo(i, perNode, NodeState.RUNNING, ImmutableSet.of("x")));
+        } else {
+          list.add(newNodeInfo(i, perNode));
+        }
       }
     }
     return list;
@@ -99,10 +107,12 @@ public class MockNodes {
     private String healthReport;
     private long lastHealthReportTime;
     private NodeState state;
+    private Set<String> labels;
 
     public MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
         Resource perNode, String rackName, String healthReport,
-        long lastHealthReportTime, int cmdPort, String hostName, NodeState state) {
+        long lastHealthReportTime, int cmdPort, String hostName, NodeState state,
+        Set<String> labels) {
       this.nodeId = nodeId;
       this.nodeAddr = nodeAddr;
       this.httpAddress = httpAddress;
@@ -113,6 +123,7 @@ public class MockNodes {
       this.cmdPort = cmdPort;
       this.hostName = hostName;
       this.state = state;
+      this.labels = labels;
     }
 
     @Override
@@ -206,16 +217,33 @@ public class MockNodes {
 
     @Override
     public Set<String> getNodeLabels() {
-      return null;
+      if (labels != null) {
+        return labels;
+      }
+      return CommonNodeLabelsManager.EMPTY_STRING_SET;
     }
   };
 
-  private static RMNode buildRMNode(int rack, final Resource perNode, NodeState state, String httpAddr) {
-    return buildRMNode(rack, perNode, state, httpAddr, NODE_ID++, null, 123);
+  private static RMNode buildRMNode(int rack, final Resource perNode,
+      NodeState state, String httpAddr) {
+    return buildRMNode(rack, perNode, state, httpAddr, null);
+  }
+  
+  private static RMNode buildRMNode(int rack, final Resource perNode,
+      NodeState state, String httpAddr, Set<String> labels) {
+    return buildRMNode(rack, perNode, state, httpAddr, NODE_ID++, null, 123,
+        labels);
+  }
+  
+  private static RMNode buildRMNode(int rack, final Resource perNode,
+      NodeState state, String httpAddr, int hostnum, String hostName, int port) {
+    return buildRMNode(rack, perNode, state, httpAddr, hostnum, hostName, port,
+        null);
   }
 
   private static RMNode buildRMNode(int rack, final Resource perNode,
-      NodeState state, String httpAddr, int hostnum, String hostName, int port) {
+      NodeState state, String httpAddr, int hostnum, String hostName, int port,
+      Set<String> labels) {
     final String rackName = "rack"+ rack;
     final int nid = hostnum;
     final String nodeAddr = hostName + ":" + nid;
@@ -227,12 +255,17 @@ public class MockNodes {
     final String httpAddress = httpAddr;
     String healthReport = (state == NodeState.UNHEALTHY) ? null : "HealthyMe";
     return new MockRMNodeImpl(nodeID, nodeAddr, httpAddress, perNode,
-        rackName, healthReport, 0, nid, hostName, state);
+        rackName, healthReport, 0, nid, hostName, state, labels);
   }
 
   public static RMNode nodeInfo(int rack, final Resource perNode,
       NodeState state) {
     return buildRMNode(rack, perNode, state, "N/A");
+  }
+  
+  public static RMNode nodeInfo(int rack, final Resource perNode,
+      NodeState state, Set<String> labels) {
+    return buildRMNode(rack, perNode, state, "N/A", labels);
   }
 
   public static RMNode newNodeInfo(int rack, final Resource perNode) {

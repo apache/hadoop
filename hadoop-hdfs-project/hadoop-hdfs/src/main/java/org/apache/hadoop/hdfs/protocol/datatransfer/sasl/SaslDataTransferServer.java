@@ -357,7 +357,8 @@ public class SaslDataTransferServer {
 
     int magicNumber = in.readInt();
     if (magicNumber != SASL_TRANSFER_MAGIC_NUMBER) {
-      throw new InvalidMagicNumberException(magicNumber);
+      throw new InvalidMagicNumberException(magicNumber, 
+          dnConf.getEncryptDataTransfer());
     }
     try {
       // step 1

@@ -668,7 +668,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       Peer peer = null;
       try {
         curPeer = nextTcpPeer();
-        if (curPeer == null) break;
         if (curPeer.fromCache) remainingCacheTries--;
         peer = curPeer.peer;
         blockReader = getRemoteBlockReader(peer);
@@ -699,7 +698,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         }
       }
     }
-    return null;
   }
 
   public static class BlockReaderPeer {

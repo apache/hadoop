@@ -22,12 +22,11 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * This class is a thread pool to easily schedule async data operations.Current
+ * This class is a thread pool to easily schedule async data operations. Current
  * async data operation is write back operation. In the future, we could use it
  * for readahead operations too.
  */
@@ -69,8 +68,8 @@ public class AsyncDataService {
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Current active thread number: " + executor.getActiveCount()
-          + " queue size:" + executor.getQueue().size()
-          + " scheduled task number:" + executor.getTaskCount());
+          + " queue size: " + executor.getQueue().size()
+          + " scheduled task number: " + executor.getTaskCount());
     }
     executor.execute(task);
   }
@@ -105,10 +104,9 @@ public class AsyncDataService {
   }
 
   /**
-   * A task for write data back to HDFS for a file. Since only one thread can
-   * write for a file, any time there should be only one task(in queue or
-   * executing) for one file existing, and this should be guaranteed by the
-   * caller.
+   * A task to write data back to HDFS for a file. Since only one thread can
+   * write to a file, there should only be one task at any time for a file
+   * (in queue or executing), and this should be guaranteed by the caller.
    */
   static class WriteBackTask implements Runnable {
 
@@ -135,7 +133,7 @@ public class AsyncDataService {
       try {
         openFileCtx.executeWriteBack();
       } catch (Throwable t) {
-        LOG.error("Asyn data service got error:", t);
+        LOG.error("Async data service got error: ", t);
       }
     }
   }

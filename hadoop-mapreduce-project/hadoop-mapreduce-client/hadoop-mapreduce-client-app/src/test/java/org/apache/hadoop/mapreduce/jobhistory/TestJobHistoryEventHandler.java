@@ -453,7 +453,7 @@ public class TestJobHistoryEventHandler {
     long currentTime = System.currentTimeMillis();
     try {
       yarnCluster = new MiniYARNCluster(
-            TestJobHistoryEventHandler.class.getSimpleName(), 1, 1, 1, 1);
+            TestJobHistoryEventHandler.class.getSimpleName(), 1, 1, 1, 1, true);
       yarnCluster.init(conf);
       yarnCluster.start();
       jheh.start();

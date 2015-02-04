@@ -284,6 +284,7 @@ public class TestKMS {
       password = null;
     }
 
+    conf.set("hadoop.kms.authentication.token.validity", "1");
     if (kerberos) {
       conf.set("hadoop.kms.authentication.type", "kerberos");
       conf.set("hadoop.kms.authentication.kerberos.keytab",
@@ -303,6 +304,32 @@ public class TestKMS {
             url.getProtocol().equals("https"));
         final URI uri = createKMSUri(getKMSUrl());
 
+        if (ssl) {
+          KeyProvider testKp = new KMSClientProvider(uri, conf);
+          ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
+          while (threadGroup.getParent() != null) {
+            threadGroup = threadGroup.getParent();
+          }
+          Thread[] threads = new Thread[threadGroup.activeCount()];
+          threadGroup.enumerate(threads);
+          Thread reloaderThread = null;
+          for (Thread thread : threads) {
+            if ((thread.getName() != null)
+                && (thread.getName().contains("Truststore reloader thread"))) {
+              reloaderThread = thread;
+            }
+          }
+          Assert.assertTrue("Reloader is not alive", reloaderThread.isAlive());
+          testKp.close();
+          boolean reloaderStillAlive = true;
+          for (int i = 0; i < 10; i++) {
+            reloaderStillAlive = reloaderThread.isAlive();
+            if (!reloaderStillAlive) break;
+            Thread.sleep(1000);
+          }
+          Assert.assertFalse("Reloader is still alive", reloaderStillAlive);
+        }
+
         if (kerberos) {
           for (String user : new String[]{"client", "client/host"}) {
             doAs(user, new PrivilegedExceptionAction<Void>() {
@@ -311,6 +338,11 @@ public class TestKMS {
                 final KeyProvider kp = new KMSClientProvider(uri, conf);
                 // getKeys() empty
                 Assert.assertTrue(kp.getKeys().isEmpty());
+
+                Thread.sleep(4000);
+                Token<?>[] tokens = ((KMSClientProvider)kp).addDelegationTokens("myuser", new Credentials());
+                Assert.assertEquals(1, tokens.length);
+                Assert.assertEquals("kms-dt", tokens[0].getKind().toString());
                 return null;
               }
             });
@@ -320,6 +352,7 @@ public class TestKMS {
           // getKeys() empty
           Assert.assertTrue(kp.getKeys().isEmpty());
 
+          Thread.sleep(4000);
           Token<?>[] tokens = ((KMSClientProvider)kp).addDelegationTokens("myuser", new Credentials());
           Assert.assertEquals(1, tokens.length);
           Assert.assertEquals("kms-dt", tokens[0].getKind().toString());

@@ -21,7 +21,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -41,37 +40,15 @@ public class SharedCacheUploaderMetrics {
   static final Log LOG =
       LogFactory.getLog(SharedCacheUploaderMetrics.class);
   final MetricsRegistry registry;
+  private final static SharedCacheUploaderMetrics INSTANCE = create();
 
-  SharedCacheUploaderMetrics() {
+  private SharedCacheUploaderMetrics() {
     registry = new MetricsRegistry("SharedCacheUploaderRequests");
     LOG.debug("Initialized "+ registry);
   }
 
-  enum Singleton {
-    INSTANCE;
-
-    SharedCacheUploaderMetrics impl;
-
-    synchronized SharedCacheUploaderMetrics init(Configuration conf) {
-      if (impl == null) {
-        impl = create();
-      }
-      return impl;
-    }
-  }
-
-  public static SharedCacheUploaderMetrics
-      initSingleton(Configuration conf) {
-    return Singleton.INSTANCE.init(conf);
-  }
-
   public static SharedCacheUploaderMetrics getInstance() {
-    SharedCacheUploaderMetrics topMetrics = Singleton.INSTANCE.impl;
-    if (topMetrics == null)
-      throw new IllegalStateException(
-          "The SharedCacheUploaderMetrics singleton instance is not"
-          + "initialized. Have you called init first?");
-    return topMetrics;
+    return INSTANCE;
   }
 
   static SharedCacheUploaderMetrics create() {

@@ -124,13 +124,7 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.util.NativeLibraryChecker
   ;;
   classpath)
-    if [[ "$#" -eq 1 ]]; then
-      CLASS=org.apache.hadoop.util.Classpath
-    else   
-      hadoop_finalize
-      echo "${CLASSPATH}"
-      exit 0
-    fi
+    hadoop_do_classpath_subcommand "$@"
   ;;
   credential)
     CLASS=org.apache.hadoop.security.alias.CredentialShell
@@ -179,11 +173,11 @@ case ${COMMAND} in
   ;;
 esac
 
+hadoop_verify_user "${COMMAND}"
+
 # Always respect HADOOP_OPTS and HADOOP_CLIENT_OPTS
 hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
 HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
-
-hadoop_add_param HADOOP_OPTS Xmx "${JAVA_HEAP_MAX}"
 
 hadoop_finalize
 hadoop_java_exec "${COMMAND}" "${CLASS}" "$@"

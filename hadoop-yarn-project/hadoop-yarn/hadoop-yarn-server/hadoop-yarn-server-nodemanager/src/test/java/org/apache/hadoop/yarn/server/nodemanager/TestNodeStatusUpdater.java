@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils.newNodeHeartbeatResponse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,7 +38,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -74,12 +78,14 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.NodeHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -610,14 +616,14 @@ public class TestNodeStatusUpdater {
           <ContainerId>();
       try {
         if (heartBeatID == 0) {
-          Assert.assertEquals(request.getNodeStatus().getContainersStatuses()
-            .size(), 0);
-          Assert.assertEquals(context.getContainers().size(), 0);
+          Assert.assertEquals(0, request.getNodeStatus().getContainersStatuses()
+            .size());
+          Assert.assertEquals(0, context.getContainers().size());
         } else if (heartBeatID == 1) {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          Assert.assertEquals(statuses.size(), 2);
-          Assert.assertEquals(context.getContainers().size(), 2);
+          Assert.assertEquals(2, statuses.size());
+          Assert.assertEquals(2, context.getContainers().size());
 
           boolean container2Exist = false, container3Exist = false;
           for (ContainerStatus status : statuses) {
@@ -643,8 +649,16 @@ public class TestNodeStatusUpdater {
         } else if (heartBeatID == 2 || heartBeatID == 3) {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          Assert.assertEquals(statuses.size(), 4);
-          Assert.assertEquals(context.getContainers().size(), 4);
+          if (heartBeatID == 2) {
+            // NM should send completed containers again, since the last
+            // heartbeat is lost.
+            Assert.assertEquals(4, statuses.size());
+          } else {
+            // NM should not send completed containers again, since the last
+            // heartbeat is successful.
+            Assert.assertEquals(2, statuses.size());
+          }
+          Assert.assertEquals(4, context.getContainers().size());
 
           boolean container2Exist = false, container3Exist = false,
               container4Exist = false, container5Exist = false;
@@ -674,8 +688,14 @@ public class TestNodeStatusUpdater {
               container5Exist = true;
             }
           }
-          Assert.assertTrue(container2Exist && container3Exist
-              && container4Exist && container5Exist);
+          if (heartBeatID == 2) {
+            Assert.assertTrue(container2Exist && container3Exist
+                && container4Exist && container5Exist);
+          } else {
+            // NM do not send completed containers again
+            Assert.assertTrue(container2Exist && !container3Exist
+                && container4Exist && !container5Exist);
+          }
 
           if (heartBeatID == 3) {
             finishedContainersPulledByAM.add(containerStatus3.getContainerId());
@@ -683,8 +703,9 @@ public class TestNodeStatusUpdater {
         } else if (heartBeatID == 4) {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          Assert.assertEquals(statuses.size(), 3);
-          Assert.assertEquals(context.getContainers().size(), 3);
+          Assert.assertEquals(2, statuses.size());
+          // Container 3 is acked by AM, hence removed from context
+          Assert.assertEquals(3, context.getContainers().size());
 
           boolean container3Exist = false;
           for (ContainerStatus status : statuses) {
@@ -917,13 +938,14 @@ public class TestNodeStatusUpdater {
     nodeStatusUpdater.removeOrTrackCompletedContainersFromContext(ackedContainers);
 
     Set<ContainerId> containerIdSet = new HashSet<ContainerId>();
-    for (ContainerStatus status : nodeStatusUpdater.getContainerStatuses()) {
+    List<ContainerStatus> containerStatuses = nodeStatusUpdater.getContainerStatuses();
+    for (ContainerStatus status : containerStatuses) {
       containerIdSet.add(status.getContainerId());
     }
 
-    Assert.assertTrue(nodeStatusUpdater.getContainerStatuses().size() == 1);
+    Assert.assertEquals(1, containerStatuses.size());
     // completed container is removed;
-    Assert.assertFalse(containerIdSet.contains(anyCompletedContainer));
+    Assert.assertFalse(containerIdSet.contains(cId));
     // running container is not removed;
     Assert.assertTrue(containerIdSet.contains(runningContainerId));
   }
@@ -967,15 +989,15 @@ public class TestNodeStatusUpdater {
 
     when(application.getApplicationState()).thenReturn(
         ApplicationState.FINISHING_CONTAINERS_WAIT);
-    // The completed container will be sent one time. Then we will delete it.
+    // The completed container will be saved in case of lost heartbeat.
     Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
-    Assert.assertEquals(0, nodeStatusUpdater.getContainerStatuses().size());
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
 
     nm.getNMContext().getContainers().put(cId, anyCompletedContainer);
     nm.getNMContext().getApplications().remove(appId);
-    // The completed container will be sent one time. Then we will delete it.
+    // The completed container will be saved in case of lost heartbeat.
     Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
-    Assert.assertEquals(0, nodeStatusUpdater.getContainerStatuses().size());
+    Assert.assertEquals(1, nodeStatusUpdater.getContainerStatuses().size());
   }
 
   @Test
@@ -1445,6 +1467,63 @@ public class TestNodeStatusUpdater {
     }
     Assert.assertTrue(nm.getServiceState() == STATE.STARTED);
     nm.stop();
+  }
+
+  @Test
+  public void testConcurrentAccessToSystemCredentials(){
+    final Map<ApplicationId, ByteBuffer> testCredentials = new HashMap<>();
+    ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[300]);
+    ApplicationId applicationId = ApplicationId.newInstance(123456, 120);
+    testCredentials.put(applicationId, byteBuffer);
+
+    final List<Throwable> exceptions = Collections.synchronizedList(new
+        ArrayList<Throwable>());
+
+    final int NUM_THREADS = 10;
+    final CountDownLatch allDone = new CountDownLatch(NUM_THREADS);
+    final ExecutorService threadPool = Executors.newFixedThreadPool(
+        NUM_THREADS);
+
+    final AtomicBoolean stop = new AtomicBoolean(false);
+
+    try {
+      for (int i = 0; i < NUM_THREADS; i++) {
+        threadPool.submit(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              for (int i = 0; i < 100 && !stop.get(); i++) {
+                NodeHeartbeatResponse nodeHeartBeatResponse =
+                    newNodeHeartbeatResponse(0, NodeAction.NORMAL,
+                        null, null, null, null, 0);
+                nodeHeartBeatResponse.setSystemCredentialsForApps(
+                    testCredentials);
+                NodeHeartbeatResponseProto proto =
+                    ((NodeHeartbeatResponsePBImpl)nodeHeartBeatResponse)
+                        .getProto();
+                Assert.assertNotNull(proto);
+              }
+            } catch (Throwable t) {
+              exceptions.add(t);
+              stop.set(true);
+            } finally {
+              allDone.countDown();
+            }
+          }
+        });
+      }
+
+      int testTimeout = 2;
+      Assert.assertTrue("Timeout waiting for more than " + testTimeout + " " +
+              "seconds",
+          allDone.await(testTimeout, TimeUnit.SECONDS));
+    } catch (InterruptedException ie) {
+      exceptions.add(ie);
+    } finally {
+      threadPool.shutdownNow();
+    }
+    Assert.assertTrue("Test failed with exception(s)" + exceptions,
+        exceptions.isEmpty());
   }
 
   // Add new containers info into NM context each time node heart beats.

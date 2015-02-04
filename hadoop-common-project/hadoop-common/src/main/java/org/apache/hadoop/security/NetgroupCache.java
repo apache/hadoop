@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.security;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -36,13 +36,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public class NetgroupCache {
-  private static boolean netgroupToUsersMapUpdated = true;
-  private static Map<String, Set<String>> netgroupToUsersMap =
+  private static ConcurrentHashMap<String, Set<String>> userToNetgroupsMap =
     new ConcurrentHashMap<String, Set<String>>();
-
-  private static Map<String, Set<String>> userToNetgroupsMap =
-    new ConcurrentHashMap<String, Set<String>>();
-
 
   /**
    * Get netgroups for a given user
@@ -52,21 +47,11 @@ public class NetgroupCache {
    */
   public static void getNetgroups(final String user,
       List<String> groups) {
-    if(netgroupToUsersMapUpdated) {
-      netgroupToUsersMapUpdated = false; // at the beginning to avoid race
-      //update userToNetgroupsMap
-      for(String netgroup : netgroupToUsersMap.keySet()) {
-        for(String netuser : netgroupToUsersMap.get(netgroup)) {
-          // add to userToNetgroupsMap
-          if(!userToNetgroupsMap.containsKey(netuser)) {
-            userToNetgroupsMap.put(netuser, new HashSet<String>());
-          }
-          userToNetgroupsMap.get(netuser).add(netgroup);
-        }
-      }
-    }
-    if(userToNetgroupsMap.containsKey(user)) {
-      groups.addAll(userToNetgroupsMap.get(user));
+    Set<String> userGroups = userToNetgroupsMap.get(user);
+    //ConcurrentHashMap does not allow null values; 
+    //So null value check can be used to check if the key exists
+    if (userGroups != null) {
+      groups.addAll(userGroups);
     }
   }
 
@@ -76,7 +61,15 @@ public class NetgroupCache {
    * @return list of cached groups
    */
   public static List<String> getNetgroupNames() {
-    return new LinkedList<String>(netgroupToUsersMap.keySet());
+    return new LinkedList<String>(getGroups());
+  }
+
+  private static Set<String> getGroups() {
+    Set<String> allGroups = new HashSet<String> ();
+    for (Set<String> userGroups : userToNetgroupsMap.values()) {
+      allGroups.addAll(userGroups);
+    }
+    return allGroups;
   }
 
   /**
@@ -86,14 +79,13 @@ public class NetgroupCache {
    * @return true if group is cached, false otherwise
    */
   public static boolean isCached(String group) {
-    return netgroupToUsersMap.containsKey(group);
+    return getGroups().contains(group);
   }
 
   /**
    * Clear the cache
    */
   public static void clear() {
-    netgroupToUsersMap.clear();
     userToNetgroupsMap.clear();
   }
 
@@ -104,7 +96,20 @@ public class NetgroupCache {
    * @param users list of users for a given group
    */
   public static void add(String group, List<String> users) {
-    netgroupToUsersMap.put(group, new HashSet<String>(users));
-    netgroupToUsersMapUpdated = true; // at the end to avoid race
+    for (String user : users) {
+      Set<String> userGroups = userToNetgroupsMap.get(user);
+      // ConcurrentHashMap does not allow null values; 
+      // So null value check can be used to check if the key exists
+      if (userGroups == null) {
+        //Generate a ConcurrentHashSet (backed by the keyset of the ConcurrentHashMap)
+        userGroups =
+            Collections.newSetFromMap(new ConcurrentHashMap<String,Boolean>());
+        Set<String> currentSet = userToNetgroupsMap.putIfAbsent(user, userGroups);
+        if (currentSet != null) {
+          userGroups = currentSet;
+        }
+      }
+      userGroups.add(group);
+    }
   }
 }
