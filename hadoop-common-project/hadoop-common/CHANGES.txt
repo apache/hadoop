@@ -482,6 +482,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11547. hadoop-common native compilation fails on Windows due to
     missing support for __attribute__ declaration. (cnauroth)
 
+    HADOOP-11549. flaky test detection tool failed to handle special control
+    characters in test result. (Yongjun Zhang via aajisaka)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
