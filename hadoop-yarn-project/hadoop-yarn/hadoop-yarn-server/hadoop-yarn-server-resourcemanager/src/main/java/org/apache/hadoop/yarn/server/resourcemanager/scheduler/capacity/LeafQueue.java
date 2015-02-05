@@ -97,7 +97,7 @@ public class LeafQueue extends AbstractCSQueue {
   
   Set<FiCaSchedulerApp> pendingApplications;
   
-  private final float minimumAllocationFactor;
+  private float minimumAllocationFactor;
 
   private Map<String, User> users = new HashMap<String, User>();
 
@@ -162,7 +162,8 @@ public class LeafQueue extends AbstractCSQueue {
         state, acls, cs.getConfiguration().getNodeLocalityDelay(), accessibleLabels,
         defaultLabelExpression, this.capacitiyByNodeLabels,
         this.maxCapacityByNodeLabels,
-        cs.getConfiguration().getReservationContinueLook());
+        cs.getConfiguration().getReservationContinueLook(),
+        cs.getConfiguration().getMaximumAllocationPerQueue(getQueuePath()));
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("LeafQueue:" + " name=" + queueName
@@ -192,11 +193,12 @@ public class LeafQueue extends AbstractCSQueue {
       Set<String> labels, String defaultLabelExpression,
       Map<String, Float> capacitieByLabel,
       Map<String, Float> maximumCapacitiesByLabel, 
-      boolean revervationContinueLooking) throws IOException {
+      boolean revervationContinueLooking,
+      Resource maxAllocation) throws IOException {
     super.setupQueueConfigs(clusterResource, capacity, absoluteCapacity,
         maximumCapacity, absoluteMaxCapacity, state, acls, labels,
         defaultLabelExpression, capacitieByLabel, maximumCapacitiesByLabel,
-        revervationContinueLooking);
+        revervationContinueLooking, maxAllocation);
     // Sanity check
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
     float absCapacity = getParent().getAbsoluteCapacity() * capacity;
@@ -237,6 +239,12 @@ public class LeafQueue extends AbstractCSQueue {
     }
     
     this.nodeLocalityDelay = nodeLocalityDelay;
+
+    // re-init this since max allocation could have changed
+    this.minimumAllocationFactor =
+        Resources.ratio(resourceCalculator,
+            Resources.subtract(maximumAllocation, minimumAllocation),
+            maximumAllocation);
 
     StringBuilder aclsString = new StringBuilder();
     for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
@@ -283,6 +291,8 @@ public class LeafQueue extends AbstractCSQueue {
         "minimumAllocationFactor = " + minimumAllocationFactor +
         " [= (float)(maximumAllocationMemory - minimumAllocationMemory) / " +
         "maximumAllocationMemory ]" + "\n" +
+        "maximumAllocation = " + maximumAllocation +
+        " [= configuredMaxAllocation ]" + "\n" +
         "numContainers = " + numContainers +
         " [= currentNumContainers ]" + "\n" +
         "state = " + state +
@@ -479,6 +489,21 @@ public class LeafQueue extends AbstractCSQueue {
     }
 
     LeafQueue newlyParsedLeafQueue = (LeafQueue)newlyParsedQueue;
+
+    // don't allow the maximum allocation to be decreased in size
+    // since we have already told running AM's the size
+    Resource oldMax = getMaximumAllocation();
+    Resource newMax = newlyParsedLeafQueue.getMaximumAllocation();
+    if (newMax.getMemory() < oldMax.getMemory()
+        || newMax.getVirtualCores() < oldMax.getVirtualCores()) {
+      throw new IOException(
+          "Trying to reinitialize "
+              + getQueuePath()
+              + " the maximum allocation size can not be decreased!"
+              + " Current setting: " + oldMax
+              + ", trying to set it to: " + newMax);
+    }
+
     setupQueueConfigs(
         clusterResource,
         newlyParsedLeafQueue.capacity, newlyParsedLeafQueue.absoluteCapacity, 
@@ -494,7 +519,8 @@ public class LeafQueue extends AbstractCSQueue {
         newlyParsedLeafQueue.defaultLabelExpression,
         newlyParsedLeafQueue.capacitiyByNodeLabels,
         newlyParsedLeafQueue.maxCapacityByNodeLabels,
-        newlyParsedLeafQueue.reservationsContinueLooking);
+        newlyParsedLeafQueue.reservationsContinueLooking,
+        newlyParsedLeafQueue.getMaximumAllocation());
 
     // queue metrics are updated, more resource may be available
     // activate the pending applications if possible
