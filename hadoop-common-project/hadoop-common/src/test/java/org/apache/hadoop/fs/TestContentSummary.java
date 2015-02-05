@@ -140,15 +140,15 @@ public class TestContentSummary {
   // check the header with quotas
   @Test
   public void testGetHeaderWithQuota() {
-    String header = "  name quota  rem name quota     space quota "
-        + "rem space quota  directories        files              bytes ";
+    String header = "       QUOTA       REM_QUOTA     SPACE_QUOTA "
+        + "REM_SPACE_QUOTA    DIR_COUNT   FILE_COUNT       CONTENT_SIZE ";
     assertEquals(header, ContentSummary.getHeader(true));
   }
 
   // check the header without quotas
   @Test
   public void testGetHeaderNoQuota() {
-    String header = " directories        files              bytes ";
+    String header = "   DIR_COUNT   FILE_COUNT       CONTENT_SIZE ";
     assertEquals(header, ContentSummary.getHeader(false));
   }
 
