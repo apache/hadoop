@@ -27,6 +27,8 @@ public class PostOpParam extends HttpOpParam<PostOpParam.Op> {
 
     CONCAT(false, HttpURLConnection.HTTP_OK),
 
+    TRUNCATE(false, HttpURLConnection.HTTP_OK),
+
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 
     final boolean doOutputAndRedirect;

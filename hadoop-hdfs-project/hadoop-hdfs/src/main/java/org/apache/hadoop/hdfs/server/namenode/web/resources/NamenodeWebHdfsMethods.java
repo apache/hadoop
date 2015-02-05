@@ -57,7 +57,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -614,10 +614,12 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize,
       @QueryParam(ExcludeDatanodesParam.NAME) @DefaultValue(ExcludeDatanodesParam.DEFAULT)
-          final ExcludeDatanodesParam excludeDatanodes
+          final ExcludeDatanodesParam excludeDatanodes,
+      @QueryParam(NewLengthParam.NAME) @DefaultValue(NewLengthParam.DEFAULT)
+          final NewLengthParam newLength
       ) throws IOException, InterruptedException {
     return post(ugi, delegation, username, doAsUser, ROOT, op, concatSrcs,
-        bufferSize, excludeDatanodes);
+        bufferSize, excludeDatanodes, newLength);
   }
 
   /** Handle HTTP POST request. */
@@ -641,11 +643,13 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize,
       @QueryParam(ExcludeDatanodesParam.NAME) @DefaultValue(ExcludeDatanodesParam.DEFAULT)
-          final ExcludeDatanodesParam excludeDatanodes
+          final ExcludeDatanodesParam excludeDatanodes,
+      @QueryParam(NewLengthParam.NAME) @DefaultValue(NewLengthParam.DEFAULT)
+          final NewLengthParam newLength
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, concatSrcs, bufferSize,
-        excludeDatanodes);
+        excludeDatanodes, newLength);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -653,7 +657,7 @@ public class NamenodeWebHdfsMethods {
         try {
           return post(ugi, delegation, username, doAsUser,
               path.getAbsolutePath(), op, concatSrcs, bufferSize,
-              excludeDatanodes);
+              excludeDatanodes, newLength);
         } finally {
           reset();
         }
@@ -670,9 +674,11 @@ public class NamenodeWebHdfsMethods {
       final PostOpParam op,
       final ConcatSourcesParam concatSrcs,
       final BufferSizeParam bufferSize,
-      final ExcludeDatanodesParam excludeDatanodes
+      final ExcludeDatanodesParam excludeDatanodes,
+      final NewLengthParam newLength
       ) throws IOException, URISyntaxException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
+    final NamenodeProtocols np = getRPCServer(namenode);
 
     switch(op.getValue()) {
     case APPEND:
@@ -684,8 +690,16 @@ public class NamenodeWebHdfsMethods {
     }
     case CONCAT:
     {
-      getRPCServer(namenode).concat(fullpath, concatSrcs.getAbsolutePaths());
+      np.concat(fullpath, concatSrcs.getAbsolutePaths());
       return Response.ok().build();
+    }
+    case TRUNCATE:
+    {
+      // We treat each rest request as a separate client.
+      final boolean b = np.truncate(fullpath, newLength.getValue(), 
+          "DFSClient_" + DFSUtil.getSecureRandom().nextLong());
+      final String js = JsonUtil.toJsonString("boolean", b);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");

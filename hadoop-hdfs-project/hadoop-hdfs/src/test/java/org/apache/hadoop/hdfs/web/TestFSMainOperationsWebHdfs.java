@@ -29,11 +29,13 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -134,6 +136,33 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
 
     FileStatus fileStatus = fSys.getFileStatus(catPath);
     Assert.assertEquals(1024*4, fileStatus.getLen());
+  }
+
+  @Test
+  public void testTruncate() throws Exception {
+    final short repl = 3;
+    final int blockSize = 1024;
+    final int numOfBlocks = 2;
+    Path dir = getTestRootPath(fSys, "test/hadoop");
+    Path file = getTestRootPath(fSys, "test/hadoop/file");
+
+    final byte[] data = getFileData(numOfBlocks, blockSize);
+    createFile(fSys, file, data, blockSize, repl);
+
+    final int newLength = blockSize;
+
+    boolean isReady = fSys.truncate(file, newLength);
+
+    Assert.assertTrue("Recovery is not expected.", isReady);
+
+    FileStatus fileStatus = fSys.getFileStatus(file);
+    Assert.assertEquals(fileStatus.getLen(), newLength);
+    AppendTestUtil.checkFullFile(fSys, file, newLength, data, file.toString());
+
+    ContentSummary cs = fSys.getContentSummary(dir);
+    Assert.assertEquals("Bad disk space usage", cs.getSpaceConsumed(),
+        newLength * repl);
+    Assert.assertTrue("Deleted", fSys.delete(dir, true));
   }
 
   // Test that WebHdfsFileSystem.jsonParse() closes the connection's input
