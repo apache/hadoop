@@ -569,6 +569,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7698. Fix locking on HDFS read statistics and add a method for
     clearing them. (Colin P. McCabe via yliu)
 
+    HDFS-7741. Remove unnecessary synchronized in FSDataInputStream and
+    HdfsDataInputStream. (yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
