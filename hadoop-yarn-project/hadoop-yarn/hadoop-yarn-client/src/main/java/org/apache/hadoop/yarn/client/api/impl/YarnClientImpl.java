@@ -100,6 +100,7 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -638,7 +639,8 @@ public class YarnClientImpl extends YarnClient {
       }
       // Even if history-service is enabled, treat all exceptions still the same
       // except the following
-      if (e.getClass() != ApplicationNotFoundException.class) {
+      if (e.getClass() != ApplicationNotFoundException.class
+          && e.getClass() != ContainerNotFoundException.class) {
         throw e;
       }
       return historyClient.getContainerReport(containerId);

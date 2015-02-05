@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -97,6 +98,8 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -372,6 +375,8 @@ public class TestYarnClient {
   @Test(timeout = 10000)
   public void testGetContainerReport() throws YarnException, IOException {
     Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
+        true);
     final YarnClient client = new MockYarnClient();
     client.init(conf);
     client.start();
@@ -388,6 +393,12 @@ public class TestYarnClient {
     Assert.assertEquals(report.getContainerId().toString(),
         (ContainerId.newContainerId(expectedReports.get(0)
             .getCurrentApplicationAttemptId(), 1)).toString());
+    containerId = ContainerId.newContainerId(appAttemptId, 3);
+    report = client.getContainerReport(containerId);
+    Assert.assertNotNull(report);
+    Assert.assertEquals(report.getContainerId().toString(),
+        (ContainerId.newContainerId(expectedReports.get(0)
+            .getCurrentApplicationAttemptId(), 3)).toString());
     client.stop();
   }
 
@@ -642,8 +653,23 @@ public class TestYarnClient {
     @Override
     public ContainerReport getContainerReport(ContainerId containerId)
         throws YarnException, IOException {
-      when(mockContainerResponse.getContainerReport()).thenReturn(
-        getContainer(containerId));
+      try {
+        ContainerReport container = getContainer(containerId, containers);
+        when(mockContainerResponse.getContainerReport()).thenReturn(container);
+      } catch (YarnException e) {
+        when(rmClient.getContainerReport(any(GetContainerReportRequest.class)))
+        .thenThrow(e).thenReturn(mockContainerResponse);
+      }
+      try {
+        ContainerReport container =
+            getContainer(containerId, containersFromAHS);
+        when(historyClient.getContainerReport(any(ContainerId.class)))
+            .thenReturn(container);
+      } catch (YarnException e) {
+        when(historyClient.getContainerReport(any(ContainerId.class)))
+            .thenThrow(e);
+      }
+
       return super.getContainerReport(containerId);
     }
     
@@ -661,8 +687,25 @@ public class TestYarnClient {
       return containers.get(appAttemptId);
     }
 
-    public ContainerReport getContainer(ContainerId containerId) {
-      return containers.get(containerId.getApplicationAttemptId()).get(0);
+    private ContainerReport getContainer(
+        ContainerId containerId,
+        HashMap<ApplicationAttemptId, List<ContainerReport>> containersToAppAttemptMapping)
+        throws YarnException, IOException {
+      List<ContainerReport> containersForAppAttempt =
+          containersToAppAttemptMapping.get(containerId
+              .getApplicationAttemptId());
+      if (containersForAppAttempt == null) {
+        throw new ApplicationNotFoundException(containerId
+            .getApplicationAttemptId().getApplicationId() + " is not found ");
+      }
+      Iterator<ContainerReport> iterator = containersForAppAttempt.iterator();
+      while (iterator.hasNext()) {
+        ContainerReport next = iterator.next();
+        if (next.getContainerId().equals(containerId)) {
+          return next;
+        }
+      }
+      throw new ContainerNotFoundException(containerId + " is not found ");
     }
   }
 
