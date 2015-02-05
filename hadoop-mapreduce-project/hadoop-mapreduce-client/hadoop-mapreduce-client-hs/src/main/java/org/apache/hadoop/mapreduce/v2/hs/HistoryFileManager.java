@@ -263,6 +263,10 @@ public class HistoryFileManager extends AbstractService {
     public HistoryFileInfo get(JobId jobId) {
       return cache.get(jobId);
     }
+
+    public boolean isFull() {
+      return cache.size() >= maxSize;
+    }
   }
 
   /**
@@ -668,6 +672,10 @@ public class HistoryFileManager extends AbstractService {
     for (FileStatus fs : timestampedDirList) {
       // TODO Could verify the correct format for these directories.
       addDirectoryToSerialNumberIndex(fs.getPath());
+    }
+    for (int i= timestampedDirList.size() - 1;
+        i >= 0 && !jobListCache.isFull(); i--) {
+      FileStatus fs = timestampedDirList.get(i); 
       addDirectoryToJobListCache(fs.getPath());
     }
   }
