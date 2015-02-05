@@ -55,6 +55,7 @@ public class TestLargeSort {
     int[] ioSortMbs = {128, 256, 1536};
     for (int ioSortMb : ioSortMbs) {
       Configuration conf = new Configuration(cluster.getConfig());
+      conf.setInt(MRJobConfig.MAP_MEMORY_MB, 2048);
       conf.setInt(MRJobConfig.IO_SORT_MB, ioSortMb);
       conf.setInt(LargeSorter.NUM_MAP_TASKS, 1);
       conf.setInt(LargeSorter.MBS_PER_MAP, ioSortMb);
