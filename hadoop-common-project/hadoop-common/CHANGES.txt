@@ -146,6 +146,8 @@ Trunk (Unreleased)
     HADOOP-11058. Missing HADOOP_CONF_DIR generates strange results
     (Masatake Iwasaki via aw)
 
+    HADOOP-11460. Deprecate shell vars (John Smith via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1

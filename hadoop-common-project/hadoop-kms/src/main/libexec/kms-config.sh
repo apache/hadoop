@@ -30,10 +30,11 @@ function hadoop_subproject_init
 
   export HADOOP_CATALINA_TEMP="${KMS_TEMP:-${HADOOP_PREFIX}/temp}"
 
-  export HADOOP_CONF_DIR="${KMS_CONFIG:-${HADOOP_CONF_DIR}}"
-  export HADOOP_CATALINA_CONFIG="${HADOOP_CONF_DIR}"
+  hadoop_deprecate_envvar KMS_CONFIG HADOOP_CONF_DIR
 
-  export HADOOP_LOG_DIR="${KMS_LOG:-${HADOOP_LOG_DIR}}"
+  hadoop_deprecate_envvar KMS_LOG HADOOP_LOG_DIR
+
+  export HADOOP_CATALINA_CONFIG="${HADOOP_CONF_DIR}"
   export HADOOP_CATALINA_LOG="${HADOOP_LOG_DIR}"
 
   export HADOOP_CATALINA_HTTP_PORT="${KMS_HTTP_PORT:-16000}"

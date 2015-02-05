@@ -18,10 +18,6 @@
 # hadoop-env.sh is read prior to this file.
 #
 
-# KMS logs directory
-#
-# export KMS_LOG=${HADOOP_LOG_DIR}
-
 # KMS temporary directory
 #
 # export KMS_TEMP=${HADOOP_PREFIX}/temp
