@@ -454,6 +454,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3101. In Fair Scheduler, fix canceling of reservations for exceeding
     max share (Anubhav Dhoot via Sandy Ryza)
 
+    YARN-3149. Fix typo in message for invalid application id.
+    (Bibin A Chundatt via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
