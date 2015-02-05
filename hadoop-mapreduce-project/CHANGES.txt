@@ -94,8 +94,6 @@ Trunk (Unreleased)
     MAPREDUCE-6013. [post-HADOOP-9902] mapred version is missing (Akira AJISAKA
     via aw)
 
-    MAPREDUCE-6059. Speed up history server startup time (Siqi Li via aw)
-
   BUG FIXES
 
     MAPREDUCE-6191. Improve clearing stale state of Java serialization
@@ -281,6 +279,8 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
     from key and value at the end of the iteration to save memory. 
     (Zhihai Xu via kasha)
+
+    MAPREDUCE-6059. Speed up history server startup time (Siqi Li via aw)
 
   BUG FIXES
 
