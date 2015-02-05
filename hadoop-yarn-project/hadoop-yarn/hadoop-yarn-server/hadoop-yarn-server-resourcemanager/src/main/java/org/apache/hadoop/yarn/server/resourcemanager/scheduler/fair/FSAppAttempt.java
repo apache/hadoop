@@ -530,6 +530,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
       return container.getResource();
     } else {
+      if (!FairScheduler.fitsInMaxShare(getQueue(), capability)) {
+        return Resources.none();
+      }
+
       // The desired container won't fit here, so reserve
       reserve(request.getPriority(), node, container, reserved);
 

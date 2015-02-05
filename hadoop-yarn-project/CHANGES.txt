@@ -448,6 +448,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3058. Fix error message of tokens' activation delay configuration.
     (Yi Liu via ozawa)
 
+    YARN-3101. In Fair Scheduler, fix canceling of reservations for exceeding
+    max share (Anubhav Dhoot via Sandy Ryza)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
