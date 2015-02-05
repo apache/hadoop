@@ -17,8 +17,10 @@
 
 function hadoop_usage()
 {
-  echo "Usage: hadoop [--config confdir] [--loglevel loglevel] COMMAND"
-  echo "       where COMMAND is one of:"
+  echo "Usage: hadoop [--config confdir] [COMMAND | CLASSNAME]"
+  echo "  CLASSNAME            run the class named CLASSNAME"
+  echo " or"
+  echo "  where COMMAND is one of:"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest>"
   echo "                       create a Hadoop archive"
   echo "  checknative [-a|-h]  check native Hadoop and compression "
@@ -39,8 +41,6 @@ function hadoop_usage()
   echo "  key                  manage keys via the KeyProvider"
   echo "  trace                view and modify Hadoop tracing settings"
   echo "  version              print the version"
-  echo " or"
-  echo "  CLASSNAME            run the class named CLASSNAME"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
