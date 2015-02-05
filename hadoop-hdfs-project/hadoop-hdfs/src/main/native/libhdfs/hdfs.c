@@ -181,7 +181,38 @@ done:
 int64_t hdfsReadStatisticsGetRemoteBytesRead(
                             const struct hdfsReadStatistics *stats)
 {
-  return stats->totalBytesRead - stats->totalLocalBytesRead;
+    return stats->totalBytesRead - stats->totalLocalBytesRead;
+}
+
+int hdfsFileClearReadStatistics(hdfsFile file)
+{
+    jthrowable jthr;
+    int ret;
+    JNIEnv* env = getJNIEnv();
+
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return EINTERNAL;
+    }
+    if (file->type != HDFS_STREAM_INPUT) {
+        ret = EINVAL;
+        goto done;
+    }
+    jthr = invokeMethod(env, NULL, INSTANCE, file->file,
+                  "org/apache/hadoop/hdfs/client/HdfsDataInputStream",
+                  "clearReadStatistics", "()V");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsFileClearReadStatistics: clearReadStatistics failed");
+        goto done;
+    }
+    ret = 0;
+done:
+    if (ret) {
+        errno = ret;
+        return ret;
+    }
+    return 0;
 }
 
 void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats)

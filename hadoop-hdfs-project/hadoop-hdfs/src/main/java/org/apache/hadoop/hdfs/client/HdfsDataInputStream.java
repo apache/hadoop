@@ -103,7 +103,11 @@ public class HdfsDataInputStream extends FSDataInputStream {
    * be higher than you would expect just by adding up the number of
    * bytes read through HdfsDataInputStream.
    */
-  public synchronized DFSInputStream.ReadStatistics getReadStatistics() {
+  public DFSInputStream.ReadStatistics getReadStatistics() {
     return getDFSInputStream().getReadStatistics();
+  }
+
+  public void clearReadStatistics() {
+    getDFSInputStream().clearReadStatistics();
   }
 }
