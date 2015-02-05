@@ -13,100 +13,120 @@
 #  limitations under the License. See accompanying LICENSE file.
 #
 
-###############################################################################
-printUsage() {
-  echo "Usage: slsrun.sh <OPTIONS>"
-  echo "                 --input-rumen|--input-sls=<FILE1,FILE2,...>"
+function hadoop_usage()
+{
+  echo "Usage: slsrun.sh <OPTIONS> "
+  echo "                 --input-rumen=<FILE1,FILE2,...>  | --input-sls=<FILE1,FILE2,...>"
   echo "                 --output-dir=<SLS_SIMULATION_OUTPUT_DIRECTORY>"
   echo "                 [--nodes=<SLS_NODES_FILE>]"
   echo "                 [--track-jobs=<JOBID1,JOBID2,...>]"
   echo "                 [--print-simulation]"
-  echo                  
 }
-###############################################################################
-parseArgs() {
-  for i in $*
-  do
+
+function parse_args()
+{
+  for i in "$@"; do
     case $i in
-    --input-rumen=*)
-      inputrumen=${i#*=}
+      --input-rumen=*)
+        inputrumen=${i#*=}
       ;;
-    --input-sls=*)
-      inputsls=${i#*=}
+      --input-sls=*)
+        inputsls=${i#*=}
       ;;
-    --output-dir=*)
-      outputdir=${i#*=}
+      --output-dir=*)
+        outputdir=${i#*=}
       ;;
-    --nodes=*)
-      nodes=${i#*=}
+      --nodes=*)
+        nodes=${i#*=}
       ;;
-    --track-jobs=*)
-      trackjobs=${i#*=}
+      --track-jobs=*)
+        trackjobs=${i#*=}
       ;;
-    --print-simulation)
-      printsimulation="true"
+      --print-simulation)
+        printsimulation="true"
       ;;
-    *)
-      echo "Invalid option"
-      echo
-      printUsage
-      exit 1
+      *)
+        hadoop_error "ERROR: Invalid option ${i}"
+        hadoop_exit_with_usage 1
       ;;
     esac
   done
 
-  if [[ "${inputrumen}" == "" && "${inputsls}" == "" ]] ; then
-    echo "Either --input-rumen or --input-sls must be specified"
-    echo
-    printUsage
-    exit 1
+  if [[ -z "${inputrumen}" && -z "${inputsls}" ]] ; then
+    hadoop_error "ERROR: Either --input-rumen or --input-sls must be specified."
+    hadoop_exit_with_usage 1
   fi
 
-  if [[ "${outputdir}" == "" ]] ; then
-    echo "The output directory --output-dir must be specified"
-    echo
-    printUsage
-    exit 1
+  if [[ -n "${inputrumen}" && -n "${inputsls}" ]] ; then
+    hadoop_error "ERROR: Only specify one of --input-rumen or --input-sls."
+    hadoop_exit_with_usage 1
+  fi
+
+  if [[ -z "${outputdir}" ]] ; then
+    hadoop_error "ERROR: The output directory --output-dir must be specified."
+    hadoop_exit_with_usage 1
   fi
 }
 
-###############################################################################
-calculateClasspath() {
-  HADOOP_BASE=`which hadoop`
-  HADOOP_BASE=`dirname $HADOOP_BASE`
-  DEFAULT_LIBEXEC_DIR=${HADOOP_BASE}/../libexec
-  HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-  . $HADOOP_LIBEXEC_DIR/hadoop-config.sh
-  export HADOOP_CLASSPATH="${HADOOP_CLASSPATH}:${TOOL_PATH}:html"
+function calculate_classpath() {
+  hadoop_debug "Injecting TOOL_PATH into CLASSPATH"
+  hadoop_add_classpath "${TOOL_PATH}"
+  hadoop_debug "Injecting ${HADOOP_PREFIX}/share/hadoop/tools/sls/html into CLASSPATH"
+  hadoop_add_classpath "${HADOOP_PREFIX}/share/hadoop/tools/sls/html"
 }
-###############################################################################
-runSimulation() {
+
+function run_simulation() {
   if [[ "${inputsls}" == "" ]] ; then
-    args="-inputrumen ${inputrumen}"
+    hadoop_add_param args -inputrumen "-inputrumen ${inputrumen}"
   else
-    args="-inputsls ${inputsls}"
+    hadoop_add_param args -inputsls "-inputsls ${inputsls}"
   fi
 
-  args="${args} -output ${outputdir}"
+  hadoop_add_param args -output "-output ${outputdir}"
 
-  if [[ "${nodes}" != "" ]] ; then
-    args="${args} -nodes ${nodes}"
+  if [[ -n "${nodes}" ]] ; then
+    hadoop_add_param args -nodes "-nodes ${nodes}"
   fi
-  
-  if [[ "${trackjobs}" != "" ]] ; then
-    args="${args} -trackjobs ${trackjobs}"
+
+  if [[ -n "${trackjobs}" ]] ; then
+    hadoop_add_param args -trackjobs "-trackjobs ${trackjobs}"
   fi
-  
+
   if [[ "${printsimulation}" == "true" ]] ; then
-    args="${args} -printsimulation"
+    hadoop_add_param args -printsimulation "-printsimulation"
   fi
 
-  hadoop org.apache.hadoop.yarn.sls.SLSRunner ${args}
+  hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+  HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+
+  hadoop_finalize
+  # shellcheck disable=SC2086
+  hadoop_java_exec sls org.apache.hadoop.yarn.sls.SLSRunner ${args}
 }
-###############################################################################
 
-calculateClasspath
-parseArgs "$@"
-runSimulation
+# let's locate libexec...
+if [[ -n "${HADOOP_PREFIX}" ]]; then
+  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+else
+  this="${BASH_SOURCE-$0}"
+  bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+  DEFAULT_LIBEXEC_DIR="${bin}/../../../../../libexec"
+fi
 
-exit 0
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh." 2>&1
+  exit 1
+fi
+
+if [[ $# = 0 ]]; then
+  hadoop_exit_with_usage 1
+fi
+
+parse_args "${@}"
+calculate_classpath
+run_simulation

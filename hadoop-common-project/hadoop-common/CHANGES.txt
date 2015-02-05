@@ -148,6 +148,9 @@ Trunk (Unreleased)
 
     HADOOP-11460. Deprecate shell vars (John Smith via aw)
 
+    HADOOP-11346. Rewrite sls/rumen to use new shell framework (John Smith
+    via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
