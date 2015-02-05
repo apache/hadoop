@@ -58,7 +58,7 @@ public class FSDataInputStream extends DataInputStream
    * @param desired offset to seek to
    */
   @Override
-  public synchronized void seek(long desired) throws IOException {
+  public void seek(long desired) throws IOException {
     ((Seekable)in).seek(desired);
   }
 
