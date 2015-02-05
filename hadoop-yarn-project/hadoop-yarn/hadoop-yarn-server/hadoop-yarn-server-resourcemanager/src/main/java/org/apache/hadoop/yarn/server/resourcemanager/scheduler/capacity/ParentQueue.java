@@ -132,7 +132,7 @@ public class ParentQueue extends AbstractCSQueue {
     super.setupQueueConfigs(clusterResource, capacity, absoluteCapacity,
         maximumCapacity, absoluteMaxCapacity, state, acls, accessibleLabels,
         defaultLabelExpression, nodeLabelCapacities, maximumCapacitiesByLabel,
-        reservationContinueLooking);
+        reservationContinueLooking, maximumAllocation);
    StringBuilder aclsString = new StringBuilder();
     for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
       aclsString.append(e.getKey() + ":" + e.getValue().getAclString());

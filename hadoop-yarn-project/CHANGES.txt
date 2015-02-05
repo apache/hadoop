@@ -211,6 +211,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3123. Made YARN CLI show a single completed container even if the app
     is running. (Naganarasimha G R via zjshen)
 
+    YARN-1582. Capacity Scheduler: add a maximum-allocation-mb setting per
+    queue (Thomas Graves via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES

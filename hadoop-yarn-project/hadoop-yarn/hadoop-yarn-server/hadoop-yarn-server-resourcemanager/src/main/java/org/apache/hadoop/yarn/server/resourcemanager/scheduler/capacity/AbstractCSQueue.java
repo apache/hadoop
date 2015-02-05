@@ -57,7 +57,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   volatile int numContainers;
   
   final Resource minimumAllocation;
-  final Resource maximumAllocation;
+  Resource maximumAllocation;
   QueueState state;
   final QueueMetrics metrics;
   
@@ -255,7 +255,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       Set<String> labels, String defaultLabelExpression,
       Map<String, Float> nodeLabelCapacities,
       Map<String, Float> maximumNodeLabelCapacities,
-      boolean reservationContinueLooking)
+      boolean reservationContinueLooking, Resource maxAllocation)
       throws IOException {
     // Sanity check
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
@@ -326,6 +326,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.reservationsContinueLooking = reservationContinueLooking;
 
     this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this);
+
+    this.maximumAllocation = maxAllocation;
   }
   
   protected QueueInfo getQueueInfo() {
@@ -341,7 +343,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   @Private
-  public Resource getMaximumAllocation() {
+  public synchronized Resource getMaximumAllocation() {
     return maximumAllocation;
   }
   
