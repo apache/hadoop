@@ -109,6 +109,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6186. Redundant call to requireJob() while displaying the conf
     page (Rohit Agarwal via jlowe)
 
+    MAPREDUCE-6233. org.apache.hadoop.mapreduce.TestLargeSort.testLargeSort
+    failed in trunk (zxu via rkanter)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
