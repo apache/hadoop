@@ -80,6 +80,11 @@ static const struct ExceptionInfo gExceptionInfo[] = {
         EDQUOT,
     },
     {
+        "java.lang.UnsupportedOperationException",
+        0,
+        ENOTSUP,
+    },
+    {
         "org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException",
         0,
         ESTALE,

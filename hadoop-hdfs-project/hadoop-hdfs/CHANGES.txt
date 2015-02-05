@@ -566,6 +566,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7709. Fix findbug warnings in httpfs. (Rakesh R via ozawa)
 
+    HDFS-7698. Fix locking on HDFS read statistics and add a method for
+    clearing them. (Colin P. McCabe via yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -119,6 +119,19 @@ extern  "C" {
                             const struct hdfsReadStatistics *stats);
 
     /**
+     * Clear the read statistics for a file.
+     *
+     * @param file      The file to clear the read statistics of.
+     *
+     * @return          0 on success; the error code otherwise.
+     *                  EINVAL: the file is not open for reading.
+     *                  ENOTSUP: the file does not support clearing the read
+     *                  statistics.
+     *                  Errno will also be set to this code on failure.
+     */
+    int hdfsFileClearReadStatistics(hdfsFile file);
+
+    /**
      * Free some HDFS read statistics.
      *
      * @param stats    The HDFS read statistics to free.
