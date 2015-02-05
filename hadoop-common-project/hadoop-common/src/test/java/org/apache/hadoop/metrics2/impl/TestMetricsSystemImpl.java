@@ -190,7 +190,7 @@ public class TestMetricsSystemImpl {
       threads[i] = new Thread(new Runnable() {
         private boolean safeAwait(int mySource, CyclicBarrier barrier) {
           try {
-            barrier1.await(2, TimeUnit.SECONDS);
+            barrier.await(2, TimeUnit.SECONDS);
           } catch (InterruptedException e) {
             results[mySource] = "Interrupted";
             return false;
