@@ -559,6 +559,8 @@ Release 2.7.0 - UNRELEASED
     in-memory state associated with volumes. (Lei (Eddy) Xu via Colin P.
     McCabe)
 
+    HDFS-7709. Fix findbug warnings in httpfs. (Rakesh R via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
