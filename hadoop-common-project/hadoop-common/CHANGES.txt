@@ -243,6 +243,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11620. Add support for load balancing across a group of KMS for HA.
     (Arun Suresh via wang)
 
+    HADOOP-10976. moving the source code of hadoop-tools docs to the
+    directory under hadoop-tools (Masatake Iwasaki via aw)
+
   BUG FIXES
 
     HADOOP-11512. Use getTrimmedStrings when reading serialization keys
