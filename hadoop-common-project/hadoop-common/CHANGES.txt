@@ -151,6 +151,9 @@ Trunk (Unreleased)
     HADOOP-11346. Rewrite sls/rumen to use new shell framework (John Smith
     via aw)
 
+    HADOOP-10976. moving the source code of hadoop-tools docs to the
+    directory under hadoop-tools (Masatake Iwasaki via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
