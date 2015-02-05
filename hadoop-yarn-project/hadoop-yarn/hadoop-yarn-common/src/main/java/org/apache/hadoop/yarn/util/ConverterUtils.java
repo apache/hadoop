@@ -204,7 +204,7 @@ public class ConverterUtils {
     try {
       return toApplicationId(it);
     } catch (NumberFormatException n) {
-      throw new IllegalArgumentException("Invalid AppAttemptId: "
+      throw new IllegalArgumentException("Invalid ApplicationId: "
           + appIdStr, n);
     }
   }
