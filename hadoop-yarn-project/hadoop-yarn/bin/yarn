@@ -17,9 +17,10 @@
 
 function hadoop_usage
 {
-  echo "Usage: yarn [--config confdir] [--daemon (start|stop|status)]"
-  echo "           [--loglevel loglevel] COMMAND"
-  echo "where COMMAND is one of:"
+  echo "Usage: yarn [--config confdir] [COMMAND | CLASSNAME]"
+  echo "  CLASSNAME                             run the class named CLASSNAME"
+  echo " or"
+  echo "  where COMMAND is one of:"
   echo "  application                           prints application(s) report/kill application"
   echo "  applicationattempt                    prints applicationattempt(s) report"
   echo "  classpath                             prints the class path needed to get the"
@@ -39,8 +40,7 @@ function hadoop_usage
   echo "  sharedcachemanager                    run the SharedCacheManager daemon"
   echo "  timelineserver                        run the timeline server"
   echo "  version                               print the version"
-  echo " or"
-  echo "  CLASSNAME                             run the class named CLASSNAME"
+  echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
 

@@ -852,6 +852,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10062. race condition in MetricsSystemImpl#publishMetricsNow that 
     causes incorrect results. (Sangjin Lee via junping_du)
 
+    HADOOP-11543. Improve help message for hadoop/yarn command.
+    (Brahma Reddy Battula via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
