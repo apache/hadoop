@@ -313,7 +313,6 @@ public class AppController extends Controller implements AMParams {
    * Render the /conf page
    */
   public void conf() {
-    requireJob();
     try {
       requireJob();
     }
