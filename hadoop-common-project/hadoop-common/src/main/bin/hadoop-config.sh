@@ -108,8 +108,6 @@ while [[ -z "${_hadoop_common_done}" ]]; do
       shift
       if [[ -d "${confdir}" ]]; then
         # shellcheck disable=SC2034
-        YARN_CONF_DIR="${confdir}"
-        # shellcheck disable=SC2034
         HADOOP_CONF_DIR="${confdir}"
       elif [[ -z "${confdir}" ]]; then
         hadoop_error "ERROR: No parameter provided for --config "

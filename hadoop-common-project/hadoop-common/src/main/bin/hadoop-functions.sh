@@ -28,6 +28,28 @@ function hadoop_debug
   fi
 }
 
+function hadoop_deprecate_envvar
+{
+  #
+  # Deprecate $1 with $2
+  local oldvar=$1
+  local newvar=$2
+  local oldval=${!oldvar}
+  local newval=${!newvar}
+
+  if [[ -n "${oldval}" ]]; then
+    hadoop_error "WARNING: ${oldvar} has been replaced by ${newvar}. Using value of ${oldvar}."
+    # shellcheck disable=SC2086
+    eval ${newvar}=\"${oldval}\"
+
+    # shellcheck disable=SC2086
+    newval=${oldval}
+
+    # shellcheck disable=SC2086
+    eval ${newvar}=\"${newval}\"
+  fi
+}
+
 function hadoop_bootstrap_init
 {
   # NOTE: This function is not user replaceable.
@@ -200,8 +222,6 @@ function hadoop_populate_slaves_file()
   elif [[ -f "${HADOOP_CONF_DIR}/${slavesfile}" ]]; then
     # shellcheck disable=2034
     HADOOP_SLAVES="${HADOOP_CONF_DIR}/${slavesfile}"
-    # shellcheck disable=2034
-    YARN_SLAVES="${HADOOP_CONF_DIR}/${slavesfile}"
   else
     hadoop_error "ERROR: Cannot find hosts file \"${slavesfile}\""
     hadoop_exit_with_usage 1

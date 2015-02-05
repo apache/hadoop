@@ -26,39 +26,19 @@
 ##
 
 ###
-# YARN-specific overrides for generic settings
-###
-
-# By default, YARN will use HADOOP_LOG_DIR for YARN logging.  Specify a custom
-# log directory for YARN things here:
-# Java properties: hadoop.log.dir, yarn.log.dir
-# export YARN_LOG_DIR="${HADOOP_LOG_DIR}"
-
-# By default, YARN will use the value of HADOOP_LOGFILE as the 'fallback' log
-# file # when log4j settings are not defined.  Specify a custom YARN log file
-# here:
-# Java properties: hadoop.log.file, yarn.log.file
-# export YARN_LOGFILE=${HADOOP_LOGFILE}
-
-#Override the log4j settings for all YARN apps By default, YARN will use
-# HADOOP_ROOT_LOGGER.
-# Java properties: hadoop.root.logger, yarn.root.logger
-# export YARN_ROOT_LOGGER=${HADOOP_ROOT_LOGGER}
-
-###
 # Resource Manager specific parameters
 ###
 
 # Specify the max heapsize for the ResourceManager.  If no units are
 # given, it will be assumed to be in MB.
-# This value will be overridden by an Xmx setting specified in either YARN_OPTS,
-# HADOOP_OPTS, and/or YARN_RESOURCEMANAGER_OPTS.
+# This value will be overridden by an Xmx setting specified in either
+# HADOOP_OPTS and/or YARN_RESOURCEMANAGER_OPTS.
 # Default is the same as HADOOP_HEAPSIZE_MAX
 #export YARN_RESOURCEMANAGER_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the ResourceManager.
-# These options will be appended to the options specified as YARN_OPTS
-# and therefore may override any similar flags set in YARN_OPTS
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
 #
 # Examples for a Sun/Oracle JDK:
 # a) override the appsummary log file:
@@ -82,14 +62,14 @@
 
 # Specify the max heapsize for the NodeManager.  If no units are
 # given, it will be assumed to be in MB.
-# This value will be overridden by an Xmx setting specified in either YARN_OPTS,
-# HADOOP_OPTS, and/or YARN_NODEMANAGER_OPTS.
+# This value will be overridden by an Xmx setting specified in either
+# HADOOP_OPTS and/or YARN_NODEMANAGER_OPTS.
 # Default is the same as HADOOP_HEAPSIZE_MAX.
 #export YARN_NODEMANAGER_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the NodeManager.
-# These options will be appended to the options specified as YARN_OPTS
-# and therefore may override any similar flags set in YARN_OPTS
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
 #
 # See ResourceManager for some examples
 #
@@ -101,14 +81,14 @@
 
 # Specify the max heapsize for the timelineserver.  If no units are
 # given, it will be assumed to be in MB.
-# This value will be overridden by an Xmx setting specified in either YARN_OPTS,
-# HADOOP_OPTS, and/or YARN_TIMELINESERVER_OPTS.
+# This value will be overridden by an Xmx setting specified in either
+# HADOOP_OPTS and/or YARN_TIMELINESERVER_OPTS.
 # Default is the same as HADOOP_HEAPSIZE_MAX.
 #export YARN_TIMELINE_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the TimeLineServer.
-# These options will be appended to the options specified as YARN_OPTS
-# and therefore may override any similar flags set in YARN_OPTS
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
 #
 # See ResourceManager for some examples
 #
@@ -120,14 +100,14 @@
 
 # Specify the max heapsize for the web app proxy server.  If no units are
 # given, it will be assumed to be in MB.
-# This value will be overridden by an Xmx setting specified in either YARN_OPTS,
-# HADOOP_OPTS, and/or YARN_PROXYSERVER_OPTS.
+# This value will be overridden by an Xmx setting specified in either
+# HADOOP_OPTS and/or YARN_PROXYSERVER_OPTS.
 # Default is the same as HADOOP_HEAPSIZE_MAX.
 #export YARN_PROXYSERVER_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the proxy server.
-# These options will be appended to the options specified as YARN_OPTS
-# and therefore may override any similar flags set in YARN_OPTS
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
 #
 # See ResourceManager for some examples
 #
@@ -138,8 +118,8 @@
 ###
 # Specify the JVM options to be used when starting the
 # shared cache manager server.
-# These options will be appended to the options specified as YARN_OPTS
-# and therefore may override any similar flags set in YARN_OPTS
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
 #
 # See ResourceManager for some examples
 #
