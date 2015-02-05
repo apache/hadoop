@@ -1049,7 +1049,8 @@ public class FairScheduler extends
       FSQueue queue = reservedAppSchedulable.getQueue();
 
       if (!reservedAppSchedulable.hasContainerForNode(reservedPriority, node)
-          || !fitInMaxShare(queue)) {
+          || !fitsInMaxShare(queue,
+          node.getReservedContainer().getReservedResource())) {
         // Don't hold the reservation if app can no longer use it
         LOG.info("Releasing reservation that cannot be satisfied for application "
             + reservedAppSchedulable.getApplicationAttemptId()
@@ -1084,14 +1085,18 @@ public class FairScheduler extends
     updateRootQueueMetrics();
   }
 
-  private boolean fitInMaxShare(FSQueue queue) {
-    if (Resources.fitsIn(queue.getResourceUsage(), queue.getMaxShare())) {
+  static boolean fitsInMaxShare(FSQueue queue, Resource
+      additionalResource) {
+    Resource usagePlusAddition =
+        Resources.add(queue.getResourceUsage(), additionalResource);
+
+    if (!Resources.fitsIn(usagePlusAddition, queue.getMaxShare())) {
       return false;
     }
     
     FSQueue parentQueue = queue.getParent();
     if (parentQueue != null) {
-      return fitInMaxShare(parentQueue);
+      return fitsInMaxShare(parentQueue, additionalResource);
     }
     return true;
   }
