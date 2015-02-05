@@ -1161,6 +1161,14 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
+  public boolean truncate(Path f, long newLength) throws IOException {
+    statistics.incrementWriteOps(1);
+
+    final HttpOpParam.Op op = PostOpParam.Op.TRUNCATE;
+    return new FsPathBooleanRunner(op, f, new NewLengthParam(newLength)).run();
+  }
+
+  @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
     final HttpOpParam.Op op = DeleteOpParam.Op.DELETE;
     return new FsPathBooleanRunner(op, f,
