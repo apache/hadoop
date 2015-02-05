@@ -292,7 +292,6 @@ public class S3AFileSystem extends FileSystem {
       Date purgeBefore = new Date(new Date().getTime() - purgeExistingMultipartAge*1000);
 
       transfers.abortMultipartUploads(bucket, purgeBefore);
-      transfers.shutdownNow(false);
     }
 
     serverSideEncryptionAlgorithm = conf.get(SERVER_SIDE_ENCRYPTION_ALGORITHM);
@@ -995,13 +994,6 @@ public class S3AFileSystem extends FileSystem {
     LocalFileSystem local = getLocal(getConf());
     File srcfile = local.pathToFile(src);
 
-    TransferManagerConfiguration transferConfiguration = new TransferManagerConfiguration();
-    transferConfiguration.setMinimumUploadPartSize(partSize);
-    transferConfiguration.setMultipartUploadThreshold(partSizeThreshold);
-
-    TransferManager transfers = new TransferManager(s3);
-    transfers.setConfiguration(transferConfiguration);
-
     final ObjectMetadata om = new ObjectMetadata();
     if (StringUtils.isNotBlank(serverSideEncryptionAlgorithm)) {
       om.setServerSideEncryption(serverSideEncryptionAlgorithm);
@@ -1029,8 +1021,6 @@ public class S3AFileSystem extends FileSystem {
       statistics.incrementWriteOps(1);
     } catch (InterruptedException e) {
       throw new IOException("Got interrupted, cancelling");
-    } finally {
-      transfers.shutdownNow(false);
     }
 
     // This will delete unnecessary fake parent directories
@@ -1038,6 +1028,18 @@ public class S3AFileSystem extends FileSystem {
 
     if (delSrc) {
       local.delete(src, false);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    try {
+      super.close();
+    } finally {
+      if (transfers != null) {
+        transfers.shutdownNow(true);
+        transfers = null;
+      }
     }
   }
 
@@ -1054,12 +1056,6 @@ public class S3AFileSystem extends FileSystem {
     if (LOG.isDebugEnabled()) {
       LOG.debug("copyFile " + srcKey + " -> " + dstKey);
     }
-
-    TransferManagerConfiguration transferConfiguration = new TransferManagerConfiguration();
-    transferConfiguration.setMultipartCopyPartSize(partSize);
-
-    TransferManager transfers = new TransferManager(s3);
-    transfers.setConfiguration(transferConfiguration);
 
     ObjectMetadata srcom = s3.getObjectMetadata(bucket, srcKey);
     final ObjectMetadata dstom = srcom.clone();
@@ -1089,8 +1085,6 @@ public class S3AFileSystem extends FileSystem {
       statistics.incrementWriteOps(1);
     } catch (InterruptedException e) {
       throw new IOException("Got interrupted, cancelling");
-    } finally {
-      transfers.shutdownNow(false);
     }
   }
 
