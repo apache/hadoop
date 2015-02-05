@@ -101,6 +101,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6243. Fix findbugs warnings in hadoop-rumen. (Masatake Iwasaki
     via aajisaka)
 
+    MAPREDUCE-5988. Fix dead links to the javadocs in mapreduce project.
+    (aajisaka)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

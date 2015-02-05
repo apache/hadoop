@@ -22,9 +22,7 @@
  *
  * cf. MAPREDUCE-901 for rationales.
  */
-@InterfaceAudience.Private
 @InterfaceStability.Evolving
 package org.apache.hadoop.mapreduce.counters;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
