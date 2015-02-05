@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -356,9 +357,11 @@ public class CapacityScheduler extends
     validateConf(this.conf);
     try {
       LOG.info("Re-initializing queues...");
+      refreshMaximumAllocation(this.conf.getMaximumAllocation());
       reinitializeQueues(this.conf);
     } catch (Throwable t) {
       this.conf = oldConf;
+      refreshMaximumAllocation(this.conf.getMaximumAllocation());
       throw new IOException("Failed to re-init queues", t);
     }
   }
@@ -1580,6 +1583,20 @@ public class CapacityScheduler extends
       .of(SchedulerResourceTypes.MEMORY, SchedulerResourceTypes.CPU);
   }
   
+  @Override
+  public Resource getMaximumResourceCapability(String queueName) {
+    CSQueue queue = getQueue(queueName);
+    if (queue == null) {
+      LOG.error("Unknown queue: " + queueName);
+      return getMaximumResourceCapability();
+    }
+    if (!(queue instanceof LeafQueue)) {
+      LOG.error("queue " + queueName + " is not an leaf queue");
+      return getMaximumResourceCapability();
+    }
+    return ((LeafQueue)queue).getMaximumAllocation();
+  }
+
   private String handleMoveToPlanQueue(String targetQueueName) {
     CSQueue dest = getQueue(targetQueueName);
     if (dest != null && dest instanceof PlanQueue) {

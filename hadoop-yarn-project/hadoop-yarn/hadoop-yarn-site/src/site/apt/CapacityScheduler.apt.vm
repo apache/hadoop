@@ -227,6 +227,18 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
 | | capacity irrespective of how idle th cluster is. Value is specified as |
 | | a float.|
 *--------------------------------------+--------------------------------------+
+| <<<yarn.scheduler.capacity.<queue-path>.maximum-allocation-mb>>> |   |
+| | The per queue maximum limit of memory to allocate to each container |
+| | request at the Resource Manager. This setting overrides the cluster |
+| | configuration <<<yarn.scheduler.maximum-allocation-mb>>>. This value |
+| | must be smaller than or equal to the cluster maximum. |
+*--------------------------------------+--------------------------------------+
+| <<<yarn.scheduler.capacity.<queue-path>.maximum-allocation-vcores>>> |   |
+| | The per queue maximum limit of virtual cores to allocate to each container |
+| | request at the Resource Manager. This setting overrides the cluster |
+| | configuration <<<yarn.scheduler.maximum-allocation-vcores>>>. This value |
+| | must be smaller than or equal to the cluster maximum. |
+*--------------------------------------+--------------------------------------+
 
     * Running and Pending Application Limits
     

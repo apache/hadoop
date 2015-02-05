@@ -180,6 +180,11 @@ public abstract class AbstractYarnScheduler
     return maxResource;
   }
 
+  @Override
+  public Resource getMaximumResourceCapability(String queueName) {
+    return getMaximumResourceCapability();
+  }
+
   protected void initMaximumResourceCapability(Resource maximumAllocation) {
     maxAllocWriteLock.lock();
     try {
@@ -631,6 +636,24 @@ public abstract class AbstractYarnScheduler
           }
         }
       }
+    } finally {
+      maxAllocWriteLock.unlock();
+    }
+  }
+
+  protected void refreshMaximumAllocation(Resource newMaxAlloc) {
+    maxAllocWriteLock.lock();
+    try {
+      configuredMaximumAllocation = Resources.clone(newMaxAlloc);
+      int maxMemory = newMaxAlloc.getMemory();
+      if (maxNodeMemory != -1) {
+        maxMemory = Math.min(maxMemory, maxNodeMemory);
+      }
+      int maxVcores = newMaxAlloc.getVirtualCores();
+      if (maxNodeVCores != -1) {
+        maxVcores = Math.min(maxVcores, maxNodeVCores);
+      }
+      maximumAllocation = Resources.createResource(maxMemory, maxVcores);
     } finally {
       maxAllocWriteLock.unlock();
     }

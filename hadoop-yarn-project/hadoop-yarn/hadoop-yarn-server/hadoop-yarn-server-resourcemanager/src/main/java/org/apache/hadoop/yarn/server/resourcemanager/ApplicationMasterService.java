@@ -285,7 +285,7 @@ public class ApplicationMasterService extends AbstractService implements
       RegisterApplicationMasterResponse response = recordFactory
           .newRecordInstance(RegisterApplicationMasterResponse.class);
       response.setMaximumResourceCapability(rScheduler
-          .getMaximumResourceCapability());
+          .getMaximumResourceCapability(app.getQueue()));
       response.setApplicationACLs(app.getRMAppAttempt(applicationAttemptId)
           .getSubmissionContext().getAMContainerSpec().getApplicationACLs());
       response.setQueue(app.getQueue());

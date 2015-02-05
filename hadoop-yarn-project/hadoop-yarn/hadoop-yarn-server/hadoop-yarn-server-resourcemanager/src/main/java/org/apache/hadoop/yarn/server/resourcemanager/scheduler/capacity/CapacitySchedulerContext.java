@@ -39,6 +39,8 @@ public interface CapacitySchedulerContext {
 
   Resource getMaximumResourceCapability();
 
+  Resource getMaximumResourceCapability(String queueName);
+
   RMContainerTokenSecretManager getContainerTokenSecretManager();
   
   int getNumClusterNodes();

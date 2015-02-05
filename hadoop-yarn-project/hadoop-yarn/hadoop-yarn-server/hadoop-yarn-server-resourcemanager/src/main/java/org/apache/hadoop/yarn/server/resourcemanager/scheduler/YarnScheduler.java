@@ -92,12 +92,21 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   public Resource getMinimumResourceCapability();
   
   /**
-   * Get maximum allocatable {@link Resource}.
+   * Get maximum allocatable {@link Resource} at the cluster level.
    * @return maximum allocatable resource
    */
   @Public
   @Stable
   public Resource getMaximumResourceCapability();
+
+  /**
+   * Get maximum allocatable {@link Resource} for the queue specified.
+   * @param queueName queue name
+   * @return maximum allocatable resource
+   */
+  @Public
+  @Stable
+  public Resource getMaximumResourceCapability(String queueName);
 
   @LimitedPrivate("yarn")
   @Evolving
