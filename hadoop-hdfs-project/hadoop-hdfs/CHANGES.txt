@@ -589,6 +589,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-3443. Fix NPE when namenode transition to active during startup by
     adding checkNNStartup() in NameNodeRpcServer.  (Vinayakumar B via szetszwo)
 
+    HDFS-7733. NFS: readdir/readdirplus return null directory
+    attribute on failure. (Arpit Agarwal)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
