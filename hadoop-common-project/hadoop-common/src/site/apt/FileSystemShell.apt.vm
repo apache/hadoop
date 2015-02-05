@@ -154,16 +154,18 @@ bin/hadoop fs <args>
 
 * count
 
-   Usage: <<<hadoop fs -count [-q] [-h] <paths> >>>
+   Usage: <<<hadoop fs -count [-q] [-h] [-v] <paths> >>>
 
    Count the number of directories, files and bytes under the paths that match
    the specified file pattern.  The output columns with -count are: DIR_COUNT,
-   FILE_COUNT, CONTENT_SIZE FILE_NAME
+   FILE_COUNT, CONTENT_SIZE PATHNAME
 
    The output columns with -count -q are: QUOTA, REMAINING_QUATA, SPACE_QUOTA,
-   REMAINING_SPACE_QUOTA, DIR_COUNT, FILE_COUNT, CONTENT_SIZE, FILE_NAME
+   REMAINING_SPACE_QUOTA, DIR_COUNT, FILE_COUNT, CONTENT_SIZE, PATHNAME
 
    The -h option shows sizes in human readable format.
+
+   The -v option displays a header line.
 
    Example:
 
@@ -172,6 +174,8 @@ bin/hadoop fs <args>
      * <<<hadoop fs -count -q hdfs://nn1.example.com/file1>>>
 
      * <<<hadoop fs -count -q -h hdfs://nn1.example.com/file1>>>
+
+     * <<<hdfs dfs -count -q -h -v hdfs://nn1.example.com/file1>>>
 
    Exit Code:
 

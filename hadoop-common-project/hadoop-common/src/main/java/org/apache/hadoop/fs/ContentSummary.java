@@ -97,28 +97,35 @@ public class ContentSummary implements Writable{
     this.spaceConsumed = in.readLong();
     this.spaceQuota = in.readLong();
   }
-  
-  /** 
+
+  /**
    * Output format:
    * <----12----> <----12----> <-------18------->
-   *    DIR_COUNT   FILE_COUNT       CONTENT_SIZE FILE_NAME    
+   *    DIR_COUNT   FILE_COUNT       CONTENT_SIZE
    */
-  private static final String STRING_FORMAT = "%12s %12s %18s ";
-  /** 
+  private static final String SUMMARY_FORMAT = "%12s %12s %18s ";
+  /**
    * Output format:
-   * <----12----> <----15----> <----15----> <----15----> <----12----> <----12----> <-------18------->
-   *    QUOTA   REMAINING_QUATA SPACE_QUOTA SPACE_QUOTA_REM DIR_COUNT   FILE_COUNT   CONTENT_SIZE     FILE_NAME    
+   * <----12----> <------15-----> <------15-----> <------15----->
+   *        QUOTA       REM_QUOTA     SPACE_QUOTA REM_SPACE_QUOTA
+   * <----12----> <----12----> <-------18------->
+   *    DIR_COUNT   FILE_COUNT       CONTENT_SIZE
    */
-  private static final String QUOTA_STRING_FORMAT = "%12s %15s ";
-  private static final String SPACE_QUOTA_STRING_FORMAT = "%15s %15s ";
-  
+  private static final String QUOTA_SUMMARY_FORMAT = "%12s %15s ";
+  private static final String SPACE_QUOTA_SUMMARY_FORMAT = "%15s %15s ";
+
+  private static final String[] HEADER_FIELDS = new String[] { "DIR_COUNT",
+      "FILE_COUNT", "CONTENT_SIZE"};
+  private static final String[] QUOTA_HEADER_FIELDS = new String[] { "QUOTA",
+      "REM_QUOTA", "SPACE_QUOTA", "REM_SPACE_QUOTA" };
+
   /** The header string */
   private static final String HEADER = String.format(
-      STRING_FORMAT.replace('d', 's'), "directories", "files", "bytes");
+      SUMMARY_FORMAT, (Object[]) HEADER_FIELDS);
 
   private static final String QUOTA_HEADER = String.format(
-      QUOTA_STRING_FORMAT + SPACE_QUOTA_STRING_FORMAT, 
-      "name quota", "rem name quota", "space quota", "rem space quota") +
+      QUOTA_SUMMARY_FORMAT + SPACE_QUOTA_SUMMARY_FORMAT,
+      (Object[]) QUOTA_HEADER_FIELDS) +
       HEADER;
   
   /** Return the header of the output.
@@ -131,7 +138,25 @@ public class ContentSummary implements Writable{
   public static String getHeader(boolean qOption) {
     return qOption ? QUOTA_HEADER : HEADER;
   }
-  
+
+  /**
+   * Returns the names of the fields from the summary header.
+   * 
+   * @return names of fields as displayed in the header
+   */
+  public static String[] getHeaderFields() {
+    return HEADER_FIELDS;
+  }
+
+  /**
+   * Returns the names of the fields used in the quota summary.
+   * 
+   * @return names of quota fields as displayed in the header
+   */
+  public static String[] getQuotaHeaderFields() {
+    return QUOTA_HEADER_FIELDS;
+  }
+
   @Override
   public String toString() {
     return toString(true);
@@ -175,11 +200,11 @@ public class ContentSummary implements Writable{
         spaceQuotaRem = formatSize(spaceQuota - spaceConsumed, hOption);
       }
       
-      prefix = String.format(QUOTA_STRING_FORMAT + SPACE_QUOTA_STRING_FORMAT, 
+      prefix = String.format(QUOTA_SUMMARY_FORMAT + SPACE_QUOTA_SUMMARY_FORMAT,
                              quotaStr, quotaRem, spaceQuotaStr, spaceQuotaRem);
     }
     
-    return prefix + String.format(STRING_FORMAT,
+    return prefix + String.format(SUMMARY_FORMAT,
      formatSize(directoryCount, hOption),
      formatSize(fileCount, hOption),
      formatSize(length, hOption));

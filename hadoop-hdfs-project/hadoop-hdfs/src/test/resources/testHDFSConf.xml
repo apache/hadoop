@@ -8699,6 +8699,48 @@
       </comparators>
     </test>
 
+    <test> <!-- TESTED -->
+      <description>count: file using absolute path showing header record</description>
+      <test-commands>
+        <command>-fs NAMENODE -touchz /file1</command>
+        <command>-fs NAMENODE -count -v /file1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /file1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*DIR_COUNT   FILE_COUNT       CONTENT_SIZE PATHNAME</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*0( |\t)*1( |\t)*0 /file1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>count: file using absolute path with -q option and showing header record</description>
+      <test-commands>
+        <command>-fs NAMENODE -touchz /file1</command>
+        <command>-fs NAMENODE -count -q -v /file1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /file1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*QUOTA       REM_QUOTA     SPACE_QUOTA REM_SPACE_QUOTA    DIR_COUNT   FILE_COUNT       CONTENT_SIZE PATHNAME</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>( |\t)*none( |\t)*inf( |\t)*none( |\t)*inf( |\t)*0( |\t)*1( |\t)*0 /file1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
     <!-- Tests for chmod -->
     <test> <!-- TESTED -->
       <description>chmod: change permission(octal mode) of file in absolute path</description>
