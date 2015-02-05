@@ -177,7 +177,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
 
     String hadoopConfDirProp = getServiceConfig().get(HADOOP_CONF_DIR, getServer().getConfigDir());
     File hadoopConfDir = new File(hadoopConfDirProp).getAbsoluteFile();
-    if (hadoopConfDir == null) {
+    if (!hadoopConfDir.exists()) {
       hadoopConfDir = new File(getServer().getConfigDir()).getAbsoluteFile();
     }
     if (!hadoopConfDir.exists()) {
