@@ -210,6 +210,7 @@ message PacketHeaderProto {
   optional bool syncBlock = 5 [default = false];
 }
 
+// Status is a 4-bit enum
 enum Status {
   SUCCESS = 0;
   ERROR = 1;
@@ -228,7 +229,7 @@ enum Status {
 
 message PipelineAckProto {
   required sint64 seqno = 1;
-  repeated Status status = 2;
+  repeated uint32 reply = 2;
   optional uint64 downstreamAckTimeNanos = 3 [default = 0];
 }
 
