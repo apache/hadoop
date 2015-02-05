@@ -160,7 +160,9 @@ public class TestDataTransferProtocol {
 
     //ok finally write a block with 0 len
     sendResponse(Status.SUCCESS, "", null, recvOut);
-    new PipelineAck(100, new Status[]{Status.SUCCESS}).write(recvOut);
+    new PipelineAck(100, new int[] {PipelineAck.combineHeader
+      (PipelineAck.ECN.DISABLED, Status.SUCCESS)}).write
+      (recvOut);
     sendRecvData(description, false);
   }
   
@@ -393,7 +395,8 @@ public class TestDataTransferProtocol {
     hdr.write(sendOut);
 
     sendResponse(Status.SUCCESS, "", null, recvOut);
-    new PipelineAck(100, new Status[]{Status.ERROR}).write(recvOut);
+    new PipelineAck(100, new int[] {PipelineAck.combineHeader
+      (PipelineAck.ECN.DISABLED, Status.ERROR)}).write(recvOut);
     sendRecvData("negative DATA_CHUNK len while writing block " + newBlockId, 
                  true);
 
@@ -414,7 +417,8 @@ public class TestDataTransferProtocol {
     sendOut.flush();
     //ok finally write a block with 0 len
     sendResponse(Status.SUCCESS, "", null, recvOut);
-    new PipelineAck(100, new Status[]{Status.SUCCESS}).write(recvOut);
+    new PipelineAck(100, new int[] {PipelineAck.combineHeader
+      (PipelineAck.ECN.DISABLED, Status.SUCCESS)}).write(recvOut);
     sendRecvData("Writing a zero len block blockid " + newBlockId, false);
     
     /* Test OP_READ_BLOCK */
