@@ -205,6 +205,10 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
     errno = 0;
     EXPECT_UINT64_EQ((uint64_t)expected, readStats->totalBytesRead);
     hdfsFileFreeReadStatistics(readStats);
+    EXPECT_ZERO(hdfsFileClearReadStatistics(file));
+    EXPECT_ZERO(hdfsFileGetReadStatistics(file, &readStats));
+    EXPECT_UINT64_EQ((uint64_t)0, readStats->totalBytesRead);
+    hdfsFileFreeReadStatistics(readStats);
     EXPECT_ZERO(memcmp(paths->prefix, tmp, expected));
     EXPECT_ZERO(hdfsCloseFile(fs, file));
 
