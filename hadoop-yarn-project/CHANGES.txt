@@ -208,6 +208,9 @@ Release 2.7.0 - UNRELEASED
     YARN-1723. AMRMClientAsync missing blacklist addition and removal
     functionality. (Bartosz Ługowski via sseth)
 
+    YARN-3123. Made YARN CLI show a single completed container even if the app
+    is running. (Naganarasimha G R via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
