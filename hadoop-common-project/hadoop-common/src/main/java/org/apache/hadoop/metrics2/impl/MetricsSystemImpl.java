@@ -384,7 +384,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
    * Requests an immediate publish of all metrics from sources to sinks.
    */
   @Override
-  public void publishMetricsNow() {
+  public synchronized void publishMetricsNow() {
     if (sinks.size() > 0) {
       publishMetrics(sampleMetrics(), true);
     }    
