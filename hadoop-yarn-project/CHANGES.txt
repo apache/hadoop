@@ -464,6 +464,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3145. Fixed ConcurrentModificationException on CapacityScheduler
     ParentQueue#getQueueUserAclInfo. (Tsuyoshi OZAWA via jianhe)
 
+    YARN-1537. Fix race condition in
+    TestLocalResourcesTrackerImpl.testLocalResourceCache. (xgong via acmurthy)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
