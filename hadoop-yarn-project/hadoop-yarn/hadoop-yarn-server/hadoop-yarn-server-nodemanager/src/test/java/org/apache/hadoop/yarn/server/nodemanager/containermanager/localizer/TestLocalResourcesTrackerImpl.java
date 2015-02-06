@@ -24,6 +24,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.timeout;
 
 import java.io.File;
 import java.io.IOException;
@@ -313,7 +314,7 @@ public class TestLocalResourcesTrackerImpl {
       // After receiving failed resource event; all waiting containers will be
       // notified with Container Resource Failed Event.
       Assert.assertEquals(0, localrsrc.size());
-      verify(containerEventHandler, times(2)).handle(
+      verify(containerEventHandler, timeout(1000).times(2)).handle(
         isA(ContainerResourceFailedEvent.class));
       Assert.assertEquals(ResourceState.FAILED, localizedResource.getState());
 
@@ -360,7 +361,7 @@ public class TestLocalResourcesTrackerImpl {
       dispatcher.await();
       
       // Verifying ContainerResourceLocalizedEvent .
-      verify(containerEventHandler, times(1)).handle(
+      verify(containerEventHandler, timeout(1000).times(1)).handle(
         isA(ContainerResourceLocalizedEvent.class));
       Assert.assertEquals(ResourceState.LOCALIZED, localrsrc.get(lr)
         .getState());
