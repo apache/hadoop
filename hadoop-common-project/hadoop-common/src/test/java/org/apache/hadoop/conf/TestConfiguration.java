@@ -209,6 +209,31 @@ public class TestConfiguration extends TestCase {
     assertNull("my var is not final", conf2.get("my.var"));
   }
 
+  public void testCompactFormat() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendCompactFormatProperty("a", "b");
+    appendCompactFormatProperty("c", "d", true);
+    appendCompactFormatProperty("e", "f", false, "g");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    Configuration conf = new Configuration(false);
+    conf.addResource(fileResource);
+
+    assertEquals("b", conf.get("a"));
+
+    assertEquals("d", conf.get("c"));
+    Set<String> s = conf.getFinalParameters();
+    assertEquals(1, s.size());
+    assertTrue(s.contains("c"));
+
+    assertEquals("f", conf.get("e"));
+    String[] sources = conf.getPropertySources("e");
+    assertEquals(2, sources.length);
+    assertEquals("g", sources[0]);
+    assertEquals(fileResource.toString(), sources[1]);
+  }
+
   public static void assertEq(Object a, Object b) {
     System.out.println("assertEq: " + a + ", " + b);
     assertEquals(a, b);
@@ -264,6 +289,36 @@ public class TestConfiguration extends TestCase {
     out.write("</property>\n");
   }
   
+  void appendCompactFormatProperty(String name, String val) throws IOException {
+    appendCompactFormatProperty(name, val, false);
+  }
+
+  void appendCompactFormatProperty(String name, String val, boolean isFinal)
+    throws IOException {
+    appendCompactFormatProperty(name, val, isFinal, null);
+  }
+
+  void appendCompactFormatProperty(String name, String val, boolean isFinal,
+      String source)
+    throws IOException {
+    out.write("<property ");
+    out.write("name=\"");
+    out.write(name);
+    out.write("\" ");
+    out.write("value=\"");
+    out.write(val);
+    out.write("\" ");
+    if (isFinal) {
+      out.write("final=\"true\" ");
+    }
+    if (source != null) {
+      out.write("source=\"");
+      out.write(source);
+      out.write("\" ");
+    }
+    out.write("/>\n");
+  }
+
   public void testOverlay() throws IOException{
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();

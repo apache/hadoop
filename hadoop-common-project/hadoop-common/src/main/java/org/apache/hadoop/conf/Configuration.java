@@ -90,6 +90,7 @@ import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
+import org.w3c.dom.Attr;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -2514,11 +2515,26 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
         if (!"property".equals(prop.getTagName()))
           LOG.warn("bad conf file: element not <property>");
-        NodeList fields = prop.getChildNodes();
+
         String attr = null;
         String value = null;
         boolean finalParameter = false;
         LinkedList<String> source = new LinkedList<String>();
+
+        Attr propAttr = prop.getAttributeNode("name");
+        if (propAttr != null)
+          attr = StringInterner.weakIntern(propAttr.getValue());
+        propAttr = prop.getAttributeNode("value");
+        if (propAttr != null)
+          value = StringInterner.weakIntern(propAttr.getValue());
+        propAttr = prop.getAttributeNode("final");
+        if (propAttr != null)
+          finalParameter = "true".equals(propAttr.getValue());
+        propAttr = prop.getAttributeNode("source");
+        if (propAttr != null)
+          source.add(StringInterner.weakIntern(propAttr.getValue()));
+
+        NodeList fields = prop.getChildNodes();
         for (int j = 0; j < fields.getLength(); j++) {
           Node fieldNode = fields.item(j);
           if (!(fieldNode instanceof Element))
