@@ -497,6 +497,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11526. Memory leak in Bzip2Compressor and Bzip2Decompressor.
     (Anu Engineer via cnauroth)
 
+    HADOOP-11535 TableMapping related tests failed due to 'successful'
+    resolving of invalid test hostname. (Kai Zheng via stevel)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

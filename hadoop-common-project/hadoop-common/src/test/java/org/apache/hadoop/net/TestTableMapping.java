@@ -34,12 +34,15 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestTableMapping {
+  private String hostName1 = "1.2.3.4";
+  private String hostName2 = "5.6.7.8";
+
   @Test
   public void testResolve() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testResolve", ".txt");
-    Files.write("a.b.c /rack1\n" +
-                "1.2.3.4\t/rack2\n", mapFile, Charsets.UTF_8);
+    Files.write(hostName1 + " /rack1\n" +
+                hostName2 + "\t/rack2\n", mapFile, Charsets.UTF_8);
     mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
 
@@ -48,8 +51,8 @@ public class TestTableMapping {
     mapping.setConf(conf);
 
     List<String> names = new ArrayList<String>();
-    names.add("a.b.c");
-    names.add("1.2.3.4");
+    names.add(hostName1);
+    names.add(hostName2);
 
     List<String> result = mapping.resolve(names);
     assertEquals(names.size(), result.size());
@@ -61,8 +64,8 @@ public class TestTableMapping {
   public void testTableCaching() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testTableCaching", ".txt");
-    Files.write("a.b.c /rack1\n" +
-                "1.2.3.4\t/rack2\n", mapFile, Charsets.UTF_8);
+    Files.write(hostName1 + " /rack1\n" +
+        hostName2 + "\t/rack2\n", mapFile, Charsets.UTF_8);
     mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
 
@@ -71,8 +74,8 @@ public class TestTableMapping {
     mapping.setConf(conf);
 
     List<String> names = new ArrayList<String>();
-    names.add("a.b.c");
-    names.add("1.2.3.4");
+    names.add(hostName1);
+    names.add(hostName2);
 
     List<String> result1 = mapping.resolve(names);
     assertEquals(names.size(), result1.size());
@@ -94,8 +97,8 @@ public class TestTableMapping {
     mapping.setConf(conf);
 
     List<String> names = new ArrayList<String>();
-    names.add("a.b.c");
-    names.add("1.2.3.4");
+    names.add(hostName1);
+    names.add(hostName2);
 
     List<String> result = mapping.resolve(names);
     assertEquals(names.size(), result.size());
@@ -112,8 +115,8 @@ public class TestTableMapping {
     mapping.setConf(conf);
 
     List<String> names = new ArrayList<String>();
-    names.add("a.b.c");
-    names.add("1.2.3.4");
+    names.add(hostName1);
+    names.add(hostName2);
 
     List<String> result = mapping.resolve(names);
     assertEquals(names.size(), result.size());
@@ -125,8 +128,8 @@ public class TestTableMapping {
   public void testClearingCachedMappings() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testClearingCachedMappings", ".txt");
-    Files.write("a.b.c /rack1\n" +
-                "1.2.3.4\t/rack2\n", mapFile, Charsets.UTF_8);
+    Files.write(hostName1 + " /rack1\n" +
+                hostName2 + "\t/rack2\n", mapFile, Charsets.UTF_8);
     mapFile.deleteOnExit();
 
     TableMapping mapping = new TableMapping();
@@ -136,8 +139,8 @@ public class TestTableMapping {
     mapping.setConf(conf);
 
     List<String> names = new ArrayList<String>();
-    names.add("a.b.c");
-    names.add("1.2.3.4");
+    names.add(hostName1);
+    names.add(hostName2);
 
     List<String> result = mapping.resolve(names);
     assertEquals(names.size(), result.size());
@@ -149,8 +152,8 @@ public class TestTableMapping {
     mapping.reloadCachedMappings();
 
     names = new ArrayList<String>();
-    names.add("a.b.c");
-    names.add("1.2.3.4");
+    names.add(hostName1);
+    names.add(hostName2);
 
     result = mapping.resolve(names);
     assertEquals(names.size(), result.size());
@@ -172,8 +175,8 @@ public class TestTableMapping {
     mapping.setConf(conf);
 
     List<String> names = new ArrayList<String>();
-    names.add("a.b.c");
-    names.add("1.2.3.4");
+    names.add(hostName1);
+    names.add(hostName2);
 
     List<String> result = mapping.resolve(names);
     assertEquals(names.size(), result.size());
