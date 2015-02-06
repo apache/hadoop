@@ -1385,6 +1385,13 @@ public class YarnConfiguration extends Configuration {
   public static final long
       DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS = 1000;
 
+  /** Timeline client policy for whether connections are fatal */
+  public static final String TIMELINE_SERVICE_CLIENT_BEST_EFFORT =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "best-effort";
+
+  public static final boolean
+      DEFAULT_TIMELINE_SERVICE_CLIENT_BEST_EFFORT = false;
+
   /** Flag to enable recovery of timeline service */
   public static final String TIMELINE_SERVICE_RECOVERY_ENABLED =
       TIMELINE_SERVICE_PREFIX + "recovery.enabled";

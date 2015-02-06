@@ -1371,6 +1371,12 @@
   </property>
 
   <property>
+    <description>Client policy for whether timeline operations are non-fatal</description>
+    <name>yarn.timeline-service.client.best-effort</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>
     Default retry time interval for timeline servive client.
     </description>
