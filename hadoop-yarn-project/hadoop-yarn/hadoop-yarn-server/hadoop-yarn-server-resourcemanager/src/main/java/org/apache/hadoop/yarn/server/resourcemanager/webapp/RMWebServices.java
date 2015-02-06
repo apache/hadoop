@@ -24,7 +24,6 @@ import java.security.AccessControlException;
 import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -167,6 +166,12 @@ public class RMWebServices {
   public RMWebServices(final ResourceManager rm, Configuration conf) {
     this.rm = rm;
     this.conf = conf;
+  }
+
+  RMWebServices(ResourceManager rm, Configuration conf,
+      HttpServletResponse response) {
+    this(rm, conf);
+    this.response = response;
   }
 
   protected Boolean hasAccess(RMApp app, HttpServletRequest hsr) {
@@ -459,6 +464,9 @@ public class RMWebServices {
     AppsInfo allApps = new AppsInfo();
     for (ApplicationReport report : appReports) {
       RMApp rmapp = apps.get(report.getApplicationId());
+      if (rmapp == null) {
+        continue;
+      }
 
       if (finalStatusQuery != null && !finalStatusQuery.isEmpty()) {
         FinalApplicationStatus.valueOf(finalStatusQuery);
