@@ -382,7 +382,28 @@ void test_delete_user() {
   if (mkdirs(app_dir, 0700) != 0) {
     exit(1);
   }
+
   char buffer[100000];
+  sprintf(buffer, "%s/test.cfg", app_dir);
+  if (write_config_file(buffer) != 0) {
+    exit(1);
+  }
+
+  char * dirs[] = {buffer, 0};
+  int ret = delete_as_user(yarn_username, "file1" , dirs);
+  if (ret == 0) {
+    printf("FAIL: if baseDir is a file, delete_as_user should fail if a subdir is also passed\n");
+    exit(1);
+  }
+
+  // Pass a file to delete_as_user in the baseDirs parameter. The file should
+  // be deleted.
+  ret = delete_as_user(yarn_username, "" , dirs);
+  if (ret != 0) {
+    printf("FAIL: delete_as_user could not delete baseDir when baseDir is a file: return code is %d\n", ret);
+    exit(1);
+  }
+
   sprintf(buffer, "%s/local-1/usercache/%s", TEST_ROOT, yarn_username);
   if (access(buffer, R_OK) != 0) {
     printf("FAIL: directory missing before test\n");
