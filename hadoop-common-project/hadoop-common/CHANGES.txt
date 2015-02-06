@@ -178,6 +178,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11463 Replace method-local TransferManager object with
     S3AFileSystem#transfers. (Ted Yu via stevel)
 
+    HADOOP-11543. Improve help message for hadoop/yarn command.
+    (Brahma Reddy Battula via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
