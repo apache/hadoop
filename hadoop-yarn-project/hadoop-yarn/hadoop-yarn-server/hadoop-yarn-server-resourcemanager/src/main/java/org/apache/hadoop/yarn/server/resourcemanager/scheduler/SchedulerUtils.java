@@ -231,9 +231,29 @@ public class SchedulerUtils {
     
     // if queue has default label expression, and RR doesn't have, use the
     // default label expression of queue
-    if (labelExp == null && queueInfo != null) {
+    if (labelExp == null && queueInfo != null
+        && ResourceRequest.ANY.equals(resReq.getResourceName())) {
       labelExp = queueInfo.getDefaultNodeLabelExpression();
       resReq.setNodeLabelExpression(labelExp);
+    }
+    
+    // we don't allow specify label expression other than resourceName=ANY now
+    if (!ResourceRequest.ANY.equals(resReq.getResourceName())
+        && labelExp != null && !labelExp.trim().isEmpty()) {
+      throw new InvalidResourceRequestException(
+          "Invailid resource request, queue=" + queueInfo.getQueueName()
+              + " specified node label expression in a "
+              + "resource request has resource name = "
+              + resReq.getResourceName());
+    }
+    
+    // we don't allow specify label expression with more than one node labels now
+    if (labelExp != null && labelExp.contains("&&")) {
+      throw new InvalidResourceRequestException(
+          "Invailid resource request, queue=" + queueInfo.getQueueName()
+              + " specified more than one node label "
+              + "in a node label expression, node label expression = "
+              + labelExp);
     }
     
     if (labelExp != null && !labelExp.trim().isEmpty() && queueInfo != null) {

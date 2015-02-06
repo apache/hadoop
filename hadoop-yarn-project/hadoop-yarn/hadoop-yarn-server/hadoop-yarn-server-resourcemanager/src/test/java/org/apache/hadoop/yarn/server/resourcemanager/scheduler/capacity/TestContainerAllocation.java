@@ -87,6 +87,7 @@ public class TestContainerAllocation {
 
   @Test(timeout = 3000000)
   public void testExcessReservationThanNodeManagerCapacity() throws Exception {
+    @SuppressWarnings("resource")
     MockRM rm = new MockRM(conf);
     rm.start();
 
@@ -393,6 +394,7 @@ public class TestContainerAllocation {
     }
   }
   
+  @SuppressWarnings("unchecked")
   private <E> Set<E> toSet(E... elements) {
     Set<E> set = Sets.newHashSet(elements);
     return set;
@@ -449,7 +451,7 @@ public class TestContainerAllocation {
     return conf;
   }
   
-  @Test(timeout = 300000)
+  @Test (timeout = 300000)
   public void testContainerAllocationWithSingleUserLimits() throws Exception {
     final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
     mgr.init(conf);
@@ -470,7 +472,7 @@ public class TestContainerAllocation {
     rm1.getRMContext().setNodeLabelManager(mgr);
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 8000); // label = x
-    MockNM nm2 = rm1.registerNode("h2:1234", 8000); // label = y
+    rm1.registerNode("h2:1234", 8000); // label = y
     MockNM nm3 = rm1.registerNode("h3:1234", 8000); // label = <empty>
 
     // launch an app to queue a1 (label = x), and check all container will
@@ -518,9 +520,9 @@ public class TestContainerAllocation {
      *                           
      * Node structure:
      * h1 : x
-     * h2 : x, y
+     * h2 : y
      * h3 : y
-     * h4 : y, z
+     * h4 : z
      * h5 : NO
      * 
      * Total resource:
@@ -540,9 +542,9 @@ public class TestContainerAllocation {
     // set node -> label
     mgr.addToCluserNodeLabels(ImmutableSet.of("x", "y", "z"));
     mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0),
-        toSet("x"), NodeId.newInstance("h2", 0), toSet("x", "y"),
+        toSet("x"), NodeId.newInstance("h2", 0), toSet("y"),
         NodeId.newInstance("h3", 0), toSet("y"), NodeId.newInstance("h4", 0),
-        toSet("y", "z"), NodeId.newInstance("h5", 0),
+        toSet("z"), NodeId.newInstance("h5", 0),
         RMNodeLabelsManager.EMPTY_STRING_SET));
 
     // inject node label manager
@@ -568,12 +570,10 @@ public class TestContainerAllocation {
     RMApp app1 = rm1.submitApp(1024, "app", "user", null, "a1");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    // request a container (label = x && y). can only allocate on nm2 
-    am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "x && y");
+    // request a container (label = y). can be allocated on nm2 
+    am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
     containerId =
-        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm1, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+        ContainerId.newContainerId(am1.getApplicationAttemptId(), 2L);
     Assert.assertTrue(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
@@ -609,12 +609,10 @@ public class TestContainerAllocation {
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h3");
     
-    // try to allocate container (request label = y && z) on nm3 (label = y) and
-    // nm4 (label = y,z). Will sucessfully allocate on nm4 only.
-    am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y && z");
-    containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 3);
-    Assert.assertFalse(rm1.waitForState(nm3, containerId,
-        RMContainerState.ALLOCATED, 10 * 1000));
+    // try to allocate container (request label = z) on nm4 (label = y,z). 
+    // Will successfully allocate on nm4 only.
+    am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "z");
+    containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 3L);
     Assert.assertTrue(rm1.waitForState(nm4, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,

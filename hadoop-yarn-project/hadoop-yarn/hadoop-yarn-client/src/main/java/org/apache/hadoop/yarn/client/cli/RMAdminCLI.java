@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RemoveFromClusterNodeLa
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequest;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
 @Private
@@ -102,7 +103,9 @@ public class RMAdminCLI extends HAAdmin {
           .put("-replaceLabelsOnNode",
               new UsageInfo(
                   "[node1[:port]=label1,label2 node2[:port]=label1,label2]",
-                  "replace labels on nodes"))
+                  "replace labels on nodes"
+                      + " (please note that we do not support specifying multiple"
+                      + " labels on a single host for now.)"))
           .put("-directlyAccessNodeLabelStore",
               new UsageInfo("", "Directly access node label store, "
                   + "with this option, all node label related operations"
@@ -389,8 +392,7 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
   
-  private Map<NodeId, Set<String>> buildNodeLabelsMapFromStr(String args)
-      throws IOException {
+  private Map<NodeId, Set<String>> buildNodeLabelsMapFromStr(String args) {
     Map<NodeId, Set<String>> map = new HashMap<NodeId, Set<String>>();
 
     for (String nodeToLabels : args.split("[ \n]")) {
@@ -411,10 +413,9 @@ public class RMAdminCLI extends HAAdmin {
       if (index == 0) {
         splits = splits[1].split(",");
       }
-
-      if (nodeIdStr.trim().isEmpty()) {
-        throw new IOException("node name cannot be empty");
-      }
+      
+      Preconditions.checkArgument(!nodeIdStr.trim().isEmpty(),
+          "node name cannot be empty");
 
       NodeId nodeId = ConverterUtils.toNodeIdWithDefaultPort(nodeIdStr);
       map.put(nodeId, new HashSet<String>());
@@ -424,6 +425,11 @@ public class RMAdminCLI extends HAAdmin {
           map.get(nodeId).add(splits[i].trim());
         }
       }
+      
+      int nLabels = map.get(nodeId).size();
+      Preconditions.checkArgument(nLabels <= 1, "%d labels specified on host=%s"
+          + ", please note that we do not support specifying multiple"
+          + " labels on a single host for now.", nLabels, nodeIdStr);
     }
 
     if (map.isEmpty()) {

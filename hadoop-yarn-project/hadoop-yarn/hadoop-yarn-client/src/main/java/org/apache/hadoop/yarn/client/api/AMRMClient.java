@@ -169,7 +169,8 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
      *          If true, containers for this request may be assigned on hosts
      *          and racks other than the ones explicitly requested.
      * @param nodeLabelsExpression
-     *          Set node labels to allocate resource
+     *          Set node labels to allocate resource, now we only support
+     *          asking for only a single node label
      */
     public ContainerRequest(Resource capability, String[] nodes,
         String[] racks, Priority priority, boolean relaxLocality,

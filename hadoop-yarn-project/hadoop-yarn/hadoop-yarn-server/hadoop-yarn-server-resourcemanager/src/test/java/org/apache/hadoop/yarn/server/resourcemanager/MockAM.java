@@ -165,12 +165,17 @@ public class MockAM {
       int containers, String labelExpression) throws Exception {
     List<ResourceRequest> reqs = new ArrayList<ResourceRequest>();
     for (String host : hosts) {
-      ResourceRequest hostReq = createResourceReq(host, memory, priority,
-          containers, labelExpression);
-      reqs.add(hostReq);
-      ResourceRequest rackReq = createResourceReq("/default-rack", memory,
-          priority, containers, labelExpression);
-      reqs.add(rackReq);
+      // only add host/rack request when asked host isn't ANY
+      if (!host.equals(ResourceRequest.ANY)) {
+        ResourceRequest hostReq =
+            createResourceReq(host, memory, priority, containers,
+                labelExpression);
+        reqs.add(hostReq);
+        ResourceRequest rackReq =
+            createResourceReq("/default-rack", memory, priority, containers,
+                labelExpression);
+        reqs.add(rackReq);
+      }
     }
 
     ResourceRequest offRackReq = createResourceReq(ResourceRequest.ANY, memory,
