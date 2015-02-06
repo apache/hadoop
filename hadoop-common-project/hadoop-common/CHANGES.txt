@@ -556,6 +556,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11463 Replace method-local TransferManager object with
     S3AFileSystem#transfers. (Ted Yu via stevel)
 
+    HADOOP-11543. Improve help message for hadoop/yarn command.
+    (Brahma Reddy Battula via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
@@ -863,9 +866,6 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-10062. race condition in MetricsSystemImpl#publishMetricsNow that 
     causes incorrect results. (Sangjin Lee via junping_du)
-
-    HADOOP-11543. Improve help message for hadoop/yarn command.
-    (Brahma Reddy Battula via ozawa)
 
     HADOOP-11526. Memory leak in Bzip2Compressor and Bzip2Decompressor.
     (Anu Engineer via cnauroth)
