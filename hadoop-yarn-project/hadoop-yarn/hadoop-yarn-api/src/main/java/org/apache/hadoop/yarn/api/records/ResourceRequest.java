@@ -253,24 +253,27 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   /**
    * Get node-label-expression for this Resource Request. If this is set, all
    * containers allocated to satisfy this resource-request will be only on those
-   * nodes that satisfy this node-label-expression
+   * nodes that satisfy this node-label-expression.
+   *  
+   * Please note that node label expression now can only take effect when the
+   * resource request has resourceName = ANY
    * 
    * @return node-label-expression
    */
   @Public
   @Evolving
-  public abstract String getNodeLabelExpression(); 
+  public abstract String getNodeLabelExpression();
   
   /**
-   * Set node label expression of this resource request. Now only
-   * support AND(&&), in the future will provide support for OR(||), NOT(!).
+   * Set node label expression of this resource request. Now only support
+   * specifying a single node label. In the future we will support more complex
+   * node label expression specification like AND(&&), OR(||), etc.
    * 
-   * Examples: 
-   * - GPU && LARGE_MEM, ask for node has label GPU and LARGE_MEM together
-   * - "" (empty) means ask for node doesn't have label on it, this is default
-   *   behavior
+   * Any please note that node label expression now can only take effect when
+   * the resource request has resourceName = ANY
    * 
-   * @param nodelabelExpression node-label-expression of this ResourceRequest
+   * @param nodelabelExpression
+   *          node-label-expression of this ResourceRequest
    */
   @Public
   @Evolving

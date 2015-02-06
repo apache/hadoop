@@ -214,11 +214,7 @@ public class TestSchedulerUtils {
       resReq.setNodeLabelExpression("x");
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
           scheduler);
-      
-      resReq.setNodeLabelExpression("x && y");
-      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
-          scheduler);
-      
+
       resReq.setNodeLabelExpression("y");
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
           scheduler);
@@ -253,6 +249,8 @@ public class TestSchedulerUtils {
     } catch (InvalidResourceRequestException e) {
     }
     
+    // we don't allow specify more than two node labels in a single expression
+    // now
     try {
       // set queue accessible node labesl to [x, y]
       queueAccessibleNodeLabels.clear();
@@ -263,7 +261,7 @@ public class TestSchedulerUtils {
           YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
       ResourceRequest resReq = BuilderUtils.newResourceRequest(
           mock(Priority.class), ResourceRequest.ANY, resource, 1);
-      resReq.setNodeLabelExpression("x && y && z");
+      resReq.setNodeLabelExpression("x && y");
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
           scheduler);
       fail("Should fail");
@@ -328,7 +326,7 @@ public class TestSchedulerUtils {
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
           scheduler);
       
-      resReq.setNodeLabelExpression("x && y && z");
+      resReq.setNodeLabelExpression("y");
       SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
           scheduler);
       
@@ -337,7 +335,45 @@ public class TestSchedulerUtils {
           scheduler);
     } catch (InvalidResourceRequestException e) {
       e.printStackTrace();
-      fail("Should be valid when request labels is empty");
+      fail("Should be valid when queue can access any labels");
+    }
+    
+    // we don't allow resource name other than ANY and specify label
+    try {
+      // set queue accessible node labesl to [x, y]
+      queueAccessibleNodeLabels.clear();
+      queueAccessibleNodeLabels.addAll(Arrays.asList("x", "y"));
+      
+      Resource resource = Resources.createResource(
+          0,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+      ResourceRequest resReq = BuilderUtils.newResourceRequest(
+          mock(Priority.class), "rack", resource, 1);
+      resReq.setNodeLabelExpression("x");
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler);
+      fail("Should fail");
+    } catch (InvalidResourceRequestException e) {
+    }
+    
+    // we don't allow resource name other than ANY and specify label even if
+    // queue has accessible label = *
+    try {
+      // set queue accessible node labesl to *
+      queueAccessibleNodeLabels.clear();
+      queueAccessibleNodeLabels.addAll(Arrays
+          .asList(CommonNodeLabelsManager.ANY));
+      
+      Resource resource = Resources.createResource(
+          0,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
+      ResourceRequest resReq = BuilderUtils.newResourceRequest(
+          mock(Priority.class), "rack", resource, 1);
+      resReq.setNodeLabelExpression("x");
+      SchedulerUtils.normalizeAndvalidateRequest(resReq, maxResource, "queue",
+          scheduler);
+      fail("Should fail");
+    } catch (InvalidResourceRequestException e) {
     }
   }
 

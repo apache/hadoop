@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import com.google.common.base.Supplier;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -40,7 +38,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
@@ -75,6 +72,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.InvalidContainerRequestException;
 import org.apache.hadoop.yarn.client.api.NMTokenCache;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -89,12 +87,15 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mortbay.log.Log;
+
+import com.google.common.base.Supplier;
 
 public class TestAMRMClient {
   static Configuration conf = null;
@@ -148,7 +149,6 @@ public class TestAMRMClient {
     racks = new String[]{ rack };
   }
   
-  @SuppressWarnings("deprecation")
   @Before
   public void startApp() throws Exception {
     // submit new app
@@ -678,21 +678,57 @@ public class TestAMRMClient {
     AMRMClientImpl<ContainerRequest> client =
         new AMRMClientImpl<ContainerRequest>();
 
-    // add x, y to ANY
+    // add exp=x to ANY
     client.addContainerRequest(new ContainerRequest(Resource.newInstance(1024,
-        1), null, null, Priority.UNDEFINED, true, "x && y"));
+        1), null, null, Priority.UNDEFINED, true, "x"));
     Assert.assertEquals(1, client.ask.size());
-    Assert.assertEquals("x && y", client.ask.iterator().next()
+    Assert.assertEquals("x", client.ask.iterator().next()
         .getNodeLabelExpression());
 
-    // add x, y and a, b to ANY, only a, b should be kept
+    // add exp=x then add exp=a to ANY in same priority, only exp=a should kept
     client.addContainerRequest(new ContainerRequest(Resource.newInstance(1024,
-        1), null, null, Priority.UNDEFINED, true, "x && y"));
+        1), null, null, Priority.UNDEFINED, true, "x"));
     client.addContainerRequest(new ContainerRequest(Resource.newInstance(1024,
-        1), null, null, Priority.UNDEFINED, true, "a && b"));
+        1), null, null, Priority.UNDEFINED, true, "a"));
     Assert.assertEquals(1, client.ask.size());
-    Assert.assertEquals("a && b", client.ask.iterator().next()
+    Assert.assertEquals("a", client.ask.iterator().next()
         .getNodeLabelExpression());
+    
+    // add exp=x to ANY, rack and node, only resource request has ANY resource
+    // name will be assigned the label expression
+    // add exp=x then add exp=a to ANY in same priority, only exp=a should kept
+    client.addContainerRequest(new ContainerRequest(Resource.newInstance(1024,
+        1), null, null, Priority.UNDEFINED, true,
+        "y"));
+    Assert.assertEquals(1, client.ask.size());
+    for (ResourceRequest req : client.ask) {
+      if (ResourceRequest.ANY.equals(req.getResourceName())) {
+        Assert.assertEquals("y", req.getNodeLabelExpression());
+      } else {
+        Assert.assertNull(req.getNodeLabelExpression());
+      }
+    }
+  }
+  
+  private void verifyAddRequestFailed(AMRMClient<ContainerRequest> client,
+      ContainerRequest request) {
+    try {
+      client.addContainerRequest(request);
+    } catch (InvalidContainerRequestException e) {
+      return;
+    }
+    Assert.fail();
+  }
+  
+  @Test(timeout=30000)
+  public void testAskWithInvalidNodeLabels() {
+    AMRMClientImpl<ContainerRequest> client =
+        new AMRMClientImpl<ContainerRequest>();
+
+    // specified exp with more than one node labels
+    verifyAddRequestFailed(client,
+        new ContainerRequest(Resource.newInstance(1024, 1), null, null,
+            Priority.UNDEFINED, true, "x && y"));
   }
     
   private void testAllocation(final AMRMClientImpl<ContainerRequest> amClient)  

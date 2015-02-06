@@ -470,7 +470,7 @@ public class TestRMAdminCLI {
     // Successfully replace labels
     dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
     String[] args =
-        { "-replaceLabelsOnNode", "node1,x,y node2,y",
+        { "-replaceLabelsOnNode", "node1,x node2,y",
             "-directlyAccessNodeLabelStore" };
     assertEquals(0, rmAdminCLI.run(args));
     assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
@@ -494,13 +494,23 @@ public class TestRMAdminCLI {
     // Successfully replace labels
     dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
     String[] args =
-      { "-replaceLabelsOnNode", "node1:8000,x,y node2:8000,y",
+      { "-replaceLabelsOnNode", "node1:8000,x node2:8000,y",
       "-directlyAccessNodeLabelStore" };
     assertEquals(0, rmAdminCLI.run(args));
     assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
         NodeId.newInstance("node1", 8000)));
     assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
         NodeId.newInstance("node2", 8000)));
+  }
+  
+  @Test
+  public void testReplaceMultipleLabelsOnSingleNode() throws Exception {
+    // Successfully replace labels
+    dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    String[] args =
+        { "-replaceLabelsOnNode", "node1,x,y",
+            "-directlyAccessNodeLabelStore" };
+    assertTrue(0 != rmAdminCLI.run(args));
   }
 
   private void testError(String[] args, String template,
