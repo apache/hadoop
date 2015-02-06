@@ -155,7 +155,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("replace-labels")
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\": [\"a\", \"b\"]}",
+            .entity("{\"nodeLabels\": [\"a\"]}",
               MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
@@ -168,8 +168,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     json = response.getEntity(JSONObject.class);
-    jarr = json.getJSONArray("nodeLabels");
-    assertEquals(2, jarr.length());
+    assertEquals("a", json.getString("nodeLabels"));
+
     
     // Replace
     response =
@@ -178,9 +178,10 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("replace-labels")
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\":\"a\"}", MediaType.APPLICATION_JSON)
+            .entity("{\"nodeLabels\":\"b\"}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
+
     // Verify
     response =
         r.path("ws").path("v1").path("cluster")
@@ -189,13 +190,12 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     json = response.getEntity(JSONObject.class);
-    assertEquals("a", json.getString("nodeLabels"));
+    assertEquals("b", json.getString("nodeLabels"));
             
     // Replace labels using node-to-labels
     NodeToLabelsInfo ntli = new NodeToLabelsInfo();
     NodeLabelsInfo nli = new NodeLabelsInfo();
     nli.getNodeLabels().add("a");
-    nli.getNodeLabels().add("b");
     ntli.getNodeToLabels().put("nid:0", nli);
     response =
         r.path("ws").path("v1").path("cluster")
@@ -214,9 +214,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     ntli = response.getEntity(NodeToLabelsInfo.class);
     nli = ntli.getNodeToLabels().get("nid:0");
-    assertEquals(2, nli.getNodeLabels().size());
+    assertEquals(1, nli.getNodeLabels().size());
     assertTrue(nli.getNodeLabels().contains("a"));
-    assertTrue(nli.getNodeLabels().contains("b"));
     
     // Remove all
     response =
@@ -267,7 +266,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .path("replace-labels")
             .queryParam("user.name", notUserName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\": [\"a\", \"b\"]}",
+            .entity("{\"nodeLabels\": [\"b\"]}",
               MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     // Verify

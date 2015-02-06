@@ -211,16 +211,14 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     
     /*
      * Node->Labels:
-     *   host1 : red, blue
-     *   host2 : blue, yellow
+     *   host1 : red
+     *   host2 : blue
      *   host3 : yellow
      *   host4 :
      */
     mgr.addToCluserNodeLabels(toSet("red", "blue", "yellow"));
-    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("host1"),
-        toSet("red", "blue")));
-    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("host2"),
-        toSet("blue", "yellow")));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("host1"), toSet("red")));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("host2"), toSet("blue")));
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("host3"), toSet("yellow")));
     
     // active two NM to n1, one large and one small
@@ -248,31 +246,29 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     // check resource
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
         mgr.getQueueResource("Q1", q1Label, clusterResource));
-    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 4),
-        mgr.getQueueResource("Q2", q2Label, clusterResource));
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
+        mgr.getQueueResource("Q2", q2Label, clusterResource));
+    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 2),
         mgr.getQueueResource("Q3", q3Label, clusterResource));
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 1),
         mgr.getQueueResource("Q4", q4Label, clusterResource));
     Assert.assertEquals(clusterResource,
         mgr.getQueueResource("Q5", q5Label, clusterResource));
     
-    mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("host1"), toSet("red"),
-        toNodeId("host2"), toSet("blue", "yellow")));
-    mgr.addLabelsToNode(ImmutableMap.of(toNodeId("host3"), toSet("red")));
+    mgr.removeLabelsFromNode(ImmutableMap.of(toNodeId("host2"), toSet("blue")));
     /*
      * Check resource after changes some labels
      * Node->Labels:
-     *   host1 : blue (was: red, blue)
-     *   host2 : (was: blue, yellow)
-     *   host3 : red, yellow (was: yellow)
+     *   host1 : red
+     *   host2 : (was: blue)
+     *   host3 : yellow
      *   host4 :
      */
     
     // check resource
-    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 4),
+    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
         mgr.getQueueResource("Q1", q1Label, clusterResource));
-    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 4),
+    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
         mgr.getQueueResource("Q2", q2Label, clusterResource));
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
         mgr.getQueueResource("Q3", q3Label, clusterResource));
@@ -284,9 +280,9 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     /*
      * Check resource after deactive/active some nodes 
      * Node->Labels:
-     *   (deactived) host1 : blue
+     *   (deactived) host1 : red
      *   host2 :
-     *   (deactived and then actived) host3 : red, yellow
+     *   (deactived and then actived) host3 : yellow
      *   host4 :
      */
     mgr.deactivateNode(NodeId.newInstance("host1", 1));
@@ -294,7 +290,7 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     mgr.activateNode(NodeId.newInstance("host3", 1), SMALL_RESOURCE);
     
     // check resource
-    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
+    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 2),
         mgr.getQueueResource("Q1", q1Label, clusterResource));
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
         mgr.getQueueResource("Q2", q2Label, clusterResource));
@@ -331,9 +327,9 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     // check resource
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 2),
         mgr.getQueueResource("Q1", q1Label, clusterResource));
-    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
+    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 2),
         mgr.getQueueResource("Q2", q2Label, clusterResource));
-    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
+    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 2),
         mgr.getQueueResource("Q3", q3Label, clusterResource));
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 2),
         mgr.getQueueResource("Q4", q4Label, clusterResource));
@@ -344,7 +340,7 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
      * Active NMs in nodes already have NM
      * Node->Labels:
      *   host2 :
-     *   host3 : red, yellow (3 NMs)
+     *   host3 : yellow (3 NMs)
      *   host4 : (2 NMs)
      */
     mgr.activateNode(NodeId.newInstance("host3", 2), SMALL_RESOURCE);
@@ -354,9 +350,9 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     // check resource
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
         mgr.getQueueResource("Q1", q1Label, clusterResource));
-    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 6),
+    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
         mgr.getQueueResource("Q2", q2Label, clusterResource));
-    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 6),
+    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
         mgr.getQueueResource("Q3", q3Label, clusterResource));
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
         mgr.getQueueResource("Q4", q4Label, clusterResource));
@@ -367,7 +363,7 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
      * Deactive NMs in nodes already have NMs
      * Node->Labels:
      *   host2 :
-     *   host3 : red, yellow (2 NMs)
+     *   host3 : yellow (2 NMs)
      *   host4 : (0 NMs)
      */
     mgr.deactivateNode(NodeId.newInstance("host3", 3));
@@ -377,9 +373,9 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     // check resource
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 1),
         mgr.getQueueResource("Q1", q1Label, clusterResource));
-    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
+    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 1),
         mgr.getQueueResource("Q2", q2Label, clusterResource));
-    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 3),
+    Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 1),
         mgr.getQueueResource("Q3", q3Label, clusterResource));
     Assert.assertEquals(Resources.multiply(SMALL_RESOURCE, 1),
         mgr.getQueueResource("Q4", q4Label, clusterResource));

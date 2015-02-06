@@ -45,11 +45,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.nodelabels.event.StoreNewClusterNodeLabels;
 import org.apache.hadoop.yarn.nodelabels.event.NodeLabelsStoreEvent;
 import org.apache.hadoop.yarn.nodelabels.event.NodeLabelsStoreEventType;
 import org.apache.hadoop.yarn.nodelabels.event.RemoveClusterNodeLabels;
+import org.apache.hadoop.yarn.nodelabels.event.StoreNewClusterNodeLabels;
 import org.apache.hadoop.yarn.nodelabels.event.UpdateNodeToLabelsMappingsEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -309,13 +310,34 @@ public class CommonNodeLabelsManager extends AbstractService {
     // check all labels being added existed
     Set<String> knownLabels = labelCollections.keySet();
     for (Entry<NodeId, Set<String>> entry : addedLabelsToNode.entrySet()) {
-      if (!knownLabels.containsAll(entry.getValue())) {
+      NodeId nodeId = entry.getKey();
+      Set<String> labels = entry.getValue();
+      
+      if (!knownLabels.containsAll(labels)) {
         String msg =
             "Not all labels being added contained by known "
                 + "label collections, please check" + ", added labels=["
-                + StringUtils.join(entry.getValue(), ",") + "]";
+                + StringUtils.join(labels, ",") + "]";
         LOG.error(msg);
         throw new IOException(msg);
+      }
+      
+      // In YARN-2694, we temporarily disable user add more than 1 labels on a
+      // same host
+      if (!labels.isEmpty()) {
+        Set<String> newLabels = new HashSet<String>(getLabelsByNode(nodeId));
+        newLabels.addAll(labels);
+        // we don't allow number of labels on a node > 1 after added labels
+        if (newLabels.size() > 1) {
+          String msg =
+              String.format(
+                      "%d labels specified on host=%s after add labels to node"
+                          + ", please note that we do not support specifying multiple"
+                          + " labels on a single host for now.",
+                      newLabels.size(), nodeId.getHost());
+          LOG.error(msg);
+          throw new IOException(msg);
+        }
       }
     }
   }
@@ -620,11 +642,24 @@ public class CommonNodeLabelsManager extends AbstractService {
     // check all labels being added existed
     Set<String> knownLabels = labelCollections.keySet();
     for (Entry<NodeId, Set<String>> entry : replaceLabelsToNode.entrySet()) {
-      if (!knownLabels.containsAll(entry.getValue())) {
+      NodeId nodeId = entry.getKey();
+      Set<String> labels = entry.getValue();
+      
+      // As in YARN-2694, we disable user add more than 1 labels on a same host
+      if (labels.size() > 1) {
+        String msg = String.format("%d labels specified on host=%s"
+            + ", please note that we do not support specifying multiple"
+            + " labels on a single host for now.", labels.size(),
+            nodeId.getHost());
+        LOG.error(msg);
+        throw new IOException(msg);
+      }
+      
+      if (!knownLabels.containsAll(labels)) {
         String msg =
             "Not all labels being replaced contained by known "
                 + "label collections, please check" + ", new labels=["
-                + StringUtils.join(entry.getValue(), ",") + "]";
+                + StringUtils.join(labels, ",") + "]";
         LOG.error(msg);
         throw new IOException(msg);
       }
