@@ -45,6 +45,9 @@ public class S3ATestUtils {
           "No test filesystem in " + TestS3AFileSystemContract.TEST_FS_S3A_NAME);
     }
     S3AFileSystem fs1 = new S3AFileSystem();
+    //enable purging in tests
+    conf.setBoolean(Constants.PURGE_EXISTING_MULTIPART, true);
+    conf.setInt(Constants.PURGE_EXISTING_MULTIPART_AGE, 0);
     fs1.initialize(testURI, conf);
     return fs1;
   }

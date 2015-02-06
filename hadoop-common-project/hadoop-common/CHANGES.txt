@@ -559,6 +559,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11543. Improve help message for hadoop/yarn command.
     (Brahma Reddy Battula via ozawa)
 
+    HADOOP-11520. Clean incomplete multi-part uploads in S3A tests.
+    (Thomas Demoor via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
