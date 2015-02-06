@@ -160,6 +160,9 @@ Trunk (Unreleased)
     HADOOP-7713. dfs -count -q should label output column (Jonathan Allen
     via aw)
 
+    HADOOP-6964. Allow compact property description in xml (Kengo Seki
+    via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
