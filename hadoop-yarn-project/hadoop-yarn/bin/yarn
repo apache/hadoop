@@ -65,10 +65,8 @@ HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/yarn-config.sh
 
 function print_usage(){
-  echo "Usage: yarn [--config confdir] [COMMAND | CLASSNAME]"
-  echo "  CLASSNAME                             run the class named CLASSNAME"
-  echo " or"
-  echo "  where COMMAND is one of:"
+  echo "Usage: yarn [--config confdir] [--loglevel] COMMAND"
+  echo "where COMMAND is one of:"
   echo "  resourcemanager -format-state-store   deletes the RMStateStore"
   echo "  resourcemanager                       run the ResourceManager"
   echo "  nodemanager                           run a nodemanager on each slave"
@@ -91,7 +89,8 @@ function print_usage(){
   echo "                                        required libraries"
   echo "  daemonlog                             get/set the log level for each"
   echo "                                        daemon"
-  echo ""
+  echo " or"
+  echo "  CLASSNAME                             run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
 }
 
