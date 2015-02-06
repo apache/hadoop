@@ -491,6 +491,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10062. race condition in MetricsSystemImpl#publishMetricsNow that 
     causes incorrect results. (Sangjin Lee via junping_du)
 
+    HADOOP-11526. Memory leak in Bzip2Compressor and Bzip2Decompressor.
+    (Anu Engineer via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
