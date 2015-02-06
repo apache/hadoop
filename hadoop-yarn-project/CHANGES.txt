@@ -218,6 +218,9 @@ Release 2.7.0 - UNRELEASED
     ApplicationHistoryClientService are uniform when application-attempt is
     not found. (zjshen via acmurthy)
 
+    YARN-3144. Configuration for making delegation token failures to timeline
+    server not-fatal (Jonathan Eagles via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES

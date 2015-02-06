@@ -854,6 +854,42 @@ public class TestYarnClient {
   }
 
   @Test
+  public void testBestEffortTimelineDelegationToken()
+      throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
+
+    YarnClientImpl client = spy(new YarnClientImpl() {
+
+      @Override
+      TimelineClient createTimelineClient() throws IOException, YarnException {
+        timelineClient = mock(TimelineClient.class);
+        when(timelineClient.getDelegationToken(any(String.class)))
+          .thenThrow(new IOException("Best effort test exception"));
+        return timelineClient;
+      }
+    });
+
+    client.init(conf);
+    try {
+      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT, true);
+      client.serviceInit(conf);
+      client.getTimelineDelegationToken();
+    } catch (Exception e) {
+      Assert.fail("Should not have thrown an exception");
+    }
+    try {
+      conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_CLIENT_BEST_EFFORT, false);
+      client.serviceInit(conf);
+      client.getTimelineDelegationToken();
+      Assert.fail("Get delegation token should have thrown an exception");
+    } catch (Exception e) {
+      // Success
+    }
+  }
+
+  @Test
   public void testAutomaticTimelineDelegationTokenLoading()
       throws Exception {
     Configuration conf = new YarnConfiguration();
@@ -864,21 +900,17 @@ public class TestYarnClient {
     final Token<TimelineDelegationTokenIdentifier> dToken =
         new Token<TimelineDelegationTokenIdentifier>(
             timelineDT.getBytes(), new byte[0], timelineDT.getKind(), new Text());
-    // crate a mock client
+    // create a mock client
     YarnClientImpl client = spy(new YarnClientImpl() {
+
       @Override
-      protected void serviceInit(Configuration conf) throws Exception {
-        if (getConfig().getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
-            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
-          timelineServiceEnabled = true;
-          timelineClient = mock(TimelineClient.class);
-          when(timelineClient.getDelegationToken(any(String.class)))
-              .thenReturn(dToken);
-          timelineClient.init(getConfig());
-          timelineService = TimelineUtils.buildTimelineTokenService(getConfig());
-        }
-        this.setConfig(conf);
+      TimelineClient createTimelineClient() throws IOException, YarnException {
+        timelineClient = mock(TimelineClient.class);
+        when(timelineClient.getDelegationToken(any(String.class)))
+          .thenReturn(dToken);
+        return timelineClient;
       }
+
 
       @Override
       protected void serviceStart() throws Exception {
