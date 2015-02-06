@@ -22,6 +22,8 @@ Trunk (Unreleased)
     HADOOP-9044. add FindClass main class to provide classpath checking
     of installations (Steve Loughran via aw)
 
+    HADOOP-11485. Pluggable shell integration (aw)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
