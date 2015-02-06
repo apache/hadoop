@@ -510,6 +510,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3089. LinuxContainerExecutor does not handle file arguments to
     deleteAsUser (Eric Payne via jlowe)
 
+    YARN-3143. RM Apps REST API can return NPE or entries missing id and other
+    fields (jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
