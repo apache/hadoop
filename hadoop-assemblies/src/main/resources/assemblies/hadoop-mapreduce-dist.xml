@@ -42,6 +42,11 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
+      <directory>shellprofile.d</directory>
+      <outputDirectory>libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>bin</directory>
       <outputDirectory>sbin</outputDirectory>
       <includes>

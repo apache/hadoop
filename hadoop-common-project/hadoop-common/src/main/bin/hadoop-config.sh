@@ -1,4 +1,4 @@
-#
+
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -76,7 +76,7 @@ fi
 #
 
 # Let's go!  Base definitions so we can move forward
-hadoop_bootstrap_init
+hadoop_bootstrap
 
 # let's find our conf.
 #
@@ -158,8 +158,12 @@ while [[ -z "${_hadoop_common_done}" ]]; do
   esac
 done
 
+#
+# Setup the base-line environment
+#
 hadoop_find_confdir
 hadoop_exec_hadoopenv
+hadoop_import_shellprofiles
 hadoop_exec_userfuncs
 
 #
@@ -183,22 +187,20 @@ if declare -F hadoop_subproject_init >/dev/null ; then
   hadoop_subproject_init
 fi
 
+hadoop_shellprofiles_init
+
 # get the native libs in there pretty quick
 hadoop_add_javalibpath "${HADOOP_PREFIX}/build/native"
 hadoop_add_javalibpath "${HADOOP_PREFIX}/${HADOOP_COMMON_LIB_NATIVE_DIR}"
 
+hadoop_shellprofiles_nativelib
+
 # get the basic java class path for these subprojects
 # in as quickly as possible since other stuff
 # will definitely depend upon it.
-#
-# at some point, this will get replaced with something pluggable
-# so that these functions can sit in their projects rather than
-# common
-#
-for i in common hdfs yarn mapred
-do
-  hadoop_add_to_classpath_$i
-done
+
+hadoop_add_common_to_classpath
+hadoop_shellprofiles_classpath
 
 #
 # backwards compatibility. new stuff should
