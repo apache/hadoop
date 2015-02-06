@@ -192,6 +192,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11188. hadoop-azure: automatically expand page blobs when they become
     full. (Eric Hanson via cnauroth)
 
+    HADOOP-11506. Configuration variable expansion regex expensive for long
+    values. (Gera Shegalov via gera)
+
   BUG FIXES
 
     HADOOP-11488. Difference in default connection timeout for S3A FS
