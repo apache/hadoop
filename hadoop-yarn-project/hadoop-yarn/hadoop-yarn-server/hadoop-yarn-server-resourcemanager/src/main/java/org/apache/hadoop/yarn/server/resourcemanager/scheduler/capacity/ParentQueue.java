@@ -158,7 +158,7 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   private static float PRECISION = 0.0005f; // 0.05% precision
-  void setChildQueues(Collection<CSQueue> childQueues) {
+  synchronized void setChildQueues(Collection<CSQueue> childQueues) {
     // Validate
     float childCapacities = 0;
     for (CSQueue queue : childQueues) {
@@ -574,7 +574,7 @@ public class ParentQueue extends AbstractCSQueue {
     printChildQueues();
 
     // Try to assign to most 'under-served' sub-queue
-    for (Iterator<CSQueue> iter=childQueues.iterator(); iter.hasNext();) {
+    for (Iterator<CSQueue> iter = childQueues.iterator(); iter.hasNext();) {
       CSQueue childQueue = iter.next();
       if(LOG.isDebugEnabled()) {
         LOG.debug("Trying to assign to queue: " + childQueue.getQueuePath()
@@ -644,26 +644,26 @@ public class ParentQueue extends AbstractCSQueue {
             " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() +
             " used=" + queueUsage.getUsed() + 
             " cluster=" + clusterResource);
-      }
 
-      // Note that this is using an iterator on the childQueues so this can't be
-      // called if already within an iterator for the childQueues. Like  
-      // from assignContainersToChildQueues.
-      if (sortQueues) {
-        // reinsert the updated queue
-        for (Iterator<CSQueue> iter=childQueues.iterator(); iter.hasNext();) {
-          CSQueue csqueue = iter.next();
-          if(csqueue.equals(completedChildQueue))
-          {
-            iter.remove();
-            LOG.info("Re-sorting completed queue: " + csqueue.getQueuePath() + 
-                " stats: " + csqueue);
-            childQueues.add(csqueue);
-            break;
+        // Note that this is using an iterator on the childQueues so this can't
+        // be called if already within an iterator for the childQueues. Like
+        // from assignContainersToChildQueues.
+        if (sortQueues) {
+          // reinsert the updated queue
+          for (Iterator<CSQueue> iter = childQueues.iterator();
+               iter.hasNext();) {
+            CSQueue csqueue = iter.next();
+            if(csqueue.equals(completedChildQueue)) {
+              iter.remove();
+              LOG.info("Re-sorting completed queue: " + csqueue.getQueuePath() +
+                  " stats: " + csqueue);
+              childQueues.add(csqueue);
+              break;
+            }
           }
         }
       }
-      
+
       // Inform the parent
       if (parent != null) {
         // complete my parent
@@ -715,7 +715,7 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   @Override
-  public void collectSchedulerApplications(
+  public synchronized void collectSchedulerApplications(
       Collection<ApplicationAttemptId> apps) {
     for (CSQueue queue : childQueues) {
       queue.collectSchedulerApplications(apps);
