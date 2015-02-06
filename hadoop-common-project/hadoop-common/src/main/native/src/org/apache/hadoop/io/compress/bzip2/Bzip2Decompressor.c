@@ -42,15 +42,25 @@ JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_compress_bzip2_Bzip2Decompressor_initIDs(
                                  JNIEnv *env, jclass class, jstring libname)
 {
-    const char* bzlib_name = (*env)->GetStringUTFChars(env, libname, NULL);
-    if (strcmp(bzlib_name, "system-native") == 0)
-      bzlib_name = HADOOP_BZIP2_LIBRARY;
+    const char *bzlib_name = NULL;
+    const char *java_lib_name = (*env)->GetStringUTFChars(env, libname, NULL);
+    if (java_lib_name == NULL) {
+        // Java code will get OutOfMemoryException thrown by GetStringUTFChars
+        goto cleanup;
+    }
+
+    if (strcmp(java_lib_name, "system-native") == 0) {
+        bzlib_name = HADOOP_BZIP2_LIBRARY;
+    } else {
+        bzlib_name = java_lib_name;
+    }
+
     // Load the native library.
     void *libbz2 = dlopen(bzlib_name, RTLD_LAZY | RTLD_GLOBAL);
     if (!libbz2) {
         THROW(env, "java/lang/UnsatisfiedLinkError",
               "Cannot load bzip2 native library");
-        return;
+        goto cleanup;
     }
 
     // Locate the requisite symbols from libbz2.so.
@@ -80,6 +90,11 @@ Java_org_apache_hadoop_io_compress_bzip2_Bzip2Decompressor_initIDs(
                                                 "Ljava/nio/Buffer;");
     Bzip2Decompressor_directBufferSize = (*env)->GetFieldID(env, class, 
                                                 "directBufferSize", "I");
+cleanup:
+    if(java_lib_name != NULL) {
+         (*env)->ReleaseStringUTFChars(env,libname,java_lib_name);
+         java_lib_name = NULL;
+    }
 }
 
 JNIEXPORT jlong JNICALL
@@ -237,9 +252,10 @@ Java_org_apache_hadoop_io_compress_bzip2_Bzip2Decompressor_end(
 {
     if (dlsym_BZ2_bzDecompressEnd(BZSTREAM(stream)) != BZ_OK) {
         THROW(env, "java/lang/InternalError", 0);
-    } else {
-        free(BZSTREAM(stream));
     }
+
+    free(BZSTREAM(stream));
+
 }
 
 /**

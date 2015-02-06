@@ -864,6 +864,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11543. Improve help message for hadoop/yarn command.
     (Brahma Reddy Battula via ozawa)
 
+    HADOOP-11526. Memory leak in Bzip2Compressor and Bzip2Decompressor.
+    (Anu Engineer via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
