@@ -49,9 +49,11 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
@@ -153,13 +155,17 @@ public class ApplicationHistoryClientService extends AbstractService {
     public GetApplicationAttemptReportResponse getApplicationAttemptReport(
         GetApplicationAttemptReportRequest request) throws YarnException,
         IOException {
+      ApplicationAttemptId appAttemptId = request.getApplicationAttemptId();
       try {
         GetApplicationAttemptReportResponse response =
             GetApplicationAttemptReportResponse.newInstance(history
-              .getApplicationAttempt(request.getApplicationAttemptId()));
+              .getApplicationAttempt(appAttemptId));
         return response;
       } catch (IOException e) {
-        throw new ApplicationAttemptNotFoundException(e.getMessage());
+        String msg = "ApplicationAttempt with id '" + appAttemptId +
+            "' doesn't exist in the history store.";
+        LOG.error(msg, e);
+        throw new ApplicationAttemptNotFoundException(msg);
       }
     }
 
@@ -177,14 +183,17 @@ public class ApplicationHistoryClientService extends AbstractService {
     @Override
     public GetApplicationReportResponse getApplicationReport(
         GetApplicationReportRequest request) throws YarnException, IOException {
+      ApplicationId applicationId = request.getApplicationId();
       try {
-        ApplicationId applicationId = request.getApplicationId();
         GetApplicationReportResponse response =
             GetApplicationReportResponse.newInstance(history
               .getApplication(applicationId));
         return response;
       } catch (IOException e) {
-        throw new ApplicationNotFoundException(e.getMessage());
+        String msg = "Application with id '" + applicationId +
+            "' doesn't exist in the history store.";
+        LOG.error(msg, e);
+        throw new ApplicationNotFoundException(msg);
       }
     }
 
@@ -200,13 +209,17 @@ public class ApplicationHistoryClientService extends AbstractService {
     @Override
     public GetContainerReportResponse getContainerReport(
         GetContainerReportRequest request) throws YarnException, IOException {
+      ContainerId containerId = request.getContainerId();
       try {
         GetContainerReportResponse response =
-            GetContainerReportResponse.newInstance(history.getContainer(request
-              .getContainerId()));
+            GetContainerReportResponse.newInstance(
+                history.getContainer(containerId));
         return response;
       } catch (IOException e) {
-        throw new ContainerNotFoundException(e.getMessage());
+        String msg = "Container with id '" + containerId +
+            "' doesn't exist in the history store.";
+        LOG.error(msg, e);
+        throw new ContainerNotFoundException(msg);
       }
     }
 

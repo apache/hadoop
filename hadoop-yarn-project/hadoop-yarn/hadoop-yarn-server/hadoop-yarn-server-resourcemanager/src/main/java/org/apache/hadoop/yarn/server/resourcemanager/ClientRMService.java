@@ -366,8 +366,9 @@ public class ClientRMService extends AbstractService implements
     if (allowAccess) {
       RMAppAttempt appAttempt = application.getAppAttempts().get(appAttemptId);
       if (appAttempt == null) {
-        throw new ApplicationAttemptNotFoundException("ApplicationAttempt "
-            + appAttemptId + " Not Found in RM");
+        throw new ApplicationAttemptNotFoundException(
+            "ApplicationAttempt with id '" + appAttemptId +
+            "' doesn't exist in RM.");
       }
       ApplicationAttemptReport attemptReport = appAttempt
           .createApplicationAttemptReport();
@@ -451,14 +452,15 @@ public class ClientRMService extends AbstractService implements
     if (allowAccess) {
       RMAppAttempt appAttempt = application.getAppAttempts().get(appAttemptId);
       if (appAttempt == null) {
-        throw new ApplicationAttemptNotFoundException("ApplicationAttempt "
-            + appAttemptId + " Not Found in RM");
+        throw new ApplicationAttemptNotFoundException(
+            "ApplicationAttempt with id '" + appAttemptId +
+            "' doesn't exist in RM.");
       }
       RMContainer rmConatiner = this.rmContext.getScheduler().getRMContainer(
           containerId);
       if (rmConatiner == null) {
-        throw new ContainerNotFoundException("Container with id " + containerId
-            + " not found");
+        throw new ContainerNotFoundException("Container with id '" + containerId
+            + "' doesn't exist in RM.");
       }
       response = GetContainerReportResponse.newInstance(rmConatiner
           .createContainerReport());
@@ -500,8 +502,9 @@ public class ClientRMService extends AbstractService implements
     if (allowAccess) {
       RMAppAttempt appAttempt = application.getAppAttempts().get(appAttemptId);
       if (appAttempt == null) {
-        throw new ApplicationAttemptNotFoundException("ApplicationAttempt "
-            + appAttemptId + " Not Found in RM");
+        throw new ApplicationAttemptNotFoundException(
+            "ApplicationAttempt with id '" + appAttemptId +
+            "' doesn't exist in RM.");
       }
       Collection<RMContainer> rmContainers = Collections.emptyList();
       SchedulerAppReport schedulerAppReport =
