@@ -214,6 +214,10 @@ Release 2.7.0 - UNRELEASED
     YARN-1582. Capacity Scheduler: add a maximum-allocation-mb setting per
     queue (Thomas Graves via jlowe)
 
+    YARN-1904. Ensure exceptions thrown in ClientRMService &
+    ApplicationHistoryClientService are uniform when application-attempt is
+    not found. (zjshen via acmurthy)
+
   OPTIMIZATIONS
 
   BUG FIXES
