@@ -49,6 +49,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+import static org.junit.Assert.fail;
+
 import org.codehaus.jackson.map.ObjectMapper;
 
 public class TestConfiguration extends TestCase {
@@ -1191,6 +1193,70 @@ public class TestConfiguration extends TestCase {
     } catch (Exception e) {
       assertTrue(e instanceof IllegalArgumentException);
       assertEquals(e.getMessage(), "Property name must not be null");
+    }
+  }
+
+  public void testInvalidSubstitutation() {
+    final Configuration configuration = new Configuration(false);
+
+    // 2-var loops
+    //
+    final String key = "test.random.key";
+    for (String keyExpression : Arrays.asList(
+    "${" + key + "}",
+    "foo${" + key + "}",
+    "foo${" + key + "}bar",
+    "${" + key + "}bar")) {
+      configuration.set(key, keyExpression);
+      checkSubDepthException(configuration, key);
+    }
+
+    //
+    // 3-variable loops
+    //
+
+    final String expVal1 = "${test.var2}";
+    String testVar1 = "test.var1";
+    configuration.set(testVar1, expVal1);
+    configuration.set("test.var2", "${test.var3}");
+    configuration.set("test.var3", "${test.var1}");
+    checkSubDepthException(configuration, testVar1);
+
+    // 3-variable loop with non-empty value prefix/suffix
+    //
+    final String expVal2 = "foo2${test.var2}bar2";
+    configuration.set(testVar1, expVal2);
+    configuration.set("test.var2", "foo3${test.var3}bar3");
+    configuration.set("test.var3", "foo1${test.var1}bar1");
+    checkSubDepthException(configuration, testVar1);
+  }
+
+  private static void checkSubDepthException(Configuration configuration,
+      String key) {
+    try {
+      configuration.get(key);
+      fail("IllegalStateException depth too large not thrown");
+    } catch (IllegalStateException e) {
+      assertTrue("Unexpected exception text: " + e,
+          e.getMessage().contains("substitution depth"));
+    }
+  }
+
+  public void testIncompleteSubbing() {
+    Configuration configuration = new Configuration(false);
+    String key = "test.random.key";
+    for (String keyExpression : Arrays.asList(
+        "{}",
+        "${}",
+        "{" + key,
+        "${" + key,
+        "foo${" + key,
+        "foo${" + key + "bar",
+        "foo{" + key + "}bar",
+        "${" + key + "bar")) {
+      configuration.set(key, keyExpression);
+      String value = configuration.get(key);
+      assertTrue("Unexpected value " + value, value.equals(keyExpression));
     }
   }
 

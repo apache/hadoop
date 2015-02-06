@@ -13,6 +13,9 @@ Release 2.6.1 - UNRELEASED
     HADOOP-11238. Update the NameNode's Group Cache in the background when
     possible (Chris Li via Colin P. McCabe)
 
+    HADOOP-11506. Configuration variable expansion regex expensive for long
+    values. (Gera Shegalov via gera)
+
   BUG FIXES
 
     HADOOP-11466: FastByteComparisons: do not use UNSAFE_COMPARER on the SPARC
