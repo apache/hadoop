@@ -21,9 +21,18 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.StringReader;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Set;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -31,14 +40,21 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -586,4 +602,43 @@ public class TestRMWebServices extends JerseyTestBase {
 
   }
 
+  // Test the scenario where the RM removes an app just as we try to
+  // look at it in the apps list
+  @Test
+  public void testAppsRace() throws Exception {
+    // mock up an RM that returns app reports for apps that don't exist
+    // in the RMApps list
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+    ApplicationReport mockReport = mock(ApplicationReport.class);
+    when(mockReport.getApplicationId()).thenReturn(appId);
+    GetApplicationsResponse mockAppsResponse =
+        mock(GetApplicationsResponse.class);
+    when(mockAppsResponse.getApplicationList())
+      .thenReturn(Arrays.asList(new ApplicationReport[] { mockReport }));
+    ClientRMService mockClientSvc = mock(ClientRMService.class);
+    when(mockClientSvc.getApplications(isA(GetApplicationsRequest.class),
+        anyBoolean())).thenReturn(mockAppsResponse);
+    ResourceManager mockRM = mock(ResourceManager.class);
+    RMContextImpl rmContext = new RMContextImpl(null, null, null, null, null,
+        null, null, null, null, null);
+    when(mockRM.getRMContext()).thenReturn(rmContext);
+    when(mockRM.getClientRMService()).thenReturn(mockClientSvc);
+
+    RMWebServices webSvc = new RMWebServices(mockRM, new Configuration(),
+        mock(HttpServletResponse.class));
+
+    final Set<String> emptySet =
+        Collections.unmodifiableSet(Collections.<String>emptySet());
+
+    // verify we don't get any apps when querying
+    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    AppsInfo appsInfo = webSvc.getApps(mockHsr, null, emptySet, null,
+        null, null, null, null, null, null, null, emptySet, emptySet);
+    assertTrue(appsInfo.getApps().isEmpty());
+
+    // verify we don't get an NPE when specifying a final status query
+    appsInfo = webSvc.getApps(mockHsr, null, emptySet, "FAILED",
+        null, null, null, null, null, null, null, emptySet, emptySet);
+    assertTrue(appsInfo.getApps().isEmpty());
+  }
 }
