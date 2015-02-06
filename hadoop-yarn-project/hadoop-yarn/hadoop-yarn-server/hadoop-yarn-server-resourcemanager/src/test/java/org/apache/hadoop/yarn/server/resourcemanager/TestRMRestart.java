@@ -2104,7 +2104,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     nodeLabelManager.removeFromClusterNodeLabels(toSet("z"));
     
     // Replace nodelabel h1->x,y
-    nodeLabelManager.replaceLabelsOnNode(ImmutableMap.of(n1, toSet("x", "y")));
+    nodeLabelManager.replaceLabelsOnNode(ImmutableMap.of(n1, toSet("y")));
 
     // Wait for updating store.It is expected NodeStore update should happen
     // very fast since it has separate dispatcher. So waiting for max 5 seconds,
@@ -2122,7 +2122,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     Map<NodeId, Set<String>> nodeLabels = nodeLabelManager.getNodeLabels();
     Assert.assertEquals(1, nodeLabelManager.getNodeLabels().size());
-    Assert.assertTrue(nodeLabels.get(n1).equals(toSet("x", "y")));
+    Assert.assertTrue(nodeLabels.get(n1).equals(toSet("y")));
 
     MockRM rm2 = new MockRM(conf, memStore) {
       @Override
@@ -2141,7 +2141,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
     nodeLabels = nodeLabelManager.getNodeLabels();
     Assert.assertEquals(1, nodeLabelManager.getNodeLabels().size());
-    Assert.assertTrue(nodeLabels.get(n1).equals(toSet("x", "y")));
+    Assert.assertTrue(nodeLabels.get(n1).equals(toSet("y")));
     rm1.stop();
     rm2.stop();
   }

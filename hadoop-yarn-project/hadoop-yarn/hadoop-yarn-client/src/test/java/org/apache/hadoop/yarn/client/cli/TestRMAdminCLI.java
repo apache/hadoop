@@ -512,7 +512,7 @@ public class TestRMAdminCLI {
         .addToCluserNodeLabels(ImmutableSet.of("x", "y", "Y"));
     String[] args =
         { "-replaceLabelsOnNode",
-            "node1:8000,x,y node2:8000=y node3,x,Y node4=Y",
+            "node1:8000,x node2:8000=y node3,x node4=Y",
             "-directlyAccessNodeLabelStore" };
     assertEquals(0, rmAdminCLI.run(args));
     assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
@@ -538,6 +538,16 @@ public class TestRMAdminCLI {
     assertTrue(0 != rmAdminCLI.run(args));
 
     args = new String[] { "-replaceLabelsOnNode", ", " };
+    assertTrue(0 != rmAdminCLI.run(args));
+  }
+  
+  @Test
+  public void testReplaceMultipleLabelsOnSingleNode() throws Exception {
+    // Successfully replace labels
+    dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    String[] args =
+        { "-replaceLabelsOnNode", "node1,x,y",
+            "-directlyAccessNodeLabelStore" };
     assertTrue(0 != rmAdminCLI.run(args));
   }
 
