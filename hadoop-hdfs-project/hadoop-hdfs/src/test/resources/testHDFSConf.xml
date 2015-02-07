@@ -15550,10 +15550,6 @@
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*It does not fault if the directory has no quota.( )*</expected-output>
         </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*The storage type specific quota is cleared when -storageType option is specified.( )*</expected-output>
-        </comparator>
       </comparators>
     </test>
 
@@ -15619,6 +15615,10 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*It does not fault if the directory has no quota.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*The storage type specific quota is cleared when -storageType option is specified.( )*</expected-output>
         </comparator>
       </comparators>
     </test>
