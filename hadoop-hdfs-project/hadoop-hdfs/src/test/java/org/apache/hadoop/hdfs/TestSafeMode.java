@@ -52,6 +52,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -292,9 +293,13 @@ public class TestSafeMode {
     try {
       f.run(fs);
       fail(msg);
-     } catch (IOException ioe) {
-       assertTrue(ioe.getMessage().contains("safe mode"));
-     }
+    } catch (RemoteException re) {
+      assertEquals(SafeModeException.class.getName(), re.getClassName());
+      GenericTestUtils.assertExceptionContains(
+          "Name node is in safe mode", re);
+    } catch (IOException ioe) {
+      fail(msg + " " + StringUtils.stringifyException(ioe));
+    }
   }
 
   /**
@@ -339,6 +344,12 @@ public class TestSafeMode {
       @Override
       public void run(FileSystem fs) throws IOException {
         DFSTestUtil.appendFile(fs, file1, "new bytes");
+      }});
+
+    runFsFun("Truncate file while in SM", new FSRun() {
+      @Override
+      public void run(FileSystem fs) throws IOException {
+        fs.truncate(file1, 0);
       }});
 
     runFsFun("Delete file while in SM", new FSRun() {

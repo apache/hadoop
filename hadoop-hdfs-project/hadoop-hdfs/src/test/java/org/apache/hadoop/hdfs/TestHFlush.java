@@ -490,8 +490,8 @@ public class TestHFlush {
 
 
       // verify that entire file is good
-      AppendTestUtil.checkFullFile(fs, p, 4,
-        fileContents, "Failed to deal with thread interruptions");
+      AppendTestUtil.checkFullFile(fs, p, 4, fileContents,
+          "Failed to deal with thread interruptions", false);
     } finally {
       cluster.shutdown();
     }
