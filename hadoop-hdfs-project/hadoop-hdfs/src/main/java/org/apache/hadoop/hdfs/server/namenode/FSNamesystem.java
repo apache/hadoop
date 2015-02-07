@@ -231,7 +231,6 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
@@ -2019,8 +2018,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw new UnsupportedOperationException(
           "Cannot truncate lazy persist file " + src);
     }
-    // Opening an existing file for write. May need lease recovery.
-    recoverLeaseInternal(iip, src, clientName, clientMachine, false);
+    // Opening an existing file for truncate. May need lease recovery.
+    recoverLeaseInternal(RecoverLeaseOp.TRUNCATE_FILE,
+        iip, src, clientName, clientMachine, false);
     // Truncate length check.
     long oldLength = file.computeFileSize();
     if(oldLength == newLength) {
@@ -2490,7 +2490,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
         } else {
           // If lease soft limit time is expired, recover the lease
-          recoverLeaseInternal(iip, src, holder, clientMachine, false);
+          recoverLeaseInternal(RecoverLeaseOp.CREATE_FILE,
+              iip, src, holder, clientMachine, false);
           throw new FileAlreadyExistsException(src + " for client " +
               clientMachine + " already exists");
         }
@@ -2613,8 +2614,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         throw new UnsupportedOperationException(
             "Cannot append to lazy persist file " + src);
       }
-      // Opening an existing file for write - may need to recover lease.
-      recoverLeaseInternal(iip, src, holder, clientMachine, false);
+      // Opening an existing file for append - may need to recover lease.
+      recoverLeaseInternal(RecoverLeaseOp.APPEND_FILE,
+          iip, src, holder, clientMachine, false);
       
       final BlockInfo lastBlock = myFile.getLastBlock();
       // Check that the block has at least minimum replication.
@@ -2704,7 +2706,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         dir.checkPathAccess(pc, iip, FsAction.WRITE);
       }
   
-      recoverLeaseInternal(iip, src, holder, clientMachine, true);
+      recoverLeaseInternal(RecoverLeaseOp.RECOVER_LEASE,
+          iip, src, holder, clientMachine, true);
     } catch (StandbyException se) {
       skipSync = true;
       throw se;
@@ -2719,7 +2722,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return false;
   }
 
-  void recoverLeaseInternal(INodesInPath iip,
+  private enum RecoverLeaseOp {
+    CREATE_FILE,
+    APPEND_FILE,
+    TRUNCATE_FILE,
+    RECOVER_LEASE;
+    
+    private String getExceptionMessage(String src, String holder,
+        String clientMachine, String reason) {
+      return "Failed to " + this + " " + src + " for " + holder +
+          " on " + clientMachine + " because " + reason;
+    }
+  }
+
+  void recoverLeaseInternal(RecoverLeaseOp op, INodesInPath iip,
       String src, String holder, String clientMachine, boolean force)
       throws IOException {
     assert hasWriteLock();
@@ -2730,18 +2746,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // leases. Find the appropriate lease record.
       //
       Lease lease = leaseManager.getLease(holder);
-      //
-      // We found the lease for this file. And surprisingly the original
-      // holder is trying to recreate this file. This should never occur.
-      //
 
       if (!force && lease != null) {
         Lease leaseFile = leaseManager.getLeaseByPath(src);
         if (leaseFile != null && leaseFile.equals(lease)) {
+          // We found the lease for this file but the original
+          // holder is trying to obtain it again.
           throw new AlreadyBeingCreatedException(
-            "failed to create file " + src + " for " + holder +
-            " for client " + clientMachine +
-            " because current leaseholder is trying to recreate file.");
+              op.getExceptionMessage(src, holder, clientMachine,
+                  holder + " is already the current lease holder."));
         }
       }
       //
@@ -2752,9 +2765,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       lease = leaseManager.getLease(clientName);
       if (lease == null) {
         throw new AlreadyBeingCreatedException(
-          "failed to create file " + src + " for " + holder +
-          " for client " + clientMachine +
-          " because pendingCreates is non-null but no leases found.");
+            op.getExceptionMessage(src, holder, clientMachine,
+                "the file is under construction but no leases found."));
       }
       if (force) {
         // close now: no need to wait for soft lease expiration and 
@@ -2776,20 +2788,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           boolean isClosed = internalReleaseLease(lease, src, iip, null);
           if(!isClosed)
             throw new RecoveryInProgressException(
-                "Failed to close file " + src +
-                ". Lease recovery is in progress. Try again later.");
+                op.getExceptionMessage(src, holder, clientMachine,
+                    "lease recovery is in progress. Try again later."));
         } else {
           final BlockInfo lastBlock = file.getLastBlock();
           if (lastBlock != null
               && lastBlock.getBlockUCState() == BlockUCState.UNDER_RECOVERY) {
-            throw new RecoveryInProgressException("Recovery in progress, file ["
-                + src + "], " + "lease owner [" + lease.getHolder() + "]");
+            throw new RecoveryInProgressException(
+                op.getExceptionMessage(src, holder, clientMachine,
+                    "another recovery is in progress by "
+                        + clientName + " on " + uc.getClientMachine()));
           } else {
-            throw new AlreadyBeingCreatedException("Failed to create file ["
-                + src + "] for [" + holder + "] for client [" + clientMachine
-                + "], because this file is already being created by ["
-                + clientName + "] on ["
-                + uc.getClientMachine() + "]");
+            throw new AlreadyBeingCreatedException(
+                op.getExceptionMessage(src, holder, clientMachine,
+                    "this file lease is currently owned by "
+                        + clientName + " on " + uc.getClientMachine()));
           }
         }
       }

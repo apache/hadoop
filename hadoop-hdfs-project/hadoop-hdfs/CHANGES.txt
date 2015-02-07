@@ -303,6 +303,10 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7710. Remove dead code in BackupImage.java. (Xiaoyu Yao via aajisaka)
 
+    HDFS-7738. Revise the exception message for recover lease; add more truncate
+    tests such as truncate with HA setup, negative tests, truncate with other
+    operations and multiple truncates.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
