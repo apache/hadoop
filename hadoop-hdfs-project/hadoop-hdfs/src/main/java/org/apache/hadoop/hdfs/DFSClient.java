@@ -167,6 +167,7 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -3026,7 +3027,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Sets or resets quotas for a directory.
-   * @see ClientProtocol#setQuota(String, long, long)
+   * @see ClientProtocol#setQuota(String, long, long, StorageType)
    */
   void setQuota(String src, long namespaceQuota, long diskspaceQuota) 
       throws IOException {
@@ -3042,7 +3043,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
     TraceScope scope = getPathTraceScope("setQuota", src);
     try {
-      namenode.setQuota(src, namespaceQuota, diskspaceQuota);
+      // Pass null as storage type for traditional space/namespace quota.
+      namenode.setQuota(src, namespaceQuota, diskspaceQuota, null);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
@@ -3055,6 +3057,34 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  /**
+   * Sets or resets quotas by storage type for a directory.
+   * @see ClientProtocol#setQuota(String, long, long, StorageType)
+   */
+  void setQuotaByStorageType(String src, StorageType type, long spaceQuota)
+      throws IOException {
+    if (spaceQuota <= 0 && spaceQuota != HdfsConstants.QUOTA_DONT_SET &&
+        spaceQuota != HdfsConstants.QUOTA_RESET) {
+      throw new IllegalArgumentException("Invalid values for quota :" +
+        spaceQuota);
+    }
+    if (type == null) {
+      throw new IllegalArgumentException("Invalid storage type(null)");
+    }
+    if (!type.supportTypeQuota()) {
+      throw new IllegalArgumentException("Don't support Quota for storage type : "
+        + type.toString());
+    }
+    try {
+      namenode.setQuota(src, HdfsConstants.QUOTA_DONT_SET, spaceQuota, type);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+        FileNotFoundException.class,
+        QuotaByStorageTypeExceededException.class,
+        UnresolvedPathException.class,
+        SnapshotAccessControlException.class);
+    }
+  }
   /**
    * set the modification and access time of a file
    * 

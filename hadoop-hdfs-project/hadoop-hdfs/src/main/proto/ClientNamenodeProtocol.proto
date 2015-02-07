@@ -572,6 +572,7 @@ message SetQuotaRequestProto {
   required string path = 1;
   required uint64 namespaceQuota = 2;
   required uint64 diskspaceQuota = 3;
+  optional StorageTypeProto storageType = 4;
 }
 
 message SetQuotaResponseProto { // void response

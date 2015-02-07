@@ -887,7 +887,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       SetQuotaRequestProto req) throws ServiceException {
     try {
       server.setQuota(req.getPath(), req.getNamespaceQuota(),
-          req.getDiskspaceQuota());
+          req.getDiskspaceQuota(),
+          req.hasStorageType() ?
+          PBHelper.convertStorageType(req.getStorageType()): null);
       return VOID_SETQUOTA_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);

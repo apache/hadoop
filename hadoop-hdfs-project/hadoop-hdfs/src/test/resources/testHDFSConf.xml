@@ -15550,6 +15550,10 @@
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*It does not fault if the directory has no quota.( )*</expected-output>
         </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*The storage type specific quota is cleared when -storageType option is specified.( )*</expected-output>
+        </comparator>
       </comparators>
     </test>
 
@@ -15563,7 +15567,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-setSpaceQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt;: Set the disk space quota &lt;quota&gt; for each directory &lt;dirName&gt;.( )*</expected-output>
+          <expected-output>^-setSpaceQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt; -storageType &lt;storagetype&gt;: Set the disk space quota &lt;quota&gt; for each directory &lt;dirName&gt;.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -15576,6 +15580,14 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*2. user is not an administrator, or( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*3. the directory does not exist or is a file.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*The storage type specific quota is set when -storageType option is specified.( )*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -15590,7 +15602,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-clrSpaceQuota &lt;dirname&gt;...&lt;dirname&gt;: Clear the disk space quota for each directory &lt;dirName&gt;.( )*</expected-output>
+          <expected-output>^-clrSpaceQuota &lt;dirname&gt;...&lt;dirname&gt; -storageType &lt;storagetype&gt;: Clear the disk space quota for each directory &lt;dirName&gt;.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

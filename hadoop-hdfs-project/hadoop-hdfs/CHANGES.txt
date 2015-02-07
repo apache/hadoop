@@ -20,6 +20,9 @@ Trunk (Unreleased)
 
     HDFS-3689. Add support for variable length block. (jing9)
 
+    HDFS-7584. Quota by Storage Type API, tools and ClientNameNode Protocol
+    changes. (Xiaoyu Yao via Arpit Agarwal)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
