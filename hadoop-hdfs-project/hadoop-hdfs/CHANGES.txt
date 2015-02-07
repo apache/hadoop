@@ -612,6 +612,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7753. Fix Multithreaded correctness Warnings in BackupImage.
     (Rakesh R and shv)
 
+    HDFS-7751. Fix TestHDFSCLI for quota with storage type.  (Xiaoyu Yao
+    via szetszwo)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
