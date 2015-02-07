@@ -274,6 +274,8 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-5800. Use Job#getInstance instead of deprecated constructors
     (aajisaka)
 
+    MAPREDUCE-6227. DFSIO for truncate. (shv via yliu)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
