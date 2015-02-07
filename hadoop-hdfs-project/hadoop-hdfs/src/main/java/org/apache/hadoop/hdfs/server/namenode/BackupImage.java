@@ -140,14 +140,6 @@ public class BackupImage extends FSImage {
   }
 
   /**
-   * Save meta-data into fsimage files.
-   * and create empty edits.
-   */
-  void saveCheckpoint() throws IOException {
-    saveNamespace(namesystem);
-  }
-
-  /**
    * Receive a batch of edits from the NameNode.
    * 
    * Depending on bnState, different actions are taken. See
