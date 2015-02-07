@@ -301,6 +301,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7732. Fix the order of the parameters in DFSConfigKeys.
     (Brahma Reddy Battula via aajisaka)
 
+    HDFS-7710. Remove dead code in BackupImage.java. (Xiaoyu Yao via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
