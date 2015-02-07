@@ -45,10 +45,16 @@ public enum StorageType {
 
   private static final StorageType[] VALUES = values();
 
-  StorageType(boolean isTransient) { this.isTransient = isTransient; }
+  StorageType(boolean isTransient) {
+    this.isTransient = isTransient;
+  }
 
   public boolean isTransient() {
     return isTransient;
+  }
+
+  public boolean supportTypeQuota() {
+    return !isTransient;
   }
 
   public boolean isMovable() {
@@ -60,12 +66,28 @@ public enum StorageType {
   }
 
   public static List<StorageType> getMovableTypes() {
-    List<StorageType> movableTypes = new ArrayList<StorageType>();
+    return getNonTransientTypes();
+  }
+
+  public static List<StorageType> getTypesSupportingQuota() {
+    return getNonTransientTypes();
+  }
+
+  public static StorageType parseStorageType(int i) {
+    return VALUES[i];
+  }
+
+  public static StorageType parseStorageType(String s) {
+    return StorageType.valueOf(s.toUpperCase());
+  }
+
+  private static List<StorageType> getNonTransientTypes() {
+    List<StorageType> nonTransientTypes = new ArrayList<>();
     for (StorageType t : VALUES) {
       if ( t.isTransient == false ) {
-        movableTypes.add(t);
+        nonTransientTypes.add(t);
       }
     }
-    return movableTypes;
+    return nonTransientTypes;
   }
 }

@@ -71,6 +71,7 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.ipc.GenericRefreshProtocol;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -173,7 +174,7 @@ public class DFSAdmin extends FsShell {
       "\t\tNote: A quota of 1 would force the directory to remain empty.\n";
 
     private final long quota; // the quota to be set
-    
+
     /** Constructor */
     SetQuotaCommand(String[] args, int pos, FileSystem fs) {
       super(fs);
@@ -206,19 +207,27 @@ public class DFSAdmin extends FsShell {
   /** A class that supports command clearSpaceQuota */
   private static class ClearSpaceQuotaCommand extends DFSAdminCommand {
     private static final String NAME = "clrSpaceQuota";
-    private static final String USAGE = "-"+NAME+" <dirname>...<dirname>";
+    private static final String USAGE = "-"+NAME+" <dirname>...<dirname> -storageType <storagetype>";
     private static final String DESCRIPTION = USAGE + ": " +
     "Clear the disk space quota for each directory <dirName>.\n" +
     "\t\tFor each directory, attempt to clear the quota. An error will be reported if\n" +
     "\t\t1. the directory does not exist or is a file, or\n" +
     "\t\t2. user is not an administrator.\n" +
-    "\t\tIt does not fault if the directory has no quota.";
-    
+    "\t\tIt does not fault if the directory has no quota.\n" +
+    "\t\tThe storage type specific quota is cleared when -storageType option is specified.";
+
+    private StorageType type;
+
     /** Constructor */
     ClearSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
       super(fs);
       CommandFormat c = new CommandFormat(1, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
+      String storageTypeString =
+          StringUtils.popOptionWithArgument("-storageType", parameters);
+      if (storageTypeString != null) {
+        this.type = StorageType.parseStorageType(storageTypeString);
+      }
       this.args = parameters.toArray(new String[parameters.size()]);
     }
     
@@ -238,7 +247,11 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, HdfsConstants.QUOTA_RESET);
+      if (type != null) {
+        dfs.setQuotaByStorageType(path, type, HdfsConstants.QUOTA_RESET);
+      } else {
+        dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, HdfsConstants.QUOTA_RESET);
+      }
     }
   }
   
@@ -246,7 +259,7 @@ public class DFSAdmin extends FsShell {
   private static class SetSpaceQuotaCommand extends DFSAdminCommand {
     private static final String NAME = "setSpaceQuota";
     private static final String USAGE =
-      "-"+NAME+" <quota> <dirname>...<dirname>";
+      "-"+NAME+" <quota> <dirname>...<dirname> -storageType <storagetype>";
     private static final String DESCRIPTION = USAGE + ": " +
       "Set the disk space quota <quota> for each directory <dirName>.\n" + 
       "\t\tThe space quota is a long integer that puts a hard limit\n" +
@@ -258,9 +271,11 @@ public class DFSAdmin extends FsShell {
       "\t\tFor each directory, attempt to set the quota. An error will be reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
       "\t\t2. user is not an administrator, or\n" +
-      "\t\t3. the directory does not exist or is a file, or\n";
+      "\t\t3. the directory does not exist or is a file.\n" +
+      "\t\tThe storage type specific quota is set when -storageType option is specified.\n";
 
     private long quota; // the quota to be set
+    private StorageType type;
     
     /** Constructor */
     SetSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
@@ -272,6 +287,11 @@ public class DFSAdmin extends FsShell {
         quota = StringUtils.TraditionalBinaryPrefix.string2long(str);
       } catch (NumberFormatException nfe) {
         throw new IllegalArgumentException("\"" + str + "\" is not a valid value for a quota.");
+      }
+      String storageTypeString =
+          StringUtils.popOptionWithArgument("-storageType", parameters);
+      if (storageTypeString != null) {
+        this.type = StorageType.parseStorageType(storageTypeString);
       }
       
       this.args = parameters.toArray(new String[parameters.size()]);
@@ -293,7 +313,11 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, quota);
+      if (type != null) {
+        dfs.setQuotaByStorageType(path, type, quota);
+      } else {
+        dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, quota);
+      }
     }
   }
 
