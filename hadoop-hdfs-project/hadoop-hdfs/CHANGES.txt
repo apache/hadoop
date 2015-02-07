@@ -20,7 +20,7 @@ Trunk (Unreleased)
 
     HDFS-3689. Add support for variable length block. (jing9)
 
-    HDFS-7584. Quota by Storage Type API, tools and ClientNameNode Protocol
+    HDFS-7720. Quota by Storage Type API, tools and ClientNameNode Protocol
     changes. (Xiaoyu Yao via Arpit Agarwal)
 
   IMPROVEMENTS
@@ -283,6 +283,9 @@ Trunk (Unreleased)
 
     HDFS-7721. The HDFS BlockScanner may run fast during the first hour
     (cmccabe)
+
+    HDFS-7751. Fix TestHDFSCLI for quota with storage type.  (Xiaoyu Yao
+    via szetszwo)
 
 Release 2.7.0 - UNRELEASED
 
