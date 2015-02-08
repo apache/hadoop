@@ -52,8 +52,8 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -364,7 +364,7 @@ public class FSDirectory implements Closeable {
       long mtime, long atime, short replication, long preferredBlockSize,
       byte storagePolicyId) {
     return new INodeFile(id, null, permissions, mtime, atime,
-        BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize,
+        BlockInfoContiguous.EMPTY_ARRAY, replication, preferredBlockSize,
         storagePolicyId);
   }
 
@@ -444,7 +444,7 @@ public class FSDirectory implements Closeable {
   /**
    * Add a block to the file. Returns a reference to the added block.
    */
-  BlockInfo addBlock(String path, INodesInPath inodesInPath, Block block,
+  BlockInfoContiguous addBlock(String path, INodesInPath inodesInPath, Block block,
                      DatanodeStorageInfo[] targets,
                      boolean isStriped) throws IOException {
     writeLock();
@@ -459,8 +459,8 @@ public class FSDirectory implements Closeable {
       updateCount(inodesInPath, 0, fileINode.getPreferredBlockDiskspace(), true);
 
       // associate new last block for the file
-      BlockInfoUnderConstruction blockInfo =
-        new BlockInfoUnderConstruction(
+      BlockInfoContiguousUnderConstruction blockInfo =
+        new BlockInfoContiguousUnderConstruction(
             block,
             numLocations,
             BlockUCState.UNDER_CONSTRUCTION,
@@ -978,7 +978,7 @@ public class FSDirectory implements Closeable {
         unprotectedTruncate(iip, newLength, collectedBlocks, mtime);
 
     if(! onBlockBoundary) {
-      BlockInfo oldBlock = file.getLastBlock();
+      BlockInfoContiguous oldBlock = file.getLastBlock();
       Block tBlk =
       getFSNamesystem().prepareFileForTruncate(iip,
           clientName, clientMachine, file.computeFileSize() - newLength,

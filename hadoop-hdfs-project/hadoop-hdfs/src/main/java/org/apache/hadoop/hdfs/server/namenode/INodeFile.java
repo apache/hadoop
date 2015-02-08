@@ -34,8 +34,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -117,17 +117,17 @@ public class INodeFile extends INodeWithAdditionalFields
 
   private long header = 0L;
 
-  private BlockInfo[] blocks;
+  private BlockInfoContiguous[] blocks;
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
-            long atime, BlockInfo[] blklist, short replication,
+            long atime, BlockInfoContiguous[] blklist, short replication,
             long preferredBlockSize) {
     this(id, name, permissions, mtime, atime, blklist, replication,
          preferredBlockSize, (byte) 0);
   }
 
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
-      long atime, BlockInfo[] blklist, short replication,
+      long atime, BlockInfoContiguous[] blklist, short replication,
       long preferredBlockSize, byte storagePolicyID) {
     super(id, name, permissions, mtime, atime);
     header = HeaderFormat.toLong(preferredBlockSize, replication, storagePolicyID);
@@ -222,20 +222,21 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override // BlockCollection
-  public void setBlock(int index, BlockInfo blk) {
+  public void setBlock(int index, BlockInfoContiguous blk) {
     this.blocks[index] = blk;
   }
 
   @Override // BlockCollection, the file should be under construction
-  public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
-      DatanodeStorageInfo[] locations) throws IOException {
+  public BlockInfoContiguousUnderConstruction setLastBlock(
+      BlockInfoContiguous lastBlock, DatanodeStorageInfo[] locations)
+      throws IOException {
     Preconditions.checkState(isUnderConstruction(),
         "file is no longer under construction");
 
     if (numBlocks() == 0) {
       throw new IOException("Failed to set last block: File is empty.");
     }
-    BlockInfoUnderConstruction ucBlock =
+    BlockInfoContiguousUnderConstruction ucBlock =
       lastBlock.convertToBlockUnderConstruction(
           BlockUCState.UNDER_CONSTRUCTION, locations);
     setBlock(numBlocks() - 1, ucBlock);
@@ -258,7 +259,7 @@ public class INodeFile extends INodeWithAdditionalFields
     }
 
     //copy to a new list
-    BlockInfo[] newlist = new BlockInfo[size_1];
+    BlockInfoContiguous[] newlist = new BlockInfoContiguous[size_1];
     System.arraycopy(blocks, 0, newlist, 0, size_1);
     setBlocks(newlist);
     return true;
@@ -418,16 +419,17 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /** @return the blocks of the file. */
   @Override
-  public BlockInfo[] getBlocks() {
+  public BlockInfoContiguous[] getBlocks() {
     return this.blocks;
   }
 
   /** @return blocks of the file corresponding to the snapshot. */
-  public BlockInfo[] getBlocks(int snapshot) {
+  public BlockInfoContiguous[] getBlocks(int snapshot) {
     if(snapshot == CURRENT_STATE_ID || getDiffs() == null)
       return getBlocks();
     FileDiff diff = getDiffs().getDiffById(snapshot);
-    BlockInfo[] snapshotBlocks = diff == null ? getBlocks() : diff.getBlocks();
+    BlockInfoContiguous[] snapshotBlocks =
+        diff == null ? getBlocks() : diff.getBlocks();
     if(snapshotBlocks != null)
       return snapshotBlocks;
     // Blocks are not in the current snapshot
@@ -438,7 +440,7 @@ public class INodeFile extends INodeWithAdditionalFields
 
   void updateBlockCollection() {
     if (blocks != null) {
-      for(BlockInfo b : blocks) {
+      for(BlockInfoContiguous b : blocks) {
         b.setBlockCollection(this);
       }
     }
@@ -454,7 +456,8 @@ public class INodeFile extends INodeWithAdditionalFields
       totalAddedBlocks += f.blocks.length;
     }
     
-    BlockInfo[] newlist = new BlockInfo[size + totalAddedBlocks];
+    BlockInfoContiguous[] newlist =
+        new BlockInfoContiguous[size + totalAddedBlocks];
     System.arraycopy(this.blocks, 0, newlist, 0, size);
     
     for(INodeFile in: inodes) {
@@ -469,12 +472,12 @@ public class INodeFile extends INodeWithAdditionalFields
   /**
    * add a block to the block list
    */
-  void addBlock(BlockInfo newblock) {
+  void addBlock(BlockInfoContiguous newblock) {
     if (this.blocks == null) {
-      this.setBlocks(new BlockInfo[]{newblock});
+      this.setBlocks(new BlockInfoContiguous[]{newblock});
     } else {
       int size = this.blocks.length;
-      BlockInfo[] newlist = new BlockInfo[size + 1];
+      BlockInfoContiguous[] newlist = new BlockInfoContiguous[size + 1];
       System.arraycopy(this.blocks, 0, newlist, 0, size);
       newlist[size] = newblock;
       this.setBlocks(newlist);
@@ -482,7 +485,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** Set the blocks. */
-  public void setBlocks(BlockInfo[] blocks) {
+  public void setBlocks(BlockInfoContiguous[] blocks) {
     this.blocks = blocks;
   }
 
@@ -518,7 +521,7 @@ public class INodeFile extends INodeWithAdditionalFields
   public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) {
     if (blocks != null && collectedBlocks != null) {
-      for (BlockInfo blk : blocks) {
+      for (BlockInfoContiguous blk : blocks) {
         collectedBlocks.addDeleteBlock(blk);
         blk.setBlockCollection(null);
       }
@@ -639,7 +642,7 @@ public class INodeFile extends INodeWithAdditionalFields
     final int last = blocks.length - 1;
     //check if the last block is BlockInfoUnderConstruction
     long size = blocks[last].getNumBytes();
-    if (blocks[last] instanceof BlockInfoUnderConstruction) {
+    if (blocks[last] instanceof BlockInfoContiguousUnderConstruction) {
        if (!includesLastUcBlock) {
          size = 0;
        } else if (usePreferredBlockSize4LastUcBlock) {
@@ -669,7 +672,7 @@ public class INodeFile extends INodeWithAdditionalFields
     Set<Block> allBlocks = new HashSet<Block>(Arrays.asList(getBlocks()));
     List<FileDiff> diffs = sf.getDiffs().asList();
     for(FileDiff diff : diffs) {
-      BlockInfo[] diffBlocks = diff.getBlocks();
+      BlockInfoContiguous[] diffBlocks = diff.getBlocks();
       if (diffBlocks != null) {
         allBlocks.addAll(Arrays.asList(diffBlocks));
       }
@@ -678,8 +681,9 @@ public class INodeFile extends INodeWithAdditionalFields
       size += block.getNumBytes();
     }
     // check if the last block is under construction
-    BlockInfo lastBlock = getLastBlock();
-    if(lastBlock != null && lastBlock instanceof BlockInfoUnderConstruction) {
+    BlockInfoContiguous lastBlock = getLastBlock();
+    if(lastBlock != null &&
+        lastBlock instanceof BlockInfoContiguousUnderConstruction) {
       size += getPreferredBlockSize() - lastBlock.getNumBytes();
     }
     return size * getBlockReplication();
@@ -697,7 +701,7 @@ public class INodeFile extends INodeWithAdditionalFields
   /**
    * Return the penultimate allocated block for this file.
    */
-  BlockInfo getPenultimateBlock() {
+  BlockInfoContiguous getPenultimateBlock() {
     if (blocks == null || blocks.length <= 1) {
       return null;
     }
@@ -705,7 +709,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public BlockInfo getLastBlock() {
+  public BlockInfoContiguous getLastBlock() {
     return blocks == null || blocks.length == 0? null: blocks[blocks.length-1];
   }
 
@@ -732,7 +736,7 @@ public class INodeFile extends INodeWithAdditionalFields
    */
   public long collectBlocksBeyondMax(final long max,
       final BlocksMapUpdateInfo collectedBlocks) {
-    final BlockInfo[] oldBlocks = getBlocks();
+    final BlockInfoContiguous[] oldBlocks = getBlocks();
     if (oldBlocks == null)
       return 0;
     // find the minimum n such that the size of the first n blocks > max
@@ -758,20 +762,20 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   void truncateBlocksTo(int n) {
-    final BlockInfo[] newBlocks;
+    final BlockInfoContiguous[] newBlocks;
     if (n == 0) {
-      newBlocks = BlockInfo.EMPTY_ARRAY;
+      newBlocks = BlockInfoContiguous.EMPTY_ARRAY;
     } else {
-      newBlocks = new BlockInfo[n];
+      newBlocks = new BlockInfoContiguous[n];
       System.arraycopy(getBlocks(), 0, newBlocks, 0, n);
     }
     // set new blocks
     setBlocks(newBlocks);
   }
 
-  public void collectBlocksBeyondSnapshot(BlockInfo[] snapshotBlocks,
+  public void collectBlocksBeyondSnapshot(BlockInfoContiguous[] snapshotBlocks,
                                           BlocksMapUpdateInfo collectedBlocks) {
-    BlockInfo[] oldBlocks = getBlocks();
+    BlockInfoContiguous[] oldBlocks = getBlocks();
     if(snapshotBlocks == null || oldBlocks == null)
       return;
     // Skip blocks in common between the file and the snapshot
@@ -795,7 +799,7 @@ public class INodeFile extends INodeWithAdditionalFields
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if(sf == null)
       return;
-    BlockInfo[] snapshotBlocks = 
+    BlockInfoContiguous[] snapshotBlocks =
         getDiffs().findEarlierSnapshotBlocks(snapshotId);
     if(snapshotBlocks == null)
       return;
@@ -809,15 +813,15 @@ public class INodeFile extends INodeWithAdditionalFields
   /**
    * @return true if the block is contained in a snapshot or false otherwise.
    */
-  boolean isBlockInLatestSnapshot(BlockInfo block) {
+  boolean isBlockInLatestSnapshot(BlockInfoContiguous block) {
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
-    if (sf == null || sf.getDiffs() == null)
+    if (sf == null || sf.getDiffs() == null) {
       return false;
-    BlockInfo[] snapshotBlocks =
-        getDiffs().findEarlierSnapshotBlocks(getDiffs().getLastSnapshotId());
-    if(snapshotBlocks == null)
-      return false;
-    return Arrays.asList(snapshotBlocks).contains(block);
+    }
+    BlockInfoContiguous[] snapshotBlocks = getDiffs()
+        .findEarlierSnapshotBlocks(getDiffs().getLastSnapshotId());
+    return snapshotBlocks != null &&
+        Arrays.asList(snapshotBlocks).contains(block);
   }
 
   @VisibleForTesting

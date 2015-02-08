@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
  * Represents a block that is currently being constructed.<br>
  * This is usually the last block of a file opened for write or append.
  */
-public class BlockInfoUnderConstruction extends BlockInfo {
+public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
   /** Block state. See {@link BlockUCState} */
   private BlockUCState blockUCState;
 
@@ -158,16 +158,14 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * Create block and set its state to
    * {@link BlockUCState#UNDER_CONSTRUCTION}.
    */
-  public BlockInfoUnderConstruction(Block blk, short replication) {
+  public BlockInfoContiguousUnderConstruction(Block blk, short replication) {
     this(blk, replication, BlockUCState.UNDER_CONSTRUCTION, null);
   }
 
   /**
    * Create a block that is currently being constructed.
    */
-  public BlockInfoUnderConstruction(Block blk, short replication,
-                             BlockUCState state,
-                             DatanodeStorageInfo[] targets) {
+  public BlockInfoContiguousUnderConstruction(Block blk, short replication, BlockUCState state, DatanodeStorageInfo[] targets) {
     super(blk, replication);
     assert getBlockUCState() != BlockUCState.COMPLETE :
       "BlockInfoUnderConstruction cannot be in COMPLETE state";
@@ -184,10 +182,10 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * the client or it does not have at least a minimal number of replicas 
    * reported from data-nodes. 
    */
-  BlockInfo convertToCompleteBlock() throws IOException {
+  BlockInfoContiguous convertToCompleteBlock() throws IOException {
     assert getBlockUCState() != BlockUCState.COMPLETE :
       "Trying to convert a COMPLETE block";
-    return new BlockInfo(this);
+    return new BlockInfoContiguous(this);
   }
 
   /** Set expected locations */
