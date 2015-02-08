@@ -39,7 +39,7 @@ public class TestBlockInfoUnderConstruction {
     DatanodeDescriptor dd3 = s3.getDatanodeDescriptor();
 
     dd1.isAlive = dd2.isAlive = dd3.isAlive = true;
-    BlockInfoUnderConstruction blockInfo = new BlockInfoUnderConstruction(
+    BlockInfoContiguousUnderConstruction blockInfo = new BlockInfoContiguousUnderConstruction(
         new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP),
         (short) 3,
         BlockUCState.UNDER_CONSTRUCTION,
@@ -51,7 +51,7 @@ public class TestBlockInfoUnderConstruction {
     dd2.setLastUpdate(currentTime - 1 * 1000);
     dd3.setLastUpdate(currentTime - 2 * 1000);
     blockInfo.initializeBlockRecovery(1);
-    BlockInfoUnderConstruction[] blockInfoRecovery = dd2.getLeaseRecoveryCommand(1);
+    BlockInfoContiguousUnderConstruction[] blockInfoRecovery = dd2.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
 
     // Recovery attempt #2.

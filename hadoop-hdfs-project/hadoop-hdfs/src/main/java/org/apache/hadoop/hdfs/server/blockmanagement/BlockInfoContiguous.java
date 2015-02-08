@@ -30,8 +30,9 @@ import org.apache.hadoop.util.LightWeightGSet;
  * the block are stored.
  */
 @InterfaceAudience.Private
-public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
-  public static final BlockInfo[] EMPTY_ARRAY = {}; 
+public class BlockInfoContiguous extends Block
+    implements LightWeightGSet.LinkedElement {
+  public static final BlockInfoContiguous[] EMPTY_ARRAY = {};
 
   private BlockCollection bc;
 
@@ -56,12 +57,12 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * Construct an entry for blocksmap
    * @param replication the block's replication factor
    */
-  public BlockInfo(short replication) {
+  public BlockInfoContiguous(short replication) {
     this.triplets = new Object[3*replication];
     this.bc = null;
   }
   
-  public BlockInfo(Block blk, short replication) {
+  public BlockInfoContiguous(Block blk, short replication) {
     super(blk);
     this.triplets = new Object[3*replication];
     this.bc = null;
@@ -72,7 +73,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * This is used to convert BlockInfoUnderConstruction
    * @param from BlockInfo to copy from.
    */
-  protected BlockInfo(BlockInfo from) {
+  protected BlockInfoContiguous(BlockInfoContiguous from) {
     this(from, from.bc.getBlockReplication());
     this.bc = from.bc;
   }
@@ -96,23 +97,23 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return (DatanodeStorageInfo)triplets[index*3];
   }
 
-  private BlockInfo getPrevious(int index) {
+  private BlockInfoContiguous getPrevious(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
-    BlockInfo info = (BlockInfo)triplets[index*3+1];
+    BlockInfoContiguous info = (BlockInfoContiguous)triplets[index*3+1];
     assert info == null || 
-        info.getClass().getName().startsWith(BlockInfo.class.getName()) : 
+        info.getClass().getName().startsWith(BlockInfoContiguous.class.getName()) :
               "BlockInfo is expected at " + index*3;
     return info;
   }
 
-  BlockInfo getNext(int index) {
+  BlockInfoContiguous getNext(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
-    BlockInfo info = (BlockInfo)triplets[index*3+2];
-    assert info == null || 
-        info.getClass().getName().startsWith(BlockInfo.class.getName()) : 
-              "BlockInfo is expected at " + index*3;
+    BlockInfoContiguous info = (BlockInfoContiguous)triplets[index*3+2];
+    assert info == null || info.getClass().getName().startsWith(
+        BlockInfoContiguous.class.getName()) :
+        "BlockInfo is expected at " + index*3;
     return info;
   }
 
@@ -130,10 +131,10 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * @param to - block to be set to previous on the list of blocks
    * @return current previous block on the list of blocks
    */
-  private BlockInfo setPrevious(int index, BlockInfo to) {
-	assert this.triplets != null : "BlockInfo is not initialized";
-	assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
-    BlockInfo info = (BlockInfo)triplets[index*3+1];
+  private BlockInfoContiguous setPrevious(int index, BlockInfoContiguous to) {
+    assert this.triplets != null : "BlockInfo is not initialized";
+    assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
+    BlockInfoContiguous info = (BlockInfoContiguous)triplets[index*3+1];
     triplets[index*3+1] = to;
     return info;
   }
@@ -146,10 +147,10 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * @param to - block to be set to next on the list of blocks
    *    * @return current next block on the list of blocks
    */
-  private BlockInfo setNext(int index, BlockInfo to) {
-	assert this.triplets != null : "BlockInfo is not initialized";
-	assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
-    BlockInfo info = (BlockInfo)triplets[index*3+2];
+  private BlockInfoContiguous setNext(int index, BlockInfoContiguous to) {
+    assert this.triplets != null : "BlockInfo is not initialized";
+    assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
+    BlockInfoContiguous info = (BlockInfoContiguous)triplets[index*3+2];
     triplets[index*3+2] = to;
     return info;
   }
@@ -241,6 +242,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     }
     return false;
   }
+
   /**
    * Find specified DatanodeStorageInfo.
    * @return DatanodeStorageInfo or null if not found.
@@ -265,10 +267,12 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     int len = getCapacity();
     for(int idx = 0; idx < len; idx++) {
       DatanodeStorageInfo cur = getStorageInfo(idx);
-      if(cur == storageInfo)
+      if (cur == storageInfo) {
         return idx;
-      if(cur == null)
+      }
+      if (cur == null) {
         break;
+      }
     }
     return -1;
   }
@@ -279,7 +283,8 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * If the head is null then form a new list.
    * @return current block as the new head of the list.
    */
-  BlockInfo listInsert(BlockInfo head, DatanodeStorageInfo storage) {
+  BlockInfoContiguous listInsert(BlockInfoContiguous head,
+      DatanodeStorageInfo storage) {
     int dnIndex = this.findStorageInfo(storage);
     assert dnIndex >= 0 : "Data node is not found: current";
     assert getPrevious(dnIndex) == null && getNext(dnIndex) == null : 
@@ -299,15 +304,16 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * @return the new head of the list or null if the list becomes
    * empy after deletion.
    */
-  BlockInfo listRemove(BlockInfo head, DatanodeStorageInfo storage) {
+  BlockInfoContiguous listRemove(BlockInfoContiguous head,
+      DatanodeStorageInfo storage) {
     if(head == null)
       return null;
     int dnIndex = this.findStorageInfo(storage);
     if(dnIndex < 0) // this block is not on the data-node list
       return head;
 
-    BlockInfo next = this.getNext(dnIndex);
-    BlockInfo prev = this.getPrevious(dnIndex);
+    BlockInfoContiguous next = this.getNext(dnIndex);
+    BlockInfoContiguous prev = this.getPrevious(dnIndex);
     this.setNext(dnIndex, null);
     this.setPrevious(dnIndex, null);
     if(prev != null)
@@ -325,25 +331,26 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    *
    * @return the new head of the list.
    */
-  public BlockInfo moveBlockToHead(BlockInfo head, DatanodeStorageInfo storage,
-      int curIndex, int headIndex) {
+  public BlockInfoContiguous moveBlockToHead(BlockInfoContiguous head,
+      DatanodeStorageInfo storage, int curIndex, int headIndex) {
     if (head == this) {
       return this;
     }
-    BlockInfo next = this.setNext(curIndex, head);
-    BlockInfo prev = this.setPrevious(curIndex, null);
+    BlockInfoContiguous next = this.setNext(curIndex, head);
+    BlockInfoContiguous prev = this.setPrevious(curIndex, null);
 
     head.setPrevious(headIndex, this);
     prev.setNext(prev.findStorageInfo(storage), next);
-    if (next != null)
+    if (next != null) {
       next.setPrevious(next.findStorageInfo(storage), prev);
+    }
     return this;
   }
 
   /**
    * BlockInfo represents a block that is not being constructed.
    * In order to start modifying the block, the BlockInfo should be converted
-   * to {@link BlockInfoUnderConstruction}.
+   * to {@link BlockInfoContiguousUnderConstruction}.
    * @return {@link BlockUCState#COMPLETE}
    */
   public BlockUCState getBlockUCState() {
@@ -363,16 +370,18 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * Convert a complete block to an under construction block.
    * @return BlockInfoUnderConstruction -  an under construction block.
    */
-  public BlockInfoUnderConstruction convertToBlockUnderConstruction(
+  public BlockInfoContiguousUnderConstruction convertToBlockUnderConstruction(
       BlockUCState s, DatanodeStorageInfo[] targets) {
     if(isComplete()) {
-      BlockInfoUnderConstruction ucBlock = new BlockInfoUnderConstruction(this,
+      BlockInfoContiguousUnderConstruction ucBlock =
+          new BlockInfoContiguousUnderConstruction(this,
           getBlockCollection().getBlockReplication(), s, targets);
       ucBlock.setBlockCollection(getBlockCollection());
       return ucBlock;
     }
     // the block is already under construction
-    BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;
+    BlockInfoContiguousUnderConstruction ucBlock =
+        (BlockInfoContiguousUnderConstruction)this;
     ucBlock.setBlockUCState(s);
     ucBlock.setExpectedLocations(targets);
     ucBlock.setBlockCollection(getBlockCollection());
@@ -384,7 +393,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     // Super implementation is sufficient
     return super.hashCode();
   }
-  
+
   @Override
   public boolean equals(Object obj) {
     // Sufficient to rely on super's implementation

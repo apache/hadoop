@@ -34,7 +34,6 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,8 +43,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
@@ -63,7 +62,6 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine.Server;
 import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 
 /**
@@ -178,8 +176,8 @@ public class SnapshotTestHelper {
    * 
    * Specific information for different types of INode: 
    * {@link INodeDirectory}:childrenSize 
-   * {@link INodeFile}: fileSize, block list. Check {@link BlockInfo#toString()} 
-   * and {@link BlockInfoUnderConstruction#toString()} for detailed information.
+   * {@link INodeFile}: fileSize, block list. Check {@link BlockInfoContiguous#toString()}
+   * and {@link BlockInfoContiguousUnderConstruction#toString()} for detailed information.
    * {@link FileWithSnapshot}: next link
    * </pre>
    * @see INode#dumpTreeRecursively()

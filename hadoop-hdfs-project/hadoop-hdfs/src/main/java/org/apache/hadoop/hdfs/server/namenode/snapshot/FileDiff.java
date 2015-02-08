@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
@@ -40,7 +40,7 @@ public class FileDiff extends
   /** The file size at snapshot creation time. */
   private final long fileSize;
   /** A copy of the INodeFile block list. Used in truncate. */
-  private BlockInfo[] blocks;
+  private BlockInfoContiguous[] blocks;
 
   FileDiff(int snapshotId, INodeFile file) {
     super(snapshotId, null, null);
@@ -66,7 +66,7 @@ public class FileDiff extends
    * up to the current {@link #fileSize}.
    * Should be done only once.
    */
-  public void setBlocks(BlockInfo[] blocks) {
+  public void setBlocks(BlockInfoContiguous[] blocks) {
     if(this.blocks != null)
       return;
     int numBlocks = 0;
@@ -75,7 +75,7 @@ public class FileDiff extends
     this.blocks = Arrays.copyOf(blocks, numBlocks);
   }
 
-  public BlockInfo[] getBlocks() {
+  public BlockInfoContiguous[] getBlocks() {
     return blocks;
   }
 
@@ -121,7 +121,7 @@ public class FileDiff extends
       BlocksMapUpdateInfo collectedBlocks) {
     if(blocks == null || collectedBlocks == null)
       return;
-    for(BlockInfo blk : blocks)
+    for(BlockInfoContiguous blk : blocks)
       collectedBlocks.addDeleteBlock(blk);
     blocks = null;
   }

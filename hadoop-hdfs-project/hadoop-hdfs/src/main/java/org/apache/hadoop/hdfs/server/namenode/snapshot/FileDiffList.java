@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -54,14 +54,14 @@ public class FileDiffList extends
       diff.setBlocks(iNodeFile.getBlocks());
   }
 
-  public BlockInfo[] findEarlierSnapshotBlocks(int snapshotId) {
+  public BlockInfoContiguous[] findEarlierSnapshotBlocks(int snapshotId) {
     assert snapshotId != Snapshot.NO_SNAPSHOT_ID : "Wrong snapshot id";
     if(snapshotId == Snapshot.CURRENT_STATE_ID) {
       return null;
     }
     List<FileDiff> diffs = this.asList();
     int i = Collections.binarySearch(diffs, snapshotId);
-    BlockInfo[] blocks = null;
+    BlockInfoContiguous[] blocks = null;
     for(i = i >= 0 ? i : -i; i < diffs.size(); i--) {
       blocks = diffs.get(i).getBlocks();
       if(blocks != null) {
@@ -71,14 +71,14 @@ public class FileDiffList extends
     return blocks;
   }
 
-  public BlockInfo[] findLaterSnapshotBlocks(int snapshotId) {
+  public BlockInfoContiguous[] findLaterSnapshotBlocks(int snapshotId) {
     assert snapshotId != Snapshot.NO_SNAPSHOT_ID : "Wrong snapshot id";
     if(snapshotId == Snapshot.CURRENT_STATE_ID) {
       return null;
     }
     List<FileDiff> diffs = this.asList();
     int i = Collections.binarySearch(diffs, snapshotId);
-    BlockInfo[] blocks = null;
+    BlockInfoContiguous[] blocks = null;
     for(i = i >= 0 ? i+1 : -i-1; i < diffs.size(); i++) {
       blocks = diffs.get(i).getBlocks();
       if(blocks != null) {
@@ -97,7 +97,7 @@ public class FileDiffList extends
                                        FileDiff removed,
                                        BlocksMapUpdateInfo collectedBlocks,
                                        List<INode> removedINodes) {
-    BlockInfo[] removedBlocks = removed.getBlocks();
+    BlockInfoContiguous[] removedBlocks = removed.getBlocks();
     if(removedBlocks == null) {
       FileWithSnapshotFeature sf = file.getFileWithSnapshotFeature();
       assert sf != null : "FileWithSnapshotFeature is null";
@@ -110,10 +110,10 @@ public class FileDiffList extends
     // Copy blocks to the previous snapshot if not set already
     if(earlierDiff != null)
       earlierDiff.setBlocks(removedBlocks);
-    BlockInfo[] earlierBlocks =
-        (earlierDiff == null ? new BlockInfo[]{} : earlierDiff.getBlocks());
+    BlockInfoContiguous[] earlierBlocks =
+        (earlierDiff == null ? new BlockInfoContiguous[]{} : earlierDiff.getBlocks());
     // Find later snapshot (or file itself) with blocks
-    BlockInfo[] laterBlocks = findLaterSnapshotBlocks(removed.getSnapshotId());
+    BlockInfoContiguous[] laterBlocks = findLaterSnapshotBlocks(removed.getSnapshotId());
     laterBlocks = (laterBlocks==null) ? file.getBlocks() : laterBlocks;
     // Skip blocks, which belong to either the earlier or the later lists
     int i = 0;
