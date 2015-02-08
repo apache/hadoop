@@ -307,6 +307,9 @@ Release 2.7.0 - UNRELEASED
     tests such as truncate with HA setup, negative tests, truncate with other
     operations and multiple truncates.  (szetszwo)
 
+    HDFS-7743. Code cleanup of BlockInfo and rename BlockInfo to
+    BlockInfoContiguous. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

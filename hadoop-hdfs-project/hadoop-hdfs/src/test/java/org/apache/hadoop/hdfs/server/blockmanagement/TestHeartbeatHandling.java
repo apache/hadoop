@@ -171,7 +171,7 @@ public class TestHeartbeatHandling {
               dd1.getStorageInfos()[0],
               dd2.getStorageInfos()[0],
               dd3.getStorageInfos()[0]};
-          BlockInfoUnderConstruction blockInfo = new BlockInfoUnderConstruction(
+          BlockInfoContiguousUnderConstruction blockInfo = new BlockInfoContiguousUnderConstruction(
               new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), (short) 3,
               BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
@@ -193,7 +193,7 @@ public class TestHeartbeatHandling {
           // More than the default stale interval of 30 seconds.
           dd2.setLastUpdate(System.currentTimeMillis() - 40 * 1000);
           dd3.setLastUpdate(System.currentTimeMillis());
-          blockInfo = new BlockInfoUnderConstruction(
+          blockInfo = new BlockInfoContiguousUnderConstruction(
               new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), (short) 3,
               BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
@@ -214,7 +214,7 @@ public class TestHeartbeatHandling {
           // More than the default stale interval of 30 seconds.
           dd2.setLastUpdate(System.currentTimeMillis() - 40 * 1000);
           dd3.setLastUpdate(System.currentTimeMillis() - 80 * 1000);
-          blockInfo = new BlockInfoUnderConstruction(
+          blockInfo = new BlockInfoContiguousUnderConstruction(
               new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP), (short) 3,
               BlockUCState.UNDER_RECOVERY, storages);
           dd1.addBlockToBeRecovered(blockInfo);
