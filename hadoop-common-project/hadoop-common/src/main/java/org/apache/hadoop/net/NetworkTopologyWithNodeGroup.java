@@ -254,7 +254,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
     // Start off by initializing to off rack
     int weight = 3;
     if (reader != null) {
-      if (reader == node) {
+      if (reader.equals(node)) {
         weight = 0;
       } else if (isOnSameNodeGroup(reader, node)) {
         weight = 1;
