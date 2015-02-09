@@ -84,7 +84,7 @@ public class OracleDataDrivenDBInputFormat<T extends DBWritable>
     try {
       // Use Oracle-specific db reader
       return new OracleDataDrivenDBRecordReader<T>(split, inputClass,
-          conf, getConnection(), dbConf, dbConf.getInputConditions(),
+          conf, createConnection(), dbConf, dbConf.getInputConditions(),
           dbConf.getInputFieldNames(), dbConf.getInputTableName());
     } catch (SQLException ex) {
       throw new IOException(ex.getMessage());
