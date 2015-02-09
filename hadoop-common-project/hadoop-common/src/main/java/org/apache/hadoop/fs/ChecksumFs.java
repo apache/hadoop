@@ -297,6 +297,11 @@ public abstract class ChecksumFs extends FilterFs {
 
   }
 
+  @Override
+  public boolean truncate(Path f, long newLength) throws IOException {
+    throw new IOException("Not supported");
+  }
+
   /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file name to open

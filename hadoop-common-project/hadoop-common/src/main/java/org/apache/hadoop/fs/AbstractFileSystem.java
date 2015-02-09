@@ -639,6 +639,15 @@ public abstract class AbstractFileSystem {
 
   /**
    * The specification of this method matches that of
+   * {@link FileContext#truncate(Path, long)} except that Path f must be for
+   * this file system.
+   */
+  public abstract boolean truncate(Path f, long newLength)
+      throws AccessControlException, FileNotFoundException,
+      UnresolvedLinkException, IOException;
+
+  /**
+   * The specification of this method matches that of
    * {@link FileContext#setReplication(Path, short)} except that Path f must be
    * for this file system.
    */

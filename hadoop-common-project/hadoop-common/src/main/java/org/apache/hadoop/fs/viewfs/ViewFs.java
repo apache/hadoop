@@ -452,7 +452,15 @@ public class ViewFs extends AbstractFileSystem {
     return res.targetFileSystem.open(res.remainingPath, bufferSize);
   }
 
-  
+  @Override
+  public boolean truncate(final Path f, final long newLength)
+      throws AccessControlException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+        fsState.resolve(getUriPath(f), true);
+    return res.targetFileSystem.truncate(res.remainingPath, newLength);
+  }
+
   @Override
   public void renameInternal(final Path src, final Path dst,
       final boolean overwrite) throws IOException, UnresolvedLinkException {
@@ -875,6 +883,13 @@ public class ViewFs extends AbstractFileSystem {
         throws FileNotFoundException, IOException {
       checkPathIsSlash(f);
       throw new FileNotFoundException("Path points to dir not a file");
+    }
+
+    @Override
+    public boolean truncate(final Path f, final long newLength)
+        throws FileNotFoundException, IOException {
+      checkPathIsSlash(f);
+      throw readOnlyMountTable("truncate", f);
     }
 
     @Override
