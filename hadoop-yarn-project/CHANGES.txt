@@ -223,6 +223,9 @@ Release 2.7.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
+    rack-local delays, even for off-rack-only requests. (kasha)
+
   BUG FIXES
 
     YARN-3071. Remove invalid char from sample conf in doc of FairScheduler.
