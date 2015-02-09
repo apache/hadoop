@@ -55,7 +55,7 @@ public class SerializationFactory extends Configured {
    */
   public SerializationFactory(Configuration conf) {
     super(conf);
-    for (String serializerName : conf.getStrings(
+    for (String serializerName : conf.getTrimmedStrings(
       CommonConfigurationKeys.IO_SERIALIZATIONS_KEY,
       new String[]{WritableSerialization.class.getName(),
         AvroSpecificSerialization.class.getName(),

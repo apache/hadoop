@@ -202,6 +202,9 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-11512. Use getTrimmedStrings when reading serialization keys
+    (Ryan P via harsh)
+
     HADOOP-11488. Difference in default connection timeout for S3A FS
     (Daisuke Kobayashi via harsh)
 
