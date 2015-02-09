@@ -168,6 +168,8 @@ Trunk (Unreleased)
     MAPREDUCE-6161. mapred hsadmin command missing from trunk (Allen Wittenauer
     via jlowe)
 
+    MAPREDUCE-4413. MR lib dir contains jdiff (which is gpl) (Nemon Lou via aw)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
