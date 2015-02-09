@@ -178,7 +178,6 @@ public class DataDrivenDBInputFormat<T extends DBWritable>
 
     ResultSet results = null;
     Statement statement = null;
-    Connection connection = getConnection();
     try {
       statement = connection.createStatement();
 
@@ -289,12 +288,12 @@ public class DataDrivenDBInputFormat<T extends DBWritable>
       if (dbProductName.startsWith("MYSQL")) {
         // use MySQL-specific db reader.
         return new MySQLDataDrivenDBRecordReader<T>(split, inputClass,
-            conf, getConnection(), dbConf, dbConf.getInputConditions(),
+            conf, createConnection(), dbConf, dbConf.getInputConditions(),
             dbConf.getInputFieldNames(), dbConf.getInputTableName());
       } else {
         // Generic reader.
         return new DataDrivenDBRecordReader<T>(split, inputClass,
-            conf, getConnection(), dbConf, dbConf.getInputConditions(),
+            conf, createConnection(), dbConf, dbConf.getInputConditions(),
             dbConf.getInputFieldNames(), dbConf.getInputTableName(),
             dbProductName);
       }
