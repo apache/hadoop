@@ -860,7 +860,7 @@ public class NetworkTopology {
     // Start off by initializing to off rack
     int weight = 2;
     if (reader != null) {
-      if (reader == node) {
+      if (reader.equals(node)) {
         weight = 0;
       } else if (isOnSameRack(reader, node)) {
         weight = 1;

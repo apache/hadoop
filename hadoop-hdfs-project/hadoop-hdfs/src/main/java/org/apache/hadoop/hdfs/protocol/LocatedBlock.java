@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.Lists;
@@ -41,11 +42,13 @@ public class LocatedBlock {
 
   private final ExtendedBlock b;
   private long offset;  // offset of the first byte of the block in the file
-  private final DatanodeInfo[] locs;
-  /** Storage ID for each replica */
-  private final String[] storageIDs;
-  // Storage type for each replica, if reported.
-  private final StorageType[] storageTypes;
+  private final DatanodeInfoWithStorage[] locs;
+  private final boolean hasStorageIDs;
+  private final boolean hasStorageTypes;
+  /** Cached storage ID for each replica */
+  private String[] storageIDs;
+  /** Cached storage type for each replica, if reported. */
+  private StorageType[] storageTypes;
   // corrupt flag is true if all of the replicas of a block are corrupt.
   // else false. If block has few corrupt replicas, they are filtered and 
   // their locations are not part of this object
@@ -57,7 +60,8 @@ public class LocatedBlock {
   private DatanodeInfo[] cachedLocs;
 
   // Used when there are no locations
-  private static final DatanodeInfo[] EMPTY_LOCS = new DatanodeInfo[0];
+  private static final DatanodeInfoWithStorage[] EMPTY_LOCS =
+      new DatanodeInfoWithStorage[0];
 
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs) {
     this(b, locs, -1, false); // startOffset is unknown
@@ -94,10 +98,22 @@ public class LocatedBlock {
     if (locs==null) {
       this.locs = EMPTY_LOCS;
     } else {
-      this.locs = locs;
+      this.locs = new DatanodeInfoWithStorage[locs.length];
+      for(int i = 0; i < locs.length; i++) {
+        DatanodeInfo di = locs[i];
+        DatanodeInfoWithStorage storage = new DatanodeInfoWithStorage(di,
+            storageIDs != null ? storageIDs[i] : null,
+            storageTypes != null ? storageTypes[i] : null);
+        storage.setDependentHostNames(di.getDependentHostNames());
+        storage.setLevel(di.getLevel());
+        storage.setParent(di.getParent());
+        this.locs[i] = storage;
+      }
     }
     this.storageIDs = storageIDs;
     this.storageTypes = storageTypes;
+    this.hasStorageIDs = storageIDs != null;
+    this.hasStorageTypes = storageTypes != null;
 
     if (cachedLocs == null || cachedLocs.length == 0) {
       this.cachedLocs = EMPTY_LOCS;
@@ -118,16 +134,51 @@ public class LocatedBlock {
     return b;
   }
 
-  public DatanodeInfo[] getLocations() {
+  /**
+   * Returns the locations associated with this block. The returned array is not
+   * expected to be modified. If it is, caller must immediately invoke
+   * {@link org.apache.hadoop.hdfs.protocol.LocatedBlock#invalidateCachedStorageInfo}
+   * to invalidate the cached Storage ID/Type arrays.
+   */
+  public DatanodeInfoWithStorage[] getLocations() {
     return locs;
   }
 
   public StorageType[] getStorageTypes() {
+    if(!hasStorageTypes) {
+      return null;
+    }
+    if(storageTypes != null) {
+      return storageTypes;
+    }
+    storageTypes = new StorageType[locs.length];
+    for(int i = 0; i < locs.length; i++) {
+      storageTypes[i] = locs[i].getStorageType();
+    }
     return storageTypes;
   }
   
   public String[] getStorageIDs() {
+    if(!hasStorageIDs) {
+      return null;
+    }
+    if(storageIDs != null) {
+      return storageIDs;
+    }
+    storageIDs = new String[locs.length];
+    for(int i = 0; i < locs.length; i++) {
+      storageIDs[i] = locs[i].getStorageID();
+    }
     return storageIDs;
+  }
+
+  /**
+   * Invalidates the cached StorageID and StorageType information. Must be
+   * called when the locations array is modified.
+   */
+  public void invalidateCachedStorageInfo() {
+    storageIDs = null;
+    storageTypes = null;
   }
 
   public long getStartOffset() {
@@ -161,9 +212,9 @@ public class LocatedBlock {
       return;
     }
     // Try to re-use a DatanodeInfo already in loc
-    for (int i=0; i<locs.length; i++) {
-      if (locs[i].equals(loc)) {
-        cachedList.add(locs[i]);
+    for (DatanodeInfoWithStorage di : locs) {
+      if (loc.equals(di)) {
+        cachedList.add(di);
         cachedLocs = cachedList.toArray(cachedLocs);
         return;
       }
@@ -187,10 +238,6 @@ public class LocatedBlock {
         + "; corrupt=" + corrupt
         + "; offset=" + offset
         + "; locs=" + Arrays.asList(locs)
-        + "; storageIDs=" +
-            (storageIDs != null ? Arrays.asList(storageIDs) : null)
-        + "; storageTypes=" +
-            (storageTypes != null ? Arrays.asList(storageTypes) : null)
         + "}";
   }
 }

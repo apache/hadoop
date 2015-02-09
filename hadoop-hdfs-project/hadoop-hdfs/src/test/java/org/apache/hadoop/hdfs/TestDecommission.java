@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
@@ -800,22 +801,23 @@ public class TestDecommission {
     
     ArrayList<String> nodes = new ArrayList<String>();
     ArrayList<DatanodeInfo> dnInfos = new ArrayList<DatanodeInfo>();
-   
+
+    DatanodeManager dm = ns.getBlockManager().getDatanodeManager();
     for (DatanodeInfo datanodeInfo : dnInfos4FirstBlock) {
       DatanodeInfo found = datanodeInfo;
       for (DatanodeInfo dif: dnInfos4LastBlock) {
         if (datanodeInfo.equals(dif)) {
-         found = null;         
+         found = null;
         }
       }
       if (found != null) {
         nodes.add(found.getXferAddr());
-        dnInfos.add(found);
+        dnInfos.add(dm.getDatanode(found));
       }
     }
     //decommission one of the 3 nodes which have last block
     nodes.add(dnInfos4LastBlock[0].getXferAddr());
-    dnInfos.add(dnInfos4LastBlock[0]);
+    dnInfos.add(dm.getDatanode(dnInfos4LastBlock[0]));
     
     writeConfigFile(excludeFile, nodes);
     refreshNodes(ns, conf);  

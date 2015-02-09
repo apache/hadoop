@@ -584,6 +584,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7741. Remove unnecessary synchronized in FSDataInputStream and
     HdfsDataInputStream. (yliu)
 
+    HDFS-7647. DatanodeManager.sortLocatedBlocks sorts DatanodeInfos
+    but not StorageIDs. (Milan Desai via Arpit Agarwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
