@@ -485,6 +485,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3094. Reset timer for liveness monitors after RM recovery. (Jun Gong
     via jianhe)
 
+    YARN-2971. RM uses conf instead of token service address to renew timeline
+    delegation tokens (jeagles)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
