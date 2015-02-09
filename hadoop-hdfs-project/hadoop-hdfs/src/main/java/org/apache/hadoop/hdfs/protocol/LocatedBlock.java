@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeInfoWithStorage;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.Lists;
@@ -140,7 +140,7 @@ public class LocatedBlock {
    * {@link org.apache.hadoop.hdfs.protocol.LocatedBlock#invalidateCachedStorageInfo}
    * to invalidate the cached Storage ID/Type arrays.
    */
-  public DatanodeInfoWithStorage[] getLocations() {
+  public DatanodeInfo[] getLocations() {
     return locs;
   }
 
