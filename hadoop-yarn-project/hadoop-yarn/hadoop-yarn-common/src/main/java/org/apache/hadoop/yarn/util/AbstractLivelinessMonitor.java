@@ -59,6 +59,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   @Override
   protected void serviceStart() throws Exception {
     assert !stopped : "starting when already stopped";
+    resetTimer();
     checkerThread = new Thread(new PingChecker());
     checkerThread.setName("Ping Checker");
     checkerThread.start();
@@ -97,6 +98,13 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
 
   public synchronized void unregister(O ob) {
     running.remove(ob);
+  }
+
+  public synchronized void resetTimer() {
+    long time = clock.getTime();
+    for (O ob : running.keySet()) {
+      running.put(ob, time);
+    }
   }
 
   private class PingChecker implements Runnable {
