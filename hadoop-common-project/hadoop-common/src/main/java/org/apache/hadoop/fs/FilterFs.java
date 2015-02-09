@@ -213,6 +213,14 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  public boolean truncate(Path f, long newLength) 
+      throws AccessControlException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
+    checkPath(f);
+    return myFs.truncate(f, newLength);
+  }
+
+  @Override
   public void renameInternal(Path src, Path dst) 
     throws IOException, UnresolvedLinkException {
     checkPath(src);
