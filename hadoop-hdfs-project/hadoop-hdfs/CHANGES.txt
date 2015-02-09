@@ -293,6 +293,9 @@ Trunk (Unreleased)
     HDFS-7669. HDFS Design Doc references commands that no longer exist.
     (Brahma Reddy Battula via aw)
 
+    HDFS-7755. httpfs shell code has hardcoded path to bash (Dmitry
+    Sivachenko via aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
