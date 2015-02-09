@@ -15,11 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.protocol;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class DatanodeInfoWithStorage extends DatanodeInfo {
   private final String storageID;
   private final StorageType storageType;

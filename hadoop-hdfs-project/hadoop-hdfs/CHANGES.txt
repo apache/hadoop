@@ -587,6 +587,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7647. DatanodeManager.sortLocatedBlocks sorts DatanodeInfos
     but not StorageIDs. (Milan Desai via Arpit Agarwal)
 
+    HDFS-7756. Restore method signature for LocatedBlock#getLocations(). (Ted
+    Yu via yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
