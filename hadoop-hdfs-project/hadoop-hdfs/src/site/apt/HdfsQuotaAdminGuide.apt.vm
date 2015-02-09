@@ -71,20 +71,20 @@ HDFS Quotas Guide
    Quotas are managed by a set of commands available only to the
    administrator.
 
-     * <<<dfsadmin -setQuota <N> <directory>...<directory> >>>
+     * <<<hdfs dfsadmin -setQuota <N> <directory>...<directory> >>>
 
        Set the name quota to be N for each directory. Best effort for each
        directory, with faults reported if N is not a positive long
        integer, the directory does not exist or it is a file, or the
        directory would immediately exceed the new quota.
 
-     * <<<dfsadmin -clrQuota <directory>...<directory> >>>
+     * <<<hdfs dfsadmin -clrQuota <directory>...<directory> >>>
 
        Remove any name quota for each directory. Best effort for each
        directory, with faults reported if the directory does not exist or
        it is a file. It is not a fault if the directory has no quota.
 
-     * <<<dfsadmin -setSpaceQuota <N> <directory>...<directory> >>>
+     * <<<hdfs dfsadmin -setSpaceQuota <N> <directory>...<directory> >>>
 
        Set the space quota to be N bytes for each directory. This is a
        hard limit on total size of all the files under the directory tree.
@@ -96,7 +96,7 @@ HDFS Quotas Guide
        integer, the directory does not exist or it is a file, or the
        directory would immediately exceed the new quota.
 
-     * <<<dfsadmin -clrSpaceQuota <directory>...<director> >>>
+     * <<<hdfs dfsadmin -clrSpaceQuota <directory>...<directory> >>>
 
        Remove any space quota for each directory. Best effort for each
        directory, with faults reported if the directory does not exist or
@@ -107,7 +107,7 @@ HDFS Quotas Guide
    An an extension to the count command of the HDFS shell reports quota
    values and the current count of names and bytes in use.
 
-     * <<<fs -count -q <directory>...<directory> >>>
+     * <<<hadoop fs -count -q <directory>...<directory> >>>
 
        With the -q option, also report the name quota value set for each
        directory, the available name quota remaining, the space quota

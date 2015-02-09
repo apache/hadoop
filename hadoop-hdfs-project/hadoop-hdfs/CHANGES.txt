@@ -287,6 +287,9 @@ Trunk (Unreleased)
     HDFS-7751. Fix TestHDFSCLI for quota with storage type.  (Xiaoyu Yao
     via szetszwo)
 
+    HDFS-7670. HDFS Quota guide has typos, incomplete command lines
+    (Brahma Reddy Battula via aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
