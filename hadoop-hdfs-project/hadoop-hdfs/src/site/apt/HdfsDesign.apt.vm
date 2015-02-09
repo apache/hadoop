@@ -13,9 +13,7 @@
   ---
   HDFS Architecture
   ---
-  Dhruba Borthakur
-  ---
-  ${maven.build.timestamp}
+    ${maven.build.timestamp}
 
 HDFS Architecture
 
@@ -439,7 +437,7 @@ HDFS Architecture
 *---------+---------+
 | Create a directory named <<</foodir>>> | <<<bin/hadoop dfs -mkdir /foodir>>>
 *---------+---------+
-| Remove a directory named <<</foodir>>> | <<<bin/hadoop dfs -rmr /foodir>>>
+| Remove a directory named <<</foodir>>> | <<<bin/hadoop fs -rm -R /foodir>>>
 *---------+---------+
 | View the contents of a file named <<</foodir/myfile.txt>>> | <<<bin/hadoop dfs -cat /foodir/myfile.txt>>>
 *---------+---------+
@@ -456,11 +454,11 @@ HDFS Architecture
 *---------+---------+
 || Action | Command
 *---------+---------+
-|Put the cluster in Safemode              | <<<bin/hadoop dfsadmin -safemode enter>>>
+|Put the cluster in Safemode              | <<<bin/hdfs dfsadmin -safemode enter>>>
 *---------+---------+
-|Generate a list of DataNodes             | <<<bin/hadoop dfsadmin -report>>>
+|Generate a list of DataNodes             | <<<bin/hdfs dfsadmin -report>>>
 *---------+---------+
-|Recommission or decommission DataNode(s) | <<<bin/hadoop dfsadmin -refreshNodes>>>
+|Recommission or decommission DataNode(s) | <<<bin/hdfs dfsadmin -refreshNodes>>>
 *---------+---------+
 
 ** Browser Interface

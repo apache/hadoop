@@ -290,6 +290,9 @@ Trunk (Unreleased)
     HDFS-7670. HDFS Quota guide has typos, incomplete command lines
     (Brahma Reddy Battula via aw)
 
+    HDFS-7669. HDFS Design Doc references commands that no longer exist.
+    (Brahma Reddy Battula via aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
