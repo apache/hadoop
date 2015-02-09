@@ -24,6 +24,9 @@ Trunk (Unreleased)
 
     HADOOP-11485. Pluggable shell integration (aw)
 
+    HADOOP-8934. Shell command ls should include sort options (Jonathan Allen
+    via aw)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution

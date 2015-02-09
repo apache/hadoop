@@ -406,14 +406,25 @@ bin/hadoop fs <args>
 
 * ls
 
-   Usage: <<<hadoop fs -ls [-R] <args> >>>
+   Usage: <<<hadoop fs -ls [-d] [-h] [-R] [-t] [-S] [-r] [-u] <args> >>>
 
    Options:
 
-     * The -R option will return stat recursively through the directory
-       structure.
+     * -d: Directories are listed as plain files.
 
-   For a file returns stat on the file with the following format:
+     * -h: Format file sizes in a human-readable fashion (eg 64.0m instead of 67108864).
+
+     * -R: Recursively list subdirectories encountered.
+
+     * -t: Sort output by modification time (most recent first).
+
+     * -S: Sort output by file size.
+
+     * -r: Reverse the sort order.
+
+     * -u: Use access time rather than modification time for display and sorting.
+
+   For a file ls returns stat on the file with the following format:
 
 +---+
 permissions number_of_replicas userid groupid filesize modification_date modification_time filename
@@ -424,6 +435,9 @@ permissions number_of_replicas userid groupid filesize modification_date modific
 +---+
 permissions userid groupid modification_date modification_time dirname
 +---+
+
+   Files within a directory are order by filename by default.
+
 
    Example:
 
