@@ -238,7 +238,10 @@ public class TestTimelineClient {
             new TimelineDelegationTokenIdentifier(
                 new Text("tester"), new Text("tester"), new Text("tester"));
         client.renewDelegationToken(
-            new Token<TimelineDelegationTokenIdentifier>(timelineDT, dtManager));
+            new Token<TimelineDelegationTokenIdentifier>(timelineDT.getBytes(),
+                dtManager.createPassword(timelineDT),
+                timelineDT.getKind(),
+                new Text("0.0.0.0:8188")));
         assertFail();
       } catch (RuntimeException ce) {
         assertException(client, ce);
@@ -250,7 +253,10 @@ public class TestTimelineClient {
             new TimelineDelegationTokenIdentifier(
                 new Text("tester"), new Text("tester"), new Text("tester"));
         client.cancelDelegationToken(
-            new Token<TimelineDelegationTokenIdentifier>(timelineDT, dtManager));
+            new Token<TimelineDelegationTokenIdentifier>(timelineDT.getBytes(),
+                dtManager.createPassword(timelineDT),
+                timelineDT.getKind(),
+                new Text("0.0.0.0:8188")));
         assertFail();
       } catch (RuntimeException ce) {
         assertException(client, ce);
@@ -371,5 +377,9 @@ public class TestTimelineClient {
       return new TimelineDelegationTokenIdentifier();
     }
 
+    @Override
+    public synchronized byte[] createPassword(TimelineDelegationTokenIdentifier identifier) {
+      return super.createPassword(identifier);
+    }
   }
 }
