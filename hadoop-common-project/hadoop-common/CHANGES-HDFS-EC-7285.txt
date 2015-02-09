@@ -5,3 +5,6 @@
 
     HADOOP-11534. Minor improvements for raw erasure coders
     ( Kai Zheng via vinayakumarb )
+
+    HADOOP-11541. Raw XOR coder
+    ( Kai Zheng )
