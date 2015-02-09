@@ -72,6 +72,9 @@ Release 2.6.1 - UNRELEASED
     YARN-3103. AMRMClientImpl does not update AMRM token properly. (Jason Lowe
     via jianhe)
 
+    YARN-3094. Reset timer for liveness monitors after RM recovery. (Jun Gong
+    via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
