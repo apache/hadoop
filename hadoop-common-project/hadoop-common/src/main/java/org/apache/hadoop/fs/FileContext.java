@@ -819,6 +819,49 @@ public class FileContext {
   }
 
   /**
+   * Truncate the file in the indicated path to the indicated size.
+   * <ul>
+   * <li>Fails if path is a directory.
+   * <li>Fails if path does not exist.
+   * <li>Fails if path is not closed.
+   * <li>Fails if new size is greater than current size.
+   * </ul>
+   * @param f The path to the file to be truncated
+   * @param newLength The size the file is to be truncated to
+   *
+   * @return <code>true</code> if the file has been truncated to the desired
+   * <code>newLength</code> and is immediately available to be reused for
+   * write operations such as <code>append</code>, or
+   * <code>false</code> if a background process of adjusting the length of
+   * the last block has been started, and clients should wait for it to
+   * complete before proceeding with further file updates.
+   *
+   * @throws AccessControlException If access is denied
+   * @throws FileNotFoundException If file <code>f</code> does not exist
+   * @throws UnsupportedFileSystemException If file system for <code>f</code> is
+   *           not supported
+   * @throws IOException If an I/O error occurred
+   *
+   * Exceptions applicable to file systems accessed over RPC:
+   * @throws RpcClientException If an exception occurred in the RPC client
+   * @throws RpcServerException If an exception occurred in the RPC server
+   * @throws UnexpectedServerException If server implementation throws
+   *           undeclared exception to RPC server
+   */
+  public boolean truncate(final Path f, final long newLength)
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, IOException {
+    final Path absF = fixRelativePart(f);
+    return new FSLinkResolver<Boolean>() {
+      @Override
+      public Boolean next(final AbstractFileSystem fs, final Path p)
+          throws IOException, UnresolvedLinkException {
+        return fs.truncate(p, newLength);
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
    * Set replication for an existing file.
    * 
    * @param f file name

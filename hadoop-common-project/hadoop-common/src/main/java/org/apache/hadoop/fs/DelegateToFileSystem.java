@@ -170,6 +170,12 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   }
 
   @Override
+  public boolean truncate(Path f, long newLength) throws IOException {
+    checkPath(f);
+    return fsImpl.truncate(f, newLength);
+  }
+
+  @Override
   @SuppressWarnings("deprecation") // call to rename
   public void renameInternal(Path src, Path dst) throws IOException {
     checkPath(src);

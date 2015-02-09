@@ -28,6 +28,7 @@ import java.net.URISyntaxException;
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -114,7 +115,36 @@ public class TestHDFSFileContextMainOperations extends
   private Path getTestRootPath(FileContext fc, String path) {
     return fileContextTestHelper.getTestRootPath(fc, path);
   }
-  
+
+  @Test
+  public void testTruncate() throws Exception {
+    final short repl = 3;
+    final int blockSize = 1024;
+    final int numOfBlocks = 2;
+    DistributedFileSystem fs = cluster.getFileSystem();
+    Path dir = getTestRootPath(fc, "test/hadoop");
+    Path file = getTestRootPath(fc, "test/hadoop/file");
+
+    final byte[] data = FileSystemTestHelper.getFileData(
+        numOfBlocks, blockSize);
+    FileSystemTestHelper.createFile(fs, file, data, blockSize, repl);
+
+    final int newLength = blockSize;
+
+    boolean isReady = fc.truncate(file, newLength);
+
+    Assert.assertTrue("Recovery is not expected.", isReady);
+
+    FileStatus fileStatus = fc.getFileStatus(file);
+    Assert.assertEquals(fileStatus.getLen(), newLength);
+    AppendTestUtil.checkFullFile(fs, file, newLength, data, file.toString());
+
+    ContentSummary cs = fs.getContentSummary(dir);
+    Assert.assertEquals("Bad disk space usage", cs.getSpaceConsumed(),
+        newLength * repl);
+    Assert.assertTrue(fs.delete(dir, true));
+  }
+
   @Test
   public void testOldRenameWithQuota() throws Exception {
     DistributedFileSystem fs = cluster.getFileSystem();
