@@ -136,6 +136,9 @@ Trunk (Unreleased)
     HDFS-7430. Rewrite the BlockScanner to use O(1) memory and use multiple
     threads (cmccabe)
 
+    HDFS-7546. Document, and set an accepting default for
+    dfs.namenode.kerberos.principal.pattern (Harsh J via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES

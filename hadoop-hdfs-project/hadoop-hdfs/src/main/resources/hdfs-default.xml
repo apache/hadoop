@@ -1288,6 +1288,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.kerberos.principal.pattern</name>
+  <value>*</value>
+  <description>
+    A client-side RegEx that can be configured to control
+    allowed realms to authenticate with (useful in cross-realm env.)
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.avoid.read.stale.datanode</name>
   <value>false</value>
   <description>
