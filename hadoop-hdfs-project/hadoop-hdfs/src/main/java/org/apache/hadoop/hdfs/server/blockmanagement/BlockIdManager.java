@@ -212,4 +212,12 @@ public class BlockIdManager {
       .LAST_RESERVED_BLOCK_ID);
     generationStampV1Limit = HdfsConstants.GRANDFATHER_GENERATION_STAMP;
   }
+
+  public static boolean isStripedBlockID(long id) {
+    return id < 0;
+  }
+
+  public static long convertToGroupID(long id) {
+    return id & (~(HdfsConstants.MAX_BLOCKS_IN_GROUP - 1));
+  }
 }
