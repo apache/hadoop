@@ -27,6 +27,9 @@ Release 2.7.1 - UNRELEASED
 
     HDFS-8361. Choose SSD over DISK in block placement.  (szetszwo)
 
+    HDFS-7546. Document, and set an accepting default for
+    dfs.namenode.kerberos.principal.pattern (Harsh J via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
