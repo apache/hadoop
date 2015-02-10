@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -124,7 +125,8 @@ public class CapacityScheduler extends
     PreemptableResourceScheduler, CapacitySchedulerContext, Configurable {
 
   private static final Log LOG = LogFactory.getLog(CapacityScheduler.class);
-
+  private YarnAuthorizationProvider authorizer;
+ 
   private CSQueue root;
   // timeout to join when we stop this service
   protected final long THREAD_JOIN_TIMEOUT_MS = 1000;
@@ -297,7 +299,7 @@ public class CapacityScheduler extends
         new ConcurrentHashMap<ApplicationId,
             SchedulerApplication<FiCaSchedulerApp>>();
     this.labelManager = rmContext.getNodeLabelManager();
-
+    authorizer = YarnAuthorizationProvider.getInstance(yarnConf);
     initializeQueues(this.conf);
 
     scheduleAsynchronously = this.conf.getScheduleAynschronously();
@@ -474,6 +476,7 @@ public class CapacityScheduler extends
     labelManager.reinitializeQueueLabels(getQueueToLabels());
     LOG.info("Initialized root queue " + root);
     initializeQueueMappings();
+    setQueueAcls(authorizer, queues);
   }
 
   @Lock(CapacityScheduler.class)
@@ -499,8 +502,19 @@ public class CapacityScheduler extends
     root.updateClusterResource(clusterResource);
 
     labelManager.reinitializeQueueLabels(getQueueToLabels());
+    setQueueAcls(authorizer, queues);
   }
-  
+
+  @VisibleForTesting
+  public static void setQueueAcls(YarnAuthorizationProvider authorizer,
+      Map<String, CSQueue> queues) throws IOException {
+    for (CSQueue queue : queues.values()) {
+      AbstractCSQueue csQueue = (AbstractCSQueue) queue;
+      authorizer.setPermission(csQueue.getPrivilegedEntity(),
+        csQueue.getACLs(), UserGroupInformation.getCurrentUser());
+    }
+  }
+
   private Map<String, Set<String>> getQueueToLabels() {
     Map<String, Set<String>> queueToLabels = new HashMap<String, Set<String>>();
     for (CSQueue queue : queues.values()) {

@@ -99,15 +99,6 @@ public class AdminACLsManager {
   }
 
   /**
-   * Returns the internal structure used to maintain administrator ACLs
-   *
-   * @return Structure used to maintain administrator access
-   */
-  public AccessControlList getAdminAcl() {
-    return adminAcl;
-  }
-
-  /**
    * Returns whether the specified user/group is an administrator
    *
    * @param callerUGI user/group to to check
@@ -116,27 +107,5 @@ public class AdminACLsManager {
    */
   public boolean isAdmin(UserGroupInformation callerUGI) {
     return adminAcl.isUserAllowed(callerUGI);
-  }
-
-  /**
-   * Returns whether the specified user/group has administrator access
-   *
-   * @param callerUGI user/group to to check
-   * @return <tt>true</tt> if the UserGroupInformation specified
-   *         is a member of the access control list for administrators
-   *         and ACLs are enabled for this cluster
-   *
-   * @see #getAdminAcl
-   * @see #areACLsEnabled
-   */
-  public boolean checkAccess(UserGroupInformation callerUGI) {
-
-    // Any user may perform this operation if authorization is not enabled
-    if (!areACLsEnabled()) {
-      return true;
-    }
-
-    // Administrators may perform any operation
-    return isAdmin(callerUGI);
   }
 }
