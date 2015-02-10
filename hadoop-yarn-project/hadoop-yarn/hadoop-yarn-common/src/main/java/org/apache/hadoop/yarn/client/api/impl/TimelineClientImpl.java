@@ -178,20 +178,7 @@ public class TimelineClientImpl extends TimelineClient {
         try {
           // try perform the op, if fail, keep retrying
           return op.run();
-        }  catch (IOException e) {
-          // We may only throw runtime and IO exceptions. After switching to
-          // Java 1.7, we can merge these two catch blocks into one.
-
-          // break if there's no retries left
-          if (leftRetries == 0) {
-            break;
-          }
-          if (op.shouldRetryOn(e)) {
-            logException(e, leftRetries);
-          } else {
-            throw e;
-          }
-        } catch (RuntimeException e) {
+        } catch (IOException | RuntimeException e) {
           // break if there's no retries left
           if (leftRetries == 0) {
             break;
