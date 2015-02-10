@@ -17064,5 +17064,41 @@ $</expected-output>
         </comparator>
       </comparators>
     </test>
+    <test> <!-- TESTED -->
+      <description>truncate to 5 bytes after waiting for block recovery to complete</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir0</command>
+        <command>-fs NAMENODE -put CLITEST_DATA/data120bytes /user/USERNAME/dir0</command>
+        <command>-fs NAMENODE -truncate -w 5 /user/USERNAME/dir0/data120bytes</command>
+        <command>-fs NAMENODE -cat /user/USERNAME/dir0/data120bytes</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user/USERNAME/dir0</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>12345</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    <test> <!-- TESTED -->
+      <description>truncate to greater length than length of file</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /user/USERNAME/dir0</command>
+        <command>-fs NAMENODE -put CLITEST_DATA/data15bytes /user/USERNAME/dir0</command>
+        <command>-fs NAMENODE -truncate -w 50 /user/USERNAME/dir0/data15bytes</command>
+        <command>-fs NAMENODE -cat /user/USERNAME/dir0/data15bytes</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r /user/USERNAME/dir0</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>12345678901234</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>
