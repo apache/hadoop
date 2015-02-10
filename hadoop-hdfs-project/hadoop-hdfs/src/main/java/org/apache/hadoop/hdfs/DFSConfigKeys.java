@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
@@ -769,4 +771,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String[] NNTOP_WINDOWS_MINUTES_DEFAULT = {"1","5","25"};
   public static final String DFS_PIPELINE_ECN_ENABLED = "dfs.pipeline.ecn";
   public static final boolean DFS_PIPELINE_ECN_ENABLED_DEFAULT = false;
+
+  // Key Provider Cache Expiry
+  public static final String DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS =
+      "dfs.client.key.provider.cache.expiry";
+  // 10 days
+  public static final long DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
+      TimeUnit.DAYS.toMillis(10);
 }
