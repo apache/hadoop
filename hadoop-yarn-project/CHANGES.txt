@@ -221,6 +221,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3144. Configuration for making delegation token failures to timeline
     server not-fatal (Jonathan Eagles via jlowe)
 
+    YARN-3155. Refactor the exception handling code for TimelineClientImpl's 
+    retryOn method (Li Lu via wangda)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
