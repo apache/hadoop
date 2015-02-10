@@ -508,6 +508,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11535 TableMapping related tests failed due to 'successful'
     resolving of invalid test hostname. (Kai Zheng via stevel)
 
+    HADOOP-10953. NetworkTopology#add calls NetworkTopology#toString without
+    holding the netlock (Liang Xie via Colin P. McCabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
