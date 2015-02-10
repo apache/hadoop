@@ -369,4 +369,34 @@ public class TestCachingStrategy {
       }
     }
   }
+
+  @Test(timeout=120000)
+  public void testSeekAfterSetDropBehind() throws Exception {
+    // start a cluster
+    LOG.info("testSeekAfterSetDropBehind");
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    String TEST_PATH = "/test";
+    int TEST_PATH_LEN = MAX_TEST_FILE_LEN;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+          .build();
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      createHdfsFile(fs, new Path(TEST_PATH), TEST_PATH_LEN, false);
+      // verify that we can seek after setDropBehind
+      FSDataInputStream fis = fs.open(new Path(TEST_PATH));
+      try {
+        Assert.assertTrue(fis.read() != -1); // create BlockReader
+        fis.setDropBehind(false); // clear BlockReader
+        fis.seek(2); // seek
+      } finally {
+        fis.close();
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }
