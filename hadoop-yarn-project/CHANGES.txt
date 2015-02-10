@@ -496,6 +496,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3090. DeletionService can silently ignore deletion task failures
     (Varun Saxena via jlowe)
 
+    YARN-2809. Implement workaround for linux kernel panic when removing
+    cgroup (Nathan Roberts via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
