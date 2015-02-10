@@ -596,6 +596,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7718. Store KeyProvider in ClientContext to avoid leaking key provider
     threads when using FileContext (Arun Suresh via Colin P. McCabe)
 
+    HDFS-7714. Simultaneous restart of HA NameNodes and DataNode can cause
+    DataNode to register successfully with only one NameNode.(vinayakumarb)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
