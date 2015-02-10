@@ -40,8 +40,10 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -530,11 +532,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     set(queuePrefix + getAclKey(acl), aclString);
   }
 
-  public Map<QueueACL, AccessControlList> getAcls(String queue) {
-    Map<QueueACL, AccessControlList> acls =
-      new HashMap<QueueACL, AccessControlList>();
+  public Map<AccessType, AccessControlList> getAcls(String queue) {
+    Map<AccessType, AccessControlList> acls =
+      new HashMap<AccessType, AccessControlList>();
     for (QueueACL acl : QueueACL.values()) {
-      acls.put(acl, getAcl(queue, acl));
+      acls.put(SchedulerUtils.toAccessType(acl), getAcl(queue, acl));
     }
     return acls;
   }

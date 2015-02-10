@@ -31,6 +31,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.SCMAdminProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RunSharedCacheCleanerTaskRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RunSharedCacheCleanerTaskResponse;
@@ -58,8 +59,7 @@ public class SCMAdminProtocolService extends AbstractService implements
   private Server server;
   InetSocketAddress clientBindAddress;
   private final CleanerService cleanerService;
-  private AccessControlList adminAcl;
-
+  private YarnAuthorizationProvider authorizer;
   public SCMAdminProtocolService(CleanerService cleanerService) {
     super(SCMAdminProtocolService.class.getName());
     this.cleanerService = cleanerService;
@@ -68,9 +68,7 @@ public class SCMAdminProtocolService extends AbstractService implements
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.clientBindAddress = getBindAddress(conf);
-    adminAcl = new AccessControlList(conf.get(
-        YarnConfiguration.YARN_ADMIN_ACL,
-        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+    authorizer = YarnAuthorizationProvider.getInstance(conf);
     super.serviceInit(conf);
   }
 
@@ -119,7 +117,7 @@ public class SCMAdminProtocolService extends AbstractService implements
       throw RPCUtil.getRemoteException(ioe);
     }
 
-    if (!adminAcl.isUserAllowed(user)) {
+    if (!authorizer.isAdmin(user)) {
       LOG.warn("User " + user.getShortUserName() + " doesn't have permission" +
           " to call '" + method + "'");
 

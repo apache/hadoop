@@ -224,6 +224,8 @@ Release 2.7.0 - UNRELEASED
     YARN-3155. Refactor the exception handling code for TimelineClientImpl's 
     retryOn method (Li Lu via wangda)
 
+    YARN-3100. Made YARN authorization pluggable. (Jian He via zjshen)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 

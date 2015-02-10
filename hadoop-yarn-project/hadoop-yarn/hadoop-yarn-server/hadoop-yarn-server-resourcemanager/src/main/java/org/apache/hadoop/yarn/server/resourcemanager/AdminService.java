@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
@@ -101,7 +103,8 @@ public class AdminService extends CompositeService implements
 
   // Address to use for binding. May be a wildcard address.
   private InetSocketAddress masterServiceBindAddress;
-  private AccessControlList adminAcl;
+
+  private YarnAuthorizationProvider authorizer;
 
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
@@ -129,10 +132,11 @@ public class AdminService extends CompositeService implements
         YarnConfiguration.RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
-
-    adminAcl = new AccessControlList(conf.get(
-        YarnConfiguration.YARN_ADMIN_ACL,
-        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+    authorizer = YarnAuthorizationProvider.getInstance(conf);
+    authorizer.setAdmins(new AccessControlList(conf.get(
+      YarnConfiguration.YARN_ADMIN_ACL,
+        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)), UserGroupInformation
+        .getCurrentUser());
     rmId = conf.get(YarnConfiguration.RM_HA_ID);
     super.serviceInit(conf);
   }
@@ -206,7 +210,7 @@ public class AdminService extends CompositeService implements
   }
 
   private UserGroupInformation checkAccess(String method) throws IOException {
-    return RMServerUtils.verifyAccess(adminAcl, method, LOG);
+    return RMServerUtils.verifyAdminAccess(authorizer, method, LOG);
   }
 
   private UserGroupInformation checkAcls(String method) throws YarnException {
@@ -293,7 +297,7 @@ public class AdminService extends CompositeService implements
           "transitionToActive", "RMHAProtocolService");
     } catch (Exception e) {
       RMAuditLogger.logFailure(user.getShortUserName(), "transitionToActive",
-          adminAcl.toString(), "RMHAProtocolService",
+          "", "RMHAProtocolService",
           "Exception transitioning to active");
       throw new ServiceFailedException(
           "Error when transitioning to Active mode", e);
@@ -318,7 +322,7 @@ public class AdminService extends CompositeService implements
           "transitionToStandby", "RMHAProtocolService");
     } catch (Exception e) {
       RMAuditLogger.logFailure(user.getShortUserName(), "transitionToStandby",
-          adminAcl.toString(), "RMHAProtocolService",
+          "", "RMHAProtocolService",
           "Exception transitioning to standby");
       throw new ServiceFailedException(
           "Error when transitioning to Standby mode", e);
@@ -446,9 +450,10 @@ public class AdminService extends CompositeService implements
     Configuration conf =
         getConfiguration(new Configuration(false),
             YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    adminAcl = new AccessControlList(conf.get(
-        YarnConfiguration.YARN_ADMIN_ACL,
-        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+    authorizer.setAdmins(new AccessControlList(conf.get(
+      YarnConfiguration.YARN_ADMIN_ACL,
+        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)), UserGroupInformation
+        .getCurrentUser());
     RMAuditLogger.logSuccess(user.getShortUserName(), argName,
         "AdminService");
 
@@ -584,9 +589,10 @@ public class AdminService extends CompositeService implements
     }
   }
 
+  // only for testing
   @VisibleForTesting
   public AccessControlList getAccessControlList() {
-    return this.adminAcl;
+    return ((ConfiguredYarnAuthorizer)authorizer).getAdminAcls();
   }
 
   @VisibleForTesting
@@ -661,7 +667,7 @@ public class AdminService extends CompositeService implements
   private void checkRMStatus(String user, String argName, String msg)
       throws StandbyException {
     if (!isRMActive()) {
-      RMAuditLogger.logFailure(user, argName, adminAcl.toString(), 
+      RMAuditLogger.logFailure(user, argName, "", 
           "AdminService", "ResourceManager is not active. Can not " + msg);
       throwStandbyException();
     }
@@ -670,7 +676,7 @@ public class AdminService extends CompositeService implements
   private YarnException logAndWrapException(IOException ioe, String user,
       String argName, String msg) throws YarnException {
     LOG.info("Exception " + msg, ioe);
-    RMAuditLogger.logFailure(user, argName, adminAcl.toString(), 
+    RMAuditLogger.logFailure(user, argName, "", 
         "AdminService", "Exception " + msg);
     return RPCUtil.getRemoteException(ioe);
   }
