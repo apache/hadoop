@@ -29,6 +29,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -113,13 +115,13 @@ public class DeletionService extends AbstractService {
       .setNameFormat("DeletionService #%d")
       .build();
     if (conf != null) {
-      sched = new ScheduledThreadPoolExecutor(
-          conf.getInt(YarnConfiguration.NM_DELETE_THREAD_COUNT, YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT),
-          tf);
+      sched = new DelServiceSchedThreadPoolExecutor(
+          conf.getInt(YarnConfiguration.NM_DELETE_THREAD_COUNT,
+          YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT), tf);
       debugDelay = conf.getInt(YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC, 0);
     } else {
-      sched = new ScheduledThreadPoolExecutor(YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT,
-          tf);
+      sched = new DelServiceSchedThreadPoolExecutor(
+          YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT, tf);
     }
     sched.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
     sched.setKeepAliveTime(60L, SECONDS);
@@ -153,6 +155,34 @@ public class DeletionService extends AbstractService {
   @Private
   public boolean isTerminated() {
     return getServiceState() == STATE.STOPPED && sched.isTerminated();
+  }
+
+  private static class DelServiceSchedThreadPoolExecutor extends
+      ScheduledThreadPoolExecutor {
+    public DelServiceSchedThreadPoolExecutor(int corePoolSize,
+        ThreadFactory threadFactory) {
+      super(corePoolSize, threadFactory);
+    }
+
+    @Override
+    protected void afterExecute(Runnable task, Throwable exception) {
+      if (task instanceof FutureTask<?>) {
+        FutureTask<?> futureTask = (FutureTask<?>) task;
+        if (!futureTask.isCancelled()) {
+          try {
+            futureTask.get();
+          } catch (ExecutionException ee) {
+            exception = ee.getCause();
+          } catch (InterruptedException ie) {
+            exception = ie;
+          }
+        }
+      }
+      if (exception != null) {
+        LOG.error("Exception during execution of task in DeletionService",
+          exception);
+      }
+    }
   }
 
   public static class FileDeletionTask implements Runnable {
