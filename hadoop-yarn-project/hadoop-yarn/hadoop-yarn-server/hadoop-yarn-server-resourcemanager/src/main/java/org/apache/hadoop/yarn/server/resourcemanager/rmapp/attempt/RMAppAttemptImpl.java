@@ -441,7 +441,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
 
-    this.proxiedTrackingUrl = generateProxyUriWithScheme(null);
+    this.proxiedTrackingUrl = generateProxyUriWithScheme();
     this.maybeLastAttempt = maybeLastAttempt;
     this.stateMachine = stateMachineFactory.make(this);
 
@@ -534,21 +534,19 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }    
   }
   
-  private String generateProxyUriWithScheme(
-      final String trackingUriWithoutScheme) {
+  private String generateProxyUriWithScheme() {
     this.readLock.lock();
     try {
       final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
-      URI trackingUri = StringUtils.isEmpty(trackingUriWithoutScheme) ? null :
-        ProxyUriUtils.getUriFromAMUrl(scheme, trackingUriWithoutScheme);
       String proxy = WebAppUtils.getProxyHostAndPort(conf);
       URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
-      URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
+      URI result = ProxyUriUtils.getProxyUri(null, proxyUri,
           applicationAttemptId.getApplicationId());
       return result.toASCIIString();
     } catch (URISyntaxException e) {
-      LOG.warn("Could not proxify "+trackingUriWithoutScheme,e);
-      return trackingUriWithoutScheme;
+      LOG.warn("Could not proxify the uri for "
+          + applicationAttemptId.getApplicationId(), e);
+      return null;
     } finally {
       this.readLock.unlock();
     }
@@ -811,7 +809,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     recoverAppAttemptCredentials(credentials, attemptState.getState());
     this.recoveredFinalState = attemptState.getState();
     this.originalTrackingUrl = attemptState.getFinalTrackingUrl();
-    this.proxiedTrackingUrl = generateProxyUriWithScheme(originalTrackingUrl);
     this.finalStatus = attemptState.getFinalApplicationStatus();
     this.startTime = attemptState.getStartTime();
     this.finishTime = attemptState.getFinishTime();
@@ -1365,8 +1362,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.rpcPort = registrationEvent.getRpcport();
       appAttempt.originalTrackingUrl =
           sanitizeTrackingUrl(registrationEvent.getTrackingurl());
-      appAttempt.proxiedTrackingUrl = 
-        appAttempt.generateProxyUriWithScheme(appAttempt.originalTrackingUrl);
 
       // Let the app know
       appAttempt.eventHandler.handle(new RMAppEvent(appAttempt
@@ -1584,7 +1579,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         (RMAppAttemptUnregistrationEvent) event;
     diagnostics.append(unregisterEvent.getDiagnostics());
     originalTrackingUrl = sanitizeTrackingUrl(unregisterEvent.getFinalTrackingUrl());
-    proxiedTrackingUrl = generateProxyUriWithScheme(originalTrackingUrl);
     finalStatus = unregisterEvent.getFinalApplicationStatus();
   }
 
