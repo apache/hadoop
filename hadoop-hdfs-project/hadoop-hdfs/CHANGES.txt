@@ -70,6 +70,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7707. Edit log corruption due to delayed block removal again.
     (Yongjun Zhang via kihwal)
 
+    HDFS-7714. Simultaneous restart of HA NameNodes and DataNode can cause
+    DataNode to register successfully with only one NameNode.(vinayakumarb)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
