@@ -590,6 +590,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7756. Restore method signature for LocatedBlock#getLocations(). (Ted
     Yu via yliu)
 
+    HDFS-7744. Fix potential NPE in DFSInputStream after setDropBehind or
+    setReadahead is called (cmccabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

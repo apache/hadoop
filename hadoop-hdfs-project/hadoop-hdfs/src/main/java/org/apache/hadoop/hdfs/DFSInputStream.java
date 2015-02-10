@@ -580,10 +580,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     }
 
     // Will be getting a new BlockReader.
-    if (blockReader != null) {
-      blockReader.close();
-      blockReader = null;
-    }
+    closeCurrentBlockReader();
 
     //
     // Connect to best DataNode for desired Block, with potential offset
@@ -686,10 +683,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           "unreleased ByteBuffers allocated by read().  " +
           "Please release " + builder.toString() + ".");
     }
-    if (blockReader != null) {
-      blockReader.close();
-      blockReader = null;
-    }
+    closeCurrentBlockReader();
     super.close();
   }
 
@@ -1649,6 +1643,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       DFSClient.LOG.error("error closing blockReader", e);
     }
     blockReader = null;
+    blockEnd = -1;
   }
 
   @Override
