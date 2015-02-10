@@ -26,6 +26,8 @@ import org.junit.Assert;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Clock;
 import org.junit.Test;
+import org.junit.After;
+import org.junit.Before;
 import org.mockito.Mockito;
 
 import java.io.*;
@@ -35,6 +37,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 public class TestCgroupsLCEResourcesHandler {
+  static File cgroupDir = null;
 
   static class MockClock implements Clock {
     long time;
@@ -43,6 +46,51 @@ public class TestCgroupsLCEResourcesHandler {
       return time;
     }
   }
+
+  @Before
+  public void setUp() throws Exception {
+    cgroupDir =
+        new File(System.getProperty("test.build.data",
+            System.getProperty("java.io.tmpdir", "target")), this.getClass()
+            .getName());
+    FileUtils.deleteQuietly(cgroupDir);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    FileUtils.deleteQuietly(cgroupDir);
+  }
+
+  @Test
+  public void testcheckAndDeleteCgroup() throws Exception {
+    CgroupsLCEResourcesHandler handler = new CgroupsLCEResourcesHandler();
+    handler.setConf(new YarnConfiguration());
+    handler.initConfig();
+
+    FileUtils.deleteQuietly(cgroupDir);
+    // Test 0
+    // tasks file not present, should return false
+    Assert.assertFalse(handler.checkAndDeleteCgroup(cgroupDir));
+
+    File tfile = new File(cgroupDir.getAbsolutePath(), "tasks");
+    FileOutputStream fos = FileUtils.openOutputStream(tfile);
+    File fspy = Mockito.spy(cgroupDir);
+
+    // Test 1, tasks file is empty
+    // tasks file has no data, should return true
+    Mockito.stub(fspy.delete()).toReturn(true);
+    Assert.assertTrue(handler.checkAndDeleteCgroup(fspy));
+
+    // Test 2, tasks file has data
+    fos.write("1234".getBytes());
+    fos.close();
+    // tasks has data, would not be able to delete, should return false
+    Assert.assertFalse(handler.checkAndDeleteCgroup(fspy));
+    FileUtils.deleteQuietly(cgroupDir);
+
+  }
+
+  // Verify DeleteCgroup times out if "tasks" file contains data
   @Test
   public void testDeleteCgroup() throws Exception {
     final MockClock clock = new MockClock();
@@ -51,13 +99,15 @@ public class TestCgroupsLCEResourcesHandler {
     handler.setConf(new YarnConfiguration());
     handler.initConfig();
     handler.clock = clock;
-    
-    //file exists
-    File file = new File("target", UUID.randomUUID().toString());
-    new FileOutputStream(file).close();
-    Assert.assertTrue(handler.deleteCgroup(file.getPath()));
 
-    //file does not exists, timing out
+    FileUtils.deleteQuietly(cgroupDir);
+
+    // Create a non-empty tasks file
+    File tfile = new File(cgroupDir.getAbsolutePath(), "tasks");
+    FileOutputStream fos = FileUtils.openOutputStream(tfile);
+    fos.write("1234".getBytes());
+    fos.close();
+
     final CountDownLatch latch = new CountDownLatch(1);
     new Thread() {
       @Override
@@ -73,8 +123,8 @@ public class TestCgroupsLCEResourcesHandler {
       }
     }.start();
     latch.await();
-    file = new File("target", UUID.randomUUID().toString());
-    Assert.assertFalse(handler.deleteCgroup(file.getPath()));
+    Assert.assertFalse(handler.deleteCgroup(cgroupDir.getAbsolutePath()));
+    FileUtils.deleteQuietly(cgroupDir);
   }
 
   static class MockLinuxContainerExecutor extends LinuxContainerExecutor {
@@ -122,7 +172,6 @@ public class TestCgroupsLCEResourcesHandler {
     handler.initConfig();
 
     // create mock cgroup
-    File cgroupDir = createMockCgroup();
     File cgroupMountDir = createMockCgroupMount(cgroupDir);
 
     // create mock mtab
@@ -202,18 +251,10 @@ public class TestCgroupsLCEResourcesHandler {
     Assert.assertEquals(-1, ret[1]);
   }
 
-  private File createMockCgroup() throws IOException {
-    File cgroupDir = new File("target", UUID.randomUUID().toString());
-    if (!cgroupDir.mkdir()) {
-      String message = "Could not create dir " + cgroupDir.getAbsolutePath();
-      throw new IOException(message);
-    }
-    return cgroupDir;
-  }
-
   private File createMockCgroupMount(File cgroupDir) throws IOException {
     File cgroupMountDir = new File(cgroupDir.getAbsolutePath(), "hadoop-yarn");
-    if (!cgroupMountDir.mkdir()) {
+    FileUtils.deleteQuietly(cgroupDir);
+    if (!cgroupMountDir.mkdirs()) {
       String message =
           "Could not create dir " + cgroupMountDir.getAbsolutePath();
       throw new IOException(message);
@@ -253,7 +294,6 @@ public class TestCgroupsLCEResourcesHandler {
     handler.initConfig();
 
     // create mock cgroup
-    File cgroupDir = createMockCgroup();
     File cgroupMountDir = createMockCgroupMount(cgroupDir);
 
     // create mock mtab

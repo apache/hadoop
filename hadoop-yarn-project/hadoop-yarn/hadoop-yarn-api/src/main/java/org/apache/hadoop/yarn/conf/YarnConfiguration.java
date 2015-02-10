@@ -1002,7 +1002,16 @@ public class YarnConfiguration extends Configuration {
 
   public static final long DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT =
       1000;
-  
+
+  /**
+   * Delay between attempts to remove linux cgroup.
+   */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_DELETE_DELAY =
+      NM_PREFIX + "linux-container-executor.cgroups.delete-delay-ms";
+
+  public static final long DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_DELAY =
+      20;
+
   /** 
   /* The Windows group that the windows-secure-container-executor should run as.
   */
