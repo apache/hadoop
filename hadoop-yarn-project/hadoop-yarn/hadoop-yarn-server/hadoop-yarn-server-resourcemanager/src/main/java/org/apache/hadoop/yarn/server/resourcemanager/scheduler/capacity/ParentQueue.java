@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -107,7 +108,7 @@ public class ParentQueue extends AbstractCSQueue {
     
     QueueState state = cs.getConfiguration().getState(getQueuePath());
 
-    Map<QueueACL, AccessControlList> acls = 
+    Map<AccessType, AccessControlList> acls = 
       cs.getConfiguration().getAcls(getQueuePath());
 
     setupQueueConfigs(cs.getClusterResource(), capacity, absoluteCapacity,
@@ -124,7 +125,7 @@ public class ParentQueue extends AbstractCSQueue {
 
   synchronized void setupQueueConfigs(Resource clusterResource, float capacity,
       float absoluteCapacity, float maximumCapacity, float absoluteMaxCapacity,
-      QueueState state, Map<QueueACL, AccessControlList> acls,
+      QueueState state, Map<AccessType, AccessControlList> acls,
       Set<String> accessibleLabels, String defaultLabelExpression,
       Map<String, Float> nodeLabelCapacities,
       Map<String, Float> maximumCapacitiesByLabel, 
@@ -134,7 +135,7 @@ public class ParentQueue extends AbstractCSQueue {
         defaultLabelExpression, nodeLabelCapacities, maximumCapacitiesByLabel,
         reservationContinueLooking, maximumAllocation);
    StringBuilder aclsString = new StringBuilder();
-    for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
+    for (Map.Entry<AccessType, AccessControlList> e : acls.entrySet()) {
       aclsString.append(e.getKey() + ":" + e.getValue().getAclString());
     }
 

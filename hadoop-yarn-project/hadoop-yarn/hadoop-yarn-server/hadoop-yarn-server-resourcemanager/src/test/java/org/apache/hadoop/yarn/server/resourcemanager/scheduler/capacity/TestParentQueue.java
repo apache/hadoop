@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -45,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -726,6 +726,9 @@ public class TestParentQueue {
         CapacityScheduler.parseQueue(csContext, csConf, null, 
             CapacitySchedulerConfiguration.ROOT, queues, queues, 
             TestUtils.spyHook);
+    YarnAuthorizationProvider authorizer =
+        YarnAuthorizationProvider.getInstance(conf);
+    CapacityScheduler.setQueueAcls(authorizer, queues);
 
     UserGroupInformation user = UserGroupInformation.getCurrentUser();
     // Setup queue configs

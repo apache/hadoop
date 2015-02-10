@@ -36,11 +36,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig.Policy;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -240,7 +239,9 @@ public class WebApps {
             .addEndpoint(
                 URI.create(httpScheme + bindAddress
                     + ":" + port)).setConf(conf).setFindPort(findPort)
-            .setACL(new AdminACLsManager(conf).getAdminAcl())
+            .setACL(new AccessControlList(conf.get(
+              YarnConfiguration.YARN_ADMIN_ACL, 
+              YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)))
             .setPathSpec(pathList.toArray(new String[0]));
 
         boolean hasSpnegoConf = spnegoPrincipalKey != null

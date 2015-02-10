@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -140,43 +141,43 @@ public class RMServerUtils {
     }
   }
 
-  public static UserGroupInformation verifyAccess(
-      AccessControlList acl, String method, final Log LOG)
+  public static UserGroupInformation verifyAdminAccess(
+      YarnAuthorizationProvider authorizer, String method, final Log LOG)
       throws IOException {
     // by default, this method will use AdminService as module name
-    return verifyAccess(acl, method, "AdminService", LOG);
+    return verifyAdminAccess(authorizer, method, "AdminService", LOG);
   }
 
   /**
    * Utility method to verify if the current user has access based on the
    * passed {@link AccessControlList}
-   * @param acl the {@link AccessControlList} to check against
+   * @param authorizer the {@link AccessControlList} to check against
    * @param method the method name to be logged
-   * @param module, like AdminService or NodeLabelManager
+   * @param module like AdminService or NodeLabelManager
    * @param LOG the logger to use
    * @return {@link UserGroupInformation} of the current user
    * @throws IOException
    */
-  public static UserGroupInformation verifyAccess(
-      AccessControlList acl, String method, String module, final Log LOG)
+  public static UserGroupInformation verifyAdminAccess(
+      YarnAuthorizationProvider authorizer, String method, String module,
+      final Log LOG)
       throws IOException {
     UserGroupInformation user;
     try {
       user = UserGroupInformation.getCurrentUser();
     } catch (IOException ioe) {
       LOG.warn("Couldn't get current user", ioe);
-      RMAuditLogger.logFailure("UNKNOWN", method, acl.toString(),
+      RMAuditLogger.logFailure("UNKNOWN", method, "",
           "AdminService", "Couldn't get current user");
       throw ioe;
     }
 
-    if (!acl.isUserAllowed(user)) {
+    if (!authorizer.isAdmin(user)) {
       LOG.warn("User " + user.getShortUserName() + " doesn't have permission" +
           " to call '" + method + "'");
 
-      RMAuditLogger.logFailure(user.getShortUserName(), method,
-          acl.toString(), module,
-          RMAuditLogger.AuditConstants.UNAUTHORIZED_USER);
+      RMAuditLogger.logFailure(user.getShortUserName(), method, "", module,
+        RMAuditLogger.AuditConstants.UNAUTHORIZED_USER);
 
       throw new AccessControlException("User " + user.getShortUserName() +
               " doesn't have permission" +
