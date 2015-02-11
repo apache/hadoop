@@ -19,9 +19,13 @@
 
 # Introduction and concepts
 
-This document describes a YARN service registry built to address a problem:
-*how can clients talk to YARN-deployed services and the components which form
-such services?*
+This document describes a YARN service registry built to address two problems:
+
+1. How can clients talk to YARN-deployed services and the components which form
+such services?
+1. Allow Hadoop core services to be registered and discovered thereby
+reducing configuration parameters and to allow core services to be more
+easily moved.
 
 Service registration and discovery is a long-standing problem in distributed
 computing, dating back to Xerox's Grapevine Service. This proposal is for a
@@ -346,31 +350,32 @@ A Service Record contains some basic informations and two lists of endpoints:
 one list for users of a service, one list for internal use within the
 application.
 
+<table>
+  <tr>
+    <td>Name</td>
+    <td>Description</td>
+  </tr>
+  <tr>
+    <td>type: String</td>
+    <td>Always: "JSONServiceRecord"</td>
+  </tr>
+  <tr>
+    <td>description: String</td>
+    <td>Human-readable description.</td>
+  </tr>
+  <tr>
+    <td>external: List[Endpoint]</td>
+    <td>A list of service endpoints for external callers.</td>
+  </tr>
+  <tr>
+    <td>internal: List[Endpoint]</td>
+    <td>A list of service endpoints for internal use within the service instance.</td>
+  </tr>
+</table>
 
-    <table>
-      <tr>
-        <td>Name</td>
-        <td>Description</td>
-      </tr>
-      <tr>
-        <td>type: String</td>
-        <td>Always: "JSONServiceRecord"</td>
-      </tr>
-      <tr>
-        <td>description: String</td>
-        <td>Human-readable description.</td>
-      </tr>
-      <tr>
-        <td>external: List[Endpoint]</td>
-        <td>A list of service endpoints for external callers.</td>
-      </tr>
-      <tr>
-        <td>internal: List[Endpoint]</td>
-        <td>A list of service endpoints for internal use within the service instance.</td>
-      </tr>
-    </table>
-
-The type field MUST be `"JSONServiceRecord"`. Mandating this string allows future record types *and* permits rapid rejection of byte arrays that lack this string before attempting JSON parsing.
+The type field MUST be `"JSONServiceRecord"`. Mandating this string allows
+future record types *and* permits rapid rejection of byte arrays that
+lack this string before attempting to parse the data with a JSON parser.
 
 ### YARN Persistence policies
 
@@ -379,8 +384,15 @@ as an application, attempt or container is completed.
 
 This allows service to register entries which have a lifespan bound to one of
 these aspects of YARN applications' lifecycles. This is a feature which is only
-supported when the RM has enabled its support, and would not apply to
-any use of the registry without the RM's participation.
+supported when the RM has had its registry integration enabled via the
+configuration option `hadoop.registry.rm.enabled`.
+
+If this option is enabled, and the YARN resource manager is running,
+it will clean up service records as defined
+below.
+
+If the option is disabled, the RM does not provide any registry support at all.
+
 
 The attributes, `yarn:id` and `yarn:persistence` specify which records
 *and any child entries* may be deleted as the associated YARN components complete.
@@ -1006,7 +1018,8 @@ The details are irrelevant —note that they use an application-specific API
 value to ensure uniqueness.
 
 Internal:
-1. Two URLS to REST APIs offered by the AM for containers deployed by
+
+1. Two URLs to REST APIs offered by the AM for containers deployed by
  the application itself.
 
 Python agents running in the containers retrieve the internal endpoint
