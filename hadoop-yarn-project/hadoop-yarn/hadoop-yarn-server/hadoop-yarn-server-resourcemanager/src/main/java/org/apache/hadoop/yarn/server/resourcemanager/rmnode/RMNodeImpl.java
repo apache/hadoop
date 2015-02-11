@@ -842,8 +842,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   public List<UpdatedContainerInfo> pullContainerUpdates() {
     List<UpdatedContainerInfo> latestContainerInfoList = 
         new ArrayList<UpdatedContainerInfo>();
-    while(nodeUpdateQueue.peek() != null){
-      latestContainerInfoList.add(nodeUpdateQueue.poll());
+    UpdatedContainerInfo containerInfo;
+    while ((containerInfo = nodeUpdateQueue.poll()) != null) {
+      latestContainerInfoList.add(containerInfo);
     }
     this.nextHeartBeat = true;
     return latestContainerInfoList;
