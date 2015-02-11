@@ -43,8 +43,6 @@ public class LocatedBlock {
   private final ExtendedBlock b;
   private long offset;  // offset of the first byte of the block in the file
   private final DatanodeInfoWithStorage[] locs;
-  private final boolean hasStorageIDs;
-  private final boolean hasStorageTypes;
   /** Cached storage ID for each replica */
   private String[] storageIDs;
   /** Cached storage type for each replica, if reported. */
@@ -104,16 +102,11 @@ public class LocatedBlock {
         DatanodeInfoWithStorage storage = new DatanodeInfoWithStorage(di,
             storageIDs != null ? storageIDs[i] : null,
             storageTypes != null ? storageTypes[i] : null);
-        storage.setDependentHostNames(di.getDependentHostNames());
-        storage.setLevel(di.getLevel());
-        storage.setParent(di.getParent());
         this.locs[i] = storage;
       }
     }
     this.storageIDs = storageIDs;
     this.storageTypes = storageTypes;
-    this.hasStorageIDs = storageIDs != null;
-    this.hasStorageTypes = storageTypes != null;
 
     if (cachedLocs == null || cachedLocs.length == 0) {
       this.cachedLocs = EMPTY_LOCS;
@@ -137,48 +130,36 @@ public class LocatedBlock {
   /**
    * Returns the locations associated with this block. The returned array is not
    * expected to be modified. If it is, caller must immediately invoke
-   * {@link org.apache.hadoop.hdfs.protocol.LocatedBlock#invalidateCachedStorageInfo}
-   * to invalidate the cached Storage ID/Type arrays.
+   * {@link org.apache.hadoop.hdfs.protocol.LocatedBlock#updateCachedStorageInfo}
+   * to update the cached Storage ID/Type arrays.
    */
   public DatanodeInfo[] getLocations() {
     return locs;
   }
 
   public StorageType[] getStorageTypes() {
-    if(!hasStorageTypes) {
-      return null;
-    }
-    if(storageTypes != null) {
-      return storageTypes;
-    }
-    storageTypes = new StorageType[locs.length];
-    for(int i = 0; i < locs.length; i++) {
-      storageTypes[i] = locs[i].getStorageType();
-    }
     return storageTypes;
   }
   
   public String[] getStorageIDs() {
-    if(!hasStorageIDs) {
-      return null;
-    }
-    if(storageIDs != null) {
-      return storageIDs;
-    }
-    storageIDs = new String[locs.length];
-    for(int i = 0; i < locs.length; i++) {
-      storageIDs[i] = locs[i].getStorageID();
-    }
     return storageIDs;
   }
 
   /**
-   * Invalidates the cached StorageID and StorageType information. Must be
+   * Updates the cached StorageID and StorageType information. Must be
    * called when the locations array is modified.
    */
-  public void invalidateCachedStorageInfo() {
-    storageIDs = null;
-    storageTypes = null;
+  public void updateCachedStorageInfo() {
+    if (storageIDs != null) {
+      for(int i = 0; i < locs.length; i++) {
+        storageIDs[i] = locs[i].getStorageID();
+      }
+    }
+    if (storageTypes != null) {
+      for(int i = 0; i < locs.length; i++) {
+        storageTypes[i] = locs[i].getStorageType();
+      }
+    }
   }
 
   public long getStartOffset() {

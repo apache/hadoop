@@ -320,6 +320,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7760. Document truncate for WebHDFS. (shv)
 
+    HDFS-7761. cleanup unnecssary code logic in LocatedBlock. (yliu)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
