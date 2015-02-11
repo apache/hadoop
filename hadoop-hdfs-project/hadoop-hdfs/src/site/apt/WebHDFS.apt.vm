@@ -137,6 +137,9 @@ WebHDFS REST API
     * {{{Concat File(s)}<<<CONCAT>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.concat)
 
+    * {{{Truncate a File}<<<TRUNCATE>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.truncate)
+
   * HTTP DELETE
 
     * {{{Delete a File/Directory}<<<DELETE>>>}}
@@ -490,6 +493,31 @@ Transfer-Encoding: chunked
   See also:
   {{{Recursive}<<<recursive>>>}},
    {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.delete
+
+
+** {Truncate a File}
+
+  * Submit a HTTP POST request.
+
++---------------------------------
+curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=TRUNCATE&newlength=<LONG>"
++---------------------------------
+
+  The client receives a response with a {{{Boolean JSON Schema}<<<boolean>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{"boolean": true}
++---------------------------------
+
+  []
+
+  See also:
+  {{{New Length}<<<newlength>>>}},
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.truncate
 
 
 ** {Status of a File/Directory}
@@ -2272,6 +2300,24 @@ var tokenProperties =
 
   See also:
   {{{Set Access or Modification Time}<<<SETTIMES>>>}}
+
+
+** {New Length}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<newlength>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The size the file is to be truncated to. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | long |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | \>= 0 |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | Any long. |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{Truncate a File}<<<TRUNCATE>>>}}
 
 
 ** {Offset}
