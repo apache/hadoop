@@ -530,7 +530,8 @@ public class Mover {
     List<NameNodeConnector> connectors = Collections.emptyList();
     try {
       connectors = NameNodeConnector.newNameNodeConnectors(namenodes,
-            Mover.class.getSimpleName(), MOVER_ID_PATH, conf);
+          Mover.class.getSimpleName(), MOVER_ID_PATH, conf,
+          NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
 
       while (connectors.size() > 0) {
         Collections.shuffle(connectors);

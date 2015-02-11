@@ -139,6 +139,9 @@ Trunk (Unreleased)
     HDFS-7546. Document, and set an accepting default for
     dfs.namenode.kerberos.principal.pattern (Harsh J via aw)
 
+    HDFS-316. Balancer should run for a configurable # of iterations (Xiaoyu
+    Yao via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
