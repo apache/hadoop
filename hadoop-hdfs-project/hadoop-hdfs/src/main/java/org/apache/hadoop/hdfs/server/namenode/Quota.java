@@ -39,7 +39,7 @@ public enum Quota {
     public static Counts newInstance() {
       return newInstance(0, 0);
     }
-    
+
     Counts() {
       super(Quota.class);
     }

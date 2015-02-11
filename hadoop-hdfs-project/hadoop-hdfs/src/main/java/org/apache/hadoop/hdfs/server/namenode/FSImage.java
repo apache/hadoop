@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -65,12 +66,13 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -841,7 +843,8 @@ public class FSImage implements Closeable {
     } finally {
       FSEditLog.closeAllStreams(editStreams);
       // update the counts
-      updateCountForQuota(target.dir.rootDir);
+      updateCountForQuota(target.getBlockManager().getStoragePolicySuite(),
+          target.dir.rootDir);
     }
     prog.endPhase(Phase.LOADING_EDITS);
     return lastAppliedTxId - prevLastAppliedTxId;
@@ -855,47 +858,64 @@ public class FSImage implements Closeable {
    * This is an update of existing state of the filesystem and does not
    * throw QuotaExceededException.
    */
-  static void updateCountForQuota(INodeDirectory root) {
-    updateCountForQuotaRecursively(root, Quota.Counts.newInstance());
-  }
-  
-  private static void updateCountForQuotaRecursively(INodeDirectory dir,
-      Quota.Counts counts) {
-    final long parentNamespace = counts.get(Quota.NAMESPACE);
-    final long parentDiskspace = counts.get(Quota.DISKSPACE);
+  static void updateCountForQuota(BlockStoragePolicySuite bsps,
+                                  INodeDirectory root) {
+    updateCountForQuotaRecursively(bsps, root, new QuotaCounts.Builder().build());
+ }
 
-    dir.computeQuotaUsage4CurrentDirectory(counts);
+  private static void updateCountForQuotaRecursively(BlockStoragePolicySuite bsps,
+      INodeDirectory dir, QuotaCounts counts) {
+    final long parentNamespace = counts.getNameSpace();
+    final long parentDiskspace = counts.getDiskSpace();
+    final EnumCounters<StorageType> parentTypeSpaces = counts.getTypeSpaces();
+
+    dir.computeQuotaUsage4CurrentDirectory(bsps, counts);
     
     for (INode child : dir.getChildrenList(Snapshot.CURRENT_STATE_ID)) {
       if (child.isDirectory()) {
-        updateCountForQuotaRecursively(child.asDirectory(), counts);
+        updateCountForQuotaRecursively(bsps, child.asDirectory(), counts);
       } else {
         // file or symlink: count here to reduce recursive calls.
-        child.computeQuotaUsage(counts, false);
+        child.computeQuotaUsage(bsps, counts, false);
       }
     }
       
     if (dir.isQuotaSet()) {
       // check if quota is violated. It indicates a software bug.
-      final Quota.Counts q = dir.getQuotaCounts();
+      final QuotaCounts q = dir.getQuotaCounts();
 
-      final long namespace = counts.get(Quota.NAMESPACE) - parentNamespace;
-      final long nsQuota = q.get(Quota.NAMESPACE);
+      final long namespace = counts.getNameSpace() - parentNamespace;
+      final long nsQuota = q.getNameSpace();
       if (Quota.isViolated(nsQuota, namespace)) {
         LOG.error("BUG: Namespace quota violation in image for "
             + dir.getFullPathName()
             + " quota = " + nsQuota + " < consumed = " + namespace);
       }
 
-      final long diskspace = counts.get(Quota.DISKSPACE) - parentDiskspace;
-      final long dsQuota = q.get(Quota.DISKSPACE);
+      final long diskspace = counts.getDiskSpace() - parentDiskspace;
+      final long dsQuota = q.getDiskSpace();
       if (Quota.isViolated(dsQuota, diskspace)) {
         LOG.error("BUG: Diskspace quota violation in image for "
             + dir.getFullPathName()
             + " quota = " + dsQuota + " < consumed = " + diskspace);
       }
 
-      dir.getDirectoryWithQuotaFeature().setSpaceConsumed(namespace, diskspace);
+      final EnumCounters<StorageType> typeSpaces =
+          new EnumCounters<StorageType>(StorageType.class);
+      for (StorageType t : StorageType.getTypesSupportingQuota()) {
+        final long typeSpace = counts.getTypeSpaces().get(t) -
+            parentTypeSpaces.get(t);
+        final long typeQuota = q.getTypeSpaces().get(t);
+        if (Quota.isViolated(typeQuota, typeSpace)) {
+          LOG.error("BUG Disk quota by storage type violation in image for "
+              + dir.getFullPathName()
+              + " type = " + t.toString() + " quota = "
+              + typeQuota + " < consumed " + typeSpace);
+        }
+      }
+
+      dir.getDirectoryWithQuotaFeature().setSpaceConsumed(namespace, diskspace,
+          typeSpaces);
     }
   }
 
