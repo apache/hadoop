@@ -391,8 +391,8 @@ public class DatanodeManager {
       }
       int activeLen = lastActiveIndex + 1;      
       networktopology.sortByDistance(client, b.getLocations(), activeLen);
-      // must invalidate cache since we modified locations array
-      b.invalidateCachedStorageInfo();
+      // must update cache since we modified locations array
+      b.updateCachedStorageInfo();
     }
   }
   
