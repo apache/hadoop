@@ -24,5 +24,6 @@ and use the binding information to connect with the services's network-accessibl
 endpoints, be they REST, IPC, Web UI, Zookeeper quorum+path or some other protocol.
 
 * [Architecture](yarn-registry.html)
+* [Configuration](registry-configuration.html)
 * [Using the YARN Service registry](using-the-yarn-service-registry.html)
 * [Security](registry-security.html)
