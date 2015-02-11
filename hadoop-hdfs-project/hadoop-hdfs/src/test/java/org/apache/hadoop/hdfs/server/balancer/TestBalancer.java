@@ -564,6 +564,7 @@ public class TestBalancer {
         p = new Balancer.Parameters(
             Balancer.Parameters.DEFAULT.policy,
             Balancer.Parameters.DEFAULT.threshold,
+            Balancer.Parameters.DEFAULT.maxIdleIteration,
             nodes.getNodesToBeExcluded(), nodes.getNodesToBeIncluded());
       }
 
@@ -629,7 +630,8 @@ public class TestBalancer {
     List<NameNodeConnector> connectors = Collections.emptyList();
     try {
       connectors = NameNodeConnector.newNameNodeConnectors(namenodes, 
-            Balancer.class.getSimpleName(), Balancer.BALANCER_ID_PATH, conf);
+          Balancer.class.getSimpleName(), Balancer.BALANCER_ID_PATH, conf,
+          Balancer.Parameters.DEFAULT.maxIdleIteration);
     
       boolean done = false;
       for(int iteration = 0; !done; iteration++) {
@@ -801,6 +803,7 @@ public class TestBalancer {
       Balancer.Parameters p = new Balancer.Parameters(
           Balancer.Parameters.DEFAULT.policy,
           Balancer.Parameters.DEFAULT.threshold,
+          Balancer.Parameters.DEFAULT.maxIdleIteration,
           datanodes, Balancer.Parameters.DEFAULT.nodesToBeIncluded);
       final int r = Balancer.run(namenodes, p, conf);
       assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
@@ -1233,6 +1236,7 @@ public class TestBalancer {
       Balancer.Parameters p = new Balancer.Parameters(
         Parameters.DEFAULT.policy,
         Parameters.DEFAULT.threshold,
+        Balancer.Parameters.DEFAULT.maxIdleIteration,
         Parameters.DEFAULT.nodesToBeExcluded,
         Parameters.DEFAULT.nodesToBeIncluded);
       final int r = Balancer.run(namenodes, p, conf);

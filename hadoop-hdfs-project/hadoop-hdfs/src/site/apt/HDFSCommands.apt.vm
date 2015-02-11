@@ -324,7 +324,7 @@ HDFS Commands Guide
 
 ** <<<balancer>>>
 
-   Usage: <<<hdfs balancer [-threshold <threshold>] [-policy <policy>]>>>
+   Usage: <<<hdfs balancer [-threshold <threshold>] [-policy <policy>] [-idleiterations <idleiterations>]>>>
 
 *------------------------+----------------------------------------------------+
 || COMMAND_OPTION        | Description
@@ -336,6 +336,9 @@ HDFS Commands Guide
 *------------------------+----------------------------------------------------+
 | -threshold <threshold> | Percentage of disk capacity. This overwrites the
 |                        | default threshold.
+*------------------------+----------------------------------------------------+
+| -idleiterations <iterations> | Maximum number of idle iterations before exit.
+|                              | This overwrites the default idleiterations(5).
 *------------------------+----------------------------------------------------+
 
    Runs a cluster balancing utility. An administrator can simply press Ctrl-C
