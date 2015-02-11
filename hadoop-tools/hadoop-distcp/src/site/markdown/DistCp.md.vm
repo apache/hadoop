@@ -14,7 +14,7 @@
 
 #set ( $H3 = '###' )
 
-DistCp Version2 Guide
+DistCp Guide
 =====================
 
 ---
@@ -40,7 +40,7 @@ DistCp Version2 Guide
 Overview
 --------
 
-  DistCp Version 2 (distributed copy) is a tool used for large
+  DistCp (distributed copy) is a tool used for large
   inter/intra-cluster copying. It uses MapReduce to effect its distribution,
   error handling and recovery, and reporting. It expands a list of files and
   directories into input to map tasks, each of which will copy a partition of
