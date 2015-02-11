@@ -33,6 +33,10 @@ public class DatanodeInfoWithStorage extends DatanodeInfo {
     super(from);
     this.storageID = storageID;
     this.storageType = storageType;
+    setSoftwareVersion(from.getSoftwareVersion());
+    setDependentHostNames(from.getDependentHostNames());
+    setLevel(from.getLevel());
+    setParent(from.getParent());
   }
 
   public String getStorageID() {
