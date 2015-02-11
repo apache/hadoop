@@ -503,6 +503,9 @@ Release 2.7.0 - UNRELEASED
     http(s)://proxy addr:port/proxy/<appId> to avoid duplicate sections. (Devaraj
     K via zjshen)
 
+    YARN-3160. Fix non-atomic operation on nodeUpdateQueue in RMNodeImpl. 
+    (Chengbing Liu via junping_du)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
