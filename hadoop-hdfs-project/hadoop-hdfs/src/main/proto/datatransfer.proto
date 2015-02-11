@@ -123,6 +123,9 @@ message OpWriteBlockProto {
    * to ignore this hint.
    */
   optional bool allowLazyPersist = 13 [default = false];
+  //whether to pin the block, so Balancer won't move it.
+  optional bool pinning = 14 [default = false];
+  repeated bool targetPinnings = 15;
 }
   
 message OpTransferBlockProto {

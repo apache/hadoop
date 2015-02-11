@@ -92,6 +92,8 @@ public interface DataTransferProtocol {
    * @param minBytesRcvd minimum number of bytes received.
    * @param maxBytesRcvd maximum number of bytes received.
    * @param latestGenerationStamp the latest generation stamp of the block.
+   * @param pinning whether to pin the block, so Balancer won't move it.
+   * @param targetPinnings whether to pin the block on target datanode
    */
   public void writeBlock(final ExtendedBlock blk,
       final StorageType storageType, 
@@ -107,7 +109,9 @@ public interface DataTransferProtocol {
       final long latestGenerationStamp,
       final DataChecksum requestedChecksum,
       final CachingStrategy cachingStrategy,
-      final boolean allowLazyPersist) throws IOException;
+      final boolean allowLazyPersist,
+      final boolean pinning,
+      final boolean[] targetPinnings) throws IOException;
   /**
    * Transfer a block to another datanode.
    * The block stage must be
