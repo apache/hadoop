@@ -28,6 +28,7 @@
 #include <search.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <utime.h>
@@ -358,6 +359,15 @@ static void hdfsConnExpiry(void)
   pthread_mutex_unlock(&gConnMutex);
 }
 
+// The Kerberos FILE: prefix.  This indicates that the kerberos ticket cache
+// specifier is a file.  (Note that we also assume that the specifier is a file
+// if no prefix is present.)
+#define KRB_FILE_PREFIX "FILE:"
+
+// Length of the Kerberos file prefix, which is equal to the string size in
+// bytes minus 1 (because we don't count the null terminator in the length.)
+#define KRB_FILE_PREFIX_LEN (sizeof(KRB_FILE_PREFIX) - 1)
+
 /**
  * Find the Kerberos ticket cache path.
  *
@@ -413,6 +423,12 @@ done:
     snprintf(path, pathLen, "/tmp/krb5cc_%d", ctx->uid);
   } else {
     path[pathIdx] = '\0';
+  }
+  if (strncmp(path, KRB_FILE_PREFIX, KRB_FILE_PREFIX_LEN) == 0) {
+    fprintf(stderr, "stripping " KRB_FILE_PREFIX " from the front of "
+            "KRB5CCNAME.\n");
+    memmove(path, path + KRB_FILE_PREFIX_LEN,
+            strlen(path + KRB_FILE_PREFIX_LEN) + 1);
   }
 }
 

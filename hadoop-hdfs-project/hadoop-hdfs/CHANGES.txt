@@ -618,6 +618,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7736. Fix typos in dfsadmin/fsck/snapshotDiff usage messages.
     (Brahma Reddy Battula via wheat9)
 
+    HDFS-7771. fuse_dfs should permit FILE: on the front of KRB5CCNAME
+    (cmccabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
