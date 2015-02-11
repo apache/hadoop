@@ -604,6 +604,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7769. TestHDFSCLI should not create files in hdfs project root dir.
     (szetszwo)
 
+    HDFS-7753. Fix Multithreaded correctness Warnings in BackupImage.
+    (Rakesh R and shv)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

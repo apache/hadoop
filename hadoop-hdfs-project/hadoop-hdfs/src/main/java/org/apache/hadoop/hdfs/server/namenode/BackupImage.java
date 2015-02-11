@@ -93,9 +93,16 @@ public class BackupImage extends FSImage {
     storage.setDisablePreUpgradableLayoutCheck(true);
     bnState = BNState.DROP_UNTIL_NEXT_ROLL;
   }
-  
-  void setNamesystem(FSNamesystem fsn) {
-    this.namesystem = fsn;
+
+  synchronized FSNamesystem getNamesystem() {
+    return namesystem;
+  }
+
+  synchronized void setNamesystem(FSNamesystem fsn) {
+    // Avoids overriding this.namesystem object
+    if (namesystem == null) {
+      this.namesystem = fsn;
+    }
   }
 
   /**
@@ -208,7 +215,7 @@ public class BackupImage extends FSImage {
       }
 
       FSEditLogLoader logLoader =
-          new FSEditLogLoader(namesystem, lastAppliedTxId);
+          new FSEditLogLoader(getNamesystem(), lastAppliedTxId);
       int logVersion = storage.getLayoutVersion();
       backupInputStream.setBytes(data, logVersion);
 
@@ -222,7 +229,7 @@ public class BackupImage extends FSImage {
       }
       lastAppliedTxId = logLoader.getLastAppliedTxId();
 
-      FSImage.updateCountForQuota(namesystem.dir.rootDir); // inefficient!
+      FSImage.updateCountForQuota(getNamesystem().dir.getRoot()); // inefficient!
     } finally {
       backupInputStream.clear();
     }
@@ -271,7 +278,7 @@ public class BackupImage extends FSImage {
           editStreams.add(s);
         }
       }
-      loadEdits(editStreams, namesystem);
+      loadEdits(editStreams, getNamesystem());
     }
     
     // now, need to load the in-progress file
@@ -306,7 +313,7 @@ public class BackupImage extends FSImage {
             + " txns from in-progress stream " + stream);
         
         FSEditLogLoader loader =
-            new FSEditLogLoader(namesystem, lastAppliedTxId);
+            new FSEditLogLoader(getNamesystem(), lastAppliedTxId);
         loader.loadFSEdits(stream, lastAppliedTxId + 1);
         lastAppliedTxId = loader.getLastAppliedTxId();
         assert lastAppliedTxId == getEditLog().getLastWrittenTxId();
