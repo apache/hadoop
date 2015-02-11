@@ -1244,7 +1244,7 @@ public class TestReplicationPolicy {
     when(storage.removeBlock(any(BlockInfoContiguous.class))).thenReturn(true);
     when(storage.addBlock(any(BlockInfoContiguous.class))).thenReturn
         (DatanodeStorageInfo.AddBlockResult.ADDED);
-    ucBlock.addStorage(storage);
+    ucBlock.addStorage(storage, ucBlock);
 
     when(mbc.setLastBlock((BlockInfoContiguous) any(), (DatanodeStorageInfo[]) any()))
     .thenReturn(ucBlock);

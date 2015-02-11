@@ -39,12 +39,12 @@ public interface BlockCollection {
   public ContentSummary computeContentSummary(BlockStoragePolicySuite bsps);
 
   /**
-   * @return the number of blocks
+   * @return the number of blocks or block groups
    */ 
   public int numBlocks();
 
   /**
-   * Get the blocks.
+   * Get the blocks or block groups.
    */
   public BlockInfoContiguous[] getBlocks();
 
@@ -55,8 +55,8 @@ public interface BlockCollection {
   public long getPreferredBlockSize();
 
   /**
-   * Get block replication for the collection 
-   * @return block replication value
+   * Get block replication for the collection.
+   * @return block replication value. Return 0 if the file is erasure coded.
    */
   public short getPreferredBlockReplication();
 
@@ -71,7 +71,7 @@ public interface BlockCollection {
   public String getName();
 
   /**
-   * Set the block at the given index.
+   * Set the block/block-group at the given index.
    */
   public void setBlock(int index, BlockInfoContiguous blk);
 
@@ -79,7 +79,8 @@ public interface BlockCollection {
    * Convert the last block of the collection to an under-construction block
    * and set the locations.
    */
-  public BlockInfoContiguousUnderConstruction setLastBlock(BlockInfoContiguous lastBlock,
+  public BlockInfoContiguousUnderConstruction setLastBlock(
+      BlockInfoContiguous lastBlock,
       DatanodeStorageInfo[] targets) throws IOException;
 
   /**

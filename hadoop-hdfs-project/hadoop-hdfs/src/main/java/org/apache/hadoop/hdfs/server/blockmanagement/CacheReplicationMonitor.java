@@ -513,8 +513,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
           iter.remove();
         }
       }
-      BlockInfoContiguous blockInfo = blockManager.
-            getStoredBlock(new Block(cblock.getBlockId()));
+      BlockInfoContiguous blockInfo = namesystem.getStoredBlock(new Block(cblock.getBlockId()));
       String reason = findReasonForNotCaching(cblock, blockInfo);
       int neededCached = 0;
       if (reason != null) {
@@ -628,8 +627,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       List<DatanodeDescriptor> pendingCached) {
     // To figure out which replicas can be cached, we consult the
     // blocksMap.  We don't want to try to cache a corrupt replica, though.
-    BlockInfoContiguous blockInfo = blockManager.
-          getStoredBlock(new Block(cachedBlock.getBlockId()));
+    BlockInfoContiguous blockInfo = namesystem.getStoredBlock(new Block(cachedBlock.getBlockId()));
     if (blockInfo == null) {
       LOG.debug("Block {}: can't add new cached replicas," +
           " because there is no record of this block " +
@@ -668,7 +666,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       while (it.hasNext()) {
         CachedBlock cBlock = it.next();
         BlockInfoContiguous info =
-            blockManager.getStoredBlock(new Block(cBlock.getBlockId()));
+            namesystem.getStoredBlock(new Block(cBlock.getBlockId()));
         if (info != null) {
           pendingBytes -= info.getNumBytes();
         }
@@ -678,7 +676,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       while (it.hasNext()) {
         CachedBlock cBlock = it.next();
         BlockInfoContiguous info =
-            blockManager.getStoredBlock(new Block(cBlock.getBlockId()));
+            namesystem.getStoredBlock(new Block(cBlock.getBlockId()));
         if (info != null) {
           pendingBytes += info.getNumBytes();
         }
