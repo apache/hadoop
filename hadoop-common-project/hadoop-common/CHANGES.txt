@@ -27,6 +27,8 @@ Trunk (Unreleased)
     HADOOP-8934. Shell command ls should include sort options (Jonathan Allen
     via aw)
 
+    HADOOP-11554. Expose HadoopKerberosName as a hadoop subcommand (aw)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution

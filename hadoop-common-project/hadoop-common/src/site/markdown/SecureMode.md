@@ -162,6 +162,8 @@ Hadoop maps Kerberos principal to OS user account using the rule specified by `h
 
 By default, it picks the first component of principal name as a user name if the realms matches to the `default_realm` (usually defined in /etc/krb5.conf). For example, `host/full.qualified.domain.name@REALM.TLD` is mapped to `host` by default rule.
 
+Custom rules can be tested using the <<<hadoop kerbname>>> command.  This command allows one to specify a principal and apply Hadoop's current auth_to_local ruleset.  The output will be what identity Hadoop will use for its usage.
+
 ### Mapping from user to group
 
 Though files on HDFS are associated to owner and group, Hadoop does not have the definition of group by itself. Mapping from user to group is done by OS or LDAP.

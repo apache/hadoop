@@ -146,7 +146,7 @@ call :updatepath %HADOOP_BIN_PATH%
     )
   )
   
-  set corecommands=fs version jar checknative distcp daemonlog archive classpath credential key
+  set corecommands=fs version jar checknative distcp daemonlog archive classpath credential kerbname key
   for %%i in ( %corecommands% ) do (
     if %hadoop-command% == %%i set corecommand=true  
   )
@@ -213,6 +213,10 @@ call :updatepath %HADOOP_BIN_PATH%
 
 :credential
   set CLASS=org.apache.hadoop.security.alias.CredentialShell
+  goto :eof
+
+:kerbname
+  set CLASS=org.apache.hadoop.security.HadoopKerberosName
   goto :eof
 
 :key
