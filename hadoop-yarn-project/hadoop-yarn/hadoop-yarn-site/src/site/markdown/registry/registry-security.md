@@ -24,8 +24,8 @@ This document is therefore relevant only to secure clusters.
 ## Security Model
 
 The security model of the registry is designed to meet the following goals
-a secur
-1. Deliver functional security on e ZK installation.
+a secure registry:
+1. Deliver functional security on a secure ZK installation.
 1. Allow the RM to create per-user regions of the registration space
 1. Allow applications belonging to a user to write registry entries
 into their part of the space. These may be short-lived or long-lived

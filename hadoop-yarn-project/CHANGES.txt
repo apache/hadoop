@@ -229,6 +229,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-3100. Made YARN authorization pluggable. (Jian He via zjshen)
 
+    YARN-2683. [YARN-913] registry config options: document and move to
+    core-default. (stevel)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
