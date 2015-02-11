@@ -134,7 +134,7 @@ HDFS Commands Guide
    to stop the rebalancing process. See
    {{{./HdfsUserGuide.html#Balancer}Balancer}} for more details.
 
-   Usage: <<<hdfs balancer [-threshold <threshold>] [-policy <policy>]>>>
+   Usage: <<<hdfs balancer [-threshold <threshold>] [-policy <policy>] [-idleiterations <idleiterations>]>>>
 
 *------------------------+----------------------------------------------------+
 || COMMAND_OPTION        | Description
@@ -146,6 +146,9 @@ HDFS Commands Guide
 |                        | each datanode is balanced. \
 |                        | <<<blockpool>>>: Cluster is balanced if each block
 |                        | pool in each datanode is balanced.
+*------------------------+----------------------------------------------------+
+| -idleiterations <iterations> | Maximum number of idle iterations before exit.
+|                              | This overwrites the default idleiterations(5).
 *------------------------+----------------------------------------------------+
 
    Note that the <<<blockpool>>> policy is more strict than the <<<datanode>>>

@@ -332,6 +332,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7790. Do not create optional fields in DFSInputStream unless they are
     needed (cmccabe)
 
+    HDFS-316. Balancer should run for a configurable # of iterations (Xiaoyu
+    Yao via aw)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.*;
 
+import com.google.common.collect.Maps;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -39,9 +40,14 @@ public class TestMover {
   static Mover newMover(Configuration conf) throws IOException {
     final Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
     Assert.assertEquals(1, namenodes.size());
+    Map<URI, List<Path>> nnMap = Maps.newHashMap();
+    for (URI nn : namenodes) {
+      nnMap.put(nn, null);
+    }
 
     final List<NameNodeConnector> nncs = NameNodeConnector.newNameNodeConnectors(
-        namenodes, Mover.class.getSimpleName(), Mover.MOVER_ID_PATH, conf);
+        nnMap, Mover.class.getSimpleName(), Mover.MOVER_ID_PATH, conf,
+        NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
     return new Mover(nncs.get(0), conf);
   }
 
