@@ -545,7 +545,7 @@ public class DFSAdmin extends FsShell {
 
   /**
    * Safe mode maintenance command.
-   * Usage: java DFSAdmin -safemode [enter | leave | get]
+   * Usage: hdfs dfsadmin -safemode [enter | leave | get]
    * @param argv List of of command line parameters.
    * @param idx The index of the command that is being processed.
    * @exception IOException if the filesystem does not exist.
@@ -661,7 +661,7 @@ public class DFSAdmin extends FsShell {
 
   /**
    * Allow snapshot on a directory.
-   * Usage: java DFSAdmin -allowSnapshot snapshotDir
+   * Usage: hdfs dfsadmin -allowSnapshot snapshotDir
    * @param argv List of of command line parameters.
    * @exception IOException
    */
@@ -677,7 +677,7 @@ public class DFSAdmin extends FsShell {
   
   /**
    * Allow snapshot on a directory.
-   * Usage: java DFSAdmin -disallowSnapshot snapshotDir
+   * Usage: hdfs dfsadmin -disallowSnapshot snapshotDir
    * @param argv List of of command line parameters.
    * @exception IOException
    */
@@ -1585,7 +1585,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("Usage: hdfs dfsadmin"
                          + " [-refreshCallQueue]");
     } else if ("-reconfig".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-reconfig <datanode|...> <host:port> <start|status>]");
     } else if ("-refresh".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
@@ -1612,7 +1612,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-getDatanodeInfo <datanode_host:ipc_port>]");
     } else if ("-triggerBlockReport".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]");
     } else {
       System.err.println("Usage: hdfs dfsadmin");

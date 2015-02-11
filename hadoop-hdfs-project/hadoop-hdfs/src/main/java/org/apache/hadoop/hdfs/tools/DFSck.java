@@ -75,7 +75,7 @@ public class DFSck extends Configured implements Tool {
     HdfsConfiguration.init();
   }
 
-  private static final String USAGE = "Usage: DFSck <path> "
+  private static final String USAGE = "Usage: hdfs fsck <path> "
       + "[-list-corruptfileblocks | "
       + "[-move | -delete | -openforwrite] "
       + "[-files [-blocks [-locations | -racks]]]]\n"

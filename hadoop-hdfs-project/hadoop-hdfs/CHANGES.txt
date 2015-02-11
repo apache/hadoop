@@ -615,6 +615,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7751. Fix TestHDFSCLI for quota with storage type.  (Xiaoyu Yao
     via szetszwo)
 
+    HDFS-7736. Fix typos in dfsadmin/fsck/snapshotDiff usage messages.
+    (Brahma Reddy Battula via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
