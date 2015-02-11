@@ -389,6 +389,9 @@ Trunk (Unreleased)
 
     HADOOP-11583. Fix syntax error in SecureMode.md (Masatake Iwasaki via aw)
 
+    HADOOP-11437. Remove the version and author information from distcp's
+    README file (Brahma Reddy Battula via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
