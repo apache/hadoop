@@ -51,6 +51,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
@@ -242,6 +246,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   // Used for synchronizing access to usage stats
   private final Object statsLock = new Object();
 
+  final LocalFileSystem localFS;
+
+  private boolean blockPinningEnabled;
+  
   /**
    * An FSDataset has a directory where it loads its data files.
    */
@@ -301,6 +309,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     lazyWriter = new Daemon(new LazyWriter(conf));
     lazyWriter.start();
     registerMBean(datanode.getDatanodeUuid());
+    localFS = FileSystem.getLocal(conf);
+    blockPinningEnabled = conf.getBoolean(
+      DFSConfigKeys.DFS_DATANODE_BLOCK_PINNING_ENABLED,
+      DFSConfigKeys.DFS_DATANODE_BLOCK_PINNING_ENABLED_DEFAULT);
   }
 
   private void addVolume(Collection<StorageLocation> dataLocations,
@@ -2869,6 +2881,34 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     public void stop() {
       shouldRun = false;
     }
+  }
+  
+  @Override
+  public void setPinning(ExtendedBlock block) throws IOException {
+    if (!blockPinningEnabled) {
+      return;
+    }
+
+    File f = getBlockFile(block);
+    Path p = new Path(f.getAbsolutePath());
+    
+    FsPermission oldPermission = localFS.getFileStatus(
+        new Path(f.getAbsolutePath())).getPermission();
+    //sticky bit is used for pinning purpose
+    FsPermission permission = new FsPermission(oldPermission.getUserAction(),
+        oldPermission.getGroupAction(), oldPermission.getOtherAction(), true);
+    localFS.setPermission(p, permission);
+  }
+  
+  @Override
+  public boolean getPinning(ExtendedBlock block) throws IOException {
+    if (!blockPinningEnabled) {
+      return  false;
+    }
+    File f = getBlockFile(block);
+        
+    FileStatus fss = localFS.getFileStatus(new Path(f.getAbsolutePath()));
+    return fss.getPermission().getStickyBit();
   }
 }
 

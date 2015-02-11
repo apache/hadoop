@@ -406,4 +406,13 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public long getNumBlocksFailedToUncache() {
     return 0;
   }
+
+  @Override
+  public void setPinning(ExtendedBlock block) throws IOException {    
+  }
+
+  @Override
+  public boolean getPinning(ExtendedBlock block) throws IOException {
+    return false;
+  }
 }

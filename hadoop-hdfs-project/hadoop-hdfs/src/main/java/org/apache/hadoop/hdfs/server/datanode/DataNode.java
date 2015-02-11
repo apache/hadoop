@@ -2117,7 +2117,7 @@ public class DataNode extends ReconfigurableBase
         new Sender(out).writeBlock(b, targetStorageTypes[0], accessToken,
             clientname, targets, targetStorageTypes, srcNode,
             stage, 0, 0, 0, 0, blockSender.getChecksum(), cachingStrategy,
-            false);
+            false, false, null);
 
         // send data & checksum
         blockSender.sendBlock(out, unbufOut, null);

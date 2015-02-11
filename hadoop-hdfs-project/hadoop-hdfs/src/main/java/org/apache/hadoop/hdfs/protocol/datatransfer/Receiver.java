@@ -149,10 +149,12 @@ public abstract class Receiver implements DataTransferProtocol {
           (proto.hasCachingStrategy() ?
               getCachingStrategy(proto.getCachingStrategy()) :
             CachingStrategy.newDefaultStrategy()),
-            (proto.hasAllowLazyPersist() ? proto.getAllowLazyPersist() : false));
-     } finally {
-      if (traceScope != null) traceScope.close();
-     }
+          (proto.hasAllowLazyPersist() ? proto.getAllowLazyPersist() : false),
+          (proto.hasPinning() ? proto.getPinning(): false),
+          (PBHelper.convertBooleanList(proto.getTargetPinningsList())));
+    } finally {
+     if (traceScope != null) traceScope.close();
+    }
   }
 
   /** Receive {@link Op#TRANSFER_BLOCK} */

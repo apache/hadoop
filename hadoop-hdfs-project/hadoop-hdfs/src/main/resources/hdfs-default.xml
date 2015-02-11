@@ -2235,4 +2235,10 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.datanode.block-pinning.enabled</name>
+    <value>false</value>
+    <description>Whether pin blocks on favored DataNode.</description>
+  </property>
+
 </configuration>

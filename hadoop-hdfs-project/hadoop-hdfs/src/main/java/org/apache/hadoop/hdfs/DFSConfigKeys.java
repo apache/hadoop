@@ -781,4 +781,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // 10 days
   public static final long DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
       TimeUnit.DAYS.toMillis(10);
+  public static final String DFS_DATANODE_BLOCK_PINNING_ENABLED = 
+    "dfs.datanode.block-pinning.enabled";
+  public static final boolean DFS_DATANODE_BLOCK_PINNING_ENABLED_DEFAULT =
+    false;
 }

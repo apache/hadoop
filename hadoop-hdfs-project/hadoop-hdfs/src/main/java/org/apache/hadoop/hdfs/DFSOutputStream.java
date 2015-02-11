@@ -1442,11 +1442,13 @@ public class DFSOutputStream extends FSOutputSummer
           ExtendedBlock blockCopy = new ExtendedBlock(block);
           blockCopy.setNumBytes(blockSize);
 
+          boolean[] targetPinnings = getPinnings(nodes);
           // send the request
           new Sender(out).writeBlock(blockCopy, nodeStorageTypes[0], accessToken,
               dfsClient.clientName, nodes, nodeStorageTypes, null, bcs, 
               nodes.length, block.getNumBytes(), bytesSent, newGS,
-              checksum4WriteBlock, cachingStrategy.get(), isLazyPersistFile);
+              checksum4WriteBlock, cachingStrategy.get(), isLazyPersistFile,
+            (targetPinnings == null ? false : targetPinnings[0]), targetPinnings);
   
           // receive ack for connect
           BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
@@ -1531,6 +1533,24 @@ public class DFSOutputStream extends FSOutputSummer
           }
         }
         return result;
+      }
+    }
+
+    private boolean[] getPinnings(DatanodeInfo[] nodes) {
+      if (favoredNodes == null) {
+        return null;
+      } else {
+        boolean[] pinnings = new boolean[nodes.length];
+        for (int i = 0; i < nodes.length; i++) {
+          pinnings[i] = false;
+          for (int j = 0; j < favoredNodes.length; j++) {
+            if (nodes[i].getXferAddrWithHostname().equals(favoredNodes[j])) {
+              pinnings[i] = true;
+              break;
+            }
+          }
+        }
+        return pinnings;
       }
     }
 

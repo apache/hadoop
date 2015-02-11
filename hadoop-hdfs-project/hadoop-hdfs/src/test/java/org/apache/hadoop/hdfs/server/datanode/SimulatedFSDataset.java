@@ -128,6 +128,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     SimulatedOutputStream oStream = null;
     private long bytesAcked;
     private long bytesRcvd;
+    private boolean pinned = false;
     BInfo(String bpid, Block b, boolean forWriting) throws IOException {
       theBlock = new Block(b);
       if (theBlock.getNumBytes() < 0) {
@@ -1274,6 +1275,16 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       StorageType targetStorageType) throws IOException {
     // TODO Auto-generated method stub
     return null;
+  }
+  
+  @Override
+  public void setPinning(ExtendedBlock b) throws IOException {
+    blockMap.get(b.getBlockPoolId()).get(b.getLocalBlock()).pinned = true;
+  }
+  
+  @Override
+  public boolean getPinning(ExtendedBlock b) throws IOException {
+    return blockMap.get(b.getBlockPoolId()).get(b.getLocalBlock()).pinned;
   }
 }
 
