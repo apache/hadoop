@@ -31,6 +31,7 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -488,21 +490,22 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public Quota.Counts cleanSubtree(final int snapshot, int priorSnapshotId,
+  public QuotaCounts cleanSubtree(BlockStoragePolicySuite bsps, final int snapshot,
+                                  int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
-      return sf.cleanFile(this, snapshot, priorSnapshotId, collectedBlocks,
+      return sf.cleanFile(bsps, this, snapshot, priorSnapshotId, collectedBlocks,
           removedINodes);
     }
-    Quota.Counts counts = Quota.Counts.newInstance();
+    QuotaCounts counts = new QuotaCounts.Builder().build();
     if (snapshot == CURRENT_STATE_ID) {
       if (priorSnapshotId == NO_SNAPSHOT_ID) {
         // this only happens when deleting the current file and the file is not
         // in any snapshot
-        computeQuotaUsage(counts, false);
-        destroyAndCollectBlocks(collectedBlocks, removedINodes);
+        computeQuotaUsage(bsps, counts, false);
+        destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
       } else {
         // when deleting the current file and the file is in snapshot, we should
         // clean the 0-sized block if the file is UC
@@ -516,8 +519,8 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+  public void destroyAndCollectBlocks(BlockStoragePolicySuite bsps,
+      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
     if (blocks != null && collectedBlocks != null) {
       for (BlockInfoContiguous blk : blocks) {
         collectedBlocks.addDeleteBlock(blk);
@@ -543,11 +546,15 @@ public class INodeFile extends INodeWithAdditionalFields
     return getFullPathName();
   }
 
+  // This is the only place that needs to use the BlockStoragePolicySuite to
+  // derive the intended storage type usage for quota by storage type
   @Override
-  public final Quota.Counts computeQuotaUsage(Quota.Counts counts,
-      boolean useCache, int lastSnapshotId) {
+  public final QuotaCounts computeQuotaUsage(
+      BlockStoragePolicySuite bsps, QuotaCounts counts, boolean useCache,
+      int lastSnapshotId) {
     long nsDelta = 1;
-    final long dsDelta;
+    final long dsDeltaNoReplication;
+    short dsReplication;
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       FileDiffList fileDiffList = sf.getDiffs();
@@ -555,18 +562,33 @@ public class INodeFile extends INodeWithAdditionalFields
 
       if (lastSnapshotId == Snapshot.CURRENT_STATE_ID
           || last == Snapshot.CURRENT_STATE_ID) {
-        dsDelta = diskspaceConsumed();
+        dsDeltaNoReplication = diskspaceConsumedNoReplication();
+        dsReplication = getBlockReplication();
       } else if (last < lastSnapshotId) {
-        dsDelta = computeFileSize(true, false) * getFileReplication();
-      } else {      
+        dsDeltaNoReplication = computeFileSize(true, false);
+        dsReplication = getFileReplication();
+      } else {
         int sid = fileDiffList.getSnapshotById(lastSnapshotId);
-        dsDelta = diskspaceConsumed(sid);
+        dsDeltaNoReplication = diskspaceConsumedNoReplication(sid);
+        dsReplication = getReplication(sid);
       }
     } else {
-      dsDelta = diskspaceConsumed();
+      dsDeltaNoReplication = diskspaceConsumedNoReplication();
+      dsReplication = getBlockReplication();
     }
-    counts.add(Quota.NAMESPACE, nsDelta);
-    counts.add(Quota.DISKSPACE, dsDelta);
+    counts.addNameSpace(nsDelta);
+    counts.addDiskSpace(dsDeltaNoReplication * dsReplication);
+
+    if (getStoragePolicyID() != BlockStoragePolicySuite.ID_UNSPECIFIED){
+      BlockStoragePolicy bsp = bsps.getPolicy(getStoragePolicyID());
+      List<StorageType> storageTypes = bsp.chooseStorageTypes(dsReplication);
+      for (StorageType t : storageTypes) {
+        if (!t.supportTypeQuota()) {
+          continue;
+        }
+        counts.addTypeSpace(t, dsDeltaNoReplication);
+      }
+    }
     return counts;
   }
 
@@ -660,9 +682,13 @@ public class INodeFile extends INodeWithAdditionalFields
    * Use preferred block size for the last block if it is under construction.
    */
   public final long diskspaceConsumed() {
+    return diskspaceConsumedNoReplication() * getBlockReplication();
+  }
+
+  public final long diskspaceConsumedNoReplication() {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if(sf == null) {
-      return computeFileSize(true, true) * getBlockReplication();
+      return computeFileSize(true, true);
     }
 
     // Collect all distinct blocks
@@ -684,18 +710,34 @@ public class INodeFile extends INodeWithAdditionalFields
         lastBlock instanceof BlockInfoContiguousUnderConstruction) {
       size += getPreferredBlockSize() - lastBlock.getNumBytes();
     }
-    return size * getBlockReplication();
+    return size;
   }
 
   public final long diskspaceConsumed(int lastSnapshotId) {
     if (lastSnapshotId != CURRENT_STATE_ID) {
       return computeFileSize(lastSnapshotId)
-          * getFileReplication(lastSnapshotId);
+        * getFileReplication(lastSnapshotId);
     } else {
       return diskspaceConsumed();
     }
   }
-  
+
+  public final short getReplication(int lastSnapshotId) {
+    if (lastSnapshotId != CURRENT_STATE_ID) {
+      return getFileReplication(lastSnapshotId);
+    } else {
+      return getBlockReplication();
+    }
+  }
+
+  public final long diskspaceConsumedNoReplication(int lastSnapshotId) {
+    if (lastSnapshotId != CURRENT_STATE_ID) {
+      return computeFileSize(lastSnapshotId);
+    } else {
+      return diskspaceConsumedNoReplication();
+    }
+  }
+
   /**
    * Return the penultimate allocated block for this file.
    */

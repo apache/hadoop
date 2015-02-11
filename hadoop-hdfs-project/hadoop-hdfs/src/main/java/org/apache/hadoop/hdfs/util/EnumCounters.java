@@ -50,6 +50,14 @@ public class EnumCounters<E extends Enum<E>> {
     this.enumClass = enumClass;
     this.counters = new long[enumConstants.length];
   }
+
+  public EnumCounters(final Class<E> enumClass, long defaultVal) {
+    final E[] enumConstants = enumClass.getEnumConstants();
+    Preconditions.checkNotNull(enumConstants);
+    this.enumClass = enumClass;
+    this.counters = new long[enumConstants.length];
+    reset(defaultVal);
+  }
   
   /** @return the value of counter e. */
   public final long get(final E e) {
@@ -77,9 +85,7 @@ public class EnumCounters<E extends Enum<E>> {
 
   /** Reset all counters to zero. */
   public final void reset() {
-    for(int i = 0; i < counters.length; i++) {
-      this.counters[i] = 0L;
-    }
+    reset(0L);
   }
 
   /** Add the given value to counter e. */
@@ -141,6 +147,30 @@ public class EnumCounters<E extends Enum<E>> {
       b.append(name).append("=").append(counters[i]).append(", ");
     }
     return b.substring(0, b.length() - 2);
+  }
+
+  public final void reset(long val) {
+    for(int i = 0; i < counters.length; i++) {
+      this.counters[i] = val;
+    }
+  }
+
+  public boolean allLessOrEqual(long val) {
+    for (long c : counters) {
+      if (c > val) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public boolean anyGreaterOrEqual(long val) {
+    for (long c: counters) {
+      if (c >= val) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

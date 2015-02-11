@@ -75,6 +75,7 @@ public enum FSEditLogOpCodes {
   OP_SET_STORAGE_POLICY         ((byte) 45),
   OP_TRUNCATE                   ((byte) 46),
   OP_APPEND                     ((byte) 47),
+  OP_SET_QUOTA_BY_STORAGETYPE   ((byte) 48),
 
   // Note that the current range of the valid OP code is 0~127
   OP_INVALID                    ((byte) -1);

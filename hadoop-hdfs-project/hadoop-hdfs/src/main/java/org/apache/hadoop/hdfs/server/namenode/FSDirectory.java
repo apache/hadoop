@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
@@ -56,9 +57,12 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.util.ByteArray;
+import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
@@ -76,6 +80,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
@@ -100,8 +106,9 @@ public class FSDirectory implements Closeable {
         namesystem.createFsOwnerPermissions(new FsPermission((short) 0755)),
         0L);
     r.addDirectoryWithQuotaFeature(
-        DirectoryWithQuotaFeature.DEFAULT_NAMESPACE_QUOTA,
-        DirectoryWithQuotaFeature.DEFAULT_DISKSPACE_QUOTA);
+        new DirectoryWithQuotaFeature.Builder().
+            nameSpaceQuota(DirectoryWithQuotaFeature.DEFAULT_NAMESPACE_QUOTA).
+            spaceQuota(DirectoryWithQuotaFeature.DEFAULT_SPACE_QUOTA).build());
     r.addSnapshottableFeature();
     r.setSnapshotQuota(0);
     return r;
@@ -149,6 +156,8 @@ public class FSDirectory implements Closeable {
   private final long accessTimePrecision;
   // whether setStoragePolicy is allowed.
   private final boolean storagePolicyEnabled;
+  // whether quota by storage type is allowed
+  private final boolean quotaByStorageTypeEnabled;
 
   private final String fsOwnerShortUserName;
   private final String supergroup;
@@ -236,6 +245,10 @@ public class FSDirectory implements Closeable {
         conf.getBoolean(DFS_STORAGE_POLICY_ENABLED_KEY,
                         DFS_STORAGE_POLICY_ENABLED_DEFAULT);
 
+    this.quotaByStorageTypeEnabled =
+        conf.getBoolean(DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY,
+                        DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT);
+
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
     this.lsLimit = configuredLimit>0 ?
@@ -291,6 +304,10 @@ public class FSDirectory implements Closeable {
     return rootDir;
   }
 
+  public BlockStoragePolicySuite getBlockStoragePolicySuite() {
+    return getBlockManager().getStoragePolicySuite();
+  }
+
   boolean isPermissionEnabled() {
     return isPermissionEnabled;
   }
@@ -306,6 +323,9 @@ public class FSDirectory implements Closeable {
   }
   boolean isAccessTimeSupported() {
     return accessTimePrecision > 0;
+  }
+  boolean isQuotaByStorageTypeEnabled() {
+    return quotaByStorageTypeEnabled;
   }
 
 
@@ -452,7 +472,8 @@ public class FSDirectory implements Closeable {
       Preconditions.checkState(fileINode.isUnderConstruction());
 
       // check quota limits and updated space consumed
-      updateCount(inodesInPath, 0, fileINode.getPreferredBlockDiskspace(), true);
+      updateCount(inodesInPath, 0, fileINode.getPreferredBlockSize(),
+          fileINode.getBlockReplication(), true);
 
       // associate new last block for the file
       BlockInfoContiguousUnderConstruction blockInfo =
@@ -508,7 +529,8 @@ public class FSDirectory implements Closeable {
     }
 
     // update space consumed
-    updateCount(iip, 0, -fileNode.getPreferredBlockDiskspace(), true);
+    updateCount(iip, 0, -fileNode.getPreferredBlockSize(),
+        fileNode.getBlockReplication(), true);
     return true;
   }
 
@@ -584,19 +606,20 @@ public class FSDirectory implements Closeable {
    * @param iip the INodesInPath instance containing all the INodes for
    *            updating quota usage
    * @param nsDelta the delta change of namespace
-   * @param dsDelta the delta change of diskspace
+   * @param dsDelta the delta change of space consumed without replication
+   * @param replication the replication factor of the block consumption change
    * @throws QuotaExceededException if the new count violates any quota limit
    * @throws FileNotFoundException if path does not exist.
    */
-  void updateSpaceConsumed(INodesInPath iip, long nsDelta, long dsDelta)
-      throws QuotaExceededException, FileNotFoundException,
-          UnresolvedLinkException, SnapshotAccessControlException {
+  void updateSpaceConsumed(INodesInPath iip, long nsDelta, long dsDelta, short replication)
+    throws QuotaExceededException, FileNotFoundException,
+    UnresolvedLinkException, SnapshotAccessControlException {
     writeLock();
     try {
       if (iip.getLastINode() == null) {
         throw new FileNotFoundException("Path not found: " + iip.getPath());
       }
-      updateCount(iip, nsDelta, dsDelta, true);
+      updateCount(iip, nsDelta, dsDelta, replication, true);
     } finally {
       writeUnlock();
     }
@@ -610,29 +633,52 @@ public class FSDirectory implements Closeable {
   void updateCountForDelete(final INode inode, final INodesInPath iip) {
     if (getFSNamesystem().isImageLoaded() &&
         !inode.isInLatestSnapshot(iip.getLatestSnapshotId())) {
-      Quota.Counts counts = inode.computeQuotaUsage();
-      unprotectedUpdateCount(iip, iip.length() - 1,
-          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+      QuotaCounts counts = inode.computeQuotaUsage(getBlockStoragePolicySuite());
+      unprotectedUpdateCount(iip, iip.length() - 1, counts.negation());
     }
   }
 
-  void updateCount(INodesInPath iip, long nsDelta, long dsDelta,
+  /**
+   * Update usage count without replication factor change
+   */
+  void updateCount(INodesInPath iip, long nsDelta, long dsDelta, short replication,
       boolean checkQuota) throws QuotaExceededException {
-    updateCount(iip, iip.length() - 1, nsDelta, dsDelta, checkQuota);
+    final INodeFile fileINode = iip.getLastINode().asFile();
+    EnumCounters<StorageType> typeSpaceDeltas =
+      getStorageTypeDeltas(fileINode.getStoragePolicyID(), dsDelta,
+          replication, replication);;
+    updateCount(iip, iip.length() - 1,
+      new QuotaCounts.Builder().nameCount(nsDelta).spaceCount(dsDelta * replication).
+          typeCounts(typeSpaceDeltas).build(),
+        checkQuota);
+  }
+
+  /**
+   * Update usage count with replication factor change due to setReplication
+   */
+  void updateCount(INodesInPath iip, long nsDelta, long dsDelta, short oldRep,
+      short newRep, boolean checkQuota) throws QuotaExceededException {
+    final INodeFile fileINode = iip.getLastINode().asFile();
+    EnumCounters<StorageType> typeSpaceDeltas =
+        getStorageTypeDeltas(fileINode.getStoragePolicyID(), dsDelta, oldRep, newRep);
+    updateCount(iip, iip.length() - 1,
+        new QuotaCounts.Builder().nameCount(nsDelta).
+            spaceCount(dsDelta * (newRep - oldRep)).
+            typeCounts(typeSpaceDeltas).build(),
+        checkQuota);
   }
 
   /** update count of each inode with quota
    * 
    * @param iip inodes in a path
    * @param numOfINodes the number of inodes to update starting from index 0
-   * @param nsDelta the delta change of namespace
-   * @param dsDelta the delta change of diskspace
+   * @param counts the count of space/namespace/type usage to be update
    * @param checkQuota if true then check if quota is exceeded
    * @throws QuotaExceededException if the new count violates any quota limit
    */
-  private void updateCount(INodesInPath iip, int numOfINodes, 
-                           long nsDelta, long dsDelta, boolean checkQuota)
-                           throws QuotaExceededException {
+   void updateCount(INodesInPath iip, int numOfINodes,
+                    QuotaCounts counts, boolean checkQuota)
+                    throws QuotaExceededException {
     assert hasWriteLock();
     if (!namesystem.isImageLoaded()) {
       //still initializing. do not check or update quotas.
@@ -642,20 +688,20 @@ public class FSDirectory implements Closeable {
       numOfINodes = iip.length();
     }
     if (checkQuota && !skipQuotaCheck) {
-      verifyQuota(iip, numOfINodes, nsDelta, dsDelta, null);
+      verifyQuota(iip, numOfINodes, counts, null);
     }
-    unprotectedUpdateCount(iip, numOfINodes, nsDelta, dsDelta);
+    unprotectedUpdateCount(iip, numOfINodes, counts);
   }
   
   /** 
    * update quota of each inode and check to see if quota is exceeded. 
-   * See {@link #updateCount(INodesInPath, long, long, boolean)}
+   * See {@link #updateCount(INodesInPath, int, QuotaCounts, boolean)}
    */ 
-  void updateCountNoQuotaCheck(INodesInPath inodesInPath, int numOfINodes,
-      long nsDelta, long dsDelta) {
+   void updateCountNoQuotaCheck(INodesInPath inodesInPath,
+      int numOfINodes, QuotaCounts counts) {
     assert hasWriteLock();
     try {
-      updateCount(inodesInPath, numOfINodes, nsDelta, dsDelta, false);
+      updateCount(inodesInPath, numOfINodes, counts, false);
     } catch (QuotaExceededException e) {
       NameNode.LOG.error("BUG: unexpected exception ", e);
     }
@@ -666,15 +712,49 @@ public class FSDirectory implements Closeable {
    * callers responsibility is to make sure quota is not exceeded
    */
   static void unprotectedUpdateCount(INodesInPath inodesInPath,
-      int numOfINodes, long nsDelta, long dsDelta) {
+      int numOfINodes, QuotaCounts counts) {
     for(int i=0; i < numOfINodes; i++) {
       if (inodesInPath.getINode(i).isQuotaSet()) { // a directory with quota
         inodesInPath.getINode(i).asDirectory().getDirectoryWithQuotaFeature()
-            .addSpaceConsumed2Cache(nsDelta, dsDelta);
+            .addSpaceConsumed2Cache(counts);
       }
     }
   }
-  
+
+  public EnumCounters<StorageType> getStorageTypeDeltas(byte storagePolicyID,
+      long dsDelta, short oldRep, short newRep) {
+    EnumCounters<StorageType> typeSpaceDeltas =
+        new EnumCounters<StorageType>(StorageType.class);
+    // Storage type and its quota are only available when storage policy is set
+    if (storagePolicyID != BlockStoragePolicySuite.ID_UNSPECIFIED) {
+      BlockStoragePolicy storagePolicy = getBlockManager().getStoragePolicy(storagePolicyID);
+
+      if (oldRep != newRep) {
+        List<StorageType> oldChosenStorageTypes =
+            storagePolicy.chooseStorageTypes(oldRep);
+
+        for (StorageType t : oldChosenStorageTypes) {
+          if (!t.supportTypeQuota()) {
+            continue;
+          }
+          Preconditions.checkArgument(dsDelta > 0);
+          typeSpaceDeltas.add(t, -dsDelta);
+        }
+      }
+
+      List<StorageType> newChosenStorageTypes =
+          storagePolicy.chooseStorageTypes(newRep);
+
+      for (StorageType t : newChosenStorageTypes) {
+        if (!t.supportTypeQuota()) {
+          continue;
+        }
+        typeSpaceDeltas.add(t, dsDelta);
+      }
+    }
+    return typeSpaceDeltas;
+  }
+
   /** Return the name of the path represented by inodes at [0, pos] */
   static String getFullPathName(INode[] inodes, int pos) {
     StringBuilder fullPathName = new StringBuilder();
@@ -751,16 +831,16 @@ public class FSDirectory implements Closeable {
    *  
    * @param iip INodes corresponding to a path
    * @param pos position where a new INode will be added
-   * @param nsDelta needed namespace
-   * @param dsDelta needed diskspace
+   * @param deltas needed namespace, diskspace and storage types
    * @param commonAncestor Last node in inodes array that is a common ancestor
    *          for a INode that is being moved from one location to the other.
    *          Pass null if a node is not being moved.
    * @throws QuotaExceededException if quota limit is exceeded.
    */
-  static void verifyQuota(INodesInPath iip, int pos, long nsDelta,
-      long dsDelta, INode commonAncestor) throws QuotaExceededException {
-    if (nsDelta <= 0 && dsDelta <= 0) {
+  static void verifyQuota(INodesInPath iip, int pos, QuotaCounts deltas,
+                          INode commonAncestor) throws QuotaExceededException {
+    if (deltas.getNameSpace() <= 0 && deltas.getDiskSpace() <= 0
+        && deltas.getTypeSpaces().allLessOrEqual(0L)) {
       // if quota is being freed or not being consumed
       return;
     }
@@ -775,7 +855,7 @@ public class FSDirectory implements Closeable {
           = iip.getINode(i).asDirectory().getDirectoryWithQuotaFeature();
       if (q != null) { // a directory with quota
         try {
-          q.verifyQuota(nsDelta, dsDelta);
+          q.verifyQuota(deltas);
         } catch (QuotaExceededException e) {
           List<INode> inodes = iip.getReadOnlyINodes();
           final String path = getFullPathName(inodes.toArray(new INode[inodes.size()]), i);
@@ -845,7 +925,7 @@ public class FSDirectory implements Closeable {
       }
     }
   }
-  
+
   /**
    * Add a child to the end of the path specified by INodesInPath.
    * @return an INodesInPath instance containing the new INode
@@ -873,7 +953,7 @@ public class FSDirectory implements Closeable {
     // odd. It's because a rename operation deletes the src, tries to add
     // to the dest, if that fails, re-adds the src from whence it came.
     // The rename code disables the quota when it's restoring to the
-    // original location becase a quota violation would cause the the item
+    // original location because a quota violation would cause the the item
     // to go "poof".  The fs limits must be bypassed for the same reason.
     if (checkQuota) {
       final String parentPath = existing.getPath(pos - 1);
@@ -883,21 +963,19 @@ public class FSDirectory implements Closeable {
     // always verify inode name
     verifyINodeName(inode.getLocalNameBytes());
 
-    final Quota.Counts counts = inode.computeQuotaUsage();
-    updateCount(existing, pos,
-        counts.get(Quota.NAMESPACE), counts.get(Quota.DISKSPACE), checkQuota);
+    final QuotaCounts counts = inode.computeQuotaUsage(getBlockStoragePolicySuite());
+    updateCount(existing, pos, counts, checkQuota);
+
     boolean isRename = (inode.getParent() != null);
     boolean added;
     try {
       added = parent.addChild(inode, true, existing.getLatestSnapshotId());
     } catch (QuotaExceededException e) {
-      updateCountNoQuotaCheck(existing, pos,
-          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+      updateCountNoQuotaCheck(existing, pos, counts.negation());
       throw e;
     }
     if (!added) {
-      updateCountNoQuotaCheck(existing, pos,
-          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+      updateCountNoQuotaCheck(existing, pos, counts.negation());
       return null;
     } else {
       if (!isRename) {
@@ -1023,12 +1101,13 @@ public class FSDirectory implements Closeable {
     INodeFile file = iip.getLastINode().asFile();
     int latestSnapshot = iip.getLatestSnapshotId();
     file.recordModification(latestSnapshot, true);
-    long oldDiskspace = file.diskspaceConsumed();
+    long oldDiskspaceNoRep = file.diskspaceConsumedNoReplication();
     long remainingLength =
         file.collectBlocksBeyondMax(newLength, collectedBlocks);
     file.excludeSnapshotBlocks(latestSnapshot, collectedBlocks);
     file.setModificationTime(mtime);
-    updateCount(iip, 0, file.diskspaceConsumed() - oldDiskspace, true);
+    updateCount(iip, 0, file.diskspaceConsumedNoReplication() - oldDiskspaceNoRep,
+      file.getBlockReplication(), true);
     // return whether on a block boundary
     return (remainingLength - newLength) == 0;
   }
@@ -1102,7 +1181,7 @@ public class FSDirectory implements Closeable {
     readLock();
     try {
       return rootDir.getDirectoryWithQuotaFeature().getSpaceConsumed()
-          .get(Quota.NAMESPACE);
+          .getNameSpace();
     } finally {
       readUnlock();
     }

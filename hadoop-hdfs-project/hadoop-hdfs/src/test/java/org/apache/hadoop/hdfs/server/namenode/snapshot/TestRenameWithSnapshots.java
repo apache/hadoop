@@ -63,7 +63,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
-import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.ChildrenDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
@@ -1198,15 +1198,15 @@ public class TestRenameWithSnapshots {
     assertFalse(hdfs.exists(bar_s2));
     restartClusterAndCheckImage(true);
     // make sure the whole referred subtree has been destroyed
-    Quota.Counts q = fsdir.getRoot().getDirectoryWithQuotaFeature().getSpaceConsumed();  
-    assertEquals(3, q.get(Quota.NAMESPACE));
-    assertEquals(0, q.get(Quota.DISKSPACE));
+    QuotaCounts q = fsdir.getRoot().getDirectoryWithQuotaFeature().getSpaceConsumed();
+    assertEquals(3, q.getNameSpace());
+    assertEquals(0, q.getDiskSpace());
     
     hdfs.deleteSnapshot(sdir1, "s1");
     restartClusterAndCheckImage(true);
-    q = fsdir.getRoot().getDirectoryWithQuotaFeature().getSpaceConsumed();  
-    assertEquals(3, q.get(Quota.NAMESPACE));
-    assertEquals(0, q.get(Quota.DISKSPACE));
+    q = fsdir.getRoot().getDirectoryWithQuotaFeature().getSpaceConsumed();
+    assertEquals(3, q.getNameSpace());
+    assertEquals(0, q.getDiskSpace());
   }
   
   /**
@@ -1600,9 +1600,9 @@ public class TestRenameWithSnapshots {
     // check dir2
     INodeDirectory dir2Node = fsdir2.getINode4Write(dir2.toString()).asDirectory();
     assertTrue(dir2Node.isSnapshottable());
-    Quota.Counts counts = dir2Node.computeQuotaUsage();
-    assertEquals(2, counts.get(Quota.NAMESPACE));
-    assertEquals(0, counts.get(Quota.DISKSPACE));
+    QuotaCounts counts = dir2Node.computeQuotaUsage(fsdir.getBlockStoragePolicySuite());
+    assertEquals(2, counts.getNameSpace());
+    assertEquals(0, counts.getDiskSpace());
     childrenList = ReadOnlyList.Util.asList(dir2Node.asDirectory()
         .getChildrenList(Snapshot.CURRENT_STATE_ID));
     assertEquals(1, childrenList.size());
@@ -1674,9 +1674,9 @@ public class TestRenameWithSnapshots {
     // check dir2
     INodeDirectory dir2Node = fsdir2.getINode4Write(dir2.toString()).asDirectory();
     assertTrue(dir2Node.isSnapshottable());
-    Quota.Counts counts = dir2Node.computeQuotaUsage();
-    assertEquals(3, counts.get(Quota.NAMESPACE));
-    assertEquals(0, counts.get(Quota.DISKSPACE));
+    QuotaCounts counts = dir2Node.computeQuotaUsage(fsdir.getBlockStoragePolicySuite());
+    assertEquals(3, counts.getNameSpace());
+    assertEquals(0, counts.getDiskSpace());
     childrenList = ReadOnlyList.Util.asList(dir2Node.asDirectory()
         .getChildrenList(Snapshot.CURRENT_STATE_ID));
     assertEquals(1, childrenList.size());
@@ -1790,9 +1790,10 @@ public class TestRenameWithSnapshots {
     // check dir2
     INode dir2Node = fsdir.getINode4Write(dir2.toString());
     assertTrue(dir2Node.asDirectory().isSnapshottable());
-    Quota.Counts counts = dir2Node.computeQuotaUsage();
-    assertEquals(4, counts.get(Quota.NAMESPACE));
-    assertEquals(BLOCKSIZE * REPL * 2, counts.get(Quota.DISKSPACE));
+    QuotaCounts counts = dir2Node.computeQuotaUsage(
+        fsdir.getBlockStoragePolicySuite());
+    assertEquals(4, counts.getNameSpace());
+    assertEquals(BLOCKSIZE * REPL * 2, counts.getDiskSpace());
   }
   
   @Test
@@ -1958,12 +1959,12 @@ public class TestRenameWithSnapshots {
     // check
     final INodeDirectory dir1Node = fsdir.getINode4Write(sdir1.toString())
         .asDirectory();
-    Quota.Counts q1 = dir1Node.getDirectoryWithQuotaFeature().getSpaceConsumed();  
-    assertEquals(3, q1.get(Quota.NAMESPACE));
+    QuotaCounts q1 = dir1Node.getDirectoryWithQuotaFeature().getSpaceConsumed();
+    assertEquals(3, q1.getNameSpace());
     final INodeDirectory dir2Node = fsdir.getINode4Write(sdir2.toString())
         .asDirectory();
-    Quota.Counts q2 = dir2Node.getDirectoryWithQuotaFeature().getSpaceConsumed();  
-    assertEquals(1, q2.get(Quota.NAMESPACE));
+    QuotaCounts q2 = dir2Node.getDirectoryWithQuotaFeature().getSpaceConsumed();
+    assertEquals(1, q2.getNameSpace());
     
     final Path foo_s1 = SnapshotTestHelper.getSnapshotPath(sdir1, "s1",
         foo.getName());
@@ -2028,12 +2029,12 @@ public class TestRenameWithSnapshots {
     final INodeDirectory dir1Node = fsdir.getINode4Write(sdir1.toString())
         .asDirectory();
     // sdir1 + s1 + foo_s1 (foo) + foo (foo + s1 + bar~bar3)
-    Quota.Counts q1 = dir1Node.getDirectoryWithQuotaFeature().getSpaceConsumed();  
-    assertEquals(7, q1.get(Quota.NAMESPACE));
+    QuotaCounts q1 = dir1Node.getDirectoryWithQuotaFeature().getSpaceConsumed();
+    assertEquals(7, q1.getNameSpace());
     final INodeDirectory dir2Node = fsdir.getINode4Write(sdir2.toString())
         .asDirectory();
-    Quota.Counts q2 = dir2Node.getDirectoryWithQuotaFeature().getSpaceConsumed();  
-    assertEquals(1, q2.get(Quota.NAMESPACE));
+    QuotaCounts q2 = dir2Node.getDirectoryWithQuotaFeature().getSpaceConsumed();
+    assertEquals(1, q2.getNameSpace());
     
     final Path foo_s1 = SnapshotTestHelper.getSnapshotPath(sdir1, "s1",
         foo.getName());

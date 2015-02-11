@@ -23,6 +23,9 @@ Trunk (Unreleased)
     HDFS-7720. Quota by Storage Type API, tools and ClientNameNode Protocol
     changes. (Xiaoyu Yao via Arpit Agarwal)
 
+    HDFS-7723. Quota By Storage Type namenode implemenation. (Xiaoyu Yao via
+    Arpit Agarwal)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.

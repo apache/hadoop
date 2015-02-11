@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -203,17 +203,17 @@ public class TestSnapshotDeletion {
       final long expectedNs, final long expectedDs) throws IOException {
     INodeDirectory dirNode = getDir(fsdir, dirPath);
     assertTrue(dirNode.isQuotaSet());
-    Quota.Counts q = dirNode.getDirectoryWithQuotaFeature().getSpaceConsumed();
+    QuotaCounts q = dirNode.getDirectoryWithQuotaFeature().getSpaceConsumed();
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
-        q.get(Quota.NAMESPACE));
+        q.getNameSpace());
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
-        q.get(Quota.DISKSPACE));
-    Quota.Counts counts = Quota.Counts.newInstance();
-    dirNode.computeQuotaUsage(counts, false);
+        q.getDiskSpace());
+    QuotaCounts counts = new QuotaCounts.Builder().build();
+    dirNode.computeQuotaUsage(fsdir.getBlockStoragePolicySuite(), counts, false);
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
-        counts.get(Quota.NAMESPACE));
+        counts.getNameSpace());
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
-        counts.get(Quota.DISKSPACE));
+        counts.getDiskSpace());
   }
   
   /**

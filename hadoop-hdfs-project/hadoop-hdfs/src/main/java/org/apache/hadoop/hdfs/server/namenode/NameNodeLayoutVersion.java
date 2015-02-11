@@ -71,7 +71,8 @@ public class NameNodeLayoutVersion {
     XATTRS_NAMESPACE_EXT(-59, "Increase number of xattr namespaces"),
     BLOCK_STORAGE_POLICY(-60, "Block Storage policy"),
     TRUNCATE(-61, "Truncate"),
-    APPEND_NEW_BLOCK(-62, "Support appending to new block");
+    APPEND_NEW_BLOCK(-62, "Support appending to new block"),
+    QUOTA_BY_STORAGE_TYPE(-63, "Support quota for specific storage types");
 
     private final FeatureInfo info;
 

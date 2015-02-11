@@ -20,14 +20,17 @@ package org.apache.hadoop.hdfs.server.namenode;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.StorageType;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.List;
 
 import static org.apache.hadoop.util.Time.now;
 
@@ -140,25 +143,42 @@ class FSDirConcatOp {
     return si.toArray(new INodeFile[si.size()]);
   }
 
-  private static long computeQuotaDelta(INodeFile target, INodeFile[] srcList) {
-    long delta = 0;
+  private static QuotaCounts computeQuotaDeltas(FSDirectory fsd, INodeFile target, INodeFile[] srcList) {
+    QuotaCounts deltas = new QuotaCounts.Builder().build();
     short targetRepl = target.getBlockReplication();
     for (INodeFile src : srcList) {
-      if (targetRepl != src.getBlockReplication()) {
-        delta += src.computeFileSize() *
-            (targetRepl - src.getBlockReplication());
+      short srcRepl = src.getBlockReplication();
+      long fileSize = src.computeFileSize();
+      if (targetRepl != srcRepl) {
+        deltas.addDiskSpace(fileSize * (targetRepl - srcRepl));
+        BlockStoragePolicy bsp =
+            fsd.getBlockStoragePolicySuite().getPolicy(src.getStoragePolicyID());
+        if (bsp != null) {
+          List<StorageType> srcTypeChosen = bsp.chooseStorageTypes(srcRepl);
+          for (StorageType t : srcTypeChosen) {
+            if (t.supportTypeQuota()) {
+              deltas.addTypeSpace(t, -fileSize);
+            }
+          }
+          List<StorageType> targetTypeChosen = bsp.chooseStorageTypes(targetRepl);
+          for (StorageType t : targetTypeChosen) {
+            if (t.supportTypeQuota()) {
+              deltas.addTypeSpace(t, fileSize);
+            }
+          }
+        }
       }
     }
-    return delta;
+    return deltas;
   }
 
   private static void verifyQuota(FSDirectory fsd, INodesInPath targetIIP,
-      long delta) throws QuotaExceededException {
+      QuotaCounts deltas) throws QuotaExceededException {
     if (!fsd.getFSNamesystem().isImageLoaded() || fsd.shouldSkipQuotaChecks()) {
       // Do not check quota if editlog is still being processed
       return;
     }
-    FSDirectory.verifyQuota(targetIIP, targetIIP.length() - 1, 0, delta, null);
+    FSDirectory.verifyQuota(targetIIP, targetIIP.length() - 1, deltas, null);
   }
 
   /**
@@ -174,8 +194,8 @@ class FSDirConcatOp {
     }
 
     final INodeFile trgInode = targetIIP.getLastINode().asFile();
-    long delta = computeQuotaDelta(trgInode, srcList);
-    verifyQuota(fsd, targetIIP, delta);
+    QuotaCounts deltas = computeQuotaDeltas(fsd, trgInode, srcList);
+    verifyQuota(fsd, targetIIP, deltas);
 
     // the target file can be included in a snapshot
     trgInode.recordModification(targetIIP.getLatestSnapshotId());
@@ -195,8 +215,7 @@ class FSDirConcatOp {
 
     trgInode.setModificationTime(timestamp, targetIIP.getLatestSnapshotId());
     trgParent.updateModificationTime(timestamp, targetIIP.getLatestSnapshotId());
-    // update quota on the parent directory ('count' files removed, 0 space)
-    FSDirectory.unprotectedUpdateCount(targetIIP, targetIIP.length() - 1,
-        -count, delta);
+    // update quota on the parent directory with deltas
+    FSDirectory.unprotectedUpdateCount(targetIIP, targetIIP.length() - 1, deltas);
   }
 }

@@ -158,7 +158,7 @@ public class TestFSImageWithSnapshot {
     fsn.getFSDirectory().writeLock();
     try {
       loader.load(imageFile, false);
-      FSImage.updateCountForQuota(
+      FSImage.updateCountForQuota(fsn.getBlockManager().getStoragePolicySuite(),
           INodeDirectory.valueOf(fsn.getFSDirectory().getINode("/"), "/"));
     } finally {
       fsn.getFSDirectory().writeUnlock();
