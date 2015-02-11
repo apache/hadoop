@@ -27,13 +27,13 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7655. Expose truncate API for Web HDFS. (yliu)
 
-    HDFS-7720. Quota by Storage Type API, tools and ClientNameNode Protocol
-    changes. (Xiaoyu Yao via Arpit Agarwal)
-
     HDFS-6133. Add a feature for replica pinning so that a pinned replica
     will not be moved by Balancer/Mover.  (zhaoyunjiong via szetszwo)
 
     HDFS-3689. Add support for variable length block. Contributed by Jing Zhao.
+
+    HDFS-7584. Enable Quota Support for Storage Types. (Xiaoyu Yao via
+    Arpit Agarwal)
 
   IMPROVEMENTS
 

@@ -1225,6 +1225,8 @@ public class DFSTestUtil {
     // OP_SET_QUOTA 14
     filesystem.setQuota(pathDirectoryMkdir, 1000L, 
         HdfsConstants.QUOTA_DONT_SET);
+    // OP_SET_QUOTA_BY_STORAGETYPE
+    filesystem.setQuotaByStorageType(pathDirectoryMkdir, StorageType.SSD, 888L);
     // OP_RENAME 15
     fc.rename(pathFileCreate, pathFileMoved, Rename.NONE);
     // OP_CONCAT_DELETE 16

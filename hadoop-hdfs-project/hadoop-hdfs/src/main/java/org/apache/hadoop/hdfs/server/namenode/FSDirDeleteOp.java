@@ -230,13 +230,14 @@ class FSDirDeleteOp {
 
     // collect block and update quota
     if (!targetNode.isInLatestSnapshot(latestSnapshot)) {
-      targetNode.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+      targetNode.destroyAndCollectBlocks(fsd.getBlockStoragePolicySuite(),
+        collectedBlocks, removedINodes);
     } else {
-      Quota.Counts counts = targetNode.cleanSubtree(CURRENT_STATE_ID,
+      QuotaCounts counts = targetNode.cleanSubtree(
+        fsd.getBlockStoragePolicySuite(), CURRENT_STATE_ID,
           latestSnapshot, collectedBlocks, removedINodes);
-      removed = counts.get(Quota.NAMESPACE);
-      fsd.updateCountNoQuotaCheck(iip, iip.length() - 1,
-          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+      removed = counts.getNameSpace();
+      fsd.updateCountNoQuotaCheck(iip, iip.length() -1, counts.negation());
     }
 
     if (NameNode.stateChangeLog.isDebugEnabled()) {

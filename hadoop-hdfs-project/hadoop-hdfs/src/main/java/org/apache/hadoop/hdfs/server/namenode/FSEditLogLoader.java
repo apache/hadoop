@@ -597,14 +597,14 @@ public class FSEditLogLoader {
       SetNSQuotaOp setNSQuotaOp = (SetNSQuotaOp)op;
       FSDirAttrOp.unprotectedSetQuota(
           fsDir, renameReservedPathsOnUpgrade(setNSQuotaOp.src, logVersion),
-          setNSQuotaOp.nsQuota, HdfsConstants.QUOTA_DONT_SET);
+          setNSQuotaOp.nsQuota, HdfsConstants.QUOTA_DONT_SET, null);
       break;
     }
     case OP_CLEAR_NS_QUOTA: {
       ClearNSQuotaOp clearNSQuotaOp = (ClearNSQuotaOp)op;
       FSDirAttrOp.unprotectedSetQuota(
           fsDir, renameReservedPathsOnUpgrade(clearNSQuotaOp.src, logVersion),
-          HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_DONT_SET);
+          HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_DONT_SET, null);
       break;
     }
 
@@ -612,8 +612,17 @@ public class FSEditLogLoader {
       SetQuotaOp setQuotaOp = (SetQuotaOp) op;
       FSDirAttrOp.unprotectedSetQuota(fsDir,
           renameReservedPathsOnUpgrade(setQuotaOp.src, logVersion),
-          setQuotaOp.nsQuota, setQuotaOp.dsQuota);
+          setQuotaOp.nsQuota, setQuotaOp.dsQuota, null);
       break;
+
+    case OP_SET_QUOTA_BY_STORAGETYPE:
+        FSEditLogOp.SetQuotaByStorageTypeOp setQuotaByStorageTypeOp =
+          (FSEditLogOp.SetQuotaByStorageTypeOp) op;
+        FSDirAttrOp.unprotectedSetQuota(fsDir,
+          renameReservedPathsOnUpgrade(setQuotaByStorageTypeOp.src, logVersion),
+          HdfsConstants.QUOTA_DONT_SET, setQuotaByStorageTypeOp.dsQuota,
+          setQuotaByStorageTypeOp.type);
+        break;
 
     case OP_TIMES: {
       TimesOp timesOp = (TimesOp)op;

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -115,5 +116,9 @@ public class ContentSummaryComputationContext {
   /** Get the content counts */
   public Content.Counts getCounts() {
     return counts;
+  }
+
+  public BlockStoragePolicySuite getBlockStoragePolicySuite() {
+      return fsn.getBlockManager().getStoragePolicySuite();
   }
 }

@@ -141,6 +141,15 @@ message INodeSection {
     optional uint32 storagePolicyID = 10;
   }
 
+  message QuotaByStorageTypeEntryProto {
+    required StorageTypeProto storageType = 1;
+    required uint64 quota = 2;
+  }
+
+  message QuotaByStorageTypeFeatureProto {
+    repeated QuotaByStorageTypeEntryProto quotas = 1;
+  }
+
   message INodeDirectory {
     optional uint64 modificationTime = 1;
     // namespace quota
@@ -150,6 +159,7 @@ message INodeSection {
     optional fixed64 permission = 4;
     optional AclFeatureProto acl = 5;
     optional XAttrFeatureProto xAttrs = 6;
+    optional QuotaByStorageTypeFeatureProto typeQuotas = 7;
   }
 
   message INodeSymlink {

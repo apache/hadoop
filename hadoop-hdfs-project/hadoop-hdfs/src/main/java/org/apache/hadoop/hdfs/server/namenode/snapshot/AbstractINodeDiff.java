@@ -21,10 +21,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
-import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 
 import com.google.common.base.Preconditions;
@@ -114,17 +115,21 @@ abstract class AbstractINodeDiff<N extends INode,
   }
 
   /** Combine the posterior diff and collect blocks for deletion. */
-  abstract Quota.Counts combinePosteriorAndCollectBlocks(final N currentINode,
+  abstract QuotaCounts combinePosteriorAndCollectBlocks(
+      final BlockStoragePolicySuite bsps, final N currentINode,
       final D posterior, final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes);
   
   /**
    * Delete and clear self.
+   * @param bsps The block storage policy suite used to retrieve storage policy
    * @param currentINode The inode where the deletion happens.
    * @param collectedBlocks Used to collect blocks for deletion.
+   * @param removedINodes INodes removed
    * @return quota usage delta
    */
-  abstract Quota.Counts destroyDiffAndCollectBlocks(final N currentINode,
+  abstract QuotaCounts destroyDiffAndCollectBlocks(
+      final BlockStoragePolicySuite bsps, final N currentINode,
       final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes);
 
   @Override

@@ -21,13 +21,17 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.AclStorage;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
-import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
+import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.util.EnumCounters;
 
 /**
  * Feature for file with snapshot-related information.
@@ -114,7 +118,8 @@ public class FileWithSnapshotFeature implements INode.Feature {
     return (isCurrentFileDeleted()? "(DELETED), ": ", ") + diffs;
   }
   
-  public Quota.Counts cleanFile(final INodeFile file, final int snapshotId,
+  public QuotaCounts cleanFile(final BlockStoragePolicySuite bsps,
+      final INodeFile file, final int snapshotId,
       int priorSnapshotId, final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
@@ -123,11 +128,11 @@ public class FileWithSnapshotFeature implements INode.Feature {
         file.recordModification(priorSnapshotId);
         deleteCurrentFile();
       }
-      collectBlocksAndClear(file, collectedBlocks, removedINodes);
-      return Quota.Counts.newInstance();
+      collectBlocksAndClear(bsps, file, collectedBlocks, removedINodes);
+      return new QuotaCounts.Builder().build();
     } else { // delete the snapshot
       priorSnapshotId = getDiffs().updatePrior(snapshotId, priorSnapshotId);
-      return diffs.deleteSnapshotDiff(snapshotId, priorSnapshotId, file,
+      return diffs.deleteSnapshotDiff(bsps, snapshotId, priorSnapshotId, file,
           collectedBlocks, removedINodes);
     }
   }
@@ -136,17 +141,52 @@ public class FileWithSnapshotFeature implements INode.Feature {
     this.diffs.clear();
   }
   
-  public Quota.Counts updateQuotaAndCollectBlocks(INodeFile file,
+  public QuotaCounts updateQuotaAndCollectBlocks(BlockStoragePolicySuite bsps, INodeFile file,
       FileDiff removed, BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) {
     long oldDiskspace = file.diskspaceConsumed();
+
+    byte storagePolicyID = file.getStoragePolicyID();
+    BlockStoragePolicy bsp = null;
+    EnumCounters<StorageType> typeSpaces =
+        new EnumCounters<StorageType>(StorageType.class);
+    if (storagePolicyID != BlockStoragePolicySuite.ID_UNSPECIFIED) {
+      bsp = bsps.getPolicy(file.getStoragePolicyID());
+    }
+
     if (removed.snapshotINode != null) {
       short replication = removed.snapshotINode.getFileReplication();
       short currentRepl = file.getBlockReplication();
       if (currentRepl == 0) {
-        oldDiskspace = file.computeFileSize(true, true) * replication;
-      } else if (replication > currentRepl) {  
-        oldDiskspace = oldDiskspace / file.getBlockReplication() * replication;
+        long oldFileSizeNoRep = file.computeFileSize(true, true);
+        oldDiskspace =  oldFileSizeNoRep * replication;
+
+        if (bsp != null) {
+          List<StorageType> oldTypeChosen = bsp.chooseStorageTypes(replication);
+          for (StorageType t : oldTypeChosen) {
+            if (t.supportTypeQuota()) {
+              typeSpaces.add(t, -oldFileSizeNoRep);
+            }
+          }
+        }
+      } else if (replication > currentRepl) {
+        long oldFileSizeNoRep = file.diskspaceConsumedNoReplication();
+        oldDiskspace = oldFileSizeNoRep * replication;
+
+        if (bsp != null) {
+          List<StorageType> oldTypeChosen = bsp.chooseStorageTypes(replication);
+          for (StorageType t : oldTypeChosen) {
+            if (t.supportTypeQuota()) {
+              typeSpaces.add(t, -oldFileSizeNoRep);
+            }
+          }
+          List<StorageType> newTypeChosen = bsp.chooseStorageTypes(currentRepl);
+          for (StorageType t: newTypeChosen) {
+            if (t.supportTypeQuota()) {
+              typeSpaces.add(t, oldFileSizeNoRep);
+            }
+          }
+        }
       }
       AclFeature aclFeature = removed.getSnapshotINode().getAclFeature();
       if (aclFeature != null) {
@@ -155,21 +195,24 @@ public class FileWithSnapshotFeature implements INode.Feature {
     }
 
     getDiffs().combineAndCollectSnapshotBlocks(
-        file, removed, collectedBlocks, removedINodes);
+        bsps, file, removed, collectedBlocks, removedINodes);
 
     long dsDelta = oldDiskspace - file.diskspaceConsumed();
-    return Quota.Counts.newInstance(0, dsDelta);
+    return new QuotaCounts.Builder().
+        spaceCount(dsDelta).
+        typeCounts(typeSpaces).
+        build();
   }
 
   /**
    * If some blocks at the end of the block list no longer belongs to
    * any inode, collect them and update the block list.
    */
-  public void collectBlocksAndClear(final INodeFile file,
+  public void collectBlocksAndClear(final BlockStoragePolicySuite bsps, final INodeFile file,
       final BlocksMapUpdateInfo info, final List<INode> removedINodes) {
     // check if everything is deleted.
     if (isCurrentFileDeleted() && getDiffs().asList().isEmpty()) {
-      file.destroyAndCollectBlocks(info, removedINodes);
+      file.destroyAndCollectBlocks(bsps, info, removedINodes);
       return;
     }
     // find max file size.

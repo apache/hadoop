@@ -254,6 +254,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -2117,7 +2118,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     // update the quota: use the preferred block size for UC block
     final long diff =
         file.getPreferredBlockSize() - truncatedBlockUC.getNumBytes();
-    dir.updateSpaceConsumed(iip, 0, diff * file.getBlockReplication());
+    dir.updateSpaceConsumed(iip, 0, diff, file.getBlockReplication());
     return newBlock;
   }
 
@@ -2664,7 +2665,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (ret != null) {
         // update the quota: use the preferred block size for UC block
         final long diff = file.getPreferredBlockSize() - ret.getBlockSize();
-        dir.updateSpaceConsumed(iip, 0, diff * file.getBlockReplication());
+        dir.updateSpaceConsumed(iip, 0, diff, file.getBlockReplication());
       }
     } else {
       BlockInfoContiguous lastBlock = file.getLastBlock();
@@ -3802,19 +3803,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Set the namespace quota and diskspace quota for a directory.
-   * See {@link ClientProtocol#setQuota(String, long, long)} for the 
+   * See {@link ClientProtocol#setQuota(String, long, long, StorageType)} for the
    * contract.
    * 
    * Note: This does not support ".inodes" relative path.
    */
-  void setQuota(String src, long nsQuota, long dsQuota)
+  void setQuota(String src, long nsQuota, long dsQuota, StorageType type)
       throws IOException {
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set quota on " + src);
-      FSDirAttrOp.setQuota(dir, src, nsQuota, dsQuota);
+      FSDirAttrOp.setQuota(dir, src, nsQuota, dsQuota, type);
     } finally {
       writeUnlock();
     }
@@ -4041,7 +4042,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final long diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();    
     if (diff > 0) {
       try {
-        dir.updateSpaceConsumed(iip, 0, -diff*fileINode.getFileReplication());
+        dir.updateSpaceConsumed(iip, 0, -diff, fileINode.getFileReplication());
       } catch (IOException e) {
         LOG.warn("Unexpected exception while updating disk space.", e);
       }

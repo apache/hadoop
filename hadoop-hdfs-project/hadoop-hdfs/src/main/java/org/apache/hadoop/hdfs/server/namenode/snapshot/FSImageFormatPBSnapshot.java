@@ -34,9 +34,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
@@ -66,12 +68,15 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.INodeWithAdditionalFields;
+import org.apache.hadoop.hdfs.server.namenode.QuotaByStorageTypeEntry;
 import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceContext;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
+import org.apache.hadoop.hdfs.util.EnumCounters;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
@@ -344,13 +349,31 @@ public class FSImageFormatPBSnapshot {
 
           long modTime = dirCopyInPb.getModificationTime();
           boolean noQuota = dirCopyInPb.getNsQuota() == -1
-              && dirCopyInPb.getDsQuota() == -1;
+              && dirCopyInPb.getDsQuota() == -1
+              && (!dirCopyInPb.hasTypeQuotas());
 
-          copy = noQuota ? new INodeDirectoryAttributes.SnapshotCopy(name,
-              permission, acl, modTime, xAttrs)
-              : new INodeDirectoryAttributes.CopyWithQuota(name, permission,
-                  acl, modTime, dirCopyInPb.getNsQuota(),
-                  dirCopyInPb.getDsQuota(), xAttrs);
+          if (noQuota) {
+            copy = new INodeDirectoryAttributes.SnapshotCopy(name,
+              permission, acl, modTime, xAttrs);
+          } else {
+            EnumCounters<StorageType> typeQuotas = null;
+            if (dirCopyInPb.hasTypeQuotas()) {
+              ImmutableList<QuotaByStorageTypeEntry> qes =
+                  FSImageFormatPBINode.Loader.loadQuotaByStorageTypeEntries(
+                      dirCopyInPb.getTypeQuotas());
+              typeQuotas = new EnumCounters<StorageType>(StorageType.class,
+                  HdfsConstants.QUOTA_RESET);
+              for (QuotaByStorageTypeEntry qe : qes) {
+                if (qe.getQuota() >= 0 && qe.getStorageType() != null &&
+                    qe.getStorageType().supportTypeQuota()) {
+                  typeQuotas.set(qe.getStorageType(), qe.getQuota());
+                }
+              }
+            }
+            copy = new INodeDirectoryAttributes.CopyWithQuota(name, permission,
+                acl, modTime, dirCopyInPb.getNsQuota(),
+                dirCopyInPb.getDsQuota(), typeQuotas, xAttrs);
+          }
         }
         // load created list
         List<INode> clist = loadCreatedList(in, dir,

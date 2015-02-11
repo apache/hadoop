@@ -64,6 +64,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_TRUNCAT
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_BLOCKS;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_MASTER_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_STORAGE_POLICY;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_QUOTA_BY_STORAGETYPE;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -106,6 +107,7 @@ import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.XAttrEditLogProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
@@ -211,6 +213,7 @@ public abstract class FSEditLogOp {
       inst.put(OP_REMOVE_XATTR, new RemoveXAttrOp());
       inst.put(OP_SET_STORAGE_POLICY, new SetStoragePolicyOp());
       inst.put(OP_APPEND, new AppendOp());
+      inst.put(OP_SET_QUOTA_BY_STORAGETYPE, new SetQuotaByStorageTypeOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
@@ -2265,6 +2268,88 @@ public abstract class FSEditLogOp {
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.src = st.getValue("SRC");
       this.nsQuota = Long.parseLong(st.getValue("NSQUOTA"));
+      this.dsQuota = Long.parseLong(st.getValue("DSQUOTA"));
+    }
+  }
+
+  /** {@literal @Idempotent} for {@link ClientProtocol#setQuota} */
+  static class SetQuotaByStorageTypeOp extends FSEditLogOp {
+    String src;
+    long dsQuota;
+    StorageType type;
+
+    private SetQuotaByStorageTypeOp() {
+      super(OP_SET_QUOTA_BY_STORAGETYPE);
+    }
+
+    static SetQuotaByStorageTypeOp getInstance(OpInstanceCache cache) {
+      return (SetQuotaByStorageTypeOp)cache.get(OP_SET_QUOTA_BY_STORAGETYPE);
+    }
+
+    @Override
+    void resetSubFields() {
+      src = null;
+      dsQuota = -1L;
+      type = StorageType.DEFAULT;
+    }
+
+    SetQuotaByStorageTypeOp setSource(String src) {
+      this.src = src;
+      return this;
+    }
+
+    SetQuotaByStorageTypeOp setQuotaByStorageType(long dsQuota, StorageType type) {
+      this.type = type;
+      this.dsQuota = dsQuota;
+      return this;
+    }
+
+    @Override
+    public
+    void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(src, out);
+      FSImageSerialization.writeInt(type.ordinal(), out);
+      FSImageSerialization.writeLong(dsQuota, out);
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion)
+      throws IOException {
+      this.src = FSImageSerialization.readString(in);
+      this.type = StorageType.parseStorageType(FSImageSerialization.readInt(in));
+      this.dsQuota = FSImageSerialization.readLong(in);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("SetTypeQuotaOp [src=");
+      builder.append(src);
+      builder.append(", storageType=");
+      builder.append(type);
+      builder.append(", dsQuota=");
+      builder.append(dsQuota);
+      builder.append(", opCode=");
+      builder.append(opCode);
+      builder.append(", txid=");
+      builder.append(txid);
+      builder.append("]");
+      return builder.toString();
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SRC", src);
+      XMLUtils.addSaxString(contentHandler, "STORAGETYPE",
+        Integer.toString(type.ordinal()));
+      XMLUtils.addSaxString(contentHandler, "DSQUOTA",
+        Long.toString(dsQuota));
+    }
+
+    @Override void fromXml(Stanza st) throws InvalidXmlException {
+      this.src = st.getValue("SRC");
+      this.type = StorageType.parseStorageType(
+          Integer.parseInt(st.getValue("STORAGETYPE")));
       this.dsQuota = Long.parseLong(st.getValue("DSQUOTA"));
     }
   }
