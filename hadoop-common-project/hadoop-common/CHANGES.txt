@@ -385,6 +385,8 @@ Trunk (Unreleased)
     HADOOP-11581. Multithreaded correctness Warnings
     #org.apache.hadoop.fs.shell.Ls (Brahma Reddy Battula via aw)
 
+    HADOOP-11580. Remove SingleNodeSetup.md from trunk (aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
