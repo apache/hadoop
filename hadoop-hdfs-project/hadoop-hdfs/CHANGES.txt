@@ -915,6 +915,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7753. Fix Multithreaded correctness Warnings in BackupImage.
     (Rakesh R and shv)
 
+    HDFS-7736. Fix typos in dfsadmin/fsck/snapshotDiff usage messages.
+    (Brahma Reddy Battula via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
