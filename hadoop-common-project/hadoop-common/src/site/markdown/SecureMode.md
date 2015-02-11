@@ -162,7 +162,7 @@ Hadoop maps Kerberos principal to OS user account using the rule specified by `h
 
 By default, it picks the first component of principal name as a user name if the realms matches to the `default_realm` (usually defined in /etc/krb5.conf). For example, `host/full.qualified.domain.name@REALM.TLD` is mapped to `host` by default rule.
 
-Custom rules can be tested using the <<<hadoop kerbname>>> command.  This command allows one to specify a principal and apply Hadoop's current auth_to_local ruleset.  The output will be what identity Hadoop will use for its usage.
+Custom rules can be tested using the `hadoop kerbname` command.  This command allows one to specify a principal and apply Hadoop's current auth_to_local ruleset.  The output will be what identity Hadoop will use for its usage.
 
 ### Mapping from user to group
 
@@ -216,20 +216,20 @@ The following table lists various paths on HDFS and local filesystems (on all no
 
 | Filesystem | Path | User:Group | Permissions |
 |:---- |:---- |:---- |:---- |
-| local | `dfs.namenode.name.dir` | hdfs:hadoop | drwx------ |
-| local | `dfs.datanode.data.dir` | hdfs:hadoop | drwx------ |
-| local | $HADOOP\_LOG\_DIR | hdfs:hadoop | drwxrwxr-x |
-| local | $YARN\_LOG\_DIR | yarn:hadoop | drwxrwxr-x |
-| local | `yarn.nodemanager.local-dirs` | yarn:hadoop | drwxr-xr-x |
-| local | `yarn.nodemanager.log-dirs` | yarn:hadoop | drwxr-xr-x |
-| local | container-executor | root:hadoop | --Sr-s--* |
-| local | `conf/container-executor.cfg` | root:hadoop | r-------* |
-| hdfs | / | hdfs:hadoop | drwxr-xr-x |
-| hdfs | /tmp | hdfs:hadoop | drwxrwxrwxt |
-| hdfs | /user | hdfs:hadoop | drwxr-xr-x |
-| hdfs | `yarn.nodemanager.remote-app-log-dir` | yarn:hadoop | drwxrwxrwxt |
-| hdfs | `mapreduce.jobhistory.intermediate-done-dir` | mapred:hadoop | drwxrwxrwxt |
-| hdfs | `mapreduce.jobhistory.done-dir` | mapred:hadoop | drwxr-x--- |
+| local | `dfs.namenode.name.dir` | hdfs:hadoop | `drwx------` |
+| local | `dfs.datanode.data.dir` | hdfs:hadoop | `drwx------` |
+| local | $HADOOP\_LOG\_DIR | hdfs:hadoop | `drwxrwxr-x` |
+| local | $YARN\_LOG\_DIR | yarn:hadoop | `drwxrwxr-x` |
+| local | `yarn.nodemanager.local-dirs` | yarn:hadoop | `drwxr-xr-x` |
+| local | `yarn.nodemanager.log-dirs` | yarn:hadoop | `drwxr-xr-x` |
+| local | container-executor | root:hadoop | `--Sr-s--*` |
+| local | `conf/container-executor.cfg` | root:hadoop | `r-------*` |
+| hdfs | / | hdfs:hadoop | `drwxr-xr-x` |
+| hdfs | /tmp | hdfs:hadoop | `drwxrwxrwxt` |
+| hdfs | /user | hdfs:hadoop | `drwxr-xr-x` |
+| hdfs | `yarn.nodemanager.remote-app-log-dir` | yarn:hadoop | `drwxrwxrwxt` |
+| hdfs | `mapreduce.jobhistory.intermediate-done-dir` | mapred:hadoop | `drwxrwxrwxt` |
+| hdfs | `mapreduce.jobhistory.done-dir` | mapred:hadoop | `drwxr-x---` |
 
 ### Common Configurations
 
@@ -336,9 +336,9 @@ To build the LinuxContainerExecutor executable run:
 
 The path passed in `-Dcontainer-executor.conf.dir` should be the path on the cluster nodes where a configuration file for the setuid executable should be located. The executable should be installed in $HADOOP\_YARN\_HOME/bin.
 
-The executable must have specific permissions: 6050 or --Sr-s--- permissions user-owned by *root* (super-user) and group-owned by a special group (e.g. `hadoop`) of which the NodeManager Unix user is the group member and no ordinary application user is. If any application user belongs to this special group, security will be compromised. This special group name should be specified for the configuration property `yarn.nodemanager.linux-container-executor.group` in both `conf/yarn-site.xml` and `conf/container-executor.cfg`.
+The executable must have specific permissions: 6050 or `--Sr-s---` permissions user-owned by *root* (super-user) and group-owned by a special group (e.g. `hadoop`) of which the NodeManager Unix user is the group member and no ordinary application user is. If any application user belongs to this special group, security will be compromised. This special group name should be specified for the configuration property `yarn.nodemanager.linux-container-executor.group` in both `conf/yarn-site.xml` and `conf/container-executor.cfg`.
 
-For example, let's say that the NodeManager is run as user *yarn* who is part of the groups users and *hadoop*, any of them being the primary group. Let also be that *users* has both *yarn* and another user (application submitter) *alice* as its members, and *alice* does not belong to *hadoop*. Going by the above description, the setuid/setgid executable should be set 6050 or --Sr-s--- with user-owner as *yarn* and group-owner as *hadoop* which has *yarn* as its member (and not *users* which has *alice* also as its member besides *yarn*).
+For example, let's say that the NodeManager is run as user *yarn* who is part of the groups users and *hadoop*, any of them being the primary group. Let also be that *users* has both *yarn* and another user (application submitter) *alice* as its members, and *alice* does not belong to *hadoop*. Going by the above description, the setuid/setgid executable should be set 6050 or `--Sr-s---` with user-owner as *yarn* and group-owner as *hadoop* which has *yarn* as its member (and not *users* which has *alice* also as its member besides *yarn*).
 
 The LinuxTaskController requires that paths including and leading up to the directories specified in `yarn.nodemanager.local-dirs` and `yarn.nodemanager.log-dirs` to be set 755 permissions as described above in the table on permissions on directories.
 
@@ -346,7 +346,7 @@ The LinuxTaskController requires that paths including and leading up to the dire
 
 The executable requires a configuration file called `container-executor.cfg` to be present in the configuration directory passed to the mvn target mentioned above.
 
-The configuration file must be owned by the user running NodeManager (user `yarn` in the above example), group-owned by anyone and should have the permissions 0400 or r--------.
+The configuration file must be owned by the user running NodeManager (user `yarn` in the above example), group-owned by anyone and should have the permissions 0400 or `r--------` .
 
 The executable requires following configuration items to be present in the `conf/container-executor.cfg` file. The items should be mentioned as simple key=value pairs, one per-line:
 
@@ -361,10 +361,10 @@ To re-cap, here are the local file-sysytem permissions required for the various 
 
 | Filesystem | Path | User:Group | Permissions |
 |:---- |:---- |:---- |:---- |
-| local | container-executor | root:hadoop | --Sr-s--* |
-| local | `conf/container-executor.cfg` | root:hadoop | r-------* |
-| local | `yarn.nodemanager.local-dirs` | yarn:hadoop | drwxr-xr-x |
-| local | `yarn.nodemanager.log-dirs` | yarn:hadoop | drwxr-xr-x |
+| local | container-executor | root:hadoop | `--Sr-s--*` |
+| local | `conf/container-executor.cfg` | root:hadoop | `r-------*` |
+| local | `yarn.nodemanager.local-dirs` | yarn:hadoop | `drwxr-xr-x` |
+| local | `yarn.nodemanager.log-dirs` | yarn:hadoop | `drwxr-xr-x` |
 
 ### MapReduce JobHistory Server
 
