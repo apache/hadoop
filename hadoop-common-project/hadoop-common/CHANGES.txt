@@ -183,6 +183,8 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11520. Clean incomplete multi-part uploads in S3A tests.
     (Thomas Demoor via stevel)
 
+    HADOOP-11579. Documentation for truncate. (shv)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
