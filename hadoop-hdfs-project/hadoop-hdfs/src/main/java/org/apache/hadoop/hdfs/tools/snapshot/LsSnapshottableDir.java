@@ -37,7 +37,7 @@ import org.apache.hadoop.util.ToolRunner;
 public class LsSnapshottableDir extends Configured implements Tool {
   @Override
   public int run(String[] argv) throws Exception {
-    String description = "LsSnapshottableDir: \n" +
+    String description = "hdfs lsSnapshottableDir: \n" +
         "\tGet the list of snapshottable directories that are owned by the current user.\n" +
         "\tReturn all the snapshottable directories if the current user is a super user.\n";
 
