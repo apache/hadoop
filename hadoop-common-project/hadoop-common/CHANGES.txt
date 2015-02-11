@@ -377,6 +377,9 @@ Trunk (Unreleased)
 
     HADOOP-10908. Common needs updates for shell rewrite (aw)
 
+    HADOOP-11559. Add links to RackAwareness and InterfaceClassification
+    to site index (Masatake Iwasaki via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
