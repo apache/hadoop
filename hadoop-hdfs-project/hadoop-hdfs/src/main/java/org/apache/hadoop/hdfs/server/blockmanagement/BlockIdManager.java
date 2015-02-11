@@ -217,6 +217,11 @@ public class BlockIdManager {
   }
 
   public static long convertToGroupID(long id) {
-    return id & (~(HdfsConstants.MAX_BLOCKS_IN_GROUP - 1));
+    return id & (~HdfsConstants.BLOCK_GROUP_INDEX_MASK);
+  }
+
+  public static int getBlockIndex(Block reportedBlock) {
+    return (int) (reportedBlock.getBlockId() &
+        HdfsConstants.BLOCK_GROUP_INDEX_MASK);
   }
 }

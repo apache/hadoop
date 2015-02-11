@@ -445,8 +445,8 @@ public class FSDirectory implements Closeable {
    * Add a block to the file. Returns a reference to the added block.
    */
   BlockInfoContiguous addBlock(String path, INodesInPath inodesInPath,
-      Block block, DatanodeStorageInfo[] targets,
-      boolean isStriped) throws IOException {
+      Block block, DatanodeStorageInfo[] targets, boolean isStriped)
+      throws IOException {
     writeLock();
     try {
       final INodeFile fileINode = inodesInPath.getLastINode().asFile();

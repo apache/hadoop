@@ -183,5 +183,6 @@ public class HdfsConstants {
 
   public static final byte NUM_DATA_BLOCKS = 3;
   public static final byte NUM_PARITY_BLOCKS = 2;
+  public static final long BLOCK_GROUP_INDEX_MASK = 15;
   public static final byte MAX_BLOCKS_IN_GROUP = 16;
 }
