@@ -831,3 +831,38 @@ HDFS's restrictions may be an implementation detail of how it implements
 a sequence. As no other filesystem in the Hadoop core codebase
 implements this method, there is no way to distinguish implementation detail.
 from specification.
+
+
+### `boolean truncate(Path p, long newLength)`
+
+Truncate file `p` to the specified `newLength`.
+
+Implementations MAY throw `UnsupportedOperationException`.
+
+#### Preconditions
+
+    if not exists(FS, p) : raise FileNotFoundException
+
+    if isDir(FS, p) : raise [FileNotFoundException, IOException]
+
+    if newLength < 0 || newLength > len(FS.Files[p]) : raise HadoopIllegalArgumentException
+
+HDFS: The source file MUST be closed.
+Truncate cannot be performed on a file, which is open for writing or appending.
+
+#### Postconditions
+
+    FS' where:
+        len(FS.Files[p]) = newLength
+
+Return: `true`, if truncation is finished and the file can be immediately
+opened for appending, or `false` otherwise.
+
+HDFS: HDFS reutrns `false` to indicate that a background process of adjusting
+the length of the last block has been started, and clients should wait for it
+to complete before they can proceed with further file updates.
+
+#### Concurrency
+
+If an input stream is open when truncate() occurs, the outcome of read
+operations related to the part of the file being truncated is undefined.
