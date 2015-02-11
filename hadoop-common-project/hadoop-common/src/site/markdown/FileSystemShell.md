@@ -54,6 +54,7 @@
     * [test](#test)
     * [text](#text)
     * [touchz](#touchz)
+    * [truncate](#truncate)
     * [usage](#usage)
 
 Overview
@@ -680,6 +681,25 @@ Example:
 * `hadoop fs -touchz pathname`
 
 Exit Code: Returns 0 on success and -1 on error.
+
+truncate
+--------
+
+Usage: `hadoop fs -truncate [-w] <length> <paths>`
+
+Truncate all files that match the specified file pattern
+to the specified length.
+
+Options:
+
+* The -w flag requests that the command waits for block recovery to complete, if necessary.  
+Without -w flag the file may remain unclosed for some time while the recovery is in progress.  
+During this time file cannot be reopened for append.
+
+Example:
+
+* `hadoop fs -truncate 55 /user/hadoop/file1 /user/hadoop/file2`
+* `hadoop fs -truncate -w 127 hdfs://nn1.example.com/user/hadoop/file1`
 
 usage
 -----
