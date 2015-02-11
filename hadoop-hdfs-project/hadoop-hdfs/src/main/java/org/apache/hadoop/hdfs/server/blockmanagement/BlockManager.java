@@ -618,8 +618,8 @@ public class BlockManager implements BlockStatsMXBean {
    * of replicas reported from data-nodes.
    */
   private static boolean commitBlock(
-      final BlockInfoContiguousUnderConstruction block, final Block commitBlock)
-      throws IOException {
+      final BlockInfoContiguousUnderConstruction block,
+      final Block commitBlock) throws IOException {
     if (block.getBlockUCState() == BlockUCState.COMMITTED)
       return false;
     assert block.getNumBytes() <= commitBlock.getNumBytes() :
@@ -650,7 +650,7 @@ public class BlockManager implements BlockStatsMXBean {
       return false; // already completed (e.g. by syncBlock)
     
     final boolean b = commitBlock(
-        (BlockInfoContiguousUnderConstruction) lastBlock, commitBlock);
+        (BlockInfoContiguousUnderConstruction)lastBlock, commitBlock);
     if(countNodes(lastBlock).liveReplicas() >= minReplication)
       completeBlock(bc, bc.numBlocks()-1, false);
     return b;
@@ -668,10 +668,11 @@ public class BlockManager implements BlockStatsMXBean {
     if(blkIndex < 0)
       return null;
     BlockInfo curBlock = bc.getBlocks()[blkIndex];
-    if(curBlock.isComplete())
+    if (curBlock.isComplete())
       return curBlock;
+    // TODO: support BlockInfoStripedUC
     BlockInfoContiguousUnderConstruction ucBlock =
-        (BlockInfoContiguousUnderConstruction) curBlock;
+        (BlockInfoContiguousUnderConstruction)curBlock;
     int numNodes = ucBlock.numNodes();
     if (!force && numNodes < minReplication)
       throw new IOException("Cannot complete block: " +
@@ -697,13 +698,15 @@ public class BlockManager implements BlockStatsMXBean {
     return blocksMap.replaceBlock(completeBlock);
   }
 
+  // TODO: support BlockInfoStrippedUC
   private BlockInfo completeBlock(final BlockCollection bc,
       final BlockInfo block, boolean force) throws IOException {
-    BlockInfo[] fileBlocks = bc.getBlocks();
-    for(int idx = 0; idx < fileBlocks.length; idx++)
-      if(fileBlocks[idx] == block) {
+    BlockInfoContiguous[] fileBlocks = bc.getBlocks();
+    for (int idx = 0; idx < fileBlocks.length; idx++) {
+      if (fileBlocks[idx] == block) {
         return completeBlock(bc, idx, force);
       }
+    }
     return block;
   }
   
@@ -744,8 +747,8 @@ public class BlockManager implements BlockStatsMXBean {
 
     DatanodeStorageInfo[] targets = getStorages(oldBlock);
 
-    BlockInfoContiguousUnderConstruction ucBlock =
-        bc.setLastBlock(oldBlock, targets);
+    BlockInfoContiguousUnderConstruction ucBlock = bc.setLastBlock(oldBlock,
+        targets);
     blocksMap.replaceBlock(ucBlock);
 
     // Remove block from replication queue.
@@ -1155,7 +1158,8 @@ public class BlockManager implements BlockStatsMXBean {
   public void findAndMarkBlockAsCorrupt(final ExtendedBlock blk,
       final DatanodeInfo dn, String storageID, String reason) throws IOException {
     assert namesystem.hasWriteLock();
-    final BlockInfo storedBlock = getStoredBlock(blk.getLocalBlock());
+    final Block reportedBlock = blk.getLocalBlock();
+    final BlockInfo storedBlock = getStoredBlock(reportedBlock);
     if (storedBlock == null) {
       // Check if the replica is in the blockMap, if not
       // ignore the request for now. This could happen when BlockScanner
@@ -1172,7 +1176,7 @@ public class BlockManager implements BlockStatsMXBean {
           + ") does not exist");
     }
     
-    markBlockAsCorrupt(new BlockToMarkCorrupt(storedBlock,
+    markBlockAsCorrupt(new BlockToMarkCorrupt(reportedBlock, storedBlock,
             blk.getGenerationStamp(), reason, Reason.CORRUPTION_REPORTED),
         storageID == null ? null : node.getStorageInfo(storageID),
         node);
@@ -1199,7 +1203,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     // Add replica to the data-node if it is not already there
     if (storageInfo != null) {
-      storageInfo.addBlock(b.stored);
+      storageInfo.addBlock(b.stored, b.reportedBlock);
     }
 
     // Add this replica to corruptReplicas Map
@@ -1772,7 +1776,17 @@ public class BlockManager implements BlockStatsMXBean {
       this.reportedState = reportedState;
     }
   }
-  
+
+  private static class BlockInfoToAdd {
+    final BlockInfo stored;
+    final Block reported;
+
+    BlockInfoToAdd(BlockInfo stored, Block reported) {
+      this.stored = stored;
+      this.reported = reported;
+    }
+  }
+
   /**
    * BlockToMarkCorrupt is used to build the "toCorrupt" list, which is a
    * list of blocks that should be considered corrupt due to a block report.
@@ -1782,32 +1796,35 @@ public class BlockManager implements BlockStatsMXBean {
     final BlockInfo corrupted;
     /** The corresponding block stored in the BlockManager. */
     final BlockInfo stored;
+    /** The block reported from a datanode */
+    final Block reportedBlock;
     /** The reason to mark corrupt. */
     final String reason;
     /** The reason code to be stored */
     final Reason reasonCode;
 
-    BlockToMarkCorrupt(BlockInfo corrupted,
-        BlockInfo stored, String reason,
-        Reason reasonCode) {
+    BlockToMarkCorrupt(Block reported, BlockInfo corrupted,
+        BlockInfo stored, String reason, Reason reasonCode) {
+      Preconditions.checkNotNull(reported, "reported is null");
       Preconditions.checkNotNull(corrupted, "corrupted is null");
       Preconditions.checkNotNull(stored, "stored is null");
 
+      this.reportedBlock = reported;
       this.corrupted = corrupted;
       this.stored = stored;
       this.reason = reason;
       this.reasonCode = reasonCode;
     }
 
-    BlockToMarkCorrupt(BlockInfo stored, String reason,
+    BlockToMarkCorrupt(Block reported, BlockInfo stored, String reason,
         Reason reasonCode) {
-      this(stored, stored, reason, reasonCode);
+      this(reported, stored, stored, reason, reasonCode);
     }
 
-    BlockToMarkCorrupt(BlockInfo stored, long gs, String reason,
-        Reason reasonCode) {
-      this(new BlockInfoContiguous((BlockInfoContiguous)stored), stored,
-          reason, reasonCode);
+    BlockToMarkCorrupt(Block reported, BlockInfo stored, long gs,
+        String reason, Reason reasonCode) {
+      this(reported, BlockInfo.copyOf(stored), stored, reason,
+          reasonCode);
       //the corrupted block in datanode has a different generation stamp
       corrupted.setGenerationStamp(gs);
     }
@@ -1994,7 +2011,7 @@ public class BlockManager implements BlockStatsMXBean {
           break;
         }
 
-        BlockInfoContiguous bi = getStoredBlock(b);
+        BlockInfo bi = getStoredBlock(b);
         if (bi == null) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("BLOCK* rescanPostponedMisreplicatedBlocks: " +
@@ -2034,7 +2051,7 @@ public class BlockManager implements BlockStatsMXBean {
     // Modify the (block-->datanode) map, according to the difference
     // between the old and new block report.
     //
-    Collection<BlockInfo> toAdd = new LinkedList<BlockInfo>();
+    Collection<BlockInfoToAdd> toAdd = new LinkedList<>();
     Collection<Block> toRemove = new TreeSet<Block>();
     Collection<Block> toInvalidate = new LinkedList<Block>();
     Collection<BlockToMarkCorrupt> toCorrupt = new LinkedList<BlockToMarkCorrupt>();
@@ -2051,8 +2068,9 @@ public class BlockManager implements BlockStatsMXBean {
       removeStoredBlock(b, node);
     }
     int numBlocksLogged = 0;
-    for (BlockInfo b : toAdd) {
-      addStoredBlock(b, storageInfo, null, numBlocksLogged < maxNumBlocksToLog);
+    for (BlockInfoToAdd b : toAdd) {
+      addStoredBlock(b.stored, b.reported, storageInfo, null,
+          numBlocksLogged < maxNumBlocksToLog);
       numBlocksLogged++;
     }
     if (numBlocksLogged > maxNumBlocksToLog) {
@@ -2142,7 +2160,7 @@ public class BlockManager implements BlockStatsMXBean {
         continue;
       }
       
-      BlockInfoContiguous storedBlock = getStoredBlock(iblk);
+      BlockInfo storedBlock = getStoredBlock(iblk);
       // If block does not belong to any file, we are done.
       if (storedBlock == null) continue;
       
@@ -2165,7 +2183,7 @@ public class BlockManager implements BlockStatsMXBean {
       
       // If block is under construction, add this replica to its list
       if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
-        ((BlockInfoContiguousUnderConstruction)storedBlock)
+        ((BlockInfoContiguousUnderConstruction) storedBlock)
             .addReplicaIfNotPresent(storageInfo, iblk, reportedState);
         // OpenFileBlocks only inside snapshots also will be added to safemode
         // threshold. So we need to update such blocks to safemode
@@ -2180,14 +2198,14 @@ public class BlockManager implements BlockStatsMXBean {
       }      
       //add replica if appropriate
       if (reportedState == ReplicaState.FINALIZED) {
-        addStoredBlockImmediate(storedBlock, storageInfo);
+        addStoredBlockImmediate(storedBlock, iblk, storageInfo);
       }
     }
   }
 
   private void reportDiff(DatanodeStorageInfo storageInfo, 
       BlockListAsLongs newReport, 
-      Collection<BlockInfo> toAdd,              // add to DatanodeDescriptor
+      Collection<BlockInfoToAdd> toAdd,     // add to DatanodeDescriptor
       Collection<Block> toRemove,           // remove from DatanodeDescriptor
       Collection<Block> toInvalidate,       // should be removed from DN
       Collection<BlockToMarkCorrupt> toCorrupt, // add to corrupt replicas list
@@ -2195,8 +2213,10 @@ public class BlockManager implements BlockStatsMXBean {
 
     // place a delimiter in the list which separates blocks 
     // that have been reported from those that have not
-    BlockInfo delimiter = new BlockInfoContiguous(new Block(), (short) 1);
-    AddBlockResult result = storageInfo.addBlock(delimiter);
+    Block delimiterBlock = new Block();
+    BlockInfoContiguous delimiter = new BlockInfoContiguous(delimiterBlock,
+        (short) 1);
+    AddBlockResult result = storageInfo.addBlock(delimiter, delimiterBlock);
     assert result == AddBlockResult.ADDED 
         : "Delimiting block cannot be present in the node";
     int headIndex = 0; //currently the delimiter is in the head of the list
@@ -2220,8 +2240,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     // collect blocks that have not been reported
     // all of them are next to the delimiter
-    Iterator<BlockInfo> it =
-        storageInfo.new BlockIterator(delimiter.getNext(0));
+    Iterator<BlockInfo> it = storageInfo.new BlockIterator(delimiter.getNext(0));
     while(it.hasNext())
       toRemove.add(it.next());
     storageInfo.removeBlock(delimiter);
@@ -2261,7 +2280,7 @@ public class BlockManager implements BlockStatsMXBean {
   private BlockInfo processReportedBlock(
       final DatanodeStorageInfo storageInfo,
       final Block block, final ReplicaState reportedState, 
-      final Collection<BlockInfo> toAdd,
+      final Collection<BlockInfoToAdd> toAdd,
       final Collection<Block> toInvalidate, 
       final Collection<BlockToMarkCorrupt> toCorrupt,
       final Collection<StatefulBlockInfo> toUC) {
@@ -2282,7 +2301,7 @@ public class BlockManager implements BlockStatsMXBean {
     }
     
     // find block by blockId
-    BlockInfoContiguous storedBlock = getStoredBlock(block);
+    BlockInfo storedBlock = getStoredBlock(block);
     if(storedBlock == null) {
       // If blocksMap does not contain reported block id,
       // the replica should be removed from the data-node.
@@ -2336,7 +2355,7 @@ public class BlockManager implements BlockStatsMXBean {
     if (reportedState == ReplicaState.FINALIZED
         && (storedBlock.findStorageInfo(storageInfo) == -1 ||
             corruptReplicas.isReplicaCorrupt(storedBlock, dn))) {
-      toAdd.add(storedBlock);
+      toAdd.add(new BlockInfoToAdd(storedBlock, block));
     }
     return storedBlock;
   }
@@ -2430,12 +2449,12 @@ public class BlockManager implements BlockStatsMXBean {
       case COMMITTED:
         if (storedBlock.getGenerationStamp() != reported.getGenerationStamp()) {
           final long reportedGS = reported.getGenerationStamp();
-          return new BlockToMarkCorrupt(storedBlock, reportedGS,
+          return new BlockToMarkCorrupt(reported, storedBlock, reportedGS,
               "block is " + ucState + " and reported genstamp " + reportedGS
               + " does not match genstamp in block map "
               + storedBlock.getGenerationStamp(), Reason.GENSTAMP_MISMATCH);
         } else if (storedBlock.getNumBytes() != reported.getNumBytes()) {
-          return new BlockToMarkCorrupt(storedBlock,
+          return new BlockToMarkCorrupt(reported, storedBlock,
               "block is " + ucState + " and reported length " +
               reported.getNumBytes() + " does not match " +
               "length in block map " + storedBlock.getNumBytes(),
@@ -2446,8 +2465,8 @@ public class BlockManager implements BlockStatsMXBean {
       case UNDER_CONSTRUCTION:
         if (storedBlock.getGenerationStamp() > reported.getGenerationStamp()) {
           final long reportedGS = reported.getGenerationStamp();
-          return new BlockToMarkCorrupt(storedBlock, reportedGS, "block is "
-              + ucState + " and reported state " + reportedState
+          return new BlockToMarkCorrupt(reported, storedBlock, reportedGS,
+              "block is " + ucState + " and reported state " + reportedState
               + ", But reported genstamp " + reportedGS
               + " does not match genstamp in block map "
               + storedBlock.getGenerationStamp(), Reason.GENSTAMP_MISMATCH);
@@ -2462,7 +2481,7 @@ public class BlockManager implements BlockStatsMXBean {
         return null; // not corrupt
       } else if (storedBlock.getGenerationStamp() != reported.getGenerationStamp()) {
         final long reportedGS = reported.getGenerationStamp();
-        return new BlockToMarkCorrupt(storedBlock, reportedGS,
+        return new BlockToMarkCorrupt(reported, storedBlock, reportedGS,
             "reported " + reportedState + " replica with genstamp " + reportedGS
             + " does not match COMPLETE block's genstamp in block map "
             + storedBlock.getGenerationStamp(), Reason.GENSTAMP_MISMATCH);
@@ -2477,7 +2496,7 @@ public class BlockManager implements BlockStatsMXBean {
               "complete with the same genstamp");
           return null;
         } else {
-          return new BlockToMarkCorrupt(storedBlock,
+          return new BlockToMarkCorrupt(reported, storedBlock,
               "reported replica has invalid state " + reportedState,
               Reason.INVALID_STATE);
         }
@@ -2490,7 +2509,8 @@ public class BlockManager implements BlockStatsMXBean {
       " on " + dn + " size " + storedBlock.getNumBytes();
       // log here at WARN level since this is really a broken HDFS invariant
       LOG.warn(msg);
-      return new BlockToMarkCorrupt(storedBlock, msg, Reason.INVALID_STATE);
+      return new BlockToMarkCorrupt(reported, storedBlock, msg,
+          Reason.INVALID_STATE);
     }
   }
 
@@ -2523,7 +2543,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     if (ucBlock.reportedState == ReplicaState.FINALIZED &&
         (block.findStorageInfo(storageInfo) < 0)) {
-      addStoredBlock(block, storageInfo, null, true);
+      addStoredBlock(block, ucBlock.reportedBlock, storageInfo, null, true);
     }
   } 
 
@@ -2538,18 +2558,18 @@ public class BlockManager implements BlockStatsMXBean {
    * 
    * @throws IOException
    */
-  private void addStoredBlockImmediate(BlockInfo storedBlock,
+  private void addStoredBlockImmediate(BlockInfo storedBlock, Block reported,
       DatanodeStorageInfo storageInfo)
   throws IOException {
     assert (storedBlock != null && namesystem.hasWriteLock());
     if (!namesystem.isInStartupSafeMode() 
         || namesystem.isPopulatingReplQueues()) {
-      addStoredBlock(storedBlock, storageInfo, null, false);
+      addStoredBlock(storedBlock, reported, storageInfo, null, false);
       return;
     }
 
     // just add it
-    AddBlockResult result = storageInfo.addBlock(storedBlock);
+    AddBlockResult result = storageInfo.addBlock(storedBlock, reported);
 
     // Now check for completion of blocks and safe block count
     int numCurrentReplica = countLiveNodes(storedBlock);
@@ -2571,6 +2591,7 @@ public class BlockManager implements BlockStatsMXBean {
    * @return the block that is stored in blockMap.
    */
   private Block addStoredBlock(final BlockInfo block,
+                               final Block reportedBlock,
                                DatanodeStorageInfo storageInfo,
                                DatanodeDescriptor delNodeHint,
                                boolean logEveryBlock)
@@ -2597,7 +2618,7 @@ public class BlockManager implements BlockStatsMXBean {
     assert bc != null : "Block must belong to a file";
 
     // add block to the datanode
-    AddBlockResult result = storageInfo.addBlock(storedBlock);
+    AddBlockResult result = storageInfo.addBlock(storedBlock, reportedBlock);
 
     int curReplicaDelta;
     if (result == AddBlockResult.ADDED) {
@@ -2669,13 +2690,13 @@ public class BlockManager implements BlockStatsMXBean {
           storedBlock + "blockMap has " + numCorruptNodes + 
           " but corrupt replicas map has " + corruptReplicasCount);
     }
-    if ((corruptReplicasCount > 0) && (numLiveReplicas >= fileReplication))
-      invalidateCorruptReplicas(storedBlock);
+    if ((corruptReplicasCount > 0) && (numLiveReplicas >= fileReplication)) {
+      invalidateCorruptReplicas(storedBlock, reportedBlock);
+    }
     return storedBlock;
   }
 
-  private void logAddStoredBlock(BlockInfo storedBlock,
-      DatanodeDescriptor node) {
+  private void logAddStoredBlock(BlockInfo storedBlock, DatanodeDescriptor node) {
     if (!blockLog.isDebugEnabled()) {
       return;
     }
@@ -2702,7 +2723,7 @@ public class BlockManager implements BlockStatsMXBean {
    *
    * @param blk Block whose corrupt replicas need to be invalidated
    */
-  private void invalidateCorruptReplicas(BlockInfo blk) {
+  private void invalidateCorruptReplicas(BlockInfo blk, Block reported) {
     Collection<DatanodeDescriptor> nodes = corruptReplicas.getNodes(blk);
     boolean removedFromBlocksMap = true;
     if (nodes == null)
@@ -2712,7 +2733,7 @@ public class BlockManager implements BlockStatsMXBean {
     DatanodeDescriptor[] nodesCopy = nodes.toArray(new DatanodeDescriptor[0]);
     for (DatanodeDescriptor node : nodesCopy) {
       try {
-        if (!invalidateBlock(new BlockToMarkCorrupt(blk, null,
+        if (!invalidateBlock(new BlockToMarkCorrupt(reported, blk, null,
               Reason.ANY), node)) {
           removedFromBlocksMap = false;
         }
@@ -3225,14 +3246,14 @@ public class BlockManager implements BlockStatsMXBean {
       ReplicaState reportedState, DatanodeDescriptor delHintNode)
       throws IOException {
     // blockReceived reports a finalized block
-    Collection<BlockInfo> toAdd = new LinkedList<BlockInfo>();
+    Collection<BlockInfoToAdd> toAdd = new LinkedList<>();
     Collection<Block> toInvalidate = new LinkedList<Block>();
     Collection<BlockToMarkCorrupt> toCorrupt = new LinkedList<BlockToMarkCorrupt>();
     Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
     final DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
 
-    processReportedBlock(storageInfo, block, reportedState,
-                              toAdd, toInvalidate, toCorrupt, toUC);
+    processReportedBlock(storageInfo, block, reportedState, toAdd, toInvalidate,
+        toCorrupt, toUC);
     // the block is only in one of the to-do lists
     // if it is in none then data-node already has it
     assert toUC.size() + toAdd.size() + toInvalidate.size() + toCorrupt.size() <= 1
@@ -3242,8 +3263,9 @@ public class BlockManager implements BlockStatsMXBean {
       addStoredBlockUnderConstruction(b, storageInfo);
     }
     long numBlocksLogged = 0;
-    for (BlockInfo b : toAdd) {
-      addStoredBlock(b, storageInfo, delHintNode, numBlocksLogged < maxNumBlocksToLog);
+    for (BlockInfoToAdd b : toAdd) {
+      addStoredBlock(b.stored, b.reported, storageInfo, delHintNode,
+          numBlocksLogged < maxNumBlocksToLog);
       numBlocksLogged++;
     }
     if (numBlocksLogged > maxNumBlocksToLog) {
@@ -3478,7 +3500,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public BlockInfo getStoredBlock(Block block) {
-    BlockInfoContiguous info = null;
+    BlockInfo info = null;
     if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
       info = blocksMap.getStoredBlock(
           new Block(BlockIdManager.convertToGroupID(block.getBlockId())));
@@ -3656,7 +3678,8 @@ public class BlockManager implements BlockStatsMXBean {
 
   public BlockInfo addBlockCollection(BlockInfo block,
       BlockCollection bc) {
-    return blocksMap.addBlockCollection(block, bc);
+    // TODO
+    return (BlockInfoContiguous) blocksMap.addBlockCollection(block, bc);
   }
 
   public BlockCollection getBlockCollection(Block b) {
@@ -3874,7 +3897,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   /**
    * A simple result enum for the result of
-   * {@link BlockManager#processMisReplicatedBlock(BlockInfo)}.
+   * {@link BlockManager#processMisReplicatedBlock}.
    */
   enum MisReplicationResult {
     /** The block should be invalidated since it belongs to a deleted file. */

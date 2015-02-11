@@ -123,6 +123,7 @@ class BlocksMap {
       return;
 
     blockInfo.setBlockCollection(null);
+    // TODO: fix this logic for block group
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
       dn.removeBlock(blockInfo); // remove from the list and wipe the location

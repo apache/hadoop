@@ -577,6 +577,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   Iterator<BlockInfo> getBlockIterator() {
     return new BlockIterator(getStorageInfos());
   }
+
   Iterator<BlockInfo> getBlockIterator(final String storageID) {
     return new BlockIterator(getStorageInfo(storageID));
   }

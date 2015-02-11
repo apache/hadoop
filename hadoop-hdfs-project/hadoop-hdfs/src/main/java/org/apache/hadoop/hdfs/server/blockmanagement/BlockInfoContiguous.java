@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 
 /**
  * Subclass of {@link BlockInfo}, used for a block with replication scheme.
@@ -41,7 +42,9 @@ public class BlockInfoContiguous extends BlockInfo {
    * @param from BlockReplicationInfo to copy from.
    */
   protected BlockInfoContiguous(BlockInfoContiguous from) {
-    super(from);
+    this(from, from.getBlockCollection().getBlockReplication());
+    this.triplets = new Object[from.triplets.length];
+    this.setBlockCollection(from.getBlockCollection());
   }
 
   /**
@@ -63,7 +66,7 @@ public class BlockInfoContiguous extends BlockInfo {
   }
 
   @Override
-  boolean addStorage(DatanodeStorageInfo storage) {
+  boolean addStorage(DatanodeStorageInfo storage, Block reportedBlock) {
     // find the last null node
     int lastNode = ensureCapacity(1);
     setStorageInfo(lastNode, storage);
@@ -115,9 +118,31 @@ public class BlockInfoContiguous extends BlockInfo {
       assert removed : "currentBlock not found.";
 
       final DatanodeStorageInfo.AddBlockResult result = storage.addBlock(
-          newBlock);
+          newBlock, newBlock);
       assert result == DatanodeStorageInfo.AddBlockResult.ADDED :
           "newBlock already exists.";
     }
+  }
+
+  /**
+   * Convert a complete block to an under construction block.
+   * @return BlockInfoUnderConstruction -  an under construction block.
+   */
+  public BlockInfoContiguousUnderConstruction convertToBlockUnderConstruction(
+      BlockUCState s, DatanodeStorageInfo[] targets) {
+    if(isComplete()) {
+      BlockInfoContiguousUnderConstruction ucBlock =
+          new BlockInfoContiguousUnderConstruction(this,
+          getBlockCollection().getPreferredBlockReplication(), s, targets);
+      ucBlock.setBlockCollection(getBlockCollection());
+      return ucBlock;
+    }
+    // the block is already under construction
+    BlockInfoContiguousUnderConstruction ucBlock =
+        (BlockInfoContiguousUnderConstruction) this;
+    ucBlock.setBlockUCState(s);
+    ucBlock.setExpectedLocations(targets);
+    ucBlock.setBlockCollection(getBlockCollection());
+    return ucBlock;
   }
 }
