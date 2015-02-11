@@ -27,6 +27,7 @@
         * [fs](#fs)
         * [jar](#jar)
         * [jnipath](#jnipath)
+        * [kerbname](#kerbname)
         * [key](#key)
         * [trace](#trace)
         * [version](#version)
@@ -174,6 +175,15 @@ Use [`yarn jar`](../../hadoop-yarn/hadoop-yarn-site/YarnCommands.html#jar) to la
 Usage: `hadoop jnipath`
 
 Print the computed java.library.path.
+
+### `kerbname`
+
+    Usage: <<<hadoop kerbname principal>>>
+
+    Convert the named principal via the auth_to_local rules to the Hadoop
+    user name.
+
+    Example: <<<hadoop kerbname user@EXAMPLE.COM>>>
 
 ### `key`
 
