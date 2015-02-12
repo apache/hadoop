@@ -115,6 +115,8 @@ Release 2.6.1 - 2015-09-23
     HDFS-8384. Allow NN to startup if there are files having a lease but are not
     under construction. (jing9)
 
+    HDFS-7694. FSDataInputStream should support "unbuffer" (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-8480. Fix performance and timeout issues in HDFS-7929 by using

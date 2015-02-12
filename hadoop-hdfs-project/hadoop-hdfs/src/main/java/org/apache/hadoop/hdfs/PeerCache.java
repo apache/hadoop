@@ -29,16 +29,21 @@ import com.google.common.collect.LinkedListMultimap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 
 /**
  * A cache of input stream sockets to Data Node.
  */
-class PeerCache {
+@InterfaceStability.Unstable
+@InterfaceAudience.Private
+@VisibleForTesting
+public class PeerCache {
   private static final Log LOG = LogFactory.getLog(PeerCache.class);
   
   private static class Key {
