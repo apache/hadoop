@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.server.webproxy;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -34,12 +32,15 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class WebAppProxy extends AbstractService {
   public static final String FETCHER_ATTRIBUTE= "AppUrlFetcher";
   public static final String IS_SECURITY_ENABLED_ATTRIBUTE = "IsSecurityEnabled";
   public static final String PROXY_HOST_ATTRIBUTE = "proxyHost";
-  private static final Log LOG = LogFactory.getLog(WebAppProxy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      WebAppProxy.class);
   
   private HttpServer2 proxyServer = null;
   private String bindAddress = null;
@@ -109,8 +110,8 @@ public class WebAppProxy extends AbstractService {
       proxyServer.setAttribute(PROXY_HOST_ATTRIBUTE, proxyHost);
       proxyServer.start();
     } catch (IOException e) {
-      LOG.fatal("Could not start proxy web server",e);
-      throw new YarnRuntimeException("Could not start proxy web server",e);
+      LOG.error("Could not start proxy web server",e);
+      throw e;
     }
     super.serviceStart();
   }
@@ -121,7 +122,7 @@ public class WebAppProxy extends AbstractService {
       try {
         proxyServer.stop();
       } catch (Exception e) {
-        LOG.fatal("Error stopping proxy web server", e);
+        LOG.error("Error stopping proxy web server", e);
         throw new YarnRuntimeException("Error stopping proxy web server",e);
       }
     }
@@ -136,6 +137,7 @@ public class WebAppProxy extends AbstractService {
       try {
         proxyServer.join();
       } catch (InterruptedException e) {
+        // ignored
       }
     }
   }
