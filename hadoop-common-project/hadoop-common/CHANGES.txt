@@ -923,6 +923,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11587. TestMapFile#testMainMethodMapFile creates test files in
     hadoop-common project root. (Xiaoyu Yao via wheat9)
 
+    HDFS-7711. Fix various typos in ClusterSetup.md.
+    (Brahma Reddy Battula via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
