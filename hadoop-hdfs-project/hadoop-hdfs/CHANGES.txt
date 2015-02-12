@@ -329,6 +329,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7684. The host:port settings of the daemons should be trimmed before
     use. (Anu Engineer via aajisaka)
 
+    HDFS-7790. Do not create optional fields in DFSInputStream unless they are
+    needed (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
