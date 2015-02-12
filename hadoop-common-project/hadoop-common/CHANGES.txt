@@ -519,6 +519,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10953. NetworkTopology#add calls NetworkTopology#toString without
     holding the netlock (Liang Xie via Colin P. McCabe)
 
+    HADOOP-11587. TestMapFile#testMainMethodMapFile creates test files in
+    hadoop-common project root. (Xiaoyu Yao via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
