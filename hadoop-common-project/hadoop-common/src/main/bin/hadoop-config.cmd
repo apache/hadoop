@@ -65,7 +65,9 @@ if not exist %HADOOP_HOME%\share\hadoop\common\hadoop-common-*.jar (
     exit /b 1
 )
 
-set HADOOP_CONF_DIR=%HADOOP_HOME%\etc\hadoop
+if not defined HADOOP_CONF_DIR (
+  set HADOOP_CONF_DIR=%HADOOP_HOME%\etc\hadoop
+)
 
 @rem
 @rem Allow alternate conf dir location.
