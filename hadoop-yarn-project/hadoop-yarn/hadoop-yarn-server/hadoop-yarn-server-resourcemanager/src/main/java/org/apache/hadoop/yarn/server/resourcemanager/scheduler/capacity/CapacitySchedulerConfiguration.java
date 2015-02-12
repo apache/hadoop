@@ -278,6 +278,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
   
   private String getNodeLabelPrefix(String queue, String label) {
+    if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
+      return getQueuePrefix(queue);
+    }
     return getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label + DOT;
   }
   
@@ -316,7 +319,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     		getMaximumApplicationMasterResourcePercent());
   }
   
-  public float getCapacity(String queue) {
+  public float getNonLabeledQueueCapacity(String queue) {
     float capacity = queue.equals("root") ? 100.0f : getFloat(
         getQueuePrefix(queue) + CAPACITY, UNDEFINED);
     if (capacity < MINIMUM_CAPACITY_VALUE || capacity > MAXIMUM_CAPACITY_VALUE) {
@@ -338,7 +341,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         ", capacity=" + capacity);
   }
 
-  public float getMaximumCapacity(String queue) {
+  public float getNonLabeledQueueMaximumCapacity(String queue) {
     float maxCapacity = getFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY,
         MAXIMUM_CAPACITY_VALUE);
     maxCapacity = (maxCapacity == DEFAULT_MAXIMUM_CAPACITY_VALUE) ? 
@@ -442,57 +445,29 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return Collections.unmodifiableSet(set);
   }
   
-  public Map<String, Float> getNodeLabelCapacities(String queue,
-      Set<String> labels, RMNodeLabelsManager mgr) {
-    Map<String, Float> nodeLabelCapacities = new HashMap<String, Float>();
-    
-    if (labels == null) {
-      return nodeLabelCapacities;
+  private float internalGetLabeledQueueCapacity(String queue, String label, String suffix,
+      float defaultValue) {
+    String capacityPropertyName = getNodeLabelPrefix(queue, label) + suffix;
+    float capacity = getFloat(capacityPropertyName, defaultValue);
+    if (capacity < MINIMUM_CAPACITY_VALUE
+        || capacity > MAXIMUM_CAPACITY_VALUE) {
+      throw new IllegalArgumentException("Illegal capacity of " + capacity
+          + " for node-label=" + label + " in queue=" + queue
+          + ", valid capacity should in range of [0, 100].");
     }
-
-    for (String label : labels.contains(CommonNodeLabelsManager.ANY) ? mgr
-        .getClusterNodeLabels() : labels) {
-      String capacityPropertyName = getNodeLabelPrefix(queue, label) + CAPACITY;
-      float capacity = getFloat(capacityPropertyName, 0f);
-      if (capacity < MINIMUM_CAPACITY_VALUE
-          || capacity > MAXIMUM_CAPACITY_VALUE) {
-        throw new IllegalArgumentException("Illegal capacity of " + capacity
-            + " for node-label=" + label + " in queue=" + queue
-            + ", valid capacity should in range of [0, 100].");
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("CSConf - getCapacityOfLabel: prefix="
-            + getNodeLabelPrefix(queue, label) + ", capacity=" + capacity);
-      }
-      
-      nodeLabelCapacities.put(label, capacity / 100f);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("CSConf - getCapacityOfLabel: prefix="
+          + getNodeLabelPrefix(queue, label) + ", capacity=" + capacity);
     }
-    return nodeLabelCapacities;
+    return capacity;
   }
   
-  public Map<String, Float> getMaximumNodeLabelCapacities(String queue,
-      Set<String> labels, RMNodeLabelsManager mgr) {
-    Map<String, Float> maximumNodeLabelCapacities = new HashMap<String, Float>();
-    if (labels == null) {
-      return maximumNodeLabelCapacities;
-    }
-
-    for (String label : labels.contains(CommonNodeLabelsManager.ANY) ? mgr
-        .getClusterNodeLabels() : labels) {
-      float maxCapacity =
-          getFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY,
-              100f);
-      if (maxCapacity < MINIMUM_CAPACITY_VALUE
-          || maxCapacity > MAXIMUM_CAPACITY_VALUE) {
-        throw new IllegalArgumentException("Illegal " + "capacity of "
-            + maxCapacity + " for label=" + label + " in queue=" + queue);
-      }
-      LOG.debug("CSConf - getCapacityOfLabel: prefix="
-          + getNodeLabelPrefix(queue, label) + ", capacity=" + maxCapacity);
-      
-      maximumNodeLabelCapacities.put(label, maxCapacity / 100f);
-    }
-    return maximumNodeLabelCapacities;
+  public float getLabeledQueueCapacity(String queue, String label) {
+    return internalGetLabeledQueueCapacity(queue, label, CAPACITY, 0f);
+  }
+  
+  public float getLabeledQueueMaximumCapacity(String queue, String label) {
+    return internalGetLabeledQueueCapacity(queue, label, MAXIMUM_CAPACITY, 100f);
   }
   
   public String getDefaultNodeLabelExpression(String queue) {
