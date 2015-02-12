@@ -130,7 +130,7 @@ This section deals with important parameters to be specified in the given config
 | Parameter | Value | Notes |
 |:---- |:---- |:---- |
 | `dfs.namenode.name.dir` | Path on the local filesystem where the NameNode stores the namespace and transactions logs persistently. | If this is a comma-delimited list of directories then the name table is replicated in all of the directories, for redundancy. |
-| `dfs.namenode.hosts` / `dfs.namenode.hosts.exclude` | List of permitted/excluded DataNodes. | If necessary, use these files to control the list of allowable datanodes. |
+| `dfs.hosts` / `dfs.hosts.exclude` | List of permitted/excluded DataNodes. | If necessary, use these files to control the list of allowable datanodes. |
 | `dfs.blocksize` | 268435456 | HDFS blocksize of 256MB for large file-systems. |
 | `dfs.namenode.handler.count` | 100 | More NameNode server threads to handle RPCs from large number of DataNodes. |
 
