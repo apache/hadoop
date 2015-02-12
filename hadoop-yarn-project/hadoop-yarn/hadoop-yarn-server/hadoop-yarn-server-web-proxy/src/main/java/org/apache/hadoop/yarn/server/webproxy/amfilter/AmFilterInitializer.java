@@ -36,7 +36,7 @@ public class AmFilterInitializer extends FilterInitializer {
   
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {
-    Map<String, String> params = new HashMap<String, String>();
+    Map<String, String> params = new HashMap<>();
     List<String> proxies = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
     StringBuilder sb = new StringBuilder();
     for (String proxy : proxies) {

@@ -38,26 +38,27 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.apache.hadoop.yarn.util.RMHAUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Public
 public class AmIpFilter implements Filter {
-  private static final Log LOG = LogFactory.getLog(AmIpFilter.class);
-
+  private static final Logger LOG = LoggerFactory.getLogger(AmIpFilter.class);
+  
   @Deprecated
   public static final String PROXY_HOST = "PROXY_HOST";
   @Deprecated
   public static final String PROXY_URI_BASE = "PROXY_URI_BASE";
-  static final String PROXY_HOSTS = "PROXY_HOSTS";
-  static final String PROXY_HOSTS_DELIMITER = ",";
-  static final String PROXY_URI_BASES = "PROXY_URI_BASES";
-  static final String PROXY_URI_BASES_DELIMITER = ",";
+  public static final String PROXY_HOSTS = "PROXY_HOSTS";
+  public static final String PROXY_HOSTS_DELIMITER = ",";
+  public static final String PROXY_URI_BASES = "PROXY_URI_BASES";
+  public static final String PROXY_URI_BASES_DELIMITER = ",";
   //update the proxy IP list about every 5 min
   private static final long updateInterval = 5 * 60 * 1000;
 
@@ -72,7 +73,7 @@ public class AmIpFilter implements Filter {
     if (conf.getInitParameter(PROXY_HOST) != null
         && conf.getInitParameter(PROXY_URI_BASE) != null) {
       proxyHosts = new String[]{conf.getInitParameter(PROXY_HOST)};
-      proxyUriBases = new HashMap<String, String>(1);
+      proxyUriBases = new HashMap<>(1);
       proxyUriBases.put("dummy", conf.getInitParameter(PROXY_URI_BASE));
     } else {
       proxyHosts = conf.getInitParameter(PROXY_HOSTS)
@@ -80,13 +81,13 @@ public class AmIpFilter implements Filter {
 
       String[] proxyUriBasesArr = conf.getInitParameter(PROXY_URI_BASES)
           .split(PROXY_URI_BASES_DELIMITER);
-      proxyUriBases = new HashMap<String, String>();
+      proxyUriBases = new HashMap<>(proxyUriBasesArr.length);
       for (String proxyUriBase : proxyUriBasesArr) {
         try {
           URL url = new URL(proxyUriBase);
           proxyUriBases.put(url.getHost() + ":" + url.getPort(), proxyUriBase);
         } catch(MalformedURLException e) {
-          LOG.warn(proxyUriBase + " does not appear to be a valid URL", e);
+          LOG.warn("{} does not appear to be a valid URL", proxyUriBase, e);
         }
       }
     }
@@ -96,18 +97,18 @@ public class AmIpFilter implements Filter {
     long now = System.currentTimeMillis();
     synchronized(this) {
       if(proxyAddresses == null || (lastUpdate + updateInterval) >= now) {
-        proxyAddresses = new HashSet<String>();
+        proxyAddresses = new HashSet<>();
         for (String proxyHost : proxyHosts) {
           try {
               for(InetAddress add : InetAddress.getAllByName(proxyHost)) {
                 if (LOG.isDebugEnabled()) {
-                  LOG.debug("proxy address is: " + add.getHostAddress());
+                  LOG.debug("proxy address is: {}", add.getHostAddress());
                 }
                 proxyAddresses.add(add.getHostAddress());
               }
               lastUpdate = now;
             } catch (UnknownHostException e) {
-              LOG.warn("Could not locate " + proxyHost + " - skipping", e);
+              LOG.warn("Could not locate {} - skipping", proxyHost, e);
             }
           }
         if (proxyAddresses.isEmpty()) {
@@ -126,20 +127,17 @@ public class AmIpFilter implements Filter {
   @Override
   public void doFilter(ServletRequest req, ServletResponse resp,
       FilterChain chain) throws IOException, ServletException {
-    if(!(req instanceof HttpServletRequest)) {
-      throw new ServletException("This filter only works for HTTP/HTTPS");
-    }
+    ProxyUtils.rejectNonHttpRequests(req);
 
     HttpServletRequest httpReq = (HttpServletRequest)req;
     HttpServletResponse httpResp = (HttpServletResponse)resp;
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Remote address for request is: " + httpReq.getRemoteAddr());
+      LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
     }
-    if(!getProxyAddresses().contains(httpReq.getRemoteAddr())) {
+    if (!getProxyAddresses().contains(httpReq.getRemoteAddr())) {
       String redirectUrl = findRedirectUrl();
-      redirectUrl = httpResp.encodeRedirectURL(redirectUrl +
-          httpReq.getRequestURI());
-      httpResp.sendRedirect(redirectUrl);
+      String target = redirectUrl + httpReq.getRequestURI();
+      ProxyUtils.sendRedirect(httpReq,  httpResp,  target);
       return;
     }
 
@@ -153,9 +151,9 @@ public class AmIpFilter implements Filter {
         }
       }
     }
-    if(user == null) {
-      LOG.warn("Could not find "+WebAppProxyServlet.PROXY_USER_COOKIE_NAME
-          +" cookie, so user will not be set");
+    if (user == null) {
+      LOG.warn("Could not find " + WebAppProxyServlet.PROXY_USER_COOKIE_NAME
+               + " cookie, so user will not be set");
       chain.doFilter(req, resp);
     } else {
       final AmIpPrincipal principal = new AmIpPrincipal(user);
