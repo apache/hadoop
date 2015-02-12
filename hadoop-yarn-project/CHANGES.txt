@@ -15,6 +15,8 @@ Trunk - Unreleased
 
     YARN-2437. start-yarn.sh/stop-yarn should give info (Varun Saxena via aw)
 
+    YARN-2796. deprecate sbin/yarn-daemon.sh (aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
