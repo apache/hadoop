@@ -1474,13 +1474,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Return value matching this enumerated type.
+   * Note that the returned value is trimmed by this method.
    * @param name Property name
    * @param defaultValue Value returned if no mapping exists
    * @throws IllegalArgumentException If mapping is illegal for the type
    * provided
    */
   public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
-    final String val = get(name);
+    final String val = getTrimmed(name);
     return null == val
       ? defaultValue
       : Enum.valueOf(defaultValue.getDeclaringClass(), val);
@@ -1577,6 +1578,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Get the value of the <code>name</code> property as a <code>Pattern</code>.
    * If no such property is specified, or if the specified value is not a valid
    * <code>Pattern</code>, then <code>DefaultValue</code> is returned.
+   * Note that the returned value is NOT trimmed by this method.
    *
    * @param name property name
    * @param defaultValue default value
@@ -2027,7 +2029,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public InetSocketAddress getSocketAddr(
       String name, String defaultAddress, int defaultPort) {
-    final String address = get(name, defaultAddress);
+    final String address = getTrimmed(name, defaultAddress);
     return NetUtils.createSocketAddr(address, defaultPort, name);
   }
 

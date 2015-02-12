@@ -58,6 +58,7 @@ public class TestConfiguration extends TestCase {
   private Configuration conf;
   final static String CONFIG = new File("./test-config-TestConfiguration.xml").getAbsolutePath();
   final static String CONFIG2 = new File("./test-config2-TestConfiguration.xml").getAbsolutePath();
+  final static String CONFIG_FOR_ENUM = new File("./test-config-enum-TestConfiguration.xml").getAbsolutePath();
   private static final String CONFIG_MULTI_BYTE = new File(
     "./test-config-multi-byte-TestConfiguration.xml").getAbsolutePath();
   private static final String CONFIG_MULTI_BYTE_SAVED = new File(
@@ -78,6 +79,7 @@ public class TestConfiguration extends TestCase {
     super.tearDown();
     new File(CONFIG).delete();
     new File(CONFIG2).delete();
+    new File(CONFIG_FOR_ENUM).delete();
     new File(CONFIG_MULTI_BYTE).delete();
     new File(CONFIG_MULTI_BYTE_SAVED).delete();
   }
@@ -739,10 +741,31 @@ public class TestConfiguration extends TestCase {
     conf.setEnum("test.enum", Dingo.FOO);
     assertSame(Dingo.FOO, conf.getEnum("test.enum", Dingo.BAR));
     assertSame(Yak.FOO, conf.getEnum("test.enum", Yak.RAB));
+    conf.setEnum("test.enum", Dingo.FOO);
     boolean fail = false;
     try {
       conf.setEnum("test.enum", Dingo.BAR);
       Yak y = conf.getEnum("test.enum", Yak.FOO);
+    } catch (IllegalArgumentException e) {
+      fail = true;
+    }
+    assertTrue(fail);
+  }
+
+  public void testEnumFromXml() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG_FOR_ENUM));
+    startConfig();
+    appendProperty("test.enum"," \t \n   FOO \t \n");
+    appendProperty("test.enum2"," \t \n   Yak.FOO \t \n");
+    endConfig();
+
+    Configuration conf = new Configuration();
+    Path fileResource = new Path(CONFIG_FOR_ENUM);
+    conf.addResource(fileResource);
+    assertSame(Yak.FOO, conf.getEnum("test.enum", Yak.FOO));
+    boolean fail = false;
+    try {
+      conf.getEnum("test.enum2", Yak.FOO);
     } catch (IllegalArgumentException e) {
       fail = true;
     }
@@ -865,7 +888,11 @@ public class TestConfiguration extends TestCase {
     conf.set("myAddress", "host2:3");
     addr = conf.getSocketAddr("myAddress", defaultAddr, defaultPort);
     assertEquals("host2:3", NetUtils.getHostPortString(addr));
-    
+
+    conf.set("myAddress", " \n \t    host4:5     \t \n   ");
+    addr = conf.getSocketAddr("myAddress", defaultAddr, defaultPort);
+    assertEquals("host4:5", NetUtils.getHostPortString(addr));
+
     boolean threwException = false;
     conf.set("myAddress", "bad:-port");
     try {
