@@ -243,6 +243,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2079. Recover NonAggregatingLogHandler state upon nodemanager
     restart. (Jason Lowe via junping_du) 
 
+    YARN-3181. FairScheduler: Fix up outdated findbugs issues. (kasha)
+
     YARN-3124. Fixed CS LeafQueue/ParentQueue to use QueueCapacities to track
     capacities-by-label. (Wangda Tan via jianhe)
 

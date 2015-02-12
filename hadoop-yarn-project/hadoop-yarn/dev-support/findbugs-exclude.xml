@@ -142,21 +142,11 @@
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogAggregationService" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationFileLoaderService" />
-    <Field name="allocFile" />
-    <Bug pattern="IS2_INCONSISTENT_SYNC" />
-  </Match>
   <!-- Inconsistent sync warning - minimumAllocation is only initialized once and never changed -->
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler" />
     <Field name="minimumAllocation" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSSchedulerNode" />
-    <Method name="reserveResource" />
-    <Bug pattern="BC_UNCONFIRMED_CAST" /> 
   </Match>
   <!-- Inconsistent sync warning - reinitialize read from other queue does not need sync-->
   <Match>
@@ -213,18 +203,6 @@
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler" />
     <Field name="scheduleAsynchronously" />
-    <Bug pattern="IS2_INCONSISTENT_SYNC" />
-  </Match>
-  <!-- Inconsistent sync warning - updateInterval is only initialized once and never changed -->
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-    <Field name="updateInterval" />
-    <Bug pattern="IS2_INCONSISTENT_SYNC" />
-  </Match>
-  <!-- Inconsistent sync warning - callDurationMetrics is only initialized once and never changed -->
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-    <Field name="fsOpDurations" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
 
@@ -424,11 +402,6 @@
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt" />
     <Field name="queue" />
-    <Bug pattern="IS2_INCONSISTENT_SYNC" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler" />
-    <Field name="allocConf" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
   <Match>
