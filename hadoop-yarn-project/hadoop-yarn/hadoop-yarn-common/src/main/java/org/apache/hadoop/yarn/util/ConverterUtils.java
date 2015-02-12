@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.fs.Path;
@@ -175,7 +176,12 @@ public class ConverterUtils {
   }
 
   public static ContainerId toContainerId(String containerIdStr) {
-    return ContainerId.fromString(containerIdStr);
+    try {
+      return ContainerId.fromString(containerIdStr);
+    } catch (NoSuchElementException e) {
+      throw new IllegalArgumentException("Invalid ContainerId: "
+          + containerIdStr, e);
+    }
   }
 
   public static ApplicationAttemptId toApplicationAttemptId(
@@ -190,6 +196,9 @@ public class ConverterUtils {
     } catch (NumberFormatException n) {
       throw new IllegalArgumentException("Invalid AppAttemptId: "
           + applicationAttmeptIdStr, n);
+    } catch (NoSuchElementException e){
+      throw new IllegalArgumentException("Invalid AppAttemptId: "
+          + applicationAttmeptIdStr, e);
     }
   }
   
@@ -206,6 +215,9 @@ public class ConverterUtils {
     } catch (NumberFormatException n) {
       throw new IllegalArgumentException("Invalid ApplicationId: "
           + appIdStr, n);
+    } catch (NoSuchElementException e){
+      throw new IllegalArgumentException("Invalid ApplicationId: "
+          + appIdStr, e);
     }
   }
 
