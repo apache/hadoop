@@ -521,6 +521,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3151. On Failover tracking url wrong in application cli for
     KILLED application (Rohith via xgong)
 
+    YARN-1580. Documentation error regarding "container-allocation.expiry-interval-ms" 
+    (Brahma Reddy Battula via junping_du)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
