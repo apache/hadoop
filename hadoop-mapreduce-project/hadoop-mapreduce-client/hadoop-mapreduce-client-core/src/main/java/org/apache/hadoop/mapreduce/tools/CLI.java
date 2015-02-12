@@ -296,9 +296,24 @@ public class CLI extends Configured implements Tool {
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
-          job.killJob();
-          System.out.println("Killed job " + jobid);
-          exitCode = 0;
+          JobStatus jobStatus = job.getStatus();
+          if (jobStatus.getState() == JobStatus.State.FAILED) {
+            System.out.println("Could not mark the job " + jobid
+                + " as killed, as it has already failed.");
+            exitCode = -1;
+          } else if (jobStatus.getState() == JobStatus.State.KILLED) {
+            System.out
+                .println("The job " + jobid + " has already been killed.");
+            exitCode = -1;
+          } else if (jobStatus.getState() == JobStatus.State.SUCCEEDED) {
+            System.out.println("Could not kill the job " + jobid
+                + ", as it has already succeeded.");
+            exitCode = -1;
+          } else {
+            job.killJob();
+            System.out.println("Killed job " + jobid);
+            exitCode = 0;
+          }
         }
       } else if (setJobPriority) {
         Job job = cluster.getJob(JobID.forName(jobid));
