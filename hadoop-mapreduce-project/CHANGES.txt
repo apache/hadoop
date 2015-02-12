@@ -122,6 +122,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6233. org.apache.hadoop.mapreduce.TestLargeSort.testLargeSort
     failed in trunk (zxu via rkanter)
 
+    MAPREDUCE-6221. Stringifier is left unclosed in Chain#getChainElementConf().
+    (Ted Yu via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

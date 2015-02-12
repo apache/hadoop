@@ -575,9 +575,8 @@ public class Chain {
   protected static Configuration getChainElementConf(Configuration jobConf,
       String confKey) {
     Configuration conf = null;
-    try {
-      Stringifier<Configuration> stringifier = 
-        new DefaultStringifier<Configuration>(jobConf, Configuration.class);
+    try (Stringifier<Configuration> stringifier =
+        new DefaultStringifier<Configuration>(jobConf, Configuration.class);) {
       String confString = jobConf.get(confKey, null);
       if (confString != null) {
         conf = stringifier.fromString(jobConf.get(confKey, null));
