@@ -238,6 +238,8 @@ Release 2.7.0 - UNRELEASED
     YARN-3157. Refactor the exception handling in ConverterUtils#to*Id.
     (Bibin A Chundatt via ozawa)
 
+    YARN-3147. Clean up RM web proxy code. (Steve Loughran via xgong)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
