@@ -347,6 +347,15 @@ extern  "C" {
     hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
                           int bufferSize, short replication, tSize blocksize);
 
+    /**
+     * hdfsUnbufferFile - Reduce the buffering done on a file.
+     *
+     * @param file  The file to unbuffer.
+     * @return      0 on success
+     *              ENOTSUP if the file does not support unbuffering
+     *              Errno will also be set to this value.
+     */
+    int hdfsUnbufferFile(hdfsFile file);
 
     /** 
      * hdfsCloseFile - Close an open file. 

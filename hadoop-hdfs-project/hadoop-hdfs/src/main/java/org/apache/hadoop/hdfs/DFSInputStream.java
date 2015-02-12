@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.ByteBufferUtil;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.HasEnhancedByteBufferAccess;
@@ -86,7 +87,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class DFSInputStream extends FSInputStream
 implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
-    HasEnhancedByteBufferAccess {
+    HasEnhancedByteBufferAccess, CanUnbuffer {
   @VisibleForTesting
   public static boolean tcpReadsDisabledForTesting = false;
   private long hedgedReadOpsLoopNumForTesting = 0;
@@ -1817,5 +1818,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     } else if (val instanceof ByteBufferPool) {
       ((ByteBufferPool)val).putBuffer(buffer);
     }
+  }
+
+  @Override
+  public synchronized void unbuffer() {
+    closeCurrentBlockReader();
   }
 }

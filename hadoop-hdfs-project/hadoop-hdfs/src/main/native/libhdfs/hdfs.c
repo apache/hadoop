@@ -1037,6 +1037,34 @@ done:
     return file;
 }
 
+int hdfsUnbufferFile(hdfsFile file)
+{
+    int ret;
+    jthrowable jthr;
+    JNIEnv *env = getJNIEnv();
+
+    if (!env) {
+        ret = EINTERNAL;
+        goto done;
+    }
+    if (file->type != HDFS_STREAM_INPUT) {
+        ret = ENOTSUP;
+        goto done;
+    }
+    jthr = invokeMethod(env, NULL, INSTANCE, file->file, HADOOP_ISTRM,
+                     "unbuffer", "()V");
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                HADOOP_ISTRM "#unbuffer failed:");
+        goto done;
+    }
+    ret = 0;
+
+done:
+    errno = ret;
+    return ret;
+}
+
 int hdfsCloseFile(hdfsFS fs, hdfsFile file)
 {
     int ret;
