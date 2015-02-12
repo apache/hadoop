@@ -44,6 +44,8 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6227. DFSIO for truncate. (shv via yliu)
 
+    MAPREDUCE-6253. Update use of Iterator to Iterable. (Ray Chiang via devaraj)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
