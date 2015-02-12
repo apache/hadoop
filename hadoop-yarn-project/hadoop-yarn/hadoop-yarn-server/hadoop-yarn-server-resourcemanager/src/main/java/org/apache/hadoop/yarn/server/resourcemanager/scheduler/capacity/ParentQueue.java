@@ -86,7 +86,7 @@ public class ParentQueue extends AbstractCSQueue {
 
     this.rootQueue = (parent == null);
 
-    float rawCapacity = cs.getConfiguration().getCapacity(getQueuePath());
+    float rawCapacity = cs.getConfiguration().getNonLabeledQueueCapacity(getQueuePath());
 
     if (rootQueue &&
         (rawCapacity != CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE)) {
@@ -94,46 +94,20 @@ public class ParentQueue extends AbstractCSQueue {
           "capacity of " + rawCapacity + " for queue " + queueName +
           ". Must be " + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE);
     }
-
-    float capacity = (float) rawCapacity / 100;
-    float parentAbsoluteCapacity = 
-      (rootQueue) ? 1.0f : parent.getAbsoluteCapacity();
-    float absoluteCapacity = parentAbsoluteCapacity * capacity; 
-
-    float  maximumCapacity =
-      (float) cs.getConfiguration().getMaximumCapacity(getQueuePath()) / 100;
-    float absoluteMaxCapacity = 
-          CSQueueUtils.computeAbsoluteMaximumCapacity(maximumCapacity, parent);
-    
-    QueueState state = cs.getConfiguration().getState(getQueuePath());
-
-    Map<QueueACL, AccessControlList> acls = 
-      cs.getConfiguration().getAcls(getQueuePath());
-
-    setupQueueConfigs(cs.getClusterResource(), capacity, absoluteCapacity,
-        maximumCapacity, absoluteMaxCapacity, state, acls, accessibleLabels,
-        defaultLabelExpression, capacitiyByNodeLabels, maxCapacityByNodeLabels, 
-        cs.getConfiguration().getReservationContinueLook());
     
     this.childQueues = new TreeSet<CSQueue>(queueComparator);
+    
+    setupQueueConfigs(cs.getClusterResource());
 
     LOG.info("Initialized parent-queue " + queueName + 
         " name=" + queueName + 
         ", fullname=" + getQueuePath()); 
   }
 
-  synchronized void setupQueueConfigs(Resource clusterResource, float capacity,
-      float absoluteCapacity, float maximumCapacity, float absoluteMaxCapacity,
-      QueueState state, Map<QueueACL, AccessControlList> acls,
-      Set<String> accessibleLabels, String defaultLabelExpression,
-      Map<String, Float> nodeLabelCapacities,
-      Map<String, Float> maximumCapacitiesByLabel, 
-      boolean reservationContinueLooking) throws IOException {
-    super.setupQueueConfigs(clusterResource, capacity, absoluteCapacity,
-        maximumCapacity, absoluteMaxCapacity, state, acls, accessibleLabels,
-        defaultLabelExpression, nodeLabelCapacities, maximumCapacitiesByLabel,
-        reservationContinueLooking);
-   StringBuilder aclsString = new StringBuilder();
+  synchronized void setupQueueConfigs(Resource clusterResource)
+      throws IOException {
+    super.setupQueueConfigs(clusterResource);
+    StringBuilder aclsString = new StringBuilder();
     for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
       aclsString.append(e.getKey() + ":" + e.getValue().getAclString());
     }
@@ -147,10 +121,10 @@ public class ParentQueue extends AbstractCSQueue {
     }
 
     LOG.info(queueName +
-        ", capacity=" + capacity +
-        ", asboluteCapacity=" + absoluteCapacity +
-        ", maxCapacity=" + maximumCapacity +
-        ", asboluteMaxCapacity=" + absoluteMaxCapacity + 
+        ", capacity=" + this.queueCapacities.getCapacity() +
+        ", asboluteCapacity=" + this.queueCapacities.getAbsoluteCapacity() +
+        ", maxCapacity=" + this.queueCapacities.getMaximumCapacity() +
+        ", asboluteMaxCapacity=" + this.queueCapacities.getAbsoluteMaximumCapacity() + 
         ", state=" + state +
         ", acls=" + aclsString + 
         ", labels=" + labelStrBuilder.toString() + "\n" +
@@ -166,19 +140,19 @@ public class ParentQueue extends AbstractCSQueue {
     }
     float delta = Math.abs(1.0f - childCapacities);  // crude way to check
     // allow capacities being set to 0, and enforce child 0 if parent is 0
-    if (((capacity > 0) && (delta > PRECISION)) || 
-        ((capacity == 0) && (childCapacities > 0))) {
+    if (((queueCapacities.getCapacity() > 0) && (delta > PRECISION)) || 
+        ((queueCapacities.getCapacity() == 0) && (childCapacities > 0))) {
       throw new IllegalArgumentException("Illegal" +
       		" capacity of " + childCapacities + 
       		" for children of queue " + queueName);
     }
     // check label capacities
     for (String nodeLabel : labelManager.getClusterNodeLabels()) {
-      float capacityByLabel = getCapacityByNodeLabel(nodeLabel);
+      float capacityByLabel = queueCapacities.getCapacity(nodeLabel);
       // check children's labels
       float sum = 0;
       for (CSQueue queue : childQueues) {
-        sum += queue.getCapacityByNodeLabel(nodeLabel);
+        sum += queue.getQueueCapacities().getCapacity(nodeLabel);
       }
       if ((capacityByLabel > 0 && Math.abs(1.0f - sum) > PRECISION)
           || (capacityByLabel == 0) && (sum > 0)) {
@@ -254,8 +228,8 @@ public class ParentQueue extends AbstractCSQueue {
   public String toString() {
     return queueName + ": " +
         "numChildQueue= " + childQueues.size() + ", " + 
-        "capacity=" + capacity + ", " +  
-        "absoluteCapacity=" + absoluteCapacity + ", " +
+        "capacity=" + queueCapacities.getCapacity() + ", " +  
+        "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
         "usedResources=" + queueUsage.getUsed() + 
         "usedCapacity=" + getUsedCapacity() + ", " + 
         "numApps=" + getNumApplications() + ", " + 
@@ -263,9 +237,8 @@ public class ParentQueue extends AbstractCSQueue {
   }
   
   @Override
-  public synchronized void reinitialize(
-      CSQueue newlyParsedQueue, Resource clusterResource)
-  throws IOException {
+  public synchronized void reinitialize(CSQueue newlyParsedQueue,
+      Resource clusterResource) throws IOException {
     // Sanity check
     if (!(newlyParsedQueue instanceof ParentQueue) ||
         !newlyParsedQueue.getQueuePath().equals(getQueuePath())) {
@@ -276,18 +249,7 @@ public class ParentQueue extends AbstractCSQueue {
     ParentQueue newlyParsedParentQueue = (ParentQueue)newlyParsedQueue;
 
     // Set new configs
-    setupQueueConfigs(clusterResource,
-        newlyParsedParentQueue.capacity, 
-        newlyParsedParentQueue.absoluteCapacity,
-        newlyParsedParentQueue.maximumCapacity, 
-        newlyParsedParentQueue.absoluteMaxCapacity,
-        newlyParsedParentQueue.state, 
-        newlyParsedParentQueue.acls,
-        newlyParsedParentQueue.accessibleLabels,
-        newlyParsedParentQueue.defaultLabelExpression,
-        newlyParsedParentQueue.capacitiyByNodeLabels,
-        newlyParsedParentQueue.maxCapacityByNodeLabels,
-        newlyParsedParentQueue.reservationsContinueLooking);
+    setupQueueConfigs(clusterResource);
 
     // Re-configure existing child queues and add new ones
     // The CS has already checked to ensure all existing child queues are present!
@@ -512,7 +474,7 @@ public class ParentQueue extends AbstractCSQueue {
               labelManager.getResourceByLabel(label, clusterResource));
       // if any of the label doesn't beyond limit, we can allocate on this node
       if (currentAbsoluteLabelUsedCapacity >= 
-            getAbsoluteMaximumCapacityByNodeLabel(label)) {
+            queueCapacities.getAbsoluteMaximumCapacity(label)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug(getQueueName() + " used=" + queueUsage.getUsed()
               + " current-capacity (" + queueUsage.getUsed(label) + ") "
@@ -540,7 +502,8 @@ public class ParentQueue extends AbstractCSQueue {
           Resources.subtract(queueUsage.getUsed(), reservedResources),
           clusterResource);
 
-      if (capacityWithoutReservedCapacity <= absoluteMaxCapacity) {
+      if (capacityWithoutReservedCapacity <= queueCapacities
+          .getAbsoluteMaximumCapacity()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("parent: try to use reserved: " + getQueueName()
             + " usedResources: " + queueUsage.getUsed().getMemory()
@@ -550,7 +513,7 @@ public class ParentQueue extends AbstractCSQueue {
             / clusterResource.getMemory()
             + " potentialNewWithoutReservedCapacity: "
             + capacityWithoutReservedCapacity + " ( " + " max-capacity: "
-            + absoluteMaxCapacity + ")");
+            + queueCapacities.getAbsoluteMaximumCapacity() + ")");
         }
         // we could potentially use this node instead of reserved node
         return true;
@@ -759,13 +722,6 @@ public class ParentQueue extends AbstractCSQueue {
         parent.detachContainer(clusterResource, application, rmContainer);
       }
     }
-  }
-
-  @Override
-  public float getAbsActualCapacity() {
-    // for now, simply return actual capacity = guaranteed capacity for parent
-    // queue
-    return absoluteCapacity;
   }
   
   public synchronized int getNumApplications() {

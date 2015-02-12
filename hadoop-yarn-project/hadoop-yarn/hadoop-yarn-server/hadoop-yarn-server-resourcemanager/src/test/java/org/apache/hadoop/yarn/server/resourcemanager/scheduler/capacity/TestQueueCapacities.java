@@ -99,7 +99,7 @@ public class TestQueueCapacities {
   }
 
   private void internalTestModifyAndRead(String label) throws Exception {
-    QueueCapacities qc = new QueueCapacities();
+    QueueCapacities qc = new QueueCapacities(false);
 
     // First get returns 0 always
     Assert.assertEquals(0f, get(qc, suffix, label), 1e-8);

@@ -189,6 +189,9 @@ Release 2.6.1 - UNRELEASED
     YARN-2694. Ensure only single node label specified in ResourceRequest.
     (Wangda Tan via jianhe)
 
+    YARN-3124. Fixed CS LeafQueue/ParentQueue to use QueueCapacities to track
+    capacities-by-label. (Wangda Tan via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

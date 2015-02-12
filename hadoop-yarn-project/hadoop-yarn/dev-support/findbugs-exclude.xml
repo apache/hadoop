@@ -204,6 +204,8 @@
       <Field name="absoluteNodeLabelCapacities" />
       <Field name="reservationsContinueLooking" />
       <Field name="absoluteCapacityByNodeLabels" />
+      <Field name="authorizer" />
+      <Field name="parent" />
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
