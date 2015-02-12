@@ -441,8 +441,8 @@ public class QueueManager {
   synchronized Map<String, JobQueueInfo> getJobQueueInfoMapping() {
     Map<String, JobQueueInfo> m = new HashMap<String, JobQueueInfo>();
 
-    for (String key : allQueues.keySet()) {
-      m.put(key, allQueues.get(key).getJobQueueInfo());
+    for (Map.Entry<String,Queue> entry : allQueues.entrySet()) {
+      m.put(entry.getKey(), entry.getValue().getJobQueueInfo());
     }
 
     return m;
