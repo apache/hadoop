@@ -324,6 +324,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7761. cleanup unnecssary code logic in LocatedBlock. (yliu)
 
+    HDFS-7703. Support favouredNodes for the append for new blocks
+    (vinayakumarb)
+
     HDFS-7694. FSDataInputStream should support "unbuffer" (cmccabe)
 
     HDFS-7684. The host:port settings of the daemons should be trimmed before
