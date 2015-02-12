@@ -621,6 +621,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7761. cleanup unnecssary code logic in LocatedBlock. (yliu)
 
+    HDFS-7703. Support favouredNodes for the append for new blocks
+    (vinayakumarb)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

@@ -26,12 +26,14 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Random;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -156,6 +158,33 @@ public class TestFavoredNodesEndToEnd {
       Assert.assertTrue("j=" + j, j > 0);
       Assert.assertTrue("loc=" + loc + " not in host list "
           + Arrays.asList(hosts) + ", j=" + j, j < hosts.length);
+    }
+  }
+
+  @Test(timeout = 180000)
+  public void testFavoredNodesEndToEndForAppend() throws Exception {
+    // create 10 files with random preferred nodes
+    for (int i = 0; i < NUM_FILES; i++) {
+      Random rand = new Random(System.currentTimeMillis() + i);
+      // pass a new created rand so as to get a uniform distribution each time
+      // without too much collisions (look at the do-while loop in getDatanodes)
+      InetSocketAddress datanode[] = getDatanodes(rand);
+      Path p = new Path("/filename" + i);
+      // create and close the file.
+      dfs.create(p, FsPermission.getDefault(), true, 4096, (short) 3, 4096L,
+          null, null).close();
+      // re-open for append
+      FSDataOutputStream out = dfs.append(p, EnumSet.of(CreateFlag.APPEND),
+          4096, null, datanode);
+      out.write(SOME_BYTES);
+      out.close();
+      BlockLocation[] locations = getBlockLocations(p);
+      // verify the files got created in the right nodes
+      for (BlockLocation loc : locations) {
+        String[] hosts = loc.getNames();
+        String[] hosts1 = getStringForInetSocketAddrs(datanode);
+        assertTrue(compareNodes(hosts, hosts1));
+      }
     }
   }
 
