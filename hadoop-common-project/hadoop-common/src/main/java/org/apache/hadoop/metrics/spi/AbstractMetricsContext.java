@@ -310,13 +310,13 @@ public abstract class AbstractMetricsContext implements MetricsContext {
    *  Emits the records.
    */
   private synchronized void emitRecords() throws IOException {
-    for (String recordName : bufferedData.keySet()) {
-      RecordMap recordMap = bufferedData.get(recordName);
+    for (Map.Entry<String,RecordMap> recordEntry : bufferedData.entrySet()) {
+      RecordMap recordMap = recordEntry.getValue();
       synchronized (recordMap) {
         Set<Entry<TagMap, MetricMap>> entrySet = recordMap.entrySet ();
         for (Entry<TagMap, MetricMap> entry : entrySet) {
           OutputRecord outRec = new OutputRecord(entry.getKey(), entry.getValue());
-          emitRecord(contextName, recordName, outRec);
+          emitRecord(contextName, recordEntry.getKey(), outRec);
         }
       }
     }
@@ -330,8 +330,8 @@ public abstract class AbstractMetricsContext implements MetricsContext {
    */
   public synchronized Map<String, Collection<OutputRecord>> getAllRecords() {
     Map<String, Collection<OutputRecord>> out = new TreeMap<String, Collection<OutputRecord>>();
-    for (String recordName : bufferedData.keySet()) {
-      RecordMap recordMap = bufferedData.get(recordName);
+    for (Map.Entry<String,RecordMap> recordEntry : bufferedData.entrySet()) {
+      RecordMap recordMap = recordEntry.getValue();
       synchronized (recordMap) {
         List<OutputRecord> records = new ArrayList<OutputRecord>();
         Set<Entry<TagMap, MetricMap>> entrySet = recordMap.entrySet();
@@ -339,7 +339,7 @@ public abstract class AbstractMetricsContext implements MetricsContext {
           OutputRecord outRec = new OutputRecord(entry.getKey(), entry.getValue());
           records.add(outRec);
         }
-        out.put(recordName, records);
+        out.put(recordEntry.getKey(), records);
       }
     }
     return out;
