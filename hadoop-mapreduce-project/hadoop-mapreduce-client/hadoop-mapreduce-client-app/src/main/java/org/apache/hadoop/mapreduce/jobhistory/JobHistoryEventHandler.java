@@ -374,11 +374,10 @@ public class JobHistoryEventHandler extends AbstractService
 
     // Process JobUnsuccessfulCompletionEvent for jobIds which still haven't
     // closed their event writers
-    Iterator<JobId> jobIt = fileMap.keySet().iterator();
     if(forceJobCompletion) {
-      while (jobIt.hasNext()) {
-        JobId toClose = jobIt.next();
-        MetaInfo mi = fileMap.get(toClose);
+      for (Map.Entry<JobId,MetaInfo> jobIt : fileMap.entrySet()) {
+        JobId toClose = jobIt.getKey();
+        MetaInfo mi = jobIt.getValue();
         if(mi != null && mi.isWriterActive()) {
           LOG.warn("Found jobId " + toClose
             + " to have not been closed. Will close");
