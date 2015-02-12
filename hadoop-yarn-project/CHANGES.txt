@@ -240,6 +240,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-3147. Clean up RM web proxy code. (Steve Loughran via xgong)
 
+    YARN-2079. Recover NonAggregatingLogHandler state upon nodemanager
+    restart. (Jason Lowe via junping_du) 
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
