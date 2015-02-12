@@ -235,6 +235,9 @@ Release 2.7.0 - UNRELEASED
     YARN-1237. Description for yarn.nodemanager.aux-services in 
     yarn-default.xml is misleading. (Brahma Reddy Battula via ozawa)
 
+    YARN-3157. Refactor the exception handling in ConverterUtils#to*Id.
+    (Bibin A Chundatt via ozawa)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
