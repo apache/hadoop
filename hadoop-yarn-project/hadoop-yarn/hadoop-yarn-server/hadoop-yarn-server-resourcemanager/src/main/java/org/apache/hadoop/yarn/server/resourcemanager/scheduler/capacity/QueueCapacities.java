@@ -19,12 +19,18 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+
+import com.google.common.collect.Sets;
 
 public class QueueCapacities {
   private static final String NL = CommonNodeLabelsManager.NO_LABEL;
@@ -32,13 +38,15 @@ public class QueueCapacities {
   private Map<String, Capacities> capacitiesMap;
   private ReadLock readLock;
   private WriteLock writeLock;
+  private final boolean isRoot;
 
-  public QueueCapacities() {
+  public QueueCapacities(boolean isRoot) {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
 
     capacitiesMap = new HashMap<String, Capacities>();
+    this.isRoot = isRoot;
   }
   
   // Usage enum here to make implement cleaner
@@ -57,6 +65,18 @@ public class QueueCapacities {
     
     public Capacities() {
       capacitiesArr = new float[CapacityType.values().length];
+    }
+    
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{used=" + capacitiesArr[0] + "%, ");
+      sb.append("abs_used=" + capacitiesArr[1] + "%, ");
+      sb.append("max_cap=" + capacitiesArr[2] + "%, ");
+      sb.append("abs_max_cap=" + capacitiesArr[3] + "%, ");
+      sb.append("cap=" + capacitiesArr[4] + "%, ");
+      sb.append("abs_cap=" + capacitiesArr[5] + "%}");
+      return sb.toString();
     }
   }
   
@@ -127,6 +147,10 @@ public class QueueCapacities {
   }
 
   public float getCapacity(String label) {
+    if (StringUtils.equals(label, RMNodeLabelsManager.NO_LABEL) && isRoot) {
+      return 1f;
+    }
+    
     return _get(label, CapacityType.CAP);
   }
 
@@ -144,6 +168,9 @@ public class QueueCapacities {
   }
 
   public float getAbsoluteCapacity(String label) {
+    if (StringUtils.equals(label, RMNodeLabelsManager.NO_LABEL) && isRoot) {
+      return 1f;
+    }
     return _get(label, CapacityType.ABS_CAP);
   }
 
@@ -187,5 +214,44 @@ public class QueueCapacities {
 
   public void setAbsoluteMaximumCapacity(String label, float value) {
     _set(label, CapacityType.ABS_MAX_CAP, value);
+  }
+  
+  /**
+   * Clear configurable fields, like
+   * (absolute)capacity/(absolute)maximum-capacity, this will be used by queue
+   * reinitialize, when we reinitialize a queue, we will first clear all
+   * configurable fields, and load new values
+   */
+  public void clearConfigurableFields() {
+    try {
+      writeLock.lock();
+      for (String label : capacitiesMap.keySet()) {
+        _set(label, CapacityType.CAP, 0);
+        _set(label, CapacityType.MAX_CAP, 0);
+        _set(label, CapacityType.ABS_CAP, 0);
+        _set(label, CapacityType.ABS_MAX_CAP, 0);
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
+  
+  public Set<String> getExistingNodeLabels() {
+    try {
+      readLock.lock();
+      return new HashSet<String>(capacitiesMap.keySet());
+    } finally {
+      readLock.unlock();
+    }
+  }
+  
+  @Override
+  public String toString() {
+    try {
+      readLock.lock();
+      return this.capacitiesMap.toString();
+    } finally {
+      readLock.unlock();
+    }
   }
 }

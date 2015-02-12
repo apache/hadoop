@@ -389,11 +389,11 @@ public class TestCapacityScheduler {
   public void testMaximumCapacitySetup() {
     float delta = 0.0000001f;
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,conf.getMaximumCapacity(A),delta);
+    assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,conf.getNonLabeledQueueMaximumCapacity(A),delta);
     conf.setMaximumCapacity(A, 50.0f);
-    assertEquals(50.0f, conf.getMaximumCapacity(A),delta);
+    assertEquals(50.0f, conf.getNonLabeledQueueMaximumCapacity(A),delta);
     conf.setMaximumCapacity(A, -1);
-    assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,conf.getMaximumCapacity(A),delta);
+    assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,conf.getNonLabeledQueueMaximumCapacity(A),delta);
   }
   
   

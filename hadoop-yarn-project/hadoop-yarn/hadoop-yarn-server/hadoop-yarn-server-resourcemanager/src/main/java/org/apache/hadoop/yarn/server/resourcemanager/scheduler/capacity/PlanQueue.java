@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -99,16 +97,7 @@ public class PlanQueue extends ParentQueue {
     }
 
     // Set new configs
-    setupQueueConfigs(clusterResource, newlyParsedParentQueue.getCapacity(),
-        newlyParsedParentQueue.getAbsoluteCapacity(),
-        newlyParsedParentQueue.getMaximumCapacity(),
-        newlyParsedParentQueue.getAbsoluteMaximumCapacity(),
-        newlyParsedParentQueue.getState(), newlyParsedParentQueue.getACLs(),
-        newlyParsedParentQueue.accessibleLabels,
-        newlyParsedParentQueue.defaultLabelExpression,
-        newlyParsedParentQueue.capacitiyByNodeLabels,
-        newlyParsedParentQueue.maxCapacityByNodeLabels,
-        newlyParsedParentQueue.getReservationContinueLooking());
+    setupQueueConfigs(clusterResource);
 
     updateQuotas(newlyParsedParentQueue.userLimit,
         newlyParsedParentQueue.userLimitFactor,

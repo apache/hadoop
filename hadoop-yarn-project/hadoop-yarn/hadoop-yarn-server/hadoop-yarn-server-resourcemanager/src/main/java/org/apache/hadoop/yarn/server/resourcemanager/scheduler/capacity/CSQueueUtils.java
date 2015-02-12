@@ -17,13 +17,14 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.utils.Lock;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -34,6 +35,9 @@ class CSQueueUtils {
 
   final static float EPSILON = 0.0001f;
   
+  /*
+   * Used only by tests
+   */
   public static void checkMaxCapacity(String queueName, 
       float capacity, float maximumCapacity) {
     if (maximumCapacity < 0.0f || maximumCapacity > 1.0f) {
@@ -43,6 +47,9 @@ class CSQueueUtils {
     }
     }
 
+  /*
+   * Used only by tests
+   */
   public static void checkAbsoluteCapacity(String queueName,
       float absCapacity, float absMaxCapacity) {
     if (absMaxCapacity < (absCapacity - EPSILON)) {
@@ -53,19 +60,33 @@ class CSQueueUtils {
   }
   }
   
-  public static void checkAbsoluteCapacitiesByLabel(String queueName,
-          Map<String, Float> absCapacities,
-          Map<String, Float> absMaximumCapacities) {
-    for (Entry<String, Float> entry : absCapacities.entrySet()) {
-      String label = entry.getKey();
-      float absCapacity = entry.getValue();
-      float absMaxCapacity = absMaximumCapacities.get(label);
-      if (absMaxCapacity < (absCapacity - EPSILON)) {
-        throw new IllegalArgumentException("Illegal call to setMaxCapacity. "
-            + "Queue '" + queueName + "' has " + "an absolute capacity ("
-            + absCapacity + ") greater than "
-            + "its absolute maximumCapacity (" + absMaxCapacity + ") of label="
-            + label);
+  /**
+   * Check sanity of capacities:
+   * - capacity <= maxCapacity
+   * - absCapacity <= absMaximumCapacity
+   */
+  private static void capacitiesSanityCheck(String queueName,
+      QueueCapacities queueCapacities) {
+    for (String label : queueCapacities.getExistingNodeLabels()) {
+      float capacity = queueCapacities.getCapacity(label);
+      float maximumCapacity = queueCapacities.getMaximumCapacity(label);
+      if (capacity > maximumCapacity) {
+        throw new IllegalArgumentException("Illegal queue capacity setting, "
+            + "(capacity=" + capacity + ") > (maximum-capacity="
+            + maximumCapacity + "). When label=[" + label + "]");
+      }
+     
+      // Actually, this may not needed since we have verified capacity <=
+      // maximumCapacity. And the way we compute absolute capacity (abs(x) =
+      // cap(x) * cap(x.parent) * ...) is a monotone increasing function. But
+      // just keep it here to make sure our compute abs capacity method works
+      // correctly. 
+      float absCapacity = queueCapacities.getAbsoluteCapacity(label);
+      float absMaxCapacity = queueCapacities.getAbsoluteMaximumCapacity(label);
+      if (absCapacity > absMaxCapacity) {
+        throw new IllegalArgumentException("Illegal queue capacity setting, "
+            + "(abs-capacity=" + absCapacity + ") > (abs-maximum-capacity="
+            + absMaxCapacity + "). When label=[" + label + "]");
       }
     }
   }
@@ -77,37 +98,94 @@ class CSQueueUtils {
     return (parentAbsMaxCapacity * maximumCapacity);
   }
   
-  public static Map<String, Float> computeAbsoluteCapacityByNodeLabels(
-      Map<String, Float> nodeLabelToCapacities, CSQueue parent) {
-    if (parent == null) {
-      return nodeLabelToCapacities;
-    }
-    
-    Map<String, Float> absoluteCapacityByNodeLabels =
-        new HashMap<String, Float>();
-    for (Entry<String, Float> entry : nodeLabelToCapacities.entrySet()) {
-      String label = entry.getKey();
-      float capacity = entry.getValue();
-      absoluteCapacityByNodeLabels.put(label,
-          capacity * parent.getAbsoluteCapacityByNodeLabel(label));
-    }
-    return absoluteCapacityByNodeLabels;
+  /**
+   * This method intends to be used by ReservationQueue, ReservationQueue will
+   * not appear in configuration file, so we shouldn't do load capacities
+   * settings in configuration for reservation queue.
+   */
+  public static void updateAndCheckCapacitiesByLabel(String queuePath,
+      QueueCapacities queueCapacities, QueueCapacities parentQueueCapacities) {
+    updateAbsoluteCapacitiesByNodeLabels(queueCapacities, parentQueueCapacities);
+
+    capacitiesSanityCheck(queuePath, queueCapacities);
+  }
+
+  /**
+   * Do following steps for capacities
+   * - Load capacities from configuration
+   * - Update absolute capacities for new capacities
+   * - Check if capacities/absolute-capacities legal
+   */
+  public static void loadUpdateAndCheckCapacities(String queuePath,
+      Set<String> accessibleLabels, CapacitySchedulerConfiguration csConf,
+      QueueCapacities queueCapacities, QueueCapacities parentQueueCapacities,
+      RMNodeLabelsManager nlm) {
+    loadCapacitiesByLabelsFromConf(queuePath, accessibleLabels, nlm,
+        queueCapacities, csConf);
+
+    updateAbsoluteCapacitiesByNodeLabels(queueCapacities, parentQueueCapacities);
+
+    capacitiesSanityCheck(queuePath, queueCapacities);
   }
   
-  public static Map<String, Float> computeAbsoluteMaxCapacityByNodeLabels(
-      Map<String, Float> maximumNodeLabelToCapacities, CSQueue parent) {
-    if (parent == null) {
-      return maximumNodeLabelToCapacities;
+  // Considered NO_LABEL, ANY and null cases
+  private static Set<String> normalizeAccessibleNodeLabels(Set<String> labels,
+      RMNodeLabelsManager mgr) {
+    Set<String> accessibleLabels = new HashSet<String>();
+    if (labels != null) {
+      accessibleLabels.addAll(labels);
     }
-    Map<String, Float> absoluteMaxCapacityByNodeLabels =
-        new HashMap<String, Float>();
-    for (Entry<String, Float> entry : maximumNodeLabelToCapacities.entrySet()) {
-      String label = entry.getKey();
-      float maxCapacity = entry.getValue();
-      absoluteMaxCapacityByNodeLabels.put(label,
-          maxCapacity * parent.getAbsoluteMaximumCapacityByNodeLabel(label));
+    if (accessibleLabels.contains(CommonNodeLabelsManager.ANY)) {
+      accessibleLabels.addAll(mgr.getClusterNodeLabels());
     }
-    return absoluteMaxCapacityByNodeLabels;
+    accessibleLabels.add(CommonNodeLabelsManager.NO_LABEL);
+    
+    return accessibleLabels;
+  }
+  
+  private static void loadCapacitiesByLabelsFromConf(String queuePath,
+      Set<String> labels, RMNodeLabelsManager mgr,
+      QueueCapacities queueCapacities, CapacitySchedulerConfiguration csConf) {
+    queueCapacities.clearConfigurableFields();
+    labels = normalizeAccessibleNodeLabels(labels, mgr);
+
+    for (String label : labels) {
+      if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
+        queueCapacities.setCapacity(CommonNodeLabelsManager.NO_LABEL,
+            csConf.getNonLabeledQueueCapacity(queuePath) / 100);
+        queueCapacities.setMaximumCapacity(CommonNodeLabelsManager.NO_LABEL,
+            csConf.getNonLabeledQueueMaximumCapacity(queuePath) / 100);
+      } else {
+        queueCapacities.setCapacity(label,
+            csConf.getLabeledQueueCapacity(queuePath, label) / 100);
+        queueCapacities.setMaximumCapacity(label,
+            csConf.getLabeledQueueMaximumCapacity(queuePath, label) / 100);
+      }
+    }
+  }
+  
+  // Set absolute capacities for {capacity, maximum-capacity}
+  private static void updateAbsoluteCapacitiesByNodeLabels(
+      QueueCapacities queueCapacities, QueueCapacities parentQueueCapacities) {
+    for (String label : queueCapacities.getExistingNodeLabels()) {
+      float capacity = queueCapacities.getCapacity(label);
+      if (capacity > 0f) {
+        queueCapacities.setAbsoluteCapacity(
+            label,
+            capacity
+                * (parentQueueCapacities == null ? 1 : parentQueueCapacities
+                    .getAbsoluteCapacity(label)));
+      }
+
+      float maxCapacity = queueCapacities.getMaximumCapacity(label);
+      if (maxCapacity > 0f) {
+        queueCapacities.setAbsoluteMaximumCapacity(
+            label,
+            maxCapacity
+                * (parentQueueCapacities == null ? 1 : parentQueueCapacities
+                    .getAbsoluteMaximumCapacity(label)));
+      }
+    }
   }
   
   @Lock(CSQueue.class)

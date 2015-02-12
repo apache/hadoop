@@ -91,7 +91,8 @@ public class TestCapacitySchedulerNodeLabelUpdate {
       String label) {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = scheduler.getQueue(queueName);
-    Assert.assertEquals(memory, queue.getUsedResourceByLabel(label).getMemory());
+    Assert.assertEquals(memory, queue.getQueueResourceUsage().getUsed(label)
+        .getMemory());
   }
 
   @Test (timeout = 30000)
