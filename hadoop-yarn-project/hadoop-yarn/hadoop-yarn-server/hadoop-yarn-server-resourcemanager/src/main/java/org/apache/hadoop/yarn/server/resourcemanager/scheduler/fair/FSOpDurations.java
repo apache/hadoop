@@ -31,6 +31,8 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 /**
  * Class to capture the performance metrics of FairScheduler.
  * This should be a singleton.
@@ -38,6 +40,7 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 @Metrics(context="fairscheduler-op-durations")
+@ThreadSafe
 public class FSOpDurations implements MetricsSource {
 
   @Metric("Duration for a continuous scheduling run")
