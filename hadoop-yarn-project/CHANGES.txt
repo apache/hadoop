@@ -232,6 +232,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2683. [YARN-913] registry config options: document and move to
     core-default. (stevel)
 
+    YARN-1237. Description for yarn.nodemanager.aux-services in 
+    yarn-default.xml is misleading. (Brahma Reddy Battula via ozawa)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
