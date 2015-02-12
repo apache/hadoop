@@ -19,11 +19,15 @@ package org.apache.hadoop.mapreduce.tools;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.JobPriority;
+import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.junit.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -103,5 +107,46 @@ public class TestCLI {
 
   private TaskReport[] getTaskReports(JobID jobId, TaskType type) {
     return new TaskReport[] { new TaskReport(), new TaskReport() };
+  }
+
+  @Test
+  public void testJobKIll() throws Exception {
+    Cluster mockCluster = mock(Cluster.class);
+    CLI cli = spy(new CLI());
+    doReturn(mockCluster).when(cli).createCluster();
+    String jobId1 = "job_1234654654_001";
+    String jobId2 = "job_1234654654_002";
+    String jobId3 = "job_1234654654_003";
+    String jobId4 = "job_1234654654_004";
+    Job mockJob1 = mockJob(mockCluster, jobId1, State.RUNNING);
+    Job mockJob2 = mockJob(mockCluster, jobId2, State.KILLED);
+    Job mockJob3 = mockJob(mockCluster, jobId3, State.FAILED);
+    Job mockJob4 = mockJob(mockCluster, jobId4, State.PREP);
+
+    int exitCode1 = cli.run(new String[] { "-kill", jobId1 });
+    assertEquals(0, exitCode1);
+    verify(mockJob1, times(1)).killJob();
+
+    int exitCode2 = cli.run(new String[] { "-kill", jobId2 });
+    assertEquals(-1, exitCode2);
+    verify(mockJob2, times(0)).killJob();
+
+    int exitCode3 = cli.run(new String[] { "-kill", jobId3 });
+    assertEquals(-1, exitCode3);
+    verify(mockJob3, times(0)).killJob();
+
+    int exitCode4 = cli.run(new String[] { "-kill", jobId4 });
+    assertEquals(0, exitCode4);
+    verify(mockJob4, times(1)).killJob();
+  }
+
+  private Job mockJob(Cluster mockCluster, String jobId, State jobState)
+      throws IOException, InterruptedException {
+    Job mockJob = mock(Job.class);
+    when(mockCluster.getJob(JobID.forName(jobId))).thenReturn(mockJob);
+    JobStatus status = new JobStatus(null, 0, 0, 0, 0, jobState,
+        JobPriority.HIGH, null, null, null, null);
+    when(mockJob.getStatus()).thenReturn(status);
+    return mockJob;
   }
 }
