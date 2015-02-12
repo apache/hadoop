@@ -26,7 +26,6 @@ import java.util.Random;
  * Test XOR encoding and decoding.
  */
 public class TestXorRawCoder extends TestRawCoderBase {
-  private static Random RAND = new Random();
 
   @Before
   public void setup() {
