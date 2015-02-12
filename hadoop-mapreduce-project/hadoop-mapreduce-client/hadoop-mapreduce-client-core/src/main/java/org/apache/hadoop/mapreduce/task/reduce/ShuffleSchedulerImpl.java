@@ -274,7 +274,8 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       }
     }
 
-    checkAndInformJobTracker(failures, mapId, readError, connectExcpt, hostFail);
+    checkAndInformMRAppMaster(failures, mapId, readError, connectExcpt,
+        hostFail);
 
     checkReducerHealth();
 
@@ -299,15 +300,15 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     reporter.reportException(ioe);
   }
 
-  // Notify the JobTracker
+  // Notify the MRAppMaster
   // after every read error, if 'reportReadErrorImmediately' is true or
   // after every 'maxFetchFailuresBeforeReporting' failures
-  private void checkAndInformJobTracker(
+  private void checkAndInformMRAppMaster(
       int failures, TaskAttemptID mapId, boolean readError,
       boolean connectExcpt, boolean hostFailed) {
     if (connectExcpt || (reportReadErrorImmediately && readError)
         || ((failures % maxFetchFailuresBeforeReporting) == 0) || hostFailed) {
-      LOG.info("Reporting fetch failure for " + mapId + " to jobtracker.");
+      LOG.info("Reporting fetch failure for " + mapId + " to MRAppMaster.");
       status.addFetchFailedMap((org.apache.hadoop.mapred.TaskAttemptID) mapId);
     }
   }
