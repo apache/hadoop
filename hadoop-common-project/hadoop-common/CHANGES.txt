@@ -392,6 +392,8 @@ Trunk (Unreleased)
     HADOOP-11437. Remove the version and author information from distcp's
     README file (Brahma Reddy Battula via aw)
 
+    HADOOP-11585. Fix formatting in Tracing.md (Masatake Iwasaki via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
