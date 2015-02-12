@@ -18,10 +18,12 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
@@ -65,10 +67,14 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
+import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.exceptions.verification.WantedButNotInvoked;
@@ -123,7 +129,8 @@ public class TestNonAggregatingLogHandler {
     dirsHandler.init(conf);
 
     NonAggregatingLogHandler rawLogHandler =
-        new NonAggregatingLogHandler(dispatcher, mockDelService, dirsHandler);
+        new NonAggregatingLogHandler(dispatcher, mockDelService, dirsHandler,
+            new NMNullStateStoreService());
     NonAggregatingLogHandler logHandler = spy(rawLogHandler);
     AbstractFileSystem spylfs =
         spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
@@ -209,7 +216,8 @@ public class TestNonAggregatingLogHandler {
   @Test
   public void testStop() throws Exception {
     NonAggregatingLogHandler aggregatingLogHandler = 
-        new NonAggregatingLogHandler(null, null, null);
+        new NonAggregatingLogHandler(null, null, null,
+            new NMNullStateStoreService());
 
     // It should not throw NullPointerException
     aggregatingLogHandler.stop();
@@ -232,7 +240,8 @@ public class TestNonAggregatingLogHandler {
     NonAggregatingLogHandler aggregatingLogHandler =
         new NonAggregatingLogHandler(new InlineDispatcher(),
             delService,
-            dirsHandler);
+            dirsHandler,
+            new NMNullStateStoreService());
 
     dirsHandler.init(conf);
     dirsHandler.start();
@@ -258,7 +267,13 @@ public class TestNonAggregatingLogHandler {
 
     public NonAggregatingLogHandlerWithMockExecutor(Dispatcher dispatcher,
         DeletionService delService, LocalDirsHandlerService dirsHandler) {
-      super(dispatcher, delService, dirsHandler);
+      this(dispatcher, delService, dirsHandler, new NMNullStateStoreService());
+    }
+
+    public NonAggregatingLogHandlerWithMockExecutor(Dispatcher dispatcher,
+        DeletionService delService, LocalDirsHandlerService dirsHandler,
+        NMStateStoreService stateStore) {
+      super(dispatcher, delService, dirsHandler, stateStore);
     }
 
     @Override
@@ -303,7 +318,8 @@ public class TestNonAggregatingLogHandler {
     LocalDirsHandlerService mockDirsHandler = mock(LocalDirsHandlerService.class);
 
     NonAggregatingLogHandler rawLogHandler =
-        new NonAggregatingLogHandler(dispatcher, mockDelService, mockDirsHandler);
+        new NonAggregatingLogHandler(dispatcher, mockDelService,
+            mockDirsHandler, new NMNullStateStoreService());
     NonAggregatingLogHandler logHandler = spy(rawLogHandler);
     AbstractFileSystem spylfs =
         spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
@@ -316,7 +332,58 @@ public class TestNonAggregatingLogHandler {
       mockDirsHandler, conf, spylfs, lfs, localLogDirs);
     logHandler.close();
   }
-  
+
+  @Test
+  public void testRecovery() throws Exception {
+    File[] localLogDirs = getLocalLogDirFiles(this.getClass().getName(), 2);
+    String localLogDirsString =
+        localLogDirs[0].getAbsolutePath() + ","
+            + localLogDirs[1].getAbsolutePath();
+
+    conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDirsString);
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, false);
+
+    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS,
+            YarnConfiguration.DEFAULT_NM_LOG_RETAIN_SECONDS);
+
+    dirsHandler.init(conf);
+
+    NMStateStoreService stateStore = new NMMemoryStateStoreService();
+    stateStore.init(conf);
+    stateStore.start();
+    NonAggregatingLogHandlerWithMockExecutor logHandler =
+        new NonAggregatingLogHandlerWithMockExecutor(dispatcher, mockDelService,
+                                                     dirsHandler, stateStore);
+    logHandler.init(conf);
+    logHandler.start();
+
+    logHandler.handle(new LogHandlerAppStartedEvent(appId, user, null,
+        ContainerLogsRetentionPolicy.ALL_CONTAINERS, null));
+    logHandler.handle(new LogHandlerContainerFinishedEvent(container11, 0));
+    logHandler.handle(new LogHandlerAppFinishedEvent(appId));
+
+    // simulate a restart and verify deletion is rescheduled
+    logHandler.close();
+    logHandler = new NonAggregatingLogHandlerWithMockExecutor(dispatcher,
+        mockDelService, dirsHandler, stateStore);
+    logHandler.init(conf);
+    logHandler.start();
+    ArgumentCaptor<Runnable> schedArg = ArgumentCaptor.forClass(Runnable.class);
+    verify(logHandler.mockSched).schedule(schedArg.capture(),
+        anyLong(), eq(TimeUnit.MILLISECONDS));
+
+    // execute the runnable and verify another restart has nothing scheduled
+    schedArg.getValue().run();
+    logHandler.close();
+    logHandler = new NonAggregatingLogHandlerWithMockExecutor(dispatcher,
+        mockDelService, dirsHandler, stateStore);
+    logHandler.init(conf);
+    logHandler.start();
+    verify(logHandler.mockSched, never()).schedule(any(Runnable.class),
+        anyLong(), any(TimeUnit.class));
+    logHandler.close();
+   }
+
   /**
    * Function to run a log handler with directories failing the getFileStatus
    * call. The function accepts the log handler, setup the mocks to fail with

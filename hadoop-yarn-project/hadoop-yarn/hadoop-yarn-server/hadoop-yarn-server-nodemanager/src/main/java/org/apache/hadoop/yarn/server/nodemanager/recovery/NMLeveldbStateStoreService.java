@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
@@ -114,6 +115,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       CONTAINER_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
   private static final String CONTAINER_TOKENS_PREV_MASTER_KEY =
       CONTAINER_TOKENS_KEY_PREFIX + PREV_MASTER_KEY_SUFFIX;
+
+  private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
 
   private static final byte[] EMPTY_VALUE = new byte[0];
 
@@ -852,6 +855,69 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
 
   @Override
+  public RecoveredLogDeleterState loadLogDeleterState() throws IOException {
+    RecoveredLogDeleterState state = new RecoveredLogDeleterState();
+    state.logDeleterMap = new HashMap<ApplicationId, LogDeleterProto>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(LOG_DELETER_KEY_PREFIX));
+      final int logDeleterKeyPrefixLength = LOG_DELETER_KEY_PREFIX.length();
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String fullKey = asString(entry.getKey());
+        if (!fullKey.startsWith(LOG_DELETER_KEY_PREFIX)) {
+          break;
+        }
+
+        String appIdStr = fullKey.substring(logDeleterKeyPrefixLength);
+        ApplicationId appId = null;
+        try {
+          appId = ConverterUtils.toApplicationId(appIdStr);
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Skipping unknown log deleter key " + fullKey);
+          continue;
+        }
+
+        LogDeleterProto proto = LogDeleterProto.parseFrom(entry.getValue());
+        state.logDeleterMap.put(appId, proto);
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+    return state;
+  }
+
+  @Override
+  public void storeLogDeleter(ApplicationId appId, LogDeleterProto proto)
+      throws IOException {
+    String key = getLogDeleterKey(appId);
+    try {
+      db.put(bytes(key), proto.toByteArray());
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeLogDeleter(ApplicationId appId) throws IOException {
+    String key = getLogDeleterKey(appId);
+    try {
+      db.delete(bytes(key));
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private String getLogDeleterKey(ApplicationId appId) {
+    return LOG_DELETER_KEY_PREFIX + appId;
+  }
+
+  @Override
   protected void initStorage(Configuration conf)
       throws IOException {
     Path storeRoot = createStorageDir(conf);
@@ -966,5 +1032,4 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             + getCurrentVersion() + ", but loading version " + loadedVersion);
     }
   }
-  
 }

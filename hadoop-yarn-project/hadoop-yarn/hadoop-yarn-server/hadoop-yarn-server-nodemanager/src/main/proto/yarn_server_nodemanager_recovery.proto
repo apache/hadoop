@@ -47,3 +47,7 @@ message LocalizedResourceProto {
   optional int64 size = 3;
 }
 
+message LogDeleterProto {
+  optional string user = 1;
+  optional int64 deletionTime = 2;
+}
