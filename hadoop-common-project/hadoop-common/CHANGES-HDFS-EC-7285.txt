@@ -8,3 +8,7 @@
 
     HADOOP-11541. Raw XOR coder
     ( Kai Zheng )
+
+    HADOOP-11542. Raw Reed-Solomon coder in pure Java. Contributed by Kai Zheng
+    ( Kai Zheng )
+
