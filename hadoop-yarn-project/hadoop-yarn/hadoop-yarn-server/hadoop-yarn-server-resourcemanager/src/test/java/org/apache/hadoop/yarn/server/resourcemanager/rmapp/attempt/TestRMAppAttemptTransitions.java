@@ -1491,7 +1491,7 @@ public class TestRMAppAttemptTransitions {
       diagnostics.contains("exitCode: " + exitCode));
     if (shouldCheckURL) {
       assertTrue("Diagnostic information does not contain application proxy URL",
-      diagnostics.contains(applicationAttempt.getWebProxyBase()));
+          diagnostics.contains(applicationAttempt.getTrackingUrl()));
     }
   }
 

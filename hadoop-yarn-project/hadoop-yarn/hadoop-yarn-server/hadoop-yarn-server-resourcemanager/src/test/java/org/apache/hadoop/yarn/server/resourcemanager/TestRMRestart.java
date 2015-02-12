@@ -769,6 +769,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     Assert.assertEquals(RMAppState.KILLED, appState.getState());
     Assert.assertEquals(RMAppAttemptState.KILLED,
       appState.getAttempt(am0.getApplicationAttemptId()).getState());
+    String trackingUrl = app0.getCurrentAppAttempt().getOriginalTrackingUrl();
+    Assert.assertNotNull(trackingUrl);
 
     // restart rm
     MockRM rm2 = createMockRM(conf, memStore);
@@ -782,6 +784,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     ApplicationReport appReport = verifyAppReportAfterRMRestart(app0, rm2);
     Assert.assertEquals(app0.getDiagnostics().toString(),
         appReport.getDiagnostics());
+    Assert.assertEquals(trackingUrl, loadedApp0.getCurrentAppAttempt()
+        .getOriginalTrackingUrl());
   }
 
   @Test (timeout = 60000)
