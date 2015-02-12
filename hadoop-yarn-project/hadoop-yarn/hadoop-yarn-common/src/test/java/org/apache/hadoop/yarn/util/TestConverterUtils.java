@@ -99,4 +99,19 @@ public class TestConverterUtils {
     assertEquals(nid.getPort(), 0);
     assertEquals(nid.getHost(), "node");
   }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidContainerId() {
+    ConverterUtils.toContainerId("container_e20_1423221031460_0003_01");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidAppattemptId() {
+    ConverterUtils.toApplicationAttemptId("appattempt_1423221031460");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testApplicationId() {
+    ConverterUtils.toApplicationId("application_1423221031460");
+  }
 }
