@@ -602,10 +602,9 @@ public class TestMapFile {
 
   @Test
   public void testMainMethodMapFile() {
-    String path = new Path(TEST_DIR, "mainMethodMapFile.mapfile").toString();
     String inFile = "mainMethodMapFile.mapfile";
-    String outFile = "mainMethodMapFile.mapfile";
-    String[] args = { path, outFile };
+    String path = new Path(TEST_DIR, inFile).toString();
+    String[] args = { path, path };
     MapFile.Writer writer = null;
     try {
       writer = createWriter(inFile, IntWritable.class, Text.class);
