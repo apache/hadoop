@@ -211,10 +211,16 @@ public class TestFsck {
     try {
       // Audit log should contain one getfileinfo and one fsck
       reader = new BufferedReader(new FileReader(auditLogFile));
-      String line = reader.readLine();
-      assertNotNull(line);
-      assertTrue("Expected getfileinfo event not found in audit log",
-          getfileinfoPattern.matcher(line).matches());
+      String line;
+
+      // one extra getfileinfo stems from resolving the path
+      //
+      for (int i = 0; i < 2; i++) {
+        line = reader.readLine();
+        assertNotNull(line);
+        assertTrue("Expected getfileinfo event not found in audit log",
+            getfileinfoPattern.matcher(line).matches());
+      }
       line = reader.readLine();
       assertNotNull(line);
       assertTrue("Expected fsck event not found in audit log", fsckPattern

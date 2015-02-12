@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
@@ -26,6 +27,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.viewfs.ConfigUtil;
+import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -116,6 +119,23 @@ public class TestFsckWithMultipleNameNodes {
         urls[i] = cluster.getFileSystem(i).getUri() + FILE_NAME;
         LOG.info("urls[" + i + "]=" + urls[i]);
         final String result = TestFsck.runFsck(conf, 0, false, urls[i]);
+        LOG.info("result=" + result);
+        Assert.assertTrue(result.contains("Status: HEALTHY"));
+      }
+
+      // Test viewfs
+      //
+      LOG.info("RUN_TEST 3");
+      final String[] vurls = new String[nNameNodes];
+      for (int i = 0; i < vurls.length; i++) {
+        String link = "/mount/nn_" + i + FILE_NAME;
+        ConfigUtil.addLink(conf, link, new URI(urls[i]));
+        vurls[i] = "viewfs:" + link;
+      }
+
+      for(int i = 0; i < vurls.length; i++) {
+        LOG.info("vurls[" + i + "]=" + vurls[i]);
+        final String result = TestFsck.runFsck(conf, 0, false, vurls[i]);
         LOG.info("result=" + result);
         Assert.assertTrue(result.contains("Status: HEALTHY"));
       }
