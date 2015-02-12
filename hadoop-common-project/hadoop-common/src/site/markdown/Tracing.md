@@ -18,7 +18,7 @@ Enabling Dapper-like Tracing in Hadoop
 * [Enabling Dapper-like Tracing in Hadoop](#Enabling_Dapper-like_Tracing_in_Hadoop)
     * [Dapper-like Tracing in Hadoop](#Dapper-like_Tracing_in_Hadoop)
         * [HTrace](#HTrace)
-        * [Samplers Configure the samplers in core-site.xml property: hadoop.htrace.sampler. The value can be NeverSampler, AlwaysSampler or ProbabilitySampler. NeverSampler: HTrace is OFF for all spans; AlwaysSampler: HTrace is ON for all spans; ProbabilitySampler: HTrace is ON for some percentage% of top-level spans.](#Samplers_Configure_the_samplers_in_core-site.xml_property:_hadoop.htrace.sampler._The_value_can_be_NeverSampler_AlwaysSampler_or_ProbabilitySampler._NeverSampler:_HTrace_is_OFF_for_all_spans_AlwaysSampler:_HTrace_is_ON_for_all_spans_ProbabilitySampler:_HTrace_is_ON_for_some_percentage_of_top-level_spans.)
+        * [Samplers](#Samplers)
         * [SpanReceivers](#SpanReceivers)
         * [Setting up ZipkinSpanReceiver](#Setting_up_ZipkinSpanReceiver)
         * [Dynamic update of tracing configuration](#Dynamic_update_of_tracing_configuration)
@@ -30,9 +30,18 @@ Dapper-like Tracing in Hadoop
 
 ### HTrace
 
-[HDFS-5274](https://issues.apache.org/jira/browse/HDFS-5274) added support for tracing requests through HDFS, using the open source tracing library, [Apache HTrace](https://git-wip-us.apache.org/repos/asf/incubator-htrace.git). Setting up tracing is quite simple, however it requires some very minor changes to your client code.
+[HDFS-5274](https://issues.apache.org/jira/browse/HDFS-5274) added support for tracing requests through HDFS,
+using the open source tracing library,
+[Apache HTrace](https://git-wip-us.apache.org/repos/asf/incubator-htrace.git). 
+Setting up tracing is quite simple, however it requires some very minor changes to your client code.
 
-### Samplers Configure the samplers in `core-site.xml` property: `hadoop.htrace.sampler`. The value can be NeverSampler, AlwaysSampler or ProbabilitySampler. NeverSampler: HTrace is OFF for all spans; AlwaysSampler: HTrace is ON for all spans; ProbabilitySampler: HTrace is ON for some percentage% of top-level spans.
+### Samplers
+
+Configure the samplers in `core-site.xml` property: `hadoop.htrace.sampler`.
+The value can be NeverSampler, AlwaysSampler or ProbabilitySampler.
+NeverSampler: HTrace is OFF for all spans;
+AlwaysSampler: HTrace is ON for all spans;
+ProbabilitySampler: HTrace is ON for some percentage% of top-level spans.
 
       <property>
         <name>hadoop.htrace.sampler</name>
@@ -41,11 +50,15 @@ Dapper-like Tracing in Hadoop
 
 ### SpanReceivers
 
-The tracing system works by collecting information in structs called 'Spans'. It is up to you to choose how you want to receive this information by implementing the SpanReceiver interface, which defines one method:
+The tracing system works by collecting information in structs called 'Spans'.
+It is up to you to choose how you want to receive this information
+by implementing the SpanReceiver interface, which defines one method:
 
     public void receiveSpan(Span span);
 
-Configure what SpanReceivers you'd like to use by putting a comma separated list of the fully-qualified class name of classes implementing SpanReceiver in `core-site.xml` property: `hadoop.htrace.spanreceiver.classes`.
+Configure what SpanReceivers you'd like to use
+by putting a comma separated list of the fully-qualified class name of classes implementing SpanReceiver
+in `core-site.xml` property: `hadoop.htrace.spanreceiver.classes`.
 
       <property>
         <name>hadoop.htrace.spanreceiver.classes</name>
@@ -65,18 +78,24 @@ You can omit package name prefix if you use span receiver bundled with HTrace.
 
 ### Setting up ZipkinSpanReceiver
 
-Instead of implementing SpanReceiver by yourself, you can use `ZipkinSpanReceiver` which uses [Zipkin](https://github.com/twitter/zipkin) for collecting and displaying tracing data.
+Instead of implementing SpanReceiver by yourself,
+you can use `ZipkinSpanReceiver` which uses
+[Zipkin](https://github.com/twitter/zipkin) for collecting and displaying tracing data.
 
-In order to use `ZipkinSpanReceiver`, you need to download and setup [Zipkin](https://github.com/twitter/zipkin) first.
+In order to use `ZipkinSpanReceiver`,
+you need to download and setup [Zipkin](https://github.com/twitter/zipkin) first.
 
-you also need to add the jar of `htrace-zipkin` to the classpath of Hadoop on each node. Here is example setup procedure.
+you also need to add the jar of `htrace-zipkin` to the classpath of Hadoop on each node.
+Here is example setup procedure.
 
       $ git clone https://github.com/cloudera/htrace
       $ cd htrace/htrace-zipkin
       $ mvn compile assembly:single
       $ cp target/htrace-zipkin-*-jar-with-dependencies.jar $HADOOP_HOME/share/hadoop/common/lib/
 
-The sample configuration for `ZipkinSpanReceiver` is shown below. By adding these to `core-site.xml` of NameNode and DataNodes, `ZipkinSpanReceiver` is initialized on the startup. You also need this configuration on the client node in addition to the servers.
+The sample configuration for `ZipkinSpanReceiver` is shown below.
+By adding these to `core-site.xml` of NameNode and DataNodes, `ZipkinSpanReceiver` is initialized on the startup.
+You also need this configuration on the client node in addition to the servers.
 
       <property>
         <name>hadoop.htrace.spanreceiver.classes</name>
@@ -93,7 +112,9 @@ The sample configuration for `ZipkinSpanReceiver` is shown below. By adding thes
 
 ### Dynamic update of tracing configuration
 
-You can use `hadoop trace` command to see and update the tracing configuration of each servers. You must specify IPC server address of namenode or datanode by `-host` option. You need to run the command against all servers if you want to update the configuration of all servers.
+You can use `hadoop trace` command to see and update the tracing configuration of each servers.
+You must specify IPC server address of namenode or datanode by `-host` option.
+You need to run the command against all servers if you want to update the configuration of all servers.
 
 `hadoop trace -list` shows list of loaded span receivers associated with the id.
 
@@ -105,12 +126,15 @@ You can use `hadoop trace` command to see and update the tracing configuration o
       ID  CLASS
       1   org.apache.htrace.impl.LocalFileSpanReceiver
 
-`hadoop trace -remove` removes span receiver from server. `-remove` options takes id of span receiver as argument.
+`hadoop trace -remove` removes span receiver from server.
+`-remove` options takes id of span receiver as argument.
 
       $ hadoop trace -remove 1 -host 192.168.56.2:9000
       Removed trace span receiver 1
 
-`hadoop trace -add` adds span receiver to server. You need to specify the class name of span receiver as argument of `-class` option. You can specify the configuration associated with span receiver by `-Ckey=value` options.
+`hadoop trace -add` adds span receiver to server.
+You need to specify the class name of span receiver as argument of `-class` option.
+You can specify the configuration associated with span receiver by `-Ckey=value` options.
 
       $ hadoop trace -add -class LocalFileSpanReceiver -Chadoop.htrace.local-file-span-receiver.path=/tmp/htrace.out -host 192.168.56.2:9000
       Added trace span receiver 2 with configuration hadoop.htrace.local-file-span-receiver.path = /tmp/htrace.out
@@ -121,7 +145,9 @@ You can use `hadoop trace` command to see and update the tracing configuration o
 
 ### Starting tracing spans by HTrace API
 
-In order to trace, you will need to wrap the traced logic with **tracing span** as shown below. When there is running tracing spans, the tracing information is propagated to servers along with RPC requests.
+In order to trace, you will need to wrap the traced logic with **tracing span** as shown below.
+When there is running tracing spans,
+the tracing information is propagated to servers along with RPC requests.
 
 In addition, you need to initialize `SpanReceiver` once per process.
 
@@ -146,7 +172,8 @@ In addition, you need to initialize `SpanReceiver` once per process.
 
 ### Sample code for tracing
 
-The `TracingFsShell.java` shown below is the wrapper of FsShell which start tracing span before invoking HDFS shell command.
+The `TracingFsShell.java` shown below is the wrapper of FsShell
+which start tracing span before invoking HDFS shell command.
 
     import org.apache.hadoop.conf.Configuration;
     import org.apache.hadoop.fs.FsShell;
