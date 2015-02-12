@@ -18,9 +18,11 @@
 package org.apache.hadoop.io.erasurecode;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test base of common utilities for tests not only raw coders but also block
@@ -41,6 +43,14 @@ public abstract class TestCoderBase {
   // may go to different coding implementations.
   protected boolean usingDirectBuffer = true;
 
+  protected void prepare(int numDataUnits, int numParityUnits,
+                         int[] erasedIndexes) {
+    this.numDataUnits = numDataUnits;
+    this.numParityUnits = numParityUnits;
+    this.erasedDataIndexes = erasedIndexes != null ?
+        erasedIndexes : new int[] {0};
+  }
+
   /**
    * Compare and verify if erased chunks are equal to recovered chunks
    * @param erasedChunks
@@ -50,10 +60,8 @@ public abstract class TestCoderBase {
                                   ECChunk[] recoveredChunks) {
     byte[][] erased = ECChunk.toArray(erasedChunks);
     byte[][] recovered = ECChunk.toArray(recoveredChunks);
-    for (int i = 0; i < erasedChunks.length; ++i) {
-      assertArrayEquals("Decoding and comparing failed.", erased[i],
-          recovered[i]);
-    }
+    boolean result = Arrays.deepEquals(erased, recovered);
+    assertTrue("Decoding and comparing failed.", result);
   }
 
   /**
@@ -63,7 +71,7 @@ public abstract class TestCoderBase {
    */
   protected int[] getErasedIndexesForDecoding() {
     int[] erasedIndexesForDecoding = new int[erasedDataIndexes.length];
-    for (int i = 0; i < erasedDataIndexes.length; ++i) {
+    for (int i = 0; i < erasedDataIndexes.length; i++) {
       erasedIndexesForDecoding[i] = erasedDataIndexes[i] + numParityUnits;
     }
     return erasedIndexesForDecoding;
@@ -100,7 +108,7 @@ public abstract class TestCoderBase {
     ECChunk[] copiedChunks = new ECChunk[erasedDataIndexes.length];
 
     int j = 0;
-    for (int i = 0; i < erasedDataIndexes.length; ++i) {
+    for (int i = 0; i < erasedDataIndexes.length; i++) {
       copiedChunks[j ++] = cloneChunkWithData(dataChunks[erasedDataIndexes[i]]);
     }
 
@@ -112,7 +120,7 @@ public abstract class TestCoderBase {
    * @param dataChunks
    */
   protected void eraseSomeDataBlocks(ECChunk[] dataChunks) {
-    for (int i = 0; i < erasedDataIndexes.length; ++i) {
+    for (int i = 0; i < erasedDataIndexes.length; i++) {
       eraseDataFromChunk(dataChunks[erasedDataIndexes[i]]);
     }
   }
@@ -122,7 +130,7 @@ public abstract class TestCoderBase {
    * @param chunks
    */
   protected void eraseDataFromChunks(ECChunk[] chunks) {
-    for (int i = 0; i < chunks.length; ++i) {
+    for (int i = 0; i < chunks.length; i++) {
       eraseDataFromChunk(chunks[i]);
     }
   }
@@ -135,7 +143,7 @@ public abstract class TestCoderBase {
     ByteBuffer chunkBuffer = chunk.getBuffer();
     // erase the data
     chunkBuffer.position(0);
-    for (int i = 0; i < chunkSize; ++i) {
+    for (int i = 0; i < chunkSize; i++) {
       chunkBuffer.put((byte) 0);
     }
     chunkBuffer.flip();
@@ -150,7 +158,7 @@ public abstract class TestCoderBase {
    */
   protected static ECChunk[] cloneChunksWithData(ECChunk[] chunks) {
     ECChunk[] results = new ECChunk[chunks.length];
-    for (int i = 0; i < chunks.length; ++i) {
+    for (int i = 0; i < chunks.length; i++) {
       results[i] = cloneChunkWithData(chunks[i]);
     }
 

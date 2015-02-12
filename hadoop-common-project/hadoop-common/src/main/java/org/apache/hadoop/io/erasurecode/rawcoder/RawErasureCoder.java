@@ -71,7 +71,7 @@ public interface RawErasureCoder {
   public boolean preferNativeBuffer();
 
   /**
-   * Should be called when release this coder. Good chance to release encoding
+   * Should be called when release this blockcoder. Good chance to release encoding
    * or decoding buffers
    */
   public void release();

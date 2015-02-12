@@ -31,10 +31,13 @@ public abstract class TestRawCoderBase extends TestCoderBase {
    * Generating source data, encoding, recovering and then verifying.
    * RawErasureCoder mainly uses ECChunk to pass input and output data buffers,
    * it supports two kinds of ByteBuffers, one is array backed, the other is
-   * direct ByteBuffer. Have usingDirectBuffer to indicate which case to test.
+   * direct ByteBuffer. Use usingDirectBuffer indicate which case to test.
+   *
    * @param usingDirectBuffer
    */
   protected void testCoding(boolean usingDirectBuffer) {
+    this.usingDirectBuffer = usingDirectBuffer;
+
     // Generate data and encode
     ECChunk[] dataChunks = prepareDataChunksForEncoding();
     ECChunk[] parityChunks = prepareParityChunksForEncoding();
