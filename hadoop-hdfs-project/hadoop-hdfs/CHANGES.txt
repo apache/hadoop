@@ -624,6 +624,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7703. Support favouredNodes for the append for new blocks
     (vinayakumarb)
 
+    HDFS-7694. FSDataInputStream should support "unbuffer" (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
