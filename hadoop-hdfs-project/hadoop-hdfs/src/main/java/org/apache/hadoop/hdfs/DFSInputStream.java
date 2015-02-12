@@ -127,8 +127,15 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * The value type can be either ByteBufferPool or ClientMmap, depending on
    * whether we this is a memory-mapped buffer or not.
    */
-  private final IdentityHashStore<ByteBuffer, Object>
+  private IdentityHashStore<ByteBuffer, Object> extendedReadBuffers;
+
+  private synchronized IdentityHashStore<ByteBuffer, Object>
+        getExtendedReadBuffers() {
+    if (extendedReadBuffers == null) {
       extendedReadBuffers = new IdentityHashStore<ByteBuffer, Object>(0);
+    }
+    return extendedReadBuffers;
+  }
 
   public static class ReadStatistics {
     public ReadStatistics() {
@@ -236,7 +243,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   private final ConcurrentHashMap<DatanodeInfo, DatanodeInfo> deadNodes =
              new ConcurrentHashMap<DatanodeInfo, DatanodeInfo>();
 
-  private final byte[] oneByteBuf = new byte[1]; // used for 'int read()'
+  private byte[] oneByteBuf; // used for 'int read()'
 
   void addToDeadNodes(DatanodeInfo dnInfo) {
     deadNodes.put(dnInfo, dnInfo);
@@ -670,7 +677,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     }
     dfsClient.checkOpen();
 
-    if (!extendedReadBuffers.isEmpty()) {
+    if ((extendedReadBuffers != null) && (!extendedReadBuffers.isEmpty())) {
       final StringBuilder builder = new StringBuilder();
       extendedReadBuffers.visitAll(new IdentityHashStore.Visitor<ByteBuffer, Object>() {
         private String prefix = "";
@@ -690,6 +697,9 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
 
   @Override
   public synchronized int read() throws IOException {
+    if (oneByteBuf == null) {
+      oneByteBuf = new byte[1];
+    }
     int ret = read( oneByteBuf, 0, 1 );
     return ( ret <= 0 ) ? -1 : (oneByteBuf[0] & 0xff);
   }
@@ -1708,7 +1718,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     }
     buffer = ByteBufferUtil.fallbackRead(this, bufferPool, maxLength);
     if (buffer != null) {
-      extendedReadBuffers.put(buffer, bufferPool);
+      getExtendedReadBuffers().put(buffer, bufferPool);
     }
     return buffer;
   }
@@ -1787,7 +1797,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       buffer = clientMmap.getMappedByteBuffer().asReadOnlyBuffer();
       buffer.position((int)blockPos);
       buffer.limit((int)(blockPos + length));
-      extendedReadBuffers.put(buffer, clientMmap);
+      getExtendedReadBuffers().put(buffer, clientMmap);
       synchronized (infoLock) {
         readStatistics.addZeroCopyBytes(length);
       }
@@ -1808,7 +1818,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   @Override
   public synchronized void releaseBuffer(ByteBuffer buffer) {
     if (buffer == EMPTY_BUFFER) return;
-    Object val = extendedReadBuffers.remove(buffer);
+    Object val = getExtendedReadBuffers().remove(buffer);
     if (val == null) {
       throw new IllegalArgumentException("tried to release a buffer " +
           "that was not created by this stream, " + buffer);
