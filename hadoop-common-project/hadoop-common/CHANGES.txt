@@ -583,9 +583,6 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11463 Replace method-local TransferManager object with
     S3AFileSystem#transfers. (Ted Yu via stevel)
 
-    HADOOP-11543. Improve help message for hadoop/yarn command.
-    (Brahma Reddy Battula via ozawa)
-
     HADOOP-11520. Clean incomplete multi-part uploads in S3A tests.
     (Thomas Demoor via stevel)
 
@@ -593,6 +590,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-10140. Specification of HADOOP_CONF_DIR via the environment in
     hadoop_config.cmd. (Kiran Kumar M R via cnauroth)
+
+    HADOOP-11543. Improve help message for hadoop/yarn command. (Brahma 
+    Reddy Battula via ozawa).
 
   OPTIMIZATIONS
 
