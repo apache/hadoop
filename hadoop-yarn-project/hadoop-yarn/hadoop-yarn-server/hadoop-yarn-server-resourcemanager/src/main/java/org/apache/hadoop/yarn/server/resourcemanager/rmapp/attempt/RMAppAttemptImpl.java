@@ -552,11 +552,18 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
   }
 
-  private void setTrackingUrlToRMAppPage() {
+  private void setTrackingUrlToRMAppPage(RMAppAttemptState stateToBeStored) {
     originalTrackingUrl = pjoin(
         WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
         "cluster", "app", getAppAttemptId().getApplicationId());
-    proxiedTrackingUrl = originalTrackingUrl;
+    switch (stateToBeStored) {
+    case KILLED:
+    case FAILED:
+      proxiedTrackingUrl = originalTrackingUrl;
+      break;
+    default:
+      break;
+    }
   }
 
   private void invalidateAMHostAndPort() {
@@ -1083,7 +1090,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     // These fields can be visible from outside only after they are saved in
     // StateStore
     String diags = null;
-    String finalTrackingUrl = null;
+
+    // don't leave the tracking URL pointing to a non-existent AM
+    setTrackingUrlToRMAppPage(stateToBeStored);
+    String finalTrackingUrl = getOriginalTrackingUrl();
     FinalApplicationStatus finalStatus = null;
     int exitStatus = ContainerExitStatus.INVALID;
     switch (event.getType()) {
@@ -1099,6 +1109,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       RMAppAttemptUnregistrationEvent unregisterEvent =
           (RMAppAttemptUnregistrationEvent) event;
       diags = unregisterEvent.getDiagnostics();
+      // reset finalTrackingUrl to url sent by am
       finalTrackingUrl = sanitizeTrackingUrl(unregisterEvent.getFinalTrackingUrl());
       finalStatus = unregisterEvent.getFinalApplicationStatus();
       break;
@@ -1202,8 +1213,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         break;
         case KILLED:
         {
-          // don't leave the tracking URL pointing to a non-existent AM
-          appAttempt.setTrackingUrlToRMAppPage();
           appAttempt.invalidateAMHostAndPort();
           appEvent =
               new RMAppFailedAttemptEvent(applicationId,
@@ -1213,8 +1222,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         break;
         case FAILED:
         {
-          // don't leave the tracking URL pointing to a non-existent AM
-          appAttempt.setTrackingUrlToRMAppPage();
           appAttempt.invalidateAMHostAndPort();
 
           if (appAttempt.submissionContext

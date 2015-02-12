@@ -515,6 +515,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3074. Nodemanager dies when localizer runner tries to write to a full
     disk (Varun Saxena via jlowe)
 
+    YARN-3151. On Failover tracking url wrong in application cli for
+    KILLED application (Rohith via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
