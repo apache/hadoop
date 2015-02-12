@@ -52,5 +52,8 @@ else
   hdfsscript="${HADOOP_HDFS_HOME}/bin/hdfs"
 fi
 
+hadoop_error "WARNING: Use of this script to ${daemonmode} HDFS daemons is deprecated."
+hadoop_error "WARNING: Attempting to execute replacement \"hdfs --daemon ${daemonmode}\" instead."
+
 exec "$hdfsscript" --config "${HADOOP_CONF_DIR}" --daemon "${daemonmode}" "$@"
 

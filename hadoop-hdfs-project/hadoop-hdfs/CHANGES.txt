@@ -139,6 +139,8 @@ Trunk (Unreleased)
     HDFS-316. Balancer should run for a configurable # of iterations (Xiaoyu
     Yao via aw)
 
+    HDFS-7322. deprecate sbin/hadoop-daemon.sh (aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
