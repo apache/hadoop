@@ -52,6 +52,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-4431. mapred command should print the reason on killing already 
     completed jobs. (devaraj via ozawa)
 
+    MAPREDUCE-6255. Fix JobCounter's format to use grouping separator.
+    (Ryu Kobayashi via ozawa)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
