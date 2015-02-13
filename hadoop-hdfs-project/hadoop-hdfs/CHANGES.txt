@@ -665,6 +665,9 @@ Release 2.7.0 - UNRELEASED
       HDFS-7776. Adding additional unit tests for Quota By Storage Type.
       (Xiaoyu Yao via Arpit Agarwal)
 
+      HDFS-4625. BKJM doesn't take advantage of speculative reads. (Rakesh R
+      via aajisaka)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
