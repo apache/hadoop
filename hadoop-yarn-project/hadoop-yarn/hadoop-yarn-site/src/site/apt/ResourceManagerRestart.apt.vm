@@ -11,12 +11,12 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  ResourceManger Restart
+  ResourceManager Restart
   ---
   ---
   ${maven.build.timestamp}
 
-ResourceManger Restart
+ResourceManager Restart
 
 %{toc|section=1|fromDepth=0}
 
@@ -32,22 +32,25 @@ ResourceManger Restart
 
   ResourceManager Restart feature is divided into two phases:
 
-  ResourceManager Restart Phase 1: Enhance RM to persist application/attempt state
+  ResourceManager Restart Phase 1 (Non-work-preserving RM restart):
+  Enhance RM to persist application/attempt state
   and other credentials information in a pluggable state-store. RM will reload
   this information from state-store upon restart and re-kick the previously
   running applications. Users are not required to re-submit the applications.
 
-  ResourceManager Restart Phase 2:
-  Focus on re-constructing the running state of ResourceManger by reading back
-  the container statuses from NodeMangers and container requests from ApplicationMasters
+  ResourceManager Restart Phase 2 (Work-preserving RM restart):
+  Focus on re-constructing the running state of ResourceManager by combining
+  the container statuses from NodeManagers and container requests from ApplicationMasters
   upon restart. The key difference from phase 1 is that previously running applications
   will not be killed after RM restarts, and so applications won't lose its work
   because of RM outage.
 
+* {Feature}
+
+** Phase 1: Non-work-preserving RM restart
+
   As of Hadoop 2.4.0 release, only ResourceManager Restart Phase 1 is implemented which
   is described below.
-
-* {Feature}
 
   The overall concept is that RM will persist the application metadata
   (i.e. ApplicationSubmissionContext) in
@@ -62,13 +65,13 @@ ResourceManger Restart
   applications if they were already completed (i.e. failed, killed, finished)
   before RM went down.
 
-  NodeMangers and clients during the down-time of RM will keep polling RM until 
+  NodeManagers and clients during the down-time of RM will keep polling RM until 
   RM comes up. When RM becomes alive, it will send a re-sync command to
-  all the NodeMangers and ApplicationMasters it was talking to via heartbeats.
-  Today, the behaviors for NodeMangers and ApplicationMasters to handle this command
+  all the NodeManagers and ApplicationMasters it was talking to via heartbeats.
+  As of Hadoop 2.4.0 release, the behaviors for NodeManagers and ApplicationMasters to handle this command
   are: NMs will kill all its managed containers and re-register with RM. From the
   RM's perspective, these re-registered NodeManagers are similar to the newly joining NMs. 
-  AMs(e.g. MapReduce AM) today are expected to shutdown when they receive the re-sync command.
+  AMs(e.g. MapReduce AM) are expected to shutdown when they receive the re-sync command.
   After RM restarts and loads all the application metadata, credentials from state-store
   and populates them into memory, it will create a new
   attempt (i.e. ApplicationMaster) for each application that was not yet completed
@@ -76,13 +79,33 @@ ResourceManger Restart
   applications' work is lost in this manner since they are essentially killed by
   RM via the re-sync command on restart.
 
+** Phase 2: Work-preserving RM restart
+
+  As of Hadoop 2.6.0, we further enhanced RM restart feature to address the problem 
+  to not kill any applications running on YARN cluster if RM restarts.
+
+  Beyond all the groundwork that has been done in Phase 1 to ensure the persistency
+  of application state and reload that state on recovery, Phase 2 primarily focuses
+  on re-constructing the entire running state of YARN cluster, the majority of which is
+  the state of the central scheduler inside RM which keeps track of all containers' life-cycle,
+  applications' headroom and resource requests, queues' resource usage etc. In this way,
+  RM doesn't need to kill the AM and re-run the application from scratch as it is
+  done in Phase 1. Applications can simply re-sync back with RM and
+  resume from where it were left off.
+
+  RM recovers its runing state by taking advantage of the container statuses sent from all NMs.
+  NM will not kill the containers when it re-syncs with the restarted RM. It continues
+  managing the containers and send the container statuses across to RM when it re-registers.
+  RM reconstructs the container instances and the associated applications' scheduling status by
+  absorbing these containers' information. In the meantime, AM needs to re-send the
+  outstanding resource requests to RM because RM may lose the unfulfilled requests when it shuts down.
+  Application writers using AMRMClient library to communicate with RM do not need to
+  worry about the part of AM re-sending resource requests to RM on re-sync, as it is
+  automatically taken care by the library itself.
+
 * {Configurations}
 
-  This section describes the configurations involved to enable RM Restart feature.
-
-  * Enable ResourceManager Restart functionality.
-
-    To enable RM Restart functionality, set the following property in <<conf/yarn-site.xml>> to true:
+** Enable RM Restart.
 
 *--------------------------------------+--------------------------------------+
 || Property                            || Value                                |
@@ -92,9 +115,10 @@ ResourceManger Restart
 *--------------------------------------+--------------------------------------+ 
 
 
-  * Configure the state-store that is used to persist the RM state.
+** Configure the state-store for persisting the RM state.
 
-*--------------------------------------+--------------------------------------+
+
+*--------------------------------------*--------------------------------------+
 || Property                            || Description                        |
 *--------------------------------------+--------------------------------------+
 | <<<yarn.resourcemanager.store.class>>> | |
@@ -103,14 +127,36 @@ ResourceManger Restart
 | | <<<org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore>>> |
 | | , a ZooKeeper based state-store implementation and  |
 | | <<<org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore>>> |
-| | , a Hadoop FileSystem based state-store implementation like HDFS. |
+| | , a Hadoop FileSystem based state-store implementation like HDFS and local FS. |
+| | <<<org.apache.hadoop.yarn.server.resourcemanager.recovery.LeveldbRMStateStore>>>, |
+| | a LevelDB based state-store implementation. |
 | | The default value is set to |
 | | <<<org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore>>>. |
 *--------------------------------------+--------------------------------------+ 
 
-    * Configurations when using Hadoop FileSystem based state-store implementation.
+** How to choose the state-store implementation.
 
-      Configure the URI where the RM state will be saved in the Hadoop FileSystem state-store.
+    <<ZooKeeper based state-store>>: User is free to pick up any storage to set up RM restart,
+    but must use ZooKeeper based state-store to support RM HA. The reason is that only ZooKeeper
+    based state-store supports fencing mechanism to avoid a split-brain situation where multiple
+    RMs assume they are active and can edit the state-store at the same time.
+
+    <<FileSystem based state-store>>: HDFS and local FS based state-store are supported. 
+    Fencing mechanism is not supported.
+
+    <<LevelDB based state-store>>: LevelDB based state-store is considered more light weight than HDFS and ZooKeeper
+    based state-store. LevelDB supports better atomic operations, fewer I/O ops per state update,
+    and far fewer total files on the filesystem. Fencing mechanism is not supported.
+
+** Configurations for Hadoop FileSystem based state-store implementation.
+
+    Support both HDFS and local FS based state-store implementation. The type of file system to
+    be used is determined by the scheme of URI. e.g. <<<hdfs://localhost:9000/rmstore>>> uses HDFS as the storage and
+    <<<file:///tmp/yarn/rmstore>>> uses local FS as the storage. If no
+    scheme(<<<hdfs://>>> or <<<file://>>>) is specified in the URI, the type of storage to be used is
+    determined by <<<fs.defaultFS>>> defined in <<<core-site.xml>>>.
+
+    Configure the URI where the RM state will be saved in the Hadoop FileSystem state-store.
 
 *--------------------------------------+--------------------------------------+
 || Property                            || Description                        |
@@ -123,8 +169,8 @@ ResourceManger Restart
 | | <<conf/core-site.xml>> will be used. |
 *--------------------------------------+--------------------------------------+ 
 
-      Configure the retry policy state-store client uses to connect with the Hadoop
-      FileSystem.
+    Configure the retry policy state-store client uses to connect with the Hadoop
+    FileSystem.
 
 *--------------------------------------+--------------------------------------+
 || Property                            || Description                        |
@@ -137,9 +183,9 @@ ResourceManger Restart
 | | Default value is (2000, 500) |
 *--------------------------------------+--------------------------------------+ 
 
-    * Configurations when using ZooKeeper based state-store implementation.
+** Configurations for ZooKeeper based state-store implementation.
   
-      Configure the ZooKeeper server address and the root path where the RM state is stored.
+    Configure the ZooKeeper server address and the root path where the RM state is stored.
 
 *--------------------------------------+--------------------------------------+
 || Property                            || Description                        |
@@ -154,7 +200,7 @@ ResourceManger Restart
 | | Default value is /rmstore. |
 *--------------------------------------+--------------------------------------+
 
-      Configure the retry policy state-store client uses to connect with the ZooKeeper server.
+    Configure the retry policy state-store client uses to connect with the ZooKeeper server.
 
 *--------------------------------------+--------------------------------------+
 || Property                            || Description                        |
@@ -175,7 +221,7 @@ ResourceManger Restart
 | | value is 10 seconds |
 *--------------------------------------+--------------------------------------+
 
-      Configure the ACLs to be used for setting permissions on ZooKeeper znodes.
+    Configure the ACLs to be used for setting permissions on ZooKeeper znodes.
 
 *--------------------------------------+--------------------------------------+
 || Property                            || Description                        |
@@ -184,25 +230,69 @@ ResourceManger Restart
 | | ACLs to be used for setting permissions on ZooKeeper znodes. Default value is <<<world:anyone:rwcda>>> |
 *--------------------------------------+--------------------------------------+
 
-  * Configure the max number of application attempt retries.
+** Configurations for LevelDB based state-store implementation.
 
 *--------------------------------------+--------------------------------------+
 || Property                            || Description                        |
 *--------------------------------------+--------------------------------------+
-| <<<yarn.resourcemanager.am.max-attempts>>> | |
-| | The maximum number of application attempts. It's a global |
-| | setting for all application masters. Each application master can specify |
-| | its individual maximum number of application attempts via the API, but the |
-| | individual number cannot be more than the global upper bound. If it is, |
-| | the RM will override it. The default number is set to 2, to |
-| | allow at least one retry for AM. |
+| <<<yarn.resourcemanager.leveldb-state-store.path>>> | |
+| | Local path where the RM state will be stored. |
+| | Default value is <<<${hadoop.tmp.dir}/yarn/system/rmstore>>> |
 *--------------------------------------+--------------------------------------+
 
-    This configuration's impact is in fact beyond RM restart scope. It controls
-    the max number of attempts an application can have. In RM Restart Phase 1,
-    this configuration is needed since as described earlier each time RM restarts,
-    it kills the previously running attempt (i.e. ApplicationMaster) and
-    creates a new attempt. Therefore, each occurrence of RM restart causes the
-    attempt count to increase by 1. In RM Restart phase 2, this configuration is not
-    needed since the previously running ApplicationMaster will
-    not be killed and the AM will just re-sync back with RM after RM restarts.
+
+**  Configurations for work-preserving RM recovery.
+
+*--------------------------------------+--------------------------------------+
+|| Property                            || Description                        |
+*--------------------------------------+--------------------------------------+
+| <<<yarn.resourcemanager.work-preserving-recovery.scheduling-wait-ms>>> | |
+| | Set the amount of time RM waits before allocating new |
+| | containers on RM work-preserving recovery. Such wait period gives RM a chance | 
+| | to settle down resyncing with NMs in the cluster on recovery, before assigning|
+| |  new containers to applications.|
+*--------------------------------------+--------------------------------------+
+
+* {Notes}
+
+  ContainerId string format is changed if RM restarts with work-preserving recovery enabled.
+  It used to be such format:
+
+   Container_\{clusterTimestamp\}_\{appId\}_\{attemptId\}_\{containerId\}, e.g. Container_1410901177871_0001_01_000005.
+
+  It is now changed to:
+
+   Container_<<e\{epoch\}>>_\{clusterTimestamp\}_\{appId\}_\{attemptId\}_\{containerId\}, e.g. Container_<<e17>>_1410901177871_0001_01_000005.
+ 
+  Here, the additional epoch number is a
+  monotonically increasing integer which starts from 0 and is increased by 1 each time
+  RM restarts. If epoch number is 0, it is omitted and the containerId string format
+  stays the same as before.
+
+* {Sample configurations}
+
+   Below is a minimum set of configurations for enabling RM work-preserving restart using ZooKeeper based state store.
+
++---+
+  <property>
+    <description>Enable RM to recover state after starting. If true, then 
+    yarn.resourcemanager.store.class must be specified</description>
+    <name>yarn.resourcemanager.recovery.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>The class to use as the persistent store.</description>
+    <name>yarn.resourcemanager.store.class</name>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore</value>
+  </property>
+
+  <property>
+    <description>Comma separated list of Host:Port pairs. Each corresponds to a ZooKeeper server
+    (e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002") to be used by the RM for storing RM state.
+    This must be supplied when using org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
+    as the value for yarn.resourcemanager.store.class</description>
+    <name>yarn.resourcemanager.zk-address</name>
+    <value>127.0.0.1:2181</value>
+  </property>
++---+
