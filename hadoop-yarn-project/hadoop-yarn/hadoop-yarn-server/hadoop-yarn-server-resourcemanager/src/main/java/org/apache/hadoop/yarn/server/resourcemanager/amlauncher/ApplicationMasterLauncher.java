@@ -117,6 +117,7 @@ public class ApplicationMasterLauncher extends AbstractService implements
       break;
     case CLEANUP:
       cleanup(application);
+      break;
     default:
       break;
     }
