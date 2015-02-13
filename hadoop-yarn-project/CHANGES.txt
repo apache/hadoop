@@ -256,6 +256,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3179. Update use of Iterator to Iterable in RMAdminCLI and
     CommonNodeLabelsManager. (Ray Chiang via xgong)
 
+    YARN-3182. Cleanup switch statement in ApplicationMasterLauncher#handle().
+    (Ray Chiang via ozawa)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
