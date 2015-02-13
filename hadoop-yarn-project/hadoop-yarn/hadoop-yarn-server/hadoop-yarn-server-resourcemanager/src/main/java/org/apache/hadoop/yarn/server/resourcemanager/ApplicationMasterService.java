@@ -588,16 +588,20 @@ public class ApplicationMasterService extends AbstractService implements
       if (nextMasterKey != null
           && nextMasterKey.getMasterKey().getKeyId() != amrmTokenIdentifier
             .getKeyId()) {
-        Token<AMRMTokenIdentifier> amrmToken =
-            rmContext.getAMRMTokenSecretManager().createAndGetAMRMToken(
-              appAttemptId);
-        ((RMAppAttemptImpl)appAttempt).setAMRMToken(amrmToken);
+        RMAppAttemptImpl appAttemptImpl = (RMAppAttemptImpl)appAttempt;
+        Token<AMRMTokenIdentifier> amrmToken = appAttempt.getAMRMToken();
+        if (nextMasterKey.getMasterKey().getKeyId() !=
+            appAttemptImpl.getAMRMTokenKeyId()) {
+          LOG.info("The AMRMToken has been rolled-over. Send new AMRMToken back"
+              + " to application: " + applicationId);
+          amrmToken = rmContext.getAMRMTokenSecretManager()
+              .createAndGetAMRMToken(appAttemptId);
+          appAttemptImpl.setAMRMToken(amrmToken);
+        }
         allocateResponse.setAMRMToken(org.apache.hadoop.yarn.api.records.Token
           .newInstance(amrmToken.getIdentifier(), amrmToken.getKind()
             .toString(), amrmToken.getPassword(), amrmToken.getService()
             .toString()));
-        LOG.info("The AMRMToken has been rolled-over. Send new AMRMToken back"
-            + " to application: " + applicationId);
       }
 
       /*
