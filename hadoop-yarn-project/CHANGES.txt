@@ -47,6 +47,8 @@ Release 2.7.0 - UNRELEASED
      YARN-2616 [YARN-913] Add CLI client to the registry to list, view
      and manipulate entries. (Akshay Radia via stevel)
 
+    YARN-2994. Document work-preserving RM restart. (Jian He via ozawa)
+
   IMPROVEMENTS
 
     YARN-3005. [JDK7] Use switch statement for String instead of if-else
