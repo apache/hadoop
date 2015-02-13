@@ -99,7 +99,7 @@ public class ContainerImpl implements Container {
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
 
-  private static final Log LOG = LogFactory.getLog(Container.class);
+  private static final Log LOG = LogFactory.getLog(ContainerImpl.class);
   private final Map<LocalResourceRequest,List<String>> pendingResources =
     new HashMap<LocalResourceRequest,List<String>>();
   private final Map<Path,List<String>> localizedResources =
