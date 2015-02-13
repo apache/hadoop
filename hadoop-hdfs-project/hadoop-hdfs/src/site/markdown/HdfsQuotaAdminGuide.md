@@ -82,11 +82,12 @@ Reporting Command
 
 An an extension to the count command of the HDFS shell reports quota values and the current count of names and bytes in use.
 
-*   `hadoop fs -count -q <directory>...<directory>`
+*   `hadoop fs -count -q [-h] [-v] <directory>...<directory>`
 
     With the -q option, also report the name quota value set for each
     directory, the available name quota remaining, the space quota
     value set, and the available space quota remaining. If the
     directory does not have a quota set, the reported values are `none`
-    and `inf`.
+    and `inf`. The -h option shows sizes in human readable format.
+    The -v option displays a header line.
 
