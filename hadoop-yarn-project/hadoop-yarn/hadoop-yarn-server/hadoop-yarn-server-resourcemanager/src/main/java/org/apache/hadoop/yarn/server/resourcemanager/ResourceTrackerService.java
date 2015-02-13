@@ -209,14 +209,14 @@ public class ResourceTrackerService extends AbstractService implements
     if (rmApp == null) {
       LOG.error("Received finished container : "
           + containerStatus.getContainerId()
-          + "for unknown application " + appAttemptId.getApplicationId()
+          + " for unknown application " + appAttemptId.getApplicationId()
           + " Skipping.");
       return;
     }
 
     if (rmApp.getApplicationSubmissionContext().getUnmanagedAM()) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Ignoring container completion status for unmanaged AM"
+        LOG.debug("Ignoring container completion status for unmanaged AM "
             + rmApp.getApplicationId());
       }
       return;
