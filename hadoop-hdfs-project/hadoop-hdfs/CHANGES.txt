@@ -141,6 +141,9 @@ Trunk (Unreleased)
 
     HDFS-7322. deprecate sbin/hadoop-daemon.sh (aw)
 
+    HDFS-7668. Convert site documentation from apt to markdown (Masatake
+    Iwasaki via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
