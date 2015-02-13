@@ -135,6 +135,11 @@ esac
 
 hadoop_verify_user "${COMMAND}"
 
+if [[ ${HADOOP_SLAVE_MODE} = true ]]; then
+  hadoop_common_slave_mode_execute "${HADOOP_MAPRED_HOME}/bin/mapred" "${HADOOP_USER_PARAMS[@]}"
+  exit $?
+fi
+
 daemon_outfile="${HADOOP_LOG_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}-${HOSTNAME}.out"
 daemon_pidfile="${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-${COMMAND}.pid"
 

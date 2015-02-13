@@ -405,6 +405,20 @@ function hadoop_connect_to_hosts
   fi
 }
 
+function hadoop_common_slave_mode_execute
+{
+  #
+  # input should be the command line as given by the user
+  # in the form of an array
+  #
+  local argv=("$@")
+
+  # if --slaves is still on the command line, remove it
+  # to prevent loops
+  argv=(${argv[@]/--slaves})
+  hadoop_connect_to_hosts -- "${argv[@]}"
+}
+
 function hadoop_validate_classname
 {
   local class=$1
