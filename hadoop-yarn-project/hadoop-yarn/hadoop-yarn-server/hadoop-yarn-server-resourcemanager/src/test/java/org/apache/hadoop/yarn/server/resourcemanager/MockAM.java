@@ -210,37 +210,25 @@ public class MockAM {
       List<ResourceRequest> resourceRequest, List<ContainerId> releases)
       throws Exception {
     final AllocateRequest req =
-        AllocateRequest.newInstance(++responseId, 0F, resourceRequest,
+        AllocateRequest.newInstance(0, 0F, resourceRequest,
           releases, null);
-    UserGroupInformation ugi =
-        UserGroupInformation.createRemoteUser(attemptId.toString());
-    Token<AMRMTokenIdentifier> token =
-        context.getRMApps().get(attemptId.getApplicationId())
-          .getRMAppAttempt(attemptId).getAMRMToken();
-    ugi.addTokenIdentifier(token.decodeIdentifier());
-    try {
-      return ugi.doAs(new PrivilegedExceptionAction<AllocateResponse>() {
-        @Override
-        public AllocateResponse run() throws Exception {
-          return amRMProtocol.allocate(req);
-        }
-      });
-    } catch (UndeclaredThrowableException e) {
-      throw (Exception) e.getCause();
-    }
+    return allocate(req);
   }
 
   public AllocateResponse allocate(AllocateRequest allocateRequest)
             throws Exception {
-    final AllocateRequest req = allocateRequest;
-    req.setResponseId(++responseId);
-
     UserGroupInformation ugi =
         UserGroupInformation.createRemoteUser(attemptId.toString());
     Token<AMRMTokenIdentifier> token =
         context.getRMApps().get(attemptId.getApplicationId())
             .getRMAppAttempt(attemptId).getAMRMToken();
     ugi.addTokenIdentifier(token.decodeIdentifier());
+    return doAllocateAs(ugi, allocateRequest);
+  }
+
+  public AllocateResponse doAllocateAs(UserGroupInformation ugi,
+      final AllocateRequest req) throws Exception {
+    req.setResponseId(++responseId);
     try {
       return ugi.doAs(new PrivilegedExceptionAction<AllocateResponse>() {
         @Override
