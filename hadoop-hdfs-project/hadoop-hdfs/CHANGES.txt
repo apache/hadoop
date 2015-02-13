@@ -32,8 +32,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-3689. Add support for variable length block. Contributed by Jing Zhao.
 
-    HDFS-7584. Enable Quota Support for Storage Types. (Xiaoyu Yao via
-    Arpit Agarwal)
+    HDFS-7584. Enable Quota Support for Storage Types (See breakdown of
+    tasks below)
 
   IMPROVEMENTS
 
@@ -641,6 +641,20 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7704. DN heartbeat to Active NN may be blocked and expire if
     connection to Standby NN continues to time out (Rushabh Shah via kihwal)
+
+    BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
+
+      HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
+      Protocol changes. (Xiaoyu Yao via Arpit Agarwal)
+
+      HDFS-7723. Quota By Storage Type namenode implemenation. (Xiaoyu Yao
+      via Arpit Agarwal)
+
+      HDFS-7751. Fix TestHDFSCLI for quota with storage type.  (Xiaoyu Yao
+      via szetszwo)
+
+      HDFS-7776. Adding additional unit tests for Quota By Storage Type.
+      (Xiaoyu Yao via Arpit Agarwal)
 
 Release 2.6.1 - UNRELEASED
 
