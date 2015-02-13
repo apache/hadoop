@@ -383,8 +383,8 @@ public class CommonNodeLabelsManager extends AbstractService {
   @SuppressWarnings("unchecked")
   protected void internalRemoveFromClusterNodeLabels(Collection<String> labelsToRemove) {
     // remove labels from nodes
-    for (String nodeName : nodeCollections.keySet()) {
-      Host host = nodeCollections.get(nodeName);
+    for (Map.Entry<String,Host> nodeEntry : nodeCollections.entrySet()) {
+      Host host = nodeEntry.getValue();
       if (null != host) {
         host.labels.removeAll(labelsToRemove);
         for (Node nm : host.nms.values()) {
