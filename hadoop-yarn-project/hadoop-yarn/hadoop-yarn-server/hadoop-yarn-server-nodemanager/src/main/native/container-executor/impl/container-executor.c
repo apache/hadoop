@@ -684,8 +684,9 @@ struct passwd* check_user(const char *user) {
     return NULL;
   }
   char **banned_users = get_values(BANNED_USERS_KEY);
-  char **banned_user = (banned_users == NULL) ? 
+  banned_users = banned_users == NULL ?
     (char**) DEFAULT_BANNED_USERS : banned_users;
+  char **banned_user = banned_users;
   for(; *banned_user; ++banned_user) {
     if (strcmp(*banned_user, user) == 0) {
       free(user_info);

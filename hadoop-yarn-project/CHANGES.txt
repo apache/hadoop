@@ -557,6 +557,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3164. RMAdmin command usage prints incorrect command name. 
     (Bibin A Chundatt via xgong)
 
+    YARN-2847. Linux native container executor segfaults if default banned
+    user detected (Olaf Flebbe via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
