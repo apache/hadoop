@@ -251,6 +251,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3158. Correct log messages in ResourceTrackerService.
     (Varun Saxena via xgong)
 
+    YARN-3179. Update use of Iterator to Iterable in RMAdminCLI and
+    CommonNodeLabelsManager. (Ray Chiang via xgong)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
