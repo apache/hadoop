@@ -537,6 +537,9 @@ Release 2.7.0 - UNRELEASED
     YARN-1580. Documentation error regarding "container-allocation.expiry-interval-ms" 
     (Brahma Reddy Battula via junping_du)
 
+    YARN-3104. Fixed RM to not generate new AMRM tokens on every heartbeat
+    between rolling and activation. (Jason Lowe via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

@@ -18,11 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
+import static org.mockito.Mockito.isA;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +56,8 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMSecretManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMWithAMS;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -207,7 +216,6 @@ public class TestAMRMTokens {
    * 
    * @throws Exception
    */
-  @SuppressWarnings("deprecation")
   @Test
   public void testMasterKeyRollOver() throws Exception {
 
@@ -336,21 +344,40 @@ public class TestAMRMTokens {
 
   @Test (timeout = 20000)
   public void testAMRMMasterKeysUpdate() throws Exception {
+    final AtomicReference<AMRMTokenSecretManager> spySecretMgrRef =
+        new AtomicReference<AMRMTokenSecretManager>();
     MockRM rm = new MockRM(conf) {
       @Override
       protected void doSecureLogin() throws IOException {
         // Skip the login.
+      }
+
+      @Override
+      protected RMSecretManagerService createRMSecretManagerService() {
+        return new RMSecretManagerService(conf, rmContext) {
+          @Override
+          protected AMRMTokenSecretManager createAMRMTokenSecretManager(
+              Configuration conf, RMContext rmContext) {
+            AMRMTokenSecretManager spySecretMgr = spy(
+                super.createAMRMTokenSecretManager(conf, rmContext));
+            spySecretMgrRef.set(spySecretMgr);
+            return spySecretMgr;
+          }
+        };
       }
     };
     rm.start();
     MockNM nm = rm.registerNode("127.0.0.1:1234", 8000);
     RMApp app = rm.submitApp(200);
     MockAM am = MockRM.launchAndRegisterAM(app, rm, nm);
-
+    AMRMTokenSecretManager spySecretMgr = spySecretMgrRef.get();
     // Do allocate. Should not update AMRMToken
     AllocateResponse response =
         am.allocate(Records.newRecord(AllocateRequest.class));
     Assert.assertNull(response.getAMRMToken());
+    Token<AMRMTokenIdentifier> oldToken = rm.getRMContext().getRMApps()
+        .get(app.getApplicationId())
+        .getRMAppAttempt(am.getApplicationAttemptId()).getAMRMToken();
 
     // roll over the master key
     // Do allocate again. the AM should get the latest AMRMToken
@@ -366,8 +393,18 @@ public class TestAMRMTokens {
       .getRMContext().getAMRMTokenSecretManager().getMasterKey().getMasterKey()
       .getKeyId());
 
-    // Do allocate again. The master key does not update.
-    // AM should not update its AMRMToken either
+    // Do allocate again with the same old token and verify the RM sends
+    // back the last generated token instead of generating it again.
+    reset(spySecretMgr);
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        am.getApplicationAttemptId().toString(), new String[0]);
+    ugi.addTokenIdentifier(oldToken.decodeIdentifier());
+    response = am.doAllocateAs(ugi, Records.newRecord(AllocateRequest.class));
+    Assert.assertNotNull(response.getAMRMToken());
+    verify(spySecretMgr, never()).createAndGetAMRMToken(isA(ApplicationAttemptId.class));
+
+    // Do allocate again with the updated token and verify we do not
+    // receive a new token to use.
     response = am.allocate(Records.newRecord(AllocateRequest.class));
     Assert.assertNull(response.getAMRMToken());
 
