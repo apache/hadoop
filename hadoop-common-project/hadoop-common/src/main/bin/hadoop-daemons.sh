@@ -56,5 +56,17 @@ else
   hdfsscript="${HADOOP_HDFS_HOME}/bin/hdfs"
 fi
 
-hadoop_connect_to_hosts "$hdfsscript" \
-    --config "${HADOOP_CONF_DIR}" --daemon "${daemonmode}" "$@"
+hadoop_error "WARNING: Use of this script to ${daemonmode} HDFS daemons is deprecated."
+hadoop_error "WARNING: Attempting to execute replacement \"hdfs --slaves --daemon ${daemonmode}\" instead."
+
+#
+# Original input was usually:
+#  hadoop-daemons.sh (shell options) (start|stop) (datanode|...) (daemon options)
+# we're going to turn this into
+#  hdfs --slaves --daemon (start|stop) (rest of options)
+#
+argv=(${HADOOP_USER_PARAMS[@]/start})
+argv=(${argv[@]/stop})
+argv=(${argv[@]/status})
+
+${hdfsscript} --slaves --daemon "${daemonmode}" "${argv[@]}"

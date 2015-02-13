@@ -1,4 +1,4 @@
-
+#!/usr/bin/env bash
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -91,7 +91,7 @@ hadoop_bootstrap
 
 # save these off in case our caller needs them
 # shellcheck disable=SC2034
-HADOOP_USER_PARAMS="$@"
+HADOOP_USER_PARAMS=("$@")
 
 HADOOP_DAEMON_MODE="default"
 
@@ -151,6 +151,11 @@ while [[ -z "${_hadoop_common_done}" ]]; do
       # shellcheck disable=SC2034
       HADOOP_LOGLEVEL="$1"
       shift
+    ;;
+    --slaves)
+      shift
+      # shellcheck disable=SC2034
+      HADOOP_SLAVE_MODE=true
     ;;
     *)
       _hadoop_common_done=true

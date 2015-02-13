@@ -41,8 +41,23 @@ else
   exit 1
 fi
 
+yarnscript="${HADOOP_YARN_HOME}/bin/yarn"
+
 daemonmode=$1
 shift
 
-hadoop_connect_to_hosts "${HADOOP_YARN_HOME}/bin/yarn" \
-    --config "${HADOOP_CONF_DIR}" --daemon "${daemonmode}" "$@"
+hadoop_error "WARNING: Use of this script to ${daemonmode} YARN daemons is deprecated."
+hadoop_error "WARNING: Attempting to execute replacement \"yarn --slaves --daemon ${daemonmode}\" instead."
+
+#
+# Original input was usually:
+#  yarn-daemons.sh (shell options) (start|stop) nodemanager (daemon options)
+# we're going to turn this into
+#  yarn --slaves --daemon (start|stop) (rest of options)
+#
+argv=(${HADOOP_USER_PARAMS[@]/start})
+argv=(${argv[@]/stop})
+argv=(${argv[@]/status})
+
+${yarnscript} --slaves --daemon "${daemonmode}" "${argv[@]}"
+
