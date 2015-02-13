@@ -130,9 +130,6 @@ Trunk (Unreleased)
     HDFS-7591. hdfs classpath command should support same options as hadoop
     classpath (Varun Saxena via Arpit Agarwal)
 
-    HDFS-7430. Rewrite the BlockScanner to use O(1) memory and use multiple
-    threads (cmccabe)
-
     HDFS-7546. Document, and set an accepting default for
     dfs.namenode.kerberos.principal.pattern (Harsh J via aw)
 
@@ -288,9 +285,6 @@ Trunk (Unreleased)
 
     HDFS-7320. The appearance of hadoop-hdfs-httpfs site docs is inconsistent 
     (Masatake Iwasaki via aw)
-
-    HDFS-7721. The HDFS BlockScanner may run fast during the first hour
-    (cmccabe)
 
     HDFS-7670. HDFS Quota guide has typos, incomplete command lines
     (Brahma Reddy Battula via aw)
@@ -637,6 +631,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7790. Do not create optional fields in DFSInputStream unless they are
     needed (cmccabe)
 
+    HDFS-7430. Refactor the BlockScanner to use O(1) memory and use multiple
+    threads (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
@@ -945,6 +942,12 @@ Release 2.7.0 - UNRELEASED
     HDFS-7704. DN heartbeat to Active NN may be blocked and expire if
     connection to Standby NN continues to time out (Rushabh Shah via kihwal)
 
+    HDFS-7721. The HDFS BlockScanner may run fast during the first hour
+    (cmccabe)
+
+    HDFS-7686. Re-add rapid rescan of possibly corrupt block feature to the
+    block scanner (cmccabe)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
@@ -959,8 +962,6 @@ Release 2.7.0 - UNRELEASED
       HDFS-7776. Adding additional unit tests for Quota By Storage Type.
       (Xiaoyu Yao via Arpit Agarwal)
 
-      HDFS-7686. Re-add rapid rescan of possibly corrupt block feature to the
-      block scanner (cmccabe)
 
 Release 2.6.1 - UNRELEASED
 
