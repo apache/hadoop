@@ -554,6 +554,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3191. Log object should be initialized with its own class. (Rohith via
     aajisaka)
 
+    YARN-3164. RMAdmin command usage prints incorrect command name. 
+    (Bibin A Chundatt via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
