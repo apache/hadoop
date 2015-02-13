@@ -648,6 +648,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7721. The HDFS BlockScanner may run fast during the first hour
     (cmccabe)
 
+    HDFS-7686. Re-add rapid rescan of possibly corrupt block feature to the
+    block scanner (cmccabe)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
