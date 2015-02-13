@@ -151,7 +151,7 @@ public class DatanodeHttpServer implements Closeable {
     }
 
     if (httpsServer != null) {
-      InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf.get(
+      InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf.getTrimmed(
         DFS_DATANODE_HTTPS_ADDRESS_KEY, DFS_DATANODE_HTTPS_ADDRESS_DEFAULT));
       ChannelFuture f = httpsServer.bind(secInfoSocAddr);
       f.syncUninterruptibly();
