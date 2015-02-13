@@ -531,6 +531,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11497. Fix typo in ClusterSetup.html#Hadoop_Startup(Christian 
     Winkler via ozawa).
 
+    HADOOP-11467. KerberosAuthenticator can connect to a non-secure cluster.
+    (yzhangal via rkanter)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
