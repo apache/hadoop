@@ -730,7 +730,7 @@ public class DataNode extends ReconfigurableBase
 
   private void initIpcServer(Configuration conf) throws IOException {
     InetSocketAddress ipcAddr = NetUtils.createSocketAddr(
-        conf.get(DFS_DATANODE_IPC_ADDRESS_KEY));
+        conf.getTrimmed(DFS_DATANODE_IPC_ADDRESS_KEY));
     
     // Add all the RPC protocols that the Datanode implements    
     RPC.setProtocolEngine(conf, ClientDatanodeProtocolPB.class,
@@ -1373,7 +1373,7 @@ public class DataNode extends ReconfigurableBase
    * Determine the http server's effective addr
    */
   public static InetSocketAddress getInfoAddr(Configuration conf) {
-    return NetUtils.createSocketAddr(conf.get(DFS_DATANODE_HTTP_ADDRESS_KEY,
+    return NetUtils.createSocketAddr(conf.getTrimmed(DFS_DATANODE_HTTP_ADDRESS_KEY,
         DFS_DATANODE_HTTP_ADDRESS_DEFAULT));
   }
   
@@ -2877,7 +2877,7 @@ public class DataNode extends ReconfigurableBase
 
   static InetSocketAddress getStreamingAddr(Configuration conf) {
     return NetUtils.createSocketAddr(
-        conf.get(DFS_DATANODE_ADDRESS_KEY, DFS_DATANODE_ADDRESS_DEFAULT));
+        conf.getTrimmed(DFS_DATANODE_ADDRESS_KEY, DFS_DATANODE_ADDRESS_DEFAULT));
   }
   
   @Override // DataNodeMXBean

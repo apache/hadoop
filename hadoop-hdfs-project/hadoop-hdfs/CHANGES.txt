@@ -326,6 +326,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7694. FSDataInputStream should support "unbuffer" (cmccabe)
 
+    HDFS-7684. The host:port settings of the daemons should be trimmed before
+    use. (Anu Engineer via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

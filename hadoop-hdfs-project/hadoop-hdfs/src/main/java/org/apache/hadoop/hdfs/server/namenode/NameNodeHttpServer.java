@@ -103,7 +103,7 @@ public class NameNodeHttpServer {
     final String infoHost = bindAddress.getHostName();
 
     final InetSocketAddress httpAddr = bindAddress;
-    final String httpsAddrString = conf.get(
+    final String httpsAddrString = conf.getTrimmed(
         DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
         DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT);
     InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
@@ -127,7 +127,7 @@ public class NameNodeHttpServer {
 
     if (policy.isHttpsEnabled()) {
       // assume same ssl port for all datanodes
-      InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.get(
+      InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.getTrimmed(
           DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, infoHost + ":"
               + DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT));
       httpServer.setAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY,

@@ -187,16 +187,16 @@ public class DatanodeManager {
     networktopology = NetworkTopology.getInstance(conf);
 
     this.defaultXferPort = NetUtils.createSocketAddr(
-          conf.get(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
+          conf.getTrimmed(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
               DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT)).getPort();
     this.defaultInfoPort = NetUtils.createSocketAddr(
-          conf.get(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY,
+          conf.getTrimmed(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY,
               DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_DEFAULT)).getPort();
     this.defaultInfoSecurePort = NetUtils.createSocketAddr(
-        conf.get(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY,
+        conf.getTrimmed(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY,
             DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_DEFAULT)).getPort();
     this.defaultIpcPort = NetUtils.createSocketAddr(
-          conf.get(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY,
+          conf.getTrimmed(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY,
               DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_DEFAULT)).getPort();
     try {
       this.hostFileManager.refresh(conf.get(DFSConfigKeys.DFS_HOSTS, ""),
