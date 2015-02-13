@@ -73,7 +73,7 @@ public class ApplicationImpl implements Application {
   private final WriteLock writeLock;
   private final Context context;
 
-  private static final Log LOG = LogFactory.getLog(Application.class);
+  private static final Log LOG = LogFactory.getLog(ApplicationImpl.class);
 
   private LogAggregationContext logAggregationContext;
 
