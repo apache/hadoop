@@ -928,6 +928,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11587. TestMapFile#testMainMethodMapFile creates test files in
     hadoop-common project root. (Xiaoyu Yao via wheat9)
 
+    HADOOP-11467. KerberosAuthenticator can connect to a non-secure cluster.
+    (yzhangal via rkanter)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
