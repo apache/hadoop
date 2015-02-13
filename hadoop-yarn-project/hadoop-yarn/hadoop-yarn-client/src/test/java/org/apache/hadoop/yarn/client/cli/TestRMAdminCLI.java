@@ -58,6 +58,7 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 
 public class TestRMAdminCLI {
@@ -561,5 +562,20 @@ public class TestRMAdminCLI {
         data.toString().contains(template));
     data.reset();
   }
-  
+
+  @Test
+  public void testRMHAErrorUsage() throws Exception {
+    ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
+    rmAdminCLIWithHAEnabled.setErrOut(new PrintStream(errOutBytes));
+    try {
+      String[] args = { "-failover" };
+      assertEquals(-1, rmAdminCLIWithHAEnabled.run(args));
+      String errOut = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
+      errOutBytes.reset();
+      assertTrue(errOut.contains("Usage: rmadmin"));
+    } finally {
+      rmAdminCLIWithHAEnabled.setErrOut(System.err);
+    }
+  }
+
 }

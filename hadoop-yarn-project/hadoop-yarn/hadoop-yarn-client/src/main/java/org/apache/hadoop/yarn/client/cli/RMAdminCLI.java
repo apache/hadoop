@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.cli;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -125,6 +126,10 @@ public class RMAdminCLI extends HAAdmin {
 
   public RMAdminCLI(Configuration conf) {
     super(conf);
+  }
+
+  protected void setErrOut(PrintStream errOut) {
+    this.errOut = errOut;
   }
 
   private static void appendHAUsage(final StringBuilder usageBuilder) {
@@ -638,6 +643,11 @@ public class RMAdminCLI extends HAAdmin {
       throw new YarnRuntimeException(
           "Could not connect to RM HA Admin for node " + rmId);
     }
+  }
+  
+  @Override
+  protected String getUsageString() {
+    return "Usage: rmadmin";
   }
 
   public static void main(String[] args) throws Exception {

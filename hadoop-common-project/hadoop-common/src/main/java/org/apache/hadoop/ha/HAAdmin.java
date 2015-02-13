@@ -125,12 +125,12 @@ public abstract class HAAdmin extends Configured implements Tool {
     ToolRunner.printGenericCommandUsage(errOut);    
   }
   
-  private static void printUsage(PrintStream errOut, String cmd) {
+  private void printUsage(PrintStream errOut, String cmd) {
     UsageInfo usage = USAGE.get(cmd);
     if (usage == null) {
       throw new RuntimeException("No usage for cmd " + cmd);
     }
-    errOut.println("Usage: HAAdmin [" + cmd + " " + usage.args + "]");
+    errOut.println(getUsageString() + " [" + cmd + " " + usage.args + "]");
   }
 
   private int transitionToActive(final CommandLine cmd)
