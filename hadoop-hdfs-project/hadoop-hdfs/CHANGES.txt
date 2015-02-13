@@ -959,6 +959,9 @@ Release 2.7.0 - UNRELEASED
       HDFS-7776. Adding additional unit tests for Quota By Storage Type.
       (Xiaoyu Yao via Arpit Agarwal)
 
+      HDFS-7686. Re-add rapid rescan of possibly corrupt block feature to the
+      block scanner (cmccabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -268,6 +268,20 @@ public class TestBlockScanner {
       final Set<ExtendedBlock> goodBlocks = new HashSet<ExtendedBlock>();
       long blocksScanned = 0;
       Semaphore sem = null;
+
+      @Override
+      public String toString() {
+        final StringBuilder bld = new StringBuilder();
+        bld.append("ScanResultHandler.Info{");
+        bld.append("shouldRun=").append(shouldRun).append(", ");
+        bld.append("blocksScanned=").append(blocksScanned).append(", ");
+        bld.append("sem#availablePermits=").append(sem.availablePermits()).
+            append(", ");
+        bld.append("badBlocks=").append(badBlocks).append(", ");
+        bld.append("goodBlocks=").append(goodBlocks);
+        bld.append("}");
+        return bld.toString();
+      }
     }
 
     private VolumeScanner scanner;
@@ -680,5 +694,122 @@ public class TestBlockScanner {
 
     Assert.assertFalse(VolumeScanner.
         calculateShouldScan("test", 100000L, 365000000L, 0, 60));
+  }
+
+  /**
+   * Test that we can mark certain blocks as suspect, and get them quickly
+   * rescanned that way.  See HDFS-7686 and HDFS-7548.
+   */
+  @Test(timeout=120000)
+  public void testMarkSuspectBlock() throws Exception {
+    Configuration conf = new Configuration();
+    // Set a really long scan period.
+    conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 100L);
+    conf.set(INTERNAL_VOLUME_SCANNER_SCAN_RESULT_HANDLER,
+        TestScanResultHandler.class.getName());
+    conf.setLong(INTERNAL_DFS_BLOCK_SCANNER_CURSOR_SAVE_INTERVAL_MS, 0L);
+    final TestContext ctx = new TestContext(conf, 1);
+    final int NUM_EXPECTED_BLOCKS = 10;
+    ctx.createFiles(0, NUM_EXPECTED_BLOCKS, 1);
+    final TestScanResultHandler.Info info =
+        TestScanResultHandler.getInfo(ctx.volumes.get(0));
+    String storageID = ctx.datanode.getFSDataset().
+        getVolumes().get(0).getStorageID();
+    synchronized (info) {
+      info.sem = new Semaphore(4);
+      info.shouldRun = true;
+      info.notify();
+    }
+    // Scan the first 4 blocks
+    LOG.info("Waiting for the first 4 blocks to be scanned.");
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        synchronized (info) {
+          if (info.blocksScanned >= 4) {
+            LOG.info("info = {}.  blockScanned has now reached 4.", info);
+            return true;
+          } else {
+            LOG.info("info = {}.  Waiting for blockScanned to reach 4.", info);
+            return false;
+          }
+        }
+      }
+    }, 50, 30000);
+    // We should have scanned 4 blocks
+    synchronized (info) {
+      assertEquals("Expected 4 good blocks.", 4, info.goodBlocks.size());
+      info.goodBlocks.clear();
+      assertEquals("Expected 4 blocksScanned", 4, info.blocksScanned);
+      assertEquals("Did not expect bad blocks.", 0, info.badBlocks.size());
+      info.blocksScanned = 0;
+    }
+    ExtendedBlock first = ctx.getFileBlock(0, 0);
+    ctx.datanode.getBlockScanner().markSuspectBlock(storageID, first);
+
+    // When we increment the semaphore, the TestScanResultHandler will finish
+    // adding the block that it was scanning previously (the 5th block).
+    // We increment the semaphore twice so that the handler will also
+    // get a chance to see the suspect block which we just requested the
+    // VolumeScanner to process.
+    info.sem.release(2);
+
+    LOG.info("Waiting for 2 more blocks to be scanned.");
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        synchronized (info) {
+          if (info.blocksScanned >= 2) {
+            LOG.info("info = {}.  blockScanned has now reached 2.", info);
+            return true;
+          } else {
+            LOG.info("info = {}.  Waiting for blockScanned to reach 2.", info);
+            return false;
+          }
+        }
+      }
+    }, 50, 30000);
+
+    synchronized (info) {
+      assertTrue("Expected block " + first + " to have been scanned.",
+          info.goodBlocks.contains(first));
+      assertEquals(2, info.goodBlocks.size());
+      info.goodBlocks.clear();
+      assertEquals("Did not expect bad blocks.", 0, info.badBlocks.size());
+      assertEquals(2, info.blocksScanned);
+      info.blocksScanned = 0;
+    }
+
+    // Re-mark the same block as suspect.
+    ctx.datanode.getBlockScanner().markSuspectBlock(storageID, first);
+    info.sem.release(10);
+
+    LOG.info("Waiting for 5 more blocks to be scanned.");
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        synchronized (info) {
+          if (info.blocksScanned >= 5) {
+            LOG.info("info = {}.  blockScanned has now reached 5.", info);
+            return true;
+          } else {
+            LOG.info("info = {}.  Waiting for blockScanned to reach 5.", info);
+            return false;
+          }
+        }
+      }
+    }, 50, 30000);
+    synchronized (info) {
+      assertEquals(5, info.goodBlocks.size());
+      assertEquals(0, info.badBlocks.size());
+      assertEquals(5, info.blocksScanned);
+      // We should not have rescanned the "suspect block",
+      // because it was recently rescanned by the suspect block system.
+      // This is a test of the "suspect block" rate limiting.
+      Assert.assertFalse("We should not " +
+          "have rescanned block " + first + ", because it should have been " +
+          "in recentSuspectBlocks.", info.goodBlocks.contains(first));
+      info.blocksScanned = 0;
+    }
   }
 }
