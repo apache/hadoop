@@ -506,7 +506,7 @@ $ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs s
   Run a script to start DataNodes on all slaves:
 
 ----
-$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start datanode
+$ $HADOOP_PREFIX/sbin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --script hdfs start datanode
 ----    	
 
   Start the YARN with the following command, run on the designated
@@ -519,7 +519,7 @@ $ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start resource
   Run a script to start NodeManagers on all slaves:
 
 ----
-$ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start nodemanager
+$ $HADOOP_YARN_HOME/sbin/yarn-daemons.sh --config $HADOOP_CONF_DIR start nodemanager
 ----    	
 
   Start a standalone WebAppProxy server.  If multiple servers
@@ -548,7 +548,7 @@ $ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs s
   Run a script to stop DataNodes on all slaves:
 
 ----
-$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop datanode
+$ $HADOOP_PREFIX/sbin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --script hdfs stop datanode
 ----    	
 
   Stop the ResourceManager with the following command, run on the designated
@@ -561,7 +561,7 @@ $ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop resourcem
   Run a script to stop NodeManagers on all slaves:
 
 ----
-$ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop nodemanager
+$ $HADOOP_YARN_HOME/sbin/yarn-daemons.sh --config $HADOOP_CONF_DIR stop nodemanager
 ----    	
 
   Stop the WebAppProxy server. If multiple servers are used with load
