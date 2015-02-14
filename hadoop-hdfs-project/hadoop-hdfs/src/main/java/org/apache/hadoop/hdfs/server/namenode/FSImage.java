@@ -866,7 +866,7 @@ public class FSImage implements Closeable {
   private static void updateCountForQuotaRecursively(BlockStoragePolicySuite bsps,
       INodeDirectory dir, QuotaCounts counts) {
     final long parentNamespace = counts.getNameSpace();
-    final long parentDiskspace = counts.getDiskSpace();
+    final long parentStoragespace = counts.getStorageSpace();
     final EnumCounters<StorageType> parentTypeSpaces = counts.getTypeSpaces();
 
     dir.computeQuotaUsage4CurrentDirectory(bsps, counts);
@@ -892,12 +892,12 @@ public class FSImage implements Closeable {
             + " quota = " + nsQuota + " < consumed = " + namespace);
       }
 
-      final long diskspace = counts.getDiskSpace() - parentDiskspace;
-      final long dsQuota = q.getDiskSpace();
-      if (Quota.isViolated(dsQuota, diskspace)) {
-        LOG.error("BUG: Diskspace quota violation in image for "
+      final long ssConsumed = counts.getStorageSpace() - parentStoragespace;
+      final long ssQuota = q.getStorageSpace();
+      if (Quota.isViolated(ssQuota, ssConsumed)) {
+        LOG.error("BUG: Storagespace quota violation in image for "
             + dir.getFullPathName()
-            + " quota = " + dsQuota + " < consumed = " + diskspace);
+            + " quota = " + ssQuota + " < consumed = " + ssConsumed);
       }
 
       final EnumCounters<StorageType> typeSpaces =
@@ -907,14 +907,14 @@ public class FSImage implements Closeable {
             parentTypeSpaces.get(t);
         final long typeQuota = q.getTypeSpaces().get(t);
         if (Quota.isViolated(typeQuota, typeSpace)) {
-          LOG.error("BUG Disk quota by storage type violation in image for "
+          LOG.error("BUG: Storage type quota violation in image for "
               + dir.getFullPathName()
               + " type = " + t.toString() + " quota = "
               + typeQuota + " < consumed " + typeSpace);
         }
       }
 
-      dir.getDirectoryWithQuotaFeature().setSpaceConsumed(namespace, diskspace,
+      dir.getDirectoryWithQuotaFeature().setSpaceConsumed(namespace, ssConsumed,
           typeSpaces);
     }
   }

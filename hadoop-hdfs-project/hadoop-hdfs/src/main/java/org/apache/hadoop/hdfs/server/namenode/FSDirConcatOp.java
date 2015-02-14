@@ -150,7 +150,7 @@ class FSDirConcatOp {
       short srcRepl = src.getBlockReplication();
       long fileSize = src.computeFileSize();
       if (targetRepl != srcRepl) {
-        deltas.addDiskSpace(fileSize * (targetRepl - srcRepl));
+        deltas.addStorageSpace(fileSize * (targetRepl - srcRepl));
         BlockStoragePolicy bsp =
             fsd.getBlockStoragePolicySuite().getPolicy(src.getStoragePolicyID());
         if (bsp != null) {

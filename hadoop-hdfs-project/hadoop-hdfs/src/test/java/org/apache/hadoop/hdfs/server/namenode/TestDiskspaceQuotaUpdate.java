@@ -84,7 +84,7 @@ public class TestDiskspaceQuotaUpdate {
     QuotaCounts cnt = fnode.asDirectory().getDirectoryWithQuotaFeature()
         .getSpaceConsumed();
     assertEquals(2, cnt.getNameSpace());
-    assertEquals(fileLen * REPLICATION, cnt.getDiskSpace());
+    assertEquals(fileLen * REPLICATION, cnt.getStorageSpace());
   }
 
   /**
@@ -108,7 +108,7 @@ public class TestDiskspaceQuotaUpdate {
     QuotaCounts quota = fooNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed();
     long ns = quota.getNameSpace();
-    long ds = quota.getDiskSpace();
+    long ds = quota.getStorageSpace();
     assertEquals(2, ns); // foo and bar
     assertEquals(currentFileLen * REPLICATION, ds);
     ContentSummary c = dfs.getContentSummary(foo);
@@ -120,7 +120,7 @@ public class TestDiskspaceQuotaUpdate {
 
     quota = fooNode.getDirectoryWithQuotaFeature().getSpaceConsumed();
     ns = quota.getNameSpace();
-    ds = quota.getDiskSpace();
+    ds = quota.getStorageSpace();
     assertEquals(2, ns); // foo and bar
     assertEquals(currentFileLen * REPLICATION, ds);
     c = dfs.getContentSummary(foo);
@@ -132,7 +132,7 @@ public class TestDiskspaceQuotaUpdate {
 
     quota = fooNode.getDirectoryWithQuotaFeature().getSpaceConsumed();
     ns = quota.getNameSpace();
-    ds = quota.getDiskSpace();
+    ds = quota.getStorageSpace();
     assertEquals(2, ns); // foo and bar
     assertEquals(currentFileLen * REPLICATION, ds);
     c = dfs.getContentSummary(foo);
@@ -159,7 +159,7 @@ public class TestDiskspaceQuotaUpdate {
     QuotaCounts quota = fooNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed();
     long ns = quota.getNameSpace();
-    long ds = quota.getDiskSpace();
+    long ds = quota.getStorageSpace();
     assertEquals(2, ns); // foo and bar
     assertEquals(BLOCKSIZE * 2 * REPLICATION, ds); // file is under construction
 
@@ -169,7 +169,7 @@ public class TestDiskspaceQuotaUpdate {
     fooNode = fsdir.getINode4Write(foo.toString()).asDirectory();
     quota = fooNode.getDirectoryWithQuotaFeature().getSpaceConsumed();
     ns = quota.getNameSpace();
-    ds = quota.getDiskSpace();
+    ds = quota.getStorageSpace();
     assertEquals(2, ns);
     assertEquals((BLOCKSIZE + BLOCKSIZE / 2) * REPLICATION, ds);
 
@@ -178,7 +178,7 @@ public class TestDiskspaceQuotaUpdate {
 
     quota = fooNode.getDirectoryWithQuotaFeature().getSpaceConsumed();
     ns = quota.getNameSpace();
-    ds = quota.getDiskSpace();
+    ds = quota.getStorageSpace();
     assertEquals(2, ns); // foo and bar
     assertEquals((BLOCKSIZE * 2 + BLOCKSIZE / 2) * REPLICATION, ds);
   }

@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.util.EnumCounters;
  */
 public final class DirectoryWithQuotaFeature implements INode.Feature {
   public static final long DEFAULT_NAMESPACE_QUOTA = Long.MAX_VALUE;
-  public static final long DEFAULT_SPACE_QUOTA = HdfsConstants.QUOTA_RESET;
+  public static final long DEFAULT_STORAGE_SPACE_QUOTA = HdfsConstants.QUOTA_RESET;
 
   private QuotaCounts quota;
   private QuotaCounts usage;
@@ -41,9 +41,10 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
     private QuotaCounts usage;
 
     public Builder() {
-      this.quota = new QuotaCounts.Builder().nameCount(DEFAULT_NAMESPACE_QUOTA).
-          spaceCount(DEFAULT_SPACE_QUOTA).typeCounts(DEFAULT_SPACE_QUOTA).build();
-      this.usage = new QuotaCounts.Builder().nameCount(1).build();
+      this.quota = new QuotaCounts.Builder().nameSpace(DEFAULT_NAMESPACE_QUOTA).
+          storageSpace(DEFAULT_STORAGE_SPACE_QUOTA).
+          typeSpaces(DEFAULT_STORAGE_SPACE_QUOTA).build();
+      this.usage = new QuotaCounts.Builder().nameSpace(1).build();
     }
 
     public Builder nameSpaceQuota(long nameSpaceQuota) {
@@ -51,8 +52,8 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
       return this;
     }
 
-    public Builder spaceQuota(long spaceQuota) {
-      this.quota.setDiskSpace(spaceQuota);
+    public Builder storageSpaceQuota(long spaceQuota) {
+      this.quota.setStorageSpace(spaceQuota);
       return this;
     }
 
@@ -84,33 +85,41 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
   /** Set this directory's quota
    * 
    * @param nsQuota Namespace quota to be set
-   * @param dsQuota Diskspace quota to be set
-   * @param type Storage type quota to be set
-   * * To set traditional space/namespace quota, type must be null
+   * @param ssQuota Storagespace quota to be set
+   * @param type Storage type of the storage space quota to be set.
+   *             To set storagespace/namespace quota, type must be null.
    */
-  void setQuota(long nsQuota, long dsQuota, StorageType type) {
+  void setQuota(long nsQuota, long ssQuota, StorageType type) {
     if (type != null) {
-      this.quota.setTypeSpace(type, dsQuota);
+      this.quota.setTypeSpace(type, ssQuota);
     } else {
-      setQuota(nsQuota, dsQuota);
+      setQuota(nsQuota, ssQuota);
     }
   }
 
-  void setQuota(long nsQuota, long dsQuota) {
+  void setQuota(long nsQuota, long ssQuota) {
     this.quota.setNameSpace(nsQuota);
-    this.quota.setDiskSpace(dsQuota);
+    this.quota.setStorageSpace(ssQuota);
   }
 
-  void setQuota(long dsQuota, StorageType type) {
-    this.quota.setTypeSpace(type, dsQuota);
+  void setQuota(long quota, StorageType type) {
+    this.quota.setTypeSpace(type, quota);
   }
 
-  // Set in a batch only during FSImage load
-  void setQuota(EnumCounters<StorageType> typeQuotas) {
-    this.quota.setTypeSpaces(typeQuotas);
+  /** Set storage type quota in a batch. (Only used by FSImage load)
+   *
+   * @param tsQuotas type space counts for all storage types supporting quota
+   */
+  void setQuota(EnumCounters<StorageType> tsQuotas) {
+    this.quota.setTypeSpaces(tsQuotas);
   }
 
-  QuotaCounts addNamespaceDiskspace(QuotaCounts counts) {
+  /**
+   * Add current quota usage to counts and return the updated counts
+   * @param counts counts to be added with current quota usage
+   * @return counts that have been added with the current qutoa usage
+   */
+  QuotaCounts AddCurrentSpaceUsage(QuotaCounts counts) {
     counts.add(this.usage);
     return counts;
   }
@@ -122,15 +131,15 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
     dir.computeDirectoryContentSummary(summary, Snapshot.CURRENT_STATE_ID);
     // Check only when the content has not changed in the middle.
     if (oldYieldCount == summary.getYieldCount()) {
-      checkDiskspace(dir, summary.getCounts().get(Content.DISKSPACE) - original);
+      checkStoragespace(dir, summary.getCounts().get(Content.DISKSPACE) - original);
     }
     return summary;
   }
 
-  private void checkDiskspace(final INodeDirectory dir, final long computed) {
-    if (-1 != quota.getDiskSpace() && usage.getDiskSpace() != computed) {
-      NameNode.LOG.error("BUG: Inconsistent diskspace for directory "
-          + dir.getFullPathName() + ". Cached = " + usage.getDiskSpace()
+  private void checkStoragespace(final INodeDirectory dir, final long computed) {
+    if (-1 != quota.getStorageSpace() && usage.getStorageSpace() != computed) {
+      NameNode.LOG.error("BUG: Inconsistent storagespace for directory "
+          + dir.getFullPathName() + ". Cached = " + usage.getStorageSpace()
           + " != Computed = " + computed);
     }
   }
@@ -163,28 +172,28 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
   }
 
   /** 
-   * Sets namespace and diskspace take by the directory rooted 
+   * Sets namespace and storagespace take by the directory rooted
    * at this INode. This should be used carefully. It does not check 
    * for quota violations.
    * 
    * @param namespace size of the directory to be set
-   * @param diskspace disk space take by all the nodes under this directory
-   * @param typeUsed counters of storage type usage
+   * @param storagespace storage space take by all the nodes under this directory
+   * @param typespaces counters of storage type usage
    */
-  void setSpaceConsumed(long namespace, long diskspace,
-      EnumCounters<StorageType> typeUsed) {
+  void setSpaceConsumed(long namespace, long storagespace,
+      EnumCounters<StorageType> typespaces) {
     usage.setNameSpace(namespace);
-    usage.setDiskSpace(diskspace);
-    usage.setTypeSpaces(typeUsed);
+    usage.setStorageSpace(storagespace);
+    usage.setTypeSpaces(typespaces);
   }
 
   void setSpaceConsumed(QuotaCounts c) {
     usage.setNameSpace(c.getNameSpace());
-    usage.setDiskSpace(c.getDiskSpace());
+    usage.setStorageSpace(c.getStorageSpace());
     usage.setTypeSpaces(c.getTypeSpaces());
   }
 
-  /** @return the namespace and diskspace consumed. */
+  /** @return the namespace and storagespace and typespace consumed. */
   public QuotaCounts getSpaceConsumed() {
     return new QuotaCounts.Builder().quotaCount(usage).build();
   }
@@ -196,11 +205,11 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
           usage.getNameSpace() + delta);
     }
   }
-  /** Verify if the diskspace quota is violated after applying delta. */
-  private void verifyDiskspaceQuota(long delta) throws DSQuotaExceededException {
-    if (Quota.isViolated(quota.getDiskSpace(), usage.getDiskSpace(), delta)) {
-      throw new DSQuotaExceededException(quota.getDiskSpace(),
-          usage.getDiskSpace() + delta);
+  /** Verify if the storagespace quota is violated after applying delta. */
+  private void verifyStoragespaceQuota(long delta) throws DSQuotaExceededException {
+    if (Quota.isViolated(quota.getStorageSpace(), usage.getStorageSpace(), delta)) {
+      throw new DSQuotaExceededException(quota.getStorageSpace(),
+          usage.getStorageSpace() + delta);
     }
   }
 
@@ -222,22 +231,22 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
   }
 
   /**
-   * @throws QuotaExceededException if namespace, diskspace or storage type quotas
-   * is violated after applying the deltas.
+   * @throws QuotaExceededException if namespace, storagespace or storage type
+   * space quota is violated after applying the deltas.
    */
   void verifyQuota(QuotaCounts counts) throws QuotaExceededException {
     verifyNamespaceQuota(counts.getNameSpace());
-    verifyDiskspaceQuota(counts.getDiskSpace());
+    verifyStoragespaceQuota(counts.getStorageSpace());
     verifyQuotaByStorageType(counts.getTypeSpaces());
   }
 
   boolean isQuotaSet() {
-    return quota.anyNsSpCountGreaterOrEqual(0) ||
-        quota.anyTypeCountGreaterOrEqual(0);
+    return quota.anyNsSsCountGreaterOrEqual(0) ||
+        quota.anyTypeSpaceCountGreaterOrEqual(0);
   }
 
   boolean isQuotaByStorageTypeSet() {
-    return quota.anyTypeCountGreaterOrEqual(0);
+    return quota.anyTypeSpaceCountGreaterOrEqual(0);
   }
 
   boolean isQuotaByStorageTypeSet(StorageType t) {
@@ -248,12 +257,12 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
     return "namespace: " + (quota.getNameSpace() < 0? "-":
         usage.getNameSpace() + "/" + quota.getNameSpace());
   }
-  private String diskspaceString() {
-    return "diskspace: " + (quota.getDiskSpace() < 0? "-":
-        usage.getDiskSpace() + "/" + quota.getDiskSpace());
+  private String storagespaceString() {
+    return "storagespace: " + (quota.getStorageSpace() < 0? "-":
+        usage.getStorageSpace() + "/" + quota.getStorageSpace());
   }
 
-  private String quotaByStorageTypeString() {
+  private String typeSpaceString() {
     StringBuilder sb = new StringBuilder();
     for (StorageType t : StorageType.getTypesSupportingQuota()) {
       sb.append("StorageType: " + t +
@@ -265,7 +274,7 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
 
   @Override
   public String toString() {
-    return "Quota[" + namespaceString() + ", " + diskspaceString() +
-        ", " + quotaByStorageTypeString() + "]";
+    return "Quota[" + namespaceString() + ", " + storagespaceString() +
+        ", " + typeSpaceString() + "]";
   }
 }

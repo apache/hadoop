@@ -571,7 +571,7 @@ message GetContentSummaryResponseProto {
 message SetQuotaRequestProto {
   required string path = 1;
   required uint64 namespaceQuota = 2;
-  required uint64 diskspaceQuota = 3;
+  required uint64 storagespaceQuota = 3;
   optional StorageTypeProto storageType = 4;
 }
 
