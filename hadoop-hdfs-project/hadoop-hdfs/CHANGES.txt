@@ -651,6 +651,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7686. Re-add rapid rescan of possibly corrupt block feature to the
     block scanner (cmccabe)
 
+    HDFS-7778. Rename FsVolumeListTest to TestFsVolumeList and commit it to
+    branch-2. (Lei (Eddy) Xu via cnauroth)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
