@@ -1355,16 +1355,6 @@ public class TestConfiguration extends TestCase {
     // it's expected behaviour.
   }
 
-  public void testTrimCreateSocketAddress() {
-    Configuration conf = new Configuration();
-    NetUtils.addStaticResolution("host", "127.0.0.1");
-    final String defaultAddr = "host:1  ";
-
-    InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);
-    conf.setSocketAddr("myAddress", addr);
-    assertEquals(defaultAddr.trim(), NetUtils.getHostPortString(addr));
-  }
-
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()
