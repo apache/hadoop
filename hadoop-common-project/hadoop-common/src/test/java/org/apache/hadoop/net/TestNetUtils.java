@@ -643,6 +643,17 @@ public class TestNetUtils {
     assertNotNull(NetUtils.getHostNameOfIP("127.0.0.1:1"));
   }
 
+  @Test
+  public void testTrimCreateSocketAddress() {
+    Configuration conf = new Configuration();
+    NetUtils.addStaticResolution("host", "127.0.0.1");
+    final String defaultAddr = "host:1  ";
+
+    InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);
+    conf.setSocketAddr("myAddress", addr);
+    assertEquals(defaultAddr.trim(), NetUtils.getHostPortString(addr));
+  }
+
   private <T> void assertBetterArrayEquals(T[] expect, T[]got) {
     String expectStr = StringUtils.join(expect, ", ");
     String gotStr = StringUtils.join(got, ", ");
