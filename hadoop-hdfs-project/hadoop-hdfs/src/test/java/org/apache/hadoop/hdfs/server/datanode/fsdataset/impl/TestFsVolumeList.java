@@ -36,7 +36,7 @@ import java.util.List;
 import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.mock;
 
-public class FsVolumeListTest {
+public class TestFsVolumeList {
 
   private final Configuration conf = new Configuration();
   private VolumeChoosingPolicy<FsVolumeImpl> blockChooser =
