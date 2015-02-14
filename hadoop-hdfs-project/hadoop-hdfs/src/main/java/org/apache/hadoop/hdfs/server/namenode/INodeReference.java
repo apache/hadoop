@@ -509,10 +509,10 @@ public abstract class INodeReference extends INode {
     @Override
     public final ContentSummaryComputationContext computeContentSummary(
         ContentSummaryComputationContext summary) {
-      //only count diskspace for WithName
+      //only count storagespace for WithName
       final QuotaCounts q = new QuotaCounts.Builder().build();
       computeQuotaUsage(summary.getBlockStoragePolicySuite(), q, false, lastSnapshotId);
-      summary.getCounts().add(Content.DISKSPACE, q.getDiskSpace());
+      summary.getCounts().add(Content.DISKSPACE, q.getStorageSpace());
       return summary;
     }
 

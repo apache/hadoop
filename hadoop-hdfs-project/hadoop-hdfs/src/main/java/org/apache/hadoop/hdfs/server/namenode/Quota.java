@@ -23,16 +23,16 @@ import org.apache.hadoop.hdfs.util.EnumCounters;
 public enum Quota {
   /** The namespace usage, i.e. the number of name objects. */
   NAMESPACE,
-  /** The diskspace usage in bytes including replication. */
-  DISKSPACE;
+  /** The storage space usage in bytes including replication. */
+  STORAGESPACE;
 
   /** Counters for quota counts. */
   public static class Counts extends EnumCounters<Quota> {
-    /** @return a new counter with the given namespace and diskspace usages. */
-    public static Counts newInstance(long namespace, long diskspace) {
+    /** @return a new counter with the given namespace and storagespace usages. */
+    public static Counts newInstance(long namespace, long storagespace) {
       final Counts c = new Counts();
       c.set(NAMESPACE, namespace);
-      c.set(DISKSPACE, diskspace);
+      c.set(STORAGESPACE, storagespace);
       return c;
     }
 

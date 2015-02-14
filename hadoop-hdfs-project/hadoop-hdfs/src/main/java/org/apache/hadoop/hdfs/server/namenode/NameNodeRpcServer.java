@@ -1192,11 +1192,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public void setQuota(String path, long namespaceQuota, long diskspaceQuota,
+  public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
                        StorageType type)
       throws IOException {
     checkNNStartup();
-    namesystem.setQuota(path, namespaceQuota, diskspaceQuota, type);
+    namesystem.setQuota(path, namespaceQuota, storagespaceQuota, type);
   }
   
   @Override // ClientProtocol

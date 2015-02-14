@@ -96,8 +96,8 @@ public class HdfsAdmin {
   }
   
   /**
-   * Set the disk space quota (size of files) for a directory. Note that
-   * directories and sym links do not occupy disk space.
+   * Set the storage space quota (size of files) for a directory. Note that
+   * directories and sym links do not occupy storage space.
    * 
    * @param src the path to set the space quota of
    * @param spaceQuota the value to set for the space quota
@@ -108,8 +108,8 @@ public class HdfsAdmin {
   }
   
   /**
-   * Clear the disk space quota (size of files) for a directory. Note that
-   * directories and sym links do not occupy disk space.
+   * Clear the storage space quota (size of files) for a directory. Note that
+   * directories and sym links do not occupy storage space.
    * 
    * @param src the path to clear the space quota of
    * @throws IOException in the event of error
@@ -120,21 +120,21 @@ public class HdfsAdmin {
 
   /**
    * Set the quota by storage type for a directory. Note that
-   * directories and sym links do not occupy disk space.
+   * directories and sym links do not occupy storage type quota.
    *
    * @param src the target directory to set the quota by storage type
    * @param type the storage type to set for quota by storage type
-   * @param spaceQuota the value to set for quota by storage type
+   * @param quota the value to set for quota by storage type
    * @throws IOException in the event of error
    */
-  public void setQuotaByStorageType(Path src, StorageType type, long spaceQuota)
+  public void setQuotaByStorageType(Path src, StorageType type, long quota)
       throws IOException {
-    dfs.setQuotaByStorageType(src, type, spaceQuota);
+    dfs.setQuotaByStorageType(src, type, quota);
   }
 
   /**
    * Clear the space quota by storage type for a directory. Note that
-   * directories and sym links do not occupy disk space.
+   * directories and sym links do not occupy storage type quota.
    *
    * @param src the target directory to clear the quota by storage type
    * @param type the storage type to clear for quota by storage type

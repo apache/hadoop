@@ -424,14 +424,14 @@ public class TestQuotaByStorageType {
     QuotaCounts cnt = fnode.asDirectory().getDirectoryWithQuotaFeature()
         .getSpaceConsumed();
     assertEquals(2, cnt.getNameSpace());
-    assertEquals(fileLen * REPLICATION, cnt.getDiskSpace());
+    assertEquals(fileLen * REPLICATION, cnt.getStorageSpace());
 
     dfs.delete(createdFile, true);
 
     QuotaCounts cntAfterDelete = fnode.asDirectory().getDirectoryWithQuotaFeature()
         .getSpaceConsumed();
     assertEquals(1, cntAfterDelete.getNameSpace());
-    assertEquals(0, cntAfterDelete.getDiskSpace());
+    assertEquals(0, cntAfterDelete.getStorageSpace());
 
     // Validate the computeQuotaUsage()
     QuotaCounts counts = new QuotaCounts.Builder().build();
@@ -439,7 +439,7 @@ public class TestQuotaByStorageType {
     assertEquals(fnode.dumpTreeRecursively().toString(), 1,
         counts.getNameSpace());
     assertEquals(fnode.dumpTreeRecursively().toString(), 0,
-        counts.getDiskSpace());
+        counts.getStorageSpace());
   }
 
   /**

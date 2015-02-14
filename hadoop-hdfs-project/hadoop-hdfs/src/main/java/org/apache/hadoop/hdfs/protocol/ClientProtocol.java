@@ -951,10 +951,14 @@ public interface ClientProtocol {
    * @param path  The string representation of the path to the directory
    * @param namespaceQuota Limit on the number of names in the tree rooted 
    *                       at the directory
-   * @param diskspaceQuota Limit on disk space occupied all the files under
+   * @param storagespaceQuota Limit on storage space occupied all the files under
    *                       this directory.
    * @param type StorageType that the space quota is intended to be set on.
    *             It may be null when called by traditional space/namespace quota.
+   *             When type is is not null, the storagespaceQuota parameter is for
+   *             type specified and namespaceQuota must be
+   *             {@link HdfsConstants#QUOTA_DONT_SET}.
+   *
    * <br><br>
    *                       
    * The quota can have three types of values : (1) 0 or more will set 
@@ -971,7 +975,7 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  public void setQuota(String path, long namespaceQuota, long diskspaceQuota,
+  public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
       StorageType type) throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, SnapshotAccessControlException, IOException;
 

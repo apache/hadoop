@@ -22,47 +22,49 @@ import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 
 /**
- * Counters for namespace, space and storage type quota and usage.
+ * Counters for namespace, storage space and storage type space quota and usage.
  */
 public class QuotaCounts {
-
-  private EnumCounters<Quota> nsSpCounts;
-  private EnumCounters<StorageType> typeCounts;
+  // Name space and storage space counts (HDFS-7775 refactors the original disk
+  // space count to storage space counts)
+  private EnumCounters<Quota> nsSsCounts;
+  // Storage type space counts
+  private EnumCounters<StorageType> tsCounts;
 
   public static class Builder {
-    private EnumCounters<Quota> nsSpCounts;
-    private EnumCounters<StorageType> typeCounts;
+    private EnumCounters<Quota> nsSsCounts;
+    private EnumCounters<StorageType> tsCounts;
 
     public Builder() {
-      this.nsSpCounts = new EnumCounters<Quota>(Quota.class);
-      this.typeCounts = new EnumCounters<StorageType>(StorageType.class);
+      this.nsSsCounts = new EnumCounters<Quota>(Quota.class);
+      this.tsCounts = new EnumCounters<StorageType>(StorageType.class);
     }
 
-    public Builder nameCount(long val) {
-      this.nsSpCounts.set(Quota.NAMESPACE, val);
+    public Builder nameSpace(long val) {
+      this.nsSsCounts.set(Quota.NAMESPACE, val);
       return this;
     }
 
-    public Builder spaceCount(long val) {
-      this.nsSpCounts.set(Quota.DISKSPACE, val);
+    public Builder storageSpace(long val) {
+      this.nsSsCounts.set(Quota.STORAGESPACE, val);
       return this;
     }
 
-    public Builder typeCounts(EnumCounters<StorageType> val) {
+    public Builder typeSpaces(EnumCounters<StorageType> val) {
       if (val != null) {
-        this.typeCounts.set(val);
+        this.tsCounts.set(val);
       }
       return this;
     }
 
-    public Builder typeCounts(long val) {
-      this.typeCounts.reset(val);
+    public Builder typeSpaces(long val) {
+      this.tsCounts.reset(val);
       return this;
     }
 
     public Builder quotaCount(QuotaCounts that) {
-      this.nsSpCounts.set(that.nsSpCounts);
-      this.typeCounts.set(that.typeCounts);
+      this.nsSsCounts.set(that.nsSsCounts);
+      this.tsCounts.set(that.tsCounts);
       return this;
     }
 
@@ -72,18 +74,18 @@ public class QuotaCounts {
   }
 
   private QuotaCounts(Builder builder) {
-    this.nsSpCounts = builder.nsSpCounts;
-    this.typeCounts = builder.typeCounts;
+    this.nsSsCounts = builder.nsSsCounts;
+    this.tsCounts = builder.tsCounts;
   }
 
   public void add(QuotaCounts that) {
-    this.nsSpCounts.add(that.nsSpCounts);
-    this.typeCounts.add(that.typeCounts);
+    this.nsSsCounts.add(that.nsSsCounts);
+    this.tsCounts.add(that.tsCounts);
   }
 
   public void subtract(QuotaCounts that) {
-    this.nsSpCounts.subtract(that.nsSpCounts);
-    this.typeCounts.subtract(that.typeCounts);
+    this.nsSsCounts.subtract(that.nsSsCounts);
+    this.tsCounts.subtract(that.tsCounts);
   }
 
   /**
@@ -93,70 +95,66 @@ public class QuotaCounts {
    */
   public QuotaCounts negation() {
     QuotaCounts ret = new QuotaCounts.Builder().quotaCount(this).build();
-    ret.nsSpCounts.negation();
-    ret.typeCounts.negation();
+    ret.nsSsCounts.negation();
+    ret.tsCounts.negation();
     return ret;
   }
 
   public long getNameSpace(){
-    return nsSpCounts.get(Quota.NAMESPACE);
+    return nsSsCounts.get(Quota.NAMESPACE);
   }
 
   public void setNameSpace(long nameSpaceCount) {
-    this.nsSpCounts.set(Quota.NAMESPACE, nameSpaceCount);
+    this.nsSsCounts.set(Quota.NAMESPACE, nameSpaceCount);
   }
 
   public void addNameSpace(long nsDelta) {
-    this.nsSpCounts.add(Quota.NAMESPACE, nsDelta);
+    this.nsSsCounts.add(Quota.NAMESPACE, nsDelta);
   }
 
-  public long getDiskSpace(){
-    return nsSpCounts.get(Quota.DISKSPACE);
+  public long getStorageSpace(){
+    return nsSsCounts.get(Quota.STORAGESPACE);
   }
 
-  public void setDiskSpace(long spaceCount) {
-    this.nsSpCounts.set(Quota.DISKSPACE, spaceCount);
+  public void setStorageSpace(long spaceCount) {
+    this.nsSsCounts.set(Quota.STORAGESPACE, spaceCount);
   }
 
-  public void addDiskSpace(long dsDelta) {
-    this.nsSpCounts.add(Quota.DISKSPACE, dsDelta);
+  public void addStorageSpace(long dsDelta) {
+    this.nsSsCounts.add(Quota.STORAGESPACE, dsDelta);
   }
 
   public EnumCounters<StorageType> getTypeSpaces() {
     EnumCounters<StorageType> ret =
         new EnumCounters<StorageType>(StorageType.class);
-    ret.set(typeCounts);
+    ret.set(tsCounts);
     return ret;
   }
 
   void setTypeSpaces(EnumCounters<StorageType> that) {
     if (that != null) {
-      this.typeCounts.set(that);
+      this.tsCounts.set(that);
     }
   }
 
   long getTypeSpace(StorageType type) {
-    return this.typeCounts.get(type);
+    return this.tsCounts.get(type);
   }
 
   void setTypeSpace(StorageType type, long spaceCount) {
-    this.typeCounts.set(type, spaceCount);
+    this.tsCounts.set(type, spaceCount);
   }
 
   public void addTypeSpace(StorageType type, long delta) {
-    this.typeCounts.add(type, delta);
+    this.tsCounts.add(type, delta);
   }
 
-  public void addTypeSpaces(EnumCounters<StorageType> deltas) {
-    this.typeCounts.add(deltas);
+  public boolean anyNsSsCountGreaterOrEqual(long val) {
+    return nsSsCounts.anyGreaterOrEqual(val);
   }
 
-  public boolean anyNsSpCountGreaterOrEqual(long val) {
-    return nsSpCounts.anyGreaterOrEqual(val);
-  }
-
-  public boolean anyTypeCountGreaterOrEqual(long val) {
-    return typeCounts.anyGreaterOrEqual(val);
+  public boolean anyTypeSpaceCountGreaterOrEqual(long val) {
+    return tsCounts.anyGreaterOrEqual(val);
   }
 
   @Override
@@ -167,8 +165,8 @@ public class QuotaCounts {
       return false;
     }
     final QuotaCounts that = (QuotaCounts)obj;
-    return this.nsSpCounts.equals(that.nsSpCounts)
-        && this.typeCounts.equals(that.typeCounts);
+    return this.nsSsCounts.equals(that.nsSsCounts)
+        && this.tsCounts.equals(that.tsCounts);
   }
 
   @Override

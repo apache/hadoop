@@ -207,13 +207,13 @@ public class TestSnapshotDeletion {
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
         q.getNameSpace());
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
-        q.getDiskSpace());
+        q.getStorageSpace());
     QuotaCounts counts = new QuotaCounts.Builder().build();
     dirNode.computeQuotaUsage(fsdir.getBlockStoragePolicySuite(), counts, false);
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
         counts.getNameSpace());
     assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
-        counts.getDiskSpace());
+        counts.getStorageSpace());
   }
   
   /**

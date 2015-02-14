@@ -1200,13 +1200,13 @@ public class TestRenameWithSnapshots {
     // make sure the whole referred subtree has been destroyed
     QuotaCounts q = fsdir.getRoot().getDirectoryWithQuotaFeature().getSpaceConsumed();
     assertEquals(3, q.getNameSpace());
-    assertEquals(0, q.getDiskSpace());
+    assertEquals(0, q.getStorageSpace());
     
     hdfs.deleteSnapshot(sdir1, "s1");
     restartClusterAndCheckImage(true);
     q = fsdir.getRoot().getDirectoryWithQuotaFeature().getSpaceConsumed();
     assertEquals(3, q.getNameSpace());
-    assertEquals(0, q.getDiskSpace());
+    assertEquals(0, q.getStorageSpace());
   }
   
   /**
@@ -1602,7 +1602,7 @@ public class TestRenameWithSnapshots {
     assertTrue(dir2Node.isSnapshottable());
     QuotaCounts counts = dir2Node.computeQuotaUsage(fsdir.getBlockStoragePolicySuite());
     assertEquals(2, counts.getNameSpace());
-    assertEquals(0, counts.getDiskSpace());
+    assertEquals(0, counts.getStorageSpace());
     childrenList = ReadOnlyList.Util.asList(dir2Node.asDirectory()
         .getChildrenList(Snapshot.CURRENT_STATE_ID));
     assertEquals(1, childrenList.size());
@@ -1676,7 +1676,7 @@ public class TestRenameWithSnapshots {
     assertTrue(dir2Node.isSnapshottable());
     QuotaCounts counts = dir2Node.computeQuotaUsage(fsdir.getBlockStoragePolicySuite());
     assertEquals(3, counts.getNameSpace());
-    assertEquals(0, counts.getDiskSpace());
+    assertEquals(0, counts.getStorageSpace());
     childrenList = ReadOnlyList.Util.asList(dir2Node.asDirectory()
         .getChildrenList(Snapshot.CURRENT_STATE_ID));
     assertEquals(1, childrenList.size());
@@ -1793,7 +1793,7 @@ public class TestRenameWithSnapshots {
     QuotaCounts counts = dir2Node.computeQuotaUsage(
         fsdir.getBlockStoragePolicySuite());
     assertEquals(4, counts.getNameSpace());
-    assertEquals(BLOCKSIZE * REPL * 2, counts.getDiskSpace());
+    assertEquals(BLOCKSIZE * REPL * 2, counts.getStorageSpace());
   }
   
   @Test
