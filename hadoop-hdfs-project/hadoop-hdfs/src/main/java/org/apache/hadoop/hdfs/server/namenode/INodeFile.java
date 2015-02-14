@@ -412,8 +412,8 @@ public class INodeFile extends INodeWithAdditionalFields
     return header;
   }
 
-  /** @return the diskspace required for a full block. */
-  final long getPreferredBlockDiskspace() {
+  /** @return the storagespace required for a full block. */
+  final long getPreferredBlockStoragespace() {
     return getPreferredBlockSize() * getBlockReplication();
   }
 
@@ -553,8 +553,8 @@ public class INodeFile extends INodeWithAdditionalFields
       BlockStoragePolicySuite bsps, QuotaCounts counts, boolean useCache,
       int lastSnapshotId) {
     long nsDelta = 1;
-    final long dsDeltaNoReplication;
-    short dsReplication;
+    final long ssDeltaNoReplication;
+    short replication;
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       FileDiffList fileDiffList = sf.getDiffs();
@@ -562,31 +562,31 @@ public class INodeFile extends INodeWithAdditionalFields
 
       if (lastSnapshotId == Snapshot.CURRENT_STATE_ID
           || last == Snapshot.CURRENT_STATE_ID) {
-        dsDeltaNoReplication = diskspaceConsumedNoReplication();
-        dsReplication = getBlockReplication();
+        ssDeltaNoReplication = storagespaceConsumedNoReplication();
+        replication = getBlockReplication();
       } else if (last < lastSnapshotId) {
-        dsDeltaNoReplication = computeFileSize(true, false);
-        dsReplication = getFileReplication();
+        ssDeltaNoReplication = computeFileSize(true, false);
+        replication = getFileReplication();
       } else {
         int sid = fileDiffList.getSnapshotById(lastSnapshotId);
-        dsDeltaNoReplication = diskspaceConsumedNoReplication(sid);
-        dsReplication = getReplication(sid);
+        ssDeltaNoReplication = storagespaceConsumedNoReplication(sid);
+        replication = getReplication(sid);
       }
     } else {
-      dsDeltaNoReplication = diskspaceConsumedNoReplication();
-      dsReplication = getBlockReplication();
+      ssDeltaNoReplication = storagespaceConsumedNoReplication();
+      replication = getBlockReplication();
     }
     counts.addNameSpace(nsDelta);
-    counts.addDiskSpace(dsDeltaNoReplication * dsReplication);
+    counts.addStorageSpace(ssDeltaNoReplication * replication);
 
     if (getStoragePolicyID() != BlockStoragePolicySuite.ID_UNSPECIFIED){
       BlockStoragePolicy bsp = bsps.getPolicy(getStoragePolicyID());
-      List<StorageType> storageTypes = bsp.chooseStorageTypes(dsReplication);
+      List<StorageType> storageTypes = bsp.chooseStorageTypes(replication);
       for (StorageType t : storageTypes) {
         if (!t.supportTypeQuota()) {
           continue;
         }
-        counts.addTypeSpace(t, dsDeltaNoReplication);
+        counts.addTypeSpace(t, ssDeltaNoReplication);
       }
     }
     return counts;
@@ -610,7 +610,7 @@ public class INodeFile extends INodeWithAdditionalFields
         counts.add(Content.LENGTH, computeFileSize());
       }
     }
-    counts.add(Content.DISKSPACE, diskspaceConsumed());
+    counts.add(Content.DISKSPACE, storagespaceConsumed());
     return summary;
   }
 
@@ -681,11 +681,11 @@ public class INodeFile extends INodeWithAdditionalFields
    * including blocks in its snapshots.
    * Use preferred block size for the last block if it is under construction.
    */
-  public final long diskspaceConsumed() {
-    return diskspaceConsumedNoReplication() * getBlockReplication();
+  public final long storagespaceConsumed() {
+    return storagespaceConsumedNoReplication() * getBlockReplication();
   }
 
-  public final long diskspaceConsumedNoReplication() {
+  public final long storagespaceConsumedNoReplication() {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if(sf == null) {
       return computeFileSize(true, true);
@@ -713,12 +713,12 @@ public class INodeFile extends INodeWithAdditionalFields
     return size;
   }
 
-  public final long diskspaceConsumed(int lastSnapshotId) {
+  public final long storagespaceConsumed(int lastSnapshotId) {
     if (lastSnapshotId != CURRENT_STATE_ID) {
       return computeFileSize(lastSnapshotId)
         * getFileReplication(lastSnapshotId);
     } else {
-      return diskspaceConsumed();
+      return storagespaceConsumed();
     }
   }
 
@@ -730,11 +730,11 @@ public class INodeFile extends INodeWithAdditionalFields
     }
   }
 
-  public final long diskspaceConsumedNoReplication(int lastSnapshotId) {
+  public final long storagespaceConsumedNoReplication(int lastSnapshotId) {
     if (lastSnapshotId != CURRENT_STATE_ID) {
       return computeFileSize(lastSnapshotId);
     } else {
-      return diskspaceConsumedNoReplication();
+      return storagespaceConsumedNoReplication();
     }
   }
 

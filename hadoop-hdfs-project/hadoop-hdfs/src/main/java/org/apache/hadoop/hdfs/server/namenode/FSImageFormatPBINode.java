@@ -169,7 +169,7 @@ public final class FSImageFormatPBINode {
       final long nsQuota = d.getNsQuota(), dsQuota = d.getDsQuota();
       if (nsQuota >= 0 || dsQuota >= 0) {
         dir.addDirectoryWithQuotaFeature(new DirectoryWithQuotaFeature.Builder().
-            nameSpaceQuota(nsQuota).spaceQuota(dsQuota).build());
+            nameSpaceQuota(nsQuota).storageSpaceQuota(dsQuota).build());
       }
       EnumCounters<StorageType> typeQuotas = null;
       if (d.hasTypeQuotas()) {
@@ -374,7 +374,7 @@ public final class FSImageFormatPBINode {
       INodeDirectory root = loadINodeDirectory(p, parent.getLoaderContext());
       final QuotaCounts q = root.getQuotaCounts();
       final long nsQuota = q.getNameSpace();
-      final long dsQuota = q.getDiskSpace();
+      final long dsQuota = q.getStorageSpace();
       if (nsQuota != -1 || dsQuota != -1) {
         dir.rootDir.getDirectoryWithQuotaFeature().setQuota(nsQuota, dsQuota);
       }
@@ -483,7 +483,7 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeDirectory.Builder b = INodeSection.INodeDirectory
           .newBuilder().setModificationTime(dir.getModificationTime())
           .setNsQuota(quota.getNameSpace())
-          .setDsQuota(quota.getDiskSpace())
+          .setDsQuota(quota.getStorageSpace())
           .setPermission(buildPermissionStatus(dir, state.getStringMap()));
 
       if (quota.getTypeSpaces().anyGreaterOrEqual(0)) {

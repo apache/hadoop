@@ -450,7 +450,7 @@ public class FSImageFormat {
   private void updateRootAttr(INodeWithAdditionalFields root) {                                                           
     final QuotaCounts q = root.getQuotaCounts();
     final long nsQuota = q.getNameSpace();
-    final long dsQuota = q.getDiskSpace();
+    final long dsQuota = q.getStorageSpace();
     FSDirectory fsDir = namesystem.dir;
     if (nsQuota != -1 || dsQuota != -1) {
       fsDir.rootDir.getDirectoryWithQuotaFeature().setQuota(nsQuota, dsQuota);
@@ -826,7 +826,7 @@ public class FSImageFormat {
           permissions, modificationTime);
       if (nsQuota >= 0 || dsQuota >= 0) {
         dir.addDirectoryWithQuotaFeature(new DirectoryWithQuotaFeature.Builder().
-            nameSpaceQuota(nsQuota).spaceQuota(dsQuota).build());
+            nameSpaceQuota(nsQuota).storageSpaceQuota(dsQuota).build());
       }
       if (withSnapshot) {
         dir.addSnapshotFeature(null);
@@ -910,7 +910,10 @@ public class FSImageFormat {
       final PermissionStatus permissions = PermissionStatus.read(in);
       final long modificationTime = in.readLong();
       
-      //read quotas
+      // Read quotas: quota by storage type does not need to be processed below.
+      // It is handled only in protobuf based FsImagePBINode class for newer
+      // fsImages. Tools using this class such as legacy-mode of offline image viewer
+      // should only load legacy FSImages without newer features.
       final long nsQuota = in.readLong();
       final long dsQuota = in.readLong();
 

@@ -447,7 +447,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return new ContentSummary(counts.get(Content.LENGTH),
         counts.get(Content.FILE) + counts.get(Content.SYMLINK),
         counts.get(Content.DIRECTORY), q.getNameSpace(),
-        counts.get(Content.DISKSPACE), q.getDiskSpace());
+        counts.get(Content.DISKSPACE), q.getStorageSpace());
     // TODO: storage type quota reporting HDFS-7701.
   }
 
@@ -462,7 +462,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
 
   /**
-   * Check and add namespace/diskspace/storagetype consumed to itself and the ancestors.
+   * Check and add namespace/storagespace/storagetype consumed to itself and the ancestors.
    * @throws QuotaExceededException if quote is violated.
    */
   public void addSpaceConsumed(QuotaCounts counts, boolean verify)
@@ -471,7 +471,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /**
-   * Check and add namespace/diskspace/storagetype consumed to itself and the ancestors.
+   * Check and add namespace/storagespace/storagetype consumed to itself and the ancestors.
    * @throws QuotaExceededException if quote is violated.
    */
   void addSpaceConsumed2Parent(QuotaCounts counts, boolean verify)
@@ -487,26 +487,26 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   public QuotaCounts getQuotaCounts() {
     return new QuotaCounts.Builder().
-        nameCount(HdfsConstants.QUOTA_RESET).
-        spaceCount(HdfsConstants.QUOTA_RESET).
-        typeCounts(HdfsConstants.QUOTA_RESET).
+        nameSpace(HdfsConstants.QUOTA_RESET).
+        storageSpace(HdfsConstants.QUOTA_RESET).
+        typeSpaces(HdfsConstants.QUOTA_RESET).
         build();
   }
 
   public final boolean isQuotaSet() {
     final QuotaCounts qc = getQuotaCounts();
-    return qc.anyNsSpCountGreaterOrEqual(0) || qc.anyTypeCountGreaterOrEqual(0);
+    return qc.anyNsSsCountGreaterOrEqual(0) || qc.anyTypeSpaceCountGreaterOrEqual(0);
   }
 
   /**
-   * Count subtree {@link Quota#NAMESPACE} and {@link Quota#DISKSPACE} usages.
+   * Count subtree {@link Quota#NAMESPACE} and {@link Quota#STORAGESPACE} usages.
    */
   public final QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps) {
     return computeQuotaUsage(bsps, new QuotaCounts.Builder().build(), true);
   }
 
   /**
-   * Count subtree {@link Quota#NAMESPACE} and {@link Quota#DISKSPACE} usages.
+   * Count subtree {@link Quota#NAMESPACE} and {@link Quota#STORAGESPACE} usages.
    * 
    * With the existence of {@link INodeReference}, the same inode and its
    * subtree may be referred by multiple {@link WithName} nodes and a

@@ -654,6 +654,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7778. Rename FsVolumeListTest to TestFsVolumeList and commit it to
     branch-2. (Lei (Eddy) Xu via cnauroth)
 
+    HDFS-4625. BKJM doesn't take advantage of speculative reads. (Rakesh R
+    via aajisaka)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
@@ -668,8 +671,8 @@ Release 2.7.0 - UNRELEASED
       HDFS-7776. Adding additional unit tests for Quota By Storage Type.
       (Xiaoyu Yao via Arpit Agarwal)
 
-      HDFS-4625. BKJM doesn't take advantage of speculative reads. (Rakesh R
-      via aajisaka)
+      HDFS-7775. Use consistent naming for NN-internal quota related types
+      and functions. (Xiaoyu Yao via Arpit Agarwal)
 
 Release 2.6.1 - UNRELEASED
 

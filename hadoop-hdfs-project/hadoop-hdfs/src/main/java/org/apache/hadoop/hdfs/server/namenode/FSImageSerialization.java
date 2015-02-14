@@ -224,7 +224,7 @@ public class FSImageSerialization {
   private static void writeQuota(QuotaCounts quota, DataOutput out)
       throws IOException {
     out.writeLong(quota.getNameSpace());
-    out.writeLong(quota.getDiskSpace());
+    out.writeLong(quota.getStorageSpace());
   }
 
   /**

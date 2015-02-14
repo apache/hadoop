@@ -48,8 +48,8 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
 
     @Override
     public QuotaCounts getQuotaCounts() {
-      return new QuotaCounts.Builder().nameCount(-1).
-          spaceCount(-1).typeCounts(-1).build();
+      return new QuotaCounts.Builder().nameSpace(-1).
+          storageSpace(-1).typeSpaces(-1).build();
     }
 
     @Override
@@ -69,8 +69,8 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
         AclFeature aclFeature, long modificationTime, long nsQuota,
         long dsQuota, EnumCounters<StorageType> typeQuotas, XAttrFeature xAttrsFeature) {
       super(name, permissions, aclFeature, modificationTime, xAttrsFeature);
-      this.quota = new QuotaCounts.Builder().nameCount(nsQuota).
-          spaceCount(dsQuota).typeCounts(typeQuotas).build();
+      this.quota = new QuotaCounts.Builder().nameSpace(nsQuota).
+          storageSpace(dsQuota).typeSpaces(typeQuotas).build();
     }
 
     public CopyWithQuota(INodeDirectory dir) {

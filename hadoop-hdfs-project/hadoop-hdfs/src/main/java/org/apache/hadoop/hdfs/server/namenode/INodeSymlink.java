@@ -81,7 +81,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
         && priorSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
       destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
     }
-    return new QuotaCounts.Builder().nameCount(1).build();
+    return new QuotaCounts.Builder().nameSpace(1).build();
   }
   
   @Override

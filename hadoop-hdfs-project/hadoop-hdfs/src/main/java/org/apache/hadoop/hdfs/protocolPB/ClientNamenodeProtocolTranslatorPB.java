@@ -806,7 +806,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void setQuota(String path, long namespaceQuota, long diskspaceQuota,
+  public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
                        StorageType type)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
@@ -814,7 +814,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
         = SetQuotaRequestProto.newBuilder()
         .setPath(path)
         .setNamespaceQuota(namespaceQuota)
-        .setDiskspaceQuota(diskspaceQuota);
+        .setStoragespaceQuota(storagespaceQuota);
     if (type != null) {
       builder.setStorageType(PBHelper.convertStorageType(type));
     }

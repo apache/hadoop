@@ -3019,22 +3019,22 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * Sets or resets quotas for a directory.
    * @see ClientProtocol#setQuota(String, long, long, StorageType)
    */
-  void setQuota(String src, long namespaceQuota, long diskspaceQuota) 
+  void setQuota(String src, long namespaceQuota, long storagespaceQuota)
       throws IOException {
     // sanity check
     if ((namespaceQuota <= 0 && namespaceQuota != HdfsConstants.QUOTA_DONT_SET &&
          namespaceQuota != HdfsConstants.QUOTA_RESET) ||
-        (diskspaceQuota <= 0 && diskspaceQuota != HdfsConstants.QUOTA_DONT_SET &&
-         diskspaceQuota != HdfsConstants.QUOTA_RESET)) {
+        (storagespaceQuota <= 0 && storagespaceQuota != HdfsConstants.QUOTA_DONT_SET &&
+         storagespaceQuota != HdfsConstants.QUOTA_RESET)) {
       throw new IllegalArgumentException("Invalid values for quota : " +
-                                         namespaceQuota + " and " + 
-                                         diskspaceQuota);
+                                         namespaceQuota + " and " +
+                                         storagespaceQuota);
                                          
     }
     TraceScope scope = getPathTraceScope("setQuota", src);
     try {
-      // Pass null as storage type for traditional space/namespace quota.
-      namenode.setQuota(src, namespaceQuota, diskspaceQuota, null);
+      // Pass null as storage type for traditional namespace/storagespace quota.
+      namenode.setQuota(src, namespaceQuota, storagespaceQuota, null);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class,
@@ -3051,12 +3051,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * Sets or resets quotas by storage type for a directory.
    * @see ClientProtocol#setQuota(String, long, long, StorageType)
    */
-  void setQuotaByStorageType(String src, StorageType type, long spaceQuota)
+  void setQuotaByStorageType(String src, StorageType type, long quota)
       throws IOException {
-    if (spaceQuota <= 0 && spaceQuota != HdfsConstants.QUOTA_DONT_SET &&
-        spaceQuota != HdfsConstants.QUOTA_RESET) {
+    if (quota <= 0 && quota != HdfsConstants.QUOTA_DONT_SET &&
+        quota != HdfsConstants.QUOTA_RESET) {
       throw new IllegalArgumentException("Invalid values for quota :" +
-        spaceQuota);
+        quota);
     }
     if (type == null) {
       throw new IllegalArgumentException("Invalid storage type(null)");
@@ -3066,7 +3066,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         + type.toString());
     }
     try {
-      namenode.setQuota(src, HdfsConstants.QUOTA_DONT_SET, spaceQuota, type);
+      namenode.setQuota(src, HdfsConstants.QUOTA_DONT_SET, quota, type);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
         FileNotFoundException.class,

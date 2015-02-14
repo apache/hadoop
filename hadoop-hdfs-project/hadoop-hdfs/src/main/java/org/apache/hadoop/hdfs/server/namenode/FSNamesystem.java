@@ -3802,20 +3802,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Set the namespace quota and diskspace quota for a directory.
+   * Set the namespace quota and storage space quota for a directory.
    * See {@link ClientProtocol#setQuota(String, long, long, StorageType)} for the
    * contract.
    * 
    * Note: This does not support ".inodes" relative path.
    */
-  void setQuota(String src, long nsQuota, long dsQuota, StorageType type)
+  void setQuota(String src, long nsQuota, long ssQuota, StorageType type)
       throws IOException {
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set quota on " + src);
-      FSDirAttrOp.setQuota(dir, src, nsQuota, dsQuota, type);
+      FSDirAttrOp.setQuota(dir, src, nsQuota, ssQuota, type);
     } finally {
       writeUnlock();
     }

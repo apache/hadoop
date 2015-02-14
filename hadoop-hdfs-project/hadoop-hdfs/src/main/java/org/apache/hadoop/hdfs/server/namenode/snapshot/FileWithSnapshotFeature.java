@@ -144,7 +144,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
   public QuotaCounts updateQuotaAndCollectBlocks(BlockStoragePolicySuite bsps, INodeFile file,
       FileDiff removed, BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) {
-    long oldDiskspace = file.diskspaceConsumed();
+    long oldStoragespace = file.storagespaceConsumed();
 
     byte storagePolicyID = file.getStoragePolicyID();
     BlockStoragePolicy bsp = null;
@@ -159,7 +159,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
       short currentRepl = file.getBlockReplication();
       if (currentRepl == 0) {
         long oldFileSizeNoRep = file.computeFileSize(true, true);
-        oldDiskspace =  oldFileSizeNoRep * replication;
+        oldStoragespace =  oldFileSizeNoRep * replication;
 
         if (bsp != null) {
           List<StorageType> oldTypeChosen = bsp.chooseStorageTypes(replication);
@@ -170,8 +170,8 @@ public class FileWithSnapshotFeature implements INode.Feature {
           }
         }
       } else if (replication > currentRepl) {
-        long oldFileSizeNoRep = file.diskspaceConsumedNoReplication();
-        oldDiskspace = oldFileSizeNoRep * replication;
+        long oldFileSizeNoRep = file.storagespaceConsumedNoReplication();
+        oldStoragespace = oldFileSizeNoRep * replication;
 
         if (bsp != null) {
           List<StorageType> oldTypeChosen = bsp.chooseStorageTypes(replication);
@@ -197,10 +197,10 @@ public class FileWithSnapshotFeature implements INode.Feature {
     getDiffs().combineAndCollectSnapshotBlocks(
         bsps, file, removed, collectedBlocks, removedINodes);
 
-    long dsDelta = oldDiskspace - file.diskspaceConsumed();
+    long ssDelta = oldStoragespace - file.storagespaceConsumed();
     return new QuotaCounts.Builder().
-        spaceCount(dsDelta).
-        typeCounts(typeSpaces).
+        storageSpace(ssDelta).
+        typeSpaces(typeSpaces).
         build();
   }
 

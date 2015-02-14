@@ -692,13 +692,13 @@ public class DistributedFileSystem extends FileSystem {
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setQuota(String, long, long, StorageType)
    */
   public void setQuota(Path src, final long namespaceQuota,
-      final long diskspaceQuota) throws IOException {
+      final long storagespaceQuota) throws IOException {
     Path absF = fixRelativePart(src);
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p)
           throws IOException, UnresolvedLinkException {
-        dfs.setQuota(getPathName(p), namespaceQuota, diskspaceQuota);
+        dfs.setQuota(getPathName(p), namespaceQuota, storagespaceQuota);
         return null;
       }
       @Override
@@ -716,18 +716,18 @@ public class DistributedFileSystem extends FileSystem {
    *
    * @param src target directory whose quota is to be modified.
    * @param type storage type of the specific storage type quota to be modified.
-   * @param spaceQuota value of the specific storage type quota to be modified.
+   * @param quota value of the specific storage type quota to be modified.
    * Maybe {@link HdfsConstants#QUOTA_RESET} to clear quota by storage type.
    */
   public void setQuotaByStorageType(
-    Path src, final StorageType type, final long spaceQuota)
+    Path src, final StorageType type, final long quota)
     throws IOException {
     Path absF = fixRelativePart(src);
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p)
         throws IOException, UnresolvedLinkException {
-        dfs.setQuotaByStorageType(getPathName(p), type, spaceQuota);
+        dfs.setQuotaByStorageType(getPathName(p), type, quota);
         return null;
       }
       @Override
