@@ -189,6 +189,7 @@ public class NetUtils {
       throw new IllegalArgumentException("Target address cannot be null." +
           helpText);
     }
+    target = target.trim();
     boolean hasScheme = target.contains("://");    
     URI uri = null;
     try {
