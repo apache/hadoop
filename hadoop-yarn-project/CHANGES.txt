@@ -563,6 +563,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2899. Run TestDockerContainerExecutorWithMocks on Linux only.
     (Ming Ma via cnauroth)
 
+    YARN-2749. Fix some testcases from TestLogAggregationService fails in trunk. 
+    (Xuan Gong via junping_du)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
