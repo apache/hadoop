@@ -55,6 +55,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6255. Fix JobCounter's format to use grouping separator.
     (Ryu Kobayashi via ozawa)
 
+    MAPREDUCE-6256. Removed unused private methods in o.a.h.mapreduce.Job.java.
+    (Naganarasimha G R via ozawa)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
