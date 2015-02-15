@@ -98,9 +98,6 @@ public class Job extends JobContextImpl implements JobContext {
     "mapreduce.client.genericoptionsparser.used";
   public static final String SUBMIT_REPLICATION = 
     "mapreduce.client.submit.file.replication";
-  private static final String TASKLOG_PULL_TIMEOUT_KEY =
-           "mapreduce.client.tasklog.timeout";
-  private static final int DEFAULT_TASKLOG_TIMEOUT = 60000;
 
   @InterfaceStability.Evolving
   public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
@@ -339,10 +336,6 @@ public class Job extends JobContextImpl implements JobContext {
     ensureState(JobState.RUNNING);
     updateStatus();
     return status;
-  }
-  
-  private void setStatus(JobStatus status) {
-    this.status = status;
   }
 
   /**
@@ -1391,46 +1384,6 @@ public class Job extends JobContextImpl implements JobContext {
       LOG.info(counters.toString());
     }
     return success;
-  }
-
-  /**
-   * @return true if the profile parameters indicate that this is using
-   * hprof, which generates profile files in a particular location
-   * that we can retrieve to the client.
-   */
-  private boolean shouldDownloadProfile() {
-    // Check the argument string that was used to initialize profiling.
-    // If this indicates hprof and file-based output, then we're ok to
-    // download.
-    String profileParams = getProfileParams();
-
-    if (null == profileParams) {
-      return false;
-    }
-
-    // Split this on whitespace.
-    String [] parts = profileParams.split("[ \\t]+");
-
-    // If any of these indicate hprof, and the use of output files, return true.
-    boolean hprofFound = false;
-    boolean fileFound = false;
-    for (String p : parts) {
-      if (p.startsWith("-agentlib:hprof") || p.startsWith("-Xrunhprof")) {
-        hprofFound = true;
-
-        // This contains a number of comma-delimited components, one of which
-        // may specify the file to write to. Make sure this is present and
-        // not empty.
-        String [] subparts = p.split(",");
-        for (String sub : subparts) {
-          if (sub.startsWith("file=") && sub.length() != "file=".length()) {
-            fileFound = true;
-          }
-        }
-      }
-    }
-
-    return hprofFound && fileFound;
   }
 
   private void printTaskEvents(TaskCompletionEvent[] events,
