@@ -101,6 +101,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -114,6 +115,7 @@ import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**************************************************
  * FSDataset manages a set of data blocks.  Each block
@@ -266,9 +268,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     String[] dataDirs = conf.getTrimmedStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
     Collection<StorageLocation> dataLocations = DataNode.getStorageLocations(conf);
+    List<VolumeFailureInfo> volumeFailureInfos = getInitialVolumeFailureInfos(
+        dataLocations, storage);
 
     int volsConfigured = (dataDirs == null) ? 0 : dataDirs.length;
-    int volsFailed = volsConfigured - storage.getNumStorageDirs();
+    int volsFailed = volumeFailureInfos.size();
     this.validVolsRequired = volsConfigured - volFailuresTolerated;
 
     if (volFailuresTolerated < 0 || volFailuresTolerated >= volsConfigured) {
@@ -293,7 +297,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             DFSConfigKeys.DFS_DATANODE_FSDATASET_VOLUME_CHOOSING_POLICY_KEY,
             RoundRobinVolumeChoosingPolicy.class,
             VolumeChoosingPolicy.class), conf);
-    volumes = new FsVolumeList(volsFailed, datanode.getBlockScanner(),
+    volumes = new FsVolumeList(volumeFailureInfos, datanode.getBlockScanner(),
         blockChooserImpl);
     asyncDiskService = new FsDatasetAsyncDiskService(datanode);
     asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode);
@@ -313,6 +317,36 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     blockPinningEnabled = conf.getBoolean(
       DFSConfigKeys.DFS_DATANODE_BLOCK_PINNING_ENABLED,
       DFSConfigKeys.DFS_DATANODE_BLOCK_PINNING_ENABLED_DEFAULT);
+  }
+
+  /**
+   * Gets initial volume failure information for all volumes that failed
+   * immediately at startup.  The method works by determining the set difference
+   * between all configured storage locations and the actual storage locations in
+   * use after attempting to put all of them into service.
+   *
+   * @return each storage location that has failed
+   */
+  private static List<VolumeFailureInfo> getInitialVolumeFailureInfos(
+      Collection<StorageLocation> dataLocations, DataStorage storage) {
+    Set<String> failedLocationSet = Sets.newHashSetWithExpectedSize(
+        dataLocations.size());
+    for (StorageLocation sl: dataLocations) {
+      failedLocationSet.add(sl.getFile().getAbsolutePath());
+    }
+    for (Iterator<Storage.StorageDirectory> it = storage.dirIterator();
+         it.hasNext(); ) {
+      Storage.StorageDirectory sd = it.next();
+      failedLocationSet.remove(sd.getRoot().getAbsolutePath());
+    }
+    List<VolumeFailureInfo> volumeFailureInfos = Lists.newArrayListWithCapacity(
+        failedLocationSet.size());
+    long failureDate = Time.now();
+    for (String failedStorageLocation: failedLocationSet) {
+      volumeFailureInfos.add(new VolumeFailureInfo(failedStorageLocation,
+          failureDate));
+    }
+    return volumeFailureInfos;
   }
 
   private void addVolume(Collection<StorageLocation> dataLocations,
@@ -350,8 +384,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final File dir = location.getFile();
 
     // Prepare volume in DataStorage
-    DataStorage.VolumeBuilder builder =
-        dataStorage.prepareVolume(datanode, location.getFile(), nsInfos);
+    final DataStorage.VolumeBuilder builder;
+    try {
+      builder = dataStorage.prepareVolume(datanode, location.getFile(), nsInfos);
+    } catch (IOException e) {
+      volumes.addVolumeFailureInfo(new VolumeFailureInfo(
+          location.getFile().getAbsolutePath(), Time.now()));
+      throw e;
+    }
 
     final Storage.StorageDirectory sd = builder.getStorageDirectory();
 
@@ -500,9 +540,65 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   /**
    * Return the number of failed volumes in the FSDataset.
    */
-  @Override
+  @Override // FSDatasetMBean
   public int getNumFailedVolumes() {
-    return volumes.numberOfFailedVolumes();
+    return volumes.getVolumeFailureInfos().length;
+  }
+
+  @Override // FSDatasetMBean
+  public String[] getFailedStorageLocations() {
+    VolumeFailureInfo[] infos = volumes.getVolumeFailureInfos();
+    List<String> failedStorageLocations = Lists.newArrayListWithCapacity(
+        infos.length);
+    for (VolumeFailureInfo info: infos) {
+      failedStorageLocations.add(info.getFailedStorageLocation());
+    }
+    return failedStorageLocations.toArray(
+        new String[failedStorageLocations.size()]);
+  }
+
+  @Override // FSDatasetMBean
+  public long getLastVolumeFailureDate() {
+    long lastVolumeFailureDate = 0;
+    for (VolumeFailureInfo info: volumes.getVolumeFailureInfos()) {
+      long failureDate = info.getFailureDate();
+      if (failureDate > lastVolumeFailureDate) {
+        lastVolumeFailureDate = failureDate;
+      }
+    }
+    return lastVolumeFailureDate;
+  }
+
+  @Override // FSDatasetMBean
+  public long getEstimatedCapacityLostTotal() {
+    long estimatedCapacityLostTotal = 0;
+    for (VolumeFailureInfo info: volumes.getVolumeFailureInfos()) {
+      estimatedCapacityLostTotal += info.getEstimatedCapacityLost();
+    }
+    return estimatedCapacityLostTotal;
+  }
+
+  @Override // FsDatasetSpi
+  public VolumeFailureSummary getVolumeFailureSummary() {
+    VolumeFailureInfo[] infos = volumes.getVolumeFailureInfos();
+    if (infos.length == 0) {
+      return null;
+    }
+    List<String> failedStorageLocations = Lists.newArrayListWithCapacity(
+        infos.length);
+    long lastVolumeFailureDate = 0;
+    long estimatedCapacityLostTotal = 0;
+    for (VolumeFailureInfo info: infos) {
+      failedStorageLocations.add(info.getFailedStorageLocation());
+      long failureDate = info.getFailureDate();
+      if (failureDate > lastVolumeFailureDate) {
+        lastVolumeFailureDate = failureDate;
+      }
+      estimatedCapacityLostTotal += info.getEstimatedCapacityLost();
+    }
+    return new VolumeFailureSummary(
+        failedStorageLocations.toArray(new String[failedStorageLocations.size()]),
+        lastVolumeFailureDate, estimatedCapacityLostTotal);
   }
 
   @Override // FSDatasetMBean

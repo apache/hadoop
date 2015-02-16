@@ -31,6 +31,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertNotEquals;
@@ -57,7 +58,8 @@ public class TestFsVolumeList {
 
   @Test
   public void testGetNextVolumeWithClosedVolume() throws IOException {
-    FsVolumeList volumeList = new FsVolumeList(0, blockScanner, blockChooser);
+    FsVolumeList volumeList = new FsVolumeList(
+        Collections.<VolumeFailureInfo>emptyList(), blockScanner, blockChooser);
     List<FsVolumeImpl> volumes = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       File curDir = new File(baseDir, "nextvolume-" + i);
@@ -82,7 +84,8 @@ public class TestFsVolumeList {
 
   @Test
   public void testCheckDirsWithClosedVolume() throws IOException {
-    FsVolumeList volumeList = new FsVolumeList(0, blockScanner, blockChooser);
+    FsVolumeList volumeList = new FsVolumeList(
+        Collections.<VolumeFailureInfo>emptyList(), blockScanner, blockChooser);
     List<FsVolumeImpl> volumes = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       File curDir = new File(baseDir, "volume-" + i);

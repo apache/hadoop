@@ -122,6 +122,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCom
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.VolumeFailureSummaryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -216,6 +217,7 @@ import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.hdfs.util.ExactSizeInputStream;
@@ -1900,6 +1902,29 @@ public class PBHelper {
       protos.add(convert(storages[i]));
     }
     return protos;
+  }
+
+  public static VolumeFailureSummary convertVolumeFailureSummary(
+      VolumeFailureSummaryProto proto) {
+    List<String> failedStorageLocations = proto.getFailedStorageLocationsList();
+    return new VolumeFailureSummary(
+        failedStorageLocations.toArray(new String[failedStorageLocations.size()]),
+        proto.getLastVolumeFailureDate(), proto.getEstimatedCapacityLostTotal());
+  }
+
+  public static VolumeFailureSummaryProto convertVolumeFailureSummary(
+      VolumeFailureSummary volumeFailureSummary) {
+    VolumeFailureSummaryProto.Builder builder =
+        VolumeFailureSummaryProto.newBuilder();
+    for (String failedStorageLocation:
+        volumeFailureSummary.getFailedStorageLocations()) {
+      builder.addFailedStorageLocations(failedStorageLocation);
+    }
+    builder.setLastVolumeFailureDate(
+        volumeFailureSummary.getLastVolumeFailureDate());
+    builder.setEstimatedCapacityLostTotal(
+        volumeFailureSummary.getEstimatedCapacityLostTotal());
+    return builder.build();
   }
 
   public static JournalInfo convert(JournalInfoProto info) {

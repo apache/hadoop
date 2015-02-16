@@ -338,6 +338,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7430. Refactor the BlockScanner to use O(1) memory and use multiple
     threads (cmccabe)
 
+    HDFS-7604. Track and display failed DataNode storage locations in NameNode.
+    (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

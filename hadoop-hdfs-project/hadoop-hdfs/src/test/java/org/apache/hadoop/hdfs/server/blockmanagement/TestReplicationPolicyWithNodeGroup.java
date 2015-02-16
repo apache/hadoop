@@ -185,7 +185,7 @@ public class TestReplicationPolicyWithNodeGroup {
         capacity, dfsUsed, remaining, blockPoolUsed);
     dn.updateHeartbeat(
         BlockManagerTestUtil.getStorageReportsForDatanode(dn),
-        dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures);
+        dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures, null);
   }
 
   private static void setupDataNodeCapacity() {
