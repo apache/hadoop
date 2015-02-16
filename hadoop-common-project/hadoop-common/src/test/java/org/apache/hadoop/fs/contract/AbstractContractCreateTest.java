@@ -21,8 +21,8 @@ package org.apache.hadoop.fs.contract;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
 import org.junit.internal.AssumptionViolatedException;
 
@@ -30,6 +30,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.getFileStatusEventually;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
@@ -39,6 +40,11 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
  */
 public abstract class AbstractContractCreateTest extends
                                                  AbstractFSContractTestBase {
+
+  /**
+   * How long to wait for a path to become visible
+   */
+  public static final int CREATE_TIMEOUT = 15000;
 
   @Test
   public void testCreateNewFile() throws Throwable {
@@ -107,7 +113,7 @@ public abstract class AbstractContractCreateTest extends
                              e);
     } catch (IOException e) {
       handleRelaxedException("overwriting a dir with a file ",
-                             "FileAlreadyExistsException",
+                             "IOException",
                              e);
     }
     assertIsDirectory(path);
@@ -148,11 +154,11 @@ public abstract class AbstractContractCreateTest extends
       handleExpectedException(expected);
     } catch (FileNotFoundException e) {
       handleRelaxedException("overwriting a dir with a file ",
-                             "FileAlreadyExistsException",
-                             e);
+          "FileAlreadyExistsException",
+          e);
     } catch (IOException e) {
       handleRelaxedException("overwriting a dir with a file ",
-                             "FileAlreadyExistsException",
+                             "IOException",
                              e);
     }
     assertIsDirectory(path);
@@ -176,8 +182,100 @@ public abstract class AbstractContractCreateTest extends
           skip("This Filesystem delays visibility of newly created files");
         }
         assertPathExists("expected path to be visible before anything written",
-                         path);
+            path);
       }
     }
   }
+  
+  @Test
+  public void testCreatedFileIsVisibleOnFlush() throws Throwable {
+    describe("verify that a newly created file exists once a flush has taken place");
+    Path path = path("testCreatedFileIsVisibleOnFlush");
+    FileSystem fs = getFileSystem();
+    try(FSDataOutputStream out = fs.create(path,
+          false,
+          4096,
+          (short) 1,
+          1024)) {
+      out.write('a');
+      out.flush();
+      if (!fs.exists(path)) {
+
+        if (isSupported(IS_BLOBSTORE)) {
+          // object store: downgrade to a skip so that the failure is visible
+          // in test results
+          skip(
+              "Filesystem is an object store and newly created files are not immediately visible");
+        }
+        assertPathExists("expected path to be visible before anything written",
+            path);
+      }
+    }
+  }
+  
+  @Test
+  public void testCreatedFileIsEventuallyVisible() throws Throwable {
+    describe("verify that a newly created file exists as soon as open returns");
+    Path path = path("testCreatedFileIsEventuallyVisible");
+    FileSystem fs = getFileSystem();
+    try( 
+      FSDataOutputStream out = fs.create(path,
+          false,
+          4096,
+          (short) 1,
+          1024)
+      ) {
+      out.write(0x01);
+      out.close();
+      getFileStatusEventually(fs, path, CREATE_TIMEOUT);
+    }
+  }
+
+  @Test
+  public void testFileStatusBlocksizeNonEmptyFile() throws Throwable {
+    describe("validate the block size of a filesystem and files within it");
+    FileSystem fs = getFileSystem();
+
+    long rootPath = fs.getDefaultBlockSize(path("/"));
+    assertTrue("Root block size is invalid " + rootPath,
+        rootPath > 0);
+
+    Path path = path("testFileStatusBlocksizeNonEmptyFile");
+    byte[] data = dataset(256, 'a', 'z');
+
+    writeDataset(fs, path, data, data.length, 1024 * 1024, false);
+
+    FileStatus status =
+        getFileStatusEventually(fs, path, CREATE_TIMEOUT);
+    String statusDetails = status.toString();
+    assertTrue("File status block size too low:  " + statusDetails,
+        status.getBlockSize() > 0);
+    
+    long defaultBlockSize = fs.getDefaultBlockSize(path);
+    assertTrue("fs.getDefaultBlockSize(path) size is invalid "+ defaultBlockSize,
+        defaultBlockSize > 0);
+  }
+
+  
+  @Test
+  public void testFileStatusBlocksizeEmptyFile() throws Throwable {
+    describe("check that an empty file may return a 0-byte blocksize");
+    FileSystem fs = getFileSystem();
+
+
+    Path path = path("testFileStatusBlocksizeEmptyFile");
+    ContractTestUtils.touch(fs, path);
+
+    FileStatus status =
+        getFileStatusEventually(fs, path, CREATE_TIMEOUT);
+    String statusDetails = status.toString();
+    assertTrue("File status block size too low:  " + statusDetails,
+        status.getBlockSize() >= 0);
+    long defaultBlockSize = fs.getDefaultBlockSize(path);
+    assertTrue("fs.getDefaultBlockSize(path) size is invalid "+ defaultBlockSize,
+        defaultBlockSize >= 0);
+  }
+
+  
+  
 }
