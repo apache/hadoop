@@ -660,6 +660,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-4625. BKJM doesn't take advantage of speculative reads. (Rakesh R
     via aajisaka)
 
+    HDFS-7798. Checkpointing failure caused by shared KerberosAuthenticator.
+    (Chengbing Liu via yliu)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
