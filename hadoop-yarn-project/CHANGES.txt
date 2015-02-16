@@ -259,6 +259,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3182. Cleanup switch statement in ApplicationMasterLauncher#handle().
     (Ray Chiang via ozawa)
 
+    YARN-3203. Correct a log message in AuxServices. (Brahma Reddy Battula 
+    via ozawa)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
