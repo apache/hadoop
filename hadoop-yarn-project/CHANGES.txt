@@ -262,6 +262,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3203. Correct a log message in AuxServices. (Brahma Reddy Battula 
     via ozawa)
 
+    YARN-1299. Improve a log message in AppSchedulingInfo by adding application 
+    id. (Ashutosh Jindal and devaraj via ozawa)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
