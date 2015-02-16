@@ -114,7 +114,8 @@ public class TestBlockManager {
           2 * HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2 * HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L);
       dn.updateHeartbeat(
-          BlockManagerTestUtil.getStorageReportsForDatanode(dn), 0L, 0L, 0, 0);
+          BlockManagerTestUtil.getStorageReportsForDatanode(dn), 0L, 0L, 0, 0,
+          null);
       bm.getDatanodeManager().checkIfClusterIsNowMultiRack(dn);
     }
   }
