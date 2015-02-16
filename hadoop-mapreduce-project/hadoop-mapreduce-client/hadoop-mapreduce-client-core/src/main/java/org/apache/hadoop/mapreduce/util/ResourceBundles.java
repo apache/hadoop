@@ -59,7 +59,7 @@ public class ResourceBundles {
     catch (Exception e) {
       return defaultValue;
     }
-    return value == null ? defaultValue : value;
+    return value;
   }
 
   private static String getLookupKey(String key, String suffix) {
