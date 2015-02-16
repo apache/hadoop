@@ -58,6 +58,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6256. Removed unused private methods in o.a.h.mapreduce.Job.java.
     (Naganarasimha G R via ozawa)
 
+    MAPREDUCE-6225. Fix new findbug warnings in hadoop-mapreduce-client-core. 
+    (Varun Saxena via junping_du)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
