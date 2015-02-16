@@ -176,8 +176,7 @@ public class AppSchedulingInfo {
         
         // Similarly, deactivate application?
         if (request.getNumContainers() <= 0) {
-          LOG.info("checking for deactivate of application :"
-              + this.applicationId);
+          LOG.info("checking for deactivate... ");
           checkForDeactivation();
         }
         
