@@ -75,7 +75,7 @@ public class TaskLogAppender extends FileAppender implements Flushable {
 
     if (maxEvents == null) {
       String propValue = System.getProperty(LOGSIZE_PROPERTY, "0");
-      setTotalLogFileSize(Long.valueOf(propValue));
+      setTotalLogFileSize(Long.parseLong(propValue));
     }
   }
   

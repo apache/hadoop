@@ -79,10 +79,8 @@ public class InMemoryReader<K, V> extends Reader<K, V> {
     File dumpFile = new File("../output/" + taskAttemptId + ".dump");
     System.err.println("Dumping corrupt map-output of " + taskAttemptId + 
                        " to " + dumpFile.getAbsolutePath());
-    try {
-      FileOutputStream fos = new FileOutputStream(dumpFile);
+    try (FileOutputStream fos = new FileOutputStream(dumpFile)) {
       fos.write(buffer, 0, bufferSize);
-      fos.close();
     } catch (IOException ioe) {
       System.err.println("Failed to dump map-output of " + taskAttemptId);
     }

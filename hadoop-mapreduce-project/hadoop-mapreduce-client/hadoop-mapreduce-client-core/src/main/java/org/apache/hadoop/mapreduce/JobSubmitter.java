@@ -390,10 +390,12 @@ class JobSubmitter {
     short replication = (short)conf.getInt(Job.SUBMIT_REPLICATION, 10);
     copyAndConfigureFiles(job, jobSubmitDir, replication);
 
-    // Set the working directory
-    if (job.getWorkingDirectory() == null) {
-      job.setWorkingDirectory(jtFs.getWorkingDirectory());
-    }
+    // Get the working directory. If not set, sets it to filesystem working dir
+    // This code has been added so that working directory reset before running
+    // the job. This is necessary for backward compatibility as other systems
+    // might use the public API JobConf#setWorkingDirectory to reset the working
+    // directory.
+    job.getWorkingDirectory();
 
   }
   /**
@@ -773,11 +775,6 @@ class JobSubmitter {
     if (!log4jPropertyFile.isEmpty()) {
       short replication = (short)conf.getInt(Job.SUBMIT_REPLICATION, 10);
       copyLog4jPropertyFile(job, jobSubmitDir, replication);
-
-      // Set the working directory
-      if (job.getWorkingDirectory() == null) {
-        job.setWorkingDirectory(jtFs.getWorkingDirectory());
-      }
     }
   }
 }
