@@ -542,6 +542,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11000. HAServiceProtocol's health state is incorrectly transitioned
     to SERVICE_NOT_RESPONDING (Ming Ma via vinayakumarb)
 
+    HADOOP-11570. S3AInputStream.close() downloads the remaining bytes of
+    the object from S3. (Dan Hecht via stevel).
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
