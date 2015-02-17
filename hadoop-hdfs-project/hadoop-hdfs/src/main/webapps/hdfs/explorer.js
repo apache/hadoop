@@ -102,6 +102,13 @@
       menus.change();
     }
 
+    function encode_path(abs_path) {
+      abs_path = encodeURIComponent(abs_path);
+      var re = /%2F/g;
+      return abs_path.replace(re, '/');
+    }
+
+    abs_path = encode_path(abs_path);
     var url = '/webhdfs/v1' + abs_path + '?op=GET_BLOCK_LOCATIONS';
     $.get(url).done(function(data) {
       var d = get_response(data, "LocatedBlocks");
