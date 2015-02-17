@@ -204,6 +204,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11522. Update S3A Documentation. (Thomas Demoor via stevel)
 
+    HADOOP-11521. Make connection timeout configurable in s3a.
+    (Thomas Demoor via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
