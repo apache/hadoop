@@ -190,7 +190,7 @@ public class FilterFileSystem extends FileSystem {
         Progressable progress,
         ChecksumOpt checksumOpt) throws IOException {
     return fs.create(f, permission,
-      flags, bufferSize, replication, blockSize, progress);
+      flags, bufferSize, replication, blockSize, progress, checksumOpt);
   }
   
   @Override
