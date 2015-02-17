@@ -175,6 +175,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-4413. MR lib dir contains jdiff (which is gpl) (Nemon Lou via aw)
 
+    MAPREDUCE-6234. TestHighRamJob fails due to the change in MAPREDUCE-5785. 
+    (Masatake Iwasaki via kasha)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
