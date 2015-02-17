@@ -38,8 +38,8 @@ is_git_diff_with_prefix() {
     fi
     if [[ "$line" =~ ^\+\+\+\  ]] ||
        [[ "$line" =~ ^\-\-\-\  ]]; then
-      if ! [[ "$line" =~ ^....[ab]/ ]]; then
-        return 1 # All +++ and --- lines must start with a/ or b/.
+      if ! [[ "$line" =~ ^....[ab]/ || "$line" =~ ^..../dev/null ]]; then
+        return 1 # All +++ and --- lines must start with a/ or b/ or be /dev/null.
       fi
     fi
   done < $1
