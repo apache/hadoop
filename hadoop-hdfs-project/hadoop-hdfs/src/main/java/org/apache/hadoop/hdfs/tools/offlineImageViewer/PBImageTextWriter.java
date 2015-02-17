@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.io.LimitInputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.LimitInputStream;
 import org.apache.hadoop.util.Time;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
