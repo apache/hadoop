@@ -211,6 +211,12 @@ If you do any of these: change your credentials immediately!
     </property>
 
     <property>
+      <name>fs.s3a.connection.establish.timeout</name>
+      <value>5000</value>
+      <description>Socket connection setup timeout in seconds.</description>
+    </property>
+
+    <property>
       <name>fs.s3a.connection.timeout</name>
       <value>50000</value>
       <description>Socket connection timeout in seconds.</description>

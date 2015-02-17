@@ -174,6 +174,8 @@ public class S3AFileSystem extends FileSystem {
     awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
     awsConf.setMaxErrorRetry(conf.getInt(MAX_ERROR_RETRIES, 
       DEFAULT_MAX_ERROR_RETRIES));
+    awsConf.setConnectionTimeout(conf.getInt(ESTABLISH_TIMEOUT,
+        DEFAULT_ESTABLISH_TIMEOUT));
     awsConf.setSocketTimeout(conf.getInt(SOCKET_TIMEOUT, 
       DEFAULT_SOCKET_TIMEOUT));
 
