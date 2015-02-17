@@ -32,7 +32,7 @@ The specifics of using these filesystems are documented below.
 
 ## Warning: Object Stores are not filesystems.
 
-Amazon S3 is an example of "an object store". In order to achieve scalalablity
+Amazon S3 is an example of "an object store". In order to achieve scalability
 and especially high availability, S3 has —as many other cloud object stores have
 done— relaxed some of the constraints which classic "POSIX" filesystems promise.
 
@@ -165,6 +165,46 @@ If you do any of these: change your credentials immediately!
     </property>
 
     <property>
+      <name>fs.s3a.endpoint</name>
+      <description>AWS S3 endpoint to connect to. An up-to-date list is
+        provided in the AWS Documentation: regions and endpoints. Without this
+        property, the standard region (s3.amazonaws.com) is assumed.
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3a.proxy.host</name>
+      <description>Hostname of the (optional) proxy server for S3 connections.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.proxy.port</name>
+      <description>Proxy server port. If this property is not set
+        but fs.s3a.proxy.host is, port 80 or 443 is assumed (consistent with
+        the value of fs.s3a.connection.ssl.enabled).</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.proxy.username</name>
+      <description>Username for authenticating with proxy server.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.proxy.password</name>
+      <description>Password for authenticating with proxy server.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.proxy.domain</name>
+      <description>Domain for authenticating with proxy server.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.proxy.workstation</name>
+      <description>Workstation for authenticating with proxy server.</description>
+    </property>
+
+    <property>
       <name>fs.s3a.attempts.maximum</name>
       <value>10</value>
       <description>How many times we should retry commands on transient errors.</description>
@@ -181,6 +221,33 @@ If you do any of these: change your credentials immediately!
       <value>5000</value>
       <description>How many keys to request from S3 when doing
          directory listings at a time.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.threads.max</name>
+      <value>256</value>
+      <description> Maximum number of concurrent active (part)uploads,
+      which each use a thread from the threadpool.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.threads.core</name>
+      <value>15</value>
+      <description>Number of core threads in the threadpool.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.threads.keepalivetime</name>
+      <value>60</value>
+      <description>Number of seconds a thread can be idle before being
+        terminated.</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.max.total.tasks</name>
+      <value>1000</value>
+      <description>Number of (part)uploads allowed to the queue before
+      blocking additional uploads.</description>
     </property>
 
     <property>
@@ -231,6 +298,9 @@ If you do any of these: change your credentials immediately!
 
 ## Testing the S3 filesystem clients
 
+Due to eventual consistency, tests may fail without reason. Transient
+failures, which no longer occur upon rerunning the test, should thus be ignored.
+
 To test the S3* filesystem clients, you need to provide two files
 which pass in authentication details to the test runner
 
@@ -256,7 +326,10 @@ each filesystem for its testing.
 2. `test.fs.s3.name` : the URL of the bucket for "S3"  tests
 
 The contents of each bucket will be destroyed during the test process:
-do not use the bucket for any purpose other than testing.
+do not use the bucket for any purpose other than testing. Furthermore, for
+s3a, all in-progress multi-part uploads to the bucket will be aborted at the
+start of a test (by forcing fs.s3a.multipart.purge=true) to clean up the
+temporary state of previously failed tests.
 
 Example:
 

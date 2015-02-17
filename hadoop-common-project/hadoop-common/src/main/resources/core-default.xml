@@ -682,12 +682,12 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
-  <name>fs.s3a.access.key</name>
+  <name>fs.s3a.awsAccessKeyId</name>
   <description>AWS access key ID. Omit for Role-based authentication.</description>
 </property>
 
 <property>
-  <name>fs.s3a.secret.key</name>
+  <name>fs.s3a.awsSecretAccessKey</name>
   <description>AWS secret key. Omit for Role-based authentication.</description>
 </property>
 
@@ -701,6 +701,46 @@ for ldap providers in the same way as above does.
   <name>fs.s3a.connection.ssl.enabled</name>
   <value>true</value>
   <description>Enables or disables SSL connections to S3.</description>
+</property>
+
+<property>
+  <name>fs.s3a.endpoint</name>
+  <description>AWS S3 endpoint to connect to. An up-to-date list is
+    provided in the AWS Documentation: regions and endpoints. Without this
+    property, the standard region (s3.amazonaws.com) is assumed.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.host</name>
+  <description>Hostname of the (optional) proxy server for S3 connections.</description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.port</name>
+  <description>Proxy server port. If this property is not set
+    but fs.s3a.proxy.host is, port 80 or 443 is assumed (consistent with
+    the value of fs.s3a.connection.ssl.enabled).</description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.username</name>
+  <description>Username for authenticating with proxy server.</description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.password</name>
+  <description>Password for authenticating with proxy server.</description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.domain</name>
+  <description>Domain for authenticating with proxy server.</description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.workstation</name>
+  <description>Workstation for authenticating with proxy server.</description>
 </property>
 
 <property>
@@ -720,6 +760,33 @@ for ldap providers in the same way as above does.
   <value>5000</value>
   <description>How many keys to request from S3 when doing 
      directory listings at a time.</description>
+</property>
+
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>256</value>
+  <description> Maximum number of concurrent active (part)uploads,
+    which each use a thread from the threadpool.</description>
+</property>
+
+<property>
+  <name>fs.s3a.threads.core</name>
+  <value>15</value>
+  <description>Number of core threads in the threadpool.</description>
+</property>
+
+<property>
+  <name>fs.s3a.threads.keepalivetime</name>
+  <value>60</value>
+  <description>Number of seconds a thread can be idle before being
+    terminated.</description>
+</property>
+
+<property>
+  <name>fs.s3a.max.total.tasks</name>
+  <value>1000</value>
+  <description>Number of (part)uploads allowed to the queue before
+    blocking additional uploads.</description>
 </property>
 
 <property>
