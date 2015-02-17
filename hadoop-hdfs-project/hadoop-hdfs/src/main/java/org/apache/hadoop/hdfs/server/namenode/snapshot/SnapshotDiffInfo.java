@@ -187,12 +187,13 @@ class SnapshotDiffInfo {
    */
   public SnapshotDiffReport generateReport() {
     List<DiffReportEntry> diffReportList = new ArrayList<DiffReportEntry>();
-    for (INode node : diffMap.keySet()) {
-      diffReportList.add(new DiffReportEntry(DiffType.MODIFY, diffMap
-          .get(node), null));
+    for (Map.Entry<INode,byte[][]> drEntry : diffMap.entrySet()) {
+      INode node = drEntry.getKey();
+      byte[][] path = drEntry.getValue();
+      diffReportList.add(new DiffReportEntry(DiffType.MODIFY, path, null));
       if (node.isDirectory()) {
         List<DiffReportEntry> subList = generateReport(dirDiffMap.get(node),
-            diffMap.get(node), isFromEarlier(), renameMap);
+            path, isFromEarlier(), renameMap);
         diffReportList.addAll(subList);
       }
     }
