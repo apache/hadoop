@@ -152,6 +152,13 @@ public class BookKeeperJournalManager implements JournalManager {
     = "dfs.namenode.bookkeeperjournal.readEntryTimeoutSec";
   public static final int BKJM_BOOKKEEPER_READ_ENTRY_TIMEOUT_DEFAULT = 5;
 
+  public static final String BKJM_BOOKKEEPER_ACK_QUORUM_SIZE 
+    = "dfs.namenode.bookkeeperjournal.ack.quorum-size";
+
+  public static final String BKJM_BOOKKEEPER_ADD_ENTRY_TIMEOUT_SEC
+    = "dfs.namenode.bookkeeperjournal.addEntryTimeoutSec";
+  public static final int BKJM_BOOKKEEPER_ADD_ENTRY_TIMEOUT_DEFAULT = 5;
+
   private ZooKeeper zkc;
   private final Configuration conf;
   private final BookKeeper bkc;
@@ -162,6 +169,8 @@ public class BookKeeperJournalManager implements JournalManager {
   private final MaxTxId maxTxId;
   private final int ensembleSize;
   private final int quorumSize;
+  private final int ackQuorumSize;
+  private final int addEntryTimeout;
   private final String digestpw;
   private final int speculativeReadTimeout;
   private final int readEntryTimeout;
@@ -184,6 +193,9 @@ public class BookKeeperJournalManager implements JournalManager {
                                BKJM_BOOKKEEPER_ENSEMBLE_SIZE_DEFAULT);
     quorumSize = conf.getInt(BKJM_BOOKKEEPER_QUORUM_SIZE,
                              BKJM_BOOKKEEPER_QUORUM_SIZE_DEFAULT);
+    ackQuorumSize = conf.getInt(BKJM_BOOKKEEPER_ACK_QUORUM_SIZE, quorumSize);
+    addEntryTimeout = conf.getInt(BKJM_BOOKKEEPER_ADD_ENTRY_TIMEOUT_SEC,
+                             BKJM_BOOKKEEPER_ADD_ENTRY_TIMEOUT_DEFAULT);
     speculativeReadTimeout = conf.getInt(
                              BKJM_BOOKKEEPER_SPECULATIVE_READ_TIMEOUT_MS,
                              BKJM_BOOKKEEPER_SPECULATIVE_READ_TIMEOUT_DEFAULT);
@@ -216,6 +228,7 @@ public class BookKeeperJournalManager implements JournalManager {
       ClientConfiguration clientConf = new ClientConfiguration();
       clientConf.setSpeculativeReadTimeout(speculativeReadTimeout);
       clientConf.setReadEntryTimeout(readEntryTimeout);
+      clientConf.setAddEntryTimeout(addEntryTimeout);
       bkc = new BookKeeper(clientConf, zkc);
     } catch (KeeperException e) {
       throw new IOException("Error initializing zk", e);
@@ -403,7 +416,7 @@ public class BookKeeperJournalManager implements JournalManager {
         // bookkeeper errored on last stream, clean up ledger
         currentLedger.close();
       }
-      currentLedger = bkc.createLedger(ensembleSize, quorumSize,
+      currentLedger = bkc.createLedger(ensembleSize, quorumSize, ackQuorumSize,
                                        BookKeeper.DigestType.MAC,
                                        digestpw.getBytes(Charsets.UTF_8));
     } catch (BKException bke) {
