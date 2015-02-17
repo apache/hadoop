@@ -39,6 +39,9 @@ Release 2.6.1 - UNRELEASED
     HADOOP-11482. Use correct UGI when KMSClientProvider is called by a proxy
     user. Contributed by Arun Suresh.
 
+    HADOOP-11295. RPC Server Reader thread can't shutdown if RPCCallQueue is
+    full. (Ming Ma via kihwal)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
