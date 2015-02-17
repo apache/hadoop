@@ -212,14 +212,16 @@ Commands useful for administrators of a hadoop cluster.
 
 ### `daemonlog`
 
-Usage: `hadoop daemonlog -getlevel <host:port> <name> ` Usage: `hadoop daemonlog -setlevel <host:port> <name> <level> `
+Usage: `hadoop daemonlog -getlevel <host:httpport> <classname> ` Usage: `hadoop daemonlog -setlevel <host:httpport> <classname> <level> `
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-getlevel` *host:port* *name* | Prints the log level of the daemon running at *host:port*. This command internally connects to http://host:port/logLevel?log=name |
-| `-setlevel` *host:port* *name* *level* | Sets the log level of the daemon running at *host:port*. This command internally connects to http://host:port/logLevel?log=name |
+| `-getlevel` *host:httpport* *classname* | Prints the log level of the log identified by a qualified *classname*, in the daemon running at *host:httpport*. This command internally connects to `http://<host:httpport>/logLevel?log=<classname>` |
+| `-setlevel` *host:httpport* *classname* *level* | Sets the log level of the log identified by a qualified *classname*, in the daemon running at *host:httpport*. This command internally connects to `http://<host:httpport>/logLevel?log=<classname>&level=<level>` |
 
-Get/Set the log level for each daemon.
+Get/Set the log level for a Log identified by a qualified class name in the daemon.
+
+	Example: $ bin/hadoop daemonlog -setlevel 127.0.0.1:50070 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG
 
 Files
 -----

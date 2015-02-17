@@ -175,6 +175,9 @@ Trunk (Unreleased)
     HADOOP-11495. Convert site documentation from apt to markdown
     (Masatake Iwasaki via aw)
 
+    HADOOP-11575. Daemon log documentation is misleading
+    (Naganarasimha G R via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
