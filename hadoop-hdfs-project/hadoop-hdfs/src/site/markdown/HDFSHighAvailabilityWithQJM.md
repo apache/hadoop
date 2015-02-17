@@ -371,7 +371,7 @@ Once the JournalNodes have been started, one must initially synchronize the two 
   sufficient edits transactions to be able to start both NameNodes.
 
 * If you are converting a non-HA NameNode to be HA, you should run the
-  command "*hdfs -initializeSharedEdits*", which will initialize the
+  command "*hdfs namenode -initializeSharedEdits*", which will initialize the
   JournalNodes with the edits data from the local NameNode edits directories.
 
 At this point you may start both of your HA NameNodes as you normally would start a NameNode.

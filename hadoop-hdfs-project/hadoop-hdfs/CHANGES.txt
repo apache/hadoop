@@ -301,6 +301,9 @@ Trunk (Unreleased)
     HDFS-7791. dfs count -v should be added to quota documentation (Akira
     AJISAKA via aw)
 
+    HDFS-7803. Wrong command mentioned in HDFSHighAvailabilityWithQJM
+    documentation (Arshad Mohammad via aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
