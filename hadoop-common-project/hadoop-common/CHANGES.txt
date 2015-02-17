@@ -1031,6 +1031,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11615. Update ServiceLevelAuth.md for YARN.
     (Brahma Reddy Battula via aajisaka)
 
+    HADOOP-11605. FilterFileSystem#create with ChecksumOpt should propagate it
+    to wrapped FS. (gera)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
