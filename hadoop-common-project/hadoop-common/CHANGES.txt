@@ -537,6 +537,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11467. KerberosAuthenticator can connect to a non-secure cluster.
     (yzhangal via rkanter)
 
+    HADOOP-11000. HAServiceProtocol's health state is incorrectly transitioned
+    to SERVICE_NOT_RESPONDING (Ming Ma via vinayakumarb)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

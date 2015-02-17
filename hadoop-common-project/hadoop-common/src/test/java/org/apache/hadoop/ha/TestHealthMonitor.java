@@ -20,6 +20,7 @@ package org.apache.hadoop.ha;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -54,7 +55,8 @@ public class TestHealthMonitor {
     conf.setInt(CommonConfigurationKeys.HA_HM_CONNECT_RETRY_INTERVAL_KEY, 50);
     conf.setInt(CommonConfigurationKeys.HA_HM_SLEEP_AFTER_DISCONNECT_KEY, 50);
     
-    svc = new DummyHAService(HAServiceState.ACTIVE, null);
+    svc = new DummyHAService(HAServiceState.ACTIVE,
+        new InetSocketAddress("0.0.0.0", 0), true);
     hm = new HealthMonitor(conf, svc) {
       @Override
       protected HAServiceProtocol createProxy() throws IOException {
