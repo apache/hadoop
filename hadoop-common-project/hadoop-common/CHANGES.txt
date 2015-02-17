@@ -178,6 +178,9 @@ Trunk (Unreleased)
     HADOOP-11575. Daemon log documentation is misleading
     (Naganarasimha G R via aw)
 
+    HADOOP-11596. Allow smart-apply-patch.sh to add new files in binary git
+    patches (raviprak)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
@@ -611,9 +614,6 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11600. Fix up source codes to be compiled with Guava 17.0. (ozawa)
 
     HADOOP-11522. Update S3A Documentation. (Thomas Demoor via stevel)
-
-    HADOOP-11596. Allow smart-apply-patch.sh to add new files in binary git
-    patches (raviprak)
 
   OPTIMIZATIONS
 
