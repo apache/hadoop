@@ -346,6 +346,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7797. Add audit log for setQuota operation (Rakesh R via umamahesh)
 
+    HDFS-4266. BKJM: Separate write and ack quorum (Rakesh R via umamahesh)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
