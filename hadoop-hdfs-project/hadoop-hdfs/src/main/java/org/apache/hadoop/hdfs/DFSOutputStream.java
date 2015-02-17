@@ -35,6 +35,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -1443,7 +1444,7 @@ public class DFSOutputStream extends FSOutputSummer
           ExtendedBlock blockCopy = new ExtendedBlock(block);
           blockCopy.setNumBytes(blockSize);
 
-          boolean[] targetPinnings = getPinnings(nodes);
+          boolean[] targetPinnings = getPinnings(nodes, true);
           // send the request
           new Sender(out).writeBlock(blockCopy, nodeStorageTypes[0], accessToken,
               dfsClient.clientName, nodes, nodeStorageTypes, null, bcs, 
@@ -1537,19 +1538,28 @@ public class DFSOutputStream extends FSOutputSummer
       }
     }
 
-    private boolean[] getPinnings(DatanodeInfo[] nodes) {
+    private boolean[] getPinnings(DatanodeInfo[] nodes, boolean shouldLog) {
       if (favoredNodes == null) {
         return null;
       } else {
         boolean[] pinnings = new boolean[nodes.length];
+        HashSet<String> favoredSet =
+            new HashSet<String>(Arrays.asList(favoredNodes));
         for (int i = 0; i < nodes.length; i++) {
-          pinnings[i] = false;
-          for (int j = 0; j < favoredNodes.length; j++) {
-            if (nodes[i].getXferAddrWithHostname().equals(favoredNodes[j])) {
-              pinnings[i] = true;
-              break;
-            }
+          pinnings[i] = favoredSet.remove(nodes[i].getXferAddrWithHostname());
+          if (DFSClient.LOG.isDebugEnabled()) {
+            DFSClient.LOG.debug(nodes[i].getXferAddrWithHostname() +
+                " was chosen by name node (favored=" + pinnings[i] +
+                ").");
           }
+        }
+        if (shouldLog && !favoredSet.isEmpty()) {
+          // There is one or more favored nodes that were not allocated.
+          DFSClient.LOG.warn(
+              "These favored nodes were specified but not chosen: " +
+              favoredSet +
+              " Specified favored nodes: " + Arrays.toString(favoredNodes));
+
         }
         return pinnings;
       }
