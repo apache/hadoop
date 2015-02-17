@@ -3813,14 +3813,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throws IOException {
     checkOperation(OperationCategory.WRITE);
     writeLock();
+    boolean success = false;
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set quota on " + src);
       FSDirAttrOp.setQuota(dir, src, nsQuota, ssQuota, type);
+      success = true;
     } finally {
       writeUnlock();
+      if (success) {
+        getEditLog().logSync();
+      }
+      logAuditEvent(success, "setQuota", src);
     }
-    getEditLog().logSync();
   }
 
   /** Persist all metadata about this file.

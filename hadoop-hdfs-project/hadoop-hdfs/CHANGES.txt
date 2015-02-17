@@ -344,6 +344,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7604. Track and display failed DataNode storage locations in NameNode.
     (cnauroth)
 
+    HDFS-7797. Add audit log for setQuota operation (Rakesh R via umamahesh)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
