@@ -666,6 +666,7 @@ public abstract class Server {
         assert !running;
         readSelector.wakeup();
         try {
+          super.interrupt();
           super.join();
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
