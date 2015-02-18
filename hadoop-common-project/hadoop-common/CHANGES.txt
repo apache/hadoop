@@ -181,6 +181,9 @@ Trunk (Unreleased)
     HADOOP-11596. Allow smart-apply-patch.sh to add new files in binary git
     patches (raviprak)
 
+    HADOOP-11593. Convert site documentation from apt to markdown (stragglers)
+    (Masatake Iwasaki via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
