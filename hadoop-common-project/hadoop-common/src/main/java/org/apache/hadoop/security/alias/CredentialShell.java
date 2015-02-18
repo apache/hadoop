@@ -97,6 +97,10 @@ public class CredentialShell extends Configured implements Tool {
 
     for (int i = 0; i < args.length; i++) { // parse command line
       if (args[i].equals("create")) {
+        if (i == args.length - 1) {
+          printCredShellUsage();
+          return 1;
+        }
         String alias = args[++i];
         command = new CreateCommand(alias);
         if (alias.equals("-help")) {
@@ -104,6 +108,10 @@ public class CredentialShell extends Configured implements Tool {
           return 0;
         }
       } else if (args[i].equals("delete")) {
+        if (i == args.length - 1) {
+          printCredShellUsage();
+          return 1;
+        }
         String alias = args[++i];
         command = new DeleteCommand(alias);
         if (alias.equals("-help")) {
@@ -113,6 +121,10 @@ public class CredentialShell extends Configured implements Tool {
       } else if (args[i].equals("list")) {
         command = new ListCommand();
       } else if (args[i].equals("-provider")) {
+        if (i == args.length - 1) {
+          printCredShellUsage();
+          return 1;
+        }
         userSuppliedProvider = true;
         getConf().set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, 
             args[++i]);
@@ -195,7 +207,7 @@ public class CredentialShell extends Configured implements Tool {
   }
 
   private class ListCommand extends Command {
-    public static final String USAGE = "list [-provider] [-help]";
+    public static final String USAGE = "list [-provider provider-path]";
     public static final String DESC =
         "The list subcommand displays the aliases contained within \n" +
         "a particular provider - as configured in core-site.xml or " +
@@ -237,7 +249,7 @@ public class CredentialShell extends Configured implements Tool {
 
   private class DeleteCommand extends Command {
     public static final String USAGE =
-        "delete <alias> [-provider] [-f] [-help]";
+        "delete <alias> [-f] [-provider provider-path]";
     public static final String DESC =
         "The delete subcommand deletes the credential\n" +
         "specified as the <alias> argument from within the provider\n" +
@@ -308,7 +320,8 @@ public class CredentialShell extends Configured implements Tool {
   }
 
   private class CreateCommand extends Command {
-    public static final String USAGE = "create <alias> [-provider] [-help]";
+    public static final String USAGE =
+        "create <alias> [-provider provider-path]";
     public static final String DESC =
         "The create subcommand creates a new credential for the name specified\n" +
         "as the <alias> argument within the provider indicated through\n" +
