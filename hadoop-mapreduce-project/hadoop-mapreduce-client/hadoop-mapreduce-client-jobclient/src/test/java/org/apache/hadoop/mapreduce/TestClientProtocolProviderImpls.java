@@ -18,30 +18,22 @@
 
 package org.apache.hadoop.mapreduce;
 
-import java.io.IOException;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-import junit.framework.TestCase;
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.LocalJobRunner;
+import org.apache.hadoop.mapred.YARNRunner;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.junit.Test;
 
-public class TestClientProtocolProviderImpls extends TestCase {
+public class TestClientProtocolProviderImpls {
 
   @Test
   public void testClusterWithLocalClientProvider() throws Exception {
-
     Configuration conf = new Configuration();
-
-    try {
-      conf.set(MRConfig.FRAMEWORK_NAME, "incorrect");
-      new Cluster(conf);
-      fail("Cluster should not be initialized with incorrect framework name");
-    } catch (IOException e) {
-
-    }
-
     conf.set(MRConfig.FRAMEWORK_NAME, "local");
     Cluster cluster = new Cluster(conf);
     assertTrue(cluster.getClient() instanceof LocalJobRunner);
@@ -50,57 +42,38 @@ public class TestClientProtocolProviderImpls extends TestCase {
 
   @Test
   public void testClusterWithJTClientProvider() throws Exception {
+    Configuration conf = new Configuration();
+    try {
+      conf.set(MRConfig.FRAMEWORK_NAME, "classic");
+      conf.set(JTConfig.JT_IPC_ADDRESS, "local");
+      new Cluster(conf);
+      fail("Cluster with classic Framework name should not use "
+          + "local JT address");
+    } catch (IOException e) {
+      assertTrue(e.getMessage().contains(
+          "Cannot initialize Cluster. Please check"));
+    }
+  }
 
+  @Test
+  public void testClusterWithYarnClientProvider() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(MRConfig.FRAMEWORK_NAME, "yarn");
+    Cluster cluster = new Cluster(conf);
+    assertTrue(cluster.getClient() instanceof YARNRunner);
+    cluster.close();
+  }
+
+  @Test
+  public void testClusterException() {
     Configuration conf = new Configuration();
     try {
       conf.set(MRConfig.FRAMEWORK_NAME, "incorrect");
       new Cluster(conf);
       fail("Cluster should not be initialized with incorrect framework name");
-
     } catch (IOException e) {
-
+      assertTrue(e.getMessage().contains(
+          "Cannot initialize Cluster. Please check"));
     }
-
-    try {
-      conf.set(MRConfig.FRAMEWORK_NAME, "classic");
-      conf.set(JTConfig.JT_IPC_ADDRESS, "local");
-      new Cluster(conf);
-      fail("Cluster with classic Framework name shouldnot use local JT address");
-
-    } catch (IOException e) {
-
-    }
-
-    try {
-      conf = new Configuration();
-      conf.set(MRConfig.FRAMEWORK_NAME, "classic");
-      conf.set(JTConfig.JT_IPC_ADDRESS, "127.0.0.1:0");
-      Cluster cluster = new Cluster(conf);
-      cluster.close();
-    } catch (IOException e) {
-
-    }
-  }
-
-  @Test
-  public void testClusterException() {
-
-    Configuration conf = new Configuration();
-    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
-    conf.set(JTConfig.JT_IPC_ADDRESS, "local");
-
-    // initializing a cluster with this conf should throw an error.
-    // However the exception thrown should not be specific to either
-    // the job tracker client provider or the local provider
-    boolean errorThrown = false;
-    try {
-      Cluster cluster = new Cluster(conf);
-      cluster.close();
-      fail("Not expected - cluster init should have failed");
-    } catch (IOException e) {
-      errorThrown = true;
-      assert(e.getMessage().contains("Cannot initialize Cluster. Please check"));
-    }
-    assert(errorThrown);
   }
 }
