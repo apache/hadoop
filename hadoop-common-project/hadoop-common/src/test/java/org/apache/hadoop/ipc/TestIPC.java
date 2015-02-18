@@ -1235,6 +1235,12 @@ public class TestIPC {
     }
   }
 
+  @Test
+  public void testClientGetTimeout() throws IOException {
+    Configuration config = new Configuration();
+    assertEquals(Client.getTimeout(config), -1);
+  }
+
   private void assertRetriesOnSocketTimeouts(Configuration conf,
       int maxTimeoutRetries) throws IOException {
     SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
