@@ -556,6 +556,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11599. Client#getTimeout should use IPC_CLIENT_PING_DEFAULT when 
     IPC_CLIENT_PING_KEY is not configured. (zhihai xu via ozawa)
 
+    HADOOP-11545. ArrayIndexOutOfBoundsException is thrown with "hadoop
+    credential list -provider". (Brahma Reddy Battula via aajisaka)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
