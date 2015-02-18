@@ -137,6 +137,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-4286. TestClientProtocolProviderImpls passes on failure 
     conditions. (Devaraj K via ozawa)
 
+    MAPREDUCE-6261. NullPointerException if MapOutputBuffer.flush invoked
+    twice (Tsuyoshi OZAWA via jlowe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
