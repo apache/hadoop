@@ -682,6 +682,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-6662. WebHDFS cannot open a file if its path contains "%".
     (Gerson Carlos via wheat9)
 
+    HDFS-7808. Remove obsolete -ns options in in DFSHAAdmin.java.
+    (Arshad Mohammad via wheat9)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode

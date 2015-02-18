@@ -156,9 +156,6 @@ public class TestDFSHAAdminMiniCluster {
     assertEquals(0, runTool("-transitionToActive", "nn1"));
     assertEquals(0, runTool("-failover", "nn1", "nn2"));
     
-    // Test failover with fencer and nameservice
-    assertEquals(0, runTool("-ns", "minidfs-ns", "-failover", "nn2", "nn1"));
-
     // Fencer has not run yet, since none of the above required fencing 
     assertEquals("", Files.toString(tmpFile, Charsets.UTF_8));
 

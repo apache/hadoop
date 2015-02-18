@@ -147,17 +147,6 @@ public class TestDFSHAAdmin {
   }
   
   @Test
-  public void testNameserviceOption() throws Exception {
-    assertEquals(-1, runTool("-ns"));
-    assertOutputContains("Missing nameservice ID");
-    assertEquals(-1, runTool("-ns", "ns1"));
-    assertOutputContains("Missing command");
-    // "ns1" isn't defined but we check this lazily and help doesn't use the ns
-    assertEquals(0, runTool("-ns", "ns1", "-help", "transitionToActive"));
-    assertOutputContains("Transitions the service into Active");
-  }
-
-  @Test
   public void testNamenodeResolution() throws Exception {
     Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
     assertEquals(0, runTool("-getServiceState", "nn1"));
@@ -276,15 +265,6 @@ public class TestDFSHAAdmin {
     conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
     tool.setConf(conf);
     assertEquals(0, runTool("-failover", "nn1", "nn2"));
-  }
-
-  @Test
-  public void testFailoverWithFencerAndNameservice() throws Exception {
-    Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
-    HdfsConfiguration conf = getHAConf();
-    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, getFencerTrueCommand());
-    tool.setConf(conf);
-    assertEquals(0, runTool("-ns", "ns1", "-failover", "nn1", "nn2"));
   }
 
   @Test
