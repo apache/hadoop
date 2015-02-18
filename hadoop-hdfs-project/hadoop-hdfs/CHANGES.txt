@@ -354,6 +354,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7780. Update use of Iterator to Iterable in DataXceiverServer and
     SnapshotDiffInfo. (Ray Chiang via aajisaka)
 
+    HDFS-7772. Document hdfs balancer -exclude/-include option in
+    HDFSCommands.html (Xiaoyu Yao via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

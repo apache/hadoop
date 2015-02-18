@@ -134,7 +134,14 @@ HDFS Commands Guide
    to stop the rebalancing process. See
    {{{./HdfsUserGuide.html#Balancer}Balancer}} for more details.
 
-   Usage: <<<hdfs balancer [-threshold <threshold>] [-policy <policy>] [-idleiterations <idleiterations>]>>>
++------------------------------------------+
+   Usage: hdfs balancer
+           [-threshold <threshold>]
+           [-policy <policy>]
+           [-exclude [-f <hosts-file> | <comma-separated list of hosts>]]
+           [-include [-f <hosts-file> | <comma-separated list of hosts>]]
+           [-idleiterations <idleiterations>]
++------------------------------------------+
 
 *------------------------+----------------------------------------------------+
 || COMMAND_OPTION        | Description
@@ -146,6 +153,12 @@ HDFS Commands Guide
 |                        | each datanode is balanced. \
 |                        | <<<blockpool>>>: Cluster is balanced if each block
 |                        | pool in each datanode is balanced.
+*------------------------+----------------------------------------------------+
+| -exclude -f \<hosts-file\> \|       | Excludes the specified datanodes from
+|   \<comma-separated list of hosts\> | being balanced by the balancer.
+*------------------------+----------------------------------------------------+
+| -include -f \<hosts-file\> \|       | Includes only the specified datanode
+|   \<comma-separated list of hosts\> | to be balanced by the balancer.
 *------------------------+----------------------------------------------------+
 | -idleiterations <iterations> | Maximum number of idle iterations before exit.
 |                              | This overwrites the default idleiterations(5).

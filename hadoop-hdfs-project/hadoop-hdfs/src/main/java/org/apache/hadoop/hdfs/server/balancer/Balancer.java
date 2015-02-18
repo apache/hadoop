@@ -171,15 +171,14 @@ public class Balancer {
   private static final long GB = 1L << 30; //1GB
   private static final long MAX_SIZE_TO_MOVE = 10*GB;
 
-  private static final String USAGE = "Usage: java "
-      + Balancer.class.getSimpleName()
+  private static final String USAGE = "Usage: hdfs balancer"
       + "\n\t[-policy <policy>]\tthe balancing policy: "
       + BalancingPolicy.Node.INSTANCE.getName() + " or "
       + BalancingPolicy.Pool.INSTANCE.getName()
       + "\n\t[-threshold <threshold>]\tPercentage of disk capacity"
-      + "\n\t[-exclude [-f <hosts-file> | comma-sperated list of hosts]]"
+      + "\n\t[-exclude [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tExcludes the specified datanodes."
-      + "\n\t[-include [-f <hosts-file> | comma-sperated list of hosts]]"
+      + "\n\t[-include [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tIncludes only the specified datanodes."
       + "\n\t[-idleiterations <idleiterations>]"
       + "\tNumber of consecutive idle iterations (-1 for Infinite) before exit.";
