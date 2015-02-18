@@ -650,6 +650,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7780. Update use of Iterator to Iterable in DataXceiverServer and
     SnapshotDiffInfo. (Ray Chiang via aajisaka)
 
+    HDFS-7804. correct the haadmin command usage in #HDFSHighAvailabilityWithQJM.html
+    (Brahma Reddy Battula via umamahesh)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

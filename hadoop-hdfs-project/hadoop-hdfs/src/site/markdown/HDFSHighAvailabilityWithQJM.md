@@ -382,7 +382,7 @@ You can visit each of the NameNodes' web pages separately by browsing to their c
 
 Now that your HA NameNodes are configured and started, you will have access to some additional commands to administer your HA HDFS cluster. Specifically, you should familiarize yourself with all of the subcommands of the "*hdfs haadmin*" command. Running this command without any additional arguments will display the following usage information:
 
-    Usage: DFSHAAdmin [-ns <nameserviceId>]
+    Usage: haadmin
         [-transitionToActive <serviceId>]
         [-transitionToStandby <serviceId>]
         [-failover [--forcefence] [--forceactive] <serviceId> <serviceId>]
