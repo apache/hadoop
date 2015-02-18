@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.PrintStream;
-import java.util.Arrays;
 import java.util.Collection;
 
 import org.apache.commons.logging.Log;
@@ -98,25 +97,6 @@ public class DFSHAAdmin extends HAAdmin {
       printUsage(errOut);
       return -1;
     }
-
-    int i = 0;
-    String cmd = argv[i++];
-
-    if ("-ns".equals(cmd)) {
-      if (i == argv.length) {
-        errOut.println("Missing nameservice ID");
-        printUsage(errOut);
-        return -1;
-      }
-      nameserviceId = argv[i++];
-      if (i >= argv.length) {
-        errOut.println("Missing command");
-        printUsage(errOut);
-        return -1;
-      }
-      argv = Arrays.copyOfRange(argv, i, argv.length);
-    }
-    
     return super.runCmd(argv);
   }
   
