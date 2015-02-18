@@ -411,6 +411,17 @@
       <artifactId>lz4-java</artifactId>
       <scope>provided</scope>
     </dependency>
+    <!-- Needed only at runtime when the redacting log4j appender
+         is configured.  Should show up in the common lib/ directory
+         without showing up as a dependency for downstream projects.
+    -->
+    <dependency>
+      <groupId>org.cloudera.logredactor</groupId>
+      <artifactId>logredactor</artifactId>
+      <version>2.0.7</version>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>
@@ -1274,4 +1285,3 @@
     </profile>
   </profiles>
 </project>
-
