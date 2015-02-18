@@ -134,6 +134,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6221. Stringifier is left unclosed in Chain#getChainElementConf().
     (Ted Yu via ozawa)
 
+    MAPREDUCE-4286. TestClientProtocolProviderImpls passes on failure 
+    conditions. (Devaraj K via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
