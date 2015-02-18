@@ -959,6 +959,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11295. RPC Server Reader thread can't shutdown if RPCCallQueue is
     full. (Ming Ma via kihwal)
 
+    HADOOP-11599. Client#getTimeout should use IPC_CLIENT_PING_DEFAULT when 
+    IPC_CLIENT_PING_KEY is not configured. (zhihai xu via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

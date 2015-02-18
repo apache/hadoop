@@ -236,7 +236,8 @@ public class Client {
    * @return the timeout period in milliseconds. -1 if no timeout value is set
    */
   final public static int getTimeout(Configuration conf) {
-    if (!conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, true)) {
+    if (!conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY,
+        CommonConfigurationKeys.IPC_CLIENT_PING_DEFAULT)) {
       return getPingInterval(conf);
     }
     return -1;
