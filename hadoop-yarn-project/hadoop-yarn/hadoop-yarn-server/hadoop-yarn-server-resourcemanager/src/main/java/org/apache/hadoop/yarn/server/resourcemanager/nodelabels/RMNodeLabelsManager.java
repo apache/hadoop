@@ -228,9 +228,23 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       Map<String, Host> before = cloneNodeMap(ImmutableSet.of(nodeId));
       Node nm = getNMInNodeSet(nodeId);
       if (null != nm) {
-        // set nm is not running, and its resource = 0
-        nm.running = false;
-        nm.resource = Resource.newInstance(0, 0);
+        if (null == nm.labels) {
+          // When node deactivated, remove the nm from node collection if no
+          // labels explicitly set for this particular nm
+
+          // Save labels first, we need to remove label->nodes relation later
+          Set<String> savedNodeLabels = getLabelsOnNode(nodeId);
+          
+          // Remove this node in nodes collection
+          nodeCollections.get(nodeId.getHost()).nms.remove(nodeId);
+          
+          // Remove this node in labels->node
+          removeNodeFromLabels(nodeId, savedNodeLabels);
+        } else {
+          // set nm is not running, and its resource = 0
+          nm.running = false;
+          nm.resource = Resource.newInstance(0, 0);
+        }
       }
       
       // get the node after edition
