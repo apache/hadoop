@@ -1458,6 +1458,10 @@ public class MapTask extends Task {
     public void flush() throws IOException, ClassNotFoundException,
            InterruptedException {
       LOG.info("Starting flush of map output");
+      if (kvbuffer == null) {
+        LOG.info("kvbuffer is null. Skipping flush.");
+        return;
+      }
       spillLock.lock();
       try {
         while (spillInProgress) {
