@@ -79,6 +79,9 @@ Release 2.6.1 - UNRELEASED
     http(s)://proxy addr:port/proxy/<appId> to avoid duplicate sections. (Devaraj
     K via zjshen)
 
+    YARN-3207. Secondary filter matches entites which do not have the key being
+    filtered for. (Zhijie Shen via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
