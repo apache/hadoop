@@ -767,6 +767,9 @@ public class TimelineStoreTestUtils {
 
     entities = getEntitiesWithFilters("type_1", userFilter, badTestingFilters);
     assertEquals(0, entities.size());
+
+    entities = getEntitiesWithFilters("type_5", null, badTestingFilters);
+    assertEquals(0, entities.size());
   }
 
   public void testGetEvents() throws IOException {
