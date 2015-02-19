@@ -843,10 +843,7 @@ metricssystem context
 |<<<Sink_>>><instance><<<Dropped>>> | Total number of dropped sink operations
                                     | for the <instance>
 *-------------------------------------+--------------------------------------+
-|<<<Sink_>>><instance><<<Qsize>>> | Current queue length of sink operations \
-                                  | (BUT always set to 0 because nothing to
-                                  | increment this metrics, see
-                                  | {{{https://issues.apache.org/jira/browse/HADOOP-9941}HADOOP-9941}})
+|<<<Sink_>>><instance><<<Qsize>>> | Current queue length of the sink
 *-------------------------------------+--------------------------------------+
 
 default context

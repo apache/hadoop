@@ -29,7 +29,9 @@ import org.junit.runner.RunWith;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.stubbing.Answer;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -432,6 +434,54 @@ public class TestMetricsSystemImpl {
     r = recs.get(1);
     assertTrue("NumActiveSinks should be 3", Iterables.contains(r.metrics(),
                new MetricGaugeInt(MsInfo.NumActiveSinks, 3)));
+  }
+
+  @Test
+  public void testQSize() throws Exception {
+    new ConfigBuilder().add("*.period", 8)
+        .add("test.sink.test.class", TestSink.class.getName())
+        .save(TestMetricsConfig.getTestFilename("hadoop-metrics2-test"));
+    MetricsSystemImpl ms = new MetricsSystemImpl("Test");
+    final CountDownLatch proceedSignal = new CountDownLatch(1);
+    final CountDownLatch reachedPutMetricSignal = new CountDownLatch(1);
+    ms.start();
+    try {
+      MetricsSink slowSink = mock(MetricsSink.class);
+      MetricsSink dataSink = mock(MetricsSink.class);
+      ms.registerSink("slowSink",
+          "The sink that will wait on putMetric", slowSink);
+      ms.registerSink("dataSink",
+          "The sink I'll use to get info about slowSink", dataSink);
+      doAnswer(new Answer() {
+        @Override
+        public Object answer(InvocationOnMock invocation) throws Throwable {
+          reachedPutMetricSignal.countDown();
+          proceedSignal.await();
+          return null;
+        }
+      }).when(slowSink).putMetrics(any(MetricsRecord.class));
+
+      // trigger metric collection first time
+      ms.onTimerEvent();
+      assertTrue(reachedPutMetricSignal.await(1, TimeUnit.SECONDS));
+      // Now that the slow sink is still processing the first metric,
+      // its queue length should be 1 for the second collection.
+      ms.onTimerEvent();
+      verify(dataSink, timeout(500).times(2)).putMetrics(r1.capture());
+      List<MetricsRecord> mr = r1.getAllValues();
+      Number qSize = Iterables.find(mr.get(1).metrics(),
+          new Predicate<AbstractMetric>() {
+            @Override
+            public boolean apply(@Nullable AbstractMetric input) {
+              assert input != null;
+              return input.name().equals("Sink_slowSinkQsize");
+            }
+      }).value();
+      assertEquals(1, qSize);
+    } finally {
+      proceedSignal.countDown();
+      ms.stop();
+    }
   }
 
   @Metrics(context="test")

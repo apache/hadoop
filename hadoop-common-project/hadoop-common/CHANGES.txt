@@ -565,6 +565,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11595. Add default implementation for AbstractFileSystem#truncate.
     (yliu)
 
+    HADOOP-9087. Queue size metric for metric sinks isn't actually maintained
+    (Akira AJISAKA via jlowe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
