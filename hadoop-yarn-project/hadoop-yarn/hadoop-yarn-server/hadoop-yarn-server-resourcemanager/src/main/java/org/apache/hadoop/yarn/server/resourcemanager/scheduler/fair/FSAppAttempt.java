@@ -80,10 +80,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   /**
    * Delay scheduling: We often want to prioritize scheduling of node-local
-   * containers over rack-local or off-switch containers. To acheive this
-   * we first only allow node-local assigments for a given prioirty level,
+   * containers over rack-local or off-switch containers. To achieve this
+   * we first only allow node-local assignments for a given priority level,
    * then relax the locality threshold once we've had a long enough period
-   * without succesfully scheduling. We measure both the number of "missed"
+   * without successfully scheduling. We measure both the number of "missed"
    * scheduling opportunities since the last container was scheduled
    * at the current allowed level and the time since the last container
    * was scheduled. Currently we use only the former.
