@@ -562,6 +562,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11545. ArrayIndexOutOfBoundsException is thrown with "hadoop
     credential list -provider". (Brahma Reddy Battula via aajisaka)
 
+    HADOOP-11595. Add default implementation for AbstractFileSystem#truncate.
+    (yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

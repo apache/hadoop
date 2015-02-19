@@ -642,9 +642,12 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#truncate(Path, long)} except that Path f must be for
    * this file system.
    */
-  public abstract boolean truncate(Path f, long newLength)
+  public boolean truncate(Path f, long newLength)
       throws AccessControlException, FileNotFoundException,
-      UnresolvedLinkException, IOException;
+      UnresolvedLinkException, IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support truncate");
+  }
 
   /**
    * The specification of this method matches that of
