@@ -587,6 +587,9 @@ Release 2.7.0 - UNRELEASED
     YARN-1615. Fix typos in description about delay scheduling. (Akira Ajisaka via 
     ozawa)
 
+    YARN-933. Fixed InvalidStateTransitonException at FINAL_SAVING state in
+    RMApp. (Rohith Sharmaks via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
