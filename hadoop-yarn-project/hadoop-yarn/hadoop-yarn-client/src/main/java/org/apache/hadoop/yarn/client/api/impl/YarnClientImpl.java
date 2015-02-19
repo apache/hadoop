@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
@@ -775,6 +776,20 @@ public class YarnClientImpl extends YarnClient {
       IOException {
     return rmClient.getNodeToLabels(GetNodesToLabelsRequest.newInstance())
         .getNodeToLabels();
+  }
+
+  @Override
+  public Map<String, Set<NodeId>> getLabelsToNodes() throws YarnException,
+      IOException {
+    return rmClient.getLabelsToNodes(GetLabelsToNodesRequest.newInstance())
+        .getLabelsToNodes();
+  }
+
+  @Override
+  public Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels)
+      throws YarnException, IOException {
+    return rmClient.getLabelsToNodes(
+        GetLabelsToNodesRequest.newInstance(labels)).getLabelsToNodes();
   }
 
   @Override

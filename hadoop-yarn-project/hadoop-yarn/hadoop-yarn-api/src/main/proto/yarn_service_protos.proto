@@ -201,6 +201,14 @@ message GetNodesToLabelsResponseProto {
   repeated NodeIdToLabelsProto nodeToLabels = 1;
 }
 
+message GetLabelsToNodesRequestProto {
+  repeated string nodeLabels = 1;
+}
+
+message GetLabelsToNodesResponseProto {
+  repeated LabelsToNodeIdsProto labelsToNodes = 1;
+}
+
 message GetClusterNodeLabelsRequestProto {
 }
 
