@@ -434,7 +434,7 @@ MetricsSystem shows the statistics for metrics snapshots and publishes. Each met
 | `Sink_`*instance*`NumOps` | Total number of sink operations for the *instance* |
 | `Sink_`*instance*`AvgTime` | Average time in milliseconds of sink operations for the *instance* |
 | `Sink_`*instance*`Dropped` | Total number of dropped sink operations for the *instance* |
-| `Sink_`*instance*`Qsize` | Current queue length of sink operations  (BUT always set to 0 because nothing to increment this metrics, see [HADOOP-9941](https://issues.apache.org/jira/browse/HADOOP-9941)) |
+| `Sink_`*instance*`Qsize` | Current queue length of sink operations |
 
 default context
 ===============
