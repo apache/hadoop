@@ -363,7 +363,7 @@ public class FSOperations {
   }
 
   /**
-   * Executor that performs an append FileSystemAccess files system operation.
+   * Executor that performs a concat FileSystemAccess files system operation.
    */
   @InterfaceAudience.Private
   public static class FSConcat implements FileSystemAccess.FileSystemExecutor<Void> {
@@ -399,6 +399,47 @@ public class FSOperations {
     public Void execute(FileSystem fs) throws IOException {
       fs.concat(path, sources);
       return null;
+    }
+
+  }
+
+  /**
+   * Executor that performs a truncate FileSystemAccess files system operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSTruncate implements 
+      FileSystemAccess.FileSystemExecutor<JSONObject> {
+    private Path path;
+    private long newLength;
+
+    /**
+     * Creates a Truncate executor.
+     *
+     * @param path target path to truncate to.
+     * @param newLength The size the file is to be truncated to.
+     */
+    public FSTruncate(String path, long newLength) {
+      this.path = new Path(path);
+      this.newLength = newLength;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     *
+     * @return <code>true</code> if the file has been truncated to the desired,
+     *         <code>false</code> if a background process of adjusting the 
+     *         length of the last block has been started, and clients should 
+     *         wait for it to complete before proceeding with further file 
+     *         updates.
+     *
+     * @throws IOException thrown if an IO error occured.
+     */
+    @Override
+    public JSONObject execute(FileSystem fs) throws IOException {
+      boolean result = fs.truncate(path, newLength);
+      return toJSON(HttpFSFileSystem.TRUNCATE_JSON.toLowerCase(), result);
     }
 
   }

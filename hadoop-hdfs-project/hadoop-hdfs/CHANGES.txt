@@ -35,6 +35,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7584. Enable Quota Support for Storage Types (See breakdown of
     tasks below)
 
+    HDFS-7656. Expose truncate API for HDFS httpfs. (yliu)
+
   IMPROVEMENTS
 
     HDFS-7055. Add tracing to DFSInputStream (cmccabe)

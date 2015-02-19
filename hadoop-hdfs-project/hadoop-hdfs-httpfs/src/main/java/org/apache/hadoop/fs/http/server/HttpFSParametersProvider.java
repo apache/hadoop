@@ -62,6 +62,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.INSTRUMENTATION, new Class[]{});
     PARAMS_DEF.put(Operation.APPEND, new Class[]{DataParam.class});
     PARAMS_DEF.put(Operation.CONCAT, new Class[]{SourcesParam.class});
+    PARAMS_DEF.put(Operation.TRUNCATE, new Class[]{NewLengthParam.class});
     PARAMS_DEF.put(Operation.CREATE,
       new Class[]{PermissionParam.class, OverwriteParam.class,
                   ReplicationParam.class, BlockSizeParam.class, DataParam.class});
@@ -283,6 +284,25 @@ public class HttpFSParametersProvider extends ParametersProvider {
      * Constructor.
      */
     public OffsetParam() {
+      super(NAME, 0l);
+    }
+  }
+
+  /**
+   * Class for newlength parameter.
+   */
+  @InterfaceAudience.Private
+  public static class NewLengthParam extends LongParam {
+
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.NEW_LENGTH_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public NewLengthParam() {
       super(NAME, 0l);
     }
   }
