@@ -141,12 +141,6 @@ public class TestAfsCheckPath {
     }
 
     @Override
-    public boolean truncate(Path f, long newLength) throws IOException {
-      // deliberately empty
-      return false;
-    }
-
-    @Override
     public void renameInternal(Path src, Path dst) throws IOException {
       // deliberately empty
     }
