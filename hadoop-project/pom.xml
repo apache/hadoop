@@ -827,7 +827,6 @@
         <artifactId>zookeeper</artifactId>
         <version>${zookeeper.version}</version>
         <type>test-jar</type>
-        <scope>test</scope>
         <exclusions>
           <exclusion>
             <groupId>org.jboss.netty</groupId>

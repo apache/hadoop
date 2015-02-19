@@ -265,6 +265,9 @@ Release 2.7.0 - UNRELEASED
     YARN-1299. Improve a log message in AppSchedulingInfo by adding application 
     id. (Ashutosh Jindal and Devaraj K via ozawa)
 
+    YARN-1514. Utility to benchmark ZKRMStateStore#loadState for RM HA.
+    (Tsuyoshi OZAWA via jianhe)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
