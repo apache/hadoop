@@ -207,6 +207,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11521. Make connection timeout configurable in s3a.
     (Thomas Demoor via stevel)
 
+    HADOOP-11440. Use "test.build.data" instead of "build.test.dir" for testing
+    in ClientBaseWithFixes. (Kengo Seki via aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
