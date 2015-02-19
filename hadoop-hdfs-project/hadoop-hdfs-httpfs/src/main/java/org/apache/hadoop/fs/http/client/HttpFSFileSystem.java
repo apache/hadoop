@@ -109,11 +109,14 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTR_VALUE_PARAM = "xattr.value";
   public static final String XATTR_SET_FLAG_PARAM = "flag";
   public static final String XATTR_ENCODING_PARAM = "encoding";
+  public static final String NEW_LENGTH_PARAM = "newlength";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
 
   public static final String RENAME_JSON = "boolean";
+
+  public static final String TRUNCATE_JSON = "boolean";
 
   public static final String DELETE_JSON = "boolean";
 
@@ -191,7 +194,7 @@ public class HttpFSFileSystem extends FileSystem
     GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
     GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),
     INSTRUMENTATION(HTTP_GET), GETACLSTATUS(HTTP_GET),
-    APPEND(HTTP_POST), CONCAT(HTTP_POST),
+    APPEND(HTTP_POST), CONCAT(HTTP_POST), TRUNCATE(HTTP_POST),
     CREATE(HTTP_PUT), MKDIRS(HTTP_PUT), RENAME(HTTP_PUT), SETOWNER(HTTP_PUT),
     SETPERMISSION(HTTP_PUT), SETREPLICATION(HTTP_PUT), SETTIMES(HTTP_PUT),
     MODIFYACLENTRIES(HTTP_PUT), REMOVEACLENTRIES(HTTP_PUT),
@@ -565,6 +568,25 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.APPEND.toString());
     return uploadData(Operation.APPEND.getMethod(), f, params, bufferSize,
                       HttpURLConnection.HTTP_OK);
+  }
+
+  /**
+   * Truncate a file.
+   * 
+   * @param f the file to be truncated.
+   * @param newLength The size the file is to be truncated to.
+   *
+   * @throws IOException
+   */
+  @Override
+  public boolean truncate(Path f, long newLength) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.TRUNCATE.toString());
+    params.put(NEW_LENGTH_PARAM, Long.toString(newLength));
+    HttpURLConnection conn = getConnection(Operation.TRUNCATE.getMethod(),
+        params, f, true);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return (Boolean) json.get(TRUNCATE_JSON);
   }
 
   /**

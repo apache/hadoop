@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FilterParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.GroupParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.LenParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ModifiedTimeParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.NewLengthParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OffsetParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OperationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OverwriteParam;
@@ -425,6 +426,15 @@ public class HttpFSServer {
         AUDIT_LOG.info("[{}]", path);
         System.out.println("SENT RESPONSE");
         response = Response.ok().build();
+        break;
+      }
+      case TRUNCATE: {
+        Long newLength = params.get(NewLengthParam.NAME, NewLengthParam.class);
+        FSOperations.FSTruncate command = 
+            new FSOperations.FSTruncate(path, newLength);
+        JSONObject json = fsExecute(user, command);
+        AUDIT_LOG.info("Truncate [{}] to length [{}]", path, newLength);
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
       default: {
