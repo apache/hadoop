@@ -440,6 +440,18 @@ public class ResourceMgrDelegate extends YarnClient {
   }
 
   @Override
+  public Map<String, Set<NodeId>> getLabelsToNodes() throws YarnException,
+      IOException {
+    return client.getLabelsToNodes();
+  }
+
+  @Override
+  public Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels)
+      throws YarnException, IOException {
+    return client.getLabelsToNodes(labels);
+  }
+
+  @Override
   public Set<String> getClusterNodeLabels()
       throws YarnException, IOException {
     return client.getClusterNodeLabels();
