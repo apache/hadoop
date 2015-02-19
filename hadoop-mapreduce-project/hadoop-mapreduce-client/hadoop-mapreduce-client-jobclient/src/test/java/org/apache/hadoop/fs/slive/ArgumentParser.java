@@ -144,6 +144,7 @@ class ArgumentParser {
     cliopt.addOption(ConfigOption.DURATION);
     cliopt.addOption(ConfigOption.EXIT_ON_ERROR);
     cliopt.addOption(ConfigOption.SLEEP_TIME);
+    cliopt.addOption(ConfigOption.TRUNCATE_WAIT);
     cliopt.addOption(ConfigOption.FILES);
     cliopt.addOption(ConfigOption.DIR_SIZE);
     cliopt.addOption(ConfigOption.BASE_DIR);
@@ -167,6 +168,7 @@ class ArgumentParser {
     cliopt.addOption(ConfigOption.READ_SIZE);
     cliopt.addOption(ConfigOption.WRITE_SIZE);
     cliopt.addOption(ConfigOption.APPEND_SIZE);
+    cliopt.addOption(ConfigOption.TRUNCATE_SIZE);
     cliopt.addOption(ConfigOption.RANDOM_SEED);
     cliopt.addOption(ConfigOption.QUEUE_NAME);
     cliopt.addOption(ConfigOption.HELP);

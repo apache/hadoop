@@ -45,7 +45,7 @@ class Constants {
    * Allowed operation types
    */
   enum OperationType {
-    READ, APPEND, RENAME, LS, MKDIR, DELETE, CREATE;
+    READ, APPEND, RENAME, LS, MKDIR, DELETE, CREATE, TRUNCATE;
     String lowerName() {
       return this.name().toLowerCase(Locale.ENGLISH);
     }
@@ -53,7 +53,7 @@ class Constants {
 
   // program info
   static final String PROG_NAME = SliveTest.class.getSimpleName();
-  static final String PROG_VERSION = "0.0.2";
+  static final String PROG_VERSION = "0.1.0";
 
   // useful constants
   static final int MEGABYTES = 1048576;
