@@ -131,6 +131,32 @@ class ConfigExtractor {
   }
 
   /**
+   * @return whether the mapper or reducer should wait for truncate recovery
+   */
+  boolean shouldWaitOnTruncate() {
+    return shouldWaitOnTruncate(null);
+  }
+
+  /**
+   * @param primary
+   *          primary the initial string to be used for the value of this
+   *          configuration option (if not provided then config and then the
+   *          default are used)
+   *
+   * @return whether the mapper or reducer should wait for truncate recovery
+   */
+  boolean shouldWaitOnTruncate(String primary) {
+    String val = primary;
+    if (val == null) {
+      val = config.get(ConfigOption.EXIT_ON_ERROR.getCfgOption());
+    }
+    if (val == null) {
+      return ConfigOption.EXIT_ON_ERROR.getDefault();
+    }
+    return Boolean.parseBoolean(val);
+  }
+
+  /**
    * @return the number of reducers to use
    */
   Integer getReducerAmount() {
@@ -537,6 +563,24 @@ class ConfigExtractor {
    * @param primary
    *          the initial string to be used for the value of this configuration
    *          option (if not provided then config and then the default are used)
+   * @return the truncate byte size range (or null if none)
+   */
+  Range<Long> getTruncateSize(String primary) {
+    return getMinMaxBytes(ConfigOption.TRUNCATE_SIZE, primary);
+  }
+
+  /**
+   * @return the truncate byte size range (or null if none) using config and
+   *         default for lookup
+   */
+  Range<Long> getTruncateSize() {
+    return getTruncateSize(null);
+  }
+
+  /**
+   * @param primary
+   *          the initial string to be used for the value of this configuration
+   *          option (if not provided then config and then the default are used)
    * @return the sleep range (or null if none)
    */
   Range<Long> getSleepRange(String primary) {
@@ -594,6 +638,21 @@ class ConfigExtractor {
     if (appendRange == null
         || (appendRange.getLower() == appendRange.getUpper() && (appendRange
             .getUpper() == Long.MAX_VALUE))) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Returns whether the truncate range should use the block size range
+   *
+   * @return true|false
+   */
+  boolean shouldTruncateUseBlockSize() {
+    Range<Long> truncateRange = getTruncateSize();
+    if (truncateRange == null
+        || (truncateRange.getLower() == truncateRange.getUpper()
+            && (truncateRange.getUpper() == Long.MAX_VALUE))) {
       return true;
     }
     return false;

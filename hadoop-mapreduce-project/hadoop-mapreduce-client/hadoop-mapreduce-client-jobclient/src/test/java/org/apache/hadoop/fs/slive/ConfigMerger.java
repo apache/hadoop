@@ -282,6 +282,18 @@ class ConfigMerger {
             "Error extracting & merging exit on error value", e);
       }
     }
+    // overwrite the truncate wait setting
+    {
+      try {
+        boolean waitOnTruncate = extractor.shouldWaitOnTruncate(opts
+            .getValue(ConfigOption.TRUNCATE_WAIT.getOpt()));
+        base.setBoolean(ConfigOption.TRUNCATE_WAIT.getCfgOption(),
+            waitOnTruncate);
+      } catch (Exception e) {
+        throw new ConfigException(
+            "Error extracting & merging wait on truncate value", e);
+      }
+    }
     // verify and set file limit and ensure > 0
     {
       Integer fileAm = null;
@@ -551,6 +563,29 @@ class ConfigMerger {
         }
         base
             .set(ConfigOption.APPEND_SIZE.getCfgOption(), appendSize.toString());
+      }
+    }
+    // set the truncate size range
+    {
+      Range<Long> truncateSize = null;
+      try {
+        truncateSize = extractor.getTruncateSize(opts
+            .getValue(ConfigOption.TRUNCATE_SIZE.getOpt()));
+      } catch (Exception e) {
+        throw new ConfigException(
+            "Error extracting & merging truncate size range", e);
+      }
+      if (truncateSize != null) {
+        if (truncateSize.getLower() > truncateSize.getUpper()) {
+          throw new ConfigException(
+              "Truncate size minimum is greater than its maximum");
+        }
+        if (truncateSize.getLower() < 0) {
+          throw new ConfigException(
+              "Truncate size minimum must be greater than or equal to zero");
+        }
+        base
+            .set(ConfigOption.TRUNCATE_SIZE.getCfgOption(), truncateSize.toString());
       }
     }
     // set the seed

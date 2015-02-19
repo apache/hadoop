@@ -6,6 +6,10 @@ Release 2.7.0 - UNRELEASED
 
   NEW FEATURES
 
+    MAPREDUCE-6227. DFSIO for truncate. (shv via yliu)
+
+    MAPREDUCE-6228. Add truncate operation to SLive. (Plamen Jeliazkov via shv)
+
   IMPROVEMENTS
 
     MAPREDUCE-6149. Document override log4j.properties in MR job.
@@ -41,8 +45,6 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-5800. Use Job#getInstance instead of deprecated constructors
     (aajisaka)
-
-    MAPREDUCE-6227. DFSIO for truncate. (shv via yliu)
 
     MAPREDUCE-6253. Update use of Iterator to Iterable. (Ray Chiang via devaraj)
 
