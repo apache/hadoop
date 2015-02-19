@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 import java.util.Stack;
 import java.util.StringTokenizer;
@@ -169,7 +170,9 @@ public class DistCpV1 implements Tool {
 
     final char symbol;
 
-    private FileAttribute() {symbol = toString().toLowerCase().charAt(0);}
+    private FileAttribute() {
+      symbol = toString().toLowerCase(Locale.ENGLISH).charAt(0);
+    }
     
     static EnumSet<FileAttribute> parse(String s) {
       if (s == null || s.length() == 0) {

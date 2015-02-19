@@ -27,6 +27,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Locale;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -102,7 +103,7 @@ public class DBCountPageView extends Configured implements Tool {
   
   private void createConnection(String driverClassName
       , String url) throws Exception {
-    if(driverClassName.toLowerCase().contains("oracle")) {
+    if(driverClassName.toLowerCase(Locale.ENGLISH).contains("oracle")) {
       isOracle = true;
     }
     Class.forName(driverClassName);

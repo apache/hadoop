@@ -22,6 +22,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Arrays;
@@ -222,12 +223,12 @@ public class CLI extends Configured implements Tool {
       taskType = argv[2];
       taskState = argv[3];
       displayTasks = true;
-      if (!taskTypes.contains(taskType.toUpperCase())) {
+      if (!taskTypes.contains(taskType.toUpperCase(Locale.ENGLISH))) {
         System.out.println("Error: Invalid task-type: " + taskType);
         displayUsage(cmd);
         return exitCode;
       }
-      if (!taskStates.contains(taskState.toLowerCase())) {
+      if (!taskStates.contains(taskState.toLowerCase(Locale.ENGLISH))) {
         System.out.println("Error: Invalid task-state: " + taskState);
         displayUsage(cmd);
         return exitCode;
@@ -593,7 +594,8 @@ public class CLI extends Configured implements Tool {
   throws IOException, InterruptedException {
 	  
     TaskReport[] reports=null;
-    reports = job.getTaskReports(TaskType.valueOf(type.toUpperCase()));
+    reports = job.getTaskReports(
+        TaskType.valueOf(type.toUpperCase(Locale.ENGLISH)));
     for (TaskReport report : reports) {
       TIPStatus status = report.getCurrentStatus();
       if ((state.equalsIgnoreCase("pending") && status ==TIPStatus.PENDING) ||

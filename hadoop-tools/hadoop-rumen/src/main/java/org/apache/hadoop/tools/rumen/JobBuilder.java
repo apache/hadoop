@@ -20,6 +20,7 @@ package org.apache.hadoop.tools.rumen;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -433,7 +434,7 @@ public class JobBuilder {
       return Values.SUCCESS;
     }
     
-    return Values.valueOf(name.toUpperCase());
+    return Values.valueOf(name.toUpperCase(Locale.ENGLISH));
   }
 
   private void processTaskUpdatedEvent(TaskUpdatedEvent event) {

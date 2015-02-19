@@ -405,6 +405,8 @@ Trunk (Unreleased)
 
     HADOOP-11585. Fix formatting in Tracing.md (Masatake Iwasaki via aw)
 
+    HADOOP-11602. Fix toUpperCase/toLowerCase to use Locale.ENGLISH. (ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

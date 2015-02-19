@@ -41,6 +41,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
@@ -213,7 +214,7 @@ public class TestUserGroupInformation {
         userName = userName.substring(sp + 1);
       }
       // user names are case insensitive on Windows. Make consistent
-      userName = userName.toLowerCase();
+      userName = userName.toLowerCase(Locale.ENGLISH);
     }
     // get the groups
     pp = Runtime.getRuntime().exec(Shell.WINDOWS ?
@@ -233,7 +234,7 @@ public class TestUserGroupInformation {
     String loginUserName = login.getShortUserName();
     if(Shell.WINDOWS) {
       // user names are case insensitive on Windows. Make consistent
-      loginUserName = loginUserName.toLowerCase();
+      loginUserName = loginUserName.toLowerCase(Locale.ENGLISH);
     }
     assertEquals(userName, loginUserName);
 

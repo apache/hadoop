@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -711,7 +712,8 @@ public class JobHistoryEventHandler extends AbstractService
   private void processEventForTimelineServer(HistoryEvent event, JobId jobId,
           long timestamp) {
     TimelineEvent tEvent = new TimelineEvent();
-    tEvent.setEventType(event.getEventType().name().toUpperCase());
+    tEvent.setEventType(
+        event.getEventType().name().toUpperCase(Locale.ENGLISH));
     tEvent.setTimestamp(timestamp);
     TimelineEntity tEntity = new TimelineEntity();
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.lib.wsrs;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.Locale;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -37,7 +38,7 @@ public abstract class EnumSetParam<E extends Enum<E>> extends Param<EnumSet<E>> 
     final EnumSet<E> set = EnumSet.noneOf(klass);
     if (!str.isEmpty()) {
       for (String sub : str.split(",")) {
-        set.add(Enum.valueOf(klass, sub.trim().toUpperCase()));
+        set.add(Enum.valueOf(klass, sub.trim().toUpperCase(Locale.ENGLISH)));
       }
     }
     return set;

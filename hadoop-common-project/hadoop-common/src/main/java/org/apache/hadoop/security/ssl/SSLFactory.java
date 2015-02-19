@@ -33,6 +33,7 @@ import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.security.GeneralSecurityException;
+import java.util.Locale;
 
 /**
  * Factory that creates SSLEngine and SSLSocketFactory instances using
@@ -138,7 +139,7 @@ public class SSLFactory implements ConnectionConfigurator {
   private HostnameVerifier getHostnameVerifier(Configuration conf)
       throws GeneralSecurityException, IOException {
     return getHostnameVerifier(conf.get(SSL_HOSTNAME_VERIFIER_KEY, "DEFAULT").
-        trim().toUpperCase());
+        trim().toUpperCase(Locale.ENGLISH));
   }
 
   public static HostnameVerifier getHostnameVerifier(String verifier)

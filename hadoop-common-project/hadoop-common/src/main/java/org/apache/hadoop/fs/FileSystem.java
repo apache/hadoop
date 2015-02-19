@@ -33,6 +33,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.ServiceLoader;
@@ -2795,8 +2796,10 @@ public abstract class FileSystem extends Configured implements Closeable {
       }
 
       Key(URI uri, Configuration conf, long unique) throws IOException {
-        scheme = uri.getScheme()==null?"":uri.getScheme().toLowerCase();
-        authority = uri.getAuthority()==null?"":uri.getAuthority().toLowerCase();
+        scheme = uri.getScheme() == null ?
+            "" : uri.getScheme().toLowerCase(Locale.ENGLISH);
+        authority = uri.getAuthority() == null ?
+            "" : uri.getAuthority().toLowerCase(Locale.ENGLISH);
         this.unique = unique;
         
         this.ugi = UserGroupInformation.getCurrentUser();

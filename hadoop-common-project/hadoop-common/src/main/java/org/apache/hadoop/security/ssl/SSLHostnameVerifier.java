@@ -41,6 +41,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
@@ -365,7 +366,7 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
             buf.append('<');
             for (int i = 0; i < hosts.length; i++) {
                 String h = hosts[i];
-                h = h != null ? h.trim().toLowerCase() : "";
+                h = h != null ? h.trim().toLowerCase(Locale.ENGLISH) : "";
                 hosts[i] = h;
                 if (i > 0) {
                     buf.append('/');
@@ -406,7 +407,7 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
             out:
             for (Iterator<String> it = names.iterator(); it.hasNext();) {
                 // Don't trim the CN, though!
-                final String cn = it.next().toLowerCase();
+                final String cn = it.next().toLowerCase(Locale.ENGLISH);
                 // Store CN in StringBuffer in case we need to report an error.
                 buf.append(" <");
                 buf.append(cn);
@@ -424,7 +425,8 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
                                      acceptableCountryWildcard(cn);
 
                 for (int i = 0; i < hosts.length; i++) {
-                    final String hostName = hosts[i].trim().toLowerCase();
+                    final String hostName =
+                        hosts[i].trim().toLowerCase(Locale.ENGLISH);
                     if (doWildcard) {
                         match = hostName.endsWith(cn.substring(1));
                         if (match && strictWithSubDomains) {
@@ -479,7 +481,7 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
         }
 
         public static boolean isLocalhost(String host) {
-            host = host != null ? host.trim().toLowerCase() : "";
+            host = host != null ? host.trim().toLowerCase(Locale.ENGLISH) : "";
             if (host.startsWith("::1")) {
                 int x = host.lastIndexOf('%');
                 if (x >= 0) {

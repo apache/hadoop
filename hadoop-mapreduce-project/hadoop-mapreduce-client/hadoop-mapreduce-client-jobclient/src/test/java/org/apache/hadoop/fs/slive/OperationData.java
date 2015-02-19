@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.slive;
 
+import java.util.Locale;
 import org.apache.hadoop.fs.slive.Constants.Distribution;
 
 /**
@@ -52,7 +53,8 @@ class OperationData {
       percent = (Double.parseDouble(pieces[0]) / 100.0d);
     } else if (pieces.length >= 2) {
       percent = (Double.parseDouble(pieces[0]) / 100.0d);
-      distribution = Distribution.valueOf(pieces[1].toUpperCase());
+      distribution =
+          Distribution.valueOf(pieces[1].toUpperCase(Locale.ENGLISH));
     }
   }
 

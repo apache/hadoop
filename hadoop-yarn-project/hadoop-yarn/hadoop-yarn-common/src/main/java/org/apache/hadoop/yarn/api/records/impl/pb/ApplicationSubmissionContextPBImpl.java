@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -291,7 +292,7 @@ extends ApplicationSubmissionContext {
     // Convert applicationTags to lower case and add
     this.applicationTags = new HashSet<String>();
     for (String tag : tags) {
-      this.applicationTags.add(tag.toLowerCase());
+      this.applicationTags.add(tag.toLowerCase(Locale.ENGLISH));
     }
   }
 

@@ -26,6 +26,7 @@ import java.text.DecimalFormat;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
@@ -173,7 +174,7 @@ public class ApplicationCLI extends YarnCLI {
           if (types != null) {
             for (String type : types) {
               if (!type.trim().isEmpty()) {
-                appTypes.add(type.toUpperCase().trim());
+                appTypes.add(type.toUpperCase(Locale.ENGLISH).trim());
               }
             }
           }
@@ -192,7 +193,7 @@ public class ApplicationCLI extends YarnCLI {
                 }
                 try {
                   appStates.add(YarnApplicationState.valueOf(state
-                      .toUpperCase().trim()));
+                      .toUpperCase(Locale.ENGLISH).trim()));
                 } catch (IllegalArgumentException ex) {
                   sysout.println("The application state " + state
                       + " is invalid.");

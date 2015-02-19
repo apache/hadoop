@@ -23,6 +23,7 @@ import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -169,7 +170,7 @@ public abstract class DelegationTokenAuthenticationHandler
     boolean requestContinues = true;
     String op = ServletUtils.getParameter(request,
         KerberosDelegationTokenAuthenticator.OP_PARAM);
-    op = (op != null) ? op.toUpperCase() : null;
+    op = (op != null) ? op.toUpperCase(Locale.ENGLISH) : null;
     if (DELEGATION_TOKEN_OPS.contains(op) &&
         !request.getMethod().equals("OPTIONS")) {
       KerberosDelegationTokenAuthenticator.DelegationTokenOperation dtOp =

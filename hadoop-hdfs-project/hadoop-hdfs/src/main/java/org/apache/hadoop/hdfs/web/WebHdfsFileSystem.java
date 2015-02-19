@@ -32,6 +32,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.StringTokenizer;
 
@@ -1242,7 +1243,7 @@ public class WebHdfsFileSystem extends FileSystem
     if (query == null) {
       return url;
     }
-    final String lower = query.toLowerCase();
+    final String lower = query.toLowerCase(Locale.ENGLISH);
     if (!lower.startsWith(OFFSET_PARAM_PREFIX)
         && !lower.contains("&" + OFFSET_PARAM_PREFIX)) {
       return url;
@@ -1253,7 +1254,7 @@ public class WebHdfsFileSystem extends FileSystem
     for(final StringTokenizer st = new StringTokenizer(query, "&");
         st.hasMoreTokens();) {
       final String token = st.nextToken();
-      if (!token.toLowerCase().startsWith(OFFSET_PARAM_PREFIX)) {
+      if (!token.toLowerCase(Locale.ENGLISH).startsWith(OFFSET_PARAM_PREFIX)) {
         if (b == null) {
           b = new StringBuilder("?").append(token);
         } else {

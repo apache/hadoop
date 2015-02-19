@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
 
 /**
@@ -329,7 +330,8 @@ public class VersionInfoMojo extends AbstractMojo {
       }
 
       private String normalizePath(File file) {
-        return file.getPath().toUpperCase().replaceAll("\\\\", "/");
+        return file.getPath().toUpperCase(Locale.ENGLISH)
+            .replaceAll("\\\\", "/");
       }
     });
     byte[] md5 = computeMD5(files);

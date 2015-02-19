@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
 import java.util.Collections;
+import java.util.Locale;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
@@ -147,7 +148,8 @@ public class AHSWebServices extends WebServices {
     }
     Set<String> appStates = parseQueries(statesQuery, true);
     for (String appState : appStates) {
-      switch (YarnApplicationState.valueOf(appState.toUpperCase())) {
+      switch (YarnApplicationState.valueOf(
+          appState.toUpperCase(Locale.ENGLISH))) {
         case FINISHED:
         case FAILED:
         case KILLED:

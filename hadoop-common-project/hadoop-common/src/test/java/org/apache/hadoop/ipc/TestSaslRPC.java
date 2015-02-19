@@ -41,6 +41,7 @@ import java.security.Security;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -181,7 +182,7 @@ public class TestSaslRPC {
     StringBuilder sb = new StringBuilder();
     int i = 0;
     for (QualityOfProtection qop:qops){
-     sb.append(qop.name().toLowerCase());
+     sb.append(qop.name().toLowerCase(Locale.ENGLISH));
      if (++i < qops.length){
        sb.append(",");
      }

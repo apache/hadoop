@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import java.util.Locale;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -72,7 +73,7 @@ public abstract class SchedulingPolicy {
       throws AllocationConfigurationException {
     @SuppressWarnings("rawtypes")
     Class clazz;
-    String text = policy.toLowerCase();
+    String text = policy.toLowerCase(Locale.ENGLISH);
     if (text.equalsIgnoreCase(FairSharePolicy.NAME)) {
       clazz = FairSharePolicy.class;
     } else if (text.equalsIgnoreCase(FifoPolicy.NAME)) {

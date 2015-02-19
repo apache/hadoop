@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -82,7 +83,8 @@ public class CheckUploadContentTypeFilter implements Filter {
     String method = httpReq.getMethod();
     if (method.equals("PUT") || method.equals("POST")) {
       String op = httpReq.getParameter(HttpFSFileSystem.OP_PARAM);
-      if (op != null && UPLOAD_OPERATIONS.contains(op.toUpperCase())) {
+      if (op != null &&
+          UPLOAD_OPERATIONS.contains(op.toUpperCase(Locale.ENGLISH))) {
         if ("true".equalsIgnoreCase(httpReq.getParameter(HttpFSParametersProvider.DataParam.NAME))) {
           String contentType = httpReq.getContentType();
           contentTypeOK =

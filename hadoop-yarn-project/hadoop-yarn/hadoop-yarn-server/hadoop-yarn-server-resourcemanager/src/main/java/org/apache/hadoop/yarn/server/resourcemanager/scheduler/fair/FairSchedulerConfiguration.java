@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -241,7 +242,7 @@ public class FairSchedulerConfiguration extends Configuration {
   public static Resource parseResourceConfigValue(String val)
       throws AllocationConfigurationException {
     try {
-      val = val.toLowerCase();
+      val = val.toLowerCase(Locale.ENGLISH);
       int memory = findResource(val, "mb");
       int vcores = findResource(val, "vcores");
       return BuilderUtils.newResource(memory, vcores);

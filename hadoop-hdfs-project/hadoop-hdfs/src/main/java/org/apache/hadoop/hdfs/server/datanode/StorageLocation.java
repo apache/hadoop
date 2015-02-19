@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 import java.io.File;
@@ -88,7 +89,8 @@ public class StorageLocation {
       String classString = matcher.group(1);
       location = matcher.group(2);
       if (!classString.isEmpty()) {
-        storageType = StorageType.valueOf(classString.toUpperCase());
+        storageType = StorageType.valueOf(
+            classString.toUpperCase(Locale.ENGLISH));
       }
     }
 

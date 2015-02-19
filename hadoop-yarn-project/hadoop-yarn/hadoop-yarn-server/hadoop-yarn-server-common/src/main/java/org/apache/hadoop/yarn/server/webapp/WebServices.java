@@ -23,6 +23,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
@@ -164,7 +165,7 @@ public class WebServices {
 
       if (checkAppStates
           && !appStates.contains(appReport.getYarnApplicationState().toString()
-            .toLowerCase())) {
+            .toLowerCase(Locale.ENGLISH))) {
         continue;
       }
       if (finalStatusQuery != null && !finalStatusQuery.isEmpty()) {
@@ -186,7 +187,7 @@ public class WebServices {
       }
       if (checkAppTypes
           && !appTypes.contains(appReport.getApplicationType().trim()
-            .toLowerCase())) {
+            .toLowerCase(Locale.ENGLISH))) {
         continue;
       }
 
@@ -368,7 +369,8 @@ public class WebServices {
               if (isState) {
                 try {
                   // enum string is in the uppercase
-                  YarnApplicationState.valueOf(paramStr.trim().toUpperCase());
+                  YarnApplicationState.valueOf(
+                      paramStr.trim().toUpperCase(Locale.ENGLISH));
                 } catch (RuntimeException e) {
                   YarnApplicationState[] stateArray =
                       YarnApplicationState.values();
@@ -378,7 +380,7 @@ public class WebServices {
                       + allAppStates);
                 }
               }
-              params.add(paramStr.trim().toLowerCase());
+              params.add(paramStr.trim().toLowerCase(Locale.ENGLISH));
             }
           }
         }

@@ -43,6 +43,7 @@ import java.io.OutputStream;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -527,7 +528,8 @@ public class FSOperations {
     @Override
     public JSONObject execute(FileSystem fs) throws IOException {
       boolean deleted = fs.delete(path, recursive);
-      return toJSON(HttpFSFileSystem.DELETE_JSON.toLowerCase(), deleted);
+      return toJSON(
+          HttpFSFileSystem.DELETE_JSON.toLowerCase(Locale.ENGLISH), deleted);
     }
 
   }

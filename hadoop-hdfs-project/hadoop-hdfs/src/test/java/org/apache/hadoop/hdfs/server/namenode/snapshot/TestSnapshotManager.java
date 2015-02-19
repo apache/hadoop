@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
@@ -70,7 +71,7 @@ public class TestSnapshotManager {
       Assert.fail("Expected SnapshotException not thrown");
     } catch (SnapshotException se) {
       Assert.assertTrue(
-          se.getMessage().toLowerCase().contains("rollover"));
+          se.getMessage().toLowerCase(Locale.ENGLISH).contains("rollover"));
     }
 
     // Delete a snapshot to free up a slot.
@@ -86,7 +87,7 @@ public class TestSnapshotManager {
       Assert.fail("Expected SnapshotException not thrown");
     } catch (SnapshotException se) {
       Assert.assertTrue(
-          se.getMessage().toLowerCase().contains("rollover"));
+          se.getMessage().toLowerCase(Locale.ENGLISH).contains("rollover"));
     }
   }
 }

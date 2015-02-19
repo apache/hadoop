@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Locale;
 
 /** A collection of block storage policies. */
 public class BlockStoragePolicySuite {
@@ -131,7 +132,8 @@ public class BlockStoragePolicySuite {
   }
 
   public static String buildXAttrName() {
-    return XAttrNS.toString().toLowerCase() + "." + STORAGE_POLICY_XATTR_NAME;
+    return XAttrNS.toString().toLowerCase(Locale.ENGLISH) + "."
+        + STORAGE_POLICY_XATTR_NAME;
   }
 
   public static XAttr buildXAttr(byte policyId) {

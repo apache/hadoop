@@ -85,12 +85,13 @@ class MetricsConfig extends SubsetConfiguration {
   private ClassLoader pluginLoader;
 
   MetricsConfig(Configuration c, String prefix) {
-    super(c, prefix.toLowerCase(Locale.US), ".");
+    super(c, prefix.toLowerCase(Locale.ENGLISH), ".");
   }
 
   static MetricsConfig create(String prefix) {
-    return loadFirst(prefix, "hadoop-metrics2-"+ prefix.toLowerCase(Locale.US)
-                     +".properties", DEFAULT_FILE_NAME);
+    return loadFirst(prefix, "hadoop-metrics2" + "-"
+        + prefix.toLowerCase(Locale.ENGLISH)
+        +".properties", DEFAULT_FILE_NAME);
   }
 
   static MetricsConfig create(String prefix, String... fileNames) {

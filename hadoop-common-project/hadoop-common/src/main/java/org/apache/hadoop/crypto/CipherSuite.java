@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.crypto;
 
+import java.util.Locale;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -97,7 +98,7 @@ public enum CipherSuite {
     String[] parts = name.split("/");
     StringBuilder suffix = new StringBuilder();
     for (String part : parts) {
-      suffix.append(".").append(part.toLowerCase());
+      suffix.append(".").append(part.toLowerCase(Locale.ENGLISH));
     }
     
     return suffix.toString();

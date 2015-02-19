@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.ArrayList;
@@ -319,42 +320,43 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
     }
 
     for (int i = 0; i < args.length - (inputFilename == null ? 0 : 1); ++i) {
-      if ("-h".equals(args[i].toLowerCase())
-          || "-help".equals(args[i].toLowerCase())) {
+      if ("-h".equals(args[i].toLowerCase(Locale.ENGLISH))
+          || "-help".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         usage();
         return 0;
       }
 
-      if ("-c".equals(args[i].toLowerCase())
-          || "-collect-prefixes".equals(args[i].toLowerCase())) {
+      if ("-c".equals(args[i].toLowerCase(Locale.ENGLISH))
+          || "-collect-prefixes".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         collecting = true;
         continue;
       }
 
       // these control the job digest
-      if ("-write-job-trace".equals(args[i].toLowerCase())) {
+      if ("-write-job-trace".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         ++i;
         jobTraceFilename = new Path(args[i]);
         continue;
       }
 
-      if ("-single-line-job-traces".equals(args[i].toLowerCase())) {
+      if ("-single-line-job-traces".equals(
+          args[i].toLowerCase(Locale.ENGLISH))) {
         prettyprintTrace = false;
         continue;
       }
 
-      if ("-omit-task-details".equals(args[i].toLowerCase())) {
+      if ("-omit-task-details".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         omitTaskDetails = true;
         continue;
       }
 
-      if ("-write-topology".equals(args[i].toLowerCase())) {
+      if ("-write-topology".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         ++i;
         topologyFilename = new Path(args[i]);
         continue;
       }
 
-      if ("-job-digest-spectra".equals(args[i].toLowerCase())) {
+      if ("-job-digest-spectra".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         ArrayList<Integer> values = new ArrayList<Integer>();
 
         ++i;
@@ -384,13 +386,13 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
         continue;
       }
 
-      if ("-d".equals(args[i].toLowerCase())
-          || "-debug".equals(args[i].toLowerCase())) {
+      if ("-d".equals(args[i].toLowerCase(Locale.ENGLISH))
+          || "-debug".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         debug = true;
         continue;
       }
 
-      if ("-spreads".equals(args[i].toLowerCase())) {
+      if ("-spreads".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         int min = Integer.parseInt(args[i + 1]);
         int max = Integer.parseInt(args[i + 2]);
 
@@ -404,22 +406,22 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
       }
 
       // These control log-wide CDF outputs
-      if ("-delays".equals(args[i].toLowerCase())) {
+      if ("-delays".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         delays = true;
         continue;
       }
 
-      if ("-runtimes".equals(args[i].toLowerCase())) {
+      if ("-runtimes".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         runtimes = true;
         continue;
       }
 
-      if ("-tasktimes".equals(args[i].toLowerCase())) {
+      if ("-tasktimes".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         collectTaskTimes = true;
         continue;
       }
 
-      if ("-v1".equals(args[i].toLowerCase())) {
+      if ("-v1".equals(args[i].toLowerCase(Locale.ENGLISH))) {
         version = 1;
         continue;
       }

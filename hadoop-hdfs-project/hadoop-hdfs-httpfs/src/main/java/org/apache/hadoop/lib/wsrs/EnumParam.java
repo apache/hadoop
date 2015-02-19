@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.StringUtils;
 
 import java.util.Arrays;
+import java.util.Locale;
 
 @InterfaceAudience.Private
 public abstract class EnumParam<E extends Enum<E>> extends Param<E> {
@@ -34,7 +35,7 @@ public abstract class EnumParam<E extends Enum<E>> extends Param<E> {
 
   @Override
   protected E parse(String str) throws Exception {
-    return Enum.valueOf(klass, str.toUpperCase());
+    return Enum.valueOf(klass, str.toUpperCase(Locale.ENGLISH));
   }
 
   @Override

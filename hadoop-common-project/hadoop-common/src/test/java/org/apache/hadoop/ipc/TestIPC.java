@@ -43,6 +43,7 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
@@ -1296,7 +1297,7 @@ public class TestIPC {
     
     StringBuilder hexString = new StringBuilder();
     
-    for (String line : hexdump.toUpperCase().split("\n")) {
+    for (String line : hexdump.toUpperCase(Locale.ENGLISH).split("\n")) {
       hexString.append(line.substring(0, LAST_HEX_COL).replace(" ", ""));
     }
     return StringUtils.hexStringToByte(hexString.toString());
