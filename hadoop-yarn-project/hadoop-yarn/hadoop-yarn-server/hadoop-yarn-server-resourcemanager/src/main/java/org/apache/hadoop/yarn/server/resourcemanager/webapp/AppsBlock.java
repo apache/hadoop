@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -65,7 +66,7 @@ class AppsBlock extends HtmlBlock {
             th(".queue", "Queue").
             th(".starttime", "StartTime").
             th(".finishtime", "FinishTime").
-            th(".state", "State").
+            th(".state", "YarnApplicationState").
             th(".finalstatus", "FinalStatus").
             th(".progress", "Progress").
             th(".ui", "Tracking UI")._()._().
@@ -101,7 +102,8 @@ class AppsBlock extends HtmlBlock {
       .append(appInfo.getStartTime()).append("\",\"")
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
-      .append(appInfo.getFinalStatus()).append("\",\"")
+      .append(appInfo.getFinalStatus() == FinalApplicationStatus.UNDEFINED ?
+          "N/A" : appInfo.getFinalStatus()).append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")

@@ -200,8 +200,8 @@ public class AppInfo {
     return this.name;
   }
 
-  public String getState() {
-    return this.state.toString();
+  public YarnApplicationState getState() {
+    return this.state;
   }
 
   public float getProgress() {
@@ -216,8 +216,8 @@ public class AppInfo {
     return this.diagnostics;
   }
 
-  public String getFinalStatus() {
-    return this.finalStatus.toString();
+  public FinalApplicationStatus getFinalStatus() {
+    return this.finalStatus;
   }
 
   public String getTrackingUrl() {
