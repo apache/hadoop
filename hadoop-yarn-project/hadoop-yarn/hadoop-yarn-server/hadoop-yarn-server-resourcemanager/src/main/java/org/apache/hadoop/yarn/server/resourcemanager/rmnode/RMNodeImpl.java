@@ -601,6 +601,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         rmNode.httpAddress = newNode.getHttpAddress();
         rmNode.totalCapability = newNode.getTotalCapability();
       
+        handleNMContainerStatus(reconnectEvent.getNMContainerStatuses(), rmNode);
+
         // Reset heartbeat ID since node just restarted.
         rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
       }
@@ -621,6 +623,26 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                 ResourceOption.newInstance(newNode.getTotalCapability(), -1)));
       }
       
+    }
+
+    private void handleNMContainerStatus(
+        List<NMContainerStatus> nmContainerStatuses, RMNodeImpl rmnode) {
+      List<ContainerStatus> containerStatuses =
+          new ArrayList<ContainerStatus>();
+      for (NMContainerStatus nmContainerStatus : nmContainerStatuses) {
+        containerStatuses.add(createContainerStatus(nmContainerStatus));
+      }
+      rmnode.handleContainerStatus(containerStatuses);
+    }
+
+    private ContainerStatus createContainerStatus(
+        NMContainerStatus remoteContainer) {
+      ContainerStatus cStatus =
+          ContainerStatus.newInstance(remoteContainer.getContainerId(),
+              remoteContainer.getContainerState(),
+              remoteContainer.getDiagnostics(),
+              remoteContainer.getContainerExitStatus());
+      return cStatus;
     }
   }
   
@@ -747,49 +769,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         return NodeState.UNHEALTHY;
       }
 
-      // Filter the map to only obtain just launched containers and finished
-      // containers.
-      List<ContainerStatus> newlyLaunchedContainers = 
-          new ArrayList<ContainerStatus>();
-      List<ContainerStatus> completedContainers = 
-          new ArrayList<ContainerStatus>();
-      for (ContainerStatus remoteContainer : statusEvent.getContainers()) {
-        ContainerId containerId = remoteContainer.getContainerId();
+      rmNode.handleContainerStatus(statusEvent.getContainers());
 
-        // Don't bother with containers already scheduled for cleanup, or for
-        // applications already killed. The scheduler doens't need to know any
-        // more about this container
-        if (rmNode.containersToClean.contains(containerId)) {
-          LOG.info("Container " + containerId + " already scheduled for " +
-          		"cleanup, no further processing");
-          continue;
-        }
-        if (rmNode.finishedApplications.contains(containerId
-            .getApplicationAttemptId().getApplicationId())) {
-          LOG.info("Container " + containerId
-              + " belongs to an application that is already killed,"
-              + " no further processing");
-          continue;
-        }
-
-        // Process running containers
-        if (remoteContainer.getState() == ContainerState.RUNNING) {
-          if (!rmNode.launchedContainers.contains(containerId)) {
-            // Just launched container. RM knows about it the first time.
-            rmNode.launchedContainers.add(containerId);
-            newlyLaunchedContainers.add(remoteContainer);
-          }
-        } else {
-          // A finished container
-          rmNode.launchedContainers.remove(containerId);
-          completedContainers.add(remoteContainer);
-        }
-      }
-      if(newlyLaunchedContainers.size() != 0 
-          || completedContainers.size() != 0) {
-        rmNode.nodeUpdateQueue.add(new UpdatedContainerInfo
-            (newlyLaunchedContainers, completedContainers));
-      }
       if(rmNode.nextHeartBeat) {
         rmNode.nextHeartBeat = false;
         rmNode.context.getDispatcher().getEventHandler().handle(
@@ -874,4 +855,50 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
     return nlm.getLabelsOnNode(nodeId);
   }
+
+  private void handleContainerStatus(List<ContainerStatus> containerStatuses) {
+    // Filter the map to only obtain just launched containers and finished
+    // containers.
+    List<ContainerStatus> newlyLaunchedContainers =
+        new ArrayList<ContainerStatus>();
+    List<ContainerStatus> completedContainers =
+        new ArrayList<ContainerStatus>();
+    for (ContainerStatus remoteContainer : containerStatuses) {
+      ContainerId containerId = remoteContainer.getContainerId();
+
+      // Don't bother with containers already scheduled for cleanup, or for
+      // applications already killed. The scheduler doens't need to know any
+      // more about this container
+      if (containersToClean.contains(containerId)) {
+        LOG.info("Container " + containerId + " already scheduled for "
+            + "cleanup, no further processing");
+        continue;
+      }
+      if (finishedApplications.contains(containerId.getApplicationAttemptId()
+          .getApplicationId())) {
+        LOG.info("Container " + containerId
+            + " belongs to an application that is already killed,"
+            + " no further processing");
+        continue;
+      }
+
+      // Process running containers
+      if (remoteContainer.getState() == ContainerState.RUNNING) {
+        if (!launchedContainers.contains(containerId)) {
+          // Just launched container. RM knows about it the first time.
+          launchedContainers.add(containerId);
+          newlyLaunchedContainers.add(remoteContainer);
+        }
+      } else {
+        // A finished container
+        launchedContainers.remove(containerId);
+        completedContainers.add(remoteContainer);
+      }
+    }
+    if (newlyLaunchedContainers.size() != 0 || completedContainers.size() != 0) {
+      nodeUpdateQueue.add(new UpdatedContainerInfo(newlyLaunchedContainers,
+          completedContainers));
+    }
+  }
+
  }
