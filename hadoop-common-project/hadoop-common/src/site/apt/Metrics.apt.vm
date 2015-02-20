@@ -336,6 +336,8 @@ dfs context
 *-------------------------------------+--------------------------------------+
 |<<<PutImageAvgTime>>> | Average fsimage upload time in milliseconds
 *-------------------------------------+--------------------------------------+
+|<<<TotalFileOps>>> | Total number of file operations performed
+*-------------------------------------+--------------------------------------+
 
 * FSNamesystem
 
@@ -604,6 +606,17 @@ dfs context
 |<<<SendDataPacketTransferNanosAvgTime>>> | Average transfer time of sending
                                           | packets in nanoseconds
 *-------------------------------------+--------------------------------------+
+|<<<TotalWriteTime>>> | Total number of milliseconds spent on write
+                      | operation
+*-------------------------------------+--------------------------------------+
+|<<<TotalReadTime>>> | Total number of milliseconds spent on read
+                     | operation
+*-------------------------------------+--------------------------------------+
+|<<<RemoteBytesRead>>> | Number of bytes read by remote clients
+*-------------------------------------+--------------------------------------+
+|<<<RemoteBytesWritten>>> | Number of bytes written by remote clients
+*-------------------------------------+--------------------------------------+
+
 
 yarn context
 

@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -246,4 +247,48 @@ public class TestDataNodeMetrics {
       DataNodeFaultInjector.instance = new DataNodeFaultInjector();
     }
   }
+
+  /**
+   * This function ensures that writing causes TotalWritetime to increment
+   * and reading causes totalReadTime to move.
+   * @throws Exception
+   */
+  @Test
+  public void testDataNodeTimeSpend() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    SimulatedFSDataset.setFactory(conf);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(datanodes.size(), 1);
+      DataNode datanode = datanodes.get(0);
+      MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
+      final long LONG_FILE_LEN = 1024 * 1024 * 10;
+
+      long startWriteValue = getLongCounter("TotalWriteTime", rb);
+      long startReadValue = getLongCounter("TotalReadTime", rb);
+
+      for (int x =0; x < 50; x++) {
+        DFSTestUtil.createFile(fs, new Path("/time.txt."+ x),
+                LONG_FILE_LEN, (short) 1, Time.monotonicNow());
+      }
+
+      for (int x =0; x < 50; x++) {
+        String s = DFSTestUtil.readFile(fs, new Path("/time.txt." + x));
+      }
+
+      MetricsRecordBuilder rbNew = getMetrics(datanode.getMetrics().name());
+      long endWriteValue = getLongCounter("TotalWriteTime", rbNew);
+      long endReadValue = getLongCounter("TotalReadTime", rbNew);
+
+      assertTrue(endReadValue > startReadValue);
+      assertTrue(endWriteValue > startWriteValue);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
 }
