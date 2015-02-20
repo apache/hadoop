@@ -15711,7 +15711,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-setSpaceQuota &lt;quota&gt; &lt;dirname&gt;...&lt;dirname&gt; -storageType &lt;storagetype&gt;: Set the disk space quota &lt;quota&gt; for each directory &lt;dirName&gt;.( )*</expected-output>
+          <expected-output>^-setSpaceQuota &lt;quota&gt; \[-storageType &lt;storagetype&gt;\] &lt;dirname&gt;...&lt;dirname&gt;: Set the space quota &lt;quota&gt; for each directory &lt;dirName&gt;.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -15746,7 +15746,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-clrSpaceQuota &lt;dirname&gt;...&lt;dirname&gt; -storageType &lt;storagetype&gt;: Clear the disk space quota for each directory &lt;dirName&gt;.( )*</expected-output>
+          <expected-output>^-clrSpaceQuota \[-storageType &lt;storagetype&gt;\] &lt;dirname&gt;...&lt;dirname&gt;: Clear the space quota for each directory &lt;dirName&gt;.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

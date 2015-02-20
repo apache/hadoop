@@ -995,6 +995,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7788. Post-2.6 namenode may not start up with an image containing
     inodes created with an old release. (Rushabh Shah via kihwal)
 
+    HDFS-7814. Fix usage string of storageType parameter for
+    "dfsadmin -setSpaceQuota/clrSpaceQuota". (Xiaoyu Yao via cnauroth)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
