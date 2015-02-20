@@ -191,6 +191,7 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `GetImageAvgTime` | Average fsimage download time in milliseconds |
 | `PutImageNumOps` | Total number of fsimage uploads to SecondaryNameNode |
 | `PutImageAvgTime` | Average fsimage upload time in milliseconds |
+| `TotalFileOps`| Total number of file operations performed |
 
 FSNamesystem
 ------------
@@ -314,6 +315,10 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `SendDataPacketBlockedOnNetworkNanosAvgTime` | Average waiting time of sending packets in nanoseconds |
 | `SendDataPacketTransferNanosNumOps` | Total number of sending packets |
 | `SendDataPacketTransferNanosAvgTime` | Average transfer time of sending packets in nanoseconds |
+| `TotalWriteTime`| Total number of milliseconds spent on write operation |
+| `TotalReadTime` | Total number of milliseconds spent on read operation |
+| `RemoteBytesRead` | Number of bytes read by remote clients |
+| `RemoteBytesWritten` | Number of bytes written by remote clients |
 
 yarn context
 ============

@@ -455,4 +455,24 @@ public class TestNameNodeMetrics {
     assertQuantileGauges("Syncs1s", rb);
     assertQuantileGauges("BlockReport1s", rb);
   }
+
+  /**
+   * Test NN ReadOps Count and WriteOps Count
+   */
+  @Test
+  public void testReadWriteOps() throws Exception {
+    MetricsRecordBuilder rb = getMetrics(NN_METRICS);
+    long startWriteCounter = MetricsAsserts.getLongCounter("TransactionsNumOps",
+        rb);
+    Path file1_Path = new Path(TEST_ROOT_DIR_PATH, "ReadData.dat");
+
+    //Perform create file operation
+    createFile(file1_Path, 1024 * 1024,(short)2);
+
+    // Perform read file operation on earlier created file
+    readFile(fs, file1_Path);
+    MetricsRecordBuilder rbNew = getMetrics(NN_METRICS);
+    assertTrue(MetricsAsserts.getLongCounter("TransactionsNumOps", rbNew) >
+        startWriteCounter);
+  }
 }

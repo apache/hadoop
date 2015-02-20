@@ -663,6 +663,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7772. Document hdfs balancer -exclude/-include option in
     HDFSCommands.html (Xiaoyu Yao via cnauroth)
 
+    HDFS-7773. Additional metrics in HDFS to be accessed via jmx.
+    (Anu Engineer via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
