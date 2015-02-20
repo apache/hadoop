@@ -274,6 +274,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2799. Cleanup TestLogAggregationService based on the change in YARN-90.
     (Zhihai Xu via junping_du)
 
+    YARN-3230. Clarify application states on the web UI. (Jian He via wangda)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
