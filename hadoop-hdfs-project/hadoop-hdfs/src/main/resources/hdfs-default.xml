@@ -852,9 +852,9 @@
 <property>
   <name>dfs.namenode.num.checkpoints.retained</name>
   <value>2</value>
-  <description>The number of image checkpoint files that will be retained by
+  <description>The number of image checkpoint files (fsimage_*) that will be retained by
   the NameNode and Secondary NameNode in their storage directories. All edit
-  logs necessary to recover an up-to-date namespace from the oldest retained
+  logs (stored on edits_* files) necessary to recover an up-to-date namespace from the oldest retained
   checkpoint will also be retained.
   </description>
 </property>
@@ -863,8 +863,15 @@
   <name>dfs.namenode.num.extra.edits.retained</name>
   <value>1000000</value>
   <description>The number of extra transactions which should be retained
-  beyond what is minimally necessary for a NN restart. This can be useful for
-  audit purposes or for an HA setup where a remote Standby Node may have
+  beyond what is minimally necessary for a NN restart.
+  It does not translate directly to file's age, or the number of files kept,
+  but to the number of transactions (here "edits" means transactions).
+  One edit file may contain several transactions (edits).
+  During checkpoint, NameNode will identify the total number of edits to retain as extra by
+  checking the latest checkpoint transaction value, subtracted by the value of this property.
+  Then, it scans edits files to identify the older ones that don't include the computed range of
+  retained transactions that are to be kept around, and purges them subsequently.
+  The retainment can be useful for audit purposes or for an HA setup where a remote Standby Node may have
   been offline for some time and need to have a longer backlog of retained
   edits in order to start again.
   Typically each edit is on the order of a few hundred bytes, so the default
