@@ -978,6 +978,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-9087. Queue size metric for metric sinks isn't actually maintained
     (Akira AJISAKA via jlowe)
 
+    HADOOP-11604. Prevent ConcurrentModificationException while closing domain
+    sockets during shutdown of DomainSocketWatcher thread. (cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
