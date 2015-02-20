@@ -64,4 +64,8 @@ public class LongBitFormat implements Serializable {
     }
     return (record & ~MASK) | (value << OFFSET);
   }
+  
+  public long getMin() {
+    return MIN;
+  }
 }

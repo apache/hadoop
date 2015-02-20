@@ -692,6 +692,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7808. Remove obsolete -ns options in in DFSHAAdmin.java.
     (Arshad Mohammad via wheat9)
 
+    HDFS-7788. Post-2.6 namenode may not start up with an image containing
+    inodes created with an old release. (Rushabh Shah via kihwal)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
