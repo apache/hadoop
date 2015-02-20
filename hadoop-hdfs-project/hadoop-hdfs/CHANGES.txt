@@ -39,6 +39,11 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-7752. Improve description for
+    "dfs.namenode.num.extra.edits.retained"
+    and "dfs.namenode.num.checkpoints.retained" properties on
+    hdfs-default.xml (Wellington Chevreuil via harsh)
+
     HDFS-7055. Add tracing to DFSInputStream (cmccabe)
 
     HDFS-7186. Document the "hadoop trace" command. (Masatake Iwasaki via Colin
