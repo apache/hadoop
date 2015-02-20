@@ -107,6 +107,9 @@ public class INodeFile extends INodeWithAdditionalFields
     static long toLong(long preferredBlockSize, short replication,
         byte storagePolicyID) {
       long h = 0;
+      if (preferredBlockSize == 0) {
+        preferredBlockSize = PREFERRED_BLOCK_SIZE.BITS.getMin();
+      }
       h = PREFERRED_BLOCK_SIZE.BITS.combine(preferredBlockSize, h);
       h = REPLICATION.BITS.combine(replication, h);
       h = STORAGE_POLICY_ID.BITS.combine(storagePolicyID, h);
