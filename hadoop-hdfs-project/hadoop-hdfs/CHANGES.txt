@@ -367,6 +367,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7773. Additional metrics in HDFS to be accessed via jmx.
     (Anu Engineer via cnauroth)
 
+    HDFS-7740. Test truncate with DataNodes restarting. (yliu)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
