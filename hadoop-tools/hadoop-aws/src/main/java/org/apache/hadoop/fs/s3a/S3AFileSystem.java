@@ -354,7 +354,9 @@ public class S3AFileSystem extends FileSystem {
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
 
-    LOG.info("Opening '" + f + "' for reading");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Opening '{}' for reading.", f);
+    }
     final FileStatus fileStatus = getFileStatus(f);
     if (fileStatus.isDirectory()) {
       throw new FileNotFoundException("Can't open " + f + " because it is a directory");
@@ -425,7 +427,9 @@ public class S3AFileSystem extends FileSystem {
    * @return true if rename is successful
    */
   public boolean rename(Path src, Path dst) throws IOException {
-    LOG.info("Rename path " + src + " to " + dst);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Rename path {} to {}", src, dst);
+    }
 
     String srcKey = pathToKey(src);
     String dstKey = pathToKey(dst);
@@ -441,7 +445,7 @@ public class S3AFileSystem extends FileSystem {
     try {
       srcStatus = getFileStatus(src);
     } catch (FileNotFoundException e) {
-      LOG.info("rename: src not found " + src);
+      LOG.error("rename: src not found {}", src);
       return false;
     }
 
