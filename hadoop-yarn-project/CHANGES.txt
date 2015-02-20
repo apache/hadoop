@@ -271,6 +271,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3076. Add API/Implementation to YarnClient to retrieve label-to-node 
     mapping. (Varun Saxena via wangda)
 
+    YARN-2799. Cleanup TestLogAggregationService based on the change in YARN-90.
+    (Zhihai Xu via junping_du)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
