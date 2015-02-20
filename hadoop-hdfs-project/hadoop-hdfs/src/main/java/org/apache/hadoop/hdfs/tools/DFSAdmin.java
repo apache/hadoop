@@ -207,9 +207,9 @@ public class DFSAdmin extends FsShell {
   /** A class that supports command clearSpaceQuota */
   private static class ClearSpaceQuotaCommand extends DFSAdminCommand {
     private static final String NAME = "clrSpaceQuota";
-    private static final String USAGE = "-"+NAME+" <dirname>...<dirname> -storageType <storagetype>";
+    private static final String USAGE = "-"+NAME+" [-storageType <storagetype>] <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
-    "Clear the disk space quota for each directory <dirName>.\n" +
+    "Clear the space quota for each directory <dirName>.\n" +
     "\t\tFor each directory, attempt to clear the quota. An error will be reported if\n" +
     "\t\t1. the directory does not exist or is a file, or\n" +
     "\t\t2. user is not an administrator.\n" +
@@ -259,9 +259,9 @@ public class DFSAdmin extends FsShell {
   private static class SetSpaceQuotaCommand extends DFSAdminCommand {
     private static final String NAME = "setSpaceQuota";
     private static final String USAGE =
-      "-"+NAME+" <quota> <dirname>...<dirname> -storageType <storagetype>";
+      "-"+NAME+" <quota> [-storageType <storagetype>] <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
-      "Set the disk space quota <quota> for each directory <dirName>.\n" + 
+      "Set the space quota <quota> for each directory <dirName>.\n" +
       "\t\tThe space quota is a long integer that puts a hard limit\n" +
       "\t\ton the total size of all the files under the directory tree.\n" +
       "\t\tThe extra space required for replication is also counted. E.g.\n" +
