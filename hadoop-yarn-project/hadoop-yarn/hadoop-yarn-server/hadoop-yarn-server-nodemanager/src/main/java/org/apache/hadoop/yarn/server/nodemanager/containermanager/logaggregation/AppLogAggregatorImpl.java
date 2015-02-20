@@ -248,7 +248,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
       } catch (IOException e1) {
         LOG.error("Cannot create writer for app " + this.applicationId
-            + ". Skip log upload this time. ");
+            + ". Skip log upload this time. ", e1);
         return;
       }
 
@@ -549,7 +549,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         writer.append(logKey, logValue);
       } catch (Exception e) {
         LOG.error("Couldn't upload logs for " + containerId
-            + ". Skipping this container.");
+            + ". Skipping this container.", e);
         return new HashSet<Path>();
       }
       this.uploadedFileMeta.addAll(logValue
