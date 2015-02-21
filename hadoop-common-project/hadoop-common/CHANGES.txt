@@ -575,6 +575,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11604. Prevent ConcurrentModificationException while closing domain
     sockets during shutdown of DomainSocketWatcher thread. (cnauroth)
 
+    HADOOP-11612. Workaround for Curator's ChildReaper requiring Guava 15+.
+    (rkanter)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
