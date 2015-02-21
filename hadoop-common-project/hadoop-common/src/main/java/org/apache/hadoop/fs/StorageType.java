@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.fs;
 
 import java.util.Arrays;
 import java.util.ArrayList;
