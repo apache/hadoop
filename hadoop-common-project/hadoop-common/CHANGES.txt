@@ -578,6 +578,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11612. Workaround for Curator's ChildReaper requiring Guava 15+.
     (rkanter)
 
+    HADOOP-11584 s3a file block size set to 0 in getFileStatus.
+    (Brahma Reddy Battula via stevel)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
