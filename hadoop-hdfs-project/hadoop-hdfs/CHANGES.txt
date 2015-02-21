@@ -723,6 +723,9 @@ Release 2.7.0 - UNRELEASED
       HDFS-7775. Use consistent naming for NN-internal quota related types
       and functions. (Xiaoyu Yao via Arpit Agarwal)
 
+      HDFS-7806. Refactor: move StorageType from hadoop-hdfs to
+      hadoop-common. (Xiaoyu Yao via Arpit Agarwal)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

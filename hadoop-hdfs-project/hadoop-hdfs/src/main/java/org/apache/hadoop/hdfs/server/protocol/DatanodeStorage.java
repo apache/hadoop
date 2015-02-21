@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.fs.StorageType;
 
 import java.util.UUID;
 

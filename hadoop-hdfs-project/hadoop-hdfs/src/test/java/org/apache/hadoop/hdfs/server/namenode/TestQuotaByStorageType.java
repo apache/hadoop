@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-  import static org.apache.hadoop.hdfs.StorageType.DEFAULT;
   import static org.junit.Assert.assertEquals;
   import static org.junit.Assert.assertTrue;
   import static org.junit.Assert.fail;
@@ -26,7 +25,11 @@ package org.apache.hadoop.hdfs.server.namenode;
   import org.apache.commons.logging.LogFactory;
   import org.apache.hadoop.conf.Configuration;
   import org.apache.hadoop.fs.Path;
-  import org.apache.hadoop.hdfs.*;
+  import org.apache.hadoop.fs.StorageType;
+  import org.apache.hadoop.hdfs.DFSConfigKeys;
+  import org.apache.hadoop.hdfs.DFSTestUtil;
+  import org.apache.hadoop.hdfs.DistributedFileSystem;
+  import org.apache.hadoop.hdfs.MiniDFSCluster;
   import org.apache.hadoop.hdfs.protocol.HdfsConstants;
   import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
   import org.apache.hadoop.test.GenericTestUtils;
@@ -61,7 +64,7 @@ public class TestQuotaByStorageType {
     cluster = new MiniDFSCluster
         .Builder(conf)
         .numDataNodes(REPLICATION)
-        .storageTypes(new StorageType[]{StorageType.SSD, DEFAULT})
+        .storageTypes(new StorageType[]{StorageType.SSD, StorageType.DEFAULT})
         .build();
     cluster.waitActive();
 
