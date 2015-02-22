@@ -601,6 +601,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3194. RM should handle NMContainerStatuses sent by NM while
     registering if NM is Reconnected node (Rohith via jlowe)
 
+    YARN-3238. Connection timeouts to nodemanagers are retried at
+    multiple levels (Jason Lowe via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
