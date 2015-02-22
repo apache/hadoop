@@ -279,6 +279,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3237. AppLogAggregatorImpl fails to log error cause.
     (Rushabh S Shah via xgong)
 
+    YARN-3236. Cleanup RMAuthenticationFilter#AUTH_HANDLER_PROPERTY.
+    (zhihai xu via xgong)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
