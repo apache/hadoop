@@ -282,6 +282,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3236. Cleanup RMAuthenticationFilter#AUTH_HANDLER_PROPERTY.
     (zhihai xu via xgong)
 
+    YARN-2797. TestWorkPreservingRMRestart should use ParametrizedSchedulerTestBase
+    (Karthik Kambatla via xgong)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
