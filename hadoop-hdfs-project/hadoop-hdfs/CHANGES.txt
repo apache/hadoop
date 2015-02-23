@@ -76,6 +76,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7788. Post-2.6 namenode may not start up with an image containing
     inodes created with an old release. (Rushabh Shah via kihwal)
 
+    HDFS-7009. Active NN and standby NN have different live nodes.
+    (Ming Ma via cnauroth)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
