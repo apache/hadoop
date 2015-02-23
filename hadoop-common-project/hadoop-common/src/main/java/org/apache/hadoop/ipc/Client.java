@@ -25,6 +25,7 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -280,7 +281,7 @@ public class Client {
   /** Check the rpc response header. */
   void checkResponse(RpcResponseHeaderProto header) throws IOException {
     if (header == null) {
-      throw new IOException("Response is null.");
+      throw new EOFException("Response is null.");
     }
     if (header.hasClientId()) {
       // check client IDs

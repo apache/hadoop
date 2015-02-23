@@ -706,6 +706,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7813. TestDFSHAAdminMiniCluster#testFencer testcase is failing
     frequently. (Rakesh R via cnauroth)
 
+    HDFS-7009. Active NN and standby NN have different live nodes.
+    (Ming Ma via cnauroth)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
