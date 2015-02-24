@@ -145,6 +145,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6261. NullPointerException if MapOutputBuffer.flush invoked
     twice (Tsuyoshi OZAWA via jlowe)
 
+    MAPREDUCE-2815. JavaDoc does not generate correctly for
+    MultithreadedMapRunner. (Chris Palmer via aajisaka)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
