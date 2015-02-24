@@ -581,6 +581,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11584 s3a file block size set to 0 in getFileStatus.
     (Brahma Reddy Battula via stevel)
 
+    HADOOP-10478. Fix new findbugs warnings in hadoop-maven-plugins.
+    (Li Lu via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
