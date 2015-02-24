@@ -140,7 +140,7 @@ indicates that the current user's credentials file should be consulted through t
 
 When utilizing the credential command it will often be for provisioning a password or secret to a particular credential store provider. In order to explicitly indicate which provider store to use the `-provider` option should be used. Otherwise, given a path of multiple providers, the first non-transient provider will be used. This may or may not be the one that you intended.
 
-Example: `-provider jceks://file/tmp/test.jceks`
+Example: `hadoop credential list -provider jceks://file/tmp/test.jceks`
 
 ### `distch`
 
@@ -178,12 +178,12 @@ Print the computed java.library.path.
 
 ### `kerbname`
 
-    Usage: <<<hadoop kerbname principal>>>
+Usage: `hadoop kerbname principal`
 
-    Convert the named principal via the auth_to_local rules to the Hadoop
-    user name.
+Convert the named principal via the auth_to_local rules to the Hadoop
+user name.
 
-    Example: <<<hadoop kerbname user@EXAMPLE.COM>>>
+Example: `hadoop kerbname user@EXAMPLE.COM`
 
 ### `key`
 
@@ -212,7 +212,10 @@ Commands useful for administrators of a hadoop cluster.
 
 ### `daemonlog`
 
-Usage: `hadoop daemonlog -getlevel <host:httpport> <classname> ` Usage: `hadoop daemonlog -setlevel <host:httpport> <classname> <level> `
+Usage:
+
+    hadoop daemonlog -getlevel <host:httpport> <classname>
+    hadoop daemonlog -setlevel <host:httpport> <classname> <level>
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |

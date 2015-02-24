@@ -407,6 +407,8 @@ Trunk (Unreleased)
 
     HADOOP-11602. Fix toUpperCase/toLowerCase to use Locale.ENGLISH. (ozawa)
 
+    HADOOP-11625. Minor fixes to command manual & SLA doc (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
