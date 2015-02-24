@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager;
+package org.apache.hadoop.util;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,7 +34,6 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * 
@@ -58,14 +57,11 @@ public class NodeHealthScriptRunner extends AbstractService {
   /** ShellCommandExecutor used to execute monitoring script */
   ShellCommandExecutor shexec = null;
 
-  /** Configuration used by the checker */
-  private Configuration conf;
-
   /** Pattern used for searching in the output of the node health script */
   static private final String ERROR_PATTERN = "ERROR";
 
   /** Time out error message */
-  static final String NODE_HEALTH_SCRIPT_TIMED_OUT_MSG = "Node health script timed out";
+  public static final String NODE_HEALTH_SCRIPT_TIMED_OUT_MSG = "Node health script timed out";
 
   private boolean isHealthy;
 
@@ -192,11 +188,16 @@ public class NodeHealthScriptRunner extends AbstractService {
     }
   }
 
-  public NodeHealthScriptRunner() {
+  public NodeHealthScriptRunner(String scriptName, long chkInterval, long timeout,
+      String[] scriptArgs) {
     super(NodeHealthScriptRunner.class.getName());
     this.lastReportedTime = System.currentTimeMillis();
     this.isHealthy = true;
-    this.healthReport = "";    
+    this.healthReport = "";
+    this.nodeHealthScript = scriptName;
+    this.intervalTime = chkInterval;
+    this.scriptTimeout = timeout;
+    this.timer = new NodeHealthMonitorExecutor(scriptArgs);
   }
 
   /*
@@ -204,17 +205,6 @@ public class NodeHealthScriptRunner extends AbstractService {
    */
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    this.conf = conf;
-    this.nodeHealthScript = 
-        conf.get(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH);
-    this.intervalTime = conf.getLong(YarnConfiguration.NM_HEALTH_CHECK_INTERVAL_MS,
-        YarnConfiguration.DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS);
-    this.scriptTimeout = conf.getLong(
-        YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS,
-        YarnConfiguration.DEFAULT_NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS);
-    String[] args = conf.getStrings(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_OPTS,
-        new String[] {});
-    timer = new NodeHealthMonitorExecutor(args);
     super.serviceInit(conf);
   }
 
@@ -225,7 +215,7 @@ public class NodeHealthScriptRunner extends AbstractService {
   @Override
   protected void serviceStart() throws Exception {
     // if health script path is not configured don't start the thread.
-    if (!shouldRun(conf)) {
+    if (!shouldRun(nodeHealthScript)) {
       LOG.info("Not starting node health monitor");
       return;
     }
@@ -242,7 +232,7 @@ public class NodeHealthScriptRunner extends AbstractService {
    */
   @Override
   protected void serviceStop() {
-    if (!shouldRun(conf)) {
+    if (!shouldRun(nodeHealthScript)) {
       return;
     }
     if (nodeHealthScriptScheduler != null) {
@@ -322,26 +312,25 @@ public class NodeHealthScriptRunner extends AbstractService {
    * <li>Node health check script file exists</li>
    * </ol>
    * 
-   * @param conf
    * @return true if node health monitoring service can be started.
    */
-  public static boolean shouldRun(Configuration conf) {
-    String nodeHealthScript = 
-      conf.get(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH);
-    if (nodeHealthScript == null || nodeHealthScript.trim().isEmpty()) {
+  public static boolean shouldRun(String healthScript) {
+    if (healthScript == null || healthScript.trim().isEmpty()) {
       return false;
     }
-    File f = new File(nodeHealthScript);
+    File f = new File(healthScript);
     return f.exists() && FileUtil.canExecute(f);
   }
 
   private synchronized void setHealthStatus(boolean isHealthy, String output) {
+		LOG.info("health status being set as " + output);
     this.setHealthy(isHealthy);
     this.setHealthReport(output);
   }
   
   private synchronized void setHealthStatus(boolean isHealthy, String output,
       long time) {
+	LOG.info("health status being set as " + output);
     this.setHealthStatus(isHealthy, output);
     this.setLastReportedTime(time);
   }
@@ -350,7 +339,7 @@ public class NodeHealthScriptRunner extends AbstractService {
    * Used only by tests to access the timer task directly
    * @return the timer task
    */
-  TimerTask getTimerTask() {
+  public TimerTask getTimerTask() {
     return timer;
   }
 }

@@ -17,6 +17,9 @@ Trunk - Unreleased
 
     YARN-2796. deprecate sbin/yarn-daemon.sh (aw)
 
+    YARN-2980. Move health check script related functionality to hadoop-common
+    (Varun Saxena via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES

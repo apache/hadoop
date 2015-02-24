@@ -63,7 +63,7 @@ public class TestEventFlow {
   private static File remoteLogDir = new File("target",
       TestEventFlow.class.getName() + "-remoteLogDir").getAbsoluteFile();
   private static final long SIMULATED_RM_IDENTIFIER = 1234;
-  
+
   @Test
   public void testSuccessfulContainerLaunch() throws InterruptedException,
       IOException, YarnException {
@@ -98,9 +98,10 @@ public class TestEventFlow {
 
     DeletionService del = new DeletionService(exec);
     Dispatcher dispatcher = new AsyncDispatcher();
-    NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
+    LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
+    NodeHealthCheckerService healthChecker = new NodeHealthCheckerService(
+        NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
     healthChecker.init(conf);
-    LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
     NodeManagerMetrics metrics = NodeManagerMetrics.create();
     NodeStatusUpdater nodeStatusUpdater =
         new NodeStatusUpdaterImpl(context, dispatcher, healthChecker, metrics) {
