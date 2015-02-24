@@ -81,6 +81,16 @@ public class FTPFileSystem extends FileSystem {
     return "ftp";
   }
 
+  /**
+   * Get the default port for this FTPFileSystem.
+   *
+   * @return the default port
+   */
+  @Override
+  protected int getDefaultPort() {
+    return FTP.DEFAULT_PORT;
+  }
+
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException { // get
     super.initialize(uri, conf);
