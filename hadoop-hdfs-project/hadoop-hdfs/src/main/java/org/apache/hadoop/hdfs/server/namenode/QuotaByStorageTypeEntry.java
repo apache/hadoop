@@ -18,9 +18,9 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Objects;
-import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.fs.StorageType;
 
- public class QuotaByStorageTypeEntry {
+public class QuotaByStorageTypeEntry {
    private StorageType type;
    private long quota;
 
