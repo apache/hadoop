@@ -79,6 +79,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7009. Active NN and standby NN have different live nodes.
     (Ming Ma via cnauroth)
 
+    HDFS-7763. fix zkfc hung issue due to not catching exception in a corner
+    case. (Liang Xie via wang)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
