@@ -285,6 +285,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2797. TestWorkPreservingRMRestart should use ParametrizedSchedulerTestBase
     (Karthik Kambatla via xgong)
 
+    YARN-2797. Add -help to yarn logs and nodes CLI command. 
+    (Jagadesh Kiran N via devaraj)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 

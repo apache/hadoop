@@ -51,12 +51,15 @@ public class LogsCLI extends Configured implements Tool {
   private static final String APPLICATION_ID_OPTION = "applicationId";
   private static final String NODE_ADDRESS_OPTION = "nodeAddress";
   private static final String APP_OWNER_OPTION = "appOwner";
+  public static final String HELP_CMD = "help";
 
   @Override
   public int run(String[] args) throws Exception {
 
     Options opts = new Options();
-    Option appIdOpt = new Option(APPLICATION_ID_OPTION, true, "ApplicationId (required)");
+    opts.addOption(HELP_CMD, false, "Displays help for all commands.");
+    Option appIdOpt =
+        new Option(APPLICATION_ID_OPTION, true, "ApplicationId (required)");
     appIdOpt.setRequired(true);
     opts.addOption(appIdOpt);
     opts.addOption(CONTAINER_ID_OPTION, true,
@@ -71,6 +74,7 @@ public class LogsCLI extends Configured implements Tool {
     opts.getOption(APP_OWNER_OPTION).setArgName("Application Owner");
 
     Options printOpts = new Options();
+    printOpts.addOption(opts.getOption(HELP_CMD));
     printOpts.addOption(opts.getOption(CONTAINER_ID_OPTION));
     printOpts.addOption(opts.getOption(NODE_ADDRESS_OPTION));
     printOpts.addOption(opts.getOption(APP_OWNER_OPTION));
@@ -79,7 +83,10 @@ public class LogsCLI extends Configured implements Tool {
       printHelpMessage(printOpts);
       return -1;
     }
-
+    if (args[0].equals("-help")) {
+      printHelpMessage(printOpts);
+      return 0;
+    }
     CommandLineParser parser = new GnuParser();
     String appIdStr = null;
     String containerIdStr = null;
