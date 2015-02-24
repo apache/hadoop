@@ -41,7 +41,10 @@
 <property>
   <name>io.native.lib.available</name>
   <value>true</value>
-  <description>Should native hadoop libraries, if present, be used.</description>
+  <description>Controls whether to use native libraries for bz2 and zlib
+    compression codecs or not. The property does not control any other native
+    libraries.
+  </description>
 </property>
 
 <property>

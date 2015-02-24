@@ -584,6 +584,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10478. Fix new findbugs warnings in hadoop-maven-plugins.
     (Li Lu via wheat9)
 
+    HADOOP-8642. Document that io.native.lib.available only controls native bz2
+    and zlib compression codecs. (aajisaka)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
