@@ -33,7 +33,6 @@ import javax.net.ssl.SSLException;
 
 import org.junit.Assert;
 
-import org.apache.commons.httpclient.HttpStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.io.IOUtils;
@@ -57,6 +56,7 @@ import org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.http.HttpStatus;
 import org.junit.Test;
 
 import com.google.common.net.HttpHeaders;

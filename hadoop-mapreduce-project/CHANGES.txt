@@ -63,6 +63,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6225. Fix new findbug warnings in hadoop-mapreduce-client-core. 
     (Varun Saxena via junping_du)
 
+    MAPREDUCE-6264. Remove httpclient dependency from hadoop-mapreduce-client.
+    (Brahma Reddy Battula via aajisaka)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
