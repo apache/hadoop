@@ -61,9 +61,9 @@ public final class MetaRecoveryContext  {
   public String ask(String prompt, String firstChoice, String... choices) 
       throws IOException {
     while (true) {
-      LOG.info(prompt);
+      System.err.print(prompt);
       if (force > FORCE_NONE) {
-        LOG.info("automatically choosing " + firstChoice);
+        System.out.println("automatically choosing " + firstChoice);
         return firstChoice;
       }
       StringBuilder responseBuilder = new StringBuilder();
@@ -82,7 +82,7 @@ public final class MetaRecoveryContext  {
           return c;
         }
       }
-      LOG.error("I'm sorry, I cannot understand your response.\n");
+      System.err.print("I'm sorry, I cannot understand your response.\n");
     }
   }
 
