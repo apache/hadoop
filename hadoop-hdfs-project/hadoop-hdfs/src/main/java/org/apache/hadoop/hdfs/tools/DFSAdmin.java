@@ -1496,30 +1496,35 @@ public class DFSAdmin extends FsShell {
       RPC.getProxy(xface, RPC.getProtocolVersion(xface), address,
         ugi, conf, NetUtils.getDefaultSocketFactory(conf), 0);
 
-    GenericRefreshProtocol xlator =
-      new GenericRefreshProtocolClientSideTranslatorPB(proxy);
+    Collection<RefreshResponse> responses = null;
+    try (GenericRefreshProtocolClientSideTranslatorPB xlator =
+        new GenericRefreshProtocolClientSideTranslatorPB(proxy);) {
+      // Refresh
+      responses = xlator.refresh(identifier, args);
 
-    // Refresh
-    Collection<RefreshResponse> responses = xlator.refresh(identifier, args);
+      int returnCode = 0;
 
-    int returnCode = 0;
+      // Print refresh responses
+      System.out.println("Refresh Responses:\n");
+      for (RefreshResponse response : responses) {
+        System.out.println(response.toString());
 
-    // Print refresh responses
-    System.out.println("Refresh Responses:\n");
-    for (RefreshResponse response : responses) {
-      System.out.println(response.toString());
-
-      if (returnCode == 0 && response.getReturnCode() != 0) {
-        // This is the first non-zero return code, so we should return this
-        returnCode = response.getReturnCode();
-      } else if (returnCode != 0 && response.getReturnCode() != 0) {
-        // Then now we have multiple non-zero return codes,
-        // so we merge them into -1
-        returnCode = -1;
+        if (returnCode == 0 && response.getReturnCode() != 0) {
+          // This is the first non-zero return code, so we should return this
+          returnCode = response.getReturnCode();
+        } else if (returnCode != 0 && response.getReturnCode() != 0) {
+          // Then now we have multiple non-zero return codes,
+          // so we merge them into -1
+          returnCode = - 1;
+        }
+      }
+      return returnCode;
+    } finally {
+      if (responses == null) {
+        System.out.println("Failed to get response.\n");
+        return -1;
       }
     }
-
-    return returnCode;
   }
 
   /**

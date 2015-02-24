@@ -714,6 +714,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7805. NameNode recovery prompt should be printed on console (Surendra
     Singh Lilhore via Colin P. McCabe)
 
+    HDFS-7008. xlator should be closed upon exit from DFSAdmin#genericRefresh().
+    (ozawa)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
