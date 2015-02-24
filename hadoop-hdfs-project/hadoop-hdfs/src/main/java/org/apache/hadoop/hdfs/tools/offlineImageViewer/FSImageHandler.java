@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.web.JsonUtil;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
@@ -142,7 +141,7 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
   private static String getOp(QueryStringDecoder decoder) {
     Map<String, List<String>> parameters = decoder.parameters();
     return parameters.containsKey("op")
-            ? parameters.get("op").get(0).toUpperCase(Locale.ENGLISH) : null;
+            ? parameters.get("op").get(0).toUpperCase() : null;
   }
 
   private static String getPath(QueryStringDecoder decoder)

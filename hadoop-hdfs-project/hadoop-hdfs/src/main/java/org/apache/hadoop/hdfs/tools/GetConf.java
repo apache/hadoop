@@ -24,7 +24,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -80,19 +79,19 @@ public class GetConf extends Configured implements Tool {
     private static final Map<String, CommandHandler> map;
     static  {
       map = new HashMap<String, CommandHandler>();
-      map.put(NAMENODE.getName().toLowerCase(Locale.ENGLISH),
+      map.put(NAMENODE.getName().toLowerCase(), 
           new NameNodesCommandHandler());
-      map.put(SECONDARY.getName().toLowerCase(Locale.ENGLISH),
+      map.put(SECONDARY.getName().toLowerCase(),
           new SecondaryNameNodesCommandHandler());
-      map.put(BACKUP.getName().toLowerCase(Locale.ENGLISH),
+      map.put(BACKUP.getName().toLowerCase(), 
           new BackupNodesCommandHandler());
-      map.put(INCLUDE_FILE.getName().toLowerCase(Locale.ENGLISH),
+      map.put(INCLUDE_FILE.getName().toLowerCase(), 
           new CommandHandler(DFSConfigKeys.DFS_HOSTS));
-      map.put(EXCLUDE_FILE.getName().toLowerCase(Locale.ENGLISH),
+      map.put(EXCLUDE_FILE.getName().toLowerCase(),
           new CommandHandler(DFSConfigKeys.DFS_HOSTS_EXCLUDE));
-      map.put(NNRPCADDRESSES.getName().toLowerCase(Locale.ENGLISH),
+      map.put(NNRPCADDRESSES.getName().toLowerCase(),
           new NNRpcAddressesCommandHandler());
-      map.put(CONFKEY.getName().toLowerCase(Locale.ENGLISH),
+      map.put(CONFKEY.getName().toLowerCase(),
           new PrintConfKeyCommandHandler());
     }
     
@@ -117,7 +116,7 @@ public class GetConf extends Configured implements Tool {
     }
     
     public static CommandHandler getHandler(String cmd) {
-      return map.get(cmd.toLowerCase(Locale.ENGLISH));
+      return map.get(cmd.toLowerCase());
     }
   }
   

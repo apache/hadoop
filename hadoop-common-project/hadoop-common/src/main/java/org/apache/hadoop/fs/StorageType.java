@@ -21,7 +21,6 @@ package org.apache.hadoop.fs;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -79,7 +78,7 @@ public enum StorageType {
   }
 
   public static StorageType parseStorageType(String s) {
-    return StorageType.valueOf(s.toUpperCase(Locale.ENGLISH));
+    return StorageType.valueOf(s.toUpperCase());
   }
 
   private static List<StorageType> getNonTransientTypes() {

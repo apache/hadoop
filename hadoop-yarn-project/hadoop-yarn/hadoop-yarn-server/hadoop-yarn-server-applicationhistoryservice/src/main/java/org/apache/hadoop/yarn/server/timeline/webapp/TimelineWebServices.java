@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -418,7 +417,7 @@ public class TimelineWebServices {
     String[] strs = str.split(delimiter);
     List<Field> fieldList = new ArrayList<Field>();
     for (String s : strs) {
-      s = s.trim().toUpperCase(Locale.ENGLISH);
+      s = s.trim().toUpperCase();
       if (s.equals("EVENTS")) {
         fieldList.add(Field.EVENTS);
       } else if (s.equals("LASTEVENTONLY")) {

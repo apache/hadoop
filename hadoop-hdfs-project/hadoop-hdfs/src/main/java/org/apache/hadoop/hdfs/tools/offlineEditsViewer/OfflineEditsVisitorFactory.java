@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Locale;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -44,7 +43,7 @@ public class OfflineEditsVisitorFactory {
    */
   static public OfflineEditsVisitor getEditsVisitor(String filename,
     String processor, boolean printToScreen) throws IOException {
-    if(processor.toLowerCase(Locale.ENGLISH).equals("binary")) {
+    if(processor.toLowerCase().equals("binary")) {
       return new BinaryEditsVisitor(filename);
     }
     OfflineEditsVisitor vis;
@@ -60,9 +59,9 @@ public class OfflineEditsVisitorFactory {
         outs[1] = System.out;
         out = new TeeOutputStream(outs);
       }
-      if(processor.toLowerCase(Locale.ENGLISH).equals("xml")) {
+      if(processor.toLowerCase().equals("xml")) {
         vis = new XmlEditsVisitor(out);
-      } else if(processor.toLowerCase(Locale.ENGLISH).equals("stats")) {
+      } else if(processor.toLowerCase().equals("stats")) {
         vis = new StatisticsEditsVisitor(out);
       } else {
         throw new IOException("Unknown proccesor " + processor +

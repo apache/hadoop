@@ -20,7 +20,6 @@ package org.apache.hadoop.tools.rumen;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -244,7 +243,7 @@ public class LoggedTask implements DeepCompare {
   }
 
   private static String canonicalizeCounterName(String nonCanonicalName) {
-    String result = nonCanonicalName.toLowerCase(Locale.ENGLISH);
+    String result = nonCanonicalName.toLowerCase();
 
     result = result.replace(' ', '|');
     result = result.replace('-', '|');

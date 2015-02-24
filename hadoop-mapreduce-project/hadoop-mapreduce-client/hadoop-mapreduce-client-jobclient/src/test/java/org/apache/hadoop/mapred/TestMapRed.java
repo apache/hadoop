@@ -28,7 +28,6 @@ import java.io.File;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -281,7 +280,7 @@ public class TestMapRed extends Configured implements Tool {
     public void map(WritableComparable key, Text value,
                     OutputCollector<Text, Text> output,
                     Reporter reporter) throws IOException {
-      String str = value.toString().toLowerCase(Locale.ENGLISH);
+      String str = value.toString().toLowerCase();
       output.collect(new Text(str), value);
     }
 

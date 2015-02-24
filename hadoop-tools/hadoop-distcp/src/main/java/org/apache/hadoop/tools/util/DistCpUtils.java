@@ -121,9 +121,8 @@ public class DistCpUtils {
    */
   public static Class<? extends InputFormat> getStrategy(Configuration conf,
                                                                  DistCpOptions options) {
-    String confLabel = "distcp."
-        + options.getCopyStrategy().toLowerCase(Locale.ENGLISH)
-        + ".strategy.impl";
+    String confLabel = "distcp." +
+        options.getCopyStrategy().toLowerCase(Locale.getDefault()) + ".strategy.impl";
     return conf.getClass(confLabel, UniformSizeInputFormat.class, InputFormat.class);
   }
 
@@ -222,8 +221,7 @@ public class DistCpUtils {
 
     final boolean preserveXAttrs = attributes.contains(FileAttribute.XATTR);
     if (preserveXAttrs || preserveRawXattrs) {
-      final String rawNS =
-          XAttr.NameSpace.RAW.name().toLowerCase(Locale.ENGLISH);
+      final String rawNS = XAttr.NameSpace.RAW.name().toLowerCase();
       Map<String, byte[]> srcXAttrs = srcFileStatus.getXAttrs();
       Map<String, byte[]> targetXAttrs = getXAttrs(targetFS, path);
       if (srcXAttrs != null && !srcXAttrs.equals(targetXAttrs)) {
@@ -323,8 +321,7 @@ public class DistCpUtils {
          copyListingFileStatus.setXAttrs(srcXAttrs);
       } else {
         Map<String, byte[]> trgXAttrs = Maps.newHashMap();
-        final String rawNS =
-            XAttr.NameSpace.RAW.name().toLowerCase(Locale.ENGLISH);
+        final String rawNS = XAttr.NameSpace.RAW.name().toLowerCase();
         for (Map.Entry<String, byte[]> ent : srcXAttrs.entrySet()) {
           final String xattrName = ent.getKey();
           if (xattrName.startsWith(rawNS)) {

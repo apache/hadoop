@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -304,7 +303,7 @@ public class MRApps extends Apps {
               remoteFS.getWorkingDirectory()));
           String name = (null == u.getFragment())
               ? p.getName() : u.getFragment();
-          if (!name.toLowerCase(Locale.ENGLISH).endsWith(".jar")) {
+          if (!name.toLowerCase().endsWith(".jar")) {
             linkLookup.put(p, name);
           }
         }
@@ -318,7 +317,7 @@ public class MRApps extends Apps {
         if (name == null) {
           name = p.getName();
         }
-        if(!name.toLowerCase(Locale.ENGLISH).endsWith(".jar")) {
+        if(!name.toLowerCase().endsWith(".jar")) {
           MRApps.addToEnvironment(
               environment,
               classpathEnvVar,

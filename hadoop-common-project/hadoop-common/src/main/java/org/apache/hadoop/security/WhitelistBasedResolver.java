@@ -19,7 +19,6 @@ package org.apache.hadoop.security;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -139,8 +138,7 @@ public class WhitelistBasedResolver extends SaslPropertiesResolver {
         QualityOfProtection.PRIVACY.toString());
 
     for (int i=0; i < qop.length; i++) {
-      qop[i] = QualityOfProtection.valueOf(
-          qop[i].toUpperCase(Locale.ENGLISH)).getSaslQop();
+      qop[i] = QualityOfProtection.valueOf(qop[i].toUpperCase()).getSaslQop();
     }
 
     saslProps.put(Sasl.QOP, StringUtils.join(",", qop));

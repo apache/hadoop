@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -58,22 +57,16 @@ public class XAttrHelper {
     }
     
     NameSpace ns;
-    final String prefix = name.substring(0, prefixIndex)
-        .toLowerCase(Locale.ENGLISH);
-    if (prefix.equals(
-        NameSpace.USER.toString().toLowerCase(Locale.ENGLISH))) {
+    final String prefix = name.substring(0, prefixIndex).toLowerCase();
+    if (prefix.equals(NameSpace.USER.toString().toLowerCase())) {
       ns = NameSpace.USER;
-    } else if (prefix.equals(
-        NameSpace.TRUSTED.toString().toLowerCase(Locale.ENGLISH))) {
+    } else if (prefix.equals(NameSpace.TRUSTED.toString().toLowerCase())) {
       ns = NameSpace.TRUSTED;
-    } else if (prefix.equals(
-        NameSpace.SYSTEM.toString().toLowerCase(Locale.ENGLISH))) {
+    } else if (prefix.equals(NameSpace.SYSTEM.toString().toLowerCase())) {
       ns = NameSpace.SYSTEM;
-    } else if (prefix.equals(
-        NameSpace.SECURITY.toString().toLowerCase(Locale.ENGLISH))) {
+    } else if (prefix.equals(NameSpace.SECURITY.toString().toLowerCase())) {
       ns = NameSpace.SECURITY;
-    } else if (prefix.equals(
-        NameSpace.RAW.toString().toLowerCase(Locale.ENGLISH))) {
+    } else if (prefix.equals(NameSpace.RAW.toString().toLowerCase())) {
       ns = NameSpace.RAW;
     } else {
       throw new HadoopIllegalArgumentException("An XAttr name must be " +
@@ -152,7 +145,7 @@ public class XAttrHelper {
     }
     
     String namespace = xAttr.getNameSpace().toString();
-    return namespace.toLowerCase(Locale.ENGLISH) + "." + xAttr.getName();
+    return namespace.toLowerCase() + "." + xAttr.getName();
   }
 
   /**

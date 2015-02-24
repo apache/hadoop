@@ -46,7 +46,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -1452,7 +1451,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return defaultValue;
     }
 
-    valueString = valueString.toLowerCase(Locale.ENGLISH);
+    valueString = valueString.toLowerCase();
 
     if ("true".equals(valueString))
       return true;

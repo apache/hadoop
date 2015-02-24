@@ -30,7 +30,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -258,8 +257,7 @@ public class RMWebServices {
     } else {
       acceptedStates = EnumSet.noneOf(NodeState.class);
       for (String stateStr : states.split(",")) {
-        acceptedStates.add(NodeState.valueOf(
-            stateStr.toUpperCase(Locale.ENGLISH)));
+        acceptedStates.add(NodeState.valueOf(stateStr.toUpperCase()));
       }
     }
     
@@ -508,7 +506,7 @@ public class RMWebServices {
     // if no states, returns the counts of all RMAppStates
     if (states.size() == 0) {
       for (YarnApplicationState state : YarnApplicationState.values()) {
-        states.add(state.toString().toLowerCase(Locale.ENGLISH));
+        states.add(state.toString().toLowerCase());
       }
     }
     // in case we extend to multiple applicationTypes in the future
@@ -520,9 +518,8 @@ public class RMWebServices {
     ConcurrentMap<ApplicationId, RMApp> apps = rm.getRMContext().getRMApps();
     for (RMApp rmapp : apps.values()) {
       YarnApplicationState state = rmapp.createApplicationState();
-      String type =
-          rmapp.getApplicationType().trim().toLowerCase(Locale.ENGLISH);
-      if (states.contains(state.toString().toLowerCase(Locale.ENGLISH))) {
+      String type = rmapp.getApplicationType().trim().toLowerCase();
+      if (states.contains(state.toString().toLowerCase())) {
         if (types.contains(ANY)) {
           countApp(scoreboard, state, ANY);
         } else if (types.contains(type)) {
@@ -557,8 +554,7 @@ public class RMWebServices {
               if (isState) {
                 try {
                   // enum string is in the uppercase
-                  YarnApplicationState.valueOf(
-                      paramStr.trim().toUpperCase(Locale.ENGLISH));
+                  YarnApplicationState.valueOf(paramStr.trim().toUpperCase());
                 } catch (RuntimeException e) {
                   YarnApplicationState[] stateArray =
                       YarnApplicationState.values();
@@ -568,7 +564,7 @@ public class RMWebServices {
                       + " specified. It should be one of " + allAppStates);
                 }
               }
-              params.add(paramStr.trim().toLowerCase(Locale.ENGLISH));
+              params.add(paramStr.trim().toLowerCase());
             }
           }
         }
@@ -586,8 +582,7 @@ public class RMWebServices {
     for (String state : states) {
       Map<String, Long> partScoreboard = new HashMap<String, Long>();
       scoreboard.put(
-          YarnApplicationState.valueOf(
-              state.toUpperCase(Locale.ENGLISH)), partScoreboard);
+          YarnApplicationState.valueOf(state.toUpperCase()), partScoreboard);
       // types is verified no to be empty
       for (String type : types) {
         partScoreboard.put(type, 0L);

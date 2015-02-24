@@ -65,10 +65,10 @@ public class CompressionCodecFactory {
     codecsByClassName.put(codec.getClass().getCanonicalName(), codec);
 
     String codecName = codec.getClass().getSimpleName();
-    codecsByName.put(codecName.toLowerCase(Locale.ENGLISH), codec);
+    codecsByName.put(codecName.toLowerCase(), codec);
     if (codecName.endsWith("Codec")) {
       codecName = codecName.substring(0, codecName.length() - "Codec".length());
-      codecsByName.put(codecName.toLowerCase(Locale.ENGLISH), codec);
+      codecsByName.put(codecName.toLowerCase(), codec);
     }
   }
 
@@ -240,7 +240,7 @@ public class CompressionCodecFactory {
       CompressionCodec codec = getCodecByClassName(codecName);
       if (codec == null) {
         // trying to get the codec by name in case the name was specified instead a class
-        codec = codecsByName.get(codecName.toLowerCase(Locale.ENGLISH));
+        codec = codecsByName.get(codecName.toLowerCase());
       }
       return codec;
     }

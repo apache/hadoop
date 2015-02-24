@@ -473,7 +473,7 @@ public class DistributedCache {
         if (fragment == null) {
           return false;
         }
-        String lowerCaseFragment = fragment.toLowerCase(Locale.ENGLISH);
+        String lowerCaseFragment = fragment.toLowerCase();
         if (fragments.contains(lowerCaseFragment)) {
           return false;
         }
@@ -488,7 +488,7 @@ public class DistributedCache {
         if (fragment == null) {
           return false;
         }
-        String lowerCaseFragment = fragment.toLowerCase(Locale.ENGLISH);
+        String lowerCaseFragment = fragment.toLowerCase();
         if (fragments.contains(lowerCaseFragment)) {
           return false;
         }

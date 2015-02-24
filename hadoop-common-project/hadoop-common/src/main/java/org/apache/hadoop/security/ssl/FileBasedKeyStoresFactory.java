@@ -33,7 +33,6 @@ import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.text.MessageFormat;
-import java.util.Locale;
 
 /**
  * {@link KeyStoresFactory} implementation that reads the certificates from
@@ -95,8 +94,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
   @VisibleForTesting
   public static String resolvePropertyName(SSLFactory.Mode mode,
                                            String template) {
-    return MessageFormat.format(
-        template, mode.toString().toLowerCase(Locale.ENGLISH));
+    return MessageFormat.format(template, mode.toString().toLowerCase());
   }
 
   /**

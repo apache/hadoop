@@ -43,7 +43,6 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -255,7 +254,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
   private Set<String> toLowerCase(Collection<String> collection) {
     Set<String> set = new HashSet<String>();
     for (String value : collection) {
-      set.add(value.toLowerCase(Locale.ENGLISH));
+      set.add(value.toLowerCase());
     }
     return set;
   }
@@ -301,7 +300,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
 
   protected void validateNamenode(String namenode) throws FileSystemAccessException {
     if (nameNodeWhitelist.size() > 0 && !nameNodeWhitelist.contains("*")) {
-      if (!nameNodeWhitelist.contains(namenode.toLowerCase(Locale.ENGLISH))) {
+      if (!nameNodeWhitelist.contains(namenode.toLowerCase())) {
         throw new FileSystemAccessException(FileSystemAccessException.ERROR.H05, namenode, "not in whitelist");
       }
     }

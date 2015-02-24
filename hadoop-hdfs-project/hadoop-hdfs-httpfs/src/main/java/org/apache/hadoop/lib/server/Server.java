@@ -36,7 +36,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 
@@ -203,7 +202,7 @@ public class Server {
    * @param config server configuration.
    */
   public Server(String name, String homeDir, String configDir, String logDir, String tempDir, Configuration config) {
-    this.name = Check.notEmpty(name, "name").trim().toLowerCase(Locale.ENGLISH);
+    this.name = Check.notEmpty(name, "name").trim().toLowerCase();
     this.homeDir = Check.notEmpty(homeDir, "homeDir");
     this.configDir = Check.notEmpty(configDir, "configDir");
     this.logDir = Check.notEmpty(logDir, "logDir");

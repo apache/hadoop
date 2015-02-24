@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.web;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import javax.ws.rs.core.MultivaluedMap;
@@ -76,7 +75,7 @@ public class ParamFilter implements ResourceFilter {
       final MultivaluedMap<String, String> parameters) {
     UriBuilder b = UriBuilder.fromUri(uri).replaceQuery("");
     for(Map.Entry<String, List<String>> e : parameters.entrySet()) {
-      final String key = e.getKey().toLowerCase(Locale.ENGLISH);
+      final String key = e.getKey().toLowerCase();
       for(String v : e.getValue()) {
         b = b.queryParam(key, v);
       }

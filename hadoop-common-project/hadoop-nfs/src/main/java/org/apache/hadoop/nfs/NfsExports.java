@@ -20,7 +20,6 @@ package org.apache.hadoop.nfs;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -360,10 +359,10 @@ public class NfsExports {
     AccessPrivilege privilege = AccessPrivilege.READ_ONLY;
     switch (parts.length) {
     case 1:
-      host = parts[0].toLowerCase(Locale.ENGLISH).trim();
+      host = parts[0].toLowerCase().trim();
       break;
     case 2:
-      host = parts[0].toLowerCase(Locale.ENGLISH).trim();
+      host = parts[0].toLowerCase().trim();
       String option = parts[1].trim();
       if ("rw".equalsIgnoreCase(option)) {
         privilege = AccessPrivilege.READ_WRITE;

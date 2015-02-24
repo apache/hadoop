@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.slive;
 
-import java.util.Locale;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -68,8 +67,7 @@ class OperationOutput {
           "Invalid key format - no type seperator - " + TYPE_SEP);
     }
     try {
-      dataType = OutputType.valueOf(
-          key.substring(0, place).toUpperCase(Locale.ENGLISH));
+      dataType = OutputType.valueOf(key.substring(0, place).toUpperCase());
     } catch (Exception e) {
       throw new IllegalArgumentException(
           "Invalid key format - invalid output type", e);

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import java.util.Locale;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_STATE;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_LABEL;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
@@ -78,7 +77,7 @@ class NodesPage extends RmView {
               .th(".nodeManagerVersion", "Version")._()._().tbody();
       NodeState stateFilter = null;
       if (type != null && !type.isEmpty()) {
-        stateFilter = NodeState.valueOf(type.toUpperCase(Locale.ENGLISH));
+        stateFilter = NodeState.valueOf(type.toUpperCase());
       }
       Collection<RMNode> rmNodes = this.rm.getRMContext().getRMNodes().values();
       boolean isInactive = false;

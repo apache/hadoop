@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.permission;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 
 import com.google.common.base.Objects;
 
@@ -107,7 +106,7 @@ public class AclEntry {
       sb.append("default:");
     }
     if (type != null) {
-      sb.append(type.toString().toLowerCase(Locale.ENGLISH));
+      sb.append(type.toString().toLowerCase());
     }
     sb.append(':');
     if (name != null) {
@@ -264,8 +263,7 @@ public class AclEntry {
 
     AclEntryType aclType = null;
     try {
-      aclType = Enum.valueOf(
-          AclEntryType.class, split[index].toUpperCase(Locale.ENGLISH));
+      aclType = Enum.valueOf(AclEntryType.class, split[index].toUpperCase());
       builder.setType(aclType);
       index++;
     } catch (IllegalArgumentException iae) {

@@ -53,7 +53,6 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -423,7 +422,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
   @Override
   public KeyVersion createKey(String name, byte[] material,
                                Options options) throws IOException {
-    Preconditions.checkArgument(name.equals(name.toLowerCase(Locale.ENGLISH)),
+    Preconditions.checkArgument(name.equals(name.toLowerCase()),
         "Uppercase key names are unsupported: %s", name);
     writeLock.lock();
     try {

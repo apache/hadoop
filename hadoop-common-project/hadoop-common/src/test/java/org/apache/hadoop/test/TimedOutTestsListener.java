@@ -27,7 +27,6 @@ import java.lang.management.ThreadMXBean;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Locale;
 import java.util.Map;
 
 import org.junit.runner.notification.Failure;
@@ -94,8 +93,7 @@ public class TimedOutTestsListener extends RunListener {
           thread.getPriority(),
           thread.getId(),
           Thread.State.WAITING.equals(thread.getState()) ? 
-              "in Object.wait()" :
-              thread.getState().name().toLowerCase(Locale.ENGLISH),
+              "in Object.wait()" : thread.getState().name().toLowerCase(),
           Thread.State.WAITING.equals(thread.getState()) ? 
               "WAITING (on object monitor)" : thread.getState()));
       for (StackTraceElement stackTraceElement : e.getValue()) {

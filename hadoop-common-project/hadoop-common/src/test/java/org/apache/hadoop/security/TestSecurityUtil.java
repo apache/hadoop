@@ -103,13 +103,13 @@ public class TestSecurityUtil {
     String realm = "@REALM";
     String principalInConf = service + SecurityUtil.HOSTNAME_PATTERN + realm;
     String hostname = "FooHost";
-    String principal = service + hostname.toLowerCase(Locale.ENGLISH) + realm;
+    String principal = service + hostname.toLowerCase() + realm;
     verify(principalInConf, hostname, principal);
   }
 
   @Test
   public void testLocalHostNameForNullOrWild() throws Exception {
-    String local = SecurityUtil.getLocalHostName().toLowerCase(Locale.ENGLISH);
+    String local = SecurityUtil.getLocalHostName().toLowerCase(Locale.US);
     assertEquals("hdfs/" + local + "@REALM",
                  SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", (String)null));
     assertEquals("hdfs/" + local + "@REALM",
@@ -260,7 +260,7 @@ public class TestSecurityUtil {
     //LOG.info("address:"+addr+" host:"+host+" ip:"+ip+" port:"+port);
 
     SecurityUtil.setTokenServiceUseIp(useIp);
-    String serviceHost = useIp ? ip : host.toLowerCase(Locale.ENGLISH);
+    String serviceHost = useIp ? ip : host.toLowerCase();
     
     Token<?> token = new Token<TokenIdentifier>();
     Text service = new Text(serviceHost+":"+port);

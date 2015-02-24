@@ -587,7 +587,7 @@ public class SecondaryNameNode implements Runnable,
       return 0;
     }
     
-    String cmd = opts.getCommand().toString().toLowerCase(Locale.ENGLISH);
+    String cmd = opts.getCommand().toString().toLowerCase();
     
     int exitCode = 0;
     try {

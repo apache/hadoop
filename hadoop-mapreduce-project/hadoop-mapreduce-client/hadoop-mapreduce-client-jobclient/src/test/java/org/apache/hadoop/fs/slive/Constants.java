@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.slive;
 
-import java.util.Locale;
-
 /**
  * Constants used in various places in slive
  */
@@ -37,7 +35,7 @@ class Constants {
   enum Distribution {
     BEG, END, UNIFORM, MID;
     String lowerName() {
-      return this.name().toLowerCase(Locale.ENGLISH);
+      return this.name().toLowerCase();
     }
   }
 
@@ -47,7 +45,7 @@ class Constants {
   enum OperationType {
     READ, APPEND, RENAME, LS, MKDIR, DELETE, CREATE, TRUNCATE;
     String lowerName() {
-      return this.name().toLowerCase(Locale.ENGLISH);
+      return this.name().toLowerCase();
     }
   }
 

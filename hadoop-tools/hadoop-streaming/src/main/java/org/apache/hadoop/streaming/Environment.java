@@ -43,7 +43,7 @@ public class Environment extends Properties {
     // http://lopica.sourceforge.net/os.html
     String command = null;
     String OS = System.getProperty("os.name");
-    String lowerOs = OS.toLowerCase(Locale.ENGLISH);
+    String lowerOs = OS.toLowerCase();
     if (OS.indexOf("Windows") > -1) {
       command = "cmd /C set";
     } else if (lowerOs.indexOf("ix") > -1 || lowerOs.indexOf("linux") > -1

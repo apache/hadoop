@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
@@ -215,25 +214,23 @@ public class FileBench extends Configured implements Tool {
           if (!(fmt == Format.txt || cod == CCodec.pln)) {
             for (CType typ : ct) {
               String fn =
-                fmt.name().toUpperCase(Locale.ENGLISH) + "_" +
-                cod.name().toUpperCase(Locale.ENGLISH) + "_" +
-                typ.name().toUpperCase(Locale.ENGLISH);
+                fmt.name().toUpperCase() + "_" +
+                cod.name().toUpperCase() + "_" +
+                typ.name().toUpperCase();
               typ.configure(job);
-              System.out.print(
-                  rwop.name().toUpperCase(Locale.ENGLISH) + " " + fn + ": ");
+              System.out.print(rwop.name().toUpperCase() + " " + fn + ": ");
               System.out.println(rwop.exec(fn, job) / 1000 +
                   " seconds");
             }
           } else {
             String fn =
-              fmt.name().toUpperCase(Locale.ENGLISH) + "_" +
-              cod.name().toUpperCase(Locale.ENGLISH);
+              fmt.name().toUpperCase() + "_" +
+              cod.name().toUpperCase();
             Path p = new Path(root, fn);
             if (rwop == RW.r && !fs.exists(p)) {
               fn += cod.getExt();
             }
-            System.out.print(
-                rwop.name().toUpperCase(Locale.ENGLISH) + " " + fn + ": ");
+            System.out.print(rwop.name().toUpperCase() + " " + fn + ": ");
             System.out.println(rwop.exec(fn, job) / 1000 +
                 " seconds");
           }

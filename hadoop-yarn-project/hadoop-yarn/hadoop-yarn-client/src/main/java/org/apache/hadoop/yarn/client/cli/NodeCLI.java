@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
@@ -112,8 +111,7 @@ public class NodeCLI extends YarnCLI {
         if (types != null) {
           for (String type : types) {
             if (!type.trim().isEmpty()) {
-              nodeStates.add(
-                  NodeState.valueOf(type.trim().toUpperCase(Locale.ENGLISH)));
+              nodeStates.add(NodeState.valueOf(type.trim().toUpperCase()));
             }
           }
         }

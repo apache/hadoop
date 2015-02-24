@@ -22,7 +22,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobStatus.State;
@@ -154,8 +153,7 @@ public class TestTypeConverter {
     org.apache.hadoop.mapreduce.QueueInfo returned =
       TypeConverter.fromYarn(queueInfo, new Configuration());
     Assert.assertEquals("queueInfo translation didn't work.",
-        returned.getState().toString(),
-        queueInfo.getQueueState().toString().toLowerCase(Locale.ENGLISH));
+      returned.getState().toString(), queueInfo.getQueueState().toString().toLowerCase());
   }
 
   /**

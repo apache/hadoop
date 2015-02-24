@@ -29,7 +29,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Date;
-import java.util.Locale;
 import java.util.Random;
 import java.util.StringTokenizer;
 import org.apache.commons.logging.Log;
@@ -155,16 +154,16 @@ public class TestDFSIO implements Tool {
     static ByteMultiple parseString(String sMultiple) {
       if(sMultiple == null || sMultiple.isEmpty()) // MB by default
         return MB;
-      String sMU = sMultiple.toUpperCase(Locale.ENGLISH);
-      if(B.name().toUpperCase(Locale.ENGLISH).endsWith(sMU))
+      String sMU = sMultiple.toUpperCase();
+      if(B.name().toUpperCase().endsWith(sMU))
         return B;
-      if(KB.name().toUpperCase(Locale.ENGLISH).endsWith(sMU))
+      if(KB.name().toUpperCase().endsWith(sMU))
         return KB;
-      if(MB.name().toUpperCase(Locale.ENGLISH).endsWith(sMU))
+      if(MB.name().toUpperCase().endsWith(sMU))
         return MB;
-      if(GB.name().toUpperCase(Locale.ENGLISH).endsWith(sMU))
+      if(GB.name().toUpperCase().endsWith(sMU))
         return GB;
-      if(TB.name().toUpperCase(Locale.ENGLISH).endsWith(sMU))
+      if(TB.name().toUpperCase().endsWith(sMU))
         return TB;
       throw new IllegalArgumentException("Unsupported ByteMultiple "+sMultiple);
     }
@@ -737,7 +736,7 @@ public class TestDFSIO implements Tool {
     }
 
     for (int i = 0; i < args.length; i++) { // parse command line
-      if (args[i].toLowerCase(Locale.ENGLISH).startsWith("-read")) {
+      if (args[i].toLowerCase().startsWith("-read")) {
         testType = TestType.TEST_TYPE_READ;
       } else if (args[i].equalsIgnoreCase("-write")) {
         testType = TestType.TEST_TYPE_WRITE;
@@ -756,10 +755,9 @@ public class TestDFSIO implements Tool {
         testType = TestType.TEST_TYPE_TRUNCATE;
       } else if (args[i].equalsIgnoreCase("-clean")) {
         testType = TestType.TEST_TYPE_CLEANUP;
-      } else if (args[i].toLowerCase(Locale.ENGLISH).startsWith("-seq")) {
+      } else if (args[i].toLowerCase().startsWith("-seq")) {
         isSequential = true;
-      } else if (
-          args[i].toLowerCase(Locale.ENGLISH).startsWith("-compression")) {
+      } else if (args[i].toLowerCase().startsWith("-compression")) {
         compressionClass = args[++i];
       } else if (args[i].equalsIgnoreCase("-nrfiles")) {
         nrFiles = Integer.parseInt(args[++i]);

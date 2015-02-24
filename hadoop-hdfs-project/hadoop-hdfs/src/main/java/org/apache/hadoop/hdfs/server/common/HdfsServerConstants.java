@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.common;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -54,7 +53,7 @@ public final class HdfsServerConstants {
 
     public String getOptionString() {
       return StartupOption.ROLLINGUPGRADE.getName() + " "
-          + name().toLowerCase(Locale.ENGLISH);
+          + name().toLowerCase();
     }
 
     public boolean matches(StartupOption option) {
@@ -77,7 +76,7 @@ public final class HdfsServerConstants {
     public static String getAllOptionString() {
       final StringBuilder b = new StringBuilder("<");
       for(RollingUpgradeStartupOption opt : VALUES) {
-        b.append(opt.name().toLowerCase(Locale.ENGLISH)).append("|");
+        b.append(opt.name().toLowerCase()).append("|");
       }
       b.setCharAt(b.length() - 1, '>');
       return b.toString();

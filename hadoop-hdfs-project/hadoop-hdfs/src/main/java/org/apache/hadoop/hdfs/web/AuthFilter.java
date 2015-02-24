@@ -23,7 +23,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 
@@ -97,7 +96,7 @@ public class AuthFilter extends AuthenticationFilter {
 
     final Map<String, List<String>> m = new HashMap<String, List<String>>();
     for(Map.Entry<String, String[]> entry : original.entrySet()) {
-      final String key = entry.getKey().toLowerCase(Locale.ENGLISH);
+      final String key = entry.getKey().toLowerCase();
       List<String> strings = m.get(key);
       if (strings == null) {
         strings = new ArrayList<String>();

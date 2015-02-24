@@ -24,7 +24,6 @@ import java.io.OutputStream;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Locale;
 import java.util.Random;
 import java.util.List;
 import java.util.ArrayList;
@@ -557,10 +556,7 @@ public class TestFileSystem extends TestCase {
   static void checkPath(MiniDFSCluster cluster, FileSystem fileSys) throws IOException {
     InetSocketAddress add = cluster.getNameNode().getNameNodeAddress();
     // Test upper/lower case
-    fileSys.checkPath(
-        new Path("hdfs://"
-            + add.getHostName().toUpperCase(Locale.ENGLISH)
-            + ":" + add.getPort()));
+    fileSys.checkPath(new Path("hdfs://" + add.getHostName().toUpperCase() + ":" + add.getPort()));
   }
 
   public void testFsClose() throws Exception {

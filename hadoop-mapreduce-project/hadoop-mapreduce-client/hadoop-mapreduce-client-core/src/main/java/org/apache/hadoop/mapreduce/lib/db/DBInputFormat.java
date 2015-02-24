@@ -29,7 +29,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -163,8 +162,7 @@ public class DBInputFormat<T extends DBWritable>
       this.connection = createConnection();
 
       DatabaseMetaData dbMeta = connection.getMetaData();
-      this.dbProductName =
-          dbMeta.getDatabaseProductName().toUpperCase(Locale.ENGLISH);
+      this.dbProductName = dbMeta.getDatabaseProductName().toUpperCase();
     }
     catch (Exception ex) {
       throw new RuntimeException(ex);

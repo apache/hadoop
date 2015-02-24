@@ -37,7 +37,6 @@ import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -287,8 +286,8 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     if (hasResponse) {
       String contentType = conn.getHeaderField(CONTENT_TYPE);
-      contentType = (contentType != null) ?
-          contentType.toLowerCase(Locale.ENGLISH) : null;
+      contentType = (contentType != null) ? contentType.toLowerCase()
+                                          : null;
       if (contentType != null &&
           contentType.contains(APPLICATION_JSON_MIME)) {
         try {

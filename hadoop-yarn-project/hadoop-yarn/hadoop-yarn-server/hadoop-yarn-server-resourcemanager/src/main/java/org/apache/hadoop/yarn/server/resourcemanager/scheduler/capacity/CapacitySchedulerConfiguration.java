@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -395,8 +394,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public QueueState getState(String queue) {
     String state = get(getQueuePrefix(queue) + STATE);
     return (state != null) ? 
-        QueueState.valueOf(state.toUpperCase(Locale.ENGLISH)) :
-        QueueState.RUNNING;
+        QueueState.valueOf(state.toUpperCase()) : QueueState.RUNNING;
   }
   
   public void setAccessibleNodeLabels(String queue, Set<String> labels) {
@@ -492,7 +490,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
   
   private static String getAclKey(QueueACL acl) {
-    return "acl_" + acl.toString().toLowerCase(Locale.ENGLISH);
+    return "acl_" + acl.toString().toLowerCase();
   }
 
   public AccessControlList getAcl(String queue, QueueACL acl) {

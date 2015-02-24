@@ -33,7 +33,6 @@ import org.apache.hadoop.lib.wsrs.StringParam;
 
 import javax.ws.rs.ext.Provider;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -169,8 +168,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
      */
     public OperationParam(String operation) {
       super(NAME, HttpFSFileSystem.Operation.class,
-            HttpFSFileSystem.Operation.valueOf(
-                operation.toUpperCase(Locale.ENGLISH)));
+            HttpFSFileSystem.Operation.valueOf(operation.toUpperCase()));
     }
   }
 

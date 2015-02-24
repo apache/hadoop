@@ -241,8 +241,7 @@ public class HamletGen {
     puts(indent, "\n",
          "private <T extends _> ", retName, "<T> ", methodName,
          "_(T e, boolean inline) {\n",
-         "  return new ", retName, "<T>(\"",
-        retName.toLowerCase(Locale.ENGLISH),
+         "  return new ", retName, "<T>(\"", retName.toLowerCase(Locale.US),
          "\", e, opt(", !endTagOptional.contains(retName), ", inline, ",
          retName.equals("PRE"), ")); }");
   }
@@ -259,7 +258,7 @@ public class HamletGen {
       puts(0, ") {");
       puts(indent,
            topMode ? "" : "  closeAttrs();\n",
-           "  return ", retName.toLowerCase(Locale.ENGLISH), "_(this, ",
+           "  return ", retName.toLowerCase(Locale.US), "_(this, ",
            isInline(className, retName), ");\n", "}");
     } else if (params.length == 1) {
       puts(0, "String selector) {");

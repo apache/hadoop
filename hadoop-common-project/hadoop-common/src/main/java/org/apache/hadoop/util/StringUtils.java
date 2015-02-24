@@ -901,7 +901,7 @@ public class StringUtils {
    */
   public static String camelize(String s) {
     StringBuilder sb = new StringBuilder();
-    String[] words = split(s.toLowerCase(Locale.ENGLISH), ESCAPE_CHAR, '_');
+    String[] words = split(s.toLowerCase(Locale.US), ESCAPE_CHAR, '_');
 
     for (String word : words)
       sb.append(org.apache.commons.lang.StringUtils.capitalize(word));

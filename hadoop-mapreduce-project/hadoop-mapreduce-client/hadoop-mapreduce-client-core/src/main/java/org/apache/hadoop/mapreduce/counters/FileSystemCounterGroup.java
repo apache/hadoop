@@ -227,7 +227,7 @@ public abstract class FileSystemCounterGroup<C extends Counter>
   }
 
   private String checkScheme(String scheme) {
-    String fixed = scheme.toUpperCase(Locale.ENGLISH);
+    String fixed = scheme.toUpperCase(Locale.US);
     String interned = schemes.putIfAbsent(fixed, fixed);
     if (schemes.size() > MAX_NUM_SCHEMES) {
       // mistakes or abuses

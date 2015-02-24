@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.web.resources;
 
 import java.util.Arrays;
-import java.util.Locale;
 
 abstract class EnumParam<E extends Enum<E>> extends Param<E, EnumParam.Domain<E>> {
   EnumParam(final Domain<E> domain, final E value) {
@@ -41,7 +40,7 @@ abstract class EnumParam<E extends Enum<E>> extends Param<E, EnumParam.Domain<E>
 
     @Override
     final E parse(final String str) {
-      return Enum.valueOf(enumClass, str.toUpperCase(Locale.ENGLISH));
+      return Enum.valueOf(enumClass, str.toUpperCase());
     }
   }
 }

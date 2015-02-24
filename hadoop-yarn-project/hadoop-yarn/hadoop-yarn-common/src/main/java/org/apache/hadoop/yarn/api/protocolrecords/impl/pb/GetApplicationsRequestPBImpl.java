@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 import org.apache.commons.lang.math.LongRange;
@@ -214,7 +213,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     // Convert applicationTags to lower case and add
     this.applicationTags = new HashSet<String>();
     for (String tag : tags) {
-      this.applicationTags.add(tag.toLowerCase(Locale.ENGLISH));
+      this.applicationTags.add(tag.toLowerCase());
     }
   }
 
@@ -259,8 +258,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   public void setApplicationStates(Set<String> applicationStates) {
     EnumSet<YarnApplicationState> appStates = null;
     for (YarnApplicationState state : YarnApplicationState.values()) {
-      if (applicationStates.contains(
-          state.name().toLowerCase(Locale.ENGLISH))) {
+      if (applicationStates.contains(state.name().toLowerCase())) {
         if (appStates == null) {
           appStates = EnumSet.of(state);
         } else {

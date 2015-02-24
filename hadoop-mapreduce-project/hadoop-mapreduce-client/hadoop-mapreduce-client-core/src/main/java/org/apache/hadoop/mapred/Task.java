@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -117,7 +116,7 @@ abstract public class Task implements Writable, Configurable {
    * BYTES_READ counter and second one is of the BYTES_WRITTEN counter.
    */
   protected static String[] getFileSystemCounterNames(String uriScheme) {
-    String scheme = uriScheme.toUpperCase(Locale.ENGLISH);
+    String scheme = uriScheme.toUpperCase();
     return new String[]{scheme+"_BYTES_READ", scheme+"_BYTES_WRITTEN"};
   }
   

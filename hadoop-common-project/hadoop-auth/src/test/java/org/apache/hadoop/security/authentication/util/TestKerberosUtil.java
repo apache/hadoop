@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 import org.apache.directory.server.kerberos.shared.keytab.Keytab;
@@ -59,25 +58,24 @@ public class TestKerberosUtil {
 
     // send null hostname
     Assert.assertEquals("When no hostname is sent",
-        service + "/" + localHostname.toLowerCase(Locale.ENGLISH),
+        service + "/" + localHostname.toLowerCase(),
         KerberosUtil.getServicePrincipal(service, null));
     // send empty hostname
     Assert.assertEquals("When empty hostname is sent",
-        service + "/" + localHostname.toLowerCase(Locale.ENGLISH),
+        service + "/" + localHostname.toLowerCase(),
         KerberosUtil.getServicePrincipal(service, ""));
     // send 0.0.0.0 hostname
     Assert.assertEquals("When 0.0.0.0 hostname is sent",
-        service + "/" + localHostname.toLowerCase(Locale.ENGLISH),
+        service + "/" + localHostname.toLowerCase(),
         KerberosUtil.getServicePrincipal(service, "0.0.0.0"));
     // send uppercase hostname
     Assert.assertEquals("When uppercase hostname is sent",
-        service + "/" + testHost.toLowerCase(Locale.ENGLISH),
+        service + "/" + testHost.toLowerCase(),
         KerberosUtil.getServicePrincipal(service, testHost));
     // send lowercase hostname
     Assert.assertEquals("When lowercase hostname is sent",
-        service + "/" + testHost.toLowerCase(Locale.ENGLISH),
-        KerberosUtil.getServicePrincipal(
-            service, testHost.toLowerCase(Locale.ENGLISH)));
+        service + "/" + testHost.toLowerCase(),
+        KerberosUtil.getServicePrincipal(service, testHost.toLowerCase()));
   }
   
   @Test

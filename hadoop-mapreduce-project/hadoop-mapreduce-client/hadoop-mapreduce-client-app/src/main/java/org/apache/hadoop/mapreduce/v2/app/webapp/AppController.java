@@ -227,7 +227,7 @@ public class AppController extends Controller implements AMParams {
       try {
         String tt = $(TASK_TYPE);
         tt = tt.isEmpty() ? "All" : StringUtils.capitalize(MRApps.taskType(tt).
-            toString().toLowerCase(Locale.ENGLISH));
+            toString().toLowerCase(Locale.US));
         setTitle(join(tt, " Tasks for ", $(JOB_ID)));
       } catch (Exception e) {
         LOG.error("Failed to render tasks page with task type : "

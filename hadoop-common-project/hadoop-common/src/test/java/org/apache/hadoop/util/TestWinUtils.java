@@ -27,7 +27,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Locale;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -383,10 +382,8 @@ public class TestWinUtils {
   private void assertOwners(File file, String expectedUser,
       String expectedGroup) throws IOException {
     String [] args = lsF(file).trim().split("[\\|]");
-    assertEquals(expectedUser.toLowerCase(Locale.ENGLISH),
-        args[2].toLowerCase(Locale.ENGLISH));
-    assertEquals(expectedGroup.toLowerCase(Locale.ENGLISH),
-        args[3].toLowerCase(Locale.ENGLISH));
+    assertEquals(expectedUser.toLowerCase(), args[2].toLowerCase());
+    assertEquals(expectedGroup.toLowerCase(), args[3].toLowerCase());
   }
 
   @Test (timeout = 30000)

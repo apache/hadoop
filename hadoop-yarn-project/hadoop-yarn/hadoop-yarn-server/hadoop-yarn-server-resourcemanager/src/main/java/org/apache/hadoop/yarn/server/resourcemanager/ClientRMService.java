@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -757,7 +756,7 @@ public class ClientRMService extends AbstractService implements
       if (applicationTypes != null && !applicationTypes.isEmpty()) {
         String appTypeToMatch = caseSensitive
             ? application.getApplicationType()
-            : application.getApplicationType().toLowerCase(Locale.ENGLISH);
+            : application.getApplicationType().toLowerCase();
         if (!applicationTypes.contains(appTypeToMatch)) {
           continue;
         }

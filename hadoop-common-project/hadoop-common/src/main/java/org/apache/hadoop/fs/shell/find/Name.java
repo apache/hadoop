@@ -19,7 +19,6 @@ package org.apache.hadoop.fs.shell.find;
 
 import java.io.IOException;
 import java.util.Deque;
-import java.util.Locale;
 
 import org.apache.hadoop.fs.GlobPattern;
 import org.apache.hadoop.fs.shell.PathData;
@@ -74,7 +73,7 @@ final class Name extends BaseExpression {
   public void prepare() throws IOException {
     String argPattern = getArgument(1);
     if (!caseSensitive) {
-      argPattern = argPattern.toLowerCase(Locale.ENGLISH);
+      argPattern = argPattern.toLowerCase();
     }
     globPattern = new GlobPattern(argPattern);
   }
@@ -83,7 +82,7 @@ final class Name extends BaseExpression {
   public Result apply(PathData item, int depth) throws IOException {
     String name = getPath(item).getName();
     if (!caseSensitive) {
-      name = name.toLowerCase(Locale.ENGLISH);
+      name = name.toLowerCase();
     }
     if (globPattern.matches(name)) {
       return Result.PASS;

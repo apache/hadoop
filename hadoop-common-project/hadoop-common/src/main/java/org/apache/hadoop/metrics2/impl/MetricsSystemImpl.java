@@ -617,6 +617,6 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     String m = System.getProperty(MS_INIT_MODE_KEY);
     String m2 = m == null ? System.getenv(MS_INIT_MODE_KEY) : m;
     return InitMode.valueOf((m2 == null ? InitMode.NORMAL.name() : m2)
-                            .toUpperCase(Locale.ENGLISH));
+                            .toUpperCase(Locale.US));
   }
 }

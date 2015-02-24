@@ -21,7 +21,6 @@ package org.apache.hadoop.mapreduce;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobPriority;
@@ -315,7 +314,7 @@ public class TypeConverter {
       QueueState state) {
     org.apache.hadoop.mapreduce.QueueState qState =
       org.apache.hadoop.mapreduce.QueueState.getState(
-        state.toString().toLowerCase(Locale.ENGLISH));
+        state.toString().toLowerCase());
     return qState;
   }
 

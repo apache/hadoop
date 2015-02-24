@@ -27,7 +27,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -158,7 +157,7 @@ public class SliveTest implements Tool {
     if (val == null) {
       return false;
     }
-    String cleanupOpt = val.toLowerCase(Locale.ENGLISH).trim();
+    String cleanupOpt = val.toLowerCase().trim();
     if (cleanupOpt.equals("true") || cleanupOpt.equals("1")) {
       return true;
     } else {

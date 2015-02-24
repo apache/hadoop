@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -99,7 +98,7 @@ public class HdfsConstants {
 
     /** Covert the given String to a RollingUpgradeAction. */
     public static RollingUpgradeAction fromString(String s) {
-      return MAP.get(s.toUpperCase(Locale.ENGLISH));
+      return MAP.get(s.toUpperCase());
     }
   }
 

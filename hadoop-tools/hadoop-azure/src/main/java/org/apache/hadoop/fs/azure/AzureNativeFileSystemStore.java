@@ -979,8 +979,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private String verifyAndConvertToStandardFormat(String rawDir) throws URISyntaxException {
     URI asUri = new URI(rawDir);
     if (asUri.getAuthority() == null 
-        || asUri.getAuthority().toLowerCase(Locale.ENGLISH).equalsIgnoreCase(
-			sessionUri.getAuthority().toLowerCase(Locale.ENGLISH))) {
+        || asUri.getAuthority().toLowerCase(Locale.US).equalsIgnoreCase(
+        		sessionUri.getAuthority().toLowerCase(Locale.US))) {
       // Applies to me.
       return trim(asUri.getPath(), "/");
     } else {

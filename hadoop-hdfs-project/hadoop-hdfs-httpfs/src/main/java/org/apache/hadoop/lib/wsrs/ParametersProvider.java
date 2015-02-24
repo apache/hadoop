@@ -33,7 +33,6 @@ import java.lang.reflect.Type;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -71,7 +70,7 @@ public class ParametersProvider
     }
     Enum op;
     try {
-      op = Enum.valueOf(enumClass, str.toUpperCase(Locale.ENGLISH));
+      op = Enum.valueOf(enumClass, str.toUpperCase());
     } catch (IllegalArgumentException ex) {
       throw new IllegalArgumentException(
         MessageFormat.format("Invalid Operation [{0}]", str));

@@ -75,7 +75,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
-import java.util.Locale;
 import java.util.List;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.Checksum;
@@ -4349,7 +4348,7 @@ public abstract class FSEditLogOp {
 
     public RollingUpgradeOp(FSEditLogOpCodes code, String name) {
       super(code);
-      this.name = name.toUpperCase(Locale.ENGLISH);
+      this.name = name.toUpperCase();
     }
 
     static RollingUpgradeOp getStartInstance(OpInstanceCache cache) {

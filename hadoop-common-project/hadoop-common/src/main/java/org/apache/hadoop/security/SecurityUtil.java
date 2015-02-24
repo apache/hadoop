@@ -182,8 +182,7 @@ public class SecurityUtil {
     if (fqdn == null || fqdn.isEmpty() || fqdn.equals("0.0.0.0")) {
       fqdn = getLocalHostName();
     }
-    return components[0] + "/" + fqdn.toLowerCase(Locale.ENGLISH) + "@"
-        + components[2];
+    return components[0] + "/" + fqdn.toLowerCase(Locale.US) + "@" + components[2];
   }
   
   static String getLocalHostName() throws UnknownHostException {
@@ -380,7 +379,7 @@ public class SecurityUtil {
       }
       host = addr.getAddress().getHostAddress();
     } else {
-      host = addr.getHostName().toLowerCase(Locale.ENGLISH);
+      host = addr.getHostName().toLowerCase();
     }
     return new Text(host + ":" + addr.getPort());
   }

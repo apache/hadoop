@@ -14,7 +14,6 @@
 package org.apache.hadoop.security.authentication.server;
 
 import java.io.IOException;
-import java.util.Locale;
 import java.util.Properties;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -69,8 +68,7 @@ public abstract class AltKerberosAuthenticationHandler
             NON_BROWSER_USER_AGENTS, NON_BROWSER_USER_AGENTS_DEFAULT)
             .split("\\W*,\\W*");
     for (int i = 0; i < nonBrowserUserAgents.length; i++) {
-        nonBrowserUserAgents[i] =
-            nonBrowserUserAgents[i].toLowerCase(Locale.ENGLISH);
+        nonBrowserUserAgents[i] = nonBrowserUserAgents[i].toLowerCase();
     }
   }
 
@@ -122,7 +120,7 @@ public abstract class AltKerberosAuthenticationHandler
     if (userAgent == null) {
       return false;
     }
-    userAgent = userAgent.toLowerCase(Locale.ENGLISH);
+    userAgent = userAgent.toLowerCase();
     boolean isBrowser = true;
     for (String nonBrowserUserAgent : nonBrowserUserAgents) {
         if (userAgent.contains(nonBrowserUserAgent)) {
