@@ -133,6 +133,9 @@ Release 2.8.0 - UNRELEASED
     at NM to show these timing information for each active container.
     (zxu via rkanter)
 
+    YARN-2980. Move health check script related functionality to hadoop-common
+    (Varun Saxena via aw)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

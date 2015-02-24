@@ -34,6 +34,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.util.NodeHealthScriptRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -123,7 +124,9 @@ public class TestNMWebServicesContainers extends JerseyTestBase {
       };
       conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
       conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
-      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
+      LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
+      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService(
+          NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
       healthChecker.init(conf);
       dirsHandler = healthChecker.getDiskHandler();
       aclsManager = new ApplicationACLsManager(conf);
