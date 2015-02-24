@@ -711,6 +711,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7807. libhdfs htable.c: fix htable resizing, add unit test (cmccabe)
 
+    HDFS-7805. NameNode recovery prompt should be printed on console (Surendra
+    Singh Lilhore via Colin P. McCabe)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
