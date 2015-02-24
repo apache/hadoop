@@ -172,9 +172,6 @@ Trunk (Unreleased)
     HADOOP-6964. Allow compact property description in xml (Kengo Seki
     via aw)
 
-    HADOOP-11495. Convert site documentation from apt to markdown
-    (Masatake Iwasaki via aw)
-
     HADOOP-11575. Daemon log documentation is misleading
     (Naganarasimha G R via aw)
 
@@ -627,6 +624,9 @@ Release 2.7.0 - UNRELEASED
     in ClientBaseWithFixes. (Kengo Seki via aajisaka)
 
     HADOOP-11607. Reduce log spew in S3AFileSystem. (Lei (Eddy) Xu via stevel)
+
+    HADOOP-11495. Convert site documentation from apt to markdown
+    (Masatake Iwasaki via aw)
 
   OPTIMIZATIONS
 
