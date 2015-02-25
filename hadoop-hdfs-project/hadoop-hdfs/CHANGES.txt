@@ -369,6 +369,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7740. Test truncate with DataNodes restarting. (yliu)
 
+    HDFS-7668. Convert site documentation from apt to markdown (Masatake
+    Iwasaki via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
