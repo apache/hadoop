@@ -599,6 +599,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11480. Typo in hadoop-aws/index.md uses wrong scheme for
     test.fs.s3.name. (Ted Yu via aajisaka)
 
+    HADOOP-11629. WASB filesystem should not start BandwidthGaugeUpdater if
+    fs.azure.skip.metrics set to true. (Shanyu Zhao via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
