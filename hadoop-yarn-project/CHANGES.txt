@@ -613,6 +613,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3238. Connection timeouts to nodemanagers are retried at
     multiple levels (Jason Lowe via xgong)
 
+    YARN-3247. TestQueueMappings should use CapacityScheduler explicitly.
+    (Zhihai Xu via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
