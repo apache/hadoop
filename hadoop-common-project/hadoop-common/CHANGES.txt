@@ -593,6 +593,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11619. FTPFileSystem should override getDefaultPort.
     (Brahma Reddy Battula via gera)
 
+    HADOOP-11480. Typo in hadoop-aws/index.md uses wrong scheme for
+    test.fs.s3.name. (Ted Yu via aajisaka)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
