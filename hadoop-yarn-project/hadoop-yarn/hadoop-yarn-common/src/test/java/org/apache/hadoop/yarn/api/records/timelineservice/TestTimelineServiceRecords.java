@@ -76,6 +76,13 @@ public class TestTimelineServiceRecords {
     entity.addIsRelatedToEntity("test type 4", "test id 4");
     entity.addIsRelatedToEntity("test type 5", "test id 5");
     LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(entity, true));
+
+    TimelineEntities entities = new TimelineEntities();
+    TimelineEntity entity1 = new TimelineEntity();
+    entities.addEntity(entity1);
+    TimelineEntity entity2 = new TimelineEntity();
+    entities.addEntity(entity2);
+    LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(entities, true));
   }
 
   @Test

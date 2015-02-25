@@ -14,6 +14,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3041. Added the overall data model of timeline service next gen.
     (zjshen)
 
+    YARN-3240. Implement client API to put generic entities. (Zhijie Shen via
+    junping_du)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
