@@ -434,12 +434,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * Fetch it from the namenode if not cached.
    * 
    * @param offset block corresponding to this offset in file is returned
-   * @param updatePosition whether to update current position
    * @return located block
    * @throws IOException
    */
-  private LocatedBlock getBlockAt(long offset,
-      boolean updatePosition) throws IOException {
+  private LocatedBlock getBlockAt(long offset) throws IOException {
     synchronized(infoLock) {
       assert (locatedBlocks != null) : "locatedBlocks is null";
 
@@ -449,7 +447,6 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       if (offset < 0 || offset >= getFileLength()) {
         throw new IOException("offset < 0 || offset >= getFileLength(), offset="
             + offset
-            + ", updatePosition=" + updatePosition
             + ", locatedBlocks=" + locatedBlocks);
       }
       else if (offset >= locatedBlocks.getFileLength()) {
@@ -469,17 +466,6 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           locatedBlocks.insertRange(targetBlockIdx, newBlocks.getLocatedBlocks());
         }
         blk = locatedBlocks.get(targetBlockIdx);
-      }
-
-      // update current position
-      if (updatePosition) {
-        // synchronized not strictly needed, since we only get here
-        // from synchronized caller methods
-        synchronized(this) {
-          pos = offset;
-          blockEnd = blk.getStartOffset() + blk.getBlockSize() - 1;
-          currentLocatedBlock = blk;
-        }
       }
       return blk;
     }
@@ -604,7 +590,14 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       //
       // Compute desired block
       //
-      LocatedBlock targetBlock = getBlockAt(target, true);
+      LocatedBlock targetBlock = getBlockAt(target);
+
+      // update current position
+      this.pos = target;
+      this.blockEnd = targetBlock.getStartOffset() +
+            targetBlock.getBlockSize() - 1;
+      this.currentLocatedBlock = targetBlock;
+
       assert (target==pos) : "Wrong postion " + pos + " expect " + target;
       long offsetIntoBlock = target - targetBlock.getStartOffset();
 
@@ -979,7 +972,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
         }
         deadNodes.clear(); //2nd option is to remove only nodes[blockId]
         openInfo();
-        block = getBlockAt(block.getStartOffset(), false);
+        block = getBlockAt(block.getStartOffset());
         failures++;
         continue;
       }
@@ -1056,7 +1049,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       byte[] buf, int offset,
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
-    block = getBlockAt(block.getStartOffset(), false);
+    block = getBlockAt(block.getStartOffset());
     while (true) {
       DNAddrPair addressPair = chooseDataNode(block, null);
       try {
@@ -1108,7 +1101,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       // start of the loop.
       CachingStrategy curCachingStrategy;
       boolean allowShortCircuitLocalReads;
-      block = getBlockAt(block.getStartOffset(), false);
+      block = getBlockAt(block.getStartOffset());
       synchronized(infoLock) {
         curCachingStrategy = cachingStrategy;
         allowShortCircuitLocalReads = !shortCircuitForbidden();
@@ -1208,7 +1201,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     ByteBuffer bb = null;
     int len = (int) (end - start + 1);
     int hedgedReadId = 0;
-    block = getBlockAt(block.getStartOffset(), false);
+    block = getBlockAt(block.getStartOffset());
     while (true) {
       // see HDFS-6591, this metric is used to verify/catch unnecessary loops
       hedgedReadOpsLoopNumForTesting++;
