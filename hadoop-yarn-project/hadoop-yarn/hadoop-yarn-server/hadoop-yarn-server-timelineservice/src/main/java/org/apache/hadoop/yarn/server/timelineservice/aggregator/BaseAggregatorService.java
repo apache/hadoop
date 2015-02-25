@@ -25,8 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 
 /**
  * Service that handles writes to the timeline service and writes them to the
@@ -70,16 +69,14 @@ public class BaseAggregatorService extends CompositeService {
    *
    * @param entities entities to post
    * @param callerUgi the caller UGI
-   * @return the response that contains the result of the post.
    */
-  public TimelinePutResponse postEntities(TimelineEntities entities,
+  public void postEntities(TimelineEntities entities,
       UserGroupInformation callerUgi) {
     // TODO implement
     if (LOG.isDebugEnabled()) {
       LOG.debug("postEntities(entities=" + entities + ", callerUgi=" +
           callerUgi + ")");
     }
-    return null;
   }
 
   /**
