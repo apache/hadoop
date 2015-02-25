@@ -372,6 +372,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7668. Convert site documentation from apt to markdown (Masatake
     Iwasaki via Colin P. McCabe)
 
+    HDFS-7495. Remove updatePosition argument from DFSInputStream#getBlockAt()
+    (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
