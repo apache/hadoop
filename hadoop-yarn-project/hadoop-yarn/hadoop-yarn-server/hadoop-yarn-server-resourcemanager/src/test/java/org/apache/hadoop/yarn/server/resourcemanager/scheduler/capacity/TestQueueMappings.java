@@ -135,6 +135,8 @@ public class TestQueueMappings {
     checkQMapping("a", Q1, cs);
 
     csConf = new CapacitySchedulerConfiguration();
+    csConf.set(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class.getName());
     setupQueueConfiguration(csConf);
     conf = new YarnConfiguration(csConf);
 
