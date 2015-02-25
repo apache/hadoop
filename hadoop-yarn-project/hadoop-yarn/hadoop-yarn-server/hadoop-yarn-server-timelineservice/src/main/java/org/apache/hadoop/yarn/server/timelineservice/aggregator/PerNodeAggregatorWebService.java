@@ -20,12 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.aggregator;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -40,13 +35,16 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
-import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+
+import java.net.URI;
 
 /**
  * The main per-node REST end point for timeline service writes. It is
@@ -112,11 +110,14 @@ public class PerNodeAggregatorWebService {
    * the request to the app level aggregator. It expects an application as a
    * context.
    */
-  @POST
+  @PUT
+  @Path("/entities")
   @Consumes({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
-  public TimelinePutResponse postEntities(
+  public Response putEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
+      @QueryParam("async") String async,
+      @QueryParam("appid") String appId,
       TimelineEntities entities) {
     init(res);
     UserGroupInformation callerUgi = getUser(req);
@@ -127,13 +128,20 @@ public class PerNodeAggregatorWebService {
     }
 
     // TODO how to express async posts and handle them
+    boolean isAsync = async != null && async.trim().equalsIgnoreCase("true");
+
     try {
-      AppLevelAggregatorService service = getAggregatorService(req);
+      appId = parseApplicationId(appId);
+      if (appId == null) {
+        return Response.status(Response.Status.BAD_REQUEST).build();
+      }
+      AppLevelAggregatorService service = serviceManager.getService(appId);
       if (service == null) {
         LOG.error("Application not found");
         throw new NotFoundException(); // different exception?
       }
-      return service.postEntities(entities, callerUgi);
+      service.postEntities(entities, callerUgi);
+      return Response.ok().build();
     } catch (Exception e) {
       LOG.error("Error putting entities", e);
       throw new WebApplicationException(e,
@@ -141,16 +149,18 @@ public class PerNodeAggregatorWebService {
     }
   }
 
-  private AppLevelAggregatorService
-      getAggregatorService(HttpServletRequest req) {
-    String appIdString = getApplicationId(req);
-    return serviceManager.getService(appIdString);
-  }
-
-  private String getApplicationId(HttpServletRequest req) {
-    // TODO the application id from the request
-    // (most likely from the URI)
-    return null;
+  private String parseApplicationId(String appId) {
+    // Make sure the appId is not null and is valid
+    ApplicationId appID;
+    try {
+      if (appId != null) {
+        return ConverterUtils.toApplicationId(appId.trim()).toString();
+      } else {
+        return null;
+      }
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   private void init(HttpServletResponse response) {

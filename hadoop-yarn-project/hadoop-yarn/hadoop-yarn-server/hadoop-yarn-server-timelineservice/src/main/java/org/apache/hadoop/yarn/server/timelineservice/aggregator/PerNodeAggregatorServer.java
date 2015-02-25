@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.aggregator;
 
 import java.nio.ByteBuffer;
 
+import com.google.inject.Inject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -39,9 +40,7 @@ import org.apache.hadoop.yarn.server.api.AuxiliaryService;
 import org.apache.hadoop.yarn.server.api.ContainerContext;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
-import org.apache.hadoop.yarn.webapp.WebApp;
-import org.apache.hadoop.yarn.webapp.WebApps;
-import org.apache.hadoop.yarn.webapp.YarnWebParams;
+import org.apache.hadoop.yarn.webapp.*;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -120,6 +119,8 @@ public class PerNodeAggregatorServer extends AuxiliaryService {
       extends WebApp implements YarnWebParams {
     @Override
     public void setup() {
+      bind(YarnJacksonJaxbJsonProvider.class);
+      bind(GenericExceptionHandler.class);
       bind(PerNodeAggregatorWebService.class);
       // bind to the global singleton
       bind(AppLevelServiceManager.class).
@@ -214,7 +215,7 @@ public class PerNodeAggregatorServer extends AuxiliaryService {
   }
 
   @VisibleForTesting
-  static PerNodeAggregatorServer launchServer(String[] args) {
+  public static PerNodeAggregatorServer launchServer(String[] args) {
     Thread
       .setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(PerNodeAggregatorServer.class, args,
