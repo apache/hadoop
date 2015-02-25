@@ -82,7 +82,7 @@ public class TestWebAppProxyServlet {
     Context context = new Context();
     context.setContextPath("/foo");
     server.setHandler(context);
-    context.addServlet(new ServletHolder(TestServlet.class), "/bar/");
+    context.addServlet(new ServletHolder(TestServlet.class), "/bar");
     server.getConnectors()[0].setHost("localhost");
     server.start();
     originalPort = server.getConnectors()[0].getLocalPort();
@@ -181,6 +181,19 @@ public class TestWebAppProxyServlet {
       proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
+
+      // test user-provided path and query parameter can be appended to the
+      // original tracking url
+      appReportFetcher.answer = 5;
+      URL clientUrl = new URL("http://localhost:" + proxyPort
+        + "/proxy/application_00_0/test/tez?x=y&h=p");
+      proxyConn = (HttpURLConnection) clientUrl.openConnection();
+      proxyConn.connect();
+      LOG.info("" + proxyConn.getURL());
+      LOG.info("ProxyConn.getHeaderField(): " +  proxyConn.getHeaderField(ProxyUtils.LOCATION));
+      assertEquals("http://localhost:" + originalPort
+          + "/foo/bar/test/tez?a=b&x=y&h=p#main", proxyConn.getURL().toString());
+
     } finally {
       proxy.close();
     }
@@ -344,6 +357,14 @@ public class TestWebAppProxyServlet {
         return result;
       } else if (answer == 4) {
         throw new ApplicationNotFoundException("Application is not found");
+      } else if (answer == 5) {
+        // test user-provided path and query parameter can be appended to the
+        // original tracking url
+        ApplicationReport result = getDefaultApplicationReport(appId);
+        result.setOriginalTrackingUrl("localhost:" + originalPort
+            + "/foo/bar?a=b#main");
+        result.setYarnApplicationState(YarnApplicationState.FINISHED);
+        return result;
       }
       return null;
     }

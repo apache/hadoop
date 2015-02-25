@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.io.ObjectInputStream;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -38,6 +38,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.UriBuilder;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HostConfiguration;
@@ -58,6 +59,8 @@ import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -325,11 +328,17 @@ public class WebAppProxyServlet extends HttpServlet {
             req.getQueryString(), true), runningUser, id);
         return;
       }
-      URI toFetch = new URI(trackingUri.getScheme(), 
-          trackingUri.getAuthority(),
-          StringHelper.ujoin(trackingUri.getPath(), rest), req.getQueryString(),
-          null);
-      
+
+      // Append the user-provided path and query parameter to the original
+      // tracking url.
+      List<NameValuePair> queryPairs =
+          URLEncodedUtils.parse(req.getQueryString(), null);
+      UriBuilder builder = UriBuilder.fromUri(trackingUri);
+      for (NameValuePair pair : queryPairs) {
+        builder.queryParam(pair.getName(), pair.getValue());
+      }
+      URI toFetch = builder.path(rest).build();
+
       LOG.info("{} is accessing unchecked {}"
           + " which is the app master GUI of {} owned by {}",
           remoteUser, toFetch, appId, runningUser);
