@@ -353,7 +353,7 @@ Example:
     
       <property>
         <name>test.fs.s3.name</name>
-        <value>s3a://test-aws-s3/</value>
+        <value>s3://test-aws-s3/</value>
       </property>
   
       <property>
