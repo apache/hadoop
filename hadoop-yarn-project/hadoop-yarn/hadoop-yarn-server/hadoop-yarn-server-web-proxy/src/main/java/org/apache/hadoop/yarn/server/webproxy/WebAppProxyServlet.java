@@ -36,6 +36,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.UriBuilder;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HostConfiguration;
@@ -58,6 +59,8 @@ import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 
 public class WebAppProxyServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
@@ -322,13 +325,19 @@ public class WebAppProxyServlet extends HttpServlet {
             req.getQueryString(), true), runningUser, id);
         return;
       }
-      URI toFetch = new URI(trackingUri.getScheme(), 
-          trackingUri.getAuthority(),
-          StringHelper.ujoin(trackingUri.getPath(), rest), req.getQueryString(),
-          null);
-      
-      LOG.info(req.getRemoteUser()+" is accessing unchecked "+toFetch+
-          " which is the app master GUI of "+appId+" owned by "+runningUser);
+
+      // Append the user-provided path and query parameter to the original
+      // tracking url.
+      List<NameValuePair> queryPairs =
+          URLEncodedUtils.parse(req.getQueryString(), null);
+      UriBuilder builder = UriBuilder.fromUri(trackingUri);
+      for (NameValuePair pair : queryPairs) {
+        builder.queryParam(pair.getName(), pair.getValue());
+      }
+      URI toFetch = builder.path(rest).build();
+
+      LOG.info(remoteUser+" is accessing unchecked "+toFetch+
+        " which is the app master GUI of "+appId+" owned by "+runningUser);
 
       switch(applicationReport.getYarnApplicationState()) {
       case KILLED:
