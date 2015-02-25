@@ -25,6 +25,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -63,19 +64,25 @@ public class Find extends FsCommand {
   private static final String OPTION_FOLLOW_ARG_LINK = "H";
 
   /** List of expressions recognized by this command. */
-  @SuppressWarnings("rawtypes")
-  private static final Class[] EXPRESSIONS;
+  private static final Set<Class<? extends Expression>> EXPRESSIONS =
+      new HashSet<>();
+
+  private static void addExpression(Class<?> clazz) {
+    EXPRESSIONS.add(clazz.asSubclass(Expression.class));
+  }
 
   static {
     // Initialize the static variables.
-    EXPRESSIONS = new Class[] {
-        // Operator Expressions
-        And.class,
-        // Action Expressions
-        Print.class,
-        // Navigation Expressions
-        // Matcher Expressions
-        Name.class };
+    // Operator Expressions
+    addExpression(And.class);
+
+    // Action Expressions
+    addExpression(Print.class);
+
+    // Navigation Expressions
+    // Matcher Expressions
+    addExpression(Name.class);
+
     DESCRIPTION = buildDescription(ExpressionFactory.getExpressionFactory());
 
     // Register the expressions with the expression factory.
@@ -92,7 +99,6 @@ public class Find extends FsCommand {
   private HashSet<Path> stopPaths = new HashSet<Path>();
 
   /** Register the expressions with the expression factory. */
-  @SuppressWarnings("unchecked")
   private static void registerExpressions(ExpressionFactory factory) {
     for (Class<? extends Expression> exprClass : EXPRESSIONS) {
       factory.registerExpression(exprClass);
@@ -100,7 +106,6 @@ public class Find extends FsCommand {
   }
 
   /** Build the description used by the help command. */
-  @SuppressWarnings("unchecked")
   private static String buildDescription(ExpressionFactory factory) {
     ArrayList<Expression> operators = new ArrayList<Expression>();
     ArrayList<Expression> primaries = new ArrayList<Expression>();
