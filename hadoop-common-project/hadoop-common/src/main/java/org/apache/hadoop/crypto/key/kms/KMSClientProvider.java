@@ -52,6 +52,7 @@ import java.io.Writer;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -74,6 +75,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
 /**
  * KMS client <code>KeyProvider</code> implementation.
@@ -221,13 +223,70 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
    */
   public static class Factory extends KeyProviderFactory {
 
+    /**
+     * This provider expects URIs in the following form :
+     * kms://<PROTO>@<AUTHORITY>/<PATH>
+     *
+     * where :
+     * - PROTO = http or https
+     * - AUTHORITY = <HOSTS>[:<PORT>]
+     * - HOSTS = <HOSTNAME>[;<HOSTS>]
+     * - HOSTNAME = string
+     * - PORT = integer
+     *
+     * If multiple hosts are provider, the Factory will create a
+     * {@link LoadBalancingKMSClientProvider} that round-robins requests
+     * across the provided list of hosts.
+     */
     @Override
-    public KeyProvider createProvider(URI providerName, Configuration conf)
+    public KeyProvider createProvider(URI providerUri, Configuration conf)
         throws IOException {
-      if (SCHEME_NAME.equals(providerName.getScheme())) {
-        return new KMSClientProvider(providerName, conf);
+      if (SCHEME_NAME.equals(providerUri.getScheme())) {
+        URL origUrl = new URL(extractKMSPath(providerUri).toString());
+        String authority = origUrl.getAuthority();
+        // check for ';' which delimits the backup hosts
+        if (Strings.isNullOrEmpty(authority)) {
+          throw new IOException(
+              "No valid authority in kms uri [" + origUrl + "]");
+        }
+        // Check if port is present in authority
+        // In the current scheme, all hosts have to run on the same port
+        int port = -1;
+        String hostsPart = authority;
+        if (authority.contains(":")) {
+          String[] t = authority.split(":");
+          try {
+            port = Integer.parseInt(t[1]);
+          } catch (Exception e) {
+            throw new IOException(
+                "Could not parse port in kms uri [" + origUrl + "]");
+          }
+          hostsPart = t[0];
+        }
+        return createProvider(providerUri, conf, origUrl, port, hostsPart);
       }
       return null;
+    }
+
+    private KeyProvider createProvider(URI providerUri, Configuration conf,
+        URL origUrl, int port, String hostsPart) throws IOException {
+      String[] hosts = hostsPart.split(";");
+      if (hosts.length == 1) {
+        return new KMSClientProvider(providerUri, conf);
+      } else {
+        KMSClientProvider[] providers = new KMSClientProvider[hosts.length];
+        for (int i = 0; i < hosts.length; i++) {
+          try {
+            providers[i] =
+                new KMSClientProvider(
+                    new URI("kms", origUrl.getProtocol(), hosts[i], port,
+                        origUrl.getPath(), null, null), conf);
+          } catch (URISyntaxException e) {
+            throw new IOException("Could not instantiate KMSProvider..", e);
+          }
+        }
+        return new LoadBalancingKMSClientProvider(providers, conf);
+      }
     }
   }
 
@@ -302,10 +361,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
 
   public KMSClientProvider(URI uri, Configuration conf) throws IOException {
     super(conf);
-    Path path = ProviderUtils.unnestUri(uri);
-    URL url = path.toUri().toURL();
-    kmsUrl = createServiceURL(url);
-    if ("https".equalsIgnoreCase(url.getProtocol())) {
+    kmsUrl = createServiceURL(extractKMSPath(uri));
+    if ("https".equalsIgnoreCase(new URL(kmsUrl).getProtocol())) {
       sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
       try {
         sslFactory.init();
@@ -346,8 +403,12 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
             .getCurrentUser();
   }
 
-  private String createServiceURL(URL url) throws IOException {
-    String str = url.toExternalForm();
+  private static Path extractKMSPath(URI uri) throws MalformedURLException, IOException {
+    return ProviderUtils.unnestUri(uri);
+  }
+
+  private static String createServiceURL(Path path) throws IOException {
+    String str = new URL(path.toString()).toExternalForm();
     if (str.endsWith("/")) {
       str = str.substring(0, str.length() - 1);
     }
@@ -852,5 +913,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         sslFactory.destroy();
       }
     }
+  }
+
+  @VisibleForTesting
+  String getKMSUrl() {
+    return kmsUrl;
   }
 }
