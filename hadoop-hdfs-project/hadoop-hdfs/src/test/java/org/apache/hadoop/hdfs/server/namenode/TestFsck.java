@@ -693,7 +693,86 @@ public class TestFsck {
       if (cluster != null) {cluster.shutdown();}
     }
   }
-  
+
+  @Test
+  public void testUnderMinReplicatedBlock() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
+    // Set short retry timeouts so this test runs faster
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+    // Set minReplication to 2
+    short minReplication=2;
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY,minReplication);
+    FileSystem fs = null;
+    DFSClient dfsClient = null;
+    LocatedBlocks blocks = null;
+    int replicaCount = 0;
+    Random random = new Random();
+    String outStr = null;
+    short factor = 1;
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      Path file1 = new Path("/testUnderMinReplicatedBlock");
+      DFSTestUtil.createFile(fs, file1, 1024, minReplication, 0);
+      // Wait until file replication has completed
+      DFSTestUtil.waitReplication(fs, file1, minReplication);
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file1);
+
+      // Make sure filesystem is in healthy state
+      outStr = runFsck(conf, 0, true, "/");
+      System.out.println(outStr);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+
+      // corrupt the first replica
+      File blockFile = cluster.getBlockFile(0, block);
+      if (blockFile != null && blockFile.exists()) {
+        RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
+        FileChannel channel = raFile.getChannel();
+        String badString = "BADBAD";
+        int rand = random.nextInt((int) channel.size()/2);
+        raFile.seek(rand);
+        raFile.write(badString.getBytes());
+        raFile.close();
+      }
+
+      dfsClient = new DFSClient(new InetSocketAddress("localhost",
+          cluster.getNameNodePort()), conf);
+      blocks = dfsClient.getNamenode().
+          getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+      replicaCount = blocks.get(0).getLocations().length;
+      while (replicaCount != factor) {
+        try {
+          Thread.sleep(100);
+          // Read the file to trigger reportBadBlocks
+          try {
+            IOUtils.copyBytes(fs.open(file1), new IOUtils.NullOutputStream(), conf,
+                true);
+          } catch (IOException ie) {
+            // Ignore exception
+          }
+          System.out.println("sleep in try: replicaCount="+replicaCount+"  factor="+factor);
+        } catch (InterruptedException ignore) {
+        }
+        blocks = dfsClient.getNamenode().
+            getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+        replicaCount = blocks.get(0).getLocations().length;
+      }
+
+      // Check if fsck reports the same
+      outStr = runFsck(conf, 0, true, "/");
+      System.out.println(outStr);
+      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+      assertTrue(outStr.contains("UNDER MIN REPL'D BLOCKS:\t1 (100.0 %)"));
+      assertTrue(outStr.contains("DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY:\t2"));
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
+
   /** Test if fsck can return -1 in case of failure
    * 
    * @throws Exception
