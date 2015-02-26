@@ -248,8 +248,9 @@ DWORD BuildServiceSecurityDescriptor(
   __out PSECURITY_DESCRIPTOR*         pSD);
 
 DWORD AddNodeManagerAndUserACEsToObject(
-  __in HANDLE hProcess,
-  __in LPWSTR user);
+  __in HANDLE hObject,
+  __in LPWSTR user,
+  __in ACCESS_MASK accessMask);
 
 
 DWORD GetSecureJobObjectName(

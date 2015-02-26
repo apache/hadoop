@@ -605,6 +605,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11629. WASB filesystem should not start BandwidthGaugeUpdater if
     fs.azure.skip.metrics set to true. (Shanyu Zhao via cnauroth)
 
+    HADOOP-9922. hadoop windows native build will fail in 32 bit machine.
+    (Kiran Kumar M R via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
