@@ -33,7 +33,7 @@ import java.util.Map;
 @InterfaceStability.Unstable
 public class TimelineEvent {
   private String id;
-  private Map<String, Object> info = new HashMap<>();
+  private HashMap<String, Object> info = new HashMap<>();
   private long timestamp;
 
   public TimelineEvent() {
@@ -49,13 +49,23 @@ public class TimelineEvent {
     this.id = id;
   }
 
+  // required by JAXB
+  @InterfaceAudience.Private
   @XmlElement(name = "info")
+  public HashMap<String, Object> getInfoJAXB() {
+    return info;
+  }
+
   public Map<String, Object> getInfo() {
     return info;
   }
 
   public void setInfo(Map<String, Object> info) {
-    this.info = info;
+    if (info != null && !(info instanceof HashMap)) {
+      this.info = new HashMap<String, Object>(info);
+    } else {
+      this.info = (HashMap<String, Object>) info;
+    }
   }
 
   public void addInfo(Map<String, Object> info) {
