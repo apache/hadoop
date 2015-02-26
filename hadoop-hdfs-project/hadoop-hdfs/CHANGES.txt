@@ -375,6 +375,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7495. Remove updatePosition argument from DFSInputStream#getBlockAt()
     (cmccabe)
 
+    HDFS-7537. Add "UNDER MIN REPL'D BLOCKS" count to fsck.  (GAO Rui via
+    szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

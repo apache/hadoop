@@ -507,6 +507,9 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       res.totalReplicas += liveReplicas;
       short targetFileReplication = file.getReplication();
       res.numExpectedReplicas += targetFileReplication;
+      if(liveReplicas<minReplication){
+        res.numUnderMinReplicatedBlocks++;
+      }
       if (liveReplicas > targetFileReplication) {
         res.excessiveReplicas += (liveReplicas - targetFileReplication);
         res.numOverReplicatedBlocks += 1;
@@ -853,6 +856,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     long corruptBlocks = 0L;
     long excessiveReplicas = 0L;
     long missingReplicas = 0L;
+    long numUnderMinReplicatedBlocks=0L;
     long numOverReplicatedBlocks = 0L;
     long numUnderReplicatedBlocks = 0L;
     long numMisReplicatedBlocks = 0L;  // blocks that do not satisfy block placement policy
@@ -869,10 +873,13 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     long totalReplicas = 0L;
 
     final short replication;
+    final int minReplication;
     
     Result(Configuration conf) {
       this.replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 
                                             DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+      this.minReplication = (short)conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY,
+                                            DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_DEFAULT);
     }
     
     /**
@@ -920,15 +927,28 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         res.append(" (Total open file blocks (not validated): ").append(
             totalOpenFilesBlocks).append(")");
       }
-      if (corruptFiles > 0) {
-        res.append("\n  ********************************").append(
-            "\n  CORRUPT FILES:\t").append(corruptFiles);
-        if (missingSize > 0) {
-          res.append("\n  MISSING BLOCKS:\t").append(missingIds.size()).append(
-              "\n  MISSING SIZE:\t\t").append(missingSize).append(" B");
+      if (corruptFiles > 0 || numUnderMinReplicatedBlocks>0) {
+        res.append("\n  ********************************");
+        if(numUnderMinReplicatedBlocks>0){
+          res.append("\n  UNDER MIN REPL'D BLOCKS:\t").append(numUnderMinReplicatedBlocks);
+          if(totalBlocks>0){
+            res.append(" (").append(
+                ((float) (numUnderMinReplicatedBlocks * 100) / (float) totalBlocks))
+                .append(" %)");
+          }
+          res.append("\n  ").append("DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY:\t")
+             .append(minReplication);
         }
-        if (corruptBlocks > 0) {
-          res.append("\n  CORRUPT BLOCKS: \t").append(corruptBlocks);
+        if(corruptFiles>0) {
+          res.append(
+              "\n  CORRUPT FILES:\t").append(corruptFiles);
+          if (missingSize > 0) {
+            res.append("\n  MISSING BLOCKS:\t").append(missingIds.size()).append(
+                "\n  MISSING SIZE:\t\t").append(missingSize).append(" B");
+          }
+          if (corruptBlocks > 0) {
+            res.append("\n  CORRUPT BLOCKS: \t").append(corruptBlocks);
+          }
         }
         res.append("\n  ********************************");
       }
