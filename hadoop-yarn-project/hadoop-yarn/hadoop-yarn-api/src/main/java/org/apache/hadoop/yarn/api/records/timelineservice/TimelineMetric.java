@@ -34,9 +34,9 @@ import java.util.Map;
 @InterfaceStability.Unstable
 public class TimelineMetric {
   private String id;
-  private Map<String, Object> info = new HashMap<>();
+  private HashMap<String, Object> info = new HashMap<>();
   private Object singleData;
-  private Map<Long, Object> timeSeries = new LinkedHashMap<>();
+  private HashMap<Long, Object> timeSeries = new LinkedHashMap<>();
   private long startTime;
   private long endTime;
 
@@ -53,13 +53,23 @@ public class TimelineMetric {
     this.id = id;
   }
 
+  // required by JAXB
+  @InterfaceAudience.Private
   @XmlElement(name = "info")
+  public HashMap<String, Object> getInfoJAXB() {
+    return info;
+  }
+
   public Map<String, Object> getInfo() {
     return info;
   }
 
   public void setInfo(Map<String, Object> info) {
-    this.info = info;
+    if (info != null && !(info instanceof HashMap)) {
+      this.info = new HashMap<String, Object>(info);
+    } else {
+      this.info = (HashMap<String, Object>) info;
+    }
   }
 
   public void addInfo(Map<String, Object> info) {
@@ -79,13 +89,23 @@ public class TimelineMetric {
     this.singleData = singleData;
   }
 
+  // required by JAXB
+  @InterfaceAudience.Private
   @XmlElement(name = "timeseries")
+  public HashMap<Long, Object> getTimeSeriesJAXB() {
+    return timeSeries;
+  }
+
   public Map<Long, Object> getTimeSeries() {
     return timeSeries;
   }
 
   public void setTimeSeries(Map<Long, Object> timeSeries) {
-    this.timeSeries = timeSeries;
+    if (timeSeries != null && !(timeSeries instanceof LinkedHashMap)) {
+      this.timeSeries = new LinkedHashMap<Long, Object>(timeSeries);
+    } else {
+      this.timeSeries = (LinkedHashMap<Long, Object>) timeSeries;
+    }
   }
 
   public void addTimeSeries(Map<Long, Object> timeSeries) {

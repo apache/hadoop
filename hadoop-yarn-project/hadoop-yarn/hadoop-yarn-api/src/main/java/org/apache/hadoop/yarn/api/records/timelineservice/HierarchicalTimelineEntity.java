@@ -33,7 +33,7 @@ import java.util.Set;
 @InterfaceStability.Unstable
 public abstract class HierarchicalTimelineEntity extends TimelineEntity {
   private Identifier parent;
-  private Map<String, Set<String>> children = new HashMap<>();
+  private HashMap<String, Set<String>> children = new HashMap<>();
 
   HierarchicalTimelineEntity(String type) {
     super(type);
@@ -56,14 +56,24 @@ public abstract class HierarchicalTimelineEntity extends TimelineEntity {
     parent.setId(id);
   }
 
+  // required by JAXB
+  @InterfaceAudience.Private
   @XmlElement(name = "children")
+  public HashMap<String, Set<String>> getChildrenJAXB() {
+    return children;
+  }
+
   public Map<String, Set<String>> getChildren() {
     return children;
   }
 
   public void setChildren(Map<String, Set<String>> children) {
     validateChildren(children);
-    this.children = children;
+    if (children != null && !(children instanceof HashMap)) {
+      this.children = new HashMap<String, Set<String>>(children);
+    } else {
+      this.children = (HashMap) children;
+    }
   }
 
   public void addChildren(Map<String, Set<String>> children) {

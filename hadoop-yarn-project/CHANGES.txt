@@ -17,6 +17,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3240. Implement client API to put generic entities. (Zhijie Shen via
     junping_du)
 
+    YARN-3087. Made the REST server of per-node aggregator work alone in NM
+    daemon. (Li Lu via zjshen)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
