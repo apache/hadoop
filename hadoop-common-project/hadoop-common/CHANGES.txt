@@ -404,6 +404,8 @@ Trunk (Unreleased)
 
     HADOOP-11625. Minor fixes to command manual & SLA doc (aw)
 
+    HADOOP-11637. bash location hard-coded in shell scripts (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

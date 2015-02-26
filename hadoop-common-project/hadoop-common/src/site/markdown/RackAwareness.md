@@ -105,7 +105,7 @@ bash Example
 ------------
 
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 # Here's a bash example to show just how simple these scripts can be
 # Assuming we have flat network with everything on a single switch, we can fake a rack topology.
 # This could occur in a lab environment where we have limited nodes,like 2-8 physical machines on a unmanaged switch.
@@ -134,3 +134,4 @@ bash Example
 
 echo $@ | xargs -n 1 | awk -F '.' '{print "/rack-"$NF}'
 ```
+
