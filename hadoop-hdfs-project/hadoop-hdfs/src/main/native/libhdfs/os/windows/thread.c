@@ -28,7 +28,7 @@
  * @param toRun thread to run
  * @return DWORD result of running thread (always 0)
  */
-static DWORD runThread(LPVOID toRun) {
+static DWORD WINAPI runThread(LPVOID toRun) {
   const thread *t = toRun;
   t->start(t->arg);
   return 0;
