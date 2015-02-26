@@ -141,6 +141,8 @@ Trunk (Unreleased)
     HDFS-7668. Convert site documentation from apt to markdown (Masatake
     Iwasaki via aw)
 
+    HDFS-7460. Rewrite httpfs to use new shell framework (John Smith via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
