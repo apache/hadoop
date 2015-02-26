@@ -619,6 +619,10 @@ Release 2.7.0 - UNRELEASED
     YARN-3239. WebAppProxy does not support a final tracking url which has
     query fragments and params (Jian He via jlowe)
 
+    YARN-3256. TestClientToAMTokens#testClientTokenRace is not running against 
+    all Schedulers even when using ParameterizedSchedulerTestBase. 
+    (Anubhav Dhoot via devaraj)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
