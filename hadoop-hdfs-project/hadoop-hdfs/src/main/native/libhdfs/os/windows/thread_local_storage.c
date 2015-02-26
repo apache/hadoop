@@ -96,13 +96,21 @@ static void NTAPI tlsCallback(PVOID h, DWORD reason, PVOID pv)
  * reference _tls_used, we guarantee that the binary retains the TLS directory.
  * See Microsoft Visual Studio 10.0/VC/crt/src/tlssup.c .
  */
+#ifdef _WIN64
 #pragma comment(linker, "/INCLUDE:_tls_used")
+#else
+#pragma comment(linker, "/INCLUDE:__tls_used")
+#endif
 
 /*
  * We must retain a pointer to the callback function.  Force the linker to keep
  * this symbol, even though it appears that nothing in our source code uses it.
  */
+#ifdef _WIN64
 #pragma comment(linker, "/INCLUDE:pTlsCallback")
+#else
+#pragma comment(linker, "/INCLUDE:_pTlsCallback")
+#endif
 
 /*
  * Define constant pointer to our callback, and tell the linker to pin it into
