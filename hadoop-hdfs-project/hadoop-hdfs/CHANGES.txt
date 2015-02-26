@@ -378,6 +378,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7537. Add "UNDER MIN REPL'D BLOCKS" count to fsck.  (GAO Rui via
     szetszwo)
 
+    HDFS-7832. Show 'Last Modified' in Namenode's 'Browse Filesystem'
+    (vinayakumarb)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

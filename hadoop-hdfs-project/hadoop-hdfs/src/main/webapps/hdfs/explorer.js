@@ -143,6 +143,12 @@
   }
 
   function browse_directory(dir) {
+    var HELPERS = {
+      'helper_date_tostring' : function (chunk, ctx, bodies, params) {
+        var value = dust.helpers.tap(params.value, chunk, ctx);
+        return chunk.write('' + new Date(Number(value)).toLocaleString());
+      }
+    };
     var url = '/webhdfs/v1' + dir + '?op=LISTSTATUS';
     $.get(url, function(data) {
       var d = get_response(data, "FileStatuses");
@@ -154,7 +160,8 @@
       current_directory = dir;
       $('#directory').val(dir);
       window.location.hash = dir;
-      dust.render('explorer', d, function(err, out) {
+      var base = dust.makeBase(HELPERS);
+      dust.render('explorer', base.push(d), function(err, out) {
         $('#panel').html(out);
 
         $('.explorer-browse-links').click(function() {
