@@ -129,7 +129,7 @@ DWORD BuildImpersonateSecurityDescriptor(__out PSECURITY_DESCRIPTOR* ppSD) {
   WCHAR** tokens = NULL;
   size_t len = 0;
   size_t count = 0;
-  int crt = 0;
+  size_t crt = 0;
   PSECURITY_DESCRIPTOR pSD = NULL;
 
   dwError = GetConfigValue(wsceConfigRelativePath, NM_WSCE_IMPERSONATE_ALLOWED, &len, &value); 

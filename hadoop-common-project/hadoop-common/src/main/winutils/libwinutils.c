@@ -2788,7 +2788,7 @@ DWORD BuildServiceSecurityDescriptor(
   __out PSECURITY_DESCRIPTOR*         pSD) {
 
   DWORD                 dwError = ERROR_SUCCESS;
-  int                   crt  = 0;
+  unsigned int          crt  = 0;
   int                   len = 0;
   EXPLICIT_ACCESS*      eas = NULL;
   LPWSTR                lpszSD = NULL;
