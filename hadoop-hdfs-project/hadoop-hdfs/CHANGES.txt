@@ -381,6 +381,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7832. Show 'Last Modified' in Namenode's 'Browse Filesystem'
     (vinayakumarb)
 
+    HDFS-7819. Log WARN message for the blocks which are not in Block ID based
+    layout (Rakesh R via Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
