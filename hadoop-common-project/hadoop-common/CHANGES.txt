@@ -237,6 +237,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11231. Remove dead code in ServletUtil. (Li Lu via wheat9)
 
+    HADOOP-11620. Add support for load balancing across a group of KMS for HA.
+    (Arun Suresh via wang)
+
   BUG FIXES
 
     HADOOP-11512. Use getTrimmedStrings when reading serialization keys
