@@ -93,6 +93,7 @@ public class DFSck extends Configured implements Tool {
       + "\t-blocks\tprint out block report\n"
       + "\t-locations\tprint out locations for every block\n"
       + "\t-racks\tprint out network topology for data-node locations\n"
+      + "\t-storagepolicies\tprint out storage policy summary for the blocks\n"
       + "\t-showprogress\tshow progress in output. Default is OFF (no progress)\n"
       + "\t-blockId\tprint out which file this blockId belongs to, locations"
       + " (nodes, racks) of this block, and other diagnostics info"
@@ -266,6 +267,7 @@ public class DFSck extends Configured implements Tool {
       else if (args[idx].equals("-blocks")) { url.append("&blocks=1"); }
       else if (args[idx].equals("-locations")) { url.append("&locations=1"); }
       else if (args[idx].equals("-racks")) { url.append("&racks=1"); }
+      else if (args[idx].equals("-storagepolicies")) { url.append("&storagepolicies=1"); }
       else if (args[idx].equals("-showprogress")) { url.append("&showprogress=1"); }
       else if (args[idx].equals("-list-corruptfileblocks")) {
         url.append("&listcorruptfileblocks=1");
