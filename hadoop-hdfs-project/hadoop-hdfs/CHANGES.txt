@@ -729,6 +729,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7763. fix zkfc hung issue due to not catching exception in a corner
     case. (Liang Xie via wang)
 
+    HDFS-7843. A truncated file is corrupted after rollback from a rolling
+    upgrade.  (szetszwo)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
