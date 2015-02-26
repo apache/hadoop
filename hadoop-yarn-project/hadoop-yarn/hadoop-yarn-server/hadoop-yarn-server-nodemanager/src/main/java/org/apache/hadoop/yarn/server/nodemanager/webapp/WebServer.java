@@ -126,12 +126,6 @@ public class WebServer extends AbstractService {
       bind(NMWebServices.class);
       bind(GenericExceptionHandler.class);
       bind(JAXBContextResolver.class);
-      // host the timeline service aggregator web service temporarily
-      // (see YARN-3087)
-      bind(PerNodeAggregatorWebService.class);
-      // bind to the global singleton instance
-      bind(AppLevelServiceManager.class).
-          toProvider(AppLevelServiceManagerProvider.class);
       bind(ResourceView.class).toInstance(this.resourceView);
       bind(ApplicationACLsManager.class).toInstance(this.aclsManager);
       bind(LocalDirsHandlerService.class).toInstance(dirsHandler);

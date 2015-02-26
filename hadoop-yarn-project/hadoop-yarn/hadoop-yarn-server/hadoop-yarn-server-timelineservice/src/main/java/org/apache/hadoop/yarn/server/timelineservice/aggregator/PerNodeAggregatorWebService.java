@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.aggregator;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
@@ -41,10 +42,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
-import com.google.inject.Inject;
 import com.google.inject.Singleton;
-
-import java.net.URI;
 
 /**
  * The main per-node REST end point for timeline service writes. It is
@@ -59,12 +57,7 @@ public class PerNodeAggregatorWebService {
   private static final Log LOG =
       LogFactory.getLog(PerNodeAggregatorWebService.class);
 
-  private final AppLevelServiceManager serviceManager;
-
-  @Inject
-  public PerNodeAggregatorWebService(AppLevelServiceManager serviceManager) {
-    this.serviceManager = serviceManager;
-  }
+  private @Context ServletContext context;
 
   @XmlRootElement(name = "about")
   @XmlAccessorType(XmlAccessType.NONE)
@@ -135,7 +128,7 @@ public class PerNodeAggregatorWebService {
       if (appId == null) {
         return Response.status(Response.Status.BAD_REQUEST).build();
       }
-      AppLevelAggregatorService service = serviceManager.getService(appId);
+      AppLevelAggregatorService service = getAggregatorService(req, appId);
       if (service == null) {
         LOG.error("Application not found");
         throw new NotFoundException(); // different exception?
@@ -161,6 +154,15 @@ public class PerNodeAggregatorWebService {
     } catch (Exception e) {
       return null;
     }
+  }
+
+  private AppLevelAggregatorService
+      getAggregatorService(HttpServletRequest req, String appIdToParse) {
+    String appIdString = parseApplicationId(appIdToParse);
+    final AppLevelServiceManager serviceManager =
+        (AppLevelServiceManager) context.getAttribute(
+            PerNodeAggregatorServer.AGGREGATOR_COLLECTION_ATTR_KEY);
+    return serviceManager.getService(appIdString);
   }
 
   private void init(HttpServletResponse response) {
