@@ -44,7 +44,7 @@ public interface BlockCollection {
   public int numBlocks();
 
   /**
-   * Get the blocks or block groups.
+   * Get the blocks (striped or contiguous).
    */
   public BlockInfo[] getBlocks();
 
@@ -71,7 +71,7 @@ public interface BlockCollection {
   public String getName();
 
   /**
-   * Set the block/block-group at the given index.
+   * Set the block (contiguous or striped) at the given index.
    */
   public void setBlock(int index, BlockInfo blk);
 
@@ -79,8 +79,7 @@ public interface BlockCollection {
    * Convert the last block of the collection to an under-construction block
    * and set the locations.
    */
-  public BlockInfoContiguousUnderConstruction setLastBlock(
-      BlockInfoContiguous lastBlock,
+  public void convertLastBlockToUC(BlockInfo lastBlock,
       DatanodeStorageInfo[] targets) throws IOException;
 
   /**

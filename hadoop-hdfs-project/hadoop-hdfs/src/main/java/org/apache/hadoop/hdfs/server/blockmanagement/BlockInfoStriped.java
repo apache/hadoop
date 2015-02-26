@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 
 /**
  * Subclass of {@link BlockInfo}, presenting a block group in erasure coding.
@@ -57,6 +59,14 @@ public class BlockInfoStriped extends BlockInfo {
 
   private short getTotalBlockNum() {
     return (short) (dataBlockNum + parityBlockNum);
+  }
+
+  public short getDataBlockNum() {
+    return dataBlockNum;
+  }
+
+  public short getParityBlockNum() {
+    return parityBlockNum;
   }
 
   private void initIndices() {
@@ -175,5 +185,26 @@ public class BlockInfoStriped extends BlockInfo {
       }
     }
     return num;
+  }
+
+  /**
+   * Convert a complete block to an under construction block.
+   * @return BlockInfoUnderConstruction -  an under construction block.
+   */
+  public BlockInfoStripedUnderConstruction convertToBlockUnderConstruction(
+      BlockUCState s, DatanodeStorageInfo[] targets) {
+    final BlockInfoStripedUnderConstruction ucBlock;
+    if(isComplete()) {
+      ucBlock = new BlockInfoStripedUnderConstruction(this, getDataBlockNum(),
+              getParityBlockNum(),  s, targets);
+      ucBlock.setBlockCollection(getBlockCollection());
+    } else {
+      // the block is already under construction
+      ucBlock = (BlockInfoStripedUnderConstruction) this;
+      ucBlock.setBlockUCState(s);
+      ucBlock.setExpectedLocations(targets);
+      ucBlock.setBlockCollection(getBlockCollection());
+    }
+    return ucBlock;
   }
 }

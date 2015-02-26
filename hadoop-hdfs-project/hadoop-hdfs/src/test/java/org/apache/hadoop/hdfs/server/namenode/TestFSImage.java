@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;

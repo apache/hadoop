@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -55,7 +56,9 @@ public class FileDiffList extends
     final FileDiff diff =
         super.saveSelf2Snapshot(latestSnapshotId, iNodeFile, snapshotCopy);
     if (withBlocks) {  // Store blocks if this is the first update
-      diff.setBlocks(iNodeFile.getBlocks());
+      BlockInfoContiguous[] blks = iNodeFile.getContiguousBlocks();
+      assert blks != null;
+      diff.setBlocks(blks);
     }
   }
 
@@ -118,7 +121,7 @@ public class FileDiffList extends
         (earlierDiff == null ? new BlockInfo[]{} : earlierDiff.getBlocks());
     // Find later snapshot (or file itself) with blocks
     BlockInfo[] laterBlocks = findLaterSnapshotBlocks(removed.getSnapshotId());
-    laterBlocks = (laterBlocks==null) ? file.getBlocks() : laterBlocks;
+    laterBlocks = (laterBlocks == null) ? file.getContiguousBlocks() : laterBlocks;
     // Skip blocks, which belong to either the earlier or the later lists
     int i = 0;
     for(; i < removedBlocks.length; i++) {

@@ -1251,8 +1251,8 @@ public class TestReplicationPolicy {
         (DatanodeStorageInfo.AddBlockResult.ADDED);
     ucBlock.addStorage(storage, ucBlock);
 
-    when(mbc.setLastBlock((BlockInfo) any(), (DatanodeStorageInfo[]) any()))
-    .thenReturn(ucBlock);
+    BlockInfo lastBlk = mbc.getLastBlock();
+    when(mbc.getLastBlock()).thenReturn(lastBlk, ucBlock);
 
     bm.convertLastBlockToUnderConstruction(mbc, 0L);
 
