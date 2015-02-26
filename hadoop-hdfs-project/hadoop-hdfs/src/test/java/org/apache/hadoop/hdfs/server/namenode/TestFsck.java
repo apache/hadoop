@@ -18,6 +18,18 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -41,7 +53,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.Sets;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -58,6 +69,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -83,17 +95,7 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import com.google.common.collect.Sets;
 
 /**
  * A JUnit test for doing fsck
@@ -1321,6 +1323,58 @@ public class TestFsck {
       System.out.println(outStr);
       assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
     } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  private void writeFile(final DistributedFileSystem dfs,
+      Path dir, String fileName) throws IOException {
+    Path filePath = new Path(dir.toString() + Path.SEPARATOR + fileName);
+    final FSDataOutputStream out = dfs.create(filePath);
+    out.writeChars("teststring");
+    out.close();
+  }
+
+  private void writeFile(final DistributedFileSystem dfs,
+      String dirName, String fileName, String StoragePolicy) throws IOException {
+    Path dirPath = new Path(dirName);
+    dfs.mkdirs(dirPath);
+    dfs.setStoragePolicy(dirPath, StoragePolicy);
+    writeFile(dfs, dirPath, fileName);
+  }
+
+  /**
+   * Test storage policy display
+   */
+  @Test
+  public void testStoragePoliciesCK() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3)
+        .storageTypes(
+            new StorageType[] {StorageType.DISK, StorageType.ARCHIVE})
+        .build();
+    try {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      writeFile(dfs, "/testhot", "file", "HOT");
+      writeFile(dfs, "/testwarm", "file", "WARM");
+      writeFile(dfs, "/testcold", "file", "COLD");
+      String outStr = runFsck(conf, 0, true, "/", "-storagepolicies");
+      assertTrue(outStr.contains("DISK:3(HOT)"));
+      assertTrue(outStr.contains("DISK:1,ARCHIVE:2(WARM)"));
+      assertTrue(outStr.contains("ARCHIVE:3(COLD)"));
+      assertTrue(outStr.contains("All blocks satisfy specified storage policy."));
+      dfs.setStoragePolicy(new Path("/testhot"), "COLD");
+      dfs.setStoragePolicy(new Path("/testwarm"), "COLD");
+      outStr = runFsck(conf, 0, true, "/", "-storagepolicies");
+      assertTrue(outStr.contains("DISK:3(HOT)"));
+      assertTrue(outStr.contains("DISK:1,ARCHIVE:2(WARM)"));
+      assertTrue(outStr.contains("ARCHIVE:3(COLD)"));
+      assertFalse(outStr.contains("All blocks satisfy specified storage policy."));
+     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
