@@ -491,6 +491,16 @@ message BlockProto {
 }
 
 /**
+ * Striped block information. Besides the basic information for a block,
+ * it also contains the number of data/parity blocks.
+ */
+message StripedBlockProto {
+  required BlockProto block = 1;
+  optional uint32 dataBlockNum = 2;
+  optional uint32 parityBlockNum = 3;
+}
+
+/**
  * Block and datanodes where is it located
  */
 message BlockWithLocationsProto {

@@ -17,35 +17,34 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.COMPLETE;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
+
 /**
- * Represents a block that is currently being constructed.<br>
+ * Represents a striped block that is currently being constructed.
  * This is usually the last block of a file opened for write or append.
  */
-public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
-  /** Block state. See {@link BlockUCState} */
+public class BlockInfoStripedUnderConstruction extends BlockInfoStriped {
   private BlockUCState blockUCState;
 
   /**
    * Block replicas as assigned when the block was allocated.
-   * This defines the pipeline order.
+   *
+   * TODO: we need to update this attribute, along with the return type of
+   * getExpectedStorageLocations and LocatedBlock. For striped blocks, clients
+   * need to understand the index of each striped block in the block group.
    */
   private List<ReplicaUnderConstruction> replicas;
-
-  /**
-   * Index of the primary data node doing the recovery. Useful for log
-   * messages.
-   */
-  private int primaryNodeIndex = -1;
 
   /**
    * The new generation stamp, which this block will have
@@ -55,43 +54,38 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
   private long blockRecoveryId = 0;
 
   /**
-   * The block source to use in the event of copy-on-write truncate.
+   * Constructor with null storage targets.
    */
-  private Block truncateBlock;
-
-  /**
-   * Create block and set its state to
-   * {@link BlockUCState#UNDER_CONSTRUCTION}.
-   */
-  public BlockInfoContiguousUnderConstruction(Block blk, short replication) {
-    this(blk, replication, BlockUCState.UNDER_CONSTRUCTION, null);
+  public BlockInfoStripedUnderConstruction(Block blk, short dataBlockNum,
+      short parityBlockNum) {
+    this(blk, dataBlockNum, parityBlockNum, UNDER_CONSTRUCTION, null);
   }
 
   /**
-   * Create a block that is currently being constructed.
+   * Create a striped block that is currently being constructed.
    */
-  public BlockInfoContiguousUnderConstruction(Block blk, short replication,
-      BlockUCState state, DatanodeStorageInfo[] targets) {
-    super(blk, replication);
-    assert getBlockUCState() != BlockUCState.COMPLETE :
-      "BlockInfoContiguousUnderConstruction cannot be in COMPLETE state";
+  public BlockInfoStripedUnderConstruction(Block blk, short dataBlockNum,
+      short parityBlockNum, BlockUCState state, DatanodeStorageInfo[] targets) {
+    super(blk, dataBlockNum, parityBlockNum);
+    assert getBlockUCState() != COMPLETE :
+      "BlockInfoStripedUnderConstruction cannot be in COMPLETE state";
     this.blockUCState = state;
     setExpectedLocations(targets);
   }
 
   /**
-   * Convert an under construction block to a complete block.
+   * Convert an under construction striped block to a complete striped block.
    * 
-   * @return BlockInfoContiguous - a complete block.
+   * @return BlockInfoStriped - a complete block.
    * @throws IOException if the state of the block 
    * (the generation stamp and the length) has not been committed by 
    * the client or it does not have at least a minimal number of replicas 
    * reported from data-nodes. 
    */
-  BlockInfoContiguous convertToCompleteBlock() throws IOException {
-    assert getBlockUCState() != BlockUCState.COMPLETE :
+  BlockInfoStriped convertToCompleteBlock() throws IOException {
+    assert getBlockUCState() != COMPLETE :
       "Trying to convert a COMPLETE block";
-    return new BlockInfoContiguous(this);
+    return new BlockInfoStriped(this);
   }
 
   /** Set expected locations */
@@ -109,7 +103,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
    * (as has been assigned by chooseTargets()).
    */
   public DatanodeStorageInfo[] getExpectedStorageLocations() {
-    int numLocations = replicas == null ? 0 : replicas.size();
+    int numLocations = getNumExpectedLocations();
     DatanodeStorageInfo[] storages = new DatanodeStorageInfo[numLocations];
     for (int i = 0; i < numLocations; i++) {
       storages[i] = replicas.get(i).getExpectedStorageLocation();
@@ -140,15 +134,6 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
     return blockRecoveryId;
   }
 
-  /** Get recover block */
-  public Block getTruncateBlock() {
-    return truncateBlock;
-  }
-
-  public void setTruncateBlock(Block recoveryBlock) {
-    this.truncateBlock = recoveryBlock;
-  }
-
   /**
    * Process the recorded replicas. When about to commit or finish the
    * pipeline recovery sort out bad replicas.
@@ -174,13 +159,13 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
   /**
    * Commit block's length and generation stamp as reported by the client.
    * Set block state to {@link BlockUCState#COMMITTED}.
-   * @param block - contains client reported block length and generation 
-   * @throws IOException if block ids are inconsistent.
+   * @param block - contains client reported block length and generation
    */
   void commitBlock(Block block) throws IOException {
-    if(getBlockId() != block.getBlockId())
+    if (getBlockId() != block.getBlockId()) {
       throw new IOException("Trying to commit inconsistent block: id = "
           + block.getBlockId() + ", expected id = " + getBlockId());
+    }
     blockUCState = BlockUCState.COMMITTED;
     this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
     // Sort out invalid replicas.
@@ -188,73 +173,32 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
   }
 
   /**
-   * Initialize lease recovery for this block.
-   * Find the first alive data-node starting from the previous primary and
-   * make it primary.
+   * Initialize lease recovery for this striped block.
    */
   public void initializeBlockRecovery(long recoveryId) {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
-    if (replicas.size() == 0) {
-      NameNode.blockStateChangeLog.warn("BLOCK*"
-        + " BlockInfoContiguousUnderConstruction.initLeaseRecovery:"
-        + " No blocks found, lease removed.");
+    if (replicas == null || replicas.size() == 0) {
+      NameNode.blockStateChangeLog.warn("BLOCK*" +
+          " BlockInfoUnderConstruction.initLeaseRecovery:" +
+          " No blocks found, lease removed.");
     }
-    boolean allLiveReplicasTriedAsPrimary = true;
-    for (ReplicaUnderConstruction replica : replicas) {
-      // Check if all replicas have been tried or not.
-      if (replica.isAlive()) {
-        allLiveReplicasTriedAsPrimary = (allLiveReplicasTriedAsPrimary &&
-            replica.getChosenAsPrimary());
-      }
-    }
-    if (allLiveReplicasTriedAsPrimary) {
-      // Just set all the replicas to be chosen whether they are alive or not.
-      for (ReplicaUnderConstruction replica : replicas) {
-        replica.setChosenAsPrimary(false);
-      }
-    }
-    long mostRecentLastUpdate = 0;
-    ReplicaUnderConstruction primary = null;
-    primaryNodeIndex = -1;
-    for(int i = 0; i < replicas.size(); i++) {
-      // Skip alive replicas which have been chosen for recovery.
-      if (!(replicas.get(i).isAlive() && !replicas.get(i).getChosenAsPrimary())) {
-        continue;
-      }
-      final ReplicaUnderConstruction ruc = replicas.get(i);
-      final long lastUpdate = ruc.getExpectedStorageLocation()
-          .getDatanodeDescriptor().getLastUpdateMonotonic();
-      if (lastUpdate > mostRecentLastUpdate) {
-        primaryNodeIndex = i;
-        primary = ruc;
-        mostRecentLastUpdate = lastUpdate;
-      }
-    }
-    if (primary != null) {
-      primary.getExpectedStorageLocation().getDatanodeDescriptor()
-          .addBlockToBeRecovered(this);
-      primary.setChosenAsPrimary(true);
-      NameNode.blockStateChangeLog.info(
-          "BLOCK* {} recovery started, primary={}", this, primary);
-    }
+    // TODO we need to implement different recovery logic here
   }
 
-  void addReplicaIfNotPresent(DatanodeStorageInfo storage,
-                     Block block,
-                     ReplicaState rState) {
+  void addReplicaIfNotPresent(DatanodeStorageInfo storage, Block block,
+      ReplicaState rState) {
     Iterator<ReplicaUnderConstruction> it = replicas.iterator();
     while (it.hasNext()) {
       ReplicaUnderConstruction r = it.next();
       DatanodeStorageInfo expectedLocation = r.getExpectedStorageLocation();
-      if(expectedLocation == storage) {
+      if (expectedLocation == storage) {
         // Record the gen stamp from the report
         r.setGenerationStamp(block.getGenerationStamp());
         return;
       } else if (expectedLocation != null &&
-                 expectedLocation.getDatanodeDescriptor() ==
-                     storage.getDatanodeDescriptor()) {
-
+          expectedLocation.getDatanodeDescriptor() ==
+              storage.getDatanodeDescriptor()) {
         // The Datanode reported that the block is on a different storage
         // than the one chosen by BlockPlacementPolicy. This can occur as
         // we allow Datanodes to choose the target storage. Update our
@@ -280,10 +224,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
   }
 
   private void appendUCParts(StringBuilder sb) {
-    sb.append("{UCState=").append(blockUCState)
-      .append(", truncateBlock=" + truncateBlock)
-      .append(", primaryNodeIndex=").append(primaryNodeIndex)
-      .append(", replicas=[");
+    sb.append("{UCState=").append(blockUCState).append(", replicas=[");
     if (replicas != null) {
       Iterator<ReplicaUnderConstruction> iter = replicas.iterator();
       if (iter.hasNext()) {

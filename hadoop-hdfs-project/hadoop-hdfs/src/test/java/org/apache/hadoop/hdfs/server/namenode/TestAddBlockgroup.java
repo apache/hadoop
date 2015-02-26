@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.junit.After;
 import org.junit.Before;
@@ -75,7 +76,7 @@ public class TestAddBlockgroup {
     final Path file1 = new Path("/file1");
     DFSTestUtil.createFile(fs, file1, BLOCKSIZE * 2, REPLICATION, 0L);
     INodeFile file1Node = fsdir.getINode4Write(file1.toString()).asFile();
-    BlockInfoContiguous[] file1Blocks = file1Node.getBlocks();
+    BlockInfo[] file1Blocks = file1Node.getBlocks();
     assertEquals(2, file1Blocks.length);
     assertEquals(GROUP_SIZE, file1Blocks[0].numNodes());
     assertEquals(HdfsConstants.MAX_BLOCKS_IN_GROUP,
