@@ -65,12 +65,12 @@ public class TimelineEntity {
   }
 
   private Identifier identifier;
-  private Map<String, Object> info = new HashMap<>();
-  private Map<String, Object> configs = new HashMap<>();
+  private HashMap<String, Object> info = new HashMap<>();
+  private HashMap<String, Object> configs = new HashMap<>();
   private Set<TimelineMetric> metrics = new HashSet<>();
   private Set<TimelineEvent> events = new HashSet<>();
-  private Map<String, Set<String>> isRelatedToEntities = new HashMap<>();
-  private Map<String, Set<String>> relatesToEntities = new HashMap<>();
+  private HashMap<String, Set<String>> isRelatedToEntities = new HashMap<>();
+  private HashMap<String, Set<String>> relatesToEntities = new HashMap<>();
   private long createdTime;
   private long modifiedTime;
 
@@ -109,13 +109,23 @@ public class TimelineEntity {
     this.identifier = identifier;
   }
 
+  // required by JAXB
+  @InterfaceAudience.Private
   @XmlElement(name = "info")
+  public HashMap<String, Object> getInfoJAXB() {
+    return info;
+  }
+
   public Map<String, Object> getInfo() {
     return info;
   }
 
   public void setInfo(Map<String, Object> info) {
-    this.info = info;
+    if (info != null && !(info instanceof HashMap)) {
+      this.info = new HashMap<String, Object>(info);
+    } else {
+      this.info = (HashMap<String, Object>) info;
+    }
   }
 
   public void addInfo(Map<String, Object> info) {
@@ -126,13 +136,23 @@ public class TimelineEntity {
     info.put(key, value);
   }
 
+  // required by JAXB
+  @InterfaceAudience.Private
   @XmlElement(name = "configs")
+  public HashMap<String, Object> getConfigsJAXB() {
+    return configs;
+  }
+
   public Map<String, Object> getConfigs() {
     return configs;
   }
 
   public void setConfigs(Map<String, Object> configs) {
-    this.configs = configs;
+    if (configs != null && !(configs instanceof HashMap)) {
+      this.configs = new HashMap<String, Object>(configs);
+    } else {
+      this.configs = (HashMap<String, Object>) configs;
+    }
   }
 
   public void addConfigs(Map<String, Object> configs) {
@@ -177,14 +197,24 @@ public class TimelineEntity {
     events.add(event);
   }
 
-  @XmlElement(name = "isrelatedto")
   public Map<String, Set<String>> getIsRelatedToEntities() {
+    return isRelatedToEntities;
+  }
+
+  // required by JAXB
+  @InterfaceAudience.Private
+  @XmlElement(name = "isrelatedto")
+  public HashMap<String, Set<String>> getIsRelatedToEntitiesJAXB() {
     return isRelatedToEntities;
   }
 
   public void setIsRelatedToEntities(
       Map<String, Set<String>> isRelatedToEntities) {
-    this.isRelatedToEntities = isRelatedToEntities;
+    if (isRelatedToEntities != null && !(isRelatedToEntities instanceof HashMap)) {
+      this.isRelatedToEntities = new HashMap<String, Set<String>>(isRelatedToEntities);
+    } else {
+      this.isRelatedToEntities = (HashMap<String, Set<String>>) isRelatedToEntities;
+    }
   }
 
   public void addIsRelatedToEntities(
@@ -209,7 +239,13 @@ public class TimelineEntity {
     ids.add(id);
   }
 
+  // required by JAXB
+  @InterfaceAudience.Private
   @XmlElement(name = "relatesto")
+  public HashMap<String, Set<String>> getRelatesToEntitiesJAXB() {
+    return relatesToEntities;
+  }
+
   public Map<String, Set<String>> getRelatesToEntities() {
     return relatesToEntities;
   }
@@ -235,7 +271,11 @@ public class TimelineEntity {
   }
 
   public void setRelatesToEntities(Map<String, Set<String>> relatesToEntities) {
-    this.relatesToEntities = relatesToEntities;
+    if (relatesToEntities != null && !(relatesToEntities instanceof HashMap)) {
+      this.relatesToEntities = new HashMap<String, Set<String>>(relatesToEntities);
+    } else {
+      this.relatesToEntities = (HashMap<String, Set<String>>) relatesToEntities;
+    }
   }
 
   @XmlElement(name = "createdtime")
