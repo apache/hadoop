@@ -118,8 +118,8 @@ public class PerNodeAggregatorServer extends AuxiliaryService {
           .setConf(conf)
           .addEndpoint(URI.create("http://" + bindAddress));
       timelineRestServer = builder.build();
-      // TODO: replace this by an authentification filter in future.
-      HashMap<String, String> options = new HashMap<String, String>();
+      // TODO: replace this by an authentication filter in future.
+      HashMap<String, String> options = new HashMap<>();
       String username = conf.get(HADOOP_HTTP_STATIC_USER,
           DEFAULT_HADOOP_HTTP_STATIC_USER);
       options.put(HADOOP_HTTP_STATIC_USER, username);

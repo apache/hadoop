@@ -20,6 +20,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3087. Made the REST server of per-node aggregator work alone in NM
     daemon. (Li Lu via zjshen)
 
+    YARN-3125. Made the distributed shell use timeline service next gen and
+    add an integration test for it. (Junping Du and Li Lu via zjshen)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
