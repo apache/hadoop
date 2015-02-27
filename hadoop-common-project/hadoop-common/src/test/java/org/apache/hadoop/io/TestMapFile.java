@@ -21,6 +21,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -728,6 +732,58 @@ public class TestMapFile {
       assertEquals(null, reader.midKey()); 
     } finally {
       reader.close();
+    }
+  }
+
+  @Test
+  public void testMerge() throws Exception {
+    final String TEST_METHOD_KEY = "testMerge.mapfile";
+    int SIZE = 10;
+    int ITERATIONS = 5;
+    Path[] in = new Path[5];
+    List<Integer> expected = new ArrayList<Integer>();
+    for (int j = 0; j < 5; j++) {
+      try (MapFile.Writer writer = createWriter(TEST_METHOD_KEY + "." + j,
+          IntWritable.class, Text.class)) {
+        in[j] = new Path(TEST_DIR, TEST_METHOD_KEY + "." + j);
+        for (int i = 0; i < SIZE; i++) {
+          expected.add(i + j);
+          writer.append(new IntWritable(i + j), new Text("Value:" + (i + j)));
+        }
+      }
+    }
+    // Sort expected values
+    Collections.sort(expected);
+    // Merge all 5 files
+    MapFile.Merger merger = new MapFile.Merger(conf);
+    merger.merge(in, true, new Path(TEST_DIR, TEST_METHOD_KEY));
+
+    try (MapFile.Reader reader = createReader(TEST_METHOD_KEY,
+        IntWritable.class)) {
+      int start = 0;
+      // test iteration
+      Text startValue = new Text("Value:" + start);
+      int i = 0;
+      while (i++ < ITERATIONS) {
+        Iterator<Integer> expectedIterator = expected.iterator();
+        IntWritable key = new IntWritable(start);
+        Text value = startValue;
+        IntWritable prev = new IntWritable(start);
+        while (reader.next(key, value)) {
+          assertTrue("Next key should be always equal or more",
+              prev.get() <= key.get());
+          assertEquals(expectedIterator.next().intValue(), key.get());
+          prev.set(key.get());
+        }
+        reader.reset();
+      }
+    }
+
+    // inputs should be deleted
+    for (int j = 0; j < in.length; j++) {
+      Path path = in[j];
+      assertFalse("inputs should be deleted",
+          path.getFileSystem(conf).exists(path));
     }
   }
 }

@@ -33,6 +33,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11510. Expose truncate API via FileContext. (yliu)
 
+    HADOOP-11569. Provide Merge API for MapFile to merge multiple similar MapFiles
+    to one MapFile. (Vinayakumar B via ozawa)
+
   IMPROVEMENTS
 
     HADOOP-11483. HardLink.java should use the jdk7 createLink method (aajisaka)
