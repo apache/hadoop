@@ -16293,8 +16293,8 @@
         <command>-fs NAMENODE -mkdir -p /user/USERNAME/dir1</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /user/USERNAME/dir1</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data30bytes /user/USERNAME/dir1</command>
-        <command>-fs NAMENODE -getmerge /user/USERNAME/dir1 CLITEST_DATA/file</command>
-        <command>-cat CLITEST_DATA/file</command>
+        <command>-fs NAMENODE -getmerge /user/USERNAME/dir1 data</command>
+        <command>-cat data</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r /user/USERNAME</command>

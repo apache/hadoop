@@ -673,9 +673,6 @@ Release 2.7.0 - UNRELEASED
     HDFS-7714. Simultaneous restart of HA NameNodes and DataNode can cause
     DataNode to register successfully with only one NameNode.(vinayakumarb)
 
-    HDFS-7769. TestHDFSCLI should not create files in hdfs project root dir.
-    (szetszwo)
-
     HDFS-7753. Fix Multithreaded correctness Warnings in BackupImage.
     (Rakesh R and shv)
 
