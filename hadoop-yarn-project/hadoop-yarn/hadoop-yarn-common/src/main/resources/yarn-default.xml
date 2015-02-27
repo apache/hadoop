@@ -420,6 +420,21 @@
   </property>
 
   <property>
+    <description>the number of retries to recover from IOException in
+    FileSystemRMStateStore.
+    </description>
+    <name>yarn.resourcemanager.fs.state-store.num-retries</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>Retry interval in milliseconds in FileSystemRMStateStore.
+    </description>
+    <name>yarn.resourcemanager.fs.state-store.retry-interval-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
     <description>Local path where the RM state will be stored when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.LeveldbRMStateStore
     as the value for yarn.resourcemanager.store.class</description>
