@@ -72,6 +72,12 @@ public class BaseAggregatorService extends CompositeService {
    */
   public void postEntities(TimelineEntities entities,
       UserGroupInformation callerUgi) {
+    // Add this output temporarily for our prototype
+    // TODO remove this after we have an actual implementation
+    LOG.info("SUCCESS - TIMELINE V2 PROTOTYPE");
+    LOG.info("postEntities(entities=" + entities + ", callerUgi=" +
+        callerUgi + ")");
+
     // TODO implement
     if (LOG.isDebugEnabled()) {
       LOG.debug("postEntities(entities=" + entities + ", callerUgi=" +
