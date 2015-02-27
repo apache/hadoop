@@ -294,6 +294,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3255. RM, NM, JobHistoryServer, and WebAppProxyServer's main()
     should support generic options. (shv)
 
+    YARN-2820. Retry in FileSystemRMStateStore when FS's operations fail 
+    due to IOException. (Zhihai Xu via ozawa)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 

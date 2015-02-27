@@ -508,6 +508,15 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_FS_RM_STATE_STORE_RETRY_POLICY_SPEC =
       "2000, 500";
 
+  public static final String FS_RM_STATE_STORE_NUM_RETRIES =
+      RM_PREFIX + "fs.state-store.num-retries";
+  public static final int DEFAULT_FS_RM_STATE_STORE_NUM_RETRIES = 0;
+
+  public static final String FS_RM_STATE_STORE_RETRY_INTERVAL_MS =
+      RM_PREFIX + "fs.state-store.retry-interval-ms";
+  public static final long DEFAULT_FS_RM_STATE_STORE_RETRY_INTERVAL_MS =
+      1000L;
+
   public static final String RM_LEVELDB_STORE_PATH = RM_PREFIX
       + "leveldb-state-store.path";
 

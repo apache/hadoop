@@ -100,7 +100,12 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
           workingDirPathURI.toString());
       conf.set(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
         "100,6000");
+      conf.setInt(YarnConfiguration.FS_RM_STATE_STORE_NUM_RETRIES, 5);
+      conf.setLong(YarnConfiguration.FS_RM_STATE_STORE_RETRY_INTERVAL_MS,
+          900L);
       this.store = new TestFileSystemRMStore(conf);
+      Assert.assertEquals(store.getNumRetries(), 5);
+      Assert.assertEquals(store.getRetryInterval(), 900L);
       return store;
     }
 
