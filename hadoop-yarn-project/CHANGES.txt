@@ -619,6 +619,9 @@ Release 2.6.0 - 2014-11-18
     identifiers to be tampered and thus causing app submission failures in
     secure mode. (Jian He via vinodkv)
 
+    YARN-3251. Fixed a deadlock in CapacityScheduler when computing 
+    absoluteMaxAvailableCapacity in LeafQueue (Craig Welch via wangda)
+ 
   BREAKDOWN OF YARN-1051 SUBTASKS AND RELATED JIRAS
 
     YARN-1707. Introduce APIs to add/remove/resize queues in the

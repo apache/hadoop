@@ -115,6 +115,8 @@ public class LeafQueue extends AbstractCSQueue {
   
   private final QueueHeadroomInfo queueHeadroomInfo = new QueueHeadroomInfo();
   
+  private volatile float absoluteMaxAvailCapacity;
+  
   public LeafQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
@@ -133,6 +135,10 @@ public class LeafQueue extends AbstractCSQueue {
         (float)cs.getConfiguration().getMaximumCapacity(getQueuePath()) / 100;
     float absoluteMaxCapacity = 
         CSQueueUtils.computeAbsoluteMaximumCapacity(maximumCapacity, parent);
+        
+    // Initially set to absoluteMax, will be updated to more accurate
+    // max avail value during assignContainers
+    absoluteMaxAvailCapacity = absoluteMaxCapacity;
 
     int userLimit = cs.getConfiguration().getUserLimit(getQueuePath());
     float userLimitFactor = 
@@ -720,8 +726,18 @@ public class LeafQueue extends AbstractCSQueue {
   }
   
   @Override
-  public synchronized CSAssignment assignContainers(Resource clusterResource,
+  public CSAssignment assignContainers(Resource clusterResource,
       FiCaSchedulerNode node, boolean needToUnreserve) {
+    //We should not hold a lock on a queue and its parent concurrently - it
+    //can lead to deadlocks when calls which walk down the tree occur
+    //concurrently (getQueueInfo...)
+    absoluteMaxAvailCapacity = CSQueueUtils.getAbsoluteMaxAvailCapacity(
+      resourceCalculator, clusterResource, this);
+    return assignContainersInternal(clusterResource, node, needToUnreserve);
+  }
+  
+  private synchronized CSAssignment assignContainersInternal(
+    Resource clusterResource, FiCaSchedulerNode node, boolean needToUnreserve) {
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("assignContainers: node=" + node.getNodeName()
@@ -1011,12 +1027,6 @@ public class LeafQueue extends AbstractCSQueue {
     Resource userLimit =
         computeUserLimit(application, clusterResource, required,
             queueUser, requestedLabels);
-
-    //Max avail capacity needs to take into account usage by ancestor-siblings
-    //which are greater than their base capacity, so we are interested in "max avail"
-    //capacity
-    float absoluteMaxAvailCapacity = CSQueueUtils.getAbsoluteMaxAvailCapacity(
-      resourceCalculator, clusterResource, this);
 
     Resource queueMaxCap =                        // Queue Max-Capacity
         Resources.multiplyAndNormalizeDown(
