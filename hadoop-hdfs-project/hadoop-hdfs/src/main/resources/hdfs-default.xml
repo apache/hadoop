@@ -145,6 +145,17 @@
 </property>
 
 <property>
+  <name>dfs.namenode.heartbeat.recheck-interval</name>
+  <value>300000</value>
+  <description>
+    This time decides the interval to check for expired datanodes.
+    With this value and dfs.heartbeat.interval, the interval of
+    deciding the datanode is stale or not is also calculated.
+    The unit of this configuration is millisecond.
+  </description>
+</property>
+
+<property>
   <name>dfs.http.policy</name>
   <value>HTTP_ONLY</value>
   <description>Decide if HTTPS(SSL) is supported on HDFS
