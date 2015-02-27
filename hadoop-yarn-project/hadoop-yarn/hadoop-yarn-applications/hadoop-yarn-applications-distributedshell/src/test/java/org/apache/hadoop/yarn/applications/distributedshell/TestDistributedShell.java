@@ -78,14 +78,13 @@ import org.apache.hadoop.yarn.server.timeline.TimelineVersion;
 import org.apache.hadoop.yarn.server.timeline.TimelineVersionWatcher;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.server.timelineservice.aggregator.PerNodeAggregatorServer;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-
-import com.sun.jersey.api.client.ClientHandlerException;
 
 public class TestDistributedShell {
 
@@ -99,6 +98,7 @@ public class TestDistributedShell {
   protected YarnConfiguration conf = null;
   private static final int NUM_NMS = 1;
   private static final float DEFAULT_TIMELINE_VERSION = 1.0f;
+  private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_aggregator";
 
   protected final static String APPMASTER_JAR =
       JarFinder.getJar(ApplicationMaster.class);
@@ -122,11 +122,16 @@ public class TestDistributedShell {
       throws Exception {
 
     LOG.info("Starting up YARN cluster");
-    
+
     conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     conf.set("yarn.log.dir", "target");
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    // mark if we need to launch the v1 timeline server
+    boolean enableATSServer = true;
+    // disable aux-service based timeline aggregators
+    conf.set(YarnConfiguration.NM_AUX_SERVICES, "");
+
     conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
     conf.set("mapreduce.jobhistory.address",
@@ -148,6 +153,13 @@ public class TestDistributedShell {
       PluginStoreTestUtils.prepareConfiguration(conf, hdfsCluster);
       conf.set(YarnConfiguration.TIMELINE_SERVICE_ENTITY_GROUP_PLUGIN_CLASSES,
           DistributedShellTimelinePlugin.class.getName());
+    } else if (timelineVersion == 2.0f) {
+      // disable v1 timeline server since we no longer have a server here
+      enableATSServer = false;
+      // enable aux-service based timeline aggregators
+      conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
+      conf.set(YarnConfiguration.NM_AUX_SERVICES + "." + TIMELINE_AUX_SERVICE_NAME
+        + ".class", PerNodeAggregatorServer.class.getName());
     } else {
       Assert.fail("Wrong timeline version number: " + timelineVersion);
     }
@@ -155,7 +167,7 @@ public class TestDistributedShell {
     if (yarnCluster == null) {
       yarnCluster =
           new MiniYARNCluster(TestDistributedShell.class.getSimpleName(), 1,
-              numNodeManager, 1, 1);
+              numNodeManager, 1, 1, enableATSServer);
       yarnCluster.init(conf);
       
       yarnCluster.start();
@@ -242,6 +254,12 @@ public class TestDistributedShell {
     testDSShell(true);
   }
 
+  @Test(timeout=90000)
+  @TimelineVersion(2.0f)
+  public void testDSShellWithoutDomainV2() throws Exception {
+    testDSShell(false);
+  }
+
   public void testDSShell(boolean haveDomain) throws Exception {
     String[] args = {
         "--jar",
@@ -269,9 +287,17 @@ public class TestDistributedShell {
           "writer_user writer_group",
           "--create"
       };
-      List<String> argsList = new ArrayList<String>(Arrays.asList(args));
-      argsList.addAll(Arrays.asList(domainArgs));
-      args = argsList.toArray(new String[argsList.size()]);
+      args = mergeArgs(args, domainArgs);
+    }
+    boolean isTestingTimelineV2 = false;
+    if (timelineVersionWatcher.getTimelineVersion() == 2.0f) {
+      String[] timelineArgs = {
+          "--timeline_service_version",
+          "v2"
+      };
+      isTestingTimelineV2 = true;
+      args = mergeArgs(args, timelineArgs);
+      LOG.info("Setup: Using timeline v2!");
     }
 
     LOG.info("Initializing DS Client");
@@ -344,6 +370,15 @@ public class TestDistributedShell {
     }
 
     TimelineDomain domain = null;
+    if (!isTestingTimelineV2) {
+      checkTimelineV1(haveDomain);
+    } else {
+      checkTimelineV2(haveDomain);
+    }
+  }
+
+  private void checkTimelineV1(boolean haveDomain) throws Exception {
+        TimelineDomain domain = null;
     if (haveDomain) {
       domain = yarnCluster.getApplicationHistoryServer()
           .getTimelineStore().getDomain("TEST_DOMAIN");
@@ -392,6 +427,24 @@ public class TestDistributedShell {
       Assert.assertEquals("DEFAULT",
           entities.getEntities().get(0).getDomainId());
     }
+  }
+
+  private void checkTimelineV2(boolean haveDomain) {
+    // TODO check timeline V2 here after we have a storage layer
+  }
+
+  /**
+   * Utility function to merge two String arrays to form a new String array for
+   * our argumemts.
+   *
+   * @param args
+   * @param newArgs
+   * @return a String array consists of {args, newArgs}
+   */
+  private String[] mergeArgs(String[] args, String[] newArgs) {
+    List<String> argsList = new ArrayList<String>(Arrays.asList(args));
+    argsList.addAll(Arrays.asList(newArgs));
+    return argsList.toArray(new String[argsList.size()]);
   }
 
   /*
