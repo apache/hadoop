@@ -38,6 +38,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
@@ -1193,6 +1194,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     StringUtils.startupShutdownMessage(ResourceManager.class, argv, LOG);
     try {
       Configuration conf = new YarnConfiguration();
+      GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
+      argv = hParser.getRemainingArgs();
       // If -format-state-store, then delete RMStateStore; else startup normally
       if (argv.length == 1 && argv[0].equals("-format-state-store")) {
         deleteRMStateStore(conf);

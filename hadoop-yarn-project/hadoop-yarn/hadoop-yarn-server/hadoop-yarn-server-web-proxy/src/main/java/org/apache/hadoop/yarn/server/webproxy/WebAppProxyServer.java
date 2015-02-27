@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
@@ -89,6 +90,7 @@ public class WebAppProxyServer extends CompositeService {
     StringUtils.startupShutdownMessage(WebAppProxyServer.class, args, LOG);
     try {
       YarnConfiguration configuration = new YarnConfiguration();
+      new GenericOptionsParser(configuration, args);
       WebAppProxyServer proxyServer = startServer(configuration);
       proxyServer.proxy.join();
     } catch (Throwable t) {

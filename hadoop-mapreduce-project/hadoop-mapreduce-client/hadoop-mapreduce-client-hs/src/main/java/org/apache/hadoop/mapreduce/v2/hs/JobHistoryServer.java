@@ -37,6 +37,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
@@ -216,6 +217,7 @@ public class JobHistoryServer extends CompositeService {
           new CompositeServiceShutdownHook(jobHistoryServer),
           SHUTDOWN_HOOK_PRIORITY);
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
+      new GenericOptionsParser(conf, args);
       jobHistoryServer.init(conf);
       jobHistoryServer.start();
     } catch (Throwable t) {
