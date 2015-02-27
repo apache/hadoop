@@ -63,6 +63,7 @@ public class DirectoryScanner implements Runnable {
   private final long scanPeriodMsecs;
   private volatile boolean shouldRun = false;
   private boolean retainDiffs = false;
+  private final DataNode datanode;
 
   final ScanInfoPerBlockPool diffs = new ScanInfoPerBlockPool();
   final Map<String, Stats> stats = new HashMap<String, Stats>();
@@ -308,7 +309,8 @@ public class DirectoryScanner implements Runnable {
     }
   }
 
-  DirectoryScanner(FsDatasetSpi<?> dataset, Configuration conf) {
+  DirectoryScanner(DataNode datanode, FsDatasetSpi<?> dataset, Configuration conf) {
+    this.datanode = datanode;
     this.dataset = dataset;
     int interval = conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT);
@@ -547,7 +549,7 @@ public class DirectoryScanner implements Runnable {
     for (int i = 0; i < volumes.size(); i++) {
       if (isValid(dataset, volumes.get(i))) {
         ReportCompiler reportCompiler =
-          new ReportCompiler(volumes.get(i));
+          new ReportCompiler(datanode,volumes.get(i));
         Future<ScanInfoPerBlockPool> result = 
           reportCompileThreadPool.submit(reportCompiler);
         compilersInProgress.put(i, result);
@@ -585,8 +587,10 @@ public class DirectoryScanner implements Runnable {
   private static class ReportCompiler 
   implements Callable<ScanInfoPerBlockPool> {
     private final FsVolumeSpi volume;
+    private final DataNode datanode;
 
-    public ReportCompiler(FsVolumeSpi volume) {
+    public ReportCompiler(DataNode datanode, FsVolumeSpi volume) {
+      this.datanode = datanode;
       this.volume = volume;
     }
 
@@ -611,6 +615,8 @@ public class DirectoryScanner implements Runnable {
         files = FileUtil.listFiles(dir);
       } catch (IOException ioe) {
         LOG.warn("Exception occured while compiling report: ", ioe);
+        // Initiate a check on disk failure.
+        datanode.checkDiskErrorAsync();
         // Ignore this directory and proceed.
         return report;
       }
