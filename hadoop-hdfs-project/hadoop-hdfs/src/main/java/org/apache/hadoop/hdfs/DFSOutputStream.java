@@ -1851,8 +1851,9 @@ public class DFSOutputStream extends FSOutputSummer
   }
 
   private void computePacketChunkSize(int psize, int csize) {
+    final int bodySize = psize - PacketHeader.PKT_MAX_HEADER_LEN;
     final int chunkSize = csize + getChecksumSize();
-    chunksPerPacket = Math.max(psize/chunkSize, 1);
+    chunksPerPacket = Math.max(bodySize/chunkSize, 1);
     packetSize = chunkSize*chunksPerPacket;
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("computePacketChunkSize: src=" + src +
