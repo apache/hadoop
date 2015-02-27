@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
@@ -64,6 +66,35 @@ public class TestDFSOutputStream {
     }
     Assert.assertEquals(null, ex.get());
     dos.close();
+  }
+
+  /**
+   * The computePacketChunkSize() method of DFSOutputStream should set the actual
+   * packet size < 64kB. See HDFS-7308 for details.
+   */
+  @Test
+  public void testComputePacketChunkSize()
+      throws Exception {
+    DistributedFileSystem fs = cluster.getFileSystem();
+    FSDataOutputStream os = fs.create(new Path("/test"));
+    DFSOutputStream dos = (DFSOutputStream) Whitebox.getInternalState(os,
+        "wrappedStream");
+
+    final int packetSize = 64*1024;
+    final int bytesPerChecksum = 512;
+
+    Method method = dos.getClass().getDeclaredMethod("computePacketChunkSize",
+        int.class, int.class);
+    method.setAccessible(true);
+    method.invoke(dos, packetSize, bytesPerChecksum);
+
+    Field field = dos.getClass().getDeclaredField("packetSize");
+    field.setAccessible(true);
+
+    Assert.assertTrue((Integer) field.get(dos) + 33 < packetSize);
+    // If PKT_MAX_HEADER_LEN is 257, actual packet size come to over 64KB
+    // without a fix on HDFS-7308.
+    Assert.assertTrue((Integer) field.get(dos) + 257 < packetSize);
   }
 
   @AfterClass

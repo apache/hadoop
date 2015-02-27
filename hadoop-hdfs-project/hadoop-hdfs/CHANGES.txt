@@ -384,6 +384,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7819. Log WARN message for the blocks which are not in Block ID based
     layout (Rakesh R via Colin P. McCabe)
 
+    HDFS-7308. Change the packet chunk size computation in DFSOutputStream in
+    order to enforce packet size <= 64kB.  (Takuya Fukudome via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
