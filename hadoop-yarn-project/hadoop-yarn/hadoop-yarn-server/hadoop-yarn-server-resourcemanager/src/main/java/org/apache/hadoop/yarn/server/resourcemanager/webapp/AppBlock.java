@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -50,6 +51,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
@@ -90,7 +92,8 @@ public class AppBlock extends HtmlBlock {
       puts("Application not found: "+ aid);
       return;
     }
-    AppInfo app = new AppInfo(rmApp, true, WebAppUtils.getHttpSchemePrefix(conf));
+    AppInfo app =
+        new AppInfo(rm, rmApp, true, WebAppUtils.getHttpSchemePrefix(conf));
 
     // Check for the authorization.
     String remoteUser = request().getRemoteUser();
@@ -134,7 +137,7 @@ public class AppBlock extends HtmlBlock {
         ._("Application Type:", app.getApplicationType())
         ._("Application Tags:", app.getApplicationTags())
         ._("YarnApplicationState:", clarifyAppState(app.getState()))
-        ._("FinalStatus reported by AM:",
+        ._("FinalStatus Reported by AM:",
           clairfyAppFinalStatus(app.getFinalStatus()))
         ._("Started:", Times.format(app.getStartTime()))
         ._("Elapsed:",
@@ -200,6 +203,45 @@ public class AppBlock extends HtmlBlock {
 
     table._();
     div._();
+
+    createResourceRequestsTable(html, app);
+  }
+
+  private void createResourceRequestsTable(Block html, AppInfo app) {
+    TBODY<TABLE<Hamlet>> tbody =
+        html.table("#ResourceRequests").thead().tr()
+          .th(".priority", "Priority")
+          .th(".resourceName", "ResourceName")
+          .th(".totalResource", "Capability")
+          .th(".numContainers", "NumContainers")
+          .th(".relaxLocality", "RelaxLocality")
+          .th(".nodeLabelExpression", "NodeLabelExpression")._()._().tbody();
+
+    Resource totalResource = Resource.newInstance(0, 0);
+    if (app.getResourceRequests() != null) {
+      for (ResourceRequest request : app.getResourceRequests()) {
+        if (request.getNumContainers() == 0) {
+          continue;
+        }
+
+        tbody.tr()
+          .td(String.valueOf(request.getPriority()))
+          .td(request.getResourceName())
+          .td(String.valueOf(request.getCapability()))
+          .td(String.valueOf(request.getNumContainers()))
+          .td(String.valueOf(request.getRelaxLocality()))
+          .td(request.getNodeLabelExpression() == null ? "N/A" : request
+              .getNodeLabelExpression())._();
+        if (request.getResourceName().equals(ResourceRequest.ANY)) {
+          Resources.addTo(totalResource,
+            Resources.multiply(request.getCapability(),
+              request.getNumContainers()));
+        }
+      }
+    }
+    html.div().$class("totalResourceRequests")
+      .h3("Total Outstanding Resource Requests: " + totalResource)._();
+    tbody._()._();
   }
 
   private String clarifyAppState(YarnApplicationState state) {

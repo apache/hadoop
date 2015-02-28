@@ -46,12 +46,13 @@ import com.google.inject.Inject;
 class AppsBlock extends HtmlBlock {
   final ConcurrentMap<ApplicationId, RMApp> apps;
   private final Configuration conf;
-
+  final ResourceManager rm;
   @Inject
   AppsBlock(ResourceManager rm, ViewContext ctx, Configuration conf) {
     super(ctx);
     apps = rm.getRMContext().getRMApps();
     this.conf = conf;
+    this.rm = rm;
   }
 
   @Override public void render(Block html) {
@@ -85,7 +86,7 @@ class AppsBlock extends HtmlBlock {
       if (reqAppStates != null && !reqAppStates.contains(app.createApplicationState())) {
         continue;
       }
-      AppInfo appInfo = new AppInfo(app, true, WebAppUtils.getHttpSchemePrefix(conf));
+      AppInfo appInfo = new AppInfo(rm, app, true, WebAppUtils.getHttpSchemePrefix(conf));
       String percent = String.format("%.1f", appInfo.getProgress());
       //AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData.append("[\"<a href='")

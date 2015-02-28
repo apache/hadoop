@@ -140,13 +140,13 @@ public class ResourceRequestPBImpl extends  ResourceRequest {
     this.capability = capability;
   }
   @Override
-  public int getNumContainers() {
+  public synchronized int getNumContainers() {
     ResourceRequestProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getNumContainers());
   }
 
   @Override
-  public void setNumContainers(int numContainers) {
+  public synchronized void setNumContainers(int numContainers) {
     maybeInitBuilder();
     builder.setNumContainers((numContainers));
   }

@@ -297,6 +297,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2820. Retry in FileSystemRMStateStore when FS's operations fail 
     due to IOException. (Zhihai Xu via ozawa)
 
+    YARN-3262. Surface application outstanding resource requests table 
+    in RM web UI. (Jian He via wangda)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
