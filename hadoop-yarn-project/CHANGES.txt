@@ -20,6 +20,9 @@ Trunk - Unreleased
     YARN-2980. Move health check script related functionality to hadoop-common
     (Varun Saxena via aw)
 
+    YARN-3168. Convert site documentation from apt to markdown (Gururaj Shetty
+    via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
