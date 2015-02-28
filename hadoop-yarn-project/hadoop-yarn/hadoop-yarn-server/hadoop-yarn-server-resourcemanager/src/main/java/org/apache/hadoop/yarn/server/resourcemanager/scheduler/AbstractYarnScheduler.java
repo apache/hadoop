@@ -658,4 +658,13 @@ public abstract class AbstractYarnScheduler
       maxAllocWriteLock.unlock();
     }
   }
+
+  public List<ResourceRequest> getPendingResourceRequestsForAttempt(
+      ApplicationAttemptId attemptId) {
+    SchedulerApplicationAttempt attempt = getApplicationAttempt(attemptId);
+    if (attempt != null) {
+      return attempt.getAppSchedulingInfo().getAllResourceRequests();
+    }
+    return null;
+  }
 }

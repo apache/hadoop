@@ -476,8 +476,8 @@ public class RMWebServices {
         }
       }
 
-      AppInfo app = new AppInfo(rmapp, hasAccess(rmapp, hsr),
-          WebAppUtils.getHttpSchemePrefix(conf));
+      AppInfo app = new AppInfo(rm, rmapp,
+          hasAccess(rmapp, hsr), WebAppUtils.getHttpSchemePrefix(conf));
       allApps.add(app);
     }
     return allApps;
@@ -617,7 +617,7 @@ public class RMWebServices {
     if (app == null) {
       throw new NotFoundException("app with id: " + appId + " not found");
     }
-    return new AppInfo(app, hasAccess(app, hsr), hsr.getScheme() + "://");
+    return new AppInfo(rm, app, hasAccess(app, hsr), hsr.getScheme() + "://");
   }
 
   @GET
