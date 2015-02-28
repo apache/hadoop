@@ -1,6 +1,6 @@
 Hadoop YARN Change Log
 
-Trunk - Unreleased 
+Trunk - Unreleased
 
   INCOMPATIBLE CHANGES
 
@@ -22,6 +22,9 @@ Trunk - Unreleased
 
     YARN-3168. Convert site documentation from apt to markdown (Gururaj Shetty
     via aw)
+
+    YARN-3199. Fair Scheduler documentation improvements (Rohit Agarwal via
+    aw)
 
   OPTIMIZATIONS
 
