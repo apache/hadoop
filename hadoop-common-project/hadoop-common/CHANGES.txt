@@ -403,6 +403,9 @@ Trunk (Unreleased)
 
     HADOOP-11637. bash location hard-coded in shell scripts (aw)
 
+    HADOOP-10774. Update KerberosTestUtils for hadoop-auth tests when using
+    IBM Java (sangamesh via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
