@@ -251,6 +251,12 @@ public class DFSTestUtil {
   public void createFiles(FileSystem fs, String topdir) throws IOException {
     createFiles(fs, topdir, (short)3);
   }
+
+  public static byte[] readFileAsBytes(FileSystem fs, Path fileName) throws IOException {
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    IOUtils.copyBytes(fs.open(fileName), os, 1024, true);
+    return os.toByteArray();
+  }
   
   /** create nFiles with random names and directory hierarchies
    *  with random (but reproducible) data in them.
@@ -721,6 +727,12 @@ public class DFSTestUtil {
     for(int c; (c = in.read()) != -1; b.append((char)c));
     in.close();      
     return b.toString();
+  }
+
+  public static byte[] readFileAsBytes(File f) throws IOException {
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    IOUtils.copyBytes(new FileInputStream(f), os, 1024, true);
+    return os.toByteArray();
   }
 
   /* Write the given string to the given file */

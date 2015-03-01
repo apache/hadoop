@@ -306,6 +306,9 @@ Trunk (Unreleased)
     HDFS-7803. Wrong command mentioned in HDFSHighAvailabilityWithQJM
     documentation (Arshad Mohammad via aw)
 
+    HDFS-4681. TestBlocksWithNotEnoughRacks#testCorruptBlockRereplicatedAcrossRacks 
+    fails using IBM java (Ayappan via aw)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
