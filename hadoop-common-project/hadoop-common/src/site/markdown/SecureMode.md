@@ -289,8 +289,8 @@ The following properties should be in the `core-site.xml` of all the nodes in th
 
 | Parameter | Value | Notes |
 |:---- |:---- |:---- |
-| `dfs.web.authentication.kerberos.principal` | http/\_HOST@REALM.TLD | Kerberos keytab file for the WebHDFS. |
-| `dfs.web.authentication.kerberos.keytab` | */etc/security/keytab/http.service.keytab* | Kerberos principal name for WebHDFS. |
+| `dfs.web.authentication.kerberos.principal` | http/\_HOST@REALM.TLD | Kerberos principal name for the WebHDFS. |
+| `dfs.web.authentication.kerberos.keytab` | */etc/security/keytab/http.service.keytab* | Kerberos keytab file for WebHDFS. |
 
 ### ResourceManager
 
