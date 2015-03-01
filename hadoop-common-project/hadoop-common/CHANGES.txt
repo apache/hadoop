@@ -614,6 +614,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-9922. hadoop windows native build will fail in 32 bit machine.
     (Kiran Kumar M R via cnauroth)
 
+    HADOOP-11634. Description of webhdfs' principal/keytab should switch places
+    each other. (Brahma Reddy Battula via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
