@@ -1518,6 +1518,17 @@
 </property>
 
 <property>
+  <name>hadoop.user.group.metrics.percentiles.intervals</name>
+  <value></value>
+  <description>
+    A comma-separated list of the granularity in seconds for the metrics
+    which describe the 50/75/90/95/99th percentile latency for group resolution
+    in milliseconds.
+    By default, percentile latency metrics are disabled.
+  </description>
+</property>
+
+<property>
   <name>dfs.encrypt.data.transfer</name>
   <value>false</value>
   <description>
