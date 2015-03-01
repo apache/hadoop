@@ -163,9 +163,6 @@ Trunk (Unreleased)
     HADOOP-11346. Rewrite sls/rumen to use new shell framework (John Smith
     via aw)
 
-    HADOOP-10976. moving the source code of hadoop-tools docs to the
-    directory under hadoop-tools (Masatake Iwasaki via aw)
-
     HADOOP-7713. dfs -count -q should label output column (Jonathan Allen
     via aw)
 
@@ -635,6 +632,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11632. Cleanup Find.java to remove SupressWarnings annotations.
     (Akira Ajisaka via ozawa)
+
+    HADOOP-10976. moving the source code of hadoop-tools docs to the
+    directory under hadoop-tools (Masatake Iwasaki via aw)
 
   OPTIMIZATIONS
 
