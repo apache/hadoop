@@ -6,6 +6,9 @@ Trunk (Unreleased)
     MAPREDUCE-5785. Derive heap size or mapreduce.*.memory.mb automatically.
     (Gera Shegalov and Karthik Kambatla via gera)
 
+    MAPREDUCE-5653. DistCp does not honour config-overrides for
+    mapreduce.[map,reduce].memory.mb (Ratandeep Ratti via aw)
+
   NEW FEATURES
 
     MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
