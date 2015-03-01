@@ -390,6 +390,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7685. Document dfs.namenode.heartbeat.recheck-interval in
     hdfs-default.xml. (Kai Sasaki via aajisaka)
 
+    HDFS-5853. Add "hadoop.user.group.metrics.percentiles.intervals" to
+    hdfs-default.xml. (aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
