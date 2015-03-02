@@ -68,10 +68,9 @@ This section lists the various Hadoop services and their configuration knobs:
 | security.datanode.protocol.acl | ACL for DatanodeProtocol, which is used by datanodes to communicate with the namenode. |
 | security.inter.datanode.protocol.acl | ACL for InterDatanodeProtocol, the inter-datanode protocol for updating generation timestamp. |
 | security.namenode.protocol.acl | ACL for NamenodeProtocol, the protocol used by the secondary namenode to communicate with the namenode. |
-| security.inter.tracker.protocol.acl | ACL for InterTrackerProtocol, used by the tasktrackers to communicate with the jobtracker. |
-| security.job.submission.protocol.acl | ACL for JobSubmissionProtocol, used by job clients to communciate with the jobtracker for job submission, querying job status etc. |
-| security.task.umbilical.protocol.acl | ACL for TaskUmbilicalProtocol, used by the map and reduce tasks to communicate with the parent tasktracker. |
-| security.refresh.policy.protocol.acl | ACL for RefreshAuthorizationPolicyProtocol, used by the dfsadmin and mradmin commands to refresh the security policy in-effect. |
+| security.job.client.protocol.acl | ACL for JobSubmissionProtocol, used by job clients to communciate with the resourcemanager for job submission, querying job status etc. |
+| security.job.task.protocol.acl | ACL for TaskUmbilicalProtocol, used by the map and reduce tasks to communicate with the parent nodemanager. |
+| security.refresh.policy.protocol.acl | ACL for RefreshAuthorizationPolicyProtocol, used by the dfsadmin and rmadmin commands to refresh the security policy in-effect. |
 | security.ha.service.protocol.acl | ACL for HAService protocol used by HAAdmin to manage the active and stand-by states of namenode. |
 
 ### Access Control Lists
@@ -98,15 +97,15 @@ If access control list is not defined for a service, the value of `security.serv
 
 ### Refreshing Service Level Authorization Configuration
 
-The service-level authorization configuration for the NameNode and JobTracker can be changed without restarting either of the Hadoop master daemons. The cluster administrator can change `$HADOOP_CONF_DIR/hadoop-policy.xml` on the master nodes and instruct the NameNode and JobTracker to reload their respective configurations via the `-refreshServiceAcl` switch to `dfsadmin` and `mradmin` commands respectively.
+The service-level authorization configuration for the NameNode and ResourceManager can be changed without restarting either of the Hadoop master daemons. The cluster administrator can change `$HADOOP_CONF_DIR/hadoop-policy.xml` on the master nodes and instruct the NameNode and ResourceManager to reload their respective configurations via the `-refreshServiceAcl` switch to `dfsadmin` and `rmadmin` commands respectively.
 
 Refresh the service-level authorization configuration for the NameNode:
 
-       $ bin/hadoop dfsadmin -refreshServiceAcl
+       $ bin/hdfs dfsadmin -refreshServiceAcl
 
-Refresh the service-level authorization configuration for the JobTracker:
+Refresh the service-level authorization configuration for the ResourceManager:
 
-       $ bin/hadoop mradmin -refreshServiceAcl
+       $ bin/yarn rmadmin -refreshServiceAcl
 
 Of course, one can use the `security.refresh.policy.protocol.acl` property in `$HADOOP_CONF_DIR/hadoop-policy.xml` to restrict access to the ability to refresh the service-level authorization configuration to certain users/groups.
 
@@ -125,7 +124,7 @@ Of course, one can use the `security.refresh.policy.protocol.acl` property in `$
 Allow only users `alice`, `bob` and users in the `mapreduce` group to submit jobs to the MapReduce cluster:
 
     <property>
-         <name>security.job.submission.protocol.acl</name>
+         <name>security.job.client.protocol.acl</name>
          <value>alice,bob mapreduce</value>
     </property>
 

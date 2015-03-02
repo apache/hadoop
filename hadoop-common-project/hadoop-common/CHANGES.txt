@@ -617,6 +617,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11634. Description of webhdfs' principal/keytab should switch places
     each other. (Brahma Reddy Battula via ozawa)
 
+    HADOOP-11615. Update ServiceLevelAuth.md for YARN.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
