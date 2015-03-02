@@ -471,21 +471,20 @@ class FSDirWriteFileOp {
     assert fsd.hasWriteLock();
     if (underConstruction) {
       newNode = newINodeFile(id, permissions, modificationTime,
-                                              modificationTime, replication,
-                                              preferredBlockSize,
-                                              storagePolicyId);
+          modificationTime, replication, preferredBlockSize, storagePolicyId);
       newNode.toUnderConstruction(clientName, clientMachine);
     } else {
-      newNode = newINodeFile(id, permissions, modificationTime,
-                                              atime, replication,
-                                              preferredBlockSize,
-                                              storagePolicyId);
+      newNode = newINodeFile(id, permissions, modificationTime, atime,
+          replication, preferredBlockSize, storagePolicyId);
     }
 
     newNode.setLocalName(localName);
     try {
       INodesInPath iip = fsd.addINode(existing, newNode);
       if (iip != null) {
+        if (newNode.isStriped()) {
+          newNode.addStripedBlocksFeature();
+        }
         if (aclEntries != null) {
           AclStorage.updateINodeAcl(newNode, aclEntries, CURRENT_STATE_ID);
         }
@@ -553,7 +552,7 @@ class FSDirWriteFileOp {
 
     long modTime = now();
     INodeFile newNode = newINodeFile(fsd.allocateNewInodeId(), permissions,
-                                     modTime, modTime, replication, preferredBlockSize);
+        modTime, modTime, replication, preferredBlockSize);
     newNode.setLocalName(localName.getBytes(Charsets.UTF_8));
     newNode.toUnderConstruction(clientName, clientMachine);
 
@@ -561,12 +560,15 @@ class FSDirWriteFileOp {
     fsd.writeLock();
     try {
       newiip = fsd.addINode(existing, newNode);
+      if (newiip != null && newNode.isStriped()) {
+        newNode.addStripedBlocksFeature();
+      }
     } finally {
       fsd.writeUnlock();
     }
     if (newiip == null) {
       NameNode.stateChangeLog.info("DIR* addFile: failed to add " +
-                                       existing.getPath() + "/" + localName);
+          existing.getPath() + "/" + localName);
       return null;
     }
 
