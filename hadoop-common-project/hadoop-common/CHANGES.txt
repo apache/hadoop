@@ -224,6 +224,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10976. moving the source code of hadoop-tools docs to the
     directory under hadoop-tools (Masatake Iwasaki via aw)
 
+    HADOOP-11658. Externalize io.compression.codecs property.
+    (Kai Zheng via aajisaka)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
