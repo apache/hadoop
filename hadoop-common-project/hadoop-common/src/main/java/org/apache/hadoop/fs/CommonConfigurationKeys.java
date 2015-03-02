@@ -91,17 +91,24 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_CALLQUEUE_IMPL_KEY = "callqueue.impl";
   public static final String IPC_CALLQUEUE_IDENTITY_PROVIDER_KEY = "identity-provider.impl";
 
-  /** Internal buffer size for Lzo compressor/decompressors */
-  public static final String  IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY =
-    "io.compression.codec.lzo.buffersize";
-  /** Default value for IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY */
-  public static final int     IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT =
-    64*1024;
   /** This is for specifying the implementation for the mappings from
    * hostnames to the racks they belong to
    */
   public static final String  NET_TOPOLOGY_CONFIGURED_NODE_MAPPING_KEY =
-    "net.topology.configured.node.mapping";
+      "net.topology.configured.node.mapping";
+
+  /**
+   * Supported compression codec classes
+   */
+  public static final String IO_COMPRESSION_CODECS_KEY = "io.compression.codecs";
+
+  /** Internal buffer size for Lzo compressor/decompressors */
+  public static final String  IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY =
+    "io.compression.codec.lzo.buffersize";
+
+  /** Default value for IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY */
+  public static final int     IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT =
+    64*1024;
 
   /** Internal buffer size for Snappy compressor/decompressors */
   public static final String IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY =
