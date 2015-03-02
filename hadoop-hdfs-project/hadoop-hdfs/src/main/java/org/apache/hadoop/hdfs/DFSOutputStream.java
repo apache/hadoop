@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
@@ -1469,16 +1470,10 @@ public class DFSOutputStream extends FSOutputSummer
             checkRestart = true;
             throw new IOException("A datanode is restarting.");
           }
-          if (pipelineStatus != SUCCESS) {
-            if (pipelineStatus == Status.ERROR_ACCESS_TOKEN) {
-              throw new InvalidBlockTokenException(
-                  "Got access token error for connect ack with firstBadLink as "
-                      + firstBadLink);
-            } else {
-              throw new IOException("Bad connect ack with firstBadLink as "
-                  + firstBadLink);
-            }
-          }
+
+          String logInfo = "ack with firstBadLink as " + firstBadLink;
+          DataTransferProtoUtil.checkBlockOpStatus(resp, logInfo);
+
           assert null == blockStream : "Previous blockStream unclosed";
           blockStream = out;
           result =  true; // success
