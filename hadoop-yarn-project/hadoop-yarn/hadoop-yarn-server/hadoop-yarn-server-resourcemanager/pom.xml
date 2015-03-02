@@ -278,7 +278,7 @@
               <source>
                 <directory>${basedir}/src/main/proto</directory>
                 <includes>
-		          <include>yarn_server_resourcemanager_recovery.proto</include>
+                  <include>yarn_server_resourcemanager_recovery.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
@@ -331,10 +331,11 @@
                 </goals>
                 <configuration>
                   <mainClass>org.apache.hadoop.yarn.state.VisualizeStateMachine</mainClass>
-		  <classpathScope>compile</classpathScope>
+                  <classpathScope>compile</classpathScope>
                   <arguments>
                     <argument>ResourceManager</argument>
-                    <argument>org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl,
+                    <argument>org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore,
+                      org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl,
                       org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl,
                       org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl,
                       org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl</argument>
