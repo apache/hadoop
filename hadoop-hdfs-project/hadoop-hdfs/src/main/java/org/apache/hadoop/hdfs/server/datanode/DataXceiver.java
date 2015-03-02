@@ -1116,16 +1116,10 @@ class DataXceiver extends Receiver implements Runnable {
         BlockOpResponseProto copyResponse = BlockOpResponseProto.parseFrom(
             PBHelper.vintPrefixed(proxyReply));
         
-        if (copyResponse.getStatus() != SUCCESS) {
-          if (copyResponse.getStatus() == ERROR_ACCESS_TOKEN) {
-            throw new IOException("Copy block " + block + " from "
-                + proxySock.getRemoteSocketAddress()
-                + " failed due to access token error");
-          }
-          throw new IOException("Copy block " + block + " from "
-              + proxySock.getRemoteSocketAddress() + " failed");
-        }
-        
+        String logInfo = "copy block " + block + " from "
+            + proxySock.getRemoteSocketAddress();
+        DataTransferProtoUtil.checkBlockOpStatus(copyResponse, logInfo);
+
         // get checksum info about the block we're copying
         ReadOpChecksumInfoProto checksumInfo = copyResponse.getReadOpChecksumInfo();
         DataChecksum remoteChecksum = DataTransferProtoUtil.fromProto(

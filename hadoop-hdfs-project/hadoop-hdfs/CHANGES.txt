@@ -393,6 +393,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-5853. Add "hadoop.user.group.metrics.percentiles.intervals" to
     hdfs-default.xml. (aajisaka)
 
+    HDFS-7439. Add BlockOpResponseProto's message to the exception messages.
+    (Takanobu Asanuma via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
