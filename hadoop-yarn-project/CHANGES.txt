@@ -345,6 +345,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3262. Surface application outstanding resource requests table 
     in RM web UI. (Jian He via wangda)
 
+    YARN-3281. Added RMStateStore to StateMachine visualization list.
+    (Chengbing Liu via jianhe)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
