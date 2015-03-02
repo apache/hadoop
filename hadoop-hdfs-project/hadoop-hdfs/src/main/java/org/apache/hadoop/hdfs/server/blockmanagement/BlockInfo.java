@@ -169,6 +169,8 @@ public abstract class BlockInfo extends Block
    */
   abstract void replaceBlock(BlockInfo newBlock);
 
+  public abstract boolean isStriped();
+
   /**
    * Find specified DatanodeDescriptor.
    * @return index or -1 if not found.
@@ -336,7 +338,7 @@ public abstract class BlockInfo extends Block
   }
 
   static BlockInfo copyOf(BlockInfo b) {
-    if (b instanceof BlockInfoContiguous) {
+    if (!b.isStriped()) {
       return new BlockInfoContiguous((BlockInfoContiguous) b);
     } else {
       return new BlockInfoStriped((BlockInfoStriped) b);

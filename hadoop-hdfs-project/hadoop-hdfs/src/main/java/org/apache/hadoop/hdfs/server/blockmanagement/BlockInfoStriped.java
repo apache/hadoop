@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 
 /**
@@ -57,7 +56,7 @@ public class BlockInfoStriped extends BlockInfo {
     this.setBlockCollection(b.getBlockCollection());
   }
 
-  private short getTotalBlockNum() {
+  short getTotalBlockNum() {
     return (short) (dataBlockNum + parityBlockNum);
   }
 
@@ -172,6 +171,11 @@ public class BlockInfoStriped extends BlockInfo {
         storage.insertToList(newBlockGroup);
       }
     }
+  }
+
+  @Override
+  public final boolean isStriped() {
+    return true;
   }
 
   @Override

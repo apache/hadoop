@@ -145,4 +145,9 @@ public class BlockInfoContiguous extends BlockInfo {
     ucBlock.setBlockCollection(getBlockCollection());
     return ucBlock;
   }
+
+  @Override
+  public final boolean isStriped() {
+    return false;
+  }
 }
