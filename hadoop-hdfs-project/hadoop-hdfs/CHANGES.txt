@@ -1064,6 +1064,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-6753. Initialize checkDisk when DirectoryScanner not able to get
     files list for scanning (J.Andreina via vinayakumarb)
 
+    HDFS-7785. Improve diagnostics information for HttpPutFailedException.
+    (Chengbing Liu via wheat9)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
