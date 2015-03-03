@@ -793,9 +793,6 @@ public class FSEditLogLoader {
             = startOpt.getRollingUpgradeStartupOption(); 
         if (rollingUpgradeOpt == RollingUpgradeStartupOption.ROLLBACK) {
           throw new RollingUpgradeOp.RollbackException();
-        } else if (rollingUpgradeOpt == RollingUpgradeStartupOption.DOWNGRADE) {
-          //ignore upgrade marker
-          break;
         }
       }
       // start rolling upgrade

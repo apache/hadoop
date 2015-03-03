@@ -687,10 +687,6 @@ public class FSImage implements Closeable {
       long txnsAdvanced = loadEdits(editStreams, target, startOpt, recovery);
       needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
           txnsAdvanced);
-      if (RollingUpgradeStartupOption.DOWNGRADE.matches(startOpt)) {
-        // rename rollback image if it is downgrade
-        renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK, NameNodeFile.IMAGE);
-      }
     } else {
       // Trigger the rollback for rolling upgrade. Here lastAppliedTxId equals
       // to the last txid in rollback fsimage.

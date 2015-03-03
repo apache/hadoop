@@ -49,7 +49,7 @@ public final class HdfsServerConstants {
 
   /** Startup options for rolling upgrade. */
   public static enum RollingUpgradeStartupOption{
-    ROLLBACK, DOWNGRADE, STARTED;
+    ROLLBACK, STARTED;
 
     public String getOptionString() {
       return StartupOption.ROLLINGUPGRADE.getName() + " "
@@ -64,6 +64,14 @@ public final class HdfsServerConstants {
     private static final RollingUpgradeStartupOption[] VALUES = values();
 
     static RollingUpgradeStartupOption fromString(String s) {
+      if ("downgrade".equalsIgnoreCase(s)) {
+        throw new IllegalArgumentException(
+            "The \"downgrade\" option is no longer supported"
+                + " since it may incorrectly finalize an ongoing rolling upgrade."
+                + " For downgrade instruction, please see the documentation"
+                + " (http://hadoop.apache.org/docs/current/hadoop-project-dist/"
+                + "hadoop-hdfs/HdfsRollingUpgrade.html#Downgrade).");
+      }
       for(RollingUpgradeStartupOption opt : VALUES) {
         if (opt.name().equalsIgnoreCase(s)) {
           return opt;

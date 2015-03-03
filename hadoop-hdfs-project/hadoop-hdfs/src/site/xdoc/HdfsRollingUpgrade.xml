@@ -308,17 +308,13 @@
   <subsection name="NameNode Startup Options" id="dfsadminCommands">
 
   <h4><code>namenode -rollingUpgrade</code></h4>
-  <source>hdfs namenode -rollingUpgrade &lt;downgrade|rollback|started&gt;</source>
+  <source>hdfs namenode -rollingUpgrade &lt;rollback|started&gt;</source>
   <p>
     When a rolling upgrade is in progress,
     the <code>-rollingUpgrade</code> namenode startup option is used to specify
     various rolling upgrade options.
   </p>
     <ul><li>Options:<table>
-      <tr><td><code>downgrade</code></td>
-        <td>Restores the namenode back to the pre-upgrade release
-            and preserves the user data.</td>
-      </tr>
       <tr><td><code>rollback</code></td>
         <td>Restores the namenode back to the pre-upgrade release
             but also reverts the user data back to the pre-upgrade state.</td>
@@ -329,7 +325,10 @@
           with different layout versions during startup.</td>
       </tr>
     </table></li></ul>
-
+  <p>
+    <b>WARN: downgrade options is obsolete.</b>
+      It is not necessary to start namenode with downgrade options explicitly.
+  </p>
   </subsection>
 
   </section>

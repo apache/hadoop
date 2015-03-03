@@ -14,6 +14,10 @@ Trunk (Unreleased)
 
     HDFS-2538. option to disable fsck dots (Mohammad Kamrul Islam via aw)
 
+    HDFS-7302. Remove "downgrade" from "namenode -rollingUpgrade" startup
+    option since it may incorrectly finalize an ongoing rolling upgrade.
+    (Kai Sasaki via szetszwo)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
