@@ -399,6 +399,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6223. TestJobConf#testNegativeValueForTaskVmem failures. 
     (Varun Saxena via kasha)
 
+    MAPREDUCE-6268. Fix typo in Task Attempt API's URL. (Ryu Kobayashi
+    via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
