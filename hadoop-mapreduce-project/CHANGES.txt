@@ -151,6 +151,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-2815. JavaDoc does not generate correctly for
     MultithreadedMapRunner. (Chris Palmer via aajisaka)
 
+    MAPREDUCE-6268. Fix typo in Task Attempt API's URL. (Ryu Kobayashi
+    via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
