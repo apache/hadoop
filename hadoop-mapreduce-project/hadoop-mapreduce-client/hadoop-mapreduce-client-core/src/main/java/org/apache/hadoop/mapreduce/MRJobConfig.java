@@ -373,6 +373,14 @@ public interface MRJobConfig {
 
   public static final String DEFAULT_JOB_ACL_MODIFY_JOB = " ";
   
+  public static final String JOB_RUNNING_MAP_LIMIT =
+      "mapreduce.job.running.map.limit";
+  public static final int DEFAULT_JOB_RUNNING_MAP_LIMIT = 0;
+
+  public static final String JOB_RUNNING_REDUCE_LIMIT =
+      "mapreduce.job.running.reduce.limit";
+  public static final int DEFAULT_JOB_RUNNING_REDUCE_LIMIT = 0;
+
   /* config for tracking the local file where all the credentials for the job
    * credentials.
    */

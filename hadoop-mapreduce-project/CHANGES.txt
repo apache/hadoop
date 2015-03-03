@@ -258,6 +258,9 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6228. Add truncate operation to SLive. (Plamen Jeliazkov via shv)
 
+    MAPREDUCE-5583. Ability to limit running map and reduce tasks. 
+    (Jason Lowe via junping_du)
+
   IMPROVEMENTS
 
     MAPREDUCE-6149. Document override log4j.properties in MR job.

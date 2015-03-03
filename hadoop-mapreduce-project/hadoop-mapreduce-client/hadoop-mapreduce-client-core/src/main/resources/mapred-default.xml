@@ -83,6 +83,22 @@
 </property>
 
 <property>
+  <name>mapreduce.job.running.map.limit</name>
+  <value>0</value>
+  <description>The maximum number of simultaneous map tasks per job.
+  There is no limit if this value is 0 or negative.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.running.reduce.limit</name>
+  <value>0</value>
+  <description>The maximum number of simultaneous reduce tasks per job.
+  There is no limit if this value is 0 or negative.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.job.reducer.preempt.delay.sec</name>
   <value>0</value>
   <description>The threshold in terms of seconds after which an unsatisfied mapper 

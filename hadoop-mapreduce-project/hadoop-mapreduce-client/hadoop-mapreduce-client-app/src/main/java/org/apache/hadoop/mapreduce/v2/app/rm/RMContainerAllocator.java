@@ -99,9 +99,9 @@ public class RMContainerAllocator extends RMContainerRequestor
   public static final 
   float DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART = 0.05f;
   
-  private static final Priority PRIORITY_FAST_FAIL_MAP;
-  private static final Priority PRIORITY_REDUCE;
-  private static final Priority PRIORITY_MAP;
+  static final Priority PRIORITY_FAST_FAIL_MAP;
+  static final Priority PRIORITY_REDUCE;
+  static final Priority PRIORITY_MAP;
 
   @VisibleForTesting
   public static final String RAMPDOWN_DIAGNOSTIC = "Reducer preempted "
@@ -166,6 +166,8 @@ public class RMContainerAllocator extends RMContainerRequestor
    */
   private long allocationDelayThresholdMs = 0;
   private float reduceSlowStart = 0;
+  private int maxRunningMaps = 0;
+  private int maxRunningReduces = 0;
   private long retryInterval;
   private long retrystartTime;
   private Clock clock;
@@ -201,6 +203,10 @@ public class RMContainerAllocator extends RMContainerRequestor
     allocationDelayThresholdMs = conf.getInt(
         MRJobConfig.MR_JOB_REDUCER_PREEMPT_DELAY_SEC,
         MRJobConfig.DEFAULT_MR_JOB_REDUCER_PREEMPT_DELAY_SEC) * 1000;//sec -> ms
+    maxRunningMaps = conf.getInt(MRJobConfig.JOB_RUNNING_MAP_LIMIT,
+        MRJobConfig.DEFAULT_JOB_RUNNING_MAP_LIMIT);
+    maxRunningReduces = conf.getInt(MRJobConfig.JOB_RUNNING_REDUCE_LIMIT,
+        MRJobConfig.DEFAULT_JOB_RUNNING_REDUCE_LIMIT);
     RackResolver.init(conf);
     retryInterval = getConfig().getLong(MRJobConfig.MR_AM_TO_RM_WAIT_INTERVAL_MS,
                                 MRJobConfig.DEFAULT_MR_AM_TO_RM_WAIT_INTERVAL_MS);
@@ -664,6 +670,8 @@ public class RMContainerAllocator extends RMContainerRequestor
   
   @SuppressWarnings("unchecked")
   private List<Container> getResources() throws Exception {
+    applyConcurrentTaskLimits();
+
     // will be null the first time
     Resource headRoom =
         getAvailableResources() == null ? Resources.none() :
@@ -776,6 +784,43 @@ public class RMContainerAllocator extends RMContainerRequestor
       }
     }
     return newContainers;
+  }
+
+  private void applyConcurrentTaskLimits() {
+    int numScheduledMaps = scheduledRequests.maps.size();
+    if (maxRunningMaps > 0 && numScheduledMaps > 0) {
+      int maxRequestedMaps = Math.max(0,
+          maxRunningMaps - assignedRequests.maps.size());
+      int numScheduledFailMaps = scheduledRequests.earlierFailedMaps.size();
+      int failedMapRequestLimit = Math.min(maxRequestedMaps,
+          numScheduledFailMaps);
+      int normalMapRequestLimit = Math.min(
+          maxRequestedMaps - failedMapRequestLimit,
+          numScheduledMaps - numScheduledFailMaps);
+      setRequestLimit(PRIORITY_FAST_FAIL_MAP, mapResourceRequest,
+          failedMapRequestLimit);
+      setRequestLimit(PRIORITY_MAP, mapResourceRequest, normalMapRequestLimit);
+    }
+
+    int numScheduledReduces = scheduledRequests.reduces.size();
+    if (maxRunningReduces > 0 && numScheduledReduces > 0) {
+      int maxRequestedReduces = Math.max(0,
+          maxRunningReduces - assignedRequests.reduces.size());
+      int reduceRequestLimit = Math.min(maxRequestedReduces,
+          numScheduledReduces);
+      setRequestLimit(PRIORITY_REDUCE, reduceResourceRequest,
+          reduceRequestLimit);
+    }
+  }
+
+  private boolean canAssignMaps() {
+    return (maxRunningMaps <= 0
+        || assignedRequests.maps.size() < maxRunningMaps);
+  }
+
+  private boolean canAssignReduces() {
+    return (maxRunningReduces <= 0
+        || assignedRequests.reduces.size() < maxRunningReduces);
   }
 
   private void updateAMRMToken(Token token) throws IOException {
@@ -1046,8 +1091,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       it = allocatedContainers.iterator();
       while (it.hasNext()) {
         Container allocated = it.next();
-        LOG.info("Releasing unassigned and invalid container " 
-            + allocated + ". RM may have assignment issues");
+        LOG.info("Releasing unassigned container " + allocated);
         containerNotAssigned(allocated);
       }
     }
@@ -1150,7 +1194,8 @@ public class RMContainerAllocator extends RMContainerRequestor
     private ContainerRequest assignToFailedMap(Container allocated) {
       //try to assign to earlierFailedMaps if present
       ContainerRequest assigned = null;
-      while (assigned == null && earlierFailedMaps.size() > 0) {
+      while (assigned == null && earlierFailedMaps.size() > 0
+          && canAssignMaps()) {
         TaskAttemptId tId = earlierFailedMaps.removeFirst();      
         if (maps.containsKey(tId)) {
           assigned = maps.remove(tId);
@@ -1168,7 +1213,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     private ContainerRequest assignToReduce(Container allocated) {
       ContainerRequest assigned = null;
       //try to assign to reduces if present
-      if (assigned == null && reduces.size() > 0) {
+      if (assigned == null && reduces.size() > 0 && canAssignReduces()) {
         TaskAttemptId tId = reduces.keySet().iterator().next();
         assigned = reduces.remove(tId);
         LOG.info("Assigned to reduce");
@@ -1180,7 +1225,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     private void assignMapsWithLocality(List<Container> allocatedContainers) {
       // try to assign to all nodes first to match node local
       Iterator<Container> it = allocatedContainers.iterator();
-      while(it.hasNext() && maps.size() > 0){
+      while(it.hasNext() && maps.size() > 0 && canAssignMaps()){
         Container allocated = it.next();        
         Priority priority = allocated.getPriority();
         assert PRIORITY_MAP.equals(priority);
@@ -1212,7 +1257,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       
       // try to match all rack local
       it = allocatedContainers.iterator();
-      while(it.hasNext() && maps.size() > 0){
+      while(it.hasNext() && maps.size() > 0 && canAssignMaps()){
         Container allocated = it.next();
         Priority priority = allocated.getPriority();
         assert PRIORITY_MAP.equals(priority);
@@ -1242,7 +1287,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       
       // assign remaining
       it = allocatedContainers.iterator();
-      while(it.hasNext() && maps.size() > 0){
+      while(it.hasNext() && maps.size() > 0 && canAssignMaps()){
         Container allocated = it.next();
         Priority priority = allocated.getPriority();
         assert PRIORITY_MAP.equals(priority);
