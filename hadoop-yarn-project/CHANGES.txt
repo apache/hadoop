@@ -23,6 +23,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3125. Made the distributed shell use timeline service next gen and
     add an integration test for it. (Junping Du and Li Lu via zjshen)
 
+    YARN-3210. Refactored timeline aggregator according to new code
+    organization proposed in YARN-3166. (Li Lu via zjshen)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
