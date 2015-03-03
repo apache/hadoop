@@ -887,7 +887,7 @@ public class FSImage implements Closeable {
       final long namespace = counts.getNameSpace() - parentNamespace;
       final long nsQuota = q.getNameSpace();
       if (Quota.isViolated(nsQuota, namespace)) {
-        LOG.error("BUG: Namespace quota violation in image for "
+        LOG.warn("Namespace quota violation in image for "
             + dir.getFullPathName()
             + " quota = " + nsQuota + " < consumed = " + namespace);
       }
@@ -895,7 +895,7 @@ public class FSImage implements Closeable {
       final long ssConsumed = counts.getStorageSpace() - parentStoragespace;
       final long ssQuota = q.getStorageSpace();
       if (Quota.isViolated(ssQuota, ssConsumed)) {
-        LOG.error("BUG: Storagespace quota violation in image for "
+        LOG.warn("Storagespace quota violation in image for "
             + dir.getFullPathName()
             + " quota = " + ssQuota + " < consumed = " + ssConsumed);
       }
@@ -907,7 +907,7 @@ public class FSImage implements Closeable {
             parentTypeSpaces.get(t);
         final long typeQuota = q.getTypeSpaces().get(t);
         if (Quota.isViolated(typeQuota, typeSpace)) {
-          LOG.error("BUG: Storage type quota violation in image for "
+          LOG.warn("Storage type quota violation in image for "
               + dir.getFullPathName()
               + " type = " + t.toString() + " quota = "
               + typeQuota + " < consumed " + typeSpace);
