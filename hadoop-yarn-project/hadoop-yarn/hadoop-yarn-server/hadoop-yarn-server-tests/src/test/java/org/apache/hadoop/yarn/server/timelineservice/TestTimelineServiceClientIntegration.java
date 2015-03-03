@@ -6,7 +6,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.timelineservice.aggregator.PerNodeAggregatorServer;
+import org.apache.hadoop.yarn.server.timelineservice.aggregator.PerNodeTimelineAggregatorsAuxService;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -14,13 +14,13 @@ import org.junit.Test;
 import static org.junit.Assert.fail;
 
 public class TestTimelineServiceClientIntegration {
-  private static PerNodeAggregatorServer server;
+  private static PerNodeTimelineAggregatorsAuxService auxService;
 
   @BeforeClass
   public static void setupClass() throws Exception {
     try {
-      server = PerNodeAggregatorServer.launchServer(new String[0]);
-      server.addApplication(ApplicationId.newInstance(0, 1));
+      auxService = PerNodeTimelineAggregatorsAuxService.launchServer(new String[0]);
+      auxService.addApplication(ApplicationId.newInstance(0, 1));
     } catch (ExitUtil.ExitException e) {
       fail();
     }
@@ -28,8 +28,8 @@ public class TestTimelineServiceClientIntegration {
 
   @AfterClass
   public static void tearDownClass() throws Exception {
-    if (server != null) {
-      server.stop();
+    if (auxService != null) {
+      auxService.stop();
     }
   }
 
