@@ -40,9 +40,11 @@ import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.collect.Sets;
 
@@ -52,7 +54,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   final String queueName;
   volatile int numContainers;
   
-  Resource minimumAllocation;
+  final Resource minimumAllocation;
   Resource maximumAllocation;
   QueueState state;
   final QueueMetrics metrics;
@@ -94,6 +96,7 @@ public abstract class AbstractCSQueue implements CSQueue {
             cs.getConf());
 
     this.csContext = cs;
+    this.minimumAllocation = csContext.getMinimumResourceCapability();
     
     // initialize ResourceUsage
     queueUsage = new ResourceUsage();
@@ -248,7 +251,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     // After we setup labels, we can setup capacities
     setupConfigurableCapacities();
     
-    this.minimumAllocation = csContext.getMinimumResourceCapability();
     this.maximumAllocation =
         csContext.getConfiguration().getMaximumAllocationPerQueue(
             getQueuePath());
@@ -402,5 +404,23 @@ public abstract class AbstractCSQueue implements CSQueue {
     // this level.
     return csConf.getPreemptionDisabled(q.getQueuePath(),
                                         parentQ.getPreemptionDisabled());
+  }
+  
+  protected Resource getCurrentResourceLimit(Resource clusterResource,
+      ResourceLimits currentResourceLimits) {
+    /*
+     * Queue's max available resource = min(my.max, my.limit)
+     * my.limit is set by my parent, considered used resource of my siblings
+     */
+    Resource queueMaxResource =
+        Resources.multiplyAndNormalizeDown(resourceCalculator, clusterResource,
+            queueCapacities.getAbsoluteMaximumCapacity(), minimumAllocation);
+    Resource queueCurrentResourceLimit =
+        Resources.min(resourceCalculator, clusterResource, queueMaxResource,
+            currentResourceLimits.getLimit());
+    queueCurrentResourceLimit =
+        Resources.roundDown(resourceCalculator, queueCurrentResourceLimit,
+            minimumAllocation);
+    return queueCurrentResourceLimit;
   }
 }

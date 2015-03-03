@@ -686,6 +686,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3270. Fix node label expression not getting set in 
     ApplicationSubmissionContext (Rohit Agarwal via wangda)
 
+    YARN-3265. Fixed a deadlock in CapacityScheduler by always passing a queue's
+    available resource-limit from the parent queue. (Wangda Tan via vinodkv)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

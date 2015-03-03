@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -189,10 +190,12 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param clusterResource the resource of the cluster.
    * @param node node on which resources are available
    * @param needToUnreserve assign container only if it can unreserve one first
+   * @param resourceLimits how much overall resource of this queue can use. 
    * @return the assignment
    */
-  public CSAssignment assignContainers(
-      Resource clusterResource, FiCaSchedulerNode node, boolean needToUnreserve);
+  public CSAssignment assignContainers(Resource clusterResource,
+      FiCaSchedulerNode node, boolean needToUnreserve,
+      ResourceLimits resourceLimits);
   
   /**
    * A container assigned to the queue has completed.
@@ -231,8 +234,10 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    /**
    * Update the cluster resource for queues as we add/remove nodes
    * @param clusterResource the current cluster resource
+   * @param resourceLimits the current ResourceLimits
    */
-  public void updateClusterResource(Resource clusterResource);
+  public void updateClusterResource(Resource clusterResource,
+      ResourceLimits resourceLimits);
   
   /**
    * Get the {@link ActiveUsersManager} for the queue.
