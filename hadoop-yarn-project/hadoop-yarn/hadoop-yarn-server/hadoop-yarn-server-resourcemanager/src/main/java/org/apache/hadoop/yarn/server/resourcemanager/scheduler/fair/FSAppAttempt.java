@@ -80,10 +80,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   /**
    * Delay scheduling: We often want to prioritize scheduling of node-local
-   * containers over rack-local or off-switch containers. To acheive this
-   * we first only allow node-local assigments for a given prioirty level,
+   * containers over rack-local or off-switch containers. To achieve this
+   * we first only allow node-local assignments for a given priority level,
    * then relax the locality threshold once we've had a long enough period
-   * without succesfully scheduling. We measure both the number of "missed"
+   * without successfully scheduling. We measure both the number of "missed"
    * scheduling opportunities since the last container was scheduled
    * at the current allowed level and the time since the last container
    * was scheduled. Currently we use only the former.
@@ -530,11 +530,19 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
       return container.getResource();
     } else {
+      if (!FairScheduler.fitsInMaxShare(getQueue(), capability)) {
+        return Resources.none();
+      }
+
       // The desired container won't fit here, so reserve
       reserve(request.getPriority(), node, container, reserved);
 
       return FairScheduler.CONTAINER_RESERVED;
     }
+  }
+
+  private boolean hasNodeOrRackLocalRequests(Priority priority) {
+    return getResourceRequests(priority).size() > 1;
   }
 
   private Resource assignContainer(FSSchedulerNode node, boolean reserved) {
@@ -611,10 +619,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
           continue;
         }
 
-        if (offSwitchRequest != null && offSwitchRequest.getNumContainers() != 0
-            && allowedLocality.equals(NodeType.OFF_SWITCH)) {
-          return assignContainer(node, offSwitchRequest,
-              NodeType.OFF_SWITCH, reserved);
+        if (offSwitchRequest != null &&
+            offSwitchRequest.getNumContainers() != 0) {
+          if (!hasNodeOrRackLocalRequests(priority) ||
+              allowedLocality.equals(NodeType.OFF_SWITCH)) {
+            return assignContainer(
+                node, offSwitchRequest, NodeType.OFF_SWITCH, reserved);
+          }
         }
       }
     }

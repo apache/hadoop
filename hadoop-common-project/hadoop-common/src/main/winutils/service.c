@@ -182,7 +182,7 @@ BOOL IsSidInList(
   __in size_t cAllowedSids, 
   __in_ecount(cAllowedSids) PSID* allowedSids) {
 
-  int crtSid = 0;
+  size_t crtSid = 0;
   
   for (crtSid = 0; crtSid < cAllowedSids; ++crtSid) {
     if (EqualSid(trustee, allowedSids[crtSid])) {
@@ -206,7 +206,7 @@ DWORD ValidateConfigurationFile() {
   BOOL daclPresent = FALSE;
   BOOL daclDefaulted = FALSE;
   PACL pDacl = NULL;
-  int crt = 0, crtSid = 0;
+  unsigned int crt = 0, crtSid = 0;
   WELL_KNOWN_SID_TYPE allowedSidTypes[] = {
     WinLocalSystemSid,
     WinBuiltinAdministratorsSid};
@@ -350,7 +350,7 @@ DWORD InitLocalDirs() {
   DWORD     dwError = ERROR_SUCCESS;
   size_t    len = 0;
   LPCWSTR   value = NULL;
-  int       crt = 0;
+  size_t    crt = 0;
     
 
   dwError = GetConfigValue(
@@ -396,7 +396,7 @@ done:
 DWORD ValidateLocalPath(LPCWSTR lpszPath) {
   DWORD   dwError = ERROR_SUCCESS;
   int     compareResult = 0;
-  int     crt = 0;
+  unsigned int  crt = 0;
   int     cchLocalBuffer = 0;
   WCHAR   localBuffer[MAX_PATH+1];
   BOOLEAN nullFound = FALSE;

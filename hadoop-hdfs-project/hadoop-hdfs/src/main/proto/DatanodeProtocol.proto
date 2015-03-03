@@ -161,6 +161,17 @@ message RegisterDatanodeResponseProto {
 }
 
 /**
+ * failedStorageLocations - storage locations that have failed
+ * lastVolumeFailureDate - date/time of last volume failure
+ * estimatedCapacityLost - estimate of total capacity lost due to volume failures
+ */
+message VolumeFailureSummaryProto {
+  repeated string failedStorageLocations = 1;
+  required uint64 lastVolumeFailureDate = 2;
+  required uint64 estimatedCapacityLostTotal = 3;
+}
+
+/**
  * registration - datanode registration information
  * capacity - total storage capacity available at the datanode
  * dfsUsed - storage used by HDFS
@@ -168,9 +179,12 @@ message RegisterDatanodeResponseProto {
  * blockPoolUsed - storage used by the block pool
  * xmitsInProgress - number of transfers from this datanode to others
  * xceiverCount - number of active transceiver threads
- * failedVolumes - number of failed volumes
+ * failedVolumes - number of failed volumes.  This is redundant with the
+ *     information included in volumeFailureSummary, but the field is retained
+ *     for backwards compatibility.
  * cacheCapacity - total cache capacity available at the datanode
  * cacheUsed - amount of cache used
+ * volumeFailureSummary - info about volume failures
  */
 message HeartbeatRequestProto {
   required DatanodeRegistrationProto registration = 1; // Datanode info
@@ -180,6 +194,7 @@ message HeartbeatRequestProto {
   optional uint32 failedVolumes = 5 [ default = 0 ];
   optional uint64 cacheCapacity = 6 [ default = 0 ];
   optional uint64 cacheUsed = 7 [default = 0 ];
+  optional VolumeFailureSummaryProto volumeFailureSummary = 8;
 }
 
 /**

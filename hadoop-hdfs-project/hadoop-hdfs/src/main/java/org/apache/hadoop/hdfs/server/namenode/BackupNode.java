@@ -94,13 +94,13 @@ public class BackupNode extends NameNode {
   /////////////////////////////////////////////////////
   @Override // NameNode
   protected InetSocketAddress getRpcServerAddress(Configuration conf) {
-    String addr = conf.get(BN_ADDRESS_NAME_KEY, BN_ADDRESS_DEFAULT);
+    String addr = conf.getTrimmed(BN_ADDRESS_NAME_KEY, BN_ADDRESS_DEFAULT);
     return NetUtils.createSocketAddr(addr);
   }
   
   @Override
   protected InetSocketAddress getServiceRpcServerAddress(Configuration conf) {
-    String addr = conf.get(BN_SERVICE_RPC_ADDRESS_KEY);
+    String addr = conf.getTrimmed(BN_SERVICE_RPC_ADDRESS_KEY);
     if (addr == null || addr.isEmpty()) {
       return null;
     }
@@ -122,7 +122,7 @@ public class BackupNode extends NameNode {
   @Override // NameNode
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
     assert getNameNodeAddress() != null : "rpcAddress should be calculated first";
-    String addr = conf.get(BN_HTTP_ADDRESS_NAME_KEY, BN_HTTP_ADDRESS_DEFAULT);
+    String addr = conf.getTrimmed(BN_HTTP_ADDRESS_NAME_KEY, BN_HTTP_ADDRESS_DEFAULT);
     return NetUtils.createSocketAddr(addr);
   }
 
@@ -411,7 +411,7 @@ public class BackupNode extends NameNode {
       errorMsg = "Incompatible build versions: active name-node BV = " 
         + nsInfo.getBuildVersion() + "; backup node BV = "
         + Storage.getBuildVersion();
-      LOG.fatal(errorMsg);
+      LOG.error(errorMsg);
       throw new IOException(errorMsg);
     }
     assert HdfsConstants.NAMENODE_LAYOUT_VERSION == nsInfo.getLayoutVersion() :

@@ -47,6 +47,11 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
+      <directory>hadoop-yarn/shellprofile.d</directory>
+      <outputDirectory>libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>hadoop-yarn/bin</directory>
       <outputDirectory>sbin</outputDirectory>
       <includes>

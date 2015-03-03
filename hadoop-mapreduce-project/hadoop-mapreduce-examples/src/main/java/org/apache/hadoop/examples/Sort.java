@@ -132,7 +132,7 @@ public class Sort<K,V> extends Configured implements Tool {
       }
     }
     // Set user-supplied (possibly default) job configs
-    job = new Job(conf);
+    job = Job.getInstance(conf);
     job.setJobName("sorter");
     job.setJarByClass(Sort.class);
 

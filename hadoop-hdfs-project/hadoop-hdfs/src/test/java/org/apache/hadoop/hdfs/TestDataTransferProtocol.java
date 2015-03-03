@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -160,7 +161,9 @@ public class TestDataTransferProtocol {
 
     //ok finally write a block with 0 len
     sendResponse(Status.SUCCESS, "", null, recvOut);
-    new PipelineAck(100, new Status[]{Status.SUCCESS}).write(recvOut);
+    new PipelineAck(100, new int[] {PipelineAck.combineHeader
+      (PipelineAck.ECN.DISABLED, Status.SUCCESS)}).write
+      (recvOut);
     sendRecvData(description, false);
   }
   
@@ -393,7 +396,8 @@ public class TestDataTransferProtocol {
     hdr.write(sendOut);
 
     sendResponse(Status.SUCCESS, "", null, recvOut);
-    new PipelineAck(100, new Status[]{Status.ERROR}).write(recvOut);
+    new PipelineAck(100, new int[] {PipelineAck.combineHeader
+      (PipelineAck.ECN.DISABLED, Status.ERROR)}).write(recvOut);
     sendRecvData("negative DATA_CHUNK len while writing block " + newBlockId, 
                  true);
 
@@ -414,7 +418,8 @@ public class TestDataTransferProtocol {
     sendOut.flush();
     //ok finally write a block with 0 len
     sendResponse(Status.SUCCESS, "", null, recvOut);
-    new PipelineAck(100, new Status[]{Status.SUCCESS}).write(recvOut);
+    new PipelineAck(100, new int[] {PipelineAck.combineHeader
+      (PipelineAck.ECN.DISABLED, Status.SUCCESS)}).write(recvOut);
     sendRecvData("Writing a zero len block blockid " + newBlockId, false);
     
     /* Test OP_READ_BLOCK */
@@ -524,6 +529,6 @@ public class TestDataTransferProtocol {
         BlockTokenSecretManager.DUMMY_TOKEN, "cl",
         new DatanodeInfo[1], new StorageType[1], null, stage,
         0, block.getNumBytes(), block.getNumBytes(), newGS,
-        checksum, CachingStrategy.newDefaultStrategy(), false);
+        checksum, CachingStrategy.newDefaultStrategy(), false, false, null);
   }
 }

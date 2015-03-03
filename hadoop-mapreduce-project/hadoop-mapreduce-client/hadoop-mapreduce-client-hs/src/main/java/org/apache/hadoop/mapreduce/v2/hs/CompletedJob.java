@@ -227,10 +227,10 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     completionEvents = new LinkedList<TaskAttemptCompletionEvent>();
     List<TaskAttempt> allTaskAttempts = new LinkedList<TaskAttempt>();
     int numMapAttempts = 0;
-    for (TaskId taskId : tasks.keySet()) {
-      Task task = tasks.get(taskId);
-      for (TaskAttemptId taskAttemptId : task.getAttempts().keySet()) {
-        TaskAttempt taskAttempt = task.getAttempts().get(taskAttemptId);
+    for (Map.Entry<TaskId,Task> taskEntry : tasks.entrySet()) {
+      Task task = taskEntry.getValue();
+      for (Map.Entry<TaskAttemptId,TaskAttempt> taskAttemptEntry : task.getAttempts().entrySet()) {
+        TaskAttempt taskAttempt = taskAttemptEntry.getValue();
         allTaskAttempts.add(taskAttempt);
         if (task.getType() == TaskType.MAP) {
           ++numMapAttempts;

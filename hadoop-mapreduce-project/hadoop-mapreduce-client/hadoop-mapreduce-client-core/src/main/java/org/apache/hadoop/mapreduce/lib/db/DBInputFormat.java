@@ -45,6 +45,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.util.StringUtils;
+
 /**
  * A InputFormat that reads input data from an SQL table.
  * <p>
@@ -159,10 +161,11 @@ public class DBInputFormat<T extends DBWritable>
     dbConf = new DBConfiguration(conf);
 
     try {
-      getConnection();
+      this.connection = createConnection();
 
       DatabaseMetaData dbMeta = connection.getMetaData();
-      this.dbProductName = dbMeta.getDatabaseProductName().toUpperCase();
+      this.dbProductName =
+          StringUtils.toUpperCase(dbMeta.getDatabaseProductName());
     }
     catch (Exception ex) {
       throw new RuntimeException(ex);
@@ -182,18 +185,25 @@ public class DBInputFormat<T extends DBWritable>
   }
 
   public Connection getConnection() {
+    // TODO Remove this code that handles backward compatibility.
+    if (this.connection == null) {
+      this.connection = createConnection();
+    }
+
+    return this.connection;
+  }
+
+  public Connection createConnection() {
     try {
-      if (null == this.connection) {
-        // The connection was closed; reinstantiate it.
-        this.connection = dbConf.getConnection();
-        this.connection.setAutoCommit(false);
-        this.connection.setTransactionIsolation(
-            Connection.TRANSACTION_SERIALIZABLE);
-      }
+      Connection newConnection = dbConf.getConnection();
+      newConnection.setAutoCommit(false);
+      newConnection.setTransactionIsolation(
+          Connection.TRANSACTION_SERIALIZABLE);
+
+      return newConnection;
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    return connection;
   }
 
   public String getDBProductName() {
@@ -210,17 +220,17 @@ public class DBInputFormat<T extends DBWritable>
       if (dbProductName.startsWith("ORACLE")) {
         // use Oracle-specific db reader.
         return new OracleDBRecordReader<T>(split, inputClass,
-            conf, getConnection(), getDBConf(), conditions, fieldNames,
+            conf, createConnection(), getDBConf(), conditions, fieldNames,
             tableName);
       } else if (dbProductName.startsWith("MYSQL")) {
         // use MySQL-specific db reader.
         return new MySQLDBRecordReader<T>(split, inputClass,
-            conf, getConnection(), getDBConf(), conditions, fieldNames,
+            conf, createConnection(), getDBConf(), conditions, fieldNames,
             tableName);
       } else {
         // Generic reader.
         return new DBRecordReader<T>(split, inputClass,
-            conf, getConnection(), getDBConf(), conditions, fieldNames,
+            conf, createConnection(), getDBConf(), conditions, fieldNames,
             tableName);
       }
     } catch (SQLException ex) {

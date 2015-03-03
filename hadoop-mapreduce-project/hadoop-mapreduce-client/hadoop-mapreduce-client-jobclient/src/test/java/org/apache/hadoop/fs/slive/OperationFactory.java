@@ -75,6 +75,9 @@ class OperationFactory {
     case CREATE:
       op = new CreateOp(this.config, rnd);
       break;
+    case TRUNCATE:
+      op = new TruncateOp(this.config, rnd);
+      break;
     }
     typedOperations.put(type, op);
     return op;

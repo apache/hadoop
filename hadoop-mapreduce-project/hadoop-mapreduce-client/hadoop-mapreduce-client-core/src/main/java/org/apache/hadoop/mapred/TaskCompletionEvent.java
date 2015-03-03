@@ -32,7 +32,37 @@ public class TaskCompletionEvent
     extends org.apache.hadoop.mapreduce.TaskCompletionEvent {
   @InterfaceAudience.Public
   @InterfaceStability.Stable
-  static public enum Status {FAILED, KILLED, SUCCEEDED, OBSOLETE, TIPFAILED};
+  /**
+   *  Task Completion Statuses
+   */
+  static public enum Status {
+    /**
+     * Task Event Attempt failed but there are attempts remaining.
+     */
+    FAILED,
+    /**
+     * Task Event was killed.
+     */
+    KILLED,
+    /**
+     * Task Event was successful.
+     */
+    SUCCEEDED,
+    /**
+     * Used to Override a previously successful event status.
+     * Example:  Map attempt runs and a SUCCEEDED event is sent. Later a task
+     * is retroactively failed due to excessive fetch failure during shuffle
+     * phase. When the retroactive attempt failure occurs, an OBSOLETE event is
+     * sent for the map attempt indicating the prior event is no longer valid.
+     */
+    OBSOLETE,
+    /**
+     * Task Event attempt failed and no further attempts exist.
+     * reached MAX attempts. When a reducer receives a TIPFAILED event it
+     * gives up trying to shuffle data from that map task.
+     */
+    TIPFAILED
+  }
   
   public static final TaskCompletionEvent[] EMPTY_ARRAY = 
 	    new TaskCompletionEvent[0];

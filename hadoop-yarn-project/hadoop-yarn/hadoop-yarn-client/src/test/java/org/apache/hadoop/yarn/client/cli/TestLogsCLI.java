@@ -149,6 +149,7 @@ public class TestLogsCLI {
     pw.println("                                 not specified)");
     pw.println(" -containerId <Container ID>     ContainerId (must be specified if node");
     pw.println("                                 address is specified)");
+    pw.println(" -help                           Displays help for all commands.");
     pw.println(" -nodeAddress <Node Address>     NodeAddress in the format nodename:port");
     pw.println("                                 (must be specified if container id is");
     pw.println("                                 specified)");

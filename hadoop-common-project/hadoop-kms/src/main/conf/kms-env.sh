@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,10 +17,6 @@
 #
 # hadoop-env.sh is read prior to this file.
 #
-
-# KMS logs directory
-#
-# export KMS_LOG=${HADOOP_LOG_DIR}
 
 # KMS temporary directory
 #

@@ -42,5 +42,8 @@ fi
 daemonmode=$1
 shift
 
+hadoop_error "WARNING: Use of this script to ${daemonmode} YARN daemons is deprecated."
+hadoop_error "WARNING: Attempting to execute replacement \"yarn --daemon ${daemonmode}\" instead."
+
 exec "${HADOOP_YARN_HOME}/bin/yarn" \
 --config "${HADOOP_CONF_DIR}" --daemon "${daemonmode}" "$@"

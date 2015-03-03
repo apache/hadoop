@@ -1,4 +1,4 @@
-#
+#!/usr/bin/env bash
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -76,7 +76,7 @@ fi
 #
 
 # Let's go!  Base definitions so we can move forward
-hadoop_bootstrap_init
+hadoop_bootstrap
 
 # let's find our conf.
 #
@@ -91,7 +91,7 @@ hadoop_bootstrap_init
 
 # save these off in case our caller needs them
 # shellcheck disable=SC2034
-HADOOP_USER_PARAMS="$@"
+HADOOP_USER_PARAMS=("$@")
 
 HADOOP_DAEMON_MODE="default"
 
@@ -107,8 +107,6 @@ while [[ -z "${_hadoop_common_done}" ]]; do
       confdir=$1
       shift
       if [[ -d "${confdir}" ]]; then
-        # shellcheck disable=SC2034
-        YARN_CONF_DIR="${confdir}"
         # shellcheck disable=SC2034
         HADOOP_CONF_DIR="${confdir}"
       elif [[ -z "${confdir}" ]]; then
@@ -154,14 +152,23 @@ while [[ -z "${_hadoop_common_done}" ]]; do
       HADOOP_LOGLEVEL="$1"
       shift
     ;;
+    --slaves)
+      shift
+      # shellcheck disable=SC2034
+      HADOOP_SLAVE_MODE=true
+    ;;
     *)
       _hadoop_common_done=true
     ;;
   esac
 done
 
+#
+# Setup the base-line environment
+#
 hadoop_find_confdir
 hadoop_exec_hadoopenv
+hadoop_import_shellprofiles
 hadoop_exec_userfuncs
 
 #
@@ -185,22 +192,20 @@ if declare -F hadoop_subproject_init >/dev/null ; then
   hadoop_subproject_init
 fi
 
+hadoop_shellprofiles_init
+
 # get the native libs in there pretty quick
 hadoop_add_javalibpath "${HADOOP_PREFIX}/build/native"
 hadoop_add_javalibpath "${HADOOP_PREFIX}/${HADOOP_COMMON_LIB_NATIVE_DIR}"
 
+hadoop_shellprofiles_nativelib
+
 # get the basic java class path for these subprojects
 # in as quickly as possible since other stuff
 # will definitely depend upon it.
-#
-# at some point, this will get replaced with something pluggable
-# so that these functions can sit in their projects rather than
-# common
-#
-for i in common hdfs yarn mapred
-do
-  hadoop_add_to_classpath_$i
-done
+
+hadoop_add_common_to_classpath
+hadoop_shellprofiles_classpath
 
 #
 # backwards compatibility. new stuff should

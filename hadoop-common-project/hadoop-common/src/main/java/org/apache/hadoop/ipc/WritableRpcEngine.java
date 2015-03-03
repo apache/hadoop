@@ -42,8 +42,8 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 /** An RpcEngine implementation for Writable data. */
 @InterfaceStability.Evolving

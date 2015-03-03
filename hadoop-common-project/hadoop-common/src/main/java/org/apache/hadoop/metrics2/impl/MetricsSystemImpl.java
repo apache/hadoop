@@ -61,6 +61,7 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricsSourceBuilder;
 import org.apache.hadoop.metrics2.lib.MutableStat;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -384,7 +385,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
    * Requests an immediate publish of all metrics from sources to sinks.
    */
   @Override
-  public void publishMetricsNow() {
+  public synchronized void publishMetricsNow() {
     if (sinks.size() > 0) {
       publishMetrics(sampleMetrics(), true);
     }    
@@ -616,7 +617,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     LOG.debug("from environment variable: "+ System.getenv(MS_INIT_MODE_KEY));
     String m = System.getProperty(MS_INIT_MODE_KEY);
     String m2 = m == null ? System.getenv(MS_INIT_MODE_KEY) : m;
-    return InitMode.valueOf((m2 == null ? InitMode.NORMAL.name() : m2)
-                            .toUpperCase(Locale.US));
+    return InitMode.valueOf(
+        StringUtils.toUpperCase((m2 == null ? InitMode.NORMAL.name() : m2)));
   }
 }

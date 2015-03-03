@@ -49,6 +49,11 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
+      <directory>${basedir}/src/main/shellprofile.d</directory>
+      <outputDirectory>/libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>${basedir}/src/main/bin</directory>
       <outputDirectory>/sbin</outputDirectory>
       <includes>

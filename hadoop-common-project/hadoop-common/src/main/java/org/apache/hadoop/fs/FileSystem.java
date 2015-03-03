@@ -65,6 +65,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -2795,8 +2796,10 @@ public abstract class FileSystem extends Configured implements Closeable {
       }
 
       Key(URI uri, Configuration conf, long unique) throws IOException {
-        scheme = uri.getScheme()==null?"":uri.getScheme().toLowerCase();
-        authority = uri.getAuthority()==null?"":uri.getAuthority().toLowerCase();
+        scheme = uri.getScheme()==null ?
+            "" : StringUtils.toLowerCase(uri.getScheme());
+        authority = uri.getAuthority()==null ?
+            "" : StringUtils.toLowerCase(uri.getAuthority());
         this.unique = unique;
         
         this.ugi = UserGroupInformation.getCurrentUser();

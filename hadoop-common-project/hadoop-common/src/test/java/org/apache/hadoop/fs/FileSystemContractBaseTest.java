@@ -20,7 +20,6 @@ package org.apache.hadoop.fs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Locale;
 
 import junit.framework.TestCase;
 
@@ -28,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * <p>
@@ -527,7 +527,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     }
     String mixedCaseFilename = "/test/UPPER.TXT";
     Path upper = path(mixedCaseFilename);
-    Path lower = path(mixedCaseFilename.toLowerCase(Locale.ENGLISH));
+    Path lower = path(StringUtils.toLowerCase(mixedCaseFilename));
     assertFalse("File exists" + upper, fs.exists(upper));
     assertFalse("File exists" + lower, fs.exists(lower));
     FSDataOutputStream out = fs.create(upper);

@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -805,14 +806,19 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void setQuota(String path, long namespaceQuota, long diskspaceQuota)
+  public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
+                       StorageType type)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
-    SetQuotaRequestProto req = SetQuotaRequestProto.newBuilder()
+    final SetQuotaRequestProto.Builder builder
+        = SetQuotaRequestProto.newBuilder()
         .setPath(path)
         .setNamespaceQuota(namespaceQuota)
-        .setDiskspaceQuota(diskspaceQuota)
-        .build();
+        .setStoragespaceQuota(storagespaceQuota);
+    if (type != null) {
+      builder.setStorageType(PBHelper.convertStorageType(type));
+    }
+    final SetQuotaRequestProto req = builder.build();
     try {
       rpcProxy.setQuota(null, req);
     } catch (ServiceException e) {

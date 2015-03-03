@@ -83,10 +83,22 @@ public abstract class ParameterizedSchedulerTestBase {
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
     out.println("<queueMaxAMShareDefault>-1.0</queueMaxAMShareDefault>");
+    out.println("<defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>");
+    out.println("<queue name=\"root\">");
+    out.println("  <schedulingPolicy>drf</schedulingPolicy>");
+    out.println("  <weight>1.0</weight>");
+    out.println("  <fairSharePreemptionTimeout>100</fairSharePreemptionTimeout>");
+    out.println("  <minSharePreemptionTimeout>120</minSharePreemptionTimeout>");
+    out.println("  <fairSharePreemptionThreshold>.5</fairSharePreemptionThreshold>");
+    out.println("</queue>");
     out.println("</allocations>");
     out.close();
 
     conf.set(YarnConfiguration.RM_SCHEDULER, FairScheduler.class.getName());
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
+  }
+
+  public SchedulerType getSchedulerType() {
+    return schedulerType;
   }
 }

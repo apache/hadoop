@@ -43,9 +43,9 @@ fi
 
 # start resourceManager
 echo "Starting resourcemanager" 
-"${HADOOP_YARN_HOME}/bin/yarn" --config "${YARN_CONF_DIR}" --daemon start resourcemanager
+"${HADOOP_YARN_HOME}/bin/yarn" --config "${HADOOP_CONF_DIR}" --daemon start resourcemanager
 # start nodeManager
 echo "Starting nodemanagers" 
-"${bin}/yarn-daemons.sh" --config "${YARN_CONF_DIR}"  start nodemanager
+"${bin}/yarn-daemons.sh" --config "${HADOOP_CONF_DIR}"  start nodemanager
 # start proxyserver
-#"${HADOOP_YARN_HOME}/bin/yarn" --config "${YARN_CONF_DIR}" --daemon start proxyserver
+#"${HADOOP_YARN_HOME}/bin/yarn" --config "${HADOOP_CONF_DIR}" --daemon start proxyserver

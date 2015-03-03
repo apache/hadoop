@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 
 @Private
@@ -186,6 +187,14 @@ public abstract class NMStateStoreService extends AbstractService {
 
     public Map<ContainerId, Long> getActiveTokens() {
       return activeTokens;
+    }
+  }
+
+  public static class RecoveredLogDeleterState {
+    Map<ApplicationId, LogDeleterProto> logDeleterMap;
+
+    public Map<ApplicationId, LogDeleterProto> getLogDeleterMap() {
+      return logDeleterMap;
     }
   }
 
@@ -456,6 +465,32 @@ public abstract class NMStateStoreService extends AbstractService {
    * @throws IOException
    */
   public abstract void removeContainerToken(ContainerId containerId)
+      throws IOException;
+
+
+  /**
+   * Load the state of log deleters
+   * @return recovered log deleter state
+   * @throws IOException
+   */
+  public abstract RecoveredLogDeleterState loadLogDeleterState()
+      throws IOException;
+
+  /**
+   * Store the state of a log deleter
+   * @param appId the application ID for the log deleter
+   * @param proto the serialized state of the log deleter
+   * @throws IOException
+   */
+  public abstract void storeLogDeleter(ApplicationId appId,
+      LogDeleterProto proto) throws IOException;
+
+  /**
+   * Remove the state of a log deleter
+   * @param appId the application ID for the log deleter
+   * @throws IOException
+   */
+  public abstract void removeLogDeleter(ApplicationId appId)
       throws IOException;
 
 

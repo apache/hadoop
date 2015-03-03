@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
+import org.apache.hadoop.util.StringUtils;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -82,7 +83,8 @@ public class CheckUploadContentTypeFilter implements Filter {
     String method = httpReq.getMethod();
     if (method.equals("PUT") || method.equals("POST")) {
       String op = httpReq.getParameter(HttpFSFileSystem.OP_PARAM);
-      if (op != null && UPLOAD_OPERATIONS.contains(op.toUpperCase())) {
+      if (op != null && UPLOAD_OPERATIONS.contains(
+          StringUtils.toUpperCase(op))) {
         if ("true".equalsIgnoreCase(httpReq.getParameter(HttpFSParametersProvider.DataParam.NAME))) {
           String contentType = httpReq.getContentType();
           contentTypeOK =

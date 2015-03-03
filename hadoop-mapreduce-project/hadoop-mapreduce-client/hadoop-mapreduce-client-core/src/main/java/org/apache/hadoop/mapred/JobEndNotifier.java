@@ -19,17 +19,19 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpMethod;
-import org.apache.commons.httpclient.URI;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.params.ClientPNames;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.CoreConnectionPNames;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -64,15 +66,14 @@ public class JobEndNotifier {
   }
 
   private static int httpNotification(String uri, int timeout)
-      throws IOException {
-    URI url = new URI(uri, false);
-    HttpClient httpClient = new HttpClient();
-    httpClient.getParams().setSoTimeout(timeout);
-    httpClient.getParams().setConnectionManagerTimeout(timeout);
-
-    HttpMethod method = new GetMethod(url.getEscapedURI());
-    method.setRequestHeader("Accept", "*/*");
-    return httpClient.executeMethod(method);
+      throws IOException, URISyntaxException {
+    DefaultHttpClient client = new DefaultHttpClient();
+    client.getParams()
+        .setIntParameter(CoreConnectionPNames.SO_TIMEOUT, timeout)
+        .setLongParameter(ClientPNames.CONN_MANAGER_TIMEOUT, (long) timeout);
+    HttpGet httpGet = new HttpGet(new URI(uri));
+    httpGet.setHeader("Accept", "*/*");
+    return client.execute(httpGet).getStatusLine().getStatusCode();
   }
 
   // for use by the LocalJobRunner, without using a thread&queue,

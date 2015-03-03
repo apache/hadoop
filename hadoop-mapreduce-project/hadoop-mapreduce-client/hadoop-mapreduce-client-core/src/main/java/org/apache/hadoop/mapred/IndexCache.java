@@ -145,7 +145,7 @@ class IndexCache {
    */
   public void removeMap(String mapId) {
     IndexInformation info = cache.get(mapId);
-    if (info == null || ((info != null) && isUnderConstruction(info))) {
+    if (info == null || isUnderConstruction(info)) {
       return;
     }
     info = cache.remove(mapId);

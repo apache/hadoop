@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -39,7 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
-import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
@@ -202,7 +203,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * @return The removed snapshot. Null if no snapshot with the given name
    *         exists.
    */
-  public Snapshot removeSnapshot(INodeDirectory snapshotRoot,
+  public Snapshot removeSnapshot(BlockStoragePolicySuite bsps, INodeDirectory snapshotRoot,
       String snapshotName, BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
@@ -214,14 +215,13 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       final Snapshot snapshot = snapshotsByNames.get(i);
       int prior = Snapshot.findLatestSnapshot(snapshotRoot, snapshot.getId());
       try {
-        Quota.Counts counts = snapshotRoot.cleanSubtree(snapshot.getId(),
-            prior, collectedBlocks, removedINodes, true);
+        QuotaCounts counts = snapshotRoot.cleanSubtree(bsps, snapshot.getId(),
+            prior, collectedBlocks, removedINodes);
         INodeDirectory parent = snapshotRoot.getParent();
         if (parent != null) {
           // there will not be any WithName node corresponding to the deleted
           // snapshot, thus only update the quota usage in the current tree
-          parent.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
-              -counts.get(Quota.DISKSPACE), true);
+          parent.addSpaceConsumed(counts.negation(), true);
         }
       } catch(QuotaExceededException e) {
         INode.LOG.error("BUG: removeSnapshot increases namespace usage.", e);
@@ -233,6 +233,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   }
 
   public ContentSummaryComputationContext computeContentSummary(
+      final BlockStoragePolicySuite bsps,
       final INodeDirectory snapshotRoot,
       final ContentSummaryComputationContext summary) {
     snapshotRoot.computeContentSummary(summary);

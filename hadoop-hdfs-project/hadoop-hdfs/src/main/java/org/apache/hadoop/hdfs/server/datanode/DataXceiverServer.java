@@ -252,9 +252,9 @@ class DataXceiverServer implements Runnable {
   // be set true before calling this method.
   synchronized void restartNotifyPeers() {
     assert (datanode.shouldRun == true && datanode.shutdownForUpgrade);
-    for (Peer p : peers.keySet()) {
+    for (Thread t : peers.values()) {
       // interrupt each and every DataXceiver thread.
-      peers.get(p).interrupt();
+      t.interrupt();
     }
   }
 

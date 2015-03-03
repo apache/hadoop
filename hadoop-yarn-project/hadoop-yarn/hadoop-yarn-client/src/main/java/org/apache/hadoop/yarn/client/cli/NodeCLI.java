@@ -68,6 +68,7 @@ public class NodeCLI extends YarnCLI {
   public int run(String[] args) throws Exception {
 
     Options opts = new Options();
+    opts.addOption(HELP_CMD, false, "Displays help for all commands.");
     opts.addOption(STATUS_CMD, true, "Prints the status report of the node.");
     opts.addOption(LIST_CMD, false, "List all running nodes. " +
         "Supports optional use of -states to filter nodes " +
@@ -110,7 +111,8 @@ public class NodeCLI extends YarnCLI {
         if (types != null) {
           for (String type : types) {
             if (!type.trim().isEmpty()) {
-              nodeStates.add(NodeState.valueOf(type.trim().toUpperCase()));
+              nodeStates.add(NodeState.valueOf(
+                  org.apache.hadoop.util.StringUtils.toUpperCase(type.trim())));
             }
           }
         }
@@ -118,6 +120,9 @@ public class NodeCLI extends YarnCLI {
         nodeStates.add(NodeState.RUNNING);
       }
       listClusterNodes(nodeStates);
+    } else if (cliParser.hasOption(HELP_CMD)) {
+      printUsage(opts);
+      return 0;
     } else {
       syserr.println("Invalid Command Usage : ");
       printUsage(opts);

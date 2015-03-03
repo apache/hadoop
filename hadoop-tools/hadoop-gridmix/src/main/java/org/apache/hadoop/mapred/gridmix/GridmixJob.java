@@ -114,8 +114,8 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
           String jobId = null == jobdesc.getJobID() 
                          ? "<unknown>" 
                          : jobdesc.getJobID().toString();
-          Job ret = new Job(conf,
-                            nameFormat.get().format("%06d", seq).toString());
+          Job ret = Job.getInstance(conf, nameFormat.get().format("%06d", seq)
+                                          .toString());
           ret.getConfiguration().setInt(GRIDMIX_JOB_SEQ, seq);
 
           ret.getConfiguration().set(Gridmix.ORIGINAL_JOB_ID, jobId);
@@ -343,7 +343,7 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
     try {
       job = this.ugi.doAs(new PrivilegedExceptionAction<Job>() {
         public Job run() throws IOException {
-          Job ret = new Job(conf, name);
+          Job ret = Job.getInstance(conf, name);
           ret.getConfiguration().setInt(GRIDMIX_JOB_SEQ, seq);
           setJobQueue(ret, conf.get(GRIDMIX_DEFAULT_QUEUE));
           return ret;

@@ -1500,6 +1500,7 @@ public class TestYarnCLI {
     PrintWriter pw = new PrintWriter(baos);
     pw.println("usage: node");
     pw.println(" -all               Works with -list to list all nodes.");
+    pw.println(" -help              Displays help for all commands.");
     pw.println(" -list              List all running nodes. Supports optional use of");
     pw.println("                    -states to filter nodes based on node state, all -all");
     pw.println("                    to list all nodes.");

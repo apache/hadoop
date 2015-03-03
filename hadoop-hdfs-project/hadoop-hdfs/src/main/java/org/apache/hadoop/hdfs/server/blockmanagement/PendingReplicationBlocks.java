@@ -28,9 +28,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.util.Daemon;
+import org.slf4j.Logger;
 
 /***************************************************
  * PendingReplicationBlocks does the bookkeeping of all
@@ -44,7 +44,7 @@ import org.apache.hadoop.util.Daemon;
  *
  ***************************************************/
 class PendingReplicationBlocks {
-  private static final Log LOG = BlockManager.LOG;
+  private static final Logger LOG = BlockManager.LOG;
 
   private final Map<Block, PendingBlockInfo> pendingReplications;
   private final ArrayList<Block> timedOutItems;

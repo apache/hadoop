@@ -69,6 +69,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.ServiceFailedException;
@@ -1864,6 +1865,16 @@ public class MiniDFSCluster {
     File blockFile = getBlockFile(i, block);
     if (blockFile != null && blockFile.exists()) {
       return DFSTestUtil.readFile(blockFile);
+    }
+    return null;
+  }
+
+  public byte[] readBlockOnDataNodeAsBytes(int i, ExtendedBlock block)
+      throws IOException {
+    assert (i >= 0 && i < dataNodes.size()) : "Invalid datanode "+i;
+    File blockFile = getBlockFile(i, block);
+    if (blockFile != null && blockFile.exists()) {
+      return DFSTestUtil.readFileAsBytes(blockFile);
     }
     return null;
   }

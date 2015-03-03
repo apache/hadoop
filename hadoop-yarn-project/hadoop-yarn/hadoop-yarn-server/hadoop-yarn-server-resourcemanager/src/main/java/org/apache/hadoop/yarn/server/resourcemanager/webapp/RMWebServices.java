@@ -24,7 +24,6 @@ import java.security.AccessControlException;
 import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -67,6 +66,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
@@ -169,6 +169,12 @@ public class RMWebServices {
     this.conf = conf;
   }
 
+  RMWebServices(ResourceManager rm, Configuration conf,
+      HttpServletResponse response) {
+    this(rm, conf);
+    this.response = response;
+  }
+
   protected Boolean hasAccess(RMApp app, HttpServletRequest hsr) {
     // Check for the authorization.
     UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
@@ -252,7 +258,8 @@ public class RMWebServices {
     } else {
       acceptedStates = EnumSet.noneOf(NodeState.class);
       for (String stateStr : states.split(",")) {
-        acceptedStates.add(NodeState.valueOf(stateStr.toUpperCase()));
+        acceptedStates.add(
+            NodeState.valueOf(StringUtils.toUpperCase(stateStr)));
       }
     }
     
@@ -459,6 +466,9 @@ public class RMWebServices {
     AppsInfo allApps = new AppsInfo();
     for (ApplicationReport report : appReports) {
       RMApp rmapp = apps.get(report.getApplicationId());
+      if (rmapp == null) {
+        continue;
+      }
 
       if (finalStatusQuery != null && !finalStatusQuery.isEmpty()) {
         FinalApplicationStatus.valueOf(finalStatusQuery);
@@ -468,8 +478,8 @@ public class RMWebServices {
         }
       }
 
-      AppInfo app = new AppInfo(rmapp, hasAccess(rmapp, hsr),
-          WebAppUtils.getHttpSchemePrefix(conf));
+      AppInfo app = new AppInfo(rm, rmapp,
+          hasAccess(rmapp, hsr), WebAppUtils.getHttpSchemePrefix(conf));
       allApps.add(app);
     }
     return allApps;
@@ -498,7 +508,7 @@ public class RMWebServices {
     // if no states, returns the counts of all RMAppStates
     if (states.size() == 0) {
       for (YarnApplicationState state : YarnApplicationState.values()) {
-        states.add(state.toString().toLowerCase());
+        states.add(StringUtils.toLowerCase(state.toString()));
       }
     }
     // in case we extend to multiple applicationTypes in the future
@@ -510,8 +520,9 @@ public class RMWebServices {
     ConcurrentMap<ApplicationId, RMApp> apps = rm.getRMContext().getRMApps();
     for (RMApp rmapp : apps.values()) {
       YarnApplicationState state = rmapp.createApplicationState();
-      String type = rmapp.getApplicationType().trim().toLowerCase();
-      if (states.contains(state.toString().toLowerCase())) {
+      String type = StringUtils.toLowerCase(rmapp.getApplicationType().trim());
+      if (states.contains(
+          StringUtils.toLowerCase(state.toString()))) {
         if (types.contains(ANY)) {
           countApp(scoreboard, state, ANY);
         } else if (types.contains(type)) {
@@ -546,7 +557,8 @@ public class RMWebServices {
               if (isState) {
                 try {
                   // enum string is in the uppercase
-                  YarnApplicationState.valueOf(paramStr.trim().toUpperCase());
+                  YarnApplicationState.valueOf(
+                      StringUtils.toUpperCase(paramStr.trim()));
                 } catch (RuntimeException e) {
                   YarnApplicationState[] stateArray =
                       YarnApplicationState.values();
@@ -556,7 +568,8 @@ public class RMWebServices {
                       + " specified. It should be one of " + allAppStates);
                 }
               }
-              params.add(paramStr.trim().toLowerCase());
+              params.add(
+                  StringUtils.toLowerCase(paramStr.trim()));
             }
           }
         }
@@ -574,7 +587,8 @@ public class RMWebServices {
     for (String state : states) {
       Map<String, Long> partScoreboard = new HashMap<String, Long>();
       scoreboard.put(
-          YarnApplicationState.valueOf(state.toUpperCase()), partScoreboard);
+          YarnApplicationState.valueOf(StringUtils.toUpperCase(state)),
+          partScoreboard);
       // types is verified no to be empty
       for (String type : types) {
         partScoreboard.put(type, 0L);
@@ -609,7 +623,7 @@ public class RMWebServices {
     if (app == null) {
       throw new NotFoundException("app with id: " + appId + " not found");
     }
-    return new AppInfo(app, hasAccess(app, hsr), hsr.getScheme() + "://");
+    return new AppInfo(rm, app, hasAccess(app, hsr), hsr.getScheme() + "://");
   }
 
   @GET

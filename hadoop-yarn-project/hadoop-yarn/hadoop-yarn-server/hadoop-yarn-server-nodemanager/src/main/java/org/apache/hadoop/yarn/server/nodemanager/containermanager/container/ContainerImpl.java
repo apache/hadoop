@@ -99,7 +99,7 @@ public class ContainerImpl implements Container {
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
 
-  private static final Log LOG = LogFactory.getLog(Container.class);
+  private static final Log LOG = LogFactory.getLog(ContainerImpl.class);
   private final Map<LocalResourceRequest,List<String>> pendingResources =
     new HashMap<LocalResourceRequest,List<String>>();
   private final Map<Path,List<String>> localizedResources =
@@ -494,10 +494,11 @@ public class ContainerImpl implements Container {
           YarnConfiguration.NM_VMEM_PMEM_RATIO,
           YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
       long vmemBytes = (long) (pmemRatio * pmemBytes);
+      int cpuVcores = getResource().getVirtualCores();
 
       dispatcher.getEventHandler().handle(
           new ContainerStartMonitoringEvent(containerId,
-              vmemBytes, pmemBytes));
+              vmemBytes, pmemBytes, cpuVcores));
   }
 
   private void addDiagnostics(String... diags) {

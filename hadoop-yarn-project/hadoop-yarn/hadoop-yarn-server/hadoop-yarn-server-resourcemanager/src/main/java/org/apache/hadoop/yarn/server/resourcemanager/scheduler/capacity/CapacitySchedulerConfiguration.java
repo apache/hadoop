@@ -40,8 +40,10 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -107,6 +109,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   
   @Private
   public static final boolean DEFAULT_RESERVE_CONT_LOOK_ALL_NODES = true;
+
+  @Private
+  public static final String MAXIMUM_ALLOCATION_MB = "maximum-allocation-mb";
+
+  @Private
+  public static final String MAXIMUM_ALLOCATION_VCORES =
+      "maximum-allocation-vcores";
 
   @Private
   public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
@@ -269,6 +278,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
   
   private String getNodeLabelPrefix(String queue, String label) {
+    if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
+      return getQueuePrefix(queue);
+    }
     return getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label + DOT;
   }
   
@@ -307,7 +319,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     		getMaximumApplicationMasterResourcePercent());
   }
   
-  public float getCapacity(String queue) {
+  public float getNonLabeledQueueCapacity(String queue) {
     float capacity = queue.equals("root") ? 100.0f : getFloat(
         getQueuePrefix(queue) + CAPACITY, UNDEFINED);
     if (capacity < MINIMUM_CAPACITY_VALUE || capacity > MAXIMUM_CAPACITY_VALUE) {
@@ -329,7 +341,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         ", capacity=" + capacity);
   }
 
-  public float getMaximumCapacity(String queue) {
+  public float getNonLabeledQueueMaximumCapacity(String queue) {
     float maxCapacity = getFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY,
         MAXIMUM_CAPACITY_VALUE);
     maxCapacity = (maxCapacity == DEFAULT_MAXIMUM_CAPACITY_VALUE) ? 
@@ -382,7 +394,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public QueueState getState(String queue) {
     String state = get(getQueuePrefix(queue) + STATE);
     return (state != null) ? 
-        QueueState.valueOf(state.toUpperCase()) : QueueState.RUNNING;
+        QueueState.valueOf(StringUtils.toUpperCase(state)) : QueueState.RUNNING;
   }
   
   public void setAccessibleNodeLabels(String queue, Set<String> labels) {
@@ -433,57 +445,29 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return Collections.unmodifiableSet(set);
   }
   
-  public Map<String, Float> getNodeLabelCapacities(String queue,
-      Set<String> labels, RMNodeLabelsManager mgr) {
-    Map<String, Float> nodeLabelCapacities = new HashMap<String, Float>();
-    
-    if (labels == null) {
-      return nodeLabelCapacities;
+  private float internalGetLabeledQueueCapacity(String queue, String label, String suffix,
+      float defaultValue) {
+    String capacityPropertyName = getNodeLabelPrefix(queue, label) + suffix;
+    float capacity = getFloat(capacityPropertyName, defaultValue);
+    if (capacity < MINIMUM_CAPACITY_VALUE
+        || capacity > MAXIMUM_CAPACITY_VALUE) {
+      throw new IllegalArgumentException("Illegal capacity of " + capacity
+          + " for node-label=" + label + " in queue=" + queue
+          + ", valid capacity should in range of [0, 100].");
     }
-
-    for (String label : labels.contains(CommonNodeLabelsManager.ANY) ? mgr
-        .getClusterNodeLabels() : labels) {
-      String capacityPropertyName = getNodeLabelPrefix(queue, label) + CAPACITY;
-      float capacity = getFloat(capacityPropertyName, 0f);
-      if (capacity < MINIMUM_CAPACITY_VALUE
-          || capacity > MAXIMUM_CAPACITY_VALUE) {
-        throw new IllegalArgumentException("Illegal capacity of " + capacity
-            + " for node-label=" + label + " in queue=" + queue
-            + ", valid capacity should in range of [0, 100].");
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("CSConf - getCapacityOfLabel: prefix="
-            + getNodeLabelPrefix(queue, label) + ", capacity=" + capacity);
-      }
-      
-      nodeLabelCapacities.put(label, capacity / 100f);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("CSConf - getCapacityOfLabel: prefix="
+          + getNodeLabelPrefix(queue, label) + ", capacity=" + capacity);
     }
-    return nodeLabelCapacities;
+    return capacity;
   }
   
-  public Map<String, Float> getMaximumNodeLabelCapacities(String queue,
-      Set<String> labels, RMNodeLabelsManager mgr) {
-    Map<String, Float> maximumNodeLabelCapacities = new HashMap<String, Float>();
-    if (labels == null) {
-      return maximumNodeLabelCapacities;
-    }
-
-    for (String label : labels.contains(CommonNodeLabelsManager.ANY) ? mgr
-        .getClusterNodeLabels() : labels) {
-      float maxCapacity =
-          getFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY,
-              100f);
-      if (maxCapacity < MINIMUM_CAPACITY_VALUE
-          || maxCapacity > MAXIMUM_CAPACITY_VALUE) {
-        throw new IllegalArgumentException("Illegal " + "capacity of "
-            + maxCapacity + " for label=" + label + " in queue=" + queue);
-      }
-      LOG.debug("CSConf - getCapacityOfLabel: prefix="
-          + getNodeLabelPrefix(queue, label) + ", capacity=" + maxCapacity);
-      
-      maximumNodeLabelCapacities.put(label, maxCapacity / 100f);
-    }
-    return maximumNodeLabelCapacities;
+  public float getLabeledQueueCapacity(String queue, String label) {
+    return internalGetLabeledQueueCapacity(queue, label, CAPACITY, 0f);
+  }
+  
+  public float getLabeledQueueMaximumCapacity(String queue, String label) {
+    return internalGetLabeledQueueCapacity(queue, label, MAXIMUM_CAPACITY, 100f);
   }
   
   public String getDefaultNodeLabelExpression(String queue) {
@@ -506,7 +490,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
   
   private static String getAclKey(QueueACL acl) {
-    return "acl_" + acl.toString().toLowerCase();
+    return "acl_" + StringUtils.toLowerCase(acl.toString());
   }
 
   public AccessControlList getAcl(String queue, QueueACL acl) {
@@ -523,11 +507,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     set(queuePrefix + getAclKey(acl), aclString);
   }
 
-  public Map<QueueACL, AccessControlList> getAcls(String queue) {
-    Map<QueueACL, AccessControlList> acls =
-      new HashMap<QueueACL, AccessControlList>();
+  public Map<AccessType, AccessControlList> getAcls(String queue) {
+    Map<AccessType, AccessControlList> acls =
+      new HashMap<AccessType, AccessControlList>();
     for (QueueACL acl : QueueACL.values()) {
-      acls.put(acl, getAcl(queue, acl));
+      acls.put(SchedulerUtils.toAccessType(acl), getAcl(queue, acl));
     }
     return acls;
   }
@@ -578,6 +562,48 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
     return Resources.createResource(maximumMemory, maximumCores);
+  }
+
+  /**
+   * Get the per queue setting for the maximum limit to allocate to
+   * each container request.
+   *
+   * @param queue
+   *          name of the queue
+   * @return setting specified per queue else falls back to the cluster setting
+   */
+  public Resource getMaximumAllocationPerQueue(String queue) {
+    String queuePrefix = getQueuePrefix(queue);
+    int maxAllocationMbPerQueue = getInt(queuePrefix + MAXIMUM_ALLOCATION_MB,
+        (int)UNDEFINED);
+    int maxAllocationVcoresPerQueue = getInt(
+        queuePrefix + MAXIMUM_ALLOCATION_VCORES, (int)UNDEFINED);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("max alloc mb per queue for " + queue + " is "
+          + maxAllocationMbPerQueue);
+      LOG.debug("max alloc vcores per queue for " + queue + " is "
+          + maxAllocationVcoresPerQueue);
+    }
+    Resource clusterMax = getMaximumAllocation();
+    if (maxAllocationMbPerQueue == (int)UNDEFINED) {
+      LOG.info("max alloc mb per queue for " + queue + " is undefined");
+      maxAllocationMbPerQueue = clusterMax.getMemory();
+    }
+    if (maxAllocationVcoresPerQueue == (int)UNDEFINED) {
+       LOG.info("max alloc vcore per queue for " + queue + " is undefined");
+      maxAllocationVcoresPerQueue = clusterMax.getVirtualCores();
+    }
+    Resource result = Resources.createResource(maxAllocationMbPerQueue,
+        maxAllocationVcoresPerQueue);
+    if (maxAllocationMbPerQueue > clusterMax.getMemory()
+        || maxAllocationVcoresPerQueue > clusterMax.getVirtualCores()) {
+      throw new IllegalArgumentException(
+          "Queue maximum allocation cannot be larger than the cluster setting"
+          + " for queue " + queue
+          + " max allocation per queue: " + result
+          + " cluster setting: " + clusterMax);
+    }
+    return result;
   }
 
   public boolean getEnableUserMetrics() {

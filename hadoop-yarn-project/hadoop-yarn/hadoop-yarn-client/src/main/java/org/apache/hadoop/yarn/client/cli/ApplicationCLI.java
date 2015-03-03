@@ -36,6 +36,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -173,7 +174,7 @@ public class ApplicationCLI extends YarnCLI {
           if (types != null) {
             for (String type : types) {
               if (!type.trim().isEmpty()) {
-                appTypes.add(type.toUpperCase().trim());
+                appTypes.add(StringUtils.toUpperCase(type).trim());
               }
             }
           }
@@ -191,8 +192,8 @@ public class ApplicationCLI extends YarnCLI {
                   break;
                 }
                 try {
-                  appStates.add(YarnApplicationState.valueOf(state
-                      .toUpperCase().trim()));
+                  appStates.add(YarnApplicationState.valueOf(
+                      StringUtils.toUpperCase(state).trim()));
                 } catch (IllegalArgumentException ex) {
                   sysout.println("The application state " + state
                       + " is invalid.");

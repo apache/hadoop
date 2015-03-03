@@ -84,9 +84,8 @@ public class TestHASafeMode {
   private MiniDFSCluster cluster;
   
   static {
-    ((Log4JLogger)LogFactory.getLog(FSImage.class)).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(FSImage.LOG, Level.ALL);
   }
   
   @Before

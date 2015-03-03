@@ -303,7 +303,7 @@ public class MRApps extends Apps {
               remoteFS.getWorkingDirectory()));
           String name = (null == u.getFragment())
               ? p.getName() : u.getFragment();
-          if (!name.toLowerCase().endsWith(".jar")) {
+          if (!StringUtils.toLowerCase(name).endsWith(".jar")) {
             linkLookup.put(p, name);
           }
         }
@@ -317,7 +317,7 @@ public class MRApps extends Apps {
         if (name == null) {
           name = p.getName();
         }
-        if(!name.toLowerCase().endsWith(".jar")) {
+        if(!StringUtils.toLowerCase(name).endsWith(".jar")) {
           MRApps.addToEnvironment(
               environment,
               classpathEnvVar,

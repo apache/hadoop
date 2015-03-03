@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -44,18 +45,26 @@ public class Count extends FsCommand {
 
   private static final String OPTION_QUOTA = "q";
   private static final String OPTION_HUMAN = "h";
+  private static final String OPTION_HEADER = "v";
 
   public static final String NAME = "count";
   public static final String USAGE =
-      "[-" + OPTION_QUOTA + "] [-" + OPTION_HUMAN + "] <path> ...";
-  public static final String DESCRIPTION = 
+      "[-" + OPTION_QUOTA + "] [-" + OPTION_HUMAN + "] [-" + OPTION_HEADER
+          + "] <path> ...";
+  public static final String DESCRIPTION =
       "Count the number of directories, files and bytes under the paths\n" +
-      "that match the specified file pattern.  The output columns are:\n" +
-      "DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME or\n" +
-      "QUOTA REMAINING_QUOTA SPACE_QUOTA REMAINING_SPACE_QUOTA \n" +
-      "      DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME\n" +
-      "The -h option shows file sizes in human readable format.";
-  
+          "that match the specified file pattern.  The output columns are:\n" +
+          StringUtils.join(ContentSummary.getHeaderFields(), ' ') +
+          " PATHNAME\n" +
+          "or, with the -" + OPTION_QUOTA + " option:\n" +
+          StringUtils.join(ContentSummary.getQuotaHeaderFields(), ' ') + "\n" +
+          "      " +
+          StringUtils.join(ContentSummary.getHeaderFields(), ' ') +
+          " PATHNAME\n" +
+          "The -" + OPTION_HUMAN +
+          " option shows file sizes in human readable format.\n" +
+          "The -" + OPTION_HEADER + " option displays a header line.";
+
   private boolean showQuotas;
   private boolean humanReadable;
 
@@ -65,7 +74,7 @@ public class Count extends FsCommand {
   /** Constructor
    * @deprecated invoke via {@link FsShell}
    * @param cmd the count command
-   * @param pos the starting index of the arguments 
+   * @param pos the starting index of the arguments
    * @param conf configuration
    */
   @Deprecated
@@ -77,13 +86,16 @@ public class Count extends FsCommand {
   @Override
   protected void processOptions(LinkedList<String> args) {
     CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE,
-      OPTION_QUOTA, OPTION_HUMAN);
+        OPTION_QUOTA, OPTION_HUMAN, OPTION_HEADER);
     cf.parse(args);
     if (args.isEmpty()) { // default path is the current working directory
       args.add(".");
     }
     showQuotas = cf.getOpt(OPTION_QUOTA);
     humanReadable = cf.getOpt(OPTION_HUMAN);
+    if (cf.getOpt(OPTION_HEADER)) {
+      out.println(ContentSummary.getHeader(showQuotas) + "PATHNAME");
+    }
   }
 
   @Override

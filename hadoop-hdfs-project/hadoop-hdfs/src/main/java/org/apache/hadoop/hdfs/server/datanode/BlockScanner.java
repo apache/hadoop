@@ -29,6 +29,7 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.VolumeScanner.ScanResultHandler;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -276,6 +277,37 @@ public class BlockScanner {
     for (Entry<String, VolumeScanner> entry : scanners.entrySet()) {
       entry.getValue().printStats(p);
     }
+  }
+
+  /**
+   * Mark a block as "suspect."
+   *
+   * This means that we should try to rescan it soon.  Note that the
+   * VolumeScanner keeps a list of recently suspicious blocks, which
+   * it uses to avoid rescanning the same block over and over in a short
+   * time frame.
+   *
+   * @param storageId     The ID of the storage where the block replica
+   *                      is being stored.
+   * @param block         The block's ID and block pool id.
+   */
+  synchronized void markSuspectBlock(String storageId, ExtendedBlock block) {
+    if (!isEnabled()) {
+      LOG.info("Not scanning suspicious block {} on {}, because the block " +
+          "scanner is disabled.", block, storageId);
+      return;
+    }
+    VolumeScanner scanner = scanners.get(storageId);
+    if (scanner == null) {
+      // This could happen if the volume is in the process of being removed.
+      // The removal process shuts down the VolumeScanner, but the volume
+      // object stays around as long as there are references to it (which
+      // should not be that long.)
+      LOG.info("Not scanning suspicious block {} on {}, because there is no " +
+          "volume scanner for that storageId.", block, storageId);
+      return;
+    }
+    scanner.markSuspectBlock(block);
   }
 
   @InterfaceAudience.Private

@@ -83,13 +83,30 @@ static int htable_realloc(struct htable *htable, uint32_t new_capacity)
     }
     for (i = 0; i < old_capacity; i++) {
         struct htable_pair *pair = htable->elem + i;
-        htable_insert_internal(nelem, new_capacity, hash_fun,
-                               pair->key, pair->val);
+        if (pair->key) {
+            htable_insert_internal(nelem, new_capacity, hash_fun,
+                                   pair->key, pair->val);
+        }
     }
     free(htable->elem);
     htable->elem = nelem;
     htable->capacity = new_capacity;
     return 0;
+}
+
+static uint32_t round_up_to_power_of_2(uint32_t i)
+{
+    if (i == 0) {
+        return 1;
+    }
+    i--;
+    i |= i >> 1;
+    i |= i >> 2;
+    i |= i >> 4;
+    i |= i >> 8;
+    i |= i >> 16;
+    i++;
+    return i;
 }
 
 struct htable *htable_alloc(uint32_t size,
@@ -101,8 +118,7 @@ struct htable *htable_alloc(uint32_t size,
     if (!htable) {
         return NULL;
     }
-    size = (size + 1) >> 1;
-    size = size << 1;
+    size = round_up_to_power_of_2(size);
     if (size < HTABLE_MIN_SIZE) {
         size = HTABLE_MIN_SIZE;
     }

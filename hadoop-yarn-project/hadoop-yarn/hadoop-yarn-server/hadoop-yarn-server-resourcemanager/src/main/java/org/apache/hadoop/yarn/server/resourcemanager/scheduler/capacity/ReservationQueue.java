@@ -62,11 +62,11 @@ public class ReservationQueue extends LeafQueue {
       throw new IOException("Trying to reinitialize " + getQueuePath()
           + " from " + newlyParsedQueue.getQueuePath());
     }
+    super.reinitialize(newlyParsedQueue, clusterResource);
     CSQueueUtils.updateQueueStatistics(
         parent.schedulerContext.getResourceCalculator(), newlyParsedQueue,
         parent, parent.schedulerContext.getClusterResource(),
         parent.schedulerContext.getMinimumResourceCapability());
-    super.reinitialize(newlyParsedQueue, clusterResource);
     updateQuotas(parent.getUserLimitForReservation(),
         parent.getUserLimitFactor(),
         parent.getMaxApplicationsForReservations(),
@@ -108,9 +108,9 @@ public class ReservationQueue extends LeafQueue {
     maxApplicationsPerUser = maxAppsPerUserForReservation;
   }
 
-  // used by the super constructor, we initialize to zero
-  protected float getCapacityFromConf() {
-    return 0f;
+  @Override
+  protected void setupConfigurableCapacities() {
+    CSQueueUtils.updateAndCheckCapacitiesByLabel(getQueuePath(),
+        queueCapacities, parent == null ? null : parent.getQueueCapacities());
   }
-
 }

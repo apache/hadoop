@@ -90,6 +90,7 @@ import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
+import org.w3c.dom.Attr;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -186,7 +187,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     "testingforemptydefaultvalue";
 
   private boolean allowNullValueProperties = false;
-  
+
   private static class Resource {
     private final Object resource;
     private final String name;
@@ -844,31 +845,106 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     resources.add(resource);                      // add to resources
     reloadConfiguration();
   }
-  
-  private static final Pattern VAR_PATTERN =
-      Pattern.compile("\\$\\{[^\\}\\$\u0020]+\\}");
 
   private static final int MAX_SUBST = 20;
 
+  private static final int SUB_START_IDX = 0;
+  private static final int SUB_END_IDX = SUB_START_IDX + 1;
+
+  /**
+   * This is a manual implementation of the following regex
+   * "\\$\\{[^\\}\\$\u0020]+\\}". It can be 15x more efficient than
+   * a regex matcher as demonstrated by HADOOP-11506. This is noticeable with
+   * Hadoop apps building on the assumption Configuration#get is an O(1)
+   * hash table lookup, especially when the eval is a long string.
+   *
+   * @param eval a string that may contain variables requiring expansion.
+   * @return a 2-element int array res such that
+   * eval.substring(res[0], res[1]) is "var" for the left-most occurrence of
+   * ${var} in eval. If no variable is found -1, -1 is returned.
+   */
+  private static int[] findSubVariable(String eval) {
+    int[] result = {-1, -1};
+
+    int matchStart;
+    int leftBrace;
+
+    // scanning for a brace first because it's less frequent than $
+    // that can occur in nested class names
+    //
+    match_loop:
+    for (matchStart = 1, leftBrace = eval.indexOf('{', matchStart);
+         // minimum left brace position (follows '$')
+         leftBrace > 0
+         // right brace of a smallest valid expression "${c}"
+         && leftBrace + "{c".length() < eval.length();
+         leftBrace = eval.indexOf('{', matchStart)) {
+      int matchedLen = 0;
+      if (eval.charAt(leftBrace - 1) == '$') {
+        int subStart = leftBrace + 1; // after '{'
+        for (int i = subStart; i < eval.length(); i++) {
+          switch (eval.charAt(i)) {
+            case '}':
+              if (matchedLen > 0) { // match
+                result[SUB_START_IDX] = subStart;
+                result[SUB_END_IDX] = subStart + matchedLen;
+                break match_loop;
+              }
+              // fall through to skip 1 char
+            case ' ':
+            case '$':
+              matchStart = i + 1;
+              continue match_loop;
+            default:
+              matchedLen++;
+          }
+        }
+        // scanned from "${"  to the end of eval, and no reset via ' ', '$':
+        //    no match!
+        break match_loop;
+      } else {
+        // not a start of a variable
+        //
+        matchStart = leftBrace + 1;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Attempts to repeatedly expand the value {@code expr} by replacing the
+   * left-most substring of the form "${var}" in the following precedence order
+   * <ol>
+   *   <li>by the value of the Java system property "var" if defined</li>
+   *   <li>by the value of the configuration key "var" if defined</li>
+   * </ol>
+   *
+   * If var is unbounded the current state of expansion "prefix${var}suffix" is
+   * returned.
+   *
+   * If a cycle is detected: replacing var1 requires replacing var2 ... requires
+   * replacing var1, i.e., the cycle is shorter than
+   * {@link Configuration#MAX_SUBST} then the original expr is returned.
+   *
+   * @param expr the literal value of a config key
+   * @return null if expr is null, otherwise the value resulting from expanding
+   * expr using the algorithm above.
+   * @throws IllegalArgumentException when more than
+   * {@link Configuration#MAX_SUBST} replacements are required
+   */
   private String substituteVars(String expr) {
     if (expr == null) {
       return null;
     }
-    Matcher match = VAR_PATTERN.matcher("");
     String eval = expr;
-    Set<String> evalSet = new HashSet<String>();
-    for(int s=0; s<MAX_SUBST; s++) {
-      if (evalSet.contains(eval)) {
-        // Cyclic resolution pattern detected. Return current expression.
+    Set<String> evalSet = null;
+    for(int s = 0; s < MAX_SUBST; s++) {
+      final int[] varBounds = findSubVariable(eval);
+      if (varBounds[SUB_START_IDX] == -1) {
         return eval;
       }
-      evalSet.add(eval);
-      match.reset(eval);
-      if (!match.find()) {
-        return eval;
-      }
-      String var = match.group();
-      var = var.substring(2, var.length()-1); // remove ${ .. }
+      final String var = eval.substring(varBounds[SUB_START_IDX],
+          varBounds[SUB_END_IDX]);
       String val = null;
       try {
         val = System.getProperty(var);
@@ -881,8 +957,23 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       if (val == null) {
         return eval; // return literal ${var}: var is unbound
       }
+
+      // prevent recursive resolution
+      //
+      final int dollar = varBounds[SUB_START_IDX] - "${".length();
+      final int afterRightBrace = varBounds[SUB_END_IDX] + "}".length();
+      final String refVar = eval.substring(dollar, afterRightBrace);
+      if (evalSet == null) {
+        evalSet = new HashSet<String>();
+      }
+      if (!evalSet.add(refVar)) {
+        return expr; // return original expression if there is a loop
+      }
+
       // substitute
-      eval = eval.substring(0, match.start())+val+eval.substring(match.end());
+      eval = eval.substring(0, dollar)
+             + val
+             + eval.substring(afterRightBrace);
     }
     throw new IllegalStateException("Variable substitution depth too large: " 
                                     + MAX_SUBST + " " + expr);
@@ -1360,11 +1451,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return defaultValue;
     }
 
-    valueString = valueString.toLowerCase();
-
-    if ("true".equals(valueString))
+    if (StringUtils.equalsIgnoreCase("true", valueString))
       return true;
-    else if ("false".equals(valueString))
+    else if (StringUtils.equalsIgnoreCase("false", valueString))
       return false;
     else return defaultValue;
   }
@@ -1400,13 +1489,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Return value matching this enumerated type.
+   * Note that the returned value is trimmed by this method.
    * @param name Property name
    * @param defaultValue Value returned if no mapping exists
    * @throws IllegalArgumentException If mapping is illegal for the type
    * provided
    */
   public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
-    final String val = get(name);
+    final String val = getTrimmed(name);
     return null == val
       ? defaultValue
       : Enum.valueOf(defaultValue.getDeclaringClass(), val);
@@ -1503,6 +1593,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Get the value of the <code>name</code> property as a <code>Pattern</code>.
    * If no such property is specified, or if the specified value is not a valid
    * <code>Pattern</code>, then <code>DefaultValue</code> is returned.
+   * Note that the returned value is NOT trimmed by this method.
    *
    * @param name property name
    * @param defaultValue default value
@@ -1953,7 +2044,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public InetSocketAddress getSocketAddr(
       String name, String defaultAddress, int defaultPort) {
-    final String address = get(name, defaultAddress);
+    final String address = getTrimmed(name, defaultAddress);
     return NetUtils.createSocketAddr(address, defaultPort, name);
   }
 
@@ -2514,11 +2605,26 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
         if (!"property".equals(prop.getTagName()))
           LOG.warn("bad conf file: element not <property>");
-        NodeList fields = prop.getChildNodes();
+
         String attr = null;
         String value = null;
         boolean finalParameter = false;
         LinkedList<String> source = new LinkedList<String>();
+
+        Attr propAttr = prop.getAttributeNode("name");
+        if (propAttr != null)
+          attr = StringInterner.weakIntern(propAttr.getValue());
+        propAttr = prop.getAttributeNode("value");
+        if (propAttr != null)
+          value = StringInterner.weakIntern(propAttr.getValue());
+        propAttr = prop.getAttributeNode("final");
+        if (propAttr != null)
+          finalParameter = "true".equals(propAttr.getValue());
+        propAttr = prop.getAttributeNode("source");
+        if (propAttr != null)
+          source.add(StringInterner.weakIntern(propAttr.getValue()));
+
+        NodeList fields = prop.getChildNodes();
         for (int j = 0; j < fields.getLength(); j++) {
           Node fieldNode = fields.item(j);
           if (!(fieldNode instanceof Element))

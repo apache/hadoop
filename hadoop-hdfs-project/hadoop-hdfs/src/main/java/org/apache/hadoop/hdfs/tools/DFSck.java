@@ -75,7 +75,7 @@ public class DFSck extends Configured implements Tool {
     HdfsConfiguration.init();
   }
 
-  private static final String USAGE = "Usage: DFSck <path> "
+  private static final String USAGE = "Usage: hdfs fsck <path> "
       + "[-list-corruptfileblocks | "
       + "[-move | -delete | -openforwrite] "
       + "[-files [-blocks [-locations | -racks]]]] "
@@ -93,6 +93,7 @@ public class DFSck extends Configured implements Tool {
       + "\t-blocks\tprint out block report\n"
       + "\t-locations\tprint out locations for every block\n"
       + "\t-racks\tprint out network topology for data-node locations\n"
+      + "\t-storagepolicies\tprint out storage policy summary for the blocks\n"
       + "\t-showprogress\tshow progress in output. Default is OFF (no progress)\n"
       + "\t-blockId\tprint out which file this blockId belongs to, locations"
       + " (nodes, racks) of this block, and other diagnostics info"
@@ -224,6 +225,14 @@ public class DFSck extends Configured implements Tool {
     return errCode;
   }
   
+
+  private Path getResolvedPath(String dir) throws IOException {
+    Configuration conf = getConf();
+    Path dirPath = new Path(dir);
+    FileSystem fs = dirPath.getFileSystem(conf);
+    return fs.resolvePath(dirPath);
+  }
+
   /**
    * Derive the namenode http address from the current file system,
    * either default or as set by "-fs" in the generic options.
@@ -235,19 +244,12 @@ public class DFSck extends Configured implements Tool {
     Configuration conf = getConf();
 
     //get the filesystem object to verify it is an HDFS system
-    final FileSystem fs;
-    try {
-      fs = target.getFileSystem(conf);
-    } catch (IOException ioe) {
-      System.err.println("FileSystem is inaccessible due to:\n"
-          + StringUtils.stringifyException(ioe));
-      return null;
-    }
+    final FileSystem fs = target.getFileSystem(conf);
     if (!(fs instanceof DistributedFileSystem)) {
       System.err.println("FileSystem is " + fs.getUri());
       return null;
     }
-    
+
     return DFSUtil.getInfoServer(HAUtil.getAddressOfActive(fs), conf,
         DFSUtil.getHttpClientScheme(conf));
   }
@@ -266,6 +268,7 @@ public class DFSck extends Configured implements Tool {
       else if (args[idx].equals("-blocks")) { url.append("&blocks=1"); }
       else if (args[idx].equals("-locations")) { url.append("&locations=1"); }
       else if (args[idx].equals("-racks")) { url.append("&racks=1"); }
+      else if (args[idx].equals("-storagepolicies")) { url.append("&storagepolicies=1"); }
       else if (args[idx].equals("-showprogress")) { url.append("&showprogress=1"); }
       else if (args[idx].equals("-list-corruptfileblocks")) {
         url.append("&listcorruptfileblocks=1");
@@ -301,8 +304,16 @@ public class DFSck extends Configured implements Tool {
       dir = "/";
     }
 
-    final Path dirpath = new Path(dir);
-    final URI namenodeAddress = getCurrentNamenodeAddress(dirpath);
+    Path dirpath = null;
+    URI namenodeAddress = null;
+    try {
+      dirpath = getResolvedPath(dir);
+      namenodeAddress = getCurrentNamenodeAddress(dirpath);
+    } catch (IOException ioe) {
+      System.err.println("FileSystem is inaccessible due to:\n"
+          + StringUtils.stringifyException(ioe));
+    }
+
     if (namenodeAddress == null) {
       //Error message already output in {@link #getCurrentNamenodeAddress()}
       System.err.println("DFSck exiting.");

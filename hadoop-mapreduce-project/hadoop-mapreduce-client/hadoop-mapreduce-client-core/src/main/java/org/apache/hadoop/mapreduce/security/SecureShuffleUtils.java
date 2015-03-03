@@ -21,8 +21,8 @@ package org.apache.hadoop.mapreduce.security;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
-
 import javax.crypto.SecretKey;
 import javax.servlet.http.HttpServletRequest;
 
@@ -141,10 +141,15 @@ public class SecureShuffleUtils {
    */
   public static String toHex(byte[] ba) {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    PrintStream ps = new PrintStream(baos);
-    for (byte b : ba) {
-      ps.printf("%x", b);
+    String strHex = "";
+    try {
+      PrintStream ps = new PrintStream(baos, false, "UTF-8");
+      for (byte b : ba) {
+        ps.printf("%x", b);
+      }
+      strHex = baos.toString("UTF-8");
+    } catch (UnsupportedEncodingException e) {
     }
-    return baos.toString();
+    return strHex;
   }
 }

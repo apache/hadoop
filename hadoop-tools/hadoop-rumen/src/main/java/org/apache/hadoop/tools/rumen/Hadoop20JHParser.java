@@ -192,11 +192,6 @@ public class Hadoop20JHParser implements JobHistoryParser {
 
     do {
       addedLine = getOneLine();
-
-      if (addedLine == null) {
-        return sb.toString();
-      }
-
       sb.append("\n");
       sb.append(addedLine);
     } while (addedLine.length() < endLineString.length()

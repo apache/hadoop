@@ -25,48 +25,21 @@
 ##
 
 ###
-# Generic settings for MapReduce
-###
-
-#Override the log4j settings for all MR apps
-# Java property: hadoop.root.logger
-# export MAPRED_ROOT_LOGGER="INFO,console"
-
-# Override Hadoop's log directory & file
-# Java property: hadoop.log.dir
-# export HADOOP_MAPRED_LOG_DIR=""
-
-# Override Hadoop's pid directory
-# export HADOOP_MAPRED_PID_DIR=
-
-# Override Hadoop's identity string. $USER by default.
-# This is used in writing log and pid files, so keep that in mind!
-# Java property: hadoop.id.str
-# export HADOOP_MAPRED_IDENT_STRING=$USER
-
-# Override Hadoop's process priority
-# Note that sub-processes will also run at this level!
-# export HADOOP_MAPRED_NICENESS=0
-
-###
 # Job History Server specific parameters
 ###
 
 # Specify the max heapsize for the JobHistoryServer.  If no units are
 # given, it will be assumed to be in MB.
-# This value will be overridden by an Xmx setting specified in either YARN_OPTS,
-# HADOOP_OPTS, and/or HADOOP_JOB_HISTORYSERVER_OPTS.
+# This value will be overridden by an Xmx setting specified in HADOOP_OPTS,
+# and/or HADOOP_JOB_HISTORYSERVER_OPTS.
 # Default is the same as HADOOP_HEAPSIZE_MAX.
 #export HADOOP_JOB_HISTORYSERVER_HEAPSIZE=
 
 # Specify the JVM options to be used when starting the HistoryServer.
-# These options will be appended to the options specified as YARN_OPTS
-# and therefore may override any similar flags set in YARN_OPTS
+# These options will be appended to the options specified as HADOOP_OPTS
+# and therefore may override any similar flags set in HADOOP_OPTS
 #export HADOOP_JOB_HISTORYSERVER_OPTS=
 
 # Specify the log4j settings for the JobHistoryServer
 # Java property: hadoop.root.logger
 #export HADOOP_JHS_LOGGER=INFO,RFA
-
-
-

@@ -79,6 +79,25 @@ public interface FSDatasetMBean {
   public int getNumFailedVolumes();
 
   /**
+   * Returns each storage location that has failed, sorted.
+   * @return each storage location that has failed, sorted
+   */
+  String[] getFailedStorageLocations();
+
+  /**
+   * Returns the date/time of the last volume failure in milliseconds since
+   * epoch.
+   * @return date/time of last volume failure in milliseconds since epoch
+   */
+  long getLastVolumeFailureDate();
+
+  /**
+   * Returns an estimate of total capacity lost due to volume failures in bytes.
+   * @return estimate of total capacity lost in bytes
+   */
+  long getEstimatedCapacityLostTotal();
+
+  /**
    * Returns the amount of cache used by the datanode (in bytes).
    */
   public long getCacheUsed();

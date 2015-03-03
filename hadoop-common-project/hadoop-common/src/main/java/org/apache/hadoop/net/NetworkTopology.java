@@ -393,14 +393,14 @@ public class NetworkTopology {
    */
   public void add(Node node) {
     if (node==null) return;
-    String oldTopoStr = this.toString();
-    if( node instanceof InnerNode ) {
-      throw new IllegalArgumentException(
-        "Not allow to add an inner node: "+NodeBase.getPath(node));
-    }
     int newDepth = NodeBase.locationToDepth(node.getNetworkLocation()) + 1;
     netlock.writeLock().lock();
     try {
+      String oldTopoStr = this.toString();
+      if( node instanceof InnerNode ) {
+        throw new IllegalArgumentException(
+          "Not allow to add an inner node: "+NodeBase.getPath(node));
+      }
       if ((depthOfAllLeaves != -1) && (depthOfAllLeaves != newDepth)) {
         LOG.error("Error: can't add leaf node " + NodeBase.getPath(node) +
             " at depth " + newDepth + " to topology:\n" + oldTopoStr);
@@ -859,7 +859,7 @@ public class NetworkTopology {
     // Start off by initializing to off rack
     int weight = 2;
     if (reader != null) {
-      if (reader == node) {
+      if (reader.equals(node)) {
         weight = 0;
       } else if (isOnSameRack(reader, node)) {
         weight = 1;

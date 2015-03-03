@@ -66,7 +66,8 @@ public class SaslPropertiesResolver implements Configurable{
         CommonConfigurationKeysPublic.HADOOP_RPC_PROTECTION,
         QualityOfProtection.AUTHENTICATION.toString());
     for (int i=0; i < qop.length; i++) {
-      qop[i] = QualityOfProtection.valueOf(qop[i].toUpperCase(Locale.ENGLISH)).getSaslQop();
+      qop[i] = QualityOfProtection.valueOf(
+          StringUtils.toUpperCase(qop[i])).getSaslQop();
     }
     properties.put(Sasl.QOP, StringUtils.join(",", qop));
     properties.put(Sasl.SERVER_AUTH, "true");

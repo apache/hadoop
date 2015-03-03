@@ -35,7 +35,7 @@ import org.apache.hadoop.util.IdentityHashStore;
 public class FSDataInputStream extends DataInputStream
     implements Seekable, PositionedReadable, 
       ByteBufferReadable, HasFileDescriptor, CanSetDropBehind, CanSetReadahead,
-      HasEnhancedByteBufferAccess {
+      HasEnhancedByteBufferAccess, CanUnbuffer {
   /**
    * Map ByteBuffers that we have handed out to readers to ByteBufferPool 
    * objects
@@ -58,7 +58,7 @@ public class FSDataInputStream extends DataInputStream
    * @param desired offset to seek to
    */
   @Override
-  public synchronized void seek(long desired) throws IOException {
+  public void seek(long desired) throws IOException {
     ((Seekable)in).seek(desired);
   }
 
@@ -218,6 +218,16 @@ public class FSDataInputStream extends DataInputStream
             "that was not created by this stream.");
       }
       bufferPool.putBuffer(buffer);
+    }
+  }
+
+  @Override
+  public void unbuffer() {
+    try {
+      ((CanUnbuffer)in).unbuffer();
+    } catch (ClassCastException e) {
+      throw new UnsupportedOperationException("this stream does not " +
+          "support unbuffering.");
     }
   }
 }

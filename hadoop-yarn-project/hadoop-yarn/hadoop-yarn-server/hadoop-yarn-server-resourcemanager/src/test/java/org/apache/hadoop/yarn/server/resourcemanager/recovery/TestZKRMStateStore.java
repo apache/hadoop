@@ -103,7 +103,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
     public RMStateStore getRMStateStore() throws Exception {
       YarnConfiguration conf = new YarnConfiguration();
-      workingZnode = "/Test";
+      workingZnode = "/jira/issue/3077/rmstore";
       conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
       this.client = createClient();
@@ -161,7 +161,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       @Override
       public RMStateStore getRMStateStore() throws Exception {
         YarnConfiguration conf = new YarnConfiguration();
-        workingZnode = "/Test";
+        workingZnode = "/jira/issue/3077/rmstore";
         conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
         conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
         this.client = createClient();

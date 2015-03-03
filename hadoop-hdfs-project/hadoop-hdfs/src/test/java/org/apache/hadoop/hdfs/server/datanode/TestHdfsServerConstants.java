@@ -83,9 +83,6 @@ public class TestHdfsServerConstants {
     verifyStartupOptionResult("ROLLINGUPGRADE(ROLLBACK)",
                               StartupOption.ROLLINGUPGRADE,
                               RollingUpgradeStartupOption.ROLLBACK);
-    verifyStartupOptionResult("ROLLINGUPGRADE(DOWNGRADE)",
-                              StartupOption.ROLLINGUPGRADE,
-                              RollingUpgradeStartupOption.DOWNGRADE);
     verifyStartupOptionResult("ROLLINGUPGRADE(STARTED)",
         StartupOption.ROLLINGUPGRADE,
         RollingUpgradeStartupOption.STARTED);

@@ -21,10 +21,7 @@
 package org.apache.hadoop.metrics.ganglia;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketAddress;
-import java.net.SocketException;
+import java.net.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,13 +51,16 @@ public class GangliaContext extends AbstractMetricsContext {
   private static final String SLOPE_PROPERTY = "slope";
   private static final String TMAX_PROPERTY = "tmax";
   private static final String DMAX_PROPERTY = "dmax";
-    
+  private static final String MULTICAST_PROPERTY = "multicast";
+  private static final String MULTICAST_TTL_PROPERTY = "multicast.ttl";
+
   private static final String DEFAULT_UNITS = "";
   private static final String DEFAULT_SLOPE = "both";
   private static final int DEFAULT_TMAX = 60;
   private static final int DEFAULT_DMAX = 0;
   private static final int DEFAULT_PORT = 8649;
   private static final int BUFFER_SIZE = 1500;       // as per libgmond.c
+  private static final int DEFAULT_MULTICAST_TTL = 1;
 
   private final Log LOG = LogFactory.getLog(this.getClass());    
 
@@ -83,6 +83,8 @@ public class GangliaContext extends AbstractMetricsContext {
   private Map<String,String> slopeTable;
   private Map<String,String> tmaxTable;
   private Map<String,String> dmaxTable;
+  private boolean multicastEnabled;
+  private int multicastTtl;
     
   protected DatagramSocket datagramSocket;
     
@@ -104,11 +106,26 @@ public class GangliaContext extends AbstractMetricsContext {
     slopeTable = getAttributeTable(SLOPE_PROPERTY);
     tmaxTable  = getAttributeTable(TMAX_PROPERTY);
     dmaxTable  = getAttributeTable(DMAX_PROPERTY);
+    multicastEnabled = Boolean.parseBoolean(getAttribute(MULTICAST_PROPERTY));
+    String multicastTtlValue = getAttribute(MULTICAST_TTL_PROPERTY);
+    if (multicastEnabled) {
+      if (multicastTtlValue == null) {
+        multicastTtl = DEFAULT_MULTICAST_TTL;
+      } else {
+        multicastTtl = Integer.parseInt(multicastTtlValue);
+      }
+    }
         
     try {
-      datagramSocket = new DatagramSocket();
-    } catch (SocketException se) {
-      se.printStackTrace();
+      if (multicastEnabled) {
+        LOG.info("Enabling multicast for Ganglia with TTL " + multicastTtl);
+        datagramSocket = new MulticastSocket();
+        ((MulticastSocket) datagramSocket).setTimeToLive(multicastTtl);
+      } else {
+        datagramSocket = new DatagramSocket();
+      }
+    } catch (IOException e) {
+      LOG.error(e);
     }
   }
 

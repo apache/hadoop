@@ -38,6 +38,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.LineReader;
@@ -319,42 +320,42 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
     }
 
     for (int i = 0; i < args.length - (inputFilename == null ? 0 : 1); ++i) {
-      if ("-h".equals(args[i].toLowerCase())
-          || "-help".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-h", args[i])
+          || StringUtils.equalsIgnoreCase("-help", args[i])) {
         usage();
         return 0;
       }
 
-      if ("-c".equals(args[i].toLowerCase())
-          || "-collect-prefixes".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-c", args[i])
+          || StringUtils.equalsIgnoreCase("-collect-prefixes", args[i])) {
         collecting = true;
         continue;
       }
 
       // these control the job digest
-      if ("-write-job-trace".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-write-job-trace", args[i])) {
         ++i;
         jobTraceFilename = new Path(args[i]);
         continue;
       }
 
-      if ("-single-line-job-traces".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-single-line-job-traces", args[i])) {
         prettyprintTrace = false;
         continue;
       }
 
-      if ("-omit-task-details".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-omit-task-details", args[i])) {
         omitTaskDetails = true;
         continue;
       }
 
-      if ("-write-topology".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-write-topology", args[i])) {
         ++i;
         topologyFilename = new Path(args[i]);
         continue;
       }
 
-      if ("-job-digest-spectra".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-job-digest-spectra", args[i])) {
         ArrayList<Integer> values = new ArrayList<Integer>();
 
         ++i;
@@ -384,13 +385,13 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
         continue;
       }
 
-      if ("-d".equals(args[i].toLowerCase())
-          || "-debug".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-d", args[i])
+          || StringUtils.equalsIgnoreCase("-debug", args[i])) {
         debug = true;
         continue;
       }
 
-      if ("-spreads".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-spreads", args[i])) {
         int min = Integer.parseInt(args[i + 1]);
         int max = Integer.parseInt(args[i + 2]);
 
@@ -404,22 +405,22 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
       }
 
       // These control log-wide CDF outputs
-      if ("-delays".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-delays", args[i])) {
         delays = true;
         continue;
       }
 
-      if ("-runtimes".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-runtimes", args[i])) {
         runtimes = true;
         continue;
       }
 
-      if ("-tasktimes".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-tasktimes", args[i])) {
         collectTaskTimes = true;
         continue;
       }
 
-      if ("-v1".equals(args[i].toLowerCase())) {
+      if (StringUtils.equalsIgnoreCase("-v1", args[i])) {
         version = 1;
         continue;
       }
@@ -559,7 +560,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
     input =
         maybeUncompressedPath(new Path(inputDirectoryPath, currentFileName));
 
-    return input != null;
+    return true;
   }
 
   private String readInputLine() throws IOException {

@@ -25,6 +25,7 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -88,7 +89,7 @@ import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.htrace.Trace;
+import org.apache.htrace.Trace;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -236,7 +237,8 @@ public class Client {
    * @return the timeout period in milliseconds. -1 if no timeout value is set
    */
   final public static int getTimeout(Configuration conf) {
-    if (!conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, true)) {
+    if (!conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY,
+        CommonConfigurationKeys.IPC_CLIENT_PING_DEFAULT)) {
       return getPingInterval(conf);
     }
     return -1;
@@ -279,7 +281,7 @@ public class Client {
   /** Check the rpc response header. */
   void checkResponse(RpcResponseHeaderProto header) throws IOException {
     if (header == null) {
-      throw new IOException("Response is null.");
+      throw new EOFException("Response is null.");
     }
     if (header.hasClientId()) {
       // check client IDs

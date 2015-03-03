@@ -22,6 +22,8 @@ import com.google.common.base.Splitter;
 
 import java.text.NumberFormat;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -231,6 +233,9 @@ public abstract class ContainerId implements Comparable<ContainerId>{
     } catch (NumberFormatException n) {
       throw new IllegalArgumentException("Invalid ContainerId: "
           + containerIdStr, n);
+    } catch (NoSuchElementException e) {
+      throw new IllegalArgumentException("Invalid ContainerId: "
+          + containerIdStr, e);
     }
   }
 

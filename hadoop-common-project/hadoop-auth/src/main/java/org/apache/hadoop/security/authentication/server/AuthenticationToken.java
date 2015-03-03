@@ -14,14 +14,9 @@
 package org.apache.hadoop.security.authentication.server;
 
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authentication.util.AuthToken;
 
 import java.security.Principal;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.StringTokenizer;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -34,38 +29,21 @@ import javax.servlet.http.HttpServletRequest;
  * and received in HTTP client responses and requests as a HTTP cookie (this is
  * done by the {@link AuthenticationFilter}).
  */
-public class AuthenticationToken implements Principal {
+public class AuthenticationToken extends AuthToken {
 
   /**
    * Constant that identifies an anonymous request.
    */
   public static final AuthenticationToken ANONYMOUS = new AuthenticationToken();
 
-  private static final String ATTR_SEPARATOR = "&";
-  private static final String USER_NAME = "u";
-  private static final String PRINCIPAL = "p";
-  private static final String EXPIRES = "e";
-  private static final String TYPE = "t";
-
-  private final static Set<String> ATTRIBUTES =
-    new HashSet<String>(Arrays.asList(USER_NAME, PRINCIPAL, EXPIRES, TYPE));
-
-  private String userName;
-  private String principal;
-  private String type;
-  private long expires;
-  private String token;
-
   private AuthenticationToken() {
-    userName = null;
-    principal = null;
-    type = null;
-    expires = -1;
-    token = "ANONYMOUS";
-    generateToken();
+    super();
   }
 
-  private static final String ILLEGAL_ARG_MSG = " is NULL, empty or contains a '" + ATTR_SEPARATOR + "'";
+  private AuthenticationToken(AuthToken token) {
+    super(token.getUserName(), token.getName(), token.getType());
+    setExpires(token.getExpires());
+  }
 
   /**
    * Creates an authentication token.
@@ -77,25 +55,7 @@ public class AuthenticationToken implements Principal {
    * (<code>System.currentTimeMillis() + validityPeriod</code>).
    */
   public AuthenticationToken(String userName, String principal, String type) {
-    checkForIllegalArgument(userName, "userName");
-    checkForIllegalArgument(principal, "principal");
-    checkForIllegalArgument(type, "type");
-    this.userName = userName;
-    this.principal = principal;
-    this.type = type;
-    this.expires = -1;
-  }
-  
-  /**
-   * Check if the provided value is invalid. Throw an error if it is invalid, NOP otherwise.
-   * 
-   * @param value the value to check.
-   * @param name the parameter name to use in an error message if the value is invalid.
-   */
-  private static void checkForIllegalArgument(String value, String name) {
-    if (value == null || value.length() == 0 || value.contains(ATTR_SEPARATOR)) {
-      throw new IllegalArgumentException(name + ILLEGAL_ARG_MSG);
-    }
+    super(userName, principal, type);
   }
 
   /**
@@ -105,79 +65,17 @@ public class AuthenticationToken implements Principal {
    */
   public void setExpires(long expires) {
     if (this != AuthenticationToken.ANONYMOUS) {
-      this.expires = expires;
-      generateToken();
+      super.setExpires(expires);
     }
   }
 
   /**
-   * Generates the token.
-   */
-  private void generateToken() {
-    StringBuffer sb = new StringBuffer();
-    sb.append(USER_NAME).append("=").append(getUserName()).append(ATTR_SEPARATOR);
-    sb.append(PRINCIPAL).append("=").append(getName()).append(ATTR_SEPARATOR);
-    sb.append(TYPE).append("=").append(getType()).append(ATTR_SEPARATOR);
-    sb.append(EXPIRES).append("=").append(getExpires());
-    token = sb.toString();
-  }
-
-  /**
-   * Returns the user name.
+   * Returns true if the token has expired.
    *
-   * @return the user name.
-   */
-  public String getUserName() {
-    return userName;
-  }
-
-  /**
-   * Returns the principal name (this method name comes from the JDK {@link Principal} interface).
-   *
-   * @return the principal name.
-   */
-  @Override
-  public String getName() {
-    return principal;
-  }
-
-  /**
-   * Returns the authentication mechanism of the token.
-   *
-   * @return the authentication mechanism of the token.
-   */
-  public String getType() {
-    return type;
-  }
-
-  /**
-   * Returns the expiration time of the token.
-   *
-   * @return the expiration time of the token, in milliseconds since Epoc.
-   */
-  public long getExpires() {
-    return expires;
-  }
-
-  /**
-   * Returns if the token has expired.
-   *
-   * @return if the token has expired.
+   * @return true if the token has expired.
    */
   public boolean isExpired() {
-    return getExpires() != -1 && System.currentTimeMillis() > getExpires();
-  }
-
-  /**
-   * Returns the string representation of the token.
-   * <p>
-   * This string representation is parseable by the {@link #parse} method.
-   *
-   * @return the string representation of the token.
-   */
-  @Override
-  public String toString() {
-    return token;
+    return super.isExpired();
   }
 
   /**
@@ -191,40 +89,6 @@ public class AuthenticationToken implements Principal {
    * an authentication token.
    */
   public static AuthenticationToken parse(String tokenStr) throws AuthenticationException {
-    Map<String, String> map = split(tokenStr);
-    if (!map.keySet().equals(ATTRIBUTES)) {
-      throw new AuthenticationException("Invalid token string, missing attributes");
-    }
-    long expires = Long.parseLong(map.get(EXPIRES));
-    AuthenticationToken token = new AuthenticationToken(map.get(USER_NAME), map.get(PRINCIPAL), map.get(TYPE));
-    token.setExpires(expires);
-    return token;
+    return new AuthenticationToken(AuthToken.parse(tokenStr));
   }
-
-  /**
-   * Splits the string representation of a token into attributes pairs.
-   *
-   * @param tokenStr string representation of a token.
-   *
-   * @return a map with the attribute pairs of the token.
-   *
-   * @throws AuthenticationException thrown if the string representation of the token could not be broken into
-   * attribute pairs.
-   */
-  private static Map<String, String> split(String tokenStr) throws AuthenticationException {
-    Map<String, String> map = new HashMap<String, String>();
-    StringTokenizer st = new StringTokenizer(tokenStr, ATTR_SEPARATOR);
-    while (st.hasMoreTokens()) {
-      String part = st.nextToken();
-      int separator = part.indexOf('=');
-      if (separator == -1) {
-        throw new AuthenticationException("Invalid authentication token");
-      }
-      String key = part.substring(0, separator);
-      String value = part.substring(separator + 1);
-      map.put(key, value);
-    }
-    return map;
-  }
-
 }

@@ -248,7 +248,7 @@ public class QuasiMonteCarlo extends Configured implements Tool {
   public static BigDecimal estimatePi(int numMaps, long numPoints,
       Path tmpDir, Configuration conf
       ) throws IOException, ClassNotFoundException, InterruptedException {
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     //setup job conf
     job.setJobName(QuasiMonteCarlo.class.getSimpleName());
     job.setJarByClass(QuasiMonteCarlo.class);

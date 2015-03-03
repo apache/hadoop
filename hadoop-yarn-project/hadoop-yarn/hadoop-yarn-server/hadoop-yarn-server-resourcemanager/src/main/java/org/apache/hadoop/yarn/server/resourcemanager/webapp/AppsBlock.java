@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -45,12 +46,13 @@ import com.google.inject.Inject;
 class AppsBlock extends HtmlBlock {
   final ConcurrentMap<ApplicationId, RMApp> apps;
   private final Configuration conf;
-
+  final ResourceManager rm;
   @Inject
   AppsBlock(ResourceManager rm, ViewContext ctx, Configuration conf) {
     super(ctx);
     apps = rm.getRMContext().getRMApps();
     this.conf = conf;
+    this.rm = rm;
   }
 
   @Override public void render(Block html) {
@@ -65,7 +67,7 @@ class AppsBlock extends HtmlBlock {
             th(".queue", "Queue").
             th(".starttime", "StartTime").
             th(".finishtime", "FinishTime").
-            th(".state", "State").
+            th(".state", "YarnApplicationState").
             th(".finalstatus", "FinalStatus").
             th(".progress", "Progress").
             th(".ui", "Tracking UI")._()._().
@@ -84,7 +86,7 @@ class AppsBlock extends HtmlBlock {
       if (reqAppStates != null && !reqAppStates.contains(app.createApplicationState())) {
         continue;
       }
-      AppInfo appInfo = new AppInfo(app, true, WebAppUtils.getHttpSchemePrefix(conf));
+      AppInfo appInfo = new AppInfo(rm, app, true, WebAppUtils.getHttpSchemePrefix(conf));
       String percent = String.format("%.1f", appInfo.getProgress());
       //AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData.append("[\"<a href='")
@@ -101,7 +103,8 @@ class AppsBlock extends HtmlBlock {
       .append(appInfo.getStartTime()).append("\",\"")
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
-      .append(appInfo.getFinalStatus()).append("\",\"")
+      .append(appInfo.getFinalStatus() == FinalApplicationStatus.UNDEFINED ?
+          "N/A" : appInfo.getFinalStatus()).append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")

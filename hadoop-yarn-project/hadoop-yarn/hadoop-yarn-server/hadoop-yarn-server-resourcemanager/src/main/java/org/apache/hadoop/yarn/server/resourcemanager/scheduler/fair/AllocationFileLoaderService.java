@@ -201,7 +201,7 @@ public class AllocationFileLoaderService extends AbstractService {
    * @throws ParserConfigurationException if XML parser is misconfigured.
    * @throws SAXException if config file is malformed.
    */
-  public synchronized void reloadAllocations() throws IOException,
+  public void reloadAllocations() throws IOException,
       ParserConfigurationException, SAXException, AllocationConfigurationException {
     if (allocFile == null) {
       return;

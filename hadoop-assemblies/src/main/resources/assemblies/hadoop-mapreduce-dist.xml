@@ -42,6 +42,11 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
+      <directory>shellprofile.d</directory>
+      <outputDirectory>libexec/shellprofile.d</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>bin</directory>
       <outputDirectory>sbin</outputDirectory>
       <includes>
@@ -190,6 +195,7 @@
         <exclude>org.slf4j:slf4j-api</exclude>
         <exclude>org.slf4j:slf4j-log4j12</exclude>
         <exclude>org.hsqldb:hsqldb</exclude>
+        <exclude>jdiff:jdiff:jar</exclude>
       </excludes>
     </dependencySet>
     <dependencySet>

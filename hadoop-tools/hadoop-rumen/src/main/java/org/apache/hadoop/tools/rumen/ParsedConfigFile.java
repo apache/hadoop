@@ -25,6 +25,8 @@ import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+import java.nio.charset.Charset;
+
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.ParserConfigurationException;
@@ -44,6 +46,7 @@ class ParsedConfigFile {
       Pattern.compile("_(job_[0-9]+_[0-9]+)_");
   private static final Pattern heapPattern =
       Pattern.compile("-Xmx([0-9]+)([mMgG])");
+  private static final Charset UTF_8 = Charset.forName("UTF-8");
 
   final int heapMegabytes;
 
@@ -100,7 +103,7 @@ class ParsedConfigFile {
     }
 
     try {
-      InputStream is = new ByteArrayInputStream(xmlString.getBytes());
+      InputStream is = new ByteArrayInputStream(xmlString.getBytes(UTF_8));
 
       DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 
@@ -151,7 +154,7 @@ class ParsedConfigFile {
         
         properties.setProperty(attr, value);
 
-        if ("mapred.child.java.opts".equals(attr) && value != null) {
+        if ("mapred.child.java.opts".equals(attr)) {
           Matcher matcher = heapPattern.matcher(value);
           if (matcher.find()) {
             String heapSize = matcher.group(1);
@@ -164,11 +167,11 @@ class ParsedConfigFile {
           }
         }
 
-        if (MRJobConfig.QUEUE_NAME.equals(attr) && value != null) {
+        if (MRJobConfig.QUEUE_NAME.equals(attr)) {
           queue = value;
         }
 
-        if (MRJobConfig.JOB_NAME.equals(attr) && value != null) {
+        if (MRJobConfig.JOB_NAME.equals(attr)) {
           jobName = value;
         }
 

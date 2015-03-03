@@ -78,7 +78,7 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
     if (rollingInterval <= activationDelay * 2) {
       throw new IllegalArgumentException(
           YarnConfiguration.RM_NMTOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS
-              + " should be more than 2 X "
+              + " should be more than 3 X "
               + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS);
     }
     appAttemptToNodeKeyMap =

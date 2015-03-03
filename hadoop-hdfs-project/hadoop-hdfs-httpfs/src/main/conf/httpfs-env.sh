@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,40 +14,59 @@
 #
 
 # Set httpfs specific environment variables here.
-
-# Settings for the Embedded Tomcat that runs HttpFS
-# Java System properties for HttpFS should be specified in this variable
 #
-# export CATALINA_OPTS=
-
-# HttpFS logs directory
+# hadoop-env.sh is read prior to this file.
 #
-# export HTTPFS_LOG=${HTTPFS_HOME}/logs
 
-# HttpFS temporary directory
+# HTTPFS temporary directory
 #
-# export HTTPFS_TEMP=${HTTPFS_HOME}/temp
+# export HTTPFS_TEMP=${HADOOP_PREFIX}/temp
 
-# The HTTP port used by HttpFS
+# The HTTP port used by HTTPFS
 #
 # export HTTPFS_HTTP_PORT=14000
 
-# The Admin port used by HttpFS
+# The Admin port used by HTTPFS
 #
-# export HTTPFS_ADMIN_PORT=`expr ${HTTPFS_HTTP_PORT} + 1`
+# export HTTPFS_ADMIN_PORT=$((HTTPFS_HTTP_PORT + 1))
+
+# The maximum number of Tomcat handler threads
+#
+# export HTTPFS_MAX_THREADS=1000
 
 # The hostname HttpFS server runs on
 #
-# export HTTPFS_HTTP_HOSTNAME=`hostname -f`
-
-# Indicates if HttpFS is using SSL
-#
-# export HTTPFS_SSL_ENABLED=false
+# export HTTPFS_HTTP_HOSTNAME=$(hostname -f)
 
 # The location of the SSL keystore if using SSL
 #
 # export HTTPFS_SSL_KEYSTORE_FILE=${HOME}/.keystore
 
+#
 # The password of the SSL keystore if using SSL
 #
 # export HTTPFS_SSL_KEYSTORE_PASS=password
+
+##
+## Tomcat specific settings
+##
+#
+# Location of tomcat
+#
+# export HTTPFS_CATALINA_HOME=${HADOOP_PREFIX}/share/hadoop/httpfs/tomcat
+
+# Java System properties for HTTPFS should be specified in this variable.
+# The java.library.path and hadoop.home.dir properties are automatically
+# configured.  In order to supplement java.library.path,
+# one should add to the JAVA_LIBRARY_PATH env var.
+#
+# export CATALINA_OPTS=
+
+# PID file
+#
+# export CATALINA_PID=${HADOOP_PID_DIR}/hadoop-${HADOOP_IDENT_STRING}-httpfs.pid
+
+# Output file
+#
+# export CATALINA_OUT=${HTTPFS_LOG}/hadoop-${HADOOP_IDENT_STRING}-httpfs-${HOSTNAME}.out
+

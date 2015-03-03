@@ -66,7 +66,7 @@ public class ReduceAttempt20LineHistoryEventEmitter
         String shuffleFinish = line.get("SHUFFLE_FINISHED");
         String sortFinish = line.get("SORT_FINISHED");
 
-        if (finishTime != null && shuffleFinish != null && sortFinish != null
+        if (shuffleFinish != null && sortFinish != null
             && "success".equalsIgnoreCase(status)) {
           ReduceAttempt20LineHistoryEventEmitter that =
               (ReduceAttempt20LineHistoryEventEmitter) thatg;

@@ -19,9 +19,7 @@ package org.apache.hadoop.conf;
 
 import org.junit.Assert;
 import org.junit.Test;
-
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
 public class TestJobConf {
@@ -87,8 +85,10 @@ public class TestJobConf {
     configuration.set("mapred.task.maxvmem" , String.valueOf(-1));
     configuration.set(MRJobConfig.MAP_MEMORY_MB,"-1");
     configuration.set(MRJobConfig.REDUCE_MEMORY_MB,"-1");
-    Assert.assertEquals(configuration.getMemoryForMapTask(),-1);
-    Assert.assertEquals(configuration.getMemoryForReduceTask(),-1);    
+    Assert.assertEquals(configuration.getMemoryForMapTask(),
+        MRJobConfig.DEFAULT_MAP_MEMORY_MB);
+    Assert.assertEquals(configuration.getMemoryForReduceTask(),
+        MRJobConfig.DEFAULT_REDUCE_MEMORY_MB);
 
     configuration = new JobConf();
     configuration.set("mapred.task.maxvmem" , String.valueOf(2*1024 * 1024));
@@ -96,7 +96,6 @@ public class TestJobConf {
     configuration.set(MRJobConfig.REDUCE_MEMORY_MB, "3");
     Assert.assertEquals(configuration.getMemoryForMapTask(),2);
     Assert.assertEquals(configuration.getMemoryForReduceTask(),2);
-    
   }
 
   /**
@@ -106,7 +105,7 @@ public class TestJobConf {
   @Test
   public void testNegativeValueForTaskVmem() {
     JobConf configuration = new JobConf();
-    
+
     configuration.set(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, "-3");
     Assert.assertEquals(MRJobConfig.DEFAULT_MAP_MEMORY_MB,
         configuration.getMemoryForMapTask());
@@ -129,10 +128,12 @@ public class TestJobConf {
         
     configuration.set(MRJobConfig.MAP_MEMORY_MB, "-5");
     configuration.set(MRJobConfig.REDUCE_MEMORY_MB, "-6");
-    Assert.assertEquals(-5, configuration.getMemoryForMapTask());
-    Assert.assertEquals(-6, configuration.getMemoryForReduceTask());
+    Assert.assertEquals(MRJobConfig.DEFAULT_MAP_MEMORY_MB,
+        configuration.getMemoryForMapTask());
+    Assert.assertEquals(MRJobConfig.DEFAULT_REDUCE_MEMORY_MB,
+        configuration.getMemoryForReduceTask());
   }
-  
+
   /**
    *   Test deprecated accessor and mutator method for mapred.task.maxvmem
    */
@@ -144,13 +145,13 @@ public class TestJobConf {
     configuration.set(MRJobConfig.MAP_MEMORY_MB, String.valueOf(300));
     configuration.set(MRJobConfig.REDUCE_MEMORY_MB, String.valueOf(-1));
     Assert.assertEquals(
-      configuration.getMaxVirtualMemoryForTask(), 300 * 1024 * 1024);
+      configuration.getMaxVirtualMemoryForTask(), 1024 * 1024 * 1024);
 
     configuration = new JobConf();
     configuration.set(MRJobConfig.MAP_MEMORY_MB, String.valueOf(-1));
     configuration.set(MRJobConfig.REDUCE_MEMORY_MB, String.valueOf(200));
     Assert.assertEquals(
-      configuration.getMaxVirtualMemoryForTask(), 200 * 1024 * 1024);
+      configuration.getMaxVirtualMemoryForTask(), 1024 * 1024 * 1024);
 
     configuration = new JobConf();
     configuration.set(MRJobConfig.MAP_MEMORY_MB, String.valueOf(-1));

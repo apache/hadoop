@@ -36,12 +36,14 @@ import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext;
@@ -52,7 +54,10 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.AclFeatureProto;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrCompactProto;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrFeatureProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.QuotaByStorageTypeEntryProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.QuotaByStorageTypeFeatureProto;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.base.Preconditions;
@@ -141,6 +146,18 @@ public final class FSImageFormatPBINode {
       return b.build();
     }
 
+    public static ImmutableList<QuotaByStorageTypeEntry> loadQuotaByStorageTypeEntries(
+      QuotaByStorageTypeFeatureProto proto) {
+      ImmutableList.Builder<QuotaByStorageTypeEntry> b = ImmutableList.builder();
+      for (QuotaByStorageTypeEntryProto quotaEntry : proto.getQuotasList()) {
+        StorageType type = PBHelper.convertStorageType(quotaEntry.getStorageType());
+        long quota = quotaEntry.getQuota();
+        b.add(new QuotaByStorageTypeEntry.Builder().setStorageType(type)
+            .setQuota(quota).build());
+      }
+      return b.build();
+    }
+
     public static INodeDirectory loadINodeDirectory(INodeSection.INode n,
         LoaderContext state) {
       assert n.getType() == INodeSection.INode.Type.DIRECTORY;
@@ -150,10 +167,33 @@ public final class FSImageFormatPBINode {
           state.getStringTable());
       final INodeDirectory dir = new INodeDirectory(n.getId(), n.getName()
           .toByteArray(), permissions, d.getModificationTime());
-
       final long nsQuota = d.getNsQuota(), dsQuota = d.getDsQuota();
       if (nsQuota >= 0 || dsQuota >= 0) {
-        dir.addDirectoryWithQuotaFeature(nsQuota, dsQuota);
+        dir.addDirectoryWithQuotaFeature(new DirectoryWithQuotaFeature.Builder().
+            nameSpaceQuota(nsQuota).storageSpaceQuota(dsQuota).build());
+      }
+      EnumCounters<StorageType> typeQuotas = null;
+      if (d.hasTypeQuotas()) {
+        ImmutableList<QuotaByStorageTypeEntry> qes =
+            loadQuotaByStorageTypeEntries(d.getTypeQuotas());
+        typeQuotas = new EnumCounters<StorageType>(StorageType.class,
+            HdfsConstants.QUOTA_RESET);
+        for (QuotaByStorageTypeEntry qe : qes) {
+          if (qe.getQuota() >= 0 && qe.getStorageType() != null &&
+              qe.getStorageType().supportTypeQuota()) {
+            typeQuotas.set(qe.getStorageType(), qe.getQuota());
+          }
+        }
+
+        if (typeQuotas.anyGreaterOrEqual(0)) {
+          DirectoryWithQuotaFeature q = dir.getDirectoryWithQuotaFeature();
+          if (q == null) {
+            dir.addDirectoryWithQuotaFeature(new DirectoryWithQuotaFeature.
+                Builder().typeQuotas(typeQuotas).build());
+          } else {
+            q.setQuota(typeQuotas);
+          }
+        }
       }
 
       if (d.hasAcl()) {
@@ -170,7 +210,7 @@ public final class FSImageFormatPBINode {
 
     public static void updateBlocksMap(INodeFile file, BlockManager bm) {
       // Add file->block mapping
-      final BlockInfo[] blocks = file.getBlocks();
+      final BlockInfoContiguous[] blocks = file.getBlocks();
       if (blocks != null) {
         for (int i = 0; i < blocks.length; i++) {
           file.setBlock(i, bm.addBlockCollection(blocks[i], file));
@@ -282,9 +322,9 @@ public final class FSImageFormatPBINode {
       short replication = (short) f.getReplication();
       LoaderContext state = parent.getLoaderContext();
 
-      BlockInfo[] blocks = new BlockInfo[bp.size()];
+      BlockInfoContiguous[] blocks = new BlockInfoContiguous[bp.size()];
       for (int i = 0, e = bp.size(); i < e; ++i) {
-        blocks[i] = new BlockInfo(PBHelper.convert(bp.get(i)), replication);
+        blocks[i] = new BlockInfoContiguous(PBHelper.convert(bp.get(i)), replication);
       }
       final PermissionStatus permissions = loadPermission(f.getPermission(),
           parent.getLoaderContext().getStringTable());
@@ -310,9 +350,9 @@ public final class FSImageFormatPBINode {
         INodeSection.FileUnderConstructionFeature uc = f.getFileUC();
         file.toUnderConstruction(uc.getClientName(), uc.getClientMachine());
         if (blocks.length > 0) {
-          BlockInfo lastBlk = file.getLastBlock();
+          BlockInfoContiguous lastBlk = file.getLastBlock();
           // replace the last block of file
-          file.setBlock(file.numBlocks() - 1, new BlockInfoUnderConstruction(
+          file.setBlock(file.numBlocks() - 1, new BlockInfoContiguousUnderConstruction(
               lastBlk, replication));
         }
       }
@@ -335,11 +375,15 @@ public final class FSImageFormatPBINode {
 
     private void loadRootINode(INodeSection.INode p) {
       INodeDirectory root = loadINodeDirectory(p, parent.getLoaderContext());
-      final Quota.Counts q = root.getQuotaCounts();
-      final long nsQuota = q.get(Quota.NAMESPACE);
-      final long dsQuota = q.get(Quota.DISKSPACE);
+      final QuotaCounts q = root.getQuotaCounts();
+      final long nsQuota = q.getNameSpace();
+      final long dsQuota = q.getStorageSpace();
       if (nsQuota != -1 || dsQuota != -1) {
         dir.rootDir.getDirectoryWithQuotaFeature().setQuota(nsQuota, dsQuota);
+      }
+      final EnumCounters<StorageType> typeQuotas = q.getTypeSpaces();
+      if (typeQuotas.anyGreaterOrEqual(0)) {
+        dir.rootDir.getDirectoryWithQuotaFeature().setQuota(typeQuotas);
       }
       dir.rootDir.cloneModificationTime(root);
       dir.rootDir.clonePermissionStatus(root);
@@ -399,6 +443,22 @@ public final class FSImageFormatPBINode {
       return b;
     }
 
+    private static QuotaByStorageTypeFeatureProto.Builder
+        buildQuotaByStorageTypeEntries(QuotaCounts q) {
+      QuotaByStorageTypeFeatureProto.Builder b =
+          QuotaByStorageTypeFeatureProto.newBuilder();
+      for (StorageType t: StorageType.getTypesSupportingQuota()) {
+        if (q.getTypeSpace(t) >= 0) {
+          QuotaByStorageTypeEntryProto.Builder eb =
+              QuotaByStorageTypeEntryProto.newBuilder().
+              setStorageType(PBHelper.convertStorageType(t)).
+              setQuota(q.getTypeSpace(t));
+          b.addQuotas(eb);
+        }
+      }
+      return b;
+    }
+
     public static INodeSection.INodeFile.Builder buildINodeFile(
         INodeFileAttributes file, final SaverContext state) {
       INodeSection.INodeFile.Builder b = INodeSection.INodeFile.newBuilder()
@@ -422,12 +482,16 @@ public final class FSImageFormatPBINode {
 
     public static INodeSection.INodeDirectory.Builder buildINodeDirectory(
         INodeDirectoryAttributes dir, final SaverContext state) {
-      Quota.Counts quota = dir.getQuotaCounts();
+      QuotaCounts quota = dir.getQuotaCounts();
       INodeSection.INodeDirectory.Builder b = INodeSection.INodeDirectory
           .newBuilder().setModificationTime(dir.getModificationTime())
-          .setNsQuota(quota.get(Quota.NAMESPACE))
-          .setDsQuota(quota.get(Quota.DISKSPACE))
+          .setNsQuota(quota.getNameSpace())
+          .setDsQuota(quota.getStorageSpace())
           .setPermission(buildPermissionStatus(dir, state.getStringMap()));
+
+      if (quota.getTypeSpaces().anyGreaterOrEqual(0)) {
+        b.setTypeQuotas(buildQuotaByStorageTypeEntries(quota));
+      }
 
       AclFeature f = dir.getAclFeature();
       if (f != null) {

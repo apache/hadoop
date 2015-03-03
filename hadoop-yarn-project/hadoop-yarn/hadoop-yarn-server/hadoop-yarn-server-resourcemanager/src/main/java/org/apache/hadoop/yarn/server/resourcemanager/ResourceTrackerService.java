@@ -209,14 +209,14 @@ public class ResourceTrackerService extends AbstractService implements
     if (rmApp == null) {
       LOG.error("Received finished container : "
           + containerStatus.getContainerId()
-          + "for unknown application " + appAttemptId.getApplicationId()
+          + " for unknown application " + appAttemptId.getApplicationId()
           + " Skipping.");
       return;
     }
 
     if (rmApp.getApplicationSubmissionContext().getUnmanagedAM()) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Ignoring container completion status for unmanaged AM"
+        LOG.debug("Ignoring container completion status for unmanaged AM "
             + rmApp.getApplicationId());
       }
       return;
@@ -312,9 +312,12 @@ public class ResourceTrackerService extends AbstractService implements
     } else {
       LOG.info("Reconnect from the node at: " + host);
       this.nmLivelinessMonitor.unregister(nodeId);
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMNodeReconnectEvent(nodeId, rmNode,
-              request.getRunningApplications()));
+      this.rmContext
+          .getDispatcher()
+          .getEventHandler()
+          .handle(
+              new RMNodeReconnectEvent(nodeId, rmNode, request
+                  .getRunningApplications(), request.getNMContainerStatuses()));
     }
     // On every node manager register we will be clearing NMToken keys if
     // present for any running application.

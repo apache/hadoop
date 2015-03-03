@@ -139,10 +139,10 @@ public class CountersBlock extends HtmlBlock {
           Counter mc = mg == null ? null : mg.findCounter(counter.getName());
           Counter rc = rg == null ? null : rg.findCounter(counter.getName());
           groupRow.
-            td(mc == null ? "0" : String.valueOf(mc.getValue())).
-            td(rc == null ? "0" : String.valueOf(rc.getValue()));
+            td(mc == null ? "0" : String.format("%,d", mc.getValue())).
+            td(rc == null ? "0" : String.format("%,d", rc.getValue()));
         }
-        groupRow.td(String.valueOf(counter.getValue()))._();
+        groupRow.td(String.format("%,d", counter.getValue()))._();
       }
       group._()._()._()._();
     }

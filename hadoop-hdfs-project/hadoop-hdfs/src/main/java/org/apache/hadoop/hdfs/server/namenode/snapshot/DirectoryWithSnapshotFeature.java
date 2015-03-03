@@ -28,6 +28,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.AclStorage;
 import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
@@ -38,7 +39,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
-import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.hdfs.util.Diff.Container;
@@ -70,7 +71,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
      * Replace the given child from the created/deleted list.
      * @return true if the child is replaced; false if the child is not found.
      */
-    private final boolean replace(final ListType type,
+    private boolean replace(final ListType type,
         final INode oldChild, final INode newChild) {
       final List<INode> list = getList(type);
       final int i = search(list, oldChild.getLocalNameBytes());
@@ -83,7 +84,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       return true;
     }
 
-    private final boolean removeChild(ListType type, final INode child) {
+    private boolean removeChild(ListType type, final INode child) {
       final List<INode> list = getList(type);
       final int i = searchIndex(type, child.getLocalNameBytes());
       if (i >= 0 && list.get(i) == child) {
@@ -94,14 +95,16 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     }
 
     /** clear the created list */
-    private Quota.Counts destroyCreatedList(final INodeDirectory currentINode,
+    private QuotaCounts destroyCreatedList(
+        final BlockStoragePolicySuite bsps,
+        final INodeDirectory currentINode,
         final BlocksMapUpdateInfo collectedBlocks,
         final List<INode> removedINodes) {
-      Quota.Counts counts = Quota.Counts.newInstance();
+      QuotaCounts counts = new QuotaCounts.Builder().build();
       final List<INode> createdList = getList(ListType.CREATED);
       for (INode c : createdList) {
-        c.computeQuotaUsage(counts, true);
-        c.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+        c.computeQuotaUsage(bsps, counts, true);
+        c.destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
         // c should be contained in the children list, remove it
         currentINode.removeChild(c);
       }
@@ -110,14 +113,15 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     }
 
     /** clear the deleted list */
-    private Quota.Counts destroyDeletedList(
+    private QuotaCounts destroyDeletedList(
+        final BlockStoragePolicySuite bsps,
         final BlocksMapUpdateInfo collectedBlocks,
         final List<INode> removedINodes) {
-      Quota.Counts counts = Quota.Counts.newInstance();
+      QuotaCounts counts = new QuotaCounts.Builder().build();
       final List<INode> deletedList = getList(ListType.DELETED);
       for (INode d : deletedList) {
-        d.computeQuotaUsage(counts, false);
-        d.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+        d.computeQuotaUsage(bsps, counts, false);
+        d.destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
       }
       deletedList.clear();
       return counts;
@@ -204,18 +208,19 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     }
 
     @Override
-    Quota.Counts combinePosteriorAndCollectBlocks(
+    QuotaCounts combinePosteriorAndCollectBlocks(
+        final BlockStoragePolicySuite bsps,
         final INodeDirectory currentDir, final DirectoryDiff posterior,
         final BlocksMapUpdateInfo collectedBlocks,
         final List<INode> removedINodes) {
-      final Quota.Counts counts = Quota.Counts.newInstance();
+      final QuotaCounts counts = new QuotaCounts.Builder().build();
       diff.combinePosterior(posterior.diff, new Diff.Processor<INode>() {
         /** Collect blocks for deleted files. */
         @Override
         public void process(INode inode) {
           if (inode != null) {
-            inode.computeQuotaUsage(counts, false);
-            inode.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+            inode.computeQuotaUsage(bsps, counts, false);
+            inode.destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
           }
         }
       });
@@ -313,11 +318,12 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     }
 
     @Override
-    Quota.Counts destroyDiffAndCollectBlocks(INodeDirectory currentINode,
+    QuotaCounts destroyDiffAndCollectBlocks(
+        BlockStoragePolicySuite bsps, INodeDirectory currentINode,
         BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
       // this diff has been deleted
-      Quota.Counts counts = Quota.Counts.newInstance();
-      counts.add(diff.destroyDeletedList(collectedBlocks, removedINodes));
+      QuotaCounts counts = new QuotaCounts.Builder().build();
+      counts.add(diff.destroyDeletedList(bsps, collectedBlocks, removedINodes));
       INodeDirectoryAttributes snapshotINode = getSnapshotINode();
       if (snapshotINode != null && snapshotINode.getAclFeature() != null) {
         AclStorage.removeAclFeature(snapshotINode.getAclFeature());
@@ -401,7 +407,8 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
   /**
    * Destroy a subtree under a DstReference node.
    */
-  public static void destroyDstSubtree(INode inode, final int snapshot,
+  public static void destroyDstSubtree(
+      final BlockStoragePolicySuite bsps, INode inode, final int snapshot,
       final int prior, final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) throws QuotaExceededException {
     Preconditions.checkArgument(prior != Snapshot.NO_SNAPSHOT_ID);
@@ -410,15 +417,14 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
           && snapshot != Snapshot.CURRENT_STATE_ID) {
         // this inode has been renamed before the deletion of the DstReference
         // subtree
-        inode.cleanSubtree(snapshot, prior, collectedBlocks, removedINodes,
-            true);
+        inode.cleanSubtree(bsps, snapshot, prior, collectedBlocks, removedINodes);
       } else { 
         // for DstReference node, continue this process to its subtree
-        destroyDstSubtree(inode.asReference().getReferredINode(), snapshot,
+        destroyDstSubtree(bsps, inode.asReference().getReferredINode(), snapshot,
             prior, collectedBlocks, removedINodes);
       }
     } else if (inode.isFile()) {
-      inode.cleanSubtree(snapshot, prior, collectedBlocks, removedINodes, true);
+      inode.cleanSubtree(bsps, snapshot, prior, collectedBlocks, removedINodes);
     } else if (inode.isDirectory()) {
       Map<INode, INode> excludedNodes = null;
       INodeDirectory dir = inode.asDirectory();
@@ -432,12 +438,12 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         }
         
         if (snapshot != Snapshot.CURRENT_STATE_ID) {
-          diffList.deleteSnapshotDiff(snapshot, prior, dir, collectedBlocks,
-              removedINodes, true);
+          diffList.deleteSnapshotDiff(bsps, snapshot, prior, dir, collectedBlocks,
+              removedINodes);
         }
         priorDiff = diffList.getDiffById(prior);
         if (priorDiff != null && priorDiff.getSnapshotId() == prior) {
-          priorDiff.diff.destroyCreatedList(dir, collectedBlocks,
+          priorDiff.diff.destroyCreatedList(bsps, dir, collectedBlocks,
               removedINodes);
         }
       }
@@ -445,7 +451,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         if (excludedNodes != null && excludedNodes.containsKey(child)) {
           continue;
         }
-        destroyDstSubtree(child, snapshot, prior, collectedBlocks,
+        destroyDstSubtree(bsps, child, snapshot, prior, collectedBlocks,
             removedINodes);
       }
     }
@@ -454,18 +460,19 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
   /**
    * Clean an inode while we move it from the deleted list of post to the
    * deleted list of prior.
+   * @param bsps The block storage policy suite.
    * @param inode The inode to clean.
    * @param post The post snapshot.
    * @param prior The id of the prior snapshot.
    * @param collectedBlocks Used to collect blocks for later deletion.
    * @return Quota usage update.
    */
-  private static Quota.Counts cleanDeletedINode(INode inode,
+  private static QuotaCounts cleanDeletedINode(
+      final BlockStoragePolicySuite bsps, INode inode,
       final int post, final int prior,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final boolean countDiffChange)
-      throws QuotaExceededException {
-    Quota.Counts counts = Quota.Counts.newInstance();
+      final List<INode> removedINodes) {
+    QuotaCounts counts = new QuotaCounts.Builder().build();
     Deque<INode> queue = new ArrayDeque<INode>();
     queue.addLast(inode);
     while (!queue.isEmpty()) {
@@ -473,15 +480,14 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       if (topNode instanceof INodeReference.WithName) {
         INodeReference.WithName wn = (INodeReference.WithName) topNode;
         if (wn.getLastSnapshotId() >= post) {
-          wn.cleanSubtree(post, prior, collectedBlocks, removedINodes,
-              countDiffChange);
+          wn.cleanSubtree(bsps, post, prior, collectedBlocks, removedINodes);
         }
         // For DstReference node, since the node is not in the created list of
         // prior, we should treat it as regular file/dir
       } else if (topNode.isFile() && topNode.asFile().isWithSnapshot()) {
         INodeFile file = topNode.asFile();
-        counts.add(file.getDiffs().deleteSnapshotDiff(post, prior, file,
-            collectedBlocks, removedINodes, countDiffChange));
+        counts.add(file.getDiffs().deleteSnapshotDiff(bsps, post, prior, file,
+            collectedBlocks, removedINodes));
       } else if (topNode.isDirectory()) {
         INodeDirectory dir = topNode.asDirectory();
         ChildrenDiff priorChildrenDiff = null;
@@ -492,7 +498,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
           DirectoryDiff priorDiff = sf.getDiffs().getDiffById(prior);
           if (priorDiff != null && priorDiff.getSnapshotId() == prior) {
             priorChildrenDiff = priorDiff.getChildrenDiff();
-            counts.add(priorChildrenDiff.destroyCreatedList(dir,
+            counts.add(priorChildrenDiff.destroyCreatedList(bsps, dir,
                 collectedBlocks, removedINodes));
           }
         }
@@ -561,7 +567,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
    * needs to make sure that parent is in the given snapshot "latest".
    */
   public boolean removeChild(INodeDirectory parent, INode child,
-      int latestSnapshotId) throws QuotaExceededException {
+      int latestSnapshotId) {
     // For a directory that is not a renamed node, if isInLatestSnapshot returns
     // false, the directory is not in the latest snapshot, thus we do not need
     // to record the removed child in any snapshot.
@@ -607,8 +613,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
   
   /** Used to record the modification of a symlink node */
   public INode saveChild2Snapshot(INodeDirectory currentINode,
-      final INode child, final int latestSnapshotId, final INode snapshotCopy)
-      throws QuotaExceededException {
+      final INode child, final int latestSnapshotId, final INode snapshotCopy) {
     Preconditions.checkArgument(!child.isDirectory(),
         "child is a directory, child=%s", child);
     Preconditions.checkArgument(latestSnapshotId != Snapshot.CURRENT_STATE_ID);
@@ -623,28 +628,29 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     diff.diff.modify(snapshotCopy, child);
     return child;
   }
-  
-  public void clear(INodeDirectory currentINode,
+
+  public void clear(BlockStoragePolicySuite bsps, INodeDirectory currentINode,
       final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
     // destroy its diff list
     for (DirectoryDiff diff : diffs) {
-      diff.destroyDiffAndCollectBlocks(currentINode, collectedBlocks,
-          removedINodes);
+      diff.destroyDiffAndCollectBlocks(bsps, currentINode, collectedBlocks,
+        removedINodes);
     }
     diffs.clear();
   }
-  
-  public Quota.Counts computeQuotaUsage4CurrentDirectory(Quota.Counts counts) {
+
+  public QuotaCounts computeQuotaUsage4CurrentDirectory(
+    BlockStoragePolicySuite bsps, QuotaCounts counts) {
     for(DirectoryDiff d : diffs) {
       for(INode deleted : d.getChildrenDiff().getList(ListType.DELETED)) {
-        deleted.computeQuotaUsage(counts, false, Snapshot.CURRENT_STATE_ID);
+        deleted.computeQuotaUsage(bsps, counts, false, Snapshot.CURRENT_STATE_ID);
       }
     }
-    counts.add(Quota.NAMESPACE, diffs.asList().size());
     return counts;
   }
-  
-  public void computeContentSummary4Snapshot(final Content.Counts counts) {
+
+  public void computeContentSummary4Snapshot(final BlockStoragePolicySuite bsps,
+      final Content.Counts counts) {
     // Create a new blank summary context for blocking processing of subtree.
     ContentSummaryComputationContext summary = 
         new ContentSummaryComputationContext();
@@ -711,12 +717,11 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     }
   }
 
-  public Quota.Counts cleanDirectory(final INodeDirectory currentINode,
+  public QuotaCounts cleanDirectory(final BlockStoragePolicySuite bsps, final INodeDirectory currentINode,
       final int snapshot, int prior,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final boolean countDiffChange)
-      throws QuotaExceededException {
-    Quota.Counts counts = Quota.Counts.newInstance();
+      final List<INode> removedINodes) {
+    QuotaCounts counts = new QuotaCounts.Builder().build();
     Map<INode, INode> priorCreated = null;
     Map<INode, INode> priorDeleted = null;
     if (snapshot == Snapshot.CURRENT_STATE_ID) { // delete the current directory
@@ -724,11 +729,11 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       // delete everything in created list
       DirectoryDiff lastDiff = diffs.getLast();
       if (lastDiff != null) {
-        counts.add(lastDiff.diff.destroyCreatedList(currentINode,
+        counts.add(lastDiff.diff.destroyCreatedList(bsps, currentINode,
             collectedBlocks, removedINodes));
       }
-      counts.add(currentINode.cleanSubtreeRecursively(snapshot, prior,
-          collectedBlocks, removedINodes, priorDeleted, countDiffChange));
+      counts.add(currentINode.cleanSubtreeRecursively(bsps, snapshot, prior,
+          collectedBlocks, removedINodes, priorDeleted));
     } else {
       // update prior
       prior = getDiffs().updatePrior(snapshot, prior);
@@ -744,10 +749,10 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         }
       }
       
-      counts.add(getDiffs().deleteSnapshotDiff(snapshot, prior,
-          currentINode, collectedBlocks, removedINodes, countDiffChange));
-      counts.add(currentINode.cleanSubtreeRecursively(snapshot, prior,
-          collectedBlocks, removedINodes, priorDeleted, countDiffChange));
+      counts.add(getDiffs().deleteSnapshotDiff(bsps, snapshot, prior,
+          currentINode, collectedBlocks, removedINodes));
+      counts.add(currentINode.cleanSubtreeRecursively(bsps, snapshot, prior,
+          collectedBlocks, removedINodes, priorDeleted));
 
       // check priorDiff again since it may be created during the diff deletion
       if (prior != Snapshot.NO_SNAPSHOT_ID) {
@@ -763,8 +768,8 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
             for (INode cNode : priorDiff.getChildrenDiff().getList(
                 ListType.CREATED)) {
               if (priorCreated.containsKey(cNode)) {
-                counts.add(cNode.cleanSubtree(snapshot, Snapshot.NO_SNAPSHOT_ID,
-                    collectedBlocks, removedINodes, countDiffChange));
+                counts.add(cNode.cleanSubtree(bsps, snapshot, Snapshot.NO_SNAPSHOT_ID,
+                    collectedBlocks, removedINodes));
               }
             }
           }
@@ -780,8 +785,8 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
           for (INode dNode : priorDiff.getChildrenDiff().getList(
               ListType.DELETED)) {
             if (priorDeleted == null || !priorDeleted.containsKey(dNode)) {
-              counts.add(cleanDeletedINode(dNode, snapshot, prior,
-                  collectedBlocks, removedINodes, countDiffChange));
+              counts.add(cleanDeletedINode(bsps, dNode, snapshot, prior,
+                  collectedBlocks, removedINodes));
             }
           }
         }
@@ -790,7 +795,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
 
     if (currentINode.isQuotaSet()) {
       currentINode.getDirectoryWithQuotaFeature().addSpaceConsumed2Cache(
-          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+          counts.negation());
     }
     return counts;
   }

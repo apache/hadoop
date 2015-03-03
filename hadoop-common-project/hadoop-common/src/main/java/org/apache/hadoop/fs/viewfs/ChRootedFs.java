@@ -248,6 +248,12 @@ class ChRootedFs extends AbstractFileSystem {
   }
 
   @Override
+  public boolean truncate(final Path f, final long newLength)
+      throws IOException, UnresolvedLinkException {
+    return myFs.truncate(fullPath(f), newLength);
+  }
+
+  @Override
   public void renameInternal(final Path src, final Path dst)
     throws IOException, UnresolvedLinkException {
     // note fullPath will check that paths are relative to this FileSystem.

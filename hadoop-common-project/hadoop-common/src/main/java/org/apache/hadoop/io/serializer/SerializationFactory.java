@@ -60,7 +60,7 @@ public class SerializationFactory extends Configured {
           + CommonConfigurationKeys.IO_SERIALIZATIONS_KEY
           + " properly to have serialization support (it is currently not set).");
     } else {
-      for (String serializerName : conf.getStrings(
+      for (String serializerName : conf.getTrimmedStrings(
           CommonConfigurationKeys.IO_SERIALIZATIONS_KEY, new String[] {
               WritableSerialization.class.getName(),
               AvroSpecificSerialization.class.getName(),

@@ -61,7 +61,7 @@ public class SnapshotDiff extends Configured implements Tool {
   
   @Override
   public int run(String[] argv) throws Exception {
-    String description = "SnapshotDiff <snapshotDir> <from> <to>:\n" +
+    String description = "hdfs snapshotDiff <snapshotDir> <from> <to>:\n" +
     "\tGet the difference between two snapshots, \n" + 
     "\tor between a snapshot and the current tree of a directory.\n" +
     "\tFor <from>/<to>, users can use \".\" to present the current status,\n" +

@@ -212,4 +212,19 @@ public class TestCredShell {
               0, shell.init(new String[] {cmd, "-help"}));
     }
   }
+
+  @Test
+  public void testEmptyArgForCommands() throws Exception {
+    CredentialShell shell = new CredentialShell();
+    String[] command = { "list", "-provider" };
+    assertEquals("Expected empty argument on " + command + " to return 1", 1,
+        shell.init(command));
+
+    for (String cmd : Arrays.asList("create", "delete")) {
+      shell.setConf(new Configuration());
+      assertEquals("Expected empty argument on " + cmd + " to return 1", 1,
+          shell.init(new String[] { cmd }));
+    }
+
+  }
 }

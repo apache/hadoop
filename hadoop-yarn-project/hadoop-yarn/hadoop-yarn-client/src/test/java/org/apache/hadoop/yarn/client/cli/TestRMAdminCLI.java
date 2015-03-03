@@ -58,6 +58,7 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 
 public class TestRMAdminCLI {
@@ -512,7 +513,7 @@ public class TestRMAdminCLI {
         .addToCluserNodeLabels(ImmutableSet.of("x", "y", "Y"));
     String[] args =
         { "-replaceLabelsOnNode",
-            "node1:8000,x,y node2:8000=y node3,x,Y node4=Y",
+            "node1:8000,x node2:8000=y node3,x node4=Y",
             "-directlyAccessNodeLabelStore" };
     assertEquals(0, rmAdminCLI.run(args));
     assertTrue(dummyNodeLabelsManager.getNodeLabels().containsKey(
@@ -540,6 +541,16 @@ public class TestRMAdminCLI {
     args = new String[] { "-replaceLabelsOnNode", ", " };
     assertTrue(0 != rmAdminCLI.run(args));
   }
+  
+  @Test
+  public void testReplaceMultipleLabelsOnSingleNode() throws Exception {
+    // Successfully replace labels
+    dummyNodeLabelsManager.addToCluserNodeLabels(ImmutableSet.of("x", "y"));
+    String[] args =
+        { "-replaceLabelsOnNode", "node1,x,y",
+            "-directlyAccessNodeLabelStore" };
+    assertTrue(0 != rmAdminCLI.run(args));
+  }
 
   private void testError(String[] args, String template,
       ByteArrayOutputStream data, int resultCode) throws Exception {
@@ -551,5 +562,20 @@ public class TestRMAdminCLI {
         data.toString().contains(template));
     data.reset();
   }
-  
+
+  @Test
+  public void testRMHAErrorUsage() throws Exception {
+    ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
+    rmAdminCLIWithHAEnabled.setErrOut(new PrintStream(errOutBytes));
+    try {
+      String[] args = { "-failover" };
+      assertEquals(-1, rmAdminCLIWithHAEnabled.run(args));
+      String errOut = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
+      errOutBytes.reset();
+      assertTrue(errOut.contains("Usage: rmadmin"));
+    } finally {
+      rmAdminCLIWithHAEnabled.setErrOut(System.err);
+    }
+  }
+
 }

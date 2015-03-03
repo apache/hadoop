@@ -38,7 +38,7 @@
 
 static const int DEFAULT_MIN_USERID = 1000;
 
-static const char* DEFAULT_BANNED_USERS[] = {"mapred", "hdfs", "bin", 0};
+static const char* DEFAULT_BANNED_USERS[] = {"yarn", "mapred", "hdfs", "bin", 0};
 
 //struct to store the user details
 struct passwd *user_detail = NULL;
@@ -684,8 +684,9 @@ struct passwd* check_user(const char *user) {
     return NULL;
   }
   char **banned_users = get_values(BANNED_USERS_KEY);
-  char **banned_user = (banned_users == NULL) ? 
+  banned_users = banned_users == NULL ?
     (char**) DEFAULT_BANNED_USERS : banned_users;
+  char **banned_user = banned_users;
   for(; *banned_user; ++banned_user) {
     if (strcmp(*banned_user, user) == 0) {
       free(user_info);
@@ -1354,21 +1355,37 @@ int delete_as_user(const char *user,
                    const char *subdir,
                    char* const* baseDirs) {
   int ret = 0;
-
+  int subDirEmptyStr = (subdir == NULL || subdir[0] == 0);
+  int needs_tt_user = subDirEmptyStr;
   char** ptr;
 
   // TODO: No switching user? !!!!
   if (baseDirs == NULL || *baseDirs == NULL) {
-    return delete_path(subdir, strlen(subdir) == 0);
+    return delete_path(subdir, needs_tt_user);
   }
   // do the delete
   for(ptr = (char**)baseDirs; *ptr != NULL; ++ptr) {
-    char* full_path = concatenate("%s/%s", "user subdir", 2,
-                              *ptr, subdir);
+    char* full_path = NULL;
+    struct stat sb;
+    if (stat(*ptr, &sb) != 0) {
+      fprintf(LOGFILE, "Could not stat %s\n", *ptr);
+      return -1;
+    }
+    if (!S_ISDIR(sb.st_mode)) {
+      if (!subDirEmptyStr) {
+        fprintf(LOGFILE, "baseDir \"%s\" is a file and cannot contain subdir \"%s\".\n", *ptr, subdir);
+        return -1;
+      }
+      full_path = strdup(*ptr);
+      needs_tt_user = 0;
+    } else {
+      full_path = concatenate("%s/%s", "user subdir", 2, *ptr, subdir);
+    }
+
     if (full_path == NULL) {
       return -1;
     }
-    int this_ret = delete_path(full_path, strlen(subdir) == 0);
+    int this_ret = delete_path(full_path, needs_tt_user);
     free(full_path);
     // delete as much as we can, but remember the error
     if (this_ret != 0) {

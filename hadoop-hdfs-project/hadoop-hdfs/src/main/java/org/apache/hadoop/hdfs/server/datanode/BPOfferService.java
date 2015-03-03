@@ -24,8 +24,8 @@ import com.google.common.collect.Sets;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -218,7 +218,9 @@ class BPOfferService {
                        String storageUuid, StorageType storageType) {
     checkBlock(block);
     for (BPServiceActor actor : bpServices) {
-      actor.reportBadBlocks(block, storageUuid, storageType);
+      ReportBadBlockAction rbbAction = new ReportBadBlockAction
+          (block, storageUuid, storageType);
+      actor.bpThreadEnqueue(rbbAction);
     }
   }
   
@@ -414,7 +416,9 @@ class BPOfferService {
    */
   void trySendErrorReport(int errCode, String errMsg) {
     for (BPServiceActor actor : bpServices) {
-      actor.trySendErrorReport(errCode, errMsg);
+      ErrorReportAction errorReportAction = new ErrorReportAction 
+          (errCode, errMsg);
+      actor.bpThreadEnqueue(errorReportAction);
     }
   }
 

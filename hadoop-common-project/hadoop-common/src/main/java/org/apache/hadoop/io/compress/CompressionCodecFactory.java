@@ -24,8 +24,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A factory that will find the correct codec for a given filename.
@@ -65,10 +67,10 @@ public class CompressionCodecFactory {
     codecsByClassName.put(codec.getClass().getCanonicalName(), codec);
 
     String codecName = codec.getClass().getSimpleName();
-    codecsByName.put(codecName.toLowerCase(), codec);
+    codecsByName.put(StringUtils.toLowerCase(codecName), codec);
     if (codecName.endsWith("Codec")) {
       codecName = codecName.substring(0, codecName.length() - "Codec".length());
-      codecsByName.put(codecName.toLowerCase(), codec);
+      codecsByName.put(StringUtils.toLowerCase(codecName), codec);
     }
   }
 
@@ -106,7 +108,8 @@ public class CompressionCodecFactory {
    * @param conf the configuration to look in
    * @return a list of the {@link CompressionCodec} classes
    */
-  public static List<Class<? extends CompressionCodec>> getCodecClasses(Configuration conf) {
+  public static List<Class<? extends CompressionCodec>> getCodecClasses(
+      Configuration conf) {
     List<Class<? extends CompressionCodec>> result
       = new ArrayList<Class<? extends CompressionCodec>>();
     // Add codec classes discovered via service loading
@@ -118,7 +121,8 @@ public class CompressionCodecFactory {
       }
     }
     // Add codec classes from configuration
-    String codecsString = conf.get("io.compression.codecs");
+    String codecsString = conf.get(
+        CommonConfigurationKeys.IO_COMPRESSION_CODECS_KEY);
     if (codecsString != null) {
       StringTokenizer codecSplit = new StringTokenizer(codecsString, ",");
       while (codecSplit.hasMoreElements()) {
@@ -161,7 +165,7 @@ public class CompressionCodecFactory {
         buf.append(itr.next().getName());
       }
     }
-    conf.set("io.compression.codecs", buf.toString());   
+    conf.set(CommonConfigurationKeys.IO_COMPRESSION_CODECS_KEY, buf.toString());
   }
   
   /**
@@ -172,7 +176,8 @@ public class CompressionCodecFactory {
     codecs = new TreeMap<String, CompressionCodec>();
     codecsByClassName = new HashMap<String, CompressionCodec>();
     codecsByName = new HashMap<String, CompressionCodec>();
-    List<Class<? extends CompressionCodec>> codecClasses = getCodecClasses(conf);
+    List<Class<? extends CompressionCodec>> codecClasses =
+        getCodecClasses(conf);
     if (codecClasses == null || codecClasses.isEmpty()) {
       addCodec(new GzipCodec());
       addCodec(new DefaultCodec());      
@@ -193,7 +198,8 @@ public class CompressionCodecFactory {
     CompressionCodec result = null;
     if (codecs != null) {
       String filename = file.getName();
-      String reversedFilename = new StringBuilder(filename).reverse().toString();
+      String reversedFilename =
+          new StringBuilder(filename).reverse().toString();
       SortedMap<String, CompressionCodec> subMap = 
         codecs.headMap(reversedFilename);
       if (!subMap.isEmpty()) {
@@ -239,8 +245,9 @@ public class CompressionCodecFactory {
       }
       CompressionCodec codec = getCodecByClassName(codecName);
       if (codec == null) {
-        // trying to get the codec by name in case the name was specified instead a class
-        codec = codecsByName.get(codecName.toLowerCase());
+        // trying to get the codec by name in case the name was specified
+        // instead a class
+        codec = codecsByName.get(StringUtils.toLowerCase(codecName));
       }
       return codec;
     }
@@ -260,7 +267,8 @@ public class CompressionCodecFactory {
      * @param codecName the canonical class name of the codec
      * @return the codec class
      */
-    public Class<? extends CompressionCodec> getCodecClassByName(String codecName) {
+    public Class<? extends CompressionCodec> getCodecClassByName(
+        String codecName) {
       CompressionCodec codec = getCodecByName(codecName);
       if (codec == null) {
         return null;

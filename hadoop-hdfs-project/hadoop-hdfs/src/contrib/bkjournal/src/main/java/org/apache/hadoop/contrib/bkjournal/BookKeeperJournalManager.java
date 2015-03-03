@@ -59,6 +59,7 @@ import org.apache.hadoop.contrib.bkjournal.BKJournalProtos.VersionProto;
 import com.google.protobuf.TextFormat;
 import static com.google.common.base.Charsets.UTF_8;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.common.annotations.VisibleForTesting;
@@ -142,6 +143,22 @@ public class BookKeeperJournalManager implements JournalManager {
   public static final String BKJM_ZK_LEDGERS_AVAILABLE_PATH_DEFAULT
     = "/ledgers/available";
 
+  public static final String BKJM_BOOKKEEPER_SPECULATIVE_READ_TIMEOUT_MS
+    = "dfs.namenode.bookkeeperjournal.speculativeReadTimeoutMs";
+  public static final int BKJM_BOOKKEEPER_SPECULATIVE_READ_TIMEOUT_DEFAULT
+    = 2000;
+
+  public static final String BKJM_BOOKKEEPER_READ_ENTRY_TIMEOUT_SEC
+    = "dfs.namenode.bookkeeperjournal.readEntryTimeoutSec";
+  public static final int BKJM_BOOKKEEPER_READ_ENTRY_TIMEOUT_DEFAULT = 5;
+
+  public static final String BKJM_BOOKKEEPER_ACK_QUORUM_SIZE 
+    = "dfs.namenode.bookkeeperjournal.ack.quorum-size";
+
+  public static final String BKJM_BOOKKEEPER_ADD_ENTRY_TIMEOUT_SEC
+    = "dfs.namenode.bookkeeperjournal.addEntryTimeoutSec";
+  public static final int BKJM_BOOKKEEPER_ADD_ENTRY_TIMEOUT_DEFAULT = 5;
+
   private ZooKeeper zkc;
   private final Configuration conf;
   private final BookKeeper bkc;
@@ -152,7 +169,11 @@ public class BookKeeperJournalManager implements JournalManager {
   private final MaxTxId maxTxId;
   private final int ensembleSize;
   private final int quorumSize;
+  private final int ackQuorumSize;
+  private final int addEntryTimeout;
   private final String digestpw;
+  private final int speculativeReadTimeout;
+  private final int readEntryTimeout;
   private final CountDownLatch zkConnectLatch;
   private final NamespaceInfo nsInfo;
   private boolean initialized = false;
@@ -172,6 +193,14 @@ public class BookKeeperJournalManager implements JournalManager {
                                BKJM_BOOKKEEPER_ENSEMBLE_SIZE_DEFAULT);
     quorumSize = conf.getInt(BKJM_BOOKKEEPER_QUORUM_SIZE,
                              BKJM_BOOKKEEPER_QUORUM_SIZE_DEFAULT);
+    ackQuorumSize = conf.getInt(BKJM_BOOKKEEPER_ACK_QUORUM_SIZE, quorumSize);
+    addEntryTimeout = conf.getInt(BKJM_BOOKKEEPER_ADD_ENTRY_TIMEOUT_SEC,
+                             BKJM_BOOKKEEPER_ADD_ENTRY_TIMEOUT_DEFAULT);
+    speculativeReadTimeout = conf.getInt(
+                             BKJM_BOOKKEEPER_SPECULATIVE_READ_TIMEOUT_MS,
+                             BKJM_BOOKKEEPER_SPECULATIVE_READ_TIMEOUT_DEFAULT);
+    readEntryTimeout = conf.getInt(BKJM_BOOKKEEPER_READ_ENTRY_TIMEOUT_SEC,
+                             BKJM_BOOKKEEPER_READ_ENTRY_TIMEOUT_DEFAULT);
 
     ledgerPath = basePath + "/ledgers";
     String maxTxIdPath = basePath + "/maxtxid";
@@ -196,7 +225,11 @@ public class BookKeeperJournalManager implements JournalManager {
       }
 
       prepareBookKeeperEnv();
-      bkc = new BookKeeper(new ClientConfiguration(), zkc);
+      ClientConfiguration clientConf = new ClientConfiguration();
+      clientConf.setSpeculativeReadTimeout(speculativeReadTimeout);
+      clientConf.setReadEntryTimeout(readEntryTimeout);
+      clientConf.setAddEntryTimeout(addEntryTimeout);
+      bkc = new BookKeeper(clientConf, zkc);
     } catch (KeeperException e) {
       throw new IOException("Error initializing zk", e);
     } catch (InterruptedException ie) {
@@ -383,9 +416,9 @@ public class BookKeeperJournalManager implements JournalManager {
         // bookkeeper errored on last stream, clean up ledger
         currentLedger.close();
       }
-      currentLedger = bkc.createLedger(ensembleSize, quorumSize,
+      currentLedger = bkc.createLedger(ensembleSize, quorumSize, ackQuorumSize,
                                        BookKeeper.DigestType.MAC,
-                                       digestpw.getBytes());
+                                       digestpw.getBytes(Charsets.UTF_8));
     } catch (BKException bke) {
       throw new IOException("Error creating ledger", bke);
     } catch (KeeperException ke) {
@@ -522,10 +555,10 @@ public class BookKeeperJournalManager implements JournalManager {
           LedgerHandle h;
           if (l.isInProgress()) { // we don't want to fence the current journal
             h = bkc.openLedgerNoRecovery(l.getLedgerId(),
-                BookKeeper.DigestType.MAC, digestpw.getBytes());
+                BookKeeper.DigestType.MAC, digestpw.getBytes(Charsets.UTF_8));
           } else {
             h = bkc.openLedger(l.getLedgerId(), BookKeeper.DigestType.MAC,
-                digestpw.getBytes());
+                digestpw.getBytes(Charsets.UTF_8));
           }
           elis = new BookKeeperEditLogInputStream(h, l);
           elis.skipTo(fromTxId);
@@ -732,11 +765,11 @@ public class BookKeeperJournalManager implements JournalManager {
       if (fence) {
         lh = bkc.openLedger(l.getLedgerId(),
                             BookKeeper.DigestType.MAC,
-                            digestpw.getBytes());
+                            digestpw.getBytes(Charsets.UTF_8));
       } else {
         lh = bkc.openLedgerNoRecovery(l.getLedgerId(),
                                       BookKeeper.DigestType.MAC,
-                                      digestpw.getBytes());
+                                      digestpw.getBytes(Charsets.UTF_8));
       }
     } catch (BKException bke) {
       throw new IOException("Exception opening ledger for " + l, bke);

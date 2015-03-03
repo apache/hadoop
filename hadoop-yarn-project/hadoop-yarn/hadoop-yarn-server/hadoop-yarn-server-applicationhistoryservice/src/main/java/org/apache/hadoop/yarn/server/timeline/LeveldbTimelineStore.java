@@ -672,7 +672,7 @@ public class LeveldbTimelineStore extends AbstractService
             if (v == null) {
               Set<Object> vs = entity.getPrimaryFilters()
                   .get(filter.getName());
-              if (vs != null && !vs.contains(filter.getValue())) {
+              if (vs == null || !vs.contains(filter.getValue())) {
                 filterPassed = false;
                 break;
               }

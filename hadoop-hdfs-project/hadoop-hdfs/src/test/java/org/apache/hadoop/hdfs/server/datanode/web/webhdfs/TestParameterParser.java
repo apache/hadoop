@@ -52,4 +52,17 @@ public class TestParameterParser {
     final Token<DelegationTokenIdentifier> tok2 = testParser.delegationToken();
     Assert.assertTrue(HAUtil.isTokenForLogicalUri(tok2));
   }
+
+  @Test
+  public void testDecodePath() {
+    final String SCAPED_PATH = "hdfs-6662/test%25251%26%3Dtest?op=OPEN";
+    final String EXPECTED_PATH = "/hdfs-6662/test%251&=test";
+
+    Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
+    QueryStringDecoder decoder = new QueryStringDecoder(
+      WebHdfsHandler.WEBHDFS_PREFIX + "/"
+      + SCAPED_PATH);
+    ParameterParser testParser = new ParameterParser(decoder, conf);
+    Assert.assertEquals(EXPECTED_PATH, testParser.path());
+  }
 }

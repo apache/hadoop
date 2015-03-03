@@ -49,10 +49,12 @@ import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.ByteBufferUtil;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.HasEnhancedByteBufferAccess;
 import org.apache.hadoop.fs.ReadOption;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -73,11 +75,11 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.IdentityHashStore;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.htrace.Span;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
 
 /****************************************************************
  * DFSInputStream provides bytes from a named file.  It handles 
@@ -86,7 +88,7 @@ import org.htrace.TraceScope;
 @InterfaceAudience.Private
 public class DFSInputStream extends FSInputStream
 implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
-    HasEnhancedByteBufferAccess {
+    HasEnhancedByteBufferAccess, CanUnbuffer {
   @VisibleForTesting
   public static boolean tcpReadsDisabledForTesting = false;
   private long hedgedReadOpsLoopNumForTesting = 0;
@@ -126,15 +128,19 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * The value type can be either ByteBufferPool or ClientMmap, depending on
    * whether we this is a memory-mapped buffer or not.
    */
-  private final IdentityHashStore<ByteBuffer, Object>
+  private IdentityHashStore<ByteBuffer, Object> extendedReadBuffers;
+
+  private synchronized IdentityHashStore<ByteBuffer, Object>
+        getExtendedReadBuffers() {
+    if (extendedReadBuffers == null) {
       extendedReadBuffers = new IdentityHashStore<ByteBuffer, Object>(0);
+    }
+    return extendedReadBuffers;
+  }
 
   public static class ReadStatistics {
     public ReadStatistics() {
-      this.totalBytesRead = 0;
-      this.totalLocalBytesRead = 0;
-      this.totalShortCircuitBytesRead = 0;
-      this.totalZeroCopyBytesRead = 0;
+      clear();
     }
 
     public ReadStatistics(ReadStatistics rhs) {
@@ -203,6 +209,13 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       this.totalShortCircuitBytesRead += amt;
       this.totalZeroCopyBytesRead += amt;
     }
+
+    void clear() {
+      this.totalBytesRead = 0;
+      this.totalLocalBytesRead = 0;
+      this.totalShortCircuitBytesRead = 0;
+      this.totalZeroCopyBytesRead = 0;
+    }
     
     private long totalBytesRead;
 
@@ -231,7 +244,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   private final ConcurrentHashMap<DatanodeInfo, DatanodeInfo> deadNodes =
              new ConcurrentHashMap<DatanodeInfo, DatanodeInfo>();
 
-  private final byte[] oneByteBuf = new byte[1]; // used for 'int read()'
+  private byte[] oneByteBuf; // used for 'int read()'
 
   void addToDeadNodes(DatanodeInfo dnInfo) {
     deadNodes.put(dnInfo, dnInfo);
@@ -412,7 +425,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   /**
    * Return collection of blocks that has already been located.
    */
-  public synchronized List<LocatedBlock> getAllBlocks() throws IOException {
+  public List<LocatedBlock> getAllBlocks() throws IOException {
     return getBlockRange(0, getFileLength());
   }
 
@@ -421,12 +434,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * Fetch it from the namenode if not cached.
    * 
    * @param offset block corresponding to this offset in file is returned
-   * @param updatePosition whether to update current position
    * @return located block
    * @throws IOException
    */
-  private LocatedBlock getBlockAt(long offset,
-      boolean updatePosition) throws IOException {
+  private LocatedBlock getBlockAt(long offset) throws IOException {
     synchronized(infoLock) {
       assert (locatedBlocks != null) : "locatedBlocks is null";
 
@@ -436,7 +447,6 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       if (offset < 0 || offset >= getFileLength()) {
         throw new IOException("offset < 0 || offset >= getFileLength(), offset="
             + offset
-            + ", updatePosition=" + updatePosition
             + ", locatedBlocks=" + locatedBlocks);
       }
       else if (offset >= locatedBlocks.getFileLength()) {
@@ -456,17 +466,6 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           locatedBlocks.insertRange(targetBlockIdx, newBlocks.getLocatedBlocks());
         }
         blk = locatedBlocks.get(targetBlockIdx);
-      }
-
-      // update current position
-      if (updatePosition) {
-        // synchronized not strictly needed, since we only get here
-        // from synchronized caller methods
-        synchronized(this) {
-          pos = offset;
-          blockEnd = blk.getStartOffset() + blk.getBlockSize() - 1;
-          currentLocatedBlock = blk;
-        }
       }
       return blk;
     }
@@ -576,10 +575,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     }
 
     // Will be getting a new BlockReader.
-    if (blockReader != null) {
-      blockReader.close();
-      blockReader = null;
-    }
+    closeCurrentBlockReader();
 
     //
     // Connect to best DataNode for desired Block, with potential offset
@@ -594,7 +590,14 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       //
       // Compute desired block
       //
-      LocatedBlock targetBlock = getBlockAt(target, true);
+      LocatedBlock targetBlock = getBlockAt(target);
+
+      // update current position
+      this.pos = target;
+      this.blockEnd = targetBlock.getStartOffset() +
+            targetBlock.getBlockSize() - 1;
+      this.currentLocatedBlock = targetBlock;
+
       assert (target==pos) : "Wrong postion " + pos + " expect " + target;
       long offsetIntoBlock = target - targetBlock.getStartOffset();
 
@@ -668,7 +671,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     }
     dfsClient.checkOpen();
 
-    if (!extendedReadBuffers.isEmpty()) {
+    if ((extendedReadBuffers != null) && (!extendedReadBuffers.isEmpty())) {
       final StringBuilder builder = new StringBuilder();
       extendedReadBuffers.visitAll(new IdentityHashStore.Visitor<ByteBuffer, Object>() {
         private String prefix = "";
@@ -682,15 +685,15 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           "unreleased ByteBuffers allocated by read().  " +
           "Please release " + builder.toString() + ".");
     }
-    if (blockReader != null) {
-      blockReader.close();
-      blockReader = null;
-    }
+    closeCurrentBlockReader();
     super.close();
   }
 
   @Override
   public synchronized int read() throws IOException {
+    if (oneByteBuf == null) {
+      oneByteBuf = new byte[1];
+    }
     int ret = read( oneByteBuf, 0, 1 );
     return ( ret <= 0 ) ? -1 : (oneByteBuf[0] & 0xff);
   }
@@ -700,26 +703,28 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * strategy-agnostic.
    */
   private interface ReaderStrategy {
-    public int doRead(BlockReader blockReader, int off, int len,
-        ReadStatistics readStatistics) throws ChecksumException, IOException;
+    public int doRead(BlockReader blockReader, int off, int len)
+        throws ChecksumException, IOException;
   }
 
-  private static void updateReadStatistics(ReadStatistics readStatistics, 
+  private void updateReadStatistics(ReadStatistics readStatistics, 
         int nRead, BlockReader blockReader) {
     if (nRead <= 0) return;
-    if (blockReader.isShortCircuit()) {
-      readStatistics.addShortCircuitBytes(nRead);
-    } else if (blockReader.isLocal()) {
-      readStatistics.addLocalBytes(nRead);
-    } else {
-      readStatistics.addRemoteBytes(nRead);
+    synchronized(infoLock) {
+      if (blockReader.isShortCircuit()) {
+        readStatistics.addShortCircuitBytes(nRead);
+      } else if (blockReader.isLocal()) {
+        readStatistics.addLocalBytes(nRead);
+      } else {
+        readStatistics.addRemoteBytes(nRead);
+      }
     }
   }
   
   /**
    * Used to read bytes into a byte[]
    */
-  private static class ByteArrayStrategy implements ReaderStrategy {
+  private class ByteArrayStrategy implements ReaderStrategy {
     final byte[] buf;
 
     public ByteArrayStrategy(byte[] buf) {
@@ -727,26 +732,26 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     }
 
     @Override
-    public int doRead(BlockReader blockReader, int off, int len,
-            ReadStatistics readStatistics) throws ChecksumException, IOException {
-        int nRead = blockReader.read(buf, off, len);
-        updateReadStatistics(readStatistics, nRead, blockReader);
-        return nRead;
+    public int doRead(BlockReader blockReader, int off, int len)
+          throws ChecksumException, IOException {
+      int nRead = blockReader.read(buf, off, len);
+      updateReadStatistics(readStatistics, nRead, blockReader);
+      return nRead;
     }
   }
 
   /**
    * Used to read bytes into a user-supplied ByteBuffer
    */
-  private static class ByteBufferStrategy implements ReaderStrategy {
+  private class ByteBufferStrategy implements ReaderStrategy {
     final ByteBuffer buf;
     ByteBufferStrategy(ByteBuffer buf) {
       this.buf = buf;
     }
 
     @Override
-    public int doRead(BlockReader blockReader, int off, int len,
-        ReadStatistics readStatistics) throws ChecksumException, IOException {
+    public int doRead(BlockReader blockReader, int off, int len)
+        throws ChecksumException, IOException {
       int oldpos = buf.position();
       int oldlimit = buf.limit();
       boolean success = false;
@@ -785,7 +790,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     while (true) {
       // retry as many times as seekToNewSource allows.
       try {
-        return reader.doRead(blockReader, off, len, readStatistics);
+        return reader.doRead(blockReader, off, len);
       } catch ( ChecksumException ce ) {
         DFSClient.LOG.warn("Found Checksum error for "
             + getCurrentBlock() + " from " + currentNode
@@ -967,7 +972,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
         }
         deadNodes.clear(); //2nd option is to remove only nodes[blockId]
         openInfo();
-        block = getBlockAt(block.getStartOffset(), false);
+        block = getBlockAt(block.getStartOffset());
         failures++;
         continue;
       }
@@ -1044,7 +1049,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       byte[] buf, int offset,
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
-    block = getBlockAt(block.getStartOffset(), false);
+    block = getBlockAt(block.getStartOffset());
     while (true) {
       DNAddrPair addressPair = chooseDataNode(block, null);
       try {
@@ -1096,7 +1101,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       // start of the loop.
       CachingStrategy curCachingStrategy;
       boolean allowShortCircuitLocalReads;
-      block = getBlockAt(block.getStartOffset(), false);
+      block = getBlockAt(block.getStartOffset());
       synchronized(infoLock) {
         curCachingStrategy = cachingStrategy;
         allowShortCircuitLocalReads = !shortCircuitForbidden();
@@ -1196,7 +1201,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     ByteBuffer bb = null;
     int len = (int) (end - start + 1);
     int hedgedReadId = 0;
-    block = getBlockAt(block.getStartOffset(), false);
+    block = getBlockAt(block.getStartOffset());
     while (true) {
       // see HDFS-6591, this metric is used to verify/catch unnecessary loops
       hedgedReadOpsLoopNumForTesting++;
@@ -1612,8 +1617,19 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   /**
    * Get statistics about the reads which this DFSInputStream has done.
    */
-  public synchronized ReadStatistics getReadStatistics() {
-    return new ReadStatistics(readStatistics);
+  public ReadStatistics getReadStatistics() {
+    synchronized(infoLock) {
+      return new ReadStatistics(readStatistics);
+    }
+  }
+
+  /**
+   * Clear statistics about the reads which this DFSInputStream has done.
+   */
+  public void clearReadStatistics() {
+    synchronized(infoLock) {
+      readStatistics.clear();
+    }
   }
 
   public FileEncryptionInfo getFileEncryptionInfo() {
@@ -1632,6 +1648,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       DFSClient.LOG.error("error closing blockReader", e);
     }
     blockReader = null;
+    blockEnd = -1;
   }
 
   @Override
@@ -1695,7 +1712,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     }
     buffer = ByteBufferUtil.fallbackRead(this, bufferPool, maxLength);
     if (buffer != null) {
-      extendedReadBuffers.put(buffer, bufferPool);
+      getExtendedReadBuffers().put(buffer, bufferPool);
     }
     return buffer;
   }
@@ -1774,8 +1791,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       buffer = clientMmap.getMappedByteBuffer().asReadOnlyBuffer();
       buffer.position((int)blockPos);
       buffer.limit((int)(blockPos + length));
-      extendedReadBuffers.put(buffer, clientMmap);
-      readStatistics.addZeroCopyBytes(length);
+      getExtendedReadBuffers().put(buffer, clientMmap);
+      synchronized (infoLock) {
+        readStatistics.addZeroCopyBytes(length);
+      }
       if (DFSClient.LOG.isDebugEnabled()) {
         DFSClient.LOG.debug("readZeroCopy read " + length + 
             " bytes from offset " + curPos + " via the zero-copy read " +
@@ -1793,7 +1812,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
   @Override
   public synchronized void releaseBuffer(ByteBuffer buffer) {
     if (buffer == EMPTY_BUFFER) return;
-    Object val = extendedReadBuffers.remove(buffer);
+    Object val = getExtendedReadBuffers().remove(buffer);
     if (val == null) {
       throw new IllegalArgumentException("tried to release a buffer " +
           "that was not created by this stream, " + buffer);
@@ -1803,5 +1822,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     } else if (val instanceof ByteBufferPool) {
       ((ByteBufferPool)val).putBuffer(buffer);
     }
+  }
+
+  @Override
+  public synchronized void unbuffer() {
+    closeCurrentBlockReader();
   }
 }

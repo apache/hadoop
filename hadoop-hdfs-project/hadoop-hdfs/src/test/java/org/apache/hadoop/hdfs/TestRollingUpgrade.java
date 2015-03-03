@@ -23,9 +23,11 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -36,6 +38,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
+import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
@@ -260,42 +263,50 @@ public class TestRollingUpgrade {
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive();
 
       final Path foo = new Path("/foo");
       final Path bar = new Path("/bar");
       cluster.getFileSystem().mkdirs(foo);
 
-      startRollingUpgrade(foo, bar, cluster);
-      cluster.getFileSystem().rollEdits();
-      cluster.getFileSystem().rollEdits();
-      rollbackRollingUpgrade(foo, bar, cluster);
+      final Path file = new Path(foo, "file");
+      final byte[] data = new byte[1024];
+      DFSUtil.getRandom().nextBytes(data);
+      final FSDataOutputStream out = cluster.getFileSystem().create(file);
+      out.write(data, 0, data.length);
+      out.close();
 
-      startRollingUpgrade(foo, bar, cluster);
+      startRollingUpgrade(foo, bar, file, data, cluster);
       cluster.getFileSystem().rollEdits();
       cluster.getFileSystem().rollEdits();
-      rollbackRollingUpgrade(foo, bar, cluster);
+      rollbackRollingUpgrade(foo, bar, file, data, cluster);
 
-      startRollingUpgrade(foo, bar, cluster);
+      startRollingUpgrade(foo, bar, file, data, cluster);
+      cluster.getFileSystem().rollEdits();
+      cluster.getFileSystem().rollEdits();
+      rollbackRollingUpgrade(foo, bar, file, data, cluster);
+
+      startRollingUpgrade(foo, bar, file, data, cluster);
       cluster.restartNameNode();
-      rollbackRollingUpgrade(foo, bar, cluster);
+      rollbackRollingUpgrade(foo, bar, file, data, cluster);
 
-      startRollingUpgrade(foo, bar, cluster);
+      startRollingUpgrade(foo, bar, file, data, cluster);
       cluster.restartNameNode();
-      rollbackRollingUpgrade(foo, bar, cluster);
+      rollbackRollingUpgrade(foo, bar, file, data, cluster);
 
-      startRollingUpgrade(foo, bar, cluster);
-      rollbackRollingUpgrade(foo, bar, cluster);
+      startRollingUpgrade(foo, bar, file, data, cluster);
+      rollbackRollingUpgrade(foo, bar, file, data, cluster);
 
-      startRollingUpgrade(foo, bar, cluster);
-      rollbackRollingUpgrade(foo, bar, cluster);
+      startRollingUpgrade(foo, bar, file, data, cluster);
+      rollbackRollingUpgrade(foo, bar, file, data, cluster);
     } finally {
       if(cluster != null) cluster.shutdown();
     }
   }
   
   private static void startRollingUpgrade(Path foo, Path bar,
+      Path file, byte[] data,
       MiniDFSCluster cluster) throws IOException {
     final DistributedFileSystem dfs = cluster.getFileSystem();
 
@@ -305,18 +316,27 @@ public class TestRollingUpgrade {
     dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
 
     dfs.mkdirs(bar);
-    
     Assert.assertTrue(dfs.exists(foo));
     Assert.assertTrue(dfs.exists(bar));
+
+    //truncate a file
+    final int newLength = DFSUtil.getRandom().nextInt(data.length - 1) + 1;
+    dfs.truncate(file, newLength);
+    TestFileTruncate.checkBlockRecovery(file, dfs);
+    AppendTestUtil.checkFullFile(dfs, file, newLength, data);
   }
   
   private static void rollbackRollingUpgrade(Path foo, Path bar,
+      Path file, byte[] data,
       MiniDFSCluster cluster) throws IOException {
+    final DataNodeProperties dnprop = cluster.stopDataNode(0);
     cluster.restartNameNode("-rollingUpgrade", "rollback");
+    cluster.restartDataNode(dnprop, true);
 
     final DistributedFileSystem dfs = cluster.getFileSystem();
     Assert.assertTrue(dfs.exists(foo));
     Assert.assertFalse(dfs.exists(bar));
+    AppendTestUtil.checkFullFile(dfs, file, data.length, data);
   }
 
   @Test

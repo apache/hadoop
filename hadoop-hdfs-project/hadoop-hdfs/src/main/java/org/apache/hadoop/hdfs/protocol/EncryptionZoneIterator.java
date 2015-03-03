@@ -23,9 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BatchedRemoteIterator;
-import org.htrace.Sampler;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.Sampler;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 /**
  * EncryptionZoneIterator is a remote iterator that iterates over encryption

@@ -132,15 +132,23 @@ class FsUsage extends FsCommand {
     }
 
     @Override
-    protected void processPathArgument(PathData item) throws IOException {
+    protected void processArguments(LinkedList<PathData> args)
+        throws IOException {
       usagesTable = new TableBuilder(3);
+      super.processArguments(args);
+      if (!usagesTable.isEmpty()) {
+        usagesTable.printToStream(out);
+      }
+    }
+
+    @Override
+    protected void processPathArgument(PathData item) throws IOException {
       // go one level deep on dirs from cmdline unless in summary mode
       if (!summary && item.stat.isDirectory()) {
         recursePath(item);
       } else {
         super.processPathArgument(item);
       }
-      usagesTable.printToStream(out);
     }
 
     @Override

@@ -246,6 +246,13 @@ public final class DomainSocketWatcher implements Closeable {
     this.interruptCheckPeriodMs = interruptCheckPeriodMs;
     notificationSockets = DomainSocket.socketpair();
     watcherThread.setDaemon(true);
+    watcherThread.setUncaughtExceptionHandler(
+        new Thread.UncaughtExceptionHandler() {
+          @Override
+          public void uncaughtException(Thread thread, Throwable t) {
+            LOG.error(thread + " terminating on unexpected exception", t);
+          }
+        });
     watcherThread.start();
   }
 
@@ -372,7 +379,17 @@ public final class DomainSocketWatcher implements Closeable {
     }
   }
 
-  private void sendCallback(String caller, TreeMap<Integer, Entry> entries,
+  /**
+   * Send callback and return whether or not the domain socket was closed as a
+   * result of processing.
+   *
+   * @param caller reason for call
+   * @param entries mapping of file descriptor to entry
+   * @param fdSet set of file descriptors
+   * @param fd file descriptor
+   * @return true if the domain socket was closed as a result of processing
+   */
+  private boolean sendCallback(String caller, TreeMap<Integer, Entry> entries,
       FdSet fdSet, int fd) {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + ": " + caller + " starting sendCallback for fd " + fd);
@@ -401,13 +418,30 @@ public final class DomainSocketWatcher implements Closeable {
             "still in the poll(2) loop.");
       }
       IOUtils.cleanup(LOG, sock);
-      entries.remove(fd);
       fdSet.remove(fd);
+      return true;
     } else {
       if (LOG.isTraceEnabled()) {
         LOG.trace(this + ": " + caller + ": sendCallback not " +
             "closing fd " + fd);
       }
+      return false;
+    }
+  }
+
+  /**
+   * Send callback, and if the domain socket was closed as a result of
+   * processing, then also remove the entry for the file descriptor.
+   *
+   * @param caller reason for call
+   * @param entries mapping of file descriptor to entry
+   * @param fdSet set of file descriptors
+   * @param fd file descriptor
+   */
+  private void sendCallbackAndRemove(String caller,
+      TreeMap<Integer, Entry> entries, FdSet fdSet, int fd) {
+    if (sendCallback(caller, entries, fdSet, fd)) {
+      entries.remove(fd);
     }
   }
 
@@ -427,7 +461,8 @@ public final class DomainSocketWatcher implements Closeable {
           lock.lock();
           try {
             for (int fd : fdSet.getAndClearReadableFds()) {
-              sendCallback("getAndClearReadableFds", entries, fdSet, fd);
+              sendCallbackAndRemove("getAndClearReadableFds", entries, fdSet,
+                  fd);
             }
             if (!(toAdd.isEmpty() && toRemove.isEmpty())) {
               // Handle pending additions (before pending removes).
@@ -448,7 +483,7 @@ public final class DomainSocketWatcher implements Closeable {
               while (true) {
                 Map.Entry<Integer, DomainSocket> entry = toRemove.firstEntry();
                 if (entry == null) break;
-                sendCallback("handlePendingRemovals",
+                sendCallbackAndRemove("handlePendingRemovals",
                     entries, fdSet, entry.getValue().fd);
               }
               processedCond.signalAll();
@@ -482,6 +517,8 @@ public final class DomainSocketWatcher implements Closeable {
         try {
           kick(); // allow the handler for notificationSockets[0] to read a byte
           for (Entry entry : entries.values()) {
+            // We do not remove from entries as we iterate, because that can
+            // cause a ConcurrentModificationException.
             sendCallback("close", entries, fdSet, entry.getDomainSocket().fd);
           }
           entries.clear();

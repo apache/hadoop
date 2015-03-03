@@ -33,12 +33,11 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.nodelabels.NodeLabel;
+import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -60,16 +59,13 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
 
   ConcurrentMap<String, Queue> queueCollections =
       new ConcurrentHashMap<String, Queue>();
-  protected AccessControlList adminAcl;
-  
+  private YarnAuthorizationProvider authorizer;
   private RMContext rmContext = null;
   
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
-    adminAcl =
-        new AccessControlList(conf.get(YarnConfiguration.YARN_ADMIN_ACL,
-            YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+    authorizer = YarnAuthorizationProvider.getInstance(conf);
   }
 
   @Override
@@ -200,6 +196,17 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       Node nm = getNMInNodeSet(nodeId);
       nm.resource = resource;
       nm.running = true;
+
+      // Add node in labelsCollection
+      Set<String> labelsForNode = getLabelsByNode(nodeId);
+      if (labelsForNode != null) {
+        for (String label : labelsForNode) {
+          NodeLabel labelInfo = labelCollections.get(label);
+          if(labelInfo != null) {
+            labelInfo.addNodeId(nodeId);
+          }
+        }
+      }
       
       // get the node after edition
       Map<String, Host> after = cloneNodeMap(ImmutableSet.of(nodeId));
@@ -221,9 +228,23 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       Map<String, Host> before = cloneNodeMap(ImmutableSet.of(nodeId));
       Node nm = getNMInNodeSet(nodeId);
       if (null != nm) {
-        // set nm is not running, and its resource = 0
-        nm.running = false;
-        nm.resource = Resource.newInstance(0, 0);
+        if (null == nm.labels) {
+          // When node deactivated, remove the nm from node collection if no
+          // labels explicitly set for this particular nm
+
+          // Save labels first, we need to remove label->nodes relation later
+          Set<String> savedNodeLabels = getLabelsOnNode(nodeId);
+          
+          // Remove this node in nodes collection
+          nodeCollections.get(nodeId.getHost()).nms.remove(nodeId);
+          
+          // Remove this node in labels->node
+          removeNodeFromLabels(nodeId, savedNodeLabels);
+        } else {
+          // set nm is not running, and its resource = 0
+          nm.running = false;
+          nm.resource = Resource.newInstance(0, 0);
+        }
       }
       
       // get the node after edition
@@ -468,7 +489,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
   public boolean checkAccess(UserGroupInformation user) {
     // make sure only admin can invoke
     // this method
-    if (adminAcl.isUserAllowed(user)) {
+    if (authorizer.isAdmin(user)) {
       return true;
     }
     return false;

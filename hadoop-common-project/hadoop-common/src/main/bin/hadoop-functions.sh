@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -28,13 +28,35 @@ function hadoop_debug
   fi
 }
 
-function hadoop_bootstrap_init
+function hadoop_deprecate_envvar
+{
+  #
+  # Deprecate $1 with $2
+  local oldvar=$1
+  local newvar=$2
+  local oldval=${!oldvar}
+  local newval=${!newvar}
+
+  if [[ -n "${oldval}" ]]; then
+    hadoop_error "WARNING: ${oldvar} has been replaced by ${newvar}. Using value of ${oldvar}."
+    # shellcheck disable=SC2086
+    eval ${newvar}=\"${oldval}\"
+
+    # shellcheck disable=SC2086
+    newval=${oldval}
+
+    # shellcheck disable=SC2086
+    eval ${newvar}=\"${newval}\"
+  fi
+}
+
+function hadoop_bootstrap
 {
   # NOTE: This function is not user replaceable.
 
   # the root of the Hadoop installation
   # See HADOOP-6255 for the expected directory structure layout
-  
+
   # By now, HADOOP_LIBEXEC_DIR should have been defined upstream
   # We can piggyback off of that to figure out where the default
   # HADOOP_FREFIX should be.  This allows us to run without
@@ -48,7 +70,7 @@ function hadoop_bootstrap_init
   HADOOP_DEFAULT_PREFIX=$(cd -P -- "${HADOOP_LIBEXEC_DIR}/.." >/dev/null && pwd -P)
   HADOOP_PREFIX=${HADOOP_PREFIX:-$HADOOP_DEFAULT_PREFIX}
   export HADOOP_PREFIX
-  
+
   #
   # short-cuts. vendors may redefine these as well, preferably
   # in hadoop-layouts.sh
@@ -66,7 +88,7 @@ function hadoop_bootstrap_init
   TOOL_PATH=${TOOL_PATH:-${HADOOP_PREFIX}/share/hadoop/tools/lib/*}
 
   export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
- 
+
   # defaults
   export HADOOP_OPTS=${HADOOP_OPTS:-"-Djava.net.preferIPv4Stack=true"}
   hadoop_debug "Initial HADOOP_OPTS=${HADOOP_OPTS}"
@@ -124,13 +146,94 @@ function hadoop_exec_userfuncs
 
 function hadoop_exec_hadooprc
 {
-  # Read the user's settings.  This provides for users to override 
+  # Read the user's settings.  This provides for users to override
   # and/or append hadoop-env.sh. It is not meant as a complete system override.
 
   if [[ -f "${HOME}/.hadooprc" ]]; then
     hadoop_debug "Applying the user's .hadooprc"
     . "${HOME}/.hadooprc"
   fi
+}
+
+function hadoop_import_shellprofiles
+{
+  local i
+  local files1
+  local files2
+
+  if [[ -d "${HADOOP_LIBEXEC_DIR}/shellprofile.d" ]]; then
+    files1=(${HADOOP_LIBEXEC_DIR}/shellprofile.d/*)
+  else
+    hadoop_error "WARNING: ${HADOOP_LIBEXEC_DIR}/shellprofile.d doesn't exist. Functionality may not work."
+  fi
+
+  if [[ -d "${HADOOP_CONF_DIR}/shellprofile.d" ]]; then
+    files2=(${HADOOP_CONF_DIR}/shellprofile.d/*)
+  fi
+
+  for i in "${files1[@]}" "${files2[@]}"
+  do
+    if [[ -n "${i}" ]]; then
+      hadoop_debug "Profiles: importing ${i}"
+      . "${i}"
+    fi
+  done
+}
+
+function hadoop_shellprofiles_init
+{
+  local i
+
+  for i in ${HADOOP_SHELL_PROFILES}
+  do
+    if declare -F _${i}_hadoop_init >/dev/null ; then
+       hadoop_debug "Profiles: ${i} init"
+       # shellcheck disable=SC2086
+       _${i}_hadoop_init
+    fi
+  done
+}
+
+function hadoop_shellprofiles_classpath
+{
+  local i
+
+  for i in ${HADOOP_SHELL_PROFILES}
+  do
+    if declare -F _${i}_hadoop_classpath >/dev/null ; then
+       hadoop_debug "Profiles: ${i} classpath"
+       # shellcheck disable=SC2086
+       _${i}_hadoop_classpath
+    fi
+  done
+}
+
+function hadoop_shellprofiles_nativelib
+{
+  local i
+
+  for i in ${HADOOP_SHELL_PROFILES}
+  do
+    if declare -F _${i}_hadoop_nativelib >/dev/null ; then
+       hadoop_debug "Profiles: ${i} nativelib"
+       # shellcheck disable=SC2086
+       _${i}_hadoop_nativelib
+    fi
+  done
+}
+
+function hadoop_shellprofiles_finalize
+{
+  local i
+
+  for i in ${HADOOP_SHELL_PROFILES}
+  do
+    if declare -F _${i}_hadoop_finalize >/dev/null ; then
+       hadoop_debug "Profiles: ${i} finalize"
+       # shellcheck disable=SC2086
+       _${i}_hadoop_finalize
+    fi
+  done
 }
 
 function hadoop_basic_init
@@ -141,37 +244,36 @@ function hadoop_basic_init
   #
   # but it is important to note that if you update these
   # you also need to update hadoop-env.sh as well!!!
-  
-  # CLASSPATH initially contains $HADOOP_CONF_DIR
-  CLASSPATH="${HADOOP_CONF_DIR}"
-  hadoop_debug "Initial CLASSPATH=${HADOOP_CONF_DIR}"
-  
+
+  CLASSPATH=""
+  hadoop_debug "Initialize CLASSPATH"
+
   if [[ -z "${HADOOP_COMMON_HOME}" ]] &&
   [[ -d "${HADOOP_PREFIX}/${HADOOP_COMMON_DIR}" ]]; then
     export HADOOP_COMMON_HOME="${HADOOP_PREFIX}"
   fi
-  
+
   # default policy file for service-level authorization
   HADOOP_POLICYFILE=${HADOOP_POLICYFILE:-"hadoop-policy.xml"}
-  
+
   # define HADOOP_HDFS_HOME
   if [[ -z "${HADOOP_HDFS_HOME}" ]] &&
      [[ -d "${HADOOP_PREFIX}/${HDFS_DIR}" ]]; then
     export HADOOP_HDFS_HOME="${HADOOP_PREFIX}"
   fi
-  
+
   # define HADOOP_YARN_HOME
   if [[ -z "${HADOOP_YARN_HOME}" ]] &&
      [[ -d "${HADOOP_PREFIX}/${YARN_DIR}" ]]; then
     export HADOOP_YARN_HOME="${HADOOP_PREFIX}"
   fi
-  
+
   # define HADOOP_MAPRED_HOME
   if [[ -z "${HADOOP_MAPRED_HOME}" ]] &&
      [[ -d "${HADOOP_PREFIX}/${MAPRED_DIR}" ]]; then
     export HADOOP_MAPRED_HOME="${HADOOP_PREFIX}"
   fi
-  
+
   HADOOP_IDENT_STRING=${HADOOP_IDENT_STRING:-$USER}
   HADOOP_LOG_DIR=${HADOOP_LOG_DIR:-"${HADOOP_PREFIX}/logs"}
   HADOOP_LOGFILE=${HADOOP_LOGFILE:-hadoop.log}
@@ -200,8 +302,6 @@ function hadoop_populate_slaves_file()
   elif [[ -f "${HADOOP_CONF_DIR}/${slavesfile}" ]]; then
     # shellcheck disable=2034
     HADOOP_SLAVES="${HADOOP_CONF_DIR}/${slavesfile}"
-    # shellcheck disable=2034
-    YARN_SLAVES="${HADOOP_CONF_DIR}/${slavesfile}"
   else
     hadoop_error "ERROR: Cannot find hosts file \"${slavesfile}\""
     hadoop_exit_with_usage 1
@@ -220,7 +320,7 @@ function hadoop_rotate_log
   #
   local log=$1;
   local num=${2:-5};
-  
+
   if [[ -f "${log}" ]]; then # rotate logs
     while [[ ${num} -gt 1 ]]; do
       #shellcheck disable=SC2086
@@ -240,7 +340,7 @@ function hadoop_actual_ssh
   # should get hostname followed by rest of command line
   local slave=$1
   shift
-  
+
   # shellcheck disable=SC2086
   ssh ${HADOOP_SSH_OPTS} ${slave} $"${@// /\\ }" 2>&1 | sed "s/^/$slave: /"
 }
@@ -249,7 +349,7 @@ function hadoop_connect_to_hosts
 {
   # shellcheck disable=SC2124
   local params="$@"
-  
+
   #
   # ssh (or whatever) to a host
   #
@@ -258,13 +358,13 @@ function hadoop_connect_to_hosts
     hadoop_error "ERROR: Both HADOOP_SLAVES and HADOOP_SLAVE_NAME were defined. Aborting."
     exit 1
   fi
-  
+
   if [[ -n "${HADOOP_SLAVE_NAMES}" ]] ; then
     SLAVE_NAMES=${HADOOP_SLAVE_NAMES}
   else
     SLAVE_FILE=${HADOOP_SLAVES:-${HADOOP_CONF_DIR}/slaves}
   fi
-  
+
   # if pdsh is available, let's use it.  otherwise default
   # to a loop around ssh.  (ugh)
   if [[ -e '/usr/bin/pdsh' ]]; then
@@ -284,7 +384,7 @@ function hadoop_connect_to_hosts
     if [[ -z "${SLAVE_NAMES}" ]]; then
       SLAVE_NAMES=$(sed 's/#.*$//;/^$/d' "${SLAVE_FILE}")
     fi
-    
+
     # quoting here gets tricky. it's easier to push it into a function
     # so that we don't have to deal with it. However...
     # xargs can't use a function so instead we'll export it out
@@ -294,8 +394,8 @@ function hadoop_connect_to_hosts
     export HADOOP_SSH_OPTS
 
     # xargs is used with option -I to replace the placeholder in arguments
-    # list with each hostname read from stdin/pipe. But it consider one 
-    # line as one argument while reading from stdin/pipe. So place each 
+    # list with each hostname read from stdin/pipe. But it consider one
+    # line as one argument while reading from stdin/pipe. So place each
     # hostname in different lines while passing via pipe.
     SLAVE_NAMES=$(echo "$SLAVE_NAMES" | tr ' ' '\n' )
     echo "${SLAVE_NAMES}" | \
@@ -303,6 +403,20 @@ function hadoop_connect_to_hosts
     -I {} bash -c --  "hadoop_actual_ssh {} ${params}"
     wait
   fi
+}
+
+function hadoop_common_slave_mode_execute
+{
+  #
+  # input should be the command line as given by the user
+  # in the form of an array
+  #
+  local argv=("$@")
+
+  # if --slaves is still on the command line, remove it
+  # to prevent loops
+  argv=(${argv[@]/--slaves})
+  hadoop_connect_to_hosts -- "${argv[@]}"
 }
 
 function hadoop_validate_classname
@@ -340,6 +454,12 @@ function hadoop_add_param
   fi
 }
 
+function hadoop_add_profile
+{
+  # shellcheck disable=SC2086
+  hadoop_add_param HADOOP_SHELL_PROFILES $1 $1
+}
+
 function hadoop_add_classpath
 {
   # two params:
@@ -348,7 +468,7 @@ function hadoop_add_classpath
   #      classpath this object should go. default is after
   # return 0 = success (added or duplicate)
   # return 1 = failure (doesn't exist, whatever)
-  
+
   # However, with classpath (& JLP), we can do dedupe
   # along with some sanity checking (e.g., missing directories)
   # since we have a better idea of what is legal
@@ -361,7 +481,7 @@ function hadoop_add_classpath
       hadoop_debug "Rejected CLASSPATH: $1 (not a dir)"
       return 1
     fi
-    
+
     # no wildcard in the middle, so check existence
     # (doesn't matter *what* it is)
   elif [[ ! $1 =~ ^.*\*.*$ ]] && [[ ! -e "$1" ]]; then
@@ -393,7 +513,7 @@ function hadoop_add_colonpath
   #      classpath this object should go
   # return 0 = success
   # return 1 = failure (duplicate)
-  
+
   # this is CLASSPATH, JLP, etc but with dedupe but no
   # other checking
   if [[ -d "${2}" ]] && [[ ":${!1}:" != *":$2:"* ]]; then
@@ -426,99 +546,28 @@ function hadoop_add_ldlibpath
 {
   # specialized function for a common use case
   hadoop_add_colonpath LD_LIBRARY_PATH "$1" "$2"
-  
+
   # note that we export this
   export LD_LIBRARY_PATH
 }
 
-function hadoop_add_to_classpath_common
+function hadoop_add_common_to_classpath
 {
-  
   #
   # get all of the common jars+config in the path
   #
-  
+
   # developers
   if [[ -n "${HADOOP_ENABLE_BUILD_PATHS}" ]]; then
     hadoop_add_classpath "${HADOOP_COMMON_HOME}/hadoop-common/target/classes"
   fi
-  
+
   if [[ -d "${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR}/webapps" ]]; then
     hadoop_add_classpath "${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR}"
   fi
-  
+
   hadoop_add_classpath "${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"'/*'
   hadoop_add_classpath "${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR}"'/*'
-}
-
-function hadoop_add_to_classpath_hdfs
-{
-  #
-  # get all of the hdfs jars+config in the path
-  #
-  # developers
-  if [[ -n "${HADOOP_ENABLE_BUILD_PATHS}" ]]; then
-    hadoop_add_classpath "${HADOOP_HDFS_HOME}/hadoop-hdfs/target/classes"
-  fi
-  
-  # put hdfs in classpath if present
-  if [[ -d "${HADOOP_HDFS_HOME}/${HDFS_DIR}/webapps" ]]; then
-    hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDFS_DIR}"
-  fi
-  
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDFS_LIB_JARS_DIR}"'/*'
-  hadoop_add_classpath "${HADOOP_HDFS_HOME}/${HDFS_DIR}"'/*'
-}
-
-function hadoop_add_to_classpath_yarn
-{
-  local i
-  #
-  # get all of the yarn jars+config in the path
-  #
-  # developers
-  if [[ -n "${HADOOP_ENABLE_BUILD_PATHS}" ]]; then
-    for i in yarn-api yarn-common yarn-mapreduce yarn-master-worker \
-    yarn-server/yarn-server-nodemanager \
-    yarn-server/yarn-server-common \
-    yarn-server/yarn-server-resourcemanager; do
-      hadoop_add_classpath "${HADOOP_YARN_HOME}/$i/target/classes"
-    done
-    
-    hadoop_add_classpath "${HADOOP_YARN_HOME}/build/test/classes"
-    hadoop_add_classpath "${HADOOP_YARN_HOME}/build/tools"
-  fi
-  
-  if [[ -d "${HADOOP_YARN_HOME}/${YARN_DIR}/webapps" ]]; then
-    hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_DIR}"
-  fi
-  
-  hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_LIB_JARS_DIR}"'/*'
-  hadoop_add_classpath  "${HADOOP_YARN_HOME}/${YARN_DIR}"'/*'
-}
-
-function hadoop_add_to_classpath_mapred
-{
-  #
-  # get all of the mapreduce jars+config in the path
-  #
-  # developers
-  if [[ -n "${HADOOP_ENABLE_BUILD_PATHS}" ]]; then
-    hadoop_add_classpath "${HADOOP_MAPRED_HOME}/hadoop-mapreduce-client-shuffle/target/classes"
-    hadoop_add_classpath "${HADOOP_MAPRED_HOME}/hadoop-mapreduce-client-common/target/classes"
-    hadoop_add_classpath "${HADOOP_MAPRED_HOME}/hadoop-mapreduce-client-hs/target/classes"
-    hadoop_add_classpath "${HADOOP_MAPRED_HOME}/hadoop-mapreduce-client-hs-plugins/target/classes"
-    hadoop_add_classpath "${HADOOP_MAPRED_HOME}/hadoop-mapreduce-client-app/target/classes"
-    hadoop_add_classpath "${HADOOP_MAPRED_HOME}/hadoop-mapreduce-client-jobclient/target/classes"
-    hadoop_add_classpath "${HADOOP_MAPRED_HOME}/hadoop-mapreduce-client-core/target/classes"
-  fi
-  
-  if [[ -d "${HADOOP_MAPRED_HOME}/${MAPRED_DIR}/webapps" ]]; then
-    hadoop_add_classpath "${HADOOP_MAPRED_HOME}/${MAPRED_DIR}"
-  fi
-  
-  hadoop_add_classpath "${HADOOP_MAPRED_HOME}/${MAPRED_LIB_JARS_DIR}"'/*'
-  hadoop_add_classpath "${HADOOP_MAPRED_HOME}/${MAPRED_DIR}"'/*'
 }
 
 function hadoop_add_to_classpath_userpath
@@ -543,7 +592,7 @@ function hadoop_add_to_classpath_userpath
       let c+=1
     done
     let j=c-1
-    
+
     if [[ -z "${HADOOP_USE_CLIENT_CLASSLOADER}" ]]; then
       if [[ -z "${HADOOP_USER_CLASSPATH_FIRST}" ]]; then
         for ((i=j; i>=0; i--)); do
@@ -582,8 +631,8 @@ function hadoop_os_tricks
       # NOTE! HADOOP_ALLOW_IPV6 is a developer hook.  We leave it
       # undocumented in hadoop-env.sh because we don't want users to
       # shoot themselves in the foot while devs make IPv6 work.
-      if [[ -n "${bindv6only}" ]] && 
-         [[ "${bindv6only}" -eq "1" ]] && 
+      if [[ -n "${bindv6only}" ]] &&
+         [[ "${bindv6only}" -eq "1" ]] &&
          [[ "${HADOOP_ALLOW_IPV6}" != "yes" ]]; then
         hadoop_error "ERROR: \"net.ipv6.bindv6only\" is set to 1 "
         hadoop_error "ERROR: Hadoop networking could be broken. Aborting."
@@ -610,14 +659,14 @@ function hadoop_java_setup
     hadoop_error "ERROR: JAVA_HOME is not set and could not be found."
     exit 1
   fi
-  
+
   if [[ ! -d "${JAVA_HOME}" ]]; then
     hadoop_error "ERROR: JAVA_HOME ${JAVA_HOME} does not exist."
     exit 1
   fi
-  
+
   JAVA="${JAVA_HOME}/bin/java"
-  
+
   if [[ ! -x "$JAVA" ]]; then
     hadoop_error "ERROR: $JAVA is not executable."
     exit 1
@@ -696,7 +745,7 @@ function hadoop_finalize_hadoop_opts
 function hadoop_finalize_classpath
 {
   hadoop_add_classpath "${HADOOP_CONF_DIR}" before
-  
+
   # user classpath gets added at the last minute. this allows
   # override of CONF dirs and more
   hadoop_add_to_classpath_userpath
@@ -724,8 +773,9 @@ function hadoop_finalize_catalina_opts
 
 function hadoop_finalize
 {
-  # user classpath gets added at the last minute. this allows
-  # override of CONF dirs and more
+
+  hadoop_shellprofiles_finalize
+
   hadoop_finalize_classpath
   hadoop_finalize_libpaths
   hadoop_finalize_hadoop_heap
@@ -762,7 +812,7 @@ function hadoop_verify_secure_prereq
   # if you are on an OS like Illumos that has functional roles
   # and you are using pfexec, you'll probably want to change
   # this.
-  
+
   # ${EUID} comes from the shell itself!
   if [[ "${EUID}" -ne 0 ]] && [[ -z "${HADOOP_SECURE_COMMAND}" ]]; then
     hadoop_error "ERROR: You must be a privileged user in order to run a secure service."
@@ -775,7 +825,7 @@ function hadoop_verify_secure_prereq
 function hadoop_setup_secure_service
 {
   # need a more complicated setup? replace me!
-  
+
   HADOOP_PID_DIR=${HADOOP_SECURE_PID_DIR}
   HADOOP_LOG_DIR=${HADOOP_SECURE_LOG_DIR}
 }
@@ -824,7 +874,7 @@ function hadoop_verify_logdir
   rm "${HADOOP_LOG_DIR}/$$" >/dev/null 2>&1
 }
 
-function hadoop_status_daemon() 
+function hadoop_status_daemon()
 {
   #
   # LSB 4.1.0 compatible status command (1)
@@ -841,12 +891,12 @@ function hadoop_status_daemon()
   #     them the benefit of a doubt and returning 1 even if
   #     our pid is not in in /var/run .
   #
-  
+
   local pidfile=$1
   shift
-  
+
   local pid
-  
+
   if [[ -f "${pidfile}" ]]; then
     pid=$(cat "${pidfile}")
     if ps -p "${pid}" > /dev/null 2>&1; then
@@ -865,7 +915,7 @@ function hadoop_java_exec
   local command=$1
   local class=$2
   shift 2
-  
+
   hadoop_debug "Final CLASSPATH: ${CLASSPATH}"
   hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
 
@@ -912,14 +962,14 @@ function hadoop_start_daemon_wrapper
   local counter
 
   hadoop_rotate_log "${outfile}"
-  
+
   hadoop_start_daemon "${daemonname}" \
     "$class" \
     "${pidfile}" \
     "$@" >> "${outfile}" 2>&1 < /dev/null &
 
   # we need to avoid a race condition here
-  # so let's wait for the fork to finish 
+  # so let's wait for the fork to finish
   # before overriding with the daemonized pid
   (( counter=0 ))
   while [[ ! -f ${pidfile} && ${counter} -le 5 ]]; do
@@ -933,23 +983,23 @@ function hadoop_start_daemon_wrapper
   if [[ $? -gt 0 ]]; then
     hadoop_error "ERROR:  Cannot write ${daemonname} pid ${pidfile}."
   fi
-  
+
   # shellcheck disable=SC2086
   renice "${HADOOP_NICENESS}" $! >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
     hadoop_error "ERROR: Cannot set priority of ${daemonname} process $!"
   fi
-  
+
   # shellcheck disable=SC2086
   disown %+ >/dev/null 2>&1
   if [[ $? -gt 0 ]]; then
     hadoop_error "ERROR: Cannot disconnect ${daemonname} process $!"
   fi
   sleep 1
-  
+
   # capture the ulimit output
   ulimit -a >> "${outfile}" 2>&1
-  
+
   # shellcheck disable=SC2086
   if ! ps -p $! >/dev/null 2>&1; then
     return 1
@@ -963,22 +1013,22 @@ function hadoop_start_secure_daemon
   #
   local daemonname=$1
   local class=$2
-  
+
   # pid file to create for our deamon
   local daemonpidfile=$3
-  
+
   # where to send stdout. jsvc has bad habits so this *may* be &1
   # which means you send it to stdout!
   local daemonoutfile=$4
-  
+
   # where to send stderr.  same thing, except &2 = stderr
   local daemonerrfile=$5
   local privpidfile=$6
   shift 6
- 
+
   hadoop_rotate_log "${daemonoutfile}"
   hadoop_rotate_log "${daemonerrfile}"
-  
+
   jsvc="${JSVC_HOME}/jsvc"
   if [[ ! -f "${jsvc}" ]]; then
     hadoop_error "JSVC_HOME is not set or set incorrectly. jsvc is required to run secure"
@@ -987,7 +1037,7 @@ function hadoop_start_secure_daemon
     hadoop_error "and set JSVC_HOME to the directory containing the jsvc binary."
     exit 1
   fi
-  
+
   # note that shellcheck will throw a
   # bogus for-our-use-case 2086 here.
   # it doesn't properly support multi-line situations
@@ -1000,7 +1050,7 @@ function hadoop_start_secure_daemon
   if [[ $? -gt 0 ]]; then
     hadoop_error "ERROR:  Cannot write ${daemonname} pid ${privpidfile}."
   fi
-  
+
   exec "${jsvc}" \
     "-Dproc_${daemonname}" \
     -outfile "${daemonoutfile}" \
@@ -1019,29 +1069,29 @@ function hadoop_start_secure_daemon_wrapper
   # of the dirty work to launch a daemon in the background!
   local daemonname=$1
   local class=$2
-  
+
   # same rules as hadoop_start_secure_daemon except we
   # have some additional parameters
-  
+
   local daemonpidfile=$3
-  
+
   local daemonoutfile=$4
-  
+
   # the pid file of the subprocess that spawned our
   # secure launcher
   local jsvcpidfile=$5
-  
+
   # the output of the subprocess that spawned our secure
   # launcher
   local jsvcoutfile=$6
-  
+
   local daemonerrfile=$7
   shift 7
 
   local counter
-  
+
   hadoop_rotate_log "${jsvcoutfile}"
-  
+
   hadoop_start_secure_daemon \
     "${daemonname}" \
     "${class}" \
@@ -1051,7 +1101,7 @@ function hadoop_start_secure_daemon_wrapper
     "${jsvcpidfile}"  "$@" >> "${jsvcoutfile}" 2>&1 < /dev/null &
 
   # we need to avoid a race condition here
-  # so let's wait for the fork to finish 
+  # so let's wait for the fork to finish
   # before overriding with the daemonized pid
   (( counter=0 ))
   while [[ ! -f ${daemonpidfile} && ${counter} -le 5 ]]; do
@@ -1065,7 +1115,7 @@ function hadoop_start_secure_daemon_wrapper
   if [[ $? -gt 0 ]]; then
     hadoop_error "ERROR:  Cannot write ${daemonname} pid ${daemonpidfile}."
   fi
-  
+
   sleep 1
   #shellcheck disable=SC2086
   renice "${HADOOP_NICENESS}" $! >/dev/null 2>&1
@@ -1098,12 +1148,12 @@ function hadoop_stop_daemon
   local cmd=$1
   local pidfile=$2
   shift 2
-  
+
   local pid
-  
+
   if [[ -f "${pidfile}" ]]; then
     pid=$(cat "$pidfile")
-    
+
     kill "${pid}" >/dev/null 2>&1
     sleep "${HADOOP_STOP_TIMEOUT}"
     if kill -0 "${pid}" > /dev/null 2>&1; then
@@ -1125,7 +1175,7 @@ function hadoop_stop_secure_daemon
   local privpidfile=$3
   shift 3
   local ret
-  
+
   hadoop_stop_daemon "${command}" "${daemonpidfile}"
   ret=$?
   rm -f "${daemonpidfile}" "${privpidfile}" 2>/dev/null
@@ -1140,18 +1190,18 @@ function hadoop_daemon_handler
   local daemon_pidfile=$4
   local daemon_outfile=$5
   shift 5
-  
+
   case ${daemonmode} in
     status)
       hadoop_status_daemon "${daemon_pidfile}"
       exit $?
     ;;
-    
+
     stop)
       hadoop_stop_daemon "${daemonname}" "${daemon_pidfile}"
       exit $?
     ;;
-    
+
     ##COMPAT  -- older hadoops would also start daemons by default
     start|default)
       hadoop_verify_piddir
@@ -1187,19 +1237,19 @@ function hadoop_secure_daemon_handler
   local priv_outfile=$7
   local priv_errfile=$8
   shift 8
-  
+
   case ${daemonmode} in
     status)
       hadoop_status_daemon "${daemon_pidfile}"
       exit $?
     ;;
-    
+
     stop)
       hadoop_stop_secure_daemon "${daemonname}" \
       "${daemon_pidfile}" "${priv_pidfile}"
       exit $?
     ;;
-    
+
     ##COMPAT  -- older hadoops would also start daemons by default
     start|default)
       hadoop_verify_piddir
@@ -1212,7 +1262,7 @@ function hadoop_secure_daemon_handler
         # stale pid file, so just remove it and continue on
         rm -f "${daemon_pidfile}" >/dev/null 2>&1
       fi
-      
+
       ##COMPAT  - differenticate between --daemon start and nothing
       # "nothing" shouldn't detach
       if [[ "${daemonmode}" = "default" ]]; then

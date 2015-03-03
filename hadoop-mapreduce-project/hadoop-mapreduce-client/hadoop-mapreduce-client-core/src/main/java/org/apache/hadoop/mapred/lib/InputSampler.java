@@ -46,7 +46,7 @@ public class InputSampler<K,V> extends
 
   public static <K,V> void writePartitionFile(JobConf job, Sampler<K,V> sampler)
       throws IOException, ClassNotFoundException, InterruptedException {
-    writePartitionFile(new Job(job), sampler);
+    writePartitionFile(Job.getInstance(job), sampler);
   }
   /**
    * Interface to sample using an {@link org.apache.hadoop.mapred.InputFormat}.

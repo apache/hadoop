@@ -117,10 +117,10 @@ import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.htrace.Span;
-import org.htrace.Trace;
-import org.htrace.TraceInfo;
-import org.htrace.TraceScope;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceInfo;
+import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
@@ -666,6 +666,7 @@ public abstract class Server {
         assert !running;
         readSelector.wakeup();
         try {
+          super.interrupt();
           super.join();
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
@@ -749,6 +750,13 @@ public abstract class Server {
         
         Reader reader = getReader();
         Connection c = connectionManager.register(channel);
+        // If the connectionManager can't take it, close the connection.
+        if (c == null) {
+          if (channel.isOpen()) {
+            IOUtils.cleanup(null, channel);
+          }
+          continue;
+        }
         key.attach(c);  // so closeCurrentConnection can get the object
         reader.addConnection(c);
       }
@@ -2731,6 +2739,7 @@ public abstract class Server {
     final private int idleScanInterval;
     final private int maxIdleTime;
     final private int maxIdleToClose;
+    final private int maxConnections;
     
     ConnectionManager() {
       this.idleScanTimer = new Timer(
@@ -2747,6 +2756,9 @@ public abstract class Server {
       this.maxIdleToClose = conf.getInt(
           CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_KEY,
           CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_DEFAULT);
+      this.maxConnections = conf.getInt(
+          CommonConfigurationKeysPublic.IPC_SERVER_MAX_CONNECTIONS_KEY,
+          CommonConfigurationKeysPublic.IPC_SERVER_MAX_CONNECTIONS_DEFAULT);
       // create a set with concurrency -and- a thread-safe iterator, add 2
       // for listener and idle closer threads
       this.connections = Collections.newSetFromMap(
@@ -2774,11 +2786,19 @@ public abstract class Server {
       return count.get();
     }
 
+    boolean isFull() {
+      // The check is disabled when maxConnections <= 0.
+      return ((maxConnections > 0) && (size() >= maxConnections));
+    }
+
     Connection[] toArray() {
       return connections.toArray(new Connection[0]);
     }
 
     Connection register(SocketChannel channel) {
+      if (isFull()) {
+        return null;
+      }
       Connection connection = new Connection(channel, Time.now());
       add(connection);
       if (LOG.isDebugEnabled()) {

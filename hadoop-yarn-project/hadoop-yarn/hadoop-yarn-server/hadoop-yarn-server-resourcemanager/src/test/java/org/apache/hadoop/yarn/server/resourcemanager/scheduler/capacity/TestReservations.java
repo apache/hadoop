@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -262,7 +263,8 @@ public class TestReservations {
 
     // Start testing...
     // Only AM
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(2 * GB, a.getUsedResources().getMemory());
     assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -273,7 +275,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_2.getUsedResource().getMemory());
 
     // Only 1 map - simulating reduce
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(5 * GB, a.getUsedResources().getMemory());
     assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -284,7 +287,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_2.getUsedResource().getMemory());
 
     // Only 1 map to other node - simulating reduce
-    a.assignContainers(clusterResource, node_1, false);
+    a.assignContainers(clusterResource, node_1, false,
+        new ResourceLimits(clusterResource));
     assertEquals(8 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -298,7 +302,8 @@ public class TestReservations {
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // try to assign reducer (5G on node 0 and should reserve)
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(13 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
@@ -313,7 +318,8 @@ public class TestReservations {
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // assign reducer to node 2
-    a.assignContainers(clusterResource, node_2, false);
+    a.assignContainers(clusterResource, node_2, false,
+        new ResourceLimits(clusterResource));
     assertEquals(18 * GB, a.getUsedResources().getMemory());
     assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
@@ -329,7 +335,8 @@ public class TestReservations {
 
     // node_1 heartbeat and unreserves from node_0 in order to allocate
     // on node_1
-    a.assignContainers(clusterResource, node_1, false);
+    a.assignContainers(clusterResource, node_1, false,
+        new ResourceLimits(clusterResource));
     assertEquals(18 * GB, a.getUsedResources().getMemory());
     assertEquals(18 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -411,7 +418,8 @@ public class TestReservations {
 
     // Start testing...
     // Only AM
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(2 * GB, a.getUsedResources().getMemory());
     assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -422,7 +430,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_2.getUsedResource().getMemory());
 
     // Only 1 map - simulating reduce
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(5 * GB, a.getUsedResources().getMemory());
     assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -433,7 +442,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_2.getUsedResource().getMemory());
 
     // Only 1 map to other node - simulating reduce
-    a.assignContainers(clusterResource, node_1, false);
+    a.assignContainers(clusterResource, node_1, false,
+        new ResourceLimits(clusterResource));
     assertEquals(8 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -447,7 +457,8 @@ public class TestReservations {
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // try to assign reducer (5G on node 0 and should reserve)
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(13 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
@@ -462,7 +473,8 @@ public class TestReservations {
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // assign reducer to node 2
-    a.assignContainers(clusterResource, node_2, false);
+    a.assignContainers(clusterResource, node_2, false,
+        new ResourceLimits(clusterResource));
     assertEquals(18 * GB, a.getUsedResources().getMemory());
     assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
@@ -478,7 +490,8 @@ public class TestReservations {
 
     // node_1 heartbeat and won't unreserve from node_0, potentially stuck
     // if AM doesn't handle
-    a.assignContainers(clusterResource, node_1, false);
+    a.assignContainers(clusterResource, node_1, false,
+        new ResourceLimits(clusterResource));
     assertEquals(18 * GB, a.getUsedResources().getMemory());
     assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
@@ -552,7 +565,8 @@ public class TestReservations {
 
     // Start testing...
     // Only AM
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(2 * GB, a.getUsedResources().getMemory());
     assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -562,7 +576,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_1.getUsedResource().getMemory());
 
     // Only 1 map - simulating reduce
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(5 * GB, a.getUsedResources().getMemory());
     assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -572,7 +587,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_1.getUsedResource().getMemory());
 
     // Only 1 map to other node - simulating reduce
-    a.assignContainers(clusterResource, node_1, false);
+    a.assignContainers(clusterResource, node_1, false,
+        new ResourceLimits(clusterResource));
     assertEquals(8 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -585,7 +601,8 @@ public class TestReservations {
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // try to assign reducer (5G on node 0 and should reserve)
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(13 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
@@ -599,7 +616,8 @@ public class TestReservations {
     assertEquals(2, app_0.getTotalRequiredResources(priorityReduce));
 
     // could allocate but told need to unreserve first
-    a.assignContainers(clusterResource, node_1, true);
+    a.assignContainers(clusterResource, node_1, true,
+        new ResourceLimits(clusterResource));
     assertEquals(13 * GB, a.getUsedResources().getMemory());
     assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -792,7 +810,8 @@ public class TestReservations {
 
     // Start testing...
     // Only AM
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(2 * GB, a.getUsedResources().getMemory());
     assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -802,7 +821,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_1.getUsedResource().getMemory());
 
     // Only 1 map - simulating reduce
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(5 * GB, a.getUsedResources().getMemory());
     assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -812,7 +832,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_1.getUsedResource().getMemory());
 
     // Only 1 map to other node - simulating reduce
-    a.assignContainers(clusterResource, node_1, false);
+    a.assignContainers(clusterResource, node_1, false,
+        new ResourceLimits(clusterResource));
     assertEquals(8 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -833,7 +854,8 @@ public class TestReservations {
     // now add in reservations and make sure it continues if config set
     // allocate to queue so that the potential new capacity is greater then
     // absoluteMaxCapacity
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(13 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(5 * GB, a.getMetrics().getReservedMB());
@@ -966,7 +988,8 @@ public class TestReservations {
 
     // Start testing...
     // Only AM
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(2 * GB, a.getUsedResources().getMemory());
     assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -976,7 +999,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_1.getUsedResource().getMemory());
 
     // Only 1 map - simulating reduce
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(5 * GB, a.getUsedResources().getMemory());
     assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -986,7 +1010,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_1.getUsedResource().getMemory());
 
     // Only 1 map to other node - simulating reduce
-    a.assignContainers(clusterResource, node_1, false);
+    a.assignContainers(clusterResource, node_1, false,
+        new ResourceLimits(clusterResource));
     assertEquals(8 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -999,7 +1024,8 @@ public class TestReservations {
     // now add in reservations and make sure it continues if config set
     // allocate to queue so that the potential new capacity is greater then
     // absoluteMaxCapacity
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(13 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(5 * GB, app_0.getCurrentReservation().getMemory());
@@ -1096,7 +1122,8 @@ public class TestReservations {
 
     // Start testing...
     // Only AM
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(2 * GB, a.getUsedResources().getMemory());
     assertEquals(2 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -1107,7 +1134,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_2.getUsedResource().getMemory());
 
     // Only 1 map - simulating reduce
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(5 * GB, a.getUsedResources().getMemory());
     assertEquals(5 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -1118,7 +1146,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_2.getUsedResource().getMemory());
 
     // Only 1 map to other node - simulating reduce
-    a.assignContainers(clusterResource, node_1, false);
+    a.assignContainers(clusterResource, node_1, false,
+        new ResourceLimits(clusterResource));
     assertEquals(8 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -1132,7 +1161,8 @@ public class TestReservations {
     // try to assign reducer (5G on node 0), but tell it
     // it has to unreserve. No room to allocate and shouldn't reserve
     // since nothing currently reserved.
-    a.assignContainers(clusterResource, node_0, true);
+    a.assignContainers(clusterResource, node_0, true,
+        new ResourceLimits(clusterResource));
     assertEquals(8 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -1146,7 +1176,8 @@ public class TestReservations {
     // try to assign reducer (5G on node 2), but tell it
     // it has to unreserve. Has room but shouldn't reserve
     // since nothing currently reserved.
-    a.assignContainers(clusterResource, node_2, true);
+    a.assignContainers(clusterResource, node_2, true,
+        new ResourceLimits(clusterResource));
     assertEquals(8 * GB, a.getUsedResources().getMemory());
     assertEquals(8 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -1158,7 +1189,8 @@ public class TestReservations {
     assertEquals(0 * GB, node_2.getUsedResource().getMemory());
 
     // let it assign 5G to node_2
-    a.assignContainers(clusterResource, node_2, false);
+    a.assignContainers(clusterResource, node_2, false,
+        new ResourceLimits(clusterResource));
     assertEquals(13 * GB, a.getUsedResources().getMemory());
     assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0 * GB, a.getMetrics().getReservedMB());
@@ -1170,7 +1202,8 @@ public class TestReservations {
     assertEquals(5 * GB, node_2.getUsedResource().getMemory());
 
     // reserve 8G node_0
-    a.assignContainers(clusterResource, node_0, false);
+    a.assignContainers(clusterResource, node_0, false,
+        new ResourceLimits(clusterResource));
     assertEquals(21 * GB, a.getUsedResources().getMemory());
     assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(8 * GB, a.getMetrics().getReservedMB());
@@ -1184,7 +1217,8 @@ public class TestReservations {
     // try to assign (8G on node 2). No room to allocate,
     // continued to try due to having reservation above,
     // but hits queue limits so can't reserve anymore.
-    a.assignContainers(clusterResource, node_2, false);
+    a.assignContainers(clusterResource, node_2, false,
+        new ResourceLimits(clusterResource));
     assertEquals(21 * GB, a.getUsedResources().getMemory());
     assertEquals(13 * GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(8 * GB, a.getMetrics().getReservedMB());

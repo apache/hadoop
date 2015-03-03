@@ -95,6 +95,14 @@ public class TestDFSShell {
     return f;
   }
 
+  static Path writeByte(FileSystem fs, Path f) throws IOException {
+    DataOutputStream out = fs.create(f);
+    out.writeByte(1);
+    out.close();
+    assertTrue(fs.exists(f));
+    return f;
+  }
+
   static Path mkdir(FileSystem fs, Path p) throws IOException {
     assertTrue(fs.mkdirs(p));
     assertTrue(fs.exists(p));
@@ -272,6 +280,27 @@ public class TestDFSShell {
       Long combinedDiskUsed = myFileDiskUsed + myFile2DiskUsed;
       assertThat(returnString, containsString(combinedLength.toString()));
       assertThat(returnString, containsString(combinedDiskUsed.toString()));
+
+      // Check if output is rendered properly with multiple input paths
+      Path myFile3 = new Path("/test/dir/file3");
+      writeByte(fs, myFile3);
+      assertTrue(fs.exists(myFile3));
+      args = new String[3];
+      args[0] = "-du";
+      args[1] = "/test/dir/file3";
+      args[2] = "/test/dir/file2";
+      val = -1;
+      try {
+        val = shell.run(args);
+      } catch (Exception e) {
+        System.err.println("Exception raised from DFSShell.run " +
+            e.getLocalizedMessage());
+      }
+      assertEquals("Return code should be 0.", 0, val);
+      returnString = out.toString();
+      out.reset();
+      assertTrue(returnString.contains("1   2   /test/dir/file3"));
+      assertTrue(returnString.contains("23  46  /test/dir/file2"));
     } finally {
       System.setOut(psBackup);
       cluster.shutdown();

@@ -121,14 +121,6 @@ public class TestNameNodeOptionParsing {
     }
 
     {
-      final String[] args = {"-rollingUpgrade", "downgrade"};
-      final StartupOption opt = NameNode.parseArguments(args);
-      assertEquals(StartupOption.ROLLINGUPGRADE, opt);
-      assertEquals(RollingUpgradeStartupOption.DOWNGRADE, opt.getRollingUpgradeStartupOption());
-      assertTrue(RollingUpgradeStartupOption.DOWNGRADE.matches(opt));
-    }
-
-    {
       final String[] args = {"-rollingUpgrade", "rollback"};
       final StartupOption opt = NameNode.parseArguments(args);
       assertEquals(StartupOption.ROLLINGUPGRADE, opt);

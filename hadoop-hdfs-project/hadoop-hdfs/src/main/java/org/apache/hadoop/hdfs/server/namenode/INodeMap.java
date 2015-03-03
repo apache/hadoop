@@ -22,10 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
-import org.apache.hadoop.hdfs.server.namenode.Quota.Counts;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
 
@@ -95,22 +92,22 @@ public class INodeMap {
         "", "", new FsPermission((short) 0)), 0, 0) {
       
       @Override
-      void recordModification(int latestSnapshotId)
-          throws QuotaExceededException {
+      void recordModification(int latestSnapshotId) {
       }
       
       @Override
-      public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks,
-          List<INode> removedINodes) {
+      public void destroyAndCollectBlocks(BlockStoragePolicySuite bsps,
+          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
         // Nothing to do
       }
-      
+
       @Override
-      public Counts computeQuotaUsage(Counts counts, boolean useCache,
-          int lastSnapshotId) {
+      public QuotaCounts computeQuotaUsage(
+          BlockStoragePolicySuite bsps, QuotaCounts counts,
+          boolean useCache, int lastSnapshotId) {
         return null;
       }
-      
+
       @Override
       public ContentSummaryComputationContext computeContentSummary(
           ContentSummaryComputationContext summary) {
@@ -118,10 +115,10 @@ public class INodeMap {
       }
       
       @Override
-      public Counts cleanSubtree(int snapshotId, int priorSnapshotId,
-          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
-          boolean countDiffChange) throws QuotaExceededException {
-        return null;
+      public QuotaCounts cleanSubtree(BlockStoragePolicySuite bsps,
+          int snapshotId, int priorSnapshotId,
+          BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
+          return null;
       }
 
       @Override

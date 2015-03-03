@@ -35,6 +35,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -51,8 +52,9 @@ import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -67,6 +69,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
@@ -94,9 +97,9 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
-import org.htrace.Span;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -892,7 +895,8 @@ public class DFSOutputStream extends FSOutputSummer
             long seqno = ack.getSeqno();
             // processes response status from datanodes.
             for (int i = ack.getNumOfReplies()-1; i >=0  && dfsClient.clientRunning; i--) {
-              final Status reply = ack.getReply(i);
+              final Status reply = PipelineAck.getStatusFromHeader(ack
+                .getReply(i));
               // Restart will not be treated differently unless it is
               // the local node or the only one in the pipeline.
               if (PipelineAck.isRestartOOBStatus(reply) &&
@@ -1442,11 +1446,13 @@ public class DFSOutputStream extends FSOutputSummer
           ExtendedBlock blockCopy = new ExtendedBlock(block);
           blockCopy.setNumBytes(blockSize);
 
+          boolean[] targetPinnings = getPinnings(nodes, true);
           // send the request
           new Sender(out).writeBlock(blockCopy, nodeStorageTypes[0], accessToken,
               dfsClient.clientName, nodes, nodeStorageTypes, null, bcs, 
               nodes.length, block.getNumBytes(), bytesSent, newGS,
-              checksum4WriteBlock, cachingStrategy.get(), isLazyPersistFile);
+              checksum4WriteBlock, cachingStrategy.get(), isLazyPersistFile,
+            (targetPinnings == null ? false : targetPinnings[0]), targetPinnings);
   
           // receive ack for connect
           BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
@@ -1464,16 +1470,10 @@ public class DFSOutputStream extends FSOutputSummer
             checkRestart = true;
             throw new IOException("A datanode is restarting.");
           }
-          if (pipelineStatus != SUCCESS) {
-            if (pipelineStatus == Status.ERROR_ACCESS_TOKEN) {
-              throw new InvalidBlockTokenException(
-                  "Got access token error for connect ack with firstBadLink as "
-                      + firstBadLink);
-            } else {
-              throw new IOException("Bad connect ack with firstBadLink as "
-                  + firstBadLink);
-            }
-          }
+
+          String logInfo = "ack with firstBadLink as " + firstBadLink;
+          DataTransferProtoUtil.checkBlockOpStatus(resp, logInfo);
+
           assert null == blockStream : "Previous blockStream unclosed";
           blockStream = out;
           result =  true; // success
@@ -1531,6 +1531,33 @@ public class DFSOutputStream extends FSOutputSummer
           }
         }
         return result;
+      }
+    }
+
+    private boolean[] getPinnings(DatanodeInfo[] nodes, boolean shouldLog) {
+      if (favoredNodes == null) {
+        return null;
+      } else {
+        boolean[] pinnings = new boolean[nodes.length];
+        HashSet<String> favoredSet =
+            new HashSet<String>(Arrays.asList(favoredNodes));
+        for (int i = 0; i < nodes.length; i++) {
+          pinnings[i] = favoredSet.remove(nodes[i].getXferAddrWithHostname());
+          if (DFSClient.LOG.isDebugEnabled()) {
+            DFSClient.LOG.debug(nodes[i].getXferAddrWithHostname() +
+                " was chosen by name node (favored=" + pinnings[i] +
+                ").");
+          }
+        }
+        if (shouldLog && !favoredSet.isEmpty()) {
+          // There is one or more favored nodes that were not allocated.
+          DFSClient.LOG.warn(
+              "These favored nodes were specified but not chosen: " +
+              favoredSet +
+              " Specified favored nodes: " + Arrays.toString(favoredNodes));
+
+        }
+        return pinnings;
       }
     }
 
@@ -1801,10 +1828,13 @@ public class DFSOutputStream extends FSOutputSummer
 
   static DFSOutputStream newStreamForAppend(DFSClient dfsClient, String src,
       boolean toNewBlock, int bufferSize, Progressable progress,
-      LocatedBlock lastBlock, HdfsFileStatus stat, DataChecksum checksum)
-      throws IOException {
+      LocatedBlock lastBlock, HdfsFileStatus stat, DataChecksum checksum,
+      String[] favoredNodes) throws IOException {
     final DFSOutputStream out = new DFSOutputStream(dfsClient, src, toNewBlock,
         progress, lastBlock, stat, checksum);
+    if (favoredNodes != null && favoredNodes.length != 0) {
+      out.streamer.setFavoredNodes(favoredNodes);
+    }
     out.start();
     return out;
   }
@@ -1816,8 +1846,9 @@ public class DFSOutputStream extends FSOutputSummer
   }
 
   private void computePacketChunkSize(int psize, int csize) {
+    final int bodySize = psize - PacketHeader.PKT_MAX_HEADER_LEN;
     final int chunkSize = csize + getChecksumSize();
-    chunksPerPacket = Math.max(psize/chunkSize, 1);
+    chunksPerPacket = Math.max(bodySize/chunkSize, 1);
     packetSize = chunkSize*chunksPerPacket;
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("computePacketChunkSize: src=" + src +

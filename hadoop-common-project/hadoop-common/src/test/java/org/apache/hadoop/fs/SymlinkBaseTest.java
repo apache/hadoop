@@ -578,7 +578,7 @@ public abstract class SymlinkBaseTest {
       // Expected
       if (wrapper instanceof FileContextTestWrapper) {
         GenericTestUtils.assertExceptionContains(
-            "No AbstractFileSystem configured for scheme: null", e);
+            AbstractFileSystem.NO_ABSTRACT_FS_ERROR, e);
       } else if (wrapper instanceof FileSystemTestWrapper) {
         assertEquals("No FileSystem for scheme: null", e.getMessage());
       }

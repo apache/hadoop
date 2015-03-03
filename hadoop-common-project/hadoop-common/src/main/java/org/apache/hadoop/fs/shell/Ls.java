@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.shell;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedList;
 import org.apache.hadoop.util.StringUtils;
@@ -40,22 +42,47 @@ class Ls extends FsCommand {
     factory.addClass(Ls.class, "-ls");
     factory.addClass(Lsr.class, "-lsr");
   }
-  
+
+  private static final String OPTION_DIRECTORY = "d";
+  private static final String OPTION_HUMAN = "h";
+  private static final String OPTION_RECURSIVE = "R";
+  private static final String OPTION_REVERSE = "r";
+  private static final String OPTION_MTIME = "t";
+  private static final String OPTION_ATIME = "u";
+  private static final String OPTION_SIZE = "S";
+
   public static final String NAME = "ls";
-  public static final String USAGE = "[-d] [-h] [-R] [<path> ...]";
+  public static final String USAGE = "[-" + OPTION_DIRECTORY + "] [-"
+      + OPTION_HUMAN + "] " + "[-" + OPTION_RECURSIVE + "] [-" + OPTION_MTIME
+      + "] [-" + OPTION_SIZE + "] [-" + OPTION_REVERSE + "] " + "[-"
+      + OPTION_ATIME + "] [<path> ...]";
+
   public static final String DESCRIPTION =
-		    "List the contents that match the specified file pattern. If " +
-		    "path is not specified, the contents of /user/<currentUser> " +
-		    "will be listed. Directory entries are of the form:\n" +
-		    "\tpermissions - userId groupId sizeOfDirectory(in bytes) modificationDate(yyyy-MM-dd HH:mm) directoryName\n\n" +
-		    "and file entries are of the form:\n" +
-		    "\tpermissions numberOfReplicas userId groupId sizeOfFile(in bytes) modificationDate(yyyy-MM-dd HH:mm) fileName\n" +
-		    "-d:  Directories are listed as plain files.\n" +
-		    "-h:  Formats the sizes of files in a human-readable fashion " +
-		    "rather than a number of bytes.\n" +
-		    "-R:  Recursively list the contents of directories.";
-		  
-  
+      "List the contents that match the specified file pattern. If " +
+          "path is not specified, the contents of /user/<currentUser> " +
+          "will be listed. For a directory a list of its direct children " +
+          "is returned (unless -" + OPTION_DIRECTORY +
+          " option is specified).\n\n" +
+          "Directory entries are of the form:\n" +
+          "\tpermissions - userId groupId sizeOfDirectory(in bytes) modificationDate(yyyy-MM-dd HH:mm) directoryName\n\n" +
+          "and file entries are of the form:\n" +
+          "\tpermissions numberOfReplicas userId groupId sizeOfFile(in bytes) modificationDate(yyyy-MM-dd HH:mm) fileName\n\n" +
+          "  -" + OPTION_DIRECTORY +
+          "  Directories are listed as plain files.\n" +
+          "  -" + OPTION_HUMAN +
+          "  Formats the sizes of files in a human-readable fashion\n" +
+          "      rather than a number of bytes.\n" +
+          "  -" + OPTION_RECURSIVE +
+          "  Recursively list the contents of directories.\n" +
+          "  -" + OPTION_MTIME +
+          "  Sort files by modification time (most recent first).\n" +
+          "  -" + OPTION_SIZE +
+          "  Sort files by size.\n" +
+          "  -" + OPTION_REVERSE +
+          "  Reverse the order of the sort.\n" +
+          "  -" + OPTION_ATIME +
+          "  Use time of last access instead of modification for\n" +
+          "      display and sorting.";
 
   protected final SimpleDateFormat dateFormat =
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -63,6 +90,11 @@ class Ls extends FsCommand {
   protected int maxRepl = 3, maxLen = 10, maxOwner = 0, maxGroup = 0;
   protected String lineFormat;
   protected boolean dirRecurse;
+  private boolean orderReverse;
+  private boolean orderTime;
+  private boolean orderSize;
+  private boolean useAtime;
+  private Comparator<PathData> orderComparator;
 
   protected boolean humanReadable = false;
 
@@ -75,12 +107,74 @@ class Ls extends FsCommand {
   @Override
   protected void processOptions(LinkedList<String> args)
   throws IOException {
-    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "d", "h", "R");
+    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE,
+        OPTION_DIRECTORY, OPTION_HUMAN, OPTION_RECURSIVE, OPTION_REVERSE,
+        OPTION_MTIME, OPTION_SIZE, OPTION_ATIME);
     cf.parse(args);
-    dirRecurse = !cf.getOpt("d");
-    setRecursive(cf.getOpt("R") && dirRecurse);
-    humanReadable = cf.getOpt("h");
+    dirRecurse = !cf.getOpt(OPTION_DIRECTORY);
+    setRecursive(cf.getOpt(OPTION_RECURSIVE) && dirRecurse);
+    humanReadable = cf.getOpt(OPTION_HUMAN);
+    orderReverse = cf.getOpt(OPTION_REVERSE);
+    orderTime = cf.getOpt(OPTION_MTIME);
+    orderSize = !orderTime && cf.getOpt(OPTION_SIZE);
+    useAtime = cf.getOpt(OPTION_ATIME);
     if (args.isEmpty()) args.add(Path.CUR_DIR);
+
+    initialiseOrderComparator();
+  }
+
+  /**
+   * Should the contents of the directory be shown or just the directory?
+   * @return true if directory contents, false if just directory
+   */
+  @InterfaceAudience.Private
+  boolean isDirRecurse() {
+    return this.dirRecurse;
+  }
+
+  /**
+   * Should file sizes be returned in human readable format rather than bytes?
+   * @return true is human readable, false if bytes
+   */
+  @InterfaceAudience.Private
+  boolean isHumanReadable() {
+    return this.humanReadable;
+  }
+
+  /**
+   * Should directory contents be displayed in reverse order
+   * @return true reverse order, false default order
+   */
+  @InterfaceAudience.Private
+  boolean isOrderReverse() {
+    return this.orderReverse;
+  }
+
+  /**
+   * Should directory contents be displayed in mtime order.
+   * @return true mtime order, false default order
+   */
+  @InterfaceAudience.Private
+  boolean isOrderTime() {
+    return this.orderTime;
+  }
+
+  /**
+   * Should directory contents be displayed in size order.
+   * @return true size order, false default order
+   */
+  @InterfaceAudience.Private
+  boolean isOrderSize() {
+    return this.orderSize;
+  }
+
+  /**
+   * Should access time be used rather than modification time.
+   * @return true use access time, false use modification time
+   */
+  @InterfaceAudience.Private
+  boolean isUseAtime() {
+    return this.useAtime;
   }
 
   @Override
@@ -98,6 +192,7 @@ class Ls extends FsCommand {
   throws IOException {
     if (parent != null && !isRecursive() && items.length != 0) {
       out.println("Found " + items.length + " items");
+      Arrays.sort(items, getOrderComparator());
     }
     adjustColumnWidths(items);
     super.processPaths(parent, items);
@@ -113,9 +208,10 @@ class Ls extends FsCommand {
         stat.getOwner(),
         stat.getGroup(),
         formatSize(stat.getLen()),
-        dateFormat.format(new Date(stat.getModificationTime())),
-        item
-    );
+        dateFormat.format(new Date(isUseAtime()
+            ? stat.getAccessTime()
+            : stat.getModificationTime())),
+        item);
     out.println(line);
   }
 
@@ -150,6 +246,49 @@ class Ls extends FsCommand {
   }
 
   /**
+   * Get the comparator to be used for sorting files.
+   * @return comparator
+   */
+  private Comparator<PathData> getOrderComparator() {
+    return this.orderComparator;
+  }
+
+  /**
+   * Initialise the comparator to be used for sorting files. If multiple options
+   * are selected then the order is chosen in the following precedence: -
+   * Modification time (or access time if requested) - File size - File name
+   */
+  private void initialiseOrderComparator() {
+    if (isOrderTime()) {
+      // mtime is ordered latest date first in line with the unix ls -t command
+      this.orderComparator = new Comparator<PathData>() {
+        public int compare(PathData o1, PathData o2) {
+          Long o1Time = (isUseAtime() ? o1.stat.getAccessTime()
+              : o1.stat.getModificationTime());
+          Long o2Time = (isUseAtime() ? o2.stat.getAccessTime()
+              : o2.stat.getModificationTime());
+          return o2Time.compareTo(o1Time) * (isOrderReverse() ? -1 : 1);
+        }
+      };
+    } else if (isOrderSize()) {
+      // size is ordered largest first in line with the unix ls -S command
+      this.orderComparator = new Comparator<PathData>() {
+        public int compare(PathData o1, PathData o2) {
+          Long o1Length = o1.stat.getLen();
+          Long o2Length = o2.stat.getLen();
+          return o2Length.compareTo(o1Length) * (isOrderReverse() ? -1 : 1);
+        }
+      };
+    } else {
+      this.orderComparator = new Comparator<PathData>() {
+        public int compare(PathData o1, PathData o2) {
+          return o1.compareTo(o2) * (isOrderReverse() ? -1 : 1);
+        }
+      };
+    }
+  }
+
+  /**
    * Get a recursive listing of all files in that match the file patterns.
    * Same as "-ls -R"
    */
@@ -162,7 +301,7 @@ class Ls extends FsCommand {
       args.addFirst("-R");
       super.processOptions(args);
     }
-    
+
     @Override
     public String getReplacementCommand() {
       return "ls -R";

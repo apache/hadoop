@@ -28,6 +28,7 @@ import org.apache.hadoop.mapred.gridmix.DebugJobProducer.MockJob;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
@@ -92,15 +93,13 @@ public class TestHighRamJob {
     
     GridmixJob job = new DummyGridmixJob(simulatedJobConf, story);
     Job simulatedJob = job.getJob();
-    Configuration simulatedConf = simulatedJob.getConfiguration();
+    JobConf simulatedConf = (JobConf)simulatedJob.getConfiguration();
     
     // check if the high ram properties are not set
     assertEquals(expectedMapMB, 
-                 simulatedConf.getLong(MRJobConfig.MAP_MEMORY_MB,
-                                       MRJobConfig.DEFAULT_MAP_MEMORY_MB));
+                 simulatedConf.getMemoryRequired(TaskType.MAP));
     assertEquals(expectedReduceMB, 
-                 simulatedConf.getLong(MRJobConfig.REDUCE_MEMORY_MB, 
-                                       MRJobConfig.DEFAULT_MAP_MEMORY_MB));
+                 simulatedConf.getMemoryRequired(TaskType.REDUCE));
   }
   
   /**

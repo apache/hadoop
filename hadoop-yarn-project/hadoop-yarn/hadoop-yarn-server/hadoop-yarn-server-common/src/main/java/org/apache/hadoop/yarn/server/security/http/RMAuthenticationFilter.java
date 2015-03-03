@@ -40,8 +40,6 @@ public class RMAuthenticationFilter extends
     DelegationTokenAuthenticationFilter {
 
   static private AbstractDelegationTokenSecretManager<?> manager;
-  public static final String AUTH_HANDLER_PROPERTY =
-      "yarn.resourcemanager.authentication-handler";
   private static final String OLD_HEADER = "Hadoop-YARN-Auth-Delegation-Token";
 
   public RMAuthenticationFilter() {

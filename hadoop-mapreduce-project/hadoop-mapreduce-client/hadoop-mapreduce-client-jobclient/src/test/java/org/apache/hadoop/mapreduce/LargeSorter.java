@@ -231,8 +231,7 @@ public class LargeSorter extends Configured implements Tool {
     conf.setInt(MRJobConfig.MAP_MEMORY_MB, mapMb);
     conf.set(MRJobConfig.MAP_JAVA_OPTS, "-Xmx" + (mapMb - 200) + "m");
 
-    @SuppressWarnings("deprecation")
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     job.setJarByClass(LargeSorter.class);
     job.setJobName("large-sorter");
     FileOutputFormat.setOutputPath(job, outDir);

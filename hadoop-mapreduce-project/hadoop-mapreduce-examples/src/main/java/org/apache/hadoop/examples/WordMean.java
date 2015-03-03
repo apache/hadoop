@@ -172,8 +172,7 @@ public class WordMean extends Configured implements Tool {
 
     Configuration conf = getConf();
 
-    @SuppressWarnings("deprecation")
-    Job job = new Job(conf, "word mean");
+    Job job = Job.getInstance(conf, "word mean");
     job.setJarByClass(WordMean.class);
     job.setMapperClass(WordMeanMapper.class);
     job.setCombinerClass(WordMeanReducer.class);

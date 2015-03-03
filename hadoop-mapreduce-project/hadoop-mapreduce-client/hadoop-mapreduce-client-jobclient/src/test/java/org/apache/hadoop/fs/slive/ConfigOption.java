@@ -97,6 +97,15 @@ class ConfigOption<T> extends Option {
       "Min,max for size to append (min=max=MAX_LONG=blocksize)", SLIVE_PREFIX
           + ".op.append.size", null);
 
+  static final ConfigOption<Boolean> TRUNCATE_WAIT = new ConfigOption<Boolean>(
+      "truncateWait", true, "Should wait for truncate recovery", SLIVE_PREFIX
+      + ".op.truncate.wait", true);
+
+  static final ConfigOption<Long> TRUNCATE_SIZE = new ConfigOption<Long>(
+      "truncateSize", true,
+      "Min,max for size to truncate (min=max=MAX_LONG=blocksize)", SLIVE_PREFIX
+      + ".op.truncate.size", null);
+
   static final ConfigOption<Long> RANDOM_SEED = new ConfigOption<Long>(
       "seed", true, "Random number seed", SLIVE_PREFIX + ".seed", null);
 

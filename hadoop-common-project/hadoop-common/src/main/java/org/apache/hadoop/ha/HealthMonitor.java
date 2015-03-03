@@ -30,6 +30,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HealthCheckFailedException;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Daemon;
 
@@ -201,18 +202,20 @@ public class HealthMonitor {
         status = proxy.getServiceStatus();
         proxy.monitorHealth();
         healthy = true;
-      } catch (HealthCheckFailedException e) {
-        LOG.warn("Service health check failed for " + targetToMonitor
-            + ": " + e.getMessage());
-        enterState(State.SERVICE_UNHEALTHY);
       } catch (Throwable t) {
-        LOG.warn("Transport-level exception trying to monitor health of " +
-            targetToMonitor + ": " + t.getLocalizedMessage());
-        RPC.stopProxy(proxy);
-        proxy = null;
-        enterState(State.SERVICE_NOT_RESPONDING);
-        Thread.sleep(sleepAfterDisconnectMillis);
-        return;
+        if (isHealthCheckFailedException(t)) {
+          LOG.warn("Service health check failed for " + targetToMonitor
+              + ": " + t.getMessage());
+          enterState(State.SERVICE_UNHEALTHY);
+        } else {
+          LOG.warn("Transport-level exception trying to monitor health of " +
+              targetToMonitor + ": " + t.getCause() + " " + t.getLocalizedMessage());
+          RPC.stopProxy(proxy);
+          proxy = null;
+          enterState(State.SERVICE_NOT_RESPONDING);
+          Thread.sleep(sleepAfterDisconnectMillis);
+          return;
+        }
       }
       
       if (status != null) {
@@ -225,7 +228,15 @@ public class HealthMonitor {
       Thread.sleep(checkIntervalMillis);
     }
   }
-  
+
+  private boolean isHealthCheckFailedException(Throwable t) {
+    return ((t instanceof HealthCheckFailedException) ||
+        (t instanceof RemoteException &&
+        ((RemoteException)t).unwrapRemoteException(
+            HealthCheckFailedException.class) instanceof
+            HealthCheckFailedException));
+  }
+
   private synchronized void setLastServiceStatus(HAServiceStatus status) {
     this.lastServiceState = status;
     for (ServiceStateCallback cb : serviceStateCallbacks) {

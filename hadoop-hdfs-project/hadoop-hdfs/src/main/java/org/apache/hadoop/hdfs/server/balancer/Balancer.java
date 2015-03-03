@@ -38,10 +38,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DDatanode;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DDatanode.StorageGroup;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.Source;
@@ -74,6 +74,10 @@ import com.google.common.base.Preconditions;
  *                     start the balancer with a default threshold of 10%
  *               bin/ start-balancer.sh -threshold 5
  *                     start the balancer with a threshold of 5%
+ *               bin/ start-balancer.sh -idleiterations 20
+ *                     start the balancer with maximum 20 consecutive idle iterations
+ *               bin/ start-balancer.sh -idleiterations -1
+ *                     run the balancer with default threshold infinitely
  * To stop:
  *      bin/ stop-balancer.sh
  * </pre>
@@ -136,7 +140,7 @@ import com.google.common.base.Preconditions;
  * <ol>
  * <li>The cluster is balanced;
  * <li>No block can be moved;
- * <li>No block has been moved for five consecutive iterations;
+ * <li>No block has been moved for specified consecutive iterations (5 by default);
  * <li>An IOException occurs while communicating with the namenode;
  * <li>Another balancer is running.
  * </ol>
@@ -147,7 +151,7 @@ import com.google.common.base.Preconditions;
  * <ol>
  * <li>The cluster is balanced. Exiting
  * <li>No block can be moved. Exiting...
- * <li>No block has been moved for 5 iterations. Exiting...
+ * <li>No block has been moved for specified iterations (5 by default). Exiting...
  * <li>Received an IO exception: failure reason. Exiting...
  * <li>Another balancer is running. Exiting...
  * </ol>
@@ -166,16 +170,17 @@ public class Balancer {
   private static final long GB = 1L << 30; //1GB
   private static final long MAX_SIZE_TO_MOVE = 10*GB;
 
-  private static final String USAGE = "Usage: java "
-      + Balancer.class.getSimpleName()
+  private static final String USAGE = "Usage: hdfs balancer"
       + "\n\t[-policy <policy>]\tthe balancing policy: "
       + BalancingPolicy.Node.INSTANCE.getName() + " or "
       + BalancingPolicy.Pool.INSTANCE.getName()
       + "\n\t[-threshold <threshold>]\tPercentage of disk capacity"
-      + "\n\t[-exclude [-f <hosts-file> | comma-sperated list of hosts]]"
+      + "\n\t[-exclude [-f <hosts-file> | <comma-separated list of hosts>]]"
       + "\tExcludes the specified datanodes."
-      + "\n\t[-include [-f <hosts-file> | comma-sperated list of hosts]]"
-      + "\tIncludes only the specified datanodes.";
+      + "\n\t[-include [-f <hosts-file> | <comma-separated list of hosts>]]"
+      + "\tIncludes only the specified datanodes."
+      + "\n\t[-idleiterations <idleiterations>]"
+      + "\tNumber of consecutive idle iterations (-1 for Infinite) before exit.";
   
   private final Dispatcher dispatcher;
   private final BalancingPolicy policy;
@@ -572,7 +577,7 @@ public class Balancer {
     List<NameNodeConnector> connectors = Collections.emptyList();
     try {
       connectors = NameNodeConnector.newNameNodeConnectors(namenodes, 
-            Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf);
+            Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf, p.maxIdleIteration);
     
       boolean done = false;
       for(int iteration = 0; !done; iteration++) {
@@ -628,19 +633,22 @@ public class Balancer {
   static class Parameters {
     static final Parameters DEFAULT = new Parameters(
         BalancingPolicy.Node.INSTANCE, 10.0,
+        NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS,
         Collections.<String> emptySet(), Collections.<String> emptySet());
 
     final BalancingPolicy policy;
     final double threshold;
+    final int maxIdleIteration;
     // exclude the nodes in this set from balancing operations
     Set<String> nodesToBeExcluded;
     //include only these nodes in balancing operations
     Set<String> nodesToBeIncluded;
 
-    Parameters(BalancingPolicy policy, double threshold,
+    Parameters(BalancingPolicy policy, double threshold, int maxIdleIteration,
         Set<String> nodesToBeExcluded, Set<String> nodesToBeIncluded) {
       this.policy = policy;
       this.threshold = threshold;
+      this.maxIdleIteration = maxIdleIteration;
       this.nodesToBeExcluded = nodesToBeExcluded;
       this.nodesToBeIncluded = nodesToBeIncluded;
     }
@@ -649,6 +657,7 @@ public class Balancer {
     public String toString() {
       return Balancer.class.getSimpleName() + "." + getClass().getSimpleName()
           + "[" + policy + ", threshold=" + threshold +
+          ", max idle iteration = " + maxIdleIteration +
           ", number of nodes to be excluded = "+ nodesToBeExcluded.size() +
           ", number of nodes to be included = "+ nodesToBeIncluded.size() +"]";
     }
@@ -687,6 +696,7 @@ public class Balancer {
     static Parameters parse(String[] args) {
       BalancingPolicy policy = Parameters.DEFAULT.policy;
       double threshold = Parameters.DEFAULT.threshold;
+      int maxIdleIteration = Parameters.DEFAULT.maxIdleIteration;
       Set<String> nodesTobeExcluded = Parameters.DEFAULT.nodesToBeExcluded;
       Set<String> nodesTobeIncluded = Parameters.DEFAULT.nodesToBeIncluded;
 
@@ -742,6 +752,11 @@ public class Balancer {
                } else {
                 nodesTobeIncluded = Util.parseHostList(args[i]);
               }
+            } else if ("-idleiterations".equalsIgnoreCase(args[i])) {
+              checkArgument(++i < args.length,
+                  "idleiterations value is missing: args = " + Arrays.toString(args));
+              maxIdleIteration = Integer.parseInt(args[i]);
+              LOG.info("Using a idleiterations of " + maxIdleIteration);
             } else {
               throw new IllegalArgumentException("args = "
                   + Arrays.toString(args));
@@ -755,7 +770,7 @@ public class Balancer {
         }
       }
       
-      return new Parameters(policy, threshold, nodesTobeExcluded, nodesTobeIncluded);
+      return new Parameters(policy, threshold, maxIdleIteration, nodesTobeExcluded, nodesTobeIncluded);
     }
 
     private static void printUsage(PrintStream out) {

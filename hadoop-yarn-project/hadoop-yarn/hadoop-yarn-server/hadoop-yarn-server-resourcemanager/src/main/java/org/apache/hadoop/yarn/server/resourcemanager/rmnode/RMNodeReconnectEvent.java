@@ -22,16 +22,19 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 
 public class RMNodeReconnectEvent extends RMNodeEvent {
   private RMNode reconnectedNode;
   private List<ApplicationId> runningApplications;
+  private List<NMContainerStatus> containerStatuses;
 
   public RMNodeReconnectEvent(NodeId nodeId, RMNode newNode,
-      List<ApplicationId> runningApps) {
+      List<ApplicationId> runningApps, List<NMContainerStatus> containerReports) {
     super(nodeId, RMNodeEventType.RECONNECTED);
     reconnectedNode = newNode;
     runningApplications = runningApps;
+    containerStatuses = containerReports;
   }
 
   public RMNode getReconnectedNode() {
@@ -40,5 +43,9 @@ public class RMNodeReconnectEvent extends RMNodeEvent {
 
   public List<ApplicationId> getRunningApplications() {
     return runningApplications;
+  }
+
+  public List<NMContainerStatus> getNMContainerStatuses() {
+    return containerStatuses;
   }
 }

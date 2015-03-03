@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.util.ChunkedArrayList;
 
@@ -201,7 +200,7 @@ class FSDirDeleteOp {
    */
   private static long unprotectedDelete(
       FSDirectory fsd, INodesInPath iip, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes, long mtime) throws QuotaExceededException {
+      List<INode> removedINodes, long mtime) {
     assert fsd.hasWriteLock();
 
     // check if target node exists
@@ -231,15 +230,14 @@ class FSDirDeleteOp {
 
     // collect block and update quota
     if (!targetNode.isInLatestSnapshot(latestSnapshot)) {
-      targetNode.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+      targetNode.destroyAndCollectBlocks(fsd.getBlockStoragePolicySuite(),
+        collectedBlocks, removedINodes);
     } else {
-      Quota.Counts counts = targetNode.cleanSubtree(CURRENT_STATE_ID,
-          latestSnapshot, collectedBlocks, removedINodes, true);
-      removed = counts.get(Quota.NAMESPACE);
-      // TODO: quota verification may fail the deletion here. We should not
-      // count the snapshot diff into quota usage in the future.
-      fsd.updateCount(iip, -counts.get(Quota.NAMESPACE),
-          -counts.get(Quota.DISKSPACE), true);
+      QuotaCounts counts = targetNode.cleanSubtree(
+        fsd.getBlockStoragePolicySuite(), CURRENT_STATE_ID,
+          latestSnapshot, collectedBlocks, removedINodes);
+      removed = counts.getNameSpace();
+      fsd.updateCountNoQuotaCheck(iip, iip.length() -1, counts.negation());
     }
 
     if (NameNode.stateChangeLog.isDebugEnabled()) {

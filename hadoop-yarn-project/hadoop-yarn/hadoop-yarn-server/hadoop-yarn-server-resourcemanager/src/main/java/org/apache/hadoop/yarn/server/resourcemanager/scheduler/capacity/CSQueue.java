@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 
@@ -75,15 +77,6 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @return configured queue capacity
    */
   public float getCapacity();
-  
-  /**
-   * Get actual <em>capacity</em> of the queue, this may be different from
-   * configured capacity when mis-config take place, like add labels to the
-   * cluster
-   * 
-   * @return actual queue capacity
-   */
-  public float getAbsActualCapacity();
 
   /**
    * Get capacity of the parent of the queue as a function of the 
@@ -144,14 +137,6 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public Resource getUsedResources();
   
   /**
-   * Get the currently utilized resources which allocated at nodes with label
-   * specified
-   * 
-   * @return used resources by the queue and it's children
-   */
-  public Resource getUsedResourceByLabel(String nodeLabel);
-  
-  /**
    * Get the current run-state of the queue
    * @return current run-state
    */
@@ -205,10 +190,12 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param clusterResource the resource of the cluster.
    * @param node node on which resources are available
    * @param needToUnreserve assign container only if it can unreserve one first
+   * @param resourceLimits how much overall resource of this queue can use. 
    * @return the assignment
    */
-  public CSAssignment assignContainers(
-      Resource clusterResource, FiCaSchedulerNode node, boolean needToUnreserve);
+  public CSAssignment assignContainers(Resource clusterResource,
+      FiCaSchedulerNode node, boolean needToUnreserve,
+      ResourceLimits resourceLimits);
   
   /**
    * A container assigned to the queue has completed.
@@ -247,8 +234,10 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    /**
    * Update the cluster resource for queues as we add/remove nodes
    * @param clusterResource the current cluster resource
+   * @param resourceLimits the current ResourceLimits
    */
-  public void updateClusterResource(Resource clusterResource);
+  public void updateClusterResource(Resource clusterResource,
+      ResourceLimits resourceLimits);
   
   /**
    * Get the {@link ActiveUsersManager} for the queue.
@@ -279,31 +268,22 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    */
   public void attachContainer(Resource clusterResource,
                FiCaSchedulerApp application, RMContainer container);
-  
-  /**
-   * Get absolute capacity by label of this queue can use 
-   * @param nodeLabel
-   * @return absolute capacity by label of this queue can use
-   */
-  public float getAbsoluteCapacityByNodeLabel(String nodeLabel);
-  
-  /**
-   * Get absolute max capacity by label of this queue can use 
-   * @param nodeLabel
-   * @return absolute capacity by label of this queue can use
-   */
-  public float getAbsoluteMaximumCapacityByNodeLabel(String nodeLabel);
-
-  /**
-   * Get capacity by node label
-   * @param nodeLabel
-   * @return capacity by node label
-   */
-  public float getCapacityByNodeLabel(String nodeLabel);
 
   /**
    * Check whether <em>disable_preemption</em> property is set for this queue
    * @return true if <em>disable_preemption</em> is set, false if not
    */
   public boolean getPreemptionDisabled();
+  
+  /**
+   * Get QueueCapacities of this queue
+   * @return queueCapacities
+   */
+  public QueueCapacities getQueueCapacities();
+  
+  /**
+   * Get ResourceUsage of this queue
+   * @return resourceUsage
+   */
+  public ResourceUsage getQueueResourceUsage();
 }

@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -173,7 +174,7 @@ public class DFSAdmin extends FsShell {
       "\t\tNote: A quota of 1 would force the directory to remain empty.\n";
 
     private final long quota; // the quota to be set
-    
+
     /** Constructor */
     SetQuotaCommand(String[] args, int pos, FileSystem fs) {
       super(fs);
@@ -206,19 +207,27 @@ public class DFSAdmin extends FsShell {
   /** A class that supports command clearSpaceQuota */
   private static class ClearSpaceQuotaCommand extends DFSAdminCommand {
     private static final String NAME = "clrSpaceQuota";
-    private static final String USAGE = "-"+NAME+" <dirname>...<dirname>";
+    private static final String USAGE = "-"+NAME+" [-storageType <storagetype>] <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
-    "Clear the disk space quota for each directory <dirName>.\n" +
+    "Clear the space quota for each directory <dirName>.\n" +
     "\t\tFor each directory, attempt to clear the quota. An error will be reported if\n" +
     "\t\t1. the directory does not exist or is a file, or\n" +
     "\t\t2. user is not an administrator.\n" +
-    "\t\tIt does not fault if the directory has no quota.";
-    
+    "\t\tIt does not fault if the directory has no quota.\n" +
+    "\t\tThe storage type specific quota is cleared when -storageType option is specified.";
+
+    private StorageType type;
+
     /** Constructor */
     ClearSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
       super(fs);
       CommandFormat c = new CommandFormat(1, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
+      String storageTypeString =
+          StringUtils.popOptionWithArgument("-storageType", parameters);
+      if (storageTypeString != null) {
+        this.type = StorageType.parseStorageType(storageTypeString);
+      }
       this.args = parameters.toArray(new String[parameters.size()]);
     }
     
@@ -238,7 +247,11 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, HdfsConstants.QUOTA_RESET);
+      if (type != null) {
+        dfs.setQuotaByStorageType(path, type, HdfsConstants.QUOTA_RESET);
+      } else {
+        dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, HdfsConstants.QUOTA_RESET);
+      }
     }
   }
   
@@ -246,9 +259,9 @@ public class DFSAdmin extends FsShell {
   private static class SetSpaceQuotaCommand extends DFSAdminCommand {
     private static final String NAME = "setSpaceQuota";
     private static final String USAGE =
-      "-"+NAME+" <quota> <dirname>...<dirname>";
+      "-"+NAME+" <quota> [-storageType <storagetype>] <dirname>...<dirname>";
     private static final String DESCRIPTION = USAGE + ": " +
-      "Set the disk space quota <quota> for each directory <dirName>.\n" + 
+      "Set the space quota <quota> for each directory <dirName>.\n" +
       "\t\tThe space quota is a long integer that puts a hard limit\n" +
       "\t\ton the total size of all the files under the directory tree.\n" +
       "\t\tThe extra space required for replication is also counted. E.g.\n" +
@@ -258,9 +271,11 @@ public class DFSAdmin extends FsShell {
       "\t\tFor each directory, attempt to set the quota. An error will be reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
       "\t\t2. user is not an administrator, or\n" +
-      "\t\t3. the directory does not exist or is a file, or\n";
+      "\t\t3. the directory does not exist or is a file.\n" +
+      "\t\tThe storage type specific quota is set when -storageType option is specified.\n";
 
     private long quota; // the quota to be set
+    private StorageType type;
     
     /** Constructor */
     SetSpaceQuotaCommand(String[] args, int pos, FileSystem fs) {
@@ -272,6 +287,11 @@ public class DFSAdmin extends FsShell {
         quota = StringUtils.TraditionalBinaryPrefix.string2long(str);
       } catch (NumberFormatException nfe) {
         throw new IllegalArgumentException("\"" + str + "\" is not a valid value for a quota.");
+      }
+      String storageTypeString =
+          StringUtils.popOptionWithArgument("-storageType", parameters);
+      if (storageTypeString != null) {
+        this.type = StorageType.parseStorageType(storageTypeString);
       }
       
       this.args = parameters.toArray(new String[parameters.size()]);
@@ -293,7 +313,11 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(Path path) throws IOException {
-      dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, quota);
+      if (type != null) {
+        dfs.setQuotaByStorageType(path, type, quota);
+      } else {
+        dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, quota);
+      }
     }
   }
 
@@ -521,7 +545,7 @@ public class DFSAdmin extends FsShell {
 
   /**
    * Safe mode maintenance command.
-   * Usage: java DFSAdmin -safemode [enter | leave | get]
+   * Usage: hdfs dfsadmin -safemode [enter | leave | get]
    * @param argv List of of command line parameters.
    * @param idx The index of the command that is being processed.
    * @exception IOException if the filesystem does not exist.
@@ -637,7 +661,7 @@ public class DFSAdmin extends FsShell {
 
   /**
    * Allow snapshot on a directory.
-   * Usage: java DFSAdmin -allowSnapshot snapshotDir
+   * Usage: hdfs dfsadmin -allowSnapshot snapshotDir
    * @param argv List of of command line parameters.
    * @exception IOException
    */
@@ -653,7 +677,7 @@ public class DFSAdmin extends FsShell {
   
   /**
    * Allow snapshot on a directory.
-   * Usage: java DFSAdmin -disallowSnapshot snapshotDir
+   * Usage: hdfs dfsadmin -disallowSnapshot snapshotDir
    * @param argv List of of command line parameters.
    * @exception IOException
    */
@@ -1472,30 +1496,35 @@ public class DFSAdmin extends FsShell {
       RPC.getProxy(xface, RPC.getProtocolVersion(xface), address,
         ugi, conf, NetUtils.getDefaultSocketFactory(conf), 0);
 
-    GenericRefreshProtocol xlator =
-      new GenericRefreshProtocolClientSideTranslatorPB(proxy);
+    Collection<RefreshResponse> responses = null;
+    try (GenericRefreshProtocolClientSideTranslatorPB xlator =
+        new GenericRefreshProtocolClientSideTranslatorPB(proxy);) {
+      // Refresh
+      responses = xlator.refresh(identifier, args);
 
-    // Refresh
-    Collection<RefreshResponse> responses = xlator.refresh(identifier, args);
+      int returnCode = 0;
 
-    int returnCode = 0;
+      // Print refresh responses
+      System.out.println("Refresh Responses:\n");
+      for (RefreshResponse response : responses) {
+        System.out.println(response.toString());
 
-    // Print refresh responses
-    System.out.println("Refresh Responses:\n");
-    for (RefreshResponse response : responses) {
-      System.out.println(response.toString());
-
-      if (returnCode == 0 && response.getReturnCode() != 0) {
-        // This is the first non-zero return code, so we should return this
-        returnCode = response.getReturnCode();
-      } else if (returnCode != 0 && response.getReturnCode() != 0) {
-        // Then now we have multiple non-zero return codes,
-        // so we merge them into -1
-        returnCode = -1;
+        if (returnCode == 0 && response.getReturnCode() != 0) {
+          // This is the first non-zero return code, so we should return this
+          returnCode = response.getReturnCode();
+        } else if (returnCode != 0 && response.getReturnCode() != 0) {
+          // Then now we have multiple non-zero return codes,
+          // so we merge them into -1
+          returnCode = - 1;
+        }
+      }
+      return returnCode;
+    } finally {
+      if (responses == null) {
+        System.out.println("Failed to get response.\n");
+        return -1;
       }
     }
-
-    return returnCode;
   }
 
   /**
@@ -1561,7 +1590,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("Usage: hdfs dfsadmin"
                          + " [-refreshCallQueue]");
     } else if ("-reconfig".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
                          + " [-reconfig <datanode|...> <host:port> <start|status>]");
     } else if ("-refresh".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
@@ -1588,7 +1617,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-getDatanodeInfo <datanode_host:ipc_port>]");
     } else if ("-triggerBlockReport".equals(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
+      System.err.println("Usage: hdfs dfsadmin"
           + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]");
     } else {
       System.err.println("Usage: hdfs dfsadmin");

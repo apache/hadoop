@@ -35,9 +35,10 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
@@ -127,6 +129,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     SimulatedOutputStream oStream = null;
     private long bytesAcked;
     private long bytesRcvd;
+    private boolean pinned = false;
     BInfo(String bpid, Block b, boolean forWriting) throws IOException {
       theBlock = new Block(b);
       if (theBlock.getNumBytes() < 0) {
@@ -624,6 +627,26 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override // FSDatasetMBean
   public int getNumFailedVolumes() {
     return storage.getNumFailedVolumes();
+  }
+
+  @Override // FSDatasetMBean
+  public String[] getFailedStorageLocations() {
+    return null;
+  }
+
+  @Override // FSDatasetMBean
+  public long getLastVolumeFailureDate() {
+    return 0;
+  }
+
+  @Override // FSDatasetMBean
+  public long getEstimatedCapacityLostTotal() {
+    return 0;
+  }
+
+  @Override // FsDatasetSpi
+  public VolumeFailureSummary getVolumeFailureSummary() {
+    return new VolumeFailureSummary(ArrayUtils.EMPTY_STRING_ARRAY, 0, 0);
   }
 
   @Override // FSDatasetMBean
@@ -1284,6 +1307,16 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       StorageType targetStorageType) throws IOException {
     // TODO Auto-generated method stub
     return null;
+  }
+  
+  @Override
+  public void setPinning(ExtendedBlock b) throws IOException {
+    blockMap.get(b.getBlockPoolId()).get(b.getLocalBlock()).pinned = true;
+  }
+  
+  @Override
+  public boolean getPinning(ExtendedBlock b) throws IOException {
+    return blockMap.get(b.getBlockPoolId()).get(b.getLocalBlock()).pinned;
   }
 }
 

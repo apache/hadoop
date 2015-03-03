@@ -200,7 +200,7 @@ public class SecondaryNameNode implements Runnable,
   }
   
   public static InetSocketAddress getHttpAddress(Configuration conf) {
-    return NetUtils.createSocketAddr(conf.get(
+    return NetUtils.createSocketAddr(conf.getTrimmed(
         DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
         DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT));
   }
@@ -253,7 +253,7 @@ public class SecondaryNameNode implements Runnable,
 
     final InetSocketAddress httpAddr = infoSocAddr;
 
-    final String httpsAddrString = conf.get(
+    final String httpsAddrString = conf.getTrimmed(
         DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
         DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_DEFAULT);
     InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
@@ -587,7 +587,7 @@ public class SecondaryNameNode implements Runnable,
       return 0;
     }
     
-    String cmd = opts.getCommand().toString().toLowerCase();
+    String cmd = StringUtils.toLowerCase(opts.getCommand().toString());
     
     int exitCode = 0;
     try {

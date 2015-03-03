@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -59,6 +60,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -132,6 +134,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final ApplicationAttemptId applicationAttemptId;
   private final ApplicationSubmissionContext submissionContext;
   private Token<AMRMTokenIdentifier> amrmToken = null;
+  private volatile Integer amrmTokenKeyId = null;
   private SecretKey clientTokenMasterKey = null;
 
   private ConcurrentMap<NodeId, List<ContainerStatus>>
@@ -351,6 +354,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           EnumSet.of(
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.STATUS_UPDATE,
+              RMAppAttemptEventType.LAUNCHED,
+              RMAppAttemptEventType.LAUNCH_FAILED,
             // should be fixed to reject container allocate request at Final
             // Saving in scheduler
               RMAppAttemptEventType.CONTAINER_ALLOCATED,
@@ -441,7 +446,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
 
-    this.proxiedTrackingUrl = generateProxyUriWithScheme(null);
+    this.proxiedTrackingUrl = generateProxyUriWithScheme();
     this.maybeLastAttempt = maybeLastAttempt;
     this.stateMachine = stateMachineFactory.make(this);
 
@@ -534,31 +539,36 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }    
   }
   
-  private String generateProxyUriWithScheme(
-      final String trackingUriWithoutScheme) {
+  private String generateProxyUriWithScheme() {
     this.readLock.lock();
     try {
       final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
-      URI trackingUri = StringUtils.isEmpty(trackingUriWithoutScheme) ? null :
-        ProxyUriUtils.getUriFromAMUrl(scheme, trackingUriWithoutScheme);
       String proxy = WebAppUtils.getProxyHostAndPort(conf);
       URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
-      URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
+      URI result = ProxyUriUtils.getProxyUri(null, proxyUri,
           applicationAttemptId.getApplicationId());
       return result.toASCIIString();
     } catch (URISyntaxException e) {
-      LOG.warn("Could not proxify "+trackingUriWithoutScheme,e);
-      return trackingUriWithoutScheme;
+      LOG.warn("Could not proxify the uri for "
+          + applicationAttemptId.getApplicationId(), e);
+      return null;
     } finally {
       this.readLock.unlock();
     }
   }
 
-  private void setTrackingUrlToRMAppPage() {
+  private void setTrackingUrlToRMAppPage(RMAppAttemptState stateToBeStored) {
     originalTrackingUrl = pjoin(
         WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
         "cluster", "app", getAppAttemptId().getApplicationId());
-    proxiedTrackingUrl = originalTrackingUrl;
+    switch (stateToBeStored) {
+    case KILLED:
+    case FAILED:
+      proxiedTrackingUrl = originalTrackingUrl;
+      break;
+    default:
+      break;
+    }
   }
 
   private void invalidateAMHostAndPort() {
@@ -588,9 +598,32 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.writeLock.lock();
     try {
       this.amrmToken = lastToken;
+      this.amrmTokenKeyId = null;
     } finally {
       this.writeLock.unlock();
     }
+  }
+
+  @Private
+  public int getAMRMTokenKeyId() {
+    Integer keyId = this.amrmTokenKeyId;
+    if (keyId == null) {
+      this.readLock.lock();
+      try {
+        if (this.amrmToken == null) {
+          throw new YarnRuntimeException("Missing AMRM token for "
+              + this.applicationAttemptId);
+        }
+        keyId = this.amrmToken.decodeIdentifier().getKeyId();
+        this.amrmTokenKeyId = keyId;
+      } catch (IOException e) {
+        throw new YarnRuntimeException("AMRM token decode error for "
+            + this.applicationAttemptId, e);
+      } finally {
+        this.readLock.unlock();
+      }
+    }
+    return keyId;
   }
 
   @Override
@@ -811,7 +844,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     recoverAppAttemptCredentials(credentials, attemptState.getState());
     this.recoveredFinalState = attemptState.getState();
     this.originalTrackingUrl = attemptState.getFinalTrackingUrl();
-    this.proxiedTrackingUrl = generateProxyUriWithScheme(originalTrackingUrl);
     this.finalStatus = attemptState.getFinalApplicationStatus();
     this.startTime = attemptState.getStartTime();
     this.finishTime = attemptState.getFinishTime();
@@ -842,9 +874,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       }
     }
 
-    this.amrmToken =
-        rmContext.getAMRMTokenSecretManager().createAndGetAMRMToken(
-          applicationAttemptId);
+    setAMRMToken(rmContext.getAMRMTokenSecretManager().createAndGetAMRMToken(
+        applicationAttemptId));
   }
 
   private static class BaseTransition implements
@@ -1086,7 +1117,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     // These fields can be visible from outside only after they are saved in
     // StateStore
     String diags = null;
-    String finalTrackingUrl = null;
+
+    // don't leave the tracking URL pointing to a non-existent AM
+    setTrackingUrlToRMAppPage(stateToBeStored);
+    String finalTrackingUrl = getOriginalTrackingUrl();
     FinalApplicationStatus finalStatus = null;
     int exitStatus = ContainerExitStatus.INVALID;
     switch (event.getType()) {
@@ -1102,6 +1136,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       RMAppAttemptUnregistrationEvent unregisterEvent =
           (RMAppAttemptUnregistrationEvent) event;
       diags = unregisterEvent.getDiagnostics();
+      // reset finalTrackingUrl to url sent by am
       finalTrackingUrl = sanitizeTrackingUrl(unregisterEvent.getFinalTrackingUrl());
       finalStatus = unregisterEvent.getFinalApplicationStatus();
       break;
@@ -1205,8 +1240,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         break;
         case KILLED:
         {
-          // don't leave the tracking URL pointing to a non-existent AM
-          appAttempt.setTrackingUrlToRMAppPage();
           appAttempt.invalidateAMHostAndPort();
           appEvent =
               new RMAppFailedAttemptEvent(applicationId,
@@ -1216,8 +1249,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         break;
         case FAILED:
         {
-          // don't leave the tracking URL pointing to a non-existent AM
-          appAttempt.setTrackingUrlToRMAppPage();
           appAttempt.invalidateAMHostAndPort();
 
           if (appAttempt.submissionContext
@@ -1365,8 +1396,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.rpcPort = registrationEvent.getRpcport();
       appAttempt.originalTrackingUrl =
           sanitizeTrackingUrl(registrationEvent.getTrackingurl());
-      appAttempt.proxiedTrackingUrl = 
-        appAttempt.generateProxyUriWithScheme(appAttempt.originalTrackingUrl);
 
       // Let the app know
       appAttempt.eventHandler.handle(new RMAppEvent(appAttempt
@@ -1584,7 +1613,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         (RMAppAttemptUnregistrationEvent) event;
     diagnostics.append(unregisterEvent.getDiagnostics());
     originalTrackingUrl = sanitizeTrackingUrl(unregisterEvent.getFinalTrackingUrl());
-    proxiedTrackingUrl = generateProxyUriWithScheme(originalTrackingUrl);
     finalStatus = unregisterEvent.getFinalApplicationStatus();
   }
 

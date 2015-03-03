@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.util.EnumCounters;
 
 import com.google.common.base.Preconditions;
 
@@ -27,7 +29,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public interface INodeDirectoryAttributes extends INodeAttributes {
-  public Quota.Counts getQuotaCounts();
+  public QuotaCounts getQuotaCounts();
 
   public boolean metadataEquals(INodeDirectoryAttributes other);
   
@@ -45,8 +47,9 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
     }
 
     @Override
-    public Quota.Counts getQuotaCounts() {
-      return Quota.Counts.newInstance(-1, -1);
+    public QuotaCounts getQuotaCounts() {
+      return new QuotaCounts.Builder().nameSpace(-1).
+          storageSpace(-1).typeSpaces(-1).build();
     }
 
     @Override
@@ -60,29 +63,26 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
   }
 
   public static class CopyWithQuota extends INodeDirectoryAttributes.SnapshotCopy {
-    private final long nsQuota;
-    private final long dsQuota;
-
+    private QuotaCounts quota;
 
     public CopyWithQuota(byte[] name, PermissionStatus permissions,
         AclFeature aclFeature, long modificationTime, long nsQuota,
-        long dsQuota, XAttrFeature xAttrsFeature) {
+        long dsQuota, EnumCounters<StorageType> typeQuotas, XAttrFeature xAttrsFeature) {
       super(name, permissions, aclFeature, modificationTime, xAttrsFeature);
-      this.nsQuota = nsQuota;
-      this.dsQuota = dsQuota;
+      this.quota = new QuotaCounts.Builder().nameSpace(nsQuota).
+          storageSpace(dsQuota).typeSpaces(typeQuotas).build();
     }
 
     public CopyWithQuota(INodeDirectory dir) {
       super(dir);
       Preconditions.checkArgument(dir.isQuotaSet());
-      final Quota.Counts q = dir.getQuotaCounts();
-      this.nsQuota = q.get(Quota.NAMESPACE);
-      this.dsQuota = q.get(Quota.DISKSPACE);
+      final QuotaCounts q = dir.getQuotaCounts();
+      this.quota = new QuotaCounts.Builder().quotaCount(q).build();
     }
-    
+
     @Override
-    public Quota.Counts getQuotaCounts() {
-      return Quota.Counts.newInstance(nsQuota, dsQuota);
+    public QuotaCounts getQuotaCounts() {
+      return new QuotaCounts.Builder().quotaCount(quota).build();
     }
   }
 }

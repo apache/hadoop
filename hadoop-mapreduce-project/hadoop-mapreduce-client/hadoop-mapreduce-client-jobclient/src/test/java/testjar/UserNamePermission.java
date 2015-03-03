@@ -77,7 +77,7 @@ public  class UserNamePermission
   {
     Path outDir = new Path("output");
     Configuration conf = new Configuration();
-    Job job = new Job(conf, "user name check"); 
+    Job job = Job.getInstance(conf, "user name check"); 
 			
 			
     job.setJarByClass(UserNamePermission.class);

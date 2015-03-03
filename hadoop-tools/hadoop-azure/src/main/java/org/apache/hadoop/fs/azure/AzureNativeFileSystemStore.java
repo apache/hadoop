@@ -387,9 +387,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     if (null == instrumentation) {
       throw new IllegalArgumentException("Null instrumentation");
     }
-
     this.instrumentation = instrumentation;
-    this.bandwidthGaugeUpdater = new BandwidthGaugeUpdater(instrumentation);
+
     if (null == this.storageInteractionLayer) {
       this.storageInteractionLayer = new StorageInterfaceImpl();
     }
@@ -405,7 +404,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     //
     if (null == conf) {
       throw new IllegalArgumentException(
-          "Cannot initialize WASB file system, URI is null");
+          "Cannot initialize WASB file system, conf is null");
+    }
+
+    if(!conf.getBoolean(
+        NativeAzureFileSystem.SKIP_AZURE_METRICS_PROPERTY_NAME, false)) {
+      //If not skip azure metrics, create bandwidthGaugeUpdater
+      this.bandwidthGaugeUpdater = new BandwidthGaugeUpdater(instrumentation);
     }
 
     // Incoming parameters validated. Capture the URI and the job configuration
@@ -789,8 +794,9 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         STORAGE_EMULATOR_ACCOUNT_NAME_PROPERTY_NAME,
         DEFAULT_STORAGE_EMULATOR_ACCOUNT_NAME));
   }
-
-  static String getAccountKeyFromConfiguration(String accountName,
+  
+  @VisibleForTesting
+  public static String getAccountKeyFromConfiguration(String accountName,
       Configuration conf) throws KeyProviderException {
     String key = null;
     String keyProviderClass = conf.get(KEY_ACCOUNT_KEYPROVIDER_PREFIX
@@ -978,8 +984,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private String verifyAndConvertToStandardFormat(String rawDir) throws URISyntaxException {
     URI asUri = new URI(rawDir);
     if (asUri.getAuthority() == null 
-        || asUri.getAuthority().toLowerCase(Locale.US).equalsIgnoreCase(
-        		sessionUri.getAuthority().toLowerCase(Locale.US))) {
+        || asUri.getAuthority().toLowerCase(Locale.ENGLISH).equalsIgnoreCase(
+      sessionUri.getAuthority().toLowerCase(Locale.ENGLISH))) {
       // Applies to me.
       return trim(asUri.getPath(), "/");
     } else {
@@ -1781,11 +1787,14 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
           selfThrottlingWriteFactor);
     }
 
-    ResponseReceivedMetricUpdater.hook(
-        operationContext,
-        instrumentation,
-        bandwidthGaugeUpdater);
-    
+    if(bandwidthGaugeUpdater != null) {
+      //bandwidthGaugeUpdater is null when we config to skip azure metrics
+      ResponseReceivedMetricUpdater.hook(
+         operationContext,
+         instrumentation,
+         bandwidthGaugeUpdater);
+    }
+
     // Bind operation context to receive send request callbacks on this operation.
     // If reads concurrent to OOB writes are allowed, the interception will reset
     // the conditional header on all Azure blob storage read requests.
@@ -2560,7 +2569,10 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
 
   @Override
   public void close() {
-    bandwidthGaugeUpdater.close();
+    if(bandwidthGaugeUpdater != null) {
+      bandwidthGaugeUpdater.close();
+      bandwidthGaugeUpdater = null;
+    }
   }
   
   // Finalizer to ensure complete shutdown

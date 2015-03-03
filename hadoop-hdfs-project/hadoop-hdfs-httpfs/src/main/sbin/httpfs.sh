@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,53 +13,99 @@
 #  limitations under the License.
 #
 
-# resolve links - $0 may be a softlink
-PRG="${0}"
+function hadoop_usage()
+{
+  echo "Usage: httpfs.sh [--config confdir] [--debug] --daemon start|status|stop"
+  echo "       httpfs.sh [--config confdir] [--debug] COMMAND"
+  echo "            where COMMAND is one of:"
+  echo "  run               Start httpfs in the current window"
+  echo "  run -security     Start in the current window with security manager"
+  echo "  start             Start httpfs in a separate window"
+  echo "  start -security   Start in a separate window with security manager"
+  echo "  status            Return the LSB compliant status"
+  echo "  stop              Stop httpfs, waiting up to 5 seconds for the process to end"
+  echo "  stop n            Stop httpfs, waiting up to n seconds for the process to end"
+  echo "  stop -force       Stop httpfs, wait up to 5 seconds and then use kill -KILL if still running"
+  echo "  stop n -force     Stop httpfs, wait up to n seconds and then use kill -KILL if still running"
+}
 
-while [ -h "${PRG}" ]; do
-  ls=`ls -ld "${PRG}"`
-  link=`expr "$ls" : '.*-> \(.*\)$'`
-  if expr "$link" : '/.*' > /dev/null; then
-    PRG="$link"
-  else
-    PRG=`dirname "${PRG}"`/"$link"
-  fi
-done
+# let's locate libexec...
+if [[ -n "${HADOOP_PREFIX}" ]]; then
+  DEFAULT_LIBEXEC_DIR="${HADOOP_PREFIX}/libexec"
+else
+  this="${BASH_SOURCE-$0}"
+  bin=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
+  DEFAULT_LIBEXEC_DIR="${bin}/../libexec"
+fi
 
-BASEDIR=`dirname ${PRG}`
-BASEDIR=`cd ${BASEDIR}/..;pwd`
+HADOOP_LIBEXEC_DIR="${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}"
+# shellcheck disable=SC2034
+HADOOP_NEW_CONFIG=true
+if [[ -f "${HADOOP_LIBEXEC_DIR}/httpfs-config.sh" ]]; then
+  . "${HADOOP_LIBEXEC_DIR}/httpfs-config.sh"
+else
+  echo "ERROR: Cannot execute ${HADOOP_LIBEXEC_DIR}/httpfs-config.sh." 2>&1
+  exit 1
+fi
 
-source ${HADOOP_LIBEXEC_DIR:-${BASEDIR}/libexec}/httpfs-config.sh
-
-# The Java System property 'httpfs.http.port' it is not used by HttpFS,
+# The Java System property 'httpfs.http.port' it is not used by Kms,
 # it is used in Tomcat's server.xml configuration file
 #
-print "Using   CATALINA_OPTS:       ${CATALINA_OPTS}"
 
-catalina_opts="-Dhttpfs.home.dir=${HTTPFS_HOME}";
-catalina_opts="${catalina_opts} -Dhttpfs.config.dir=${HTTPFS_CONFIG}";
-catalina_opts="${catalina_opts} -Dhttpfs.log.dir=${HTTPFS_LOG}";
-catalina_opts="${catalina_opts} -Dhttpfs.temp.dir=${HTTPFS_TEMP}";
-catalina_opts="${catalina_opts} -Dhttpfs.admin.port=${HTTPFS_ADMIN_PORT}";
-catalina_opts="${catalina_opts} -Dhttpfs.http.port=${HTTPFS_HTTP_PORT}";
-catalina_opts="${catalina_opts} -Dhttpfs.http.hostname=${HTTPFS_HTTP_HOSTNAME}";
-catalina_opts="${catalina_opts} -Dhttpfs.ssl.enabled=${HTTPFS_SSL_ENABLED}";
-catalina_opts="${catalina_opts} -Dhttpfs.ssl.keystore.file=${HTTPFS_SSL_KEYSTORE_FILE}";
-catalina_opts="${catalina_opts} -Dhttpfs.ssl.keystore.pass=${HTTPFS_SSL_KEYSTORE_PASS}";
+# Mask the trustStorePassword
+# shellcheck disable=SC2086
+CATALINA_OPTS_DISP="$(echo ${CATALINA_OPTS} | sed -e 's/trustStorePassword=[^ ]*/trustStorePassword=***/')"
 
-print "Adding to CATALINA_OPTS:     ${catalina_opts}"
+hadoop_debug "Using   CATALINA_OPTS:       ${CATALINA_OPTS_DISP}"
 
-export CATALINA_OPTS="${CATALINA_OPTS} ${catalina_opts}"
+# We're using hadoop-common, so set up some stuff it might need:
+hadoop_finalize
+
+hadoop_verify_logdir
+
+if [[ $# = 0 ]]; then
+  case "${HADOOP_DAEMON_MODE}" in
+    status)
+      hadoop_status_daemon "${CATALINA_PID}"
+      exit
+    ;;
+    start)
+      set -- "start"
+    ;;
+    stop)
+      set -- "stop"
+    ;;
+  esac
+fi
+
+hadoop_finalize_catalina_opts
+export CATALINA_OPTS
 
 # A bug in catalina.sh script does not use CATALINA_OPTS for stopping the server
 #
-if [ "${1}" = "stop" ]; then
+if [[ "${1}" = "stop" ]]; then
   export JAVA_OPTS=${CATALINA_OPTS}
 fi
 
-if [ "${HTTPFS_SILENT}" != "true" ]; then
-  exec ${HTTPFS_CATALINA_HOME}/bin/catalina.sh "$@"
-else
-  exec ${HTTPFS_CATALINA_HOME}/bin/catalina.sh "$@" > /dev/null
+# If ssl, the populate the passwords into ssl-server.xml before starting tomcat
+#
+# HTTPFS_SSL_KEYSTORE_PASS is a bit odd.
+# if undefined, then the if test will not enable ssl on its own
+# if "", set it to "password".
+# if custom, use provided password
+#
+if [[ -f "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml.conf" ]]; then
+  if [[ -n "${HTTPFS_SSL_KEYSTORE_PASS+x}" ]] || [[ -n "${HTTPFS_SSL_TRUSTSTORE_PASS}" ]]; then
+    export HTTPFS_SSL_KEYSTORE_PASS=${HTTPFS_SSL_KEYSTORE_PASS:-password}
+    sed -e 's/_httpfs_ssl_keystore_pass_/'${HTTPFS_SSL_KEYSTORE_PASS}'/g' \
+        -e 's/_httpfs_ssl_truststore_pass_/'${HTTPFS_SSL_TRUSTSTORE_PASS}'/g' \
+      "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml.conf" \
+      > "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml"
+    chmod 700 "${HADOOP_CATALINA_HOME}/conf/ssl-server.xml" >/dev/null 2>&1
+  fi
 fi
 
+hadoop_add_param CATALINA_OPTS -Dhttpfs.http.hostname "-Dhttpfs.http.hostname=${HTTPFS_HOST_NAME}"
+hadoop_add_param CATALINA_OPTS -Dhttpfs.ssl.enabled "-Dhttpfs.ssl.enabled=${HTTPFS_SSL_ENABLED}"
+
+exec "${HADOOP_CATALINA_HOME}/bin/catalina.sh" "$@"

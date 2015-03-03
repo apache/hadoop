@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.util.*;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
@@ -258,7 +259,7 @@ public class TestCodecFactory extends TestCase {
     checkCodec("overridden factory for gzip codec", NewGzipCodec.class, codec);
     
     Configuration conf = new Configuration();
-    conf.set("io.compression.codecs", 
+    conf.set(CommonConfigurationKeys.IO_COMPRESSION_CODECS_KEY,
         "   org.apache.hadoop.io.compress.GzipCodec   , " +
         "    org.apache.hadoop.io.compress.DefaultCodec  , " +
         " org.apache.hadoop.io.compress.BZip2Codec   ");

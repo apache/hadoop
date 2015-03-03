@@ -22,6 +22,7 @@ import java.util.Deque;
 
 import org.apache.hadoop.fs.GlobPattern;
 import org.apache.hadoop.fs.shell.PathData;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Implements the -name expression for the
@@ -73,7 +74,7 @@ final class Name extends BaseExpression {
   public void prepare() throws IOException {
     String argPattern = getArgument(1);
     if (!caseSensitive) {
-      argPattern = argPattern.toLowerCase();
+      argPattern = StringUtils.toLowerCase(argPattern);
     }
     globPattern = new GlobPattern(argPattern);
   }
@@ -82,7 +83,7 @@ final class Name extends BaseExpression {
   public Result apply(PathData item, int depth) throws IOException {
     String name = getPath(item).getName();
     if (!caseSensitive) {
-      name = name.toLowerCase();
+      name = StringUtils.toLowerCase(name);
     }
     if (globPattern.matches(name)) {
       return Result.PASS;

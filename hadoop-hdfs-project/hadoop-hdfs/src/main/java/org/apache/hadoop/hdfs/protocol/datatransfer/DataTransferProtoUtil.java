@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hdfs.protocol.datatransfer;
 
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BaseHeaderProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
@@ -29,12 +34,13 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferTrac
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ChecksumTypeProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
-import org.htrace.Span;
-import org.htrace.Trace;
-import org.htrace.TraceInfo;
-import org.htrace.TraceScope;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceInfo;
+import org.apache.htrace.TraceScope;
 
 /**
  * Static utilities for dealing with the protocol buffers used by the
@@ -118,5 +124,25 @@ public abstract class DataTransferProtoUtil {
       scope = Trace.startSpan(description, info);
     }
     return scope;
+  }
+
+  public static void checkBlockOpStatus(
+          BlockOpResponseProto response,
+          String logInfo) throws IOException {
+    if (response.getStatus() != Status.SUCCESS) {
+      if (response.getStatus() == Status.ERROR_ACCESS_TOKEN) {
+        throw new InvalidBlockTokenException(
+          "Got access token error"
+          + ", status message " + response.getMessage()
+          + ", " + logInfo
+        );
+      } else {
+        throw new IOException(
+          "Got error"
+          + ", status message " + response.getMessage()
+          + ", " + logInfo
+        );
+      }
+    }
   }
 }

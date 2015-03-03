@@ -42,6 +42,7 @@ import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TextOutputFormat;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -157,7 +158,7 @@ public class SliveTest implements Tool {
     if (val == null) {
       return false;
     }
-    String cleanupOpt = val.toLowerCase().trim();
+    String cleanupOpt = StringUtils.toLowerCase(val).trim();
     if (cleanupOpt.equals("true") || cleanupOpt.equals("1")) {
       return true;
     } else {

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.serializer;
 
+import org.apache.hadoop.io.LongWritable;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.assertNull;
@@ -76,4 +77,13 @@ public class TestSerializationFactory {
     assertNull("A null should be returned if there are no deserializers found",
         factory.getDeserializer(TestSerializationFactory.class));
   }
+
+  @Test
+  public void testSerializationKeyIsTrimmed() {
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY, " org.apache.hadoop.io.serializer.WritableSerialization ");
+    SerializationFactory factory = new SerializationFactory(conf);
+    assertNotNull("Valid class must be returned",
+     factory.getSerializer(LongWritable.class));
+   }
 }

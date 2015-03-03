@@ -23,10 +23,8 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.server.namenode.AclFeature;
-import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 
 /**
  * An {@link INode} representing a symbolic link.
@@ -47,7 +45,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
 
   @Override
-  void recordModification(int latestSnapshotId) throws QuotaExceededException {
+  void recordModification(int latestSnapshotId) {
     if (isInLatestSnapshot(latestSnapshotId)) {
       INodeDirectory parent = getParent();
       parent.saveChild2Snapshot(this, latestSnapshotId, new INodeSymlink(this));
@@ -75,26 +73,29 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
   
   @Override
-  public Quota.Counts cleanSubtree(final int snapshotId, int priorSnapshotId,
+  public QuotaCounts cleanSubtree(BlockStoragePolicySuite bsps,
+      final int snapshotId, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final boolean countDiffChange) {
+      final List<INode> removedINodes) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID
         && priorSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
-      destroyAndCollectBlocks(collectedBlocks, removedINodes);
+      destroyAndCollectBlocks(bsps, collectedBlocks, removedINodes);
     }
-    return Quota.Counts.newInstance(1, 0);
+    return new QuotaCounts.Builder().nameSpace(1).build();
   }
   
   @Override
-  public void destroyAndCollectBlocks(final BlocksMapUpdateInfo collectedBlocks,
+  public void destroyAndCollectBlocks(final BlockStoragePolicySuite bsps,
+      final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) {
     removedINodes.add(this);
   }
 
   @Override
-  public Quota.Counts computeQuotaUsage(Quota.Counts counts,
-      boolean updateCache, int lastSnapshotId) {
-    counts.add(Quota.NAMESPACE, 1);
+  public QuotaCounts computeQuotaUsage(
+      BlockStoragePolicySuite bsps,
+      QuotaCounts counts, boolean useCache, int lastSnapshotId) {
+    counts.addNameSpace(1);
     return counts;
   }
 

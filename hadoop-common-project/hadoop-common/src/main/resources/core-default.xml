@@ -41,7 +41,10 @@
 <property>
   <name>io.native.lib.available</name>
   <value>true</value>
-  <description>Should native hadoop libraries, if present, be used.</description>
+  <description>Controls whether to use native libraries for bz2 and zlib
+    compression codecs or not. The property does not control any other native
+    libraries.
+  </description>
 </property>
 
 <property>
@@ -690,12 +693,12 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
-  <name>fs.s3a.access.key</name>
+  <name>fs.s3a.awsAccessKeyId</name>
   <description>AWS access key ID. Omit for Role-based authentication.</description>
 </property>
 
 <property>
-  <name>fs.s3a.secret.key</name>
+  <name>fs.s3a.awsSecretAccessKey</name>
   <description>AWS secret key. Omit for Role-based authentication.</description>
 </property>
 
@@ -712,14 +715,60 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>fs.s3a.endpoint</name>
+  <description>AWS S3 endpoint to connect to. An up-to-date list is
+    provided in the AWS Documentation: regions and endpoints. Without this
+    property, the standard region (s3.amazonaws.com) is assumed.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.host</name>
+  <description>Hostname of the (optional) proxy server for S3 connections.</description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.port</name>
+  <description>Proxy server port. If this property is not set
+    but fs.s3a.proxy.host is, port 80 or 443 is assumed (consistent with
+    the value of fs.s3a.connection.ssl.enabled).</description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.username</name>
+  <description>Username for authenticating with proxy server.</description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.password</name>
+  <description>Password for authenticating with proxy server.</description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.domain</name>
+  <description>Domain for authenticating with proxy server.</description>
+</property>
+
+<property>
+  <name>fs.s3a.proxy.workstation</name>
+  <description>Workstation for authenticating with proxy server.</description>
+</property>
+
+<property>
   <name>fs.s3a.attempts.maximum</name>
   <value>10</value>
   <description>How many times we should retry commands on transient errors.</description>
 </property>
 
 <property>
-  <name>fs.s3a.connection.timeout</name>
+  <name>fs.s3a.connection.establish.timeout</name>
   <value>5000</value>
+  <description>Socket connection setup timeout in seconds.</description>
+</property>
+
+<property>
+  <name>fs.s3a.connection.timeout</name>
+  <value>50000</value>
   <description>Socket connection timeout in seconds.</description>
 </property>
 
@@ -728,6 +777,33 @@ for ldap providers in the same way as above does.
   <value>5000</value>
   <description>How many keys to request from S3 when doing 
      directory listings at a time.</description>
+</property>
+
+<property>
+  <name>fs.s3a.threads.max</name>
+  <value>256</value>
+  <description> Maximum number of concurrent active (part)uploads,
+    which each use a thread from the threadpool.</description>
+</property>
+
+<property>
+  <name>fs.s3a.threads.core</name>
+  <value>15</value>
+  <description>Number of core threads in the threadpool.</description>
+</property>
+
+<property>
+  <name>fs.s3a.threads.keepalivetime</name>
+  <value>60</value>
+  <description>Number of seconds a thread can be idle before being
+    terminated.</description>
+</property>
+
+<property>
+  <name>fs.s3a.max.total.tasks</name>
+  <value>1000</value>
+  <description>Number of (part)uploads allowed to the queue before
+    blocking additional uploads.</description>
 </property>
 
 <property>
@@ -1654,18 +1730,6 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
-  <name>hadoop.htrace.sampler</name>
-  <value>NeverSampler</value>
-  <description>
-    Configure the samplers for HTrace, the value can be NeverSampler,
-    AlwaysSampler or ProbabilitySampler. NeverSampler: HTrace is OFF 
-    for all spans; AlwaysSampler: HTrace is ON for all spans;
-    ProbabilitySampler: HTrace is ON for some percentage% of top-level 
-    spans.
-  </description>
-</property>
-
-<property>
   <name>hadoop.htrace.spanreceiver.classes</name>
   <value></value>
   <description>
@@ -1676,5 +1740,148 @@ for ldap providers in the same way as above does.
     SpanReceiver interface.
   </description>
 </property>
+
+ <property>
+  <name>ipc.server.max.connections</name>
+  <value>0</value>
+  <description>The maximum number of concurrent connections a server is allowed
+    to accept. If this limit is exceeded, incoming connections will first fill
+    the listen queue and then may go to an OS-specific listen overflow queue. 
+    The client may fail or timeout, but the server can avoid running out of file
+    descriptors using this feature. 0 means no limit.
+  </description>
+</property>
+
+
+  <!-- YARN registry -->
+
+  <property>
+    <description>
+      Is the registry enabled in the YARN Resource Manager?
+
+      If true, the YARN RM will, as needed.
+      create the user and system paths, and purge
+      service records when containers, application attempts
+      and applications complete.
+
+      If false, the paths must be created by other means,
+      and no automatic cleanup of service records will take place.
+    </description>
+    <name>hadoop.registry.rm.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The root zookeeper node for the registry
+    </description>
+    <name>hadoop.registry.zk.root</name>
+    <value>/registry</value>
+  </property>
+
+  <property>
+    <description>
+      Zookeeper session timeout in milliseconds
+    </description>
+    <name>hadoop.registry.zk.session.timeout.ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>
+      Zookeeper connection timeout in milliseconds
+    </description>
+    <name>hadoop.registry.zk.connection.timeout.ms</name>
+    <value>15000</value>
+  </property>
+
+  <property>
+    <description>
+      Zookeeper connection retry count before failing
+    </description>
+    <name>hadoop.registry.zk.retry.times</name>
+    <value>5</value>
+  </property>
+
+  <property>
+    <description>
+    </description>
+    <name>hadoop.registry.zk.retry.interval.ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      Zookeeper retry limit in milliseconds, during
+      exponential backoff.
+
+      This places a limit even
+      if the retry times and interval limit, combined
+      with the backoff policy, result in a long retry
+      period
+    </description>
+    <name>hadoop.registry.zk.retry.ceiling.ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>
+      List of hostname:port pairs defining the
+      zookeeper quorum binding for the registry
+    </description>
+    <name>hadoop.registry.zk.quorum</name>
+    <value>localhost:2181</value>
+  </property>
+
+  <property>
+    <description>
+      Key to set if the registry is secure. Turning it on
+      changes the permissions policy from "open access"
+      to restrictions on kerberos with the option of
+      a user adding one or more auth key pairs down their
+      own tree.
+    </description>
+    <name>hadoop.registry.secure</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      A comma separated list of Zookeeper ACL identifiers with
+      system access to the registry in a secure cluster.
+
+      These are given full access to all entries.
+
+      If there is an "@" at the end of a SASL entry it
+      instructs the registry client to append the default kerberos domain.
+    </description>
+    <name>hadoop.registry.system.acls</name>
+    <value>sasl:yarn@, sasl:mapred@, sasl:hdfs@</value>
+  </property>
+
+  <property>
+    <description>
+      The kerberos realm: used to set the realm of
+      system principals which do not declare their realm,
+      and any other accounts that need the value.
+
+      If empty, the default realm of the running process
+      is used.
+
+      If neither are known and the realm is needed, then the registry
+      service/client will fail.
+    </description>
+    <name>hadoop.registry.kerberos.realm</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Key to define the JAAS context. Used in secure
+      mode
+    </description>
+    <name>hadoop.registry.jaas.context</name>
+    <value>Client</value>
+  </property>
 
 </configuration>

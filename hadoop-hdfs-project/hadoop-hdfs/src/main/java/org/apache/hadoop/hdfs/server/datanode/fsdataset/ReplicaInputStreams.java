@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 import java.io.Closeable;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
 import java.io.InputStream;
 
 import org.apache.hadoop.io.IOUtils;

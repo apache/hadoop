@@ -21,16 +21,17 @@ package org.apache.hadoop.yarn.server.webproxy;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ProxyServer will sit in between the end user and AppMaster
@@ -43,8 +44,9 @@ public class WebAppProxyServer extends CompositeService {
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
-  private static final Log LOG = LogFactory.getLog(WebAppProxyServer.class);
-  
+  private static final Logger LOG = LoggerFactory.getLogger(
+      WebAppProxyServer.class);
+
   private WebAppProxy proxy = null;
   
   public WebAppProxyServer() {
@@ -54,11 +56,7 @@ public class WebAppProxyServer extends CompositeService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     Configuration config = new YarnConfiguration(conf);
-    try {
-      doSecureLogin(conf);      
-    } catch(IOException ie) {
-      throw new YarnRuntimeException("Proxy Server Failed to login", ie);
-    }
+    doSecureLogin(conf);      
     proxy = new WebAppProxy();
     addService(proxy);
     super.serviceInit(config);
@@ -92,11 +90,11 @@ public class WebAppProxyServer extends CompositeService {
     StringUtils.startupShutdownMessage(WebAppProxyServer.class, args, LOG);
     try {
       YarnConfiguration configuration = new YarnConfiguration();
+      new GenericOptionsParser(configuration, args);
       WebAppProxyServer proxyServer = startServer(configuration);
       proxyServer.proxy.join();
     } catch (Throwable t) {
-      LOG.fatal("Error starting Proxy server", t);
-      System.exit(-1);
+      ExitUtil.terminate(-1, t);
     }
   }
 

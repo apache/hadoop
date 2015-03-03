@@ -28,22 +28,29 @@ import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 public class TestFSImage {
 
+  private static final String HADOOP_2_7_ZER0_BLOCK_SIZE_TGZ =
+      "image-with-zero-block-size.tar.gz";
   @Test
   public void testPersist() throws IOException {
     Configuration conf = new Configuration();
@@ -97,7 +104,7 @@ public class TestFSImage {
       INodeFile file2Node = fsn.dir.getINode4Write(file2.toString()).asFile();
       assertEquals("hello".length(), file2Node.computeFileSize());
       assertTrue(file2Node.isUnderConstruction());
-      BlockInfo[] blks = file2Node.getBlocks();
+      BlockInfoContiguous[] blks = file2Node.getBlocks();
       assertEquals(1, blks.length);
       assertEquals(BlockUCState.UNDER_CONSTRUCTION, blks[0].getBlockUCState());
       // check lease manager
@@ -181,6 +188,47 @@ public class TestFSImage {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+  
+  /**
+   * In this test case, I have created an image with a file having
+   * preferredblockSize = 0. We are trying to read this image (since file with
+   * preferredblockSize = 0 was allowed pre 2.1.0-beta version. The namenode 
+   * after 2.6 version will not be able to read this particular file.
+   * See HDFS-7788 for more information.
+   * @throws Exception
+   */
+  @Test
+  public void testZeroBlockSize() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    String tarFile = System.getProperty("test.cache.data", "build/test/cache")
+      + "/" + HADOOP_2_7_ZER0_BLOCK_SIZE_TGZ;
+    String testDir = PathUtils.getTestDirName(getClass());
+    File dfsDir = new File(testDir, "image-with-zero-block-size");
+    if (dfsDir.exists() && !FileUtil.fullyDelete(dfsDir)) {
+      throw new IOException("Could not delete dfs directory '" + dfsDir + "'");
+    }
+    FileUtil.unTar(new File(tarFile), new File(testDir));
+    File nameDir = new File(dfsDir, "name");
+    GenericTestUtils.assertExists(nameDir);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, 
+        nameDir.getAbsolutePath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .format(false)
+        .manageDataDfsDirs(false)
+        .manageNameDfsDirs(false)
+        .waitSafeMode(false)
+        .build();
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      Path testPath = new Path("/tmp/zeroBlockFile");
+      assertTrue("File /tmp/zeroBlockFile doesn't exist ", fs.exists(testPath));
+      assertTrue("Name node didn't come up", cluster.isNameNodeUp(0));
+    } finally {
+      cluster.shutdown();
+      //Clean up
+      FileUtil.fullyDelete(dfsDir);
     }
   }
 }

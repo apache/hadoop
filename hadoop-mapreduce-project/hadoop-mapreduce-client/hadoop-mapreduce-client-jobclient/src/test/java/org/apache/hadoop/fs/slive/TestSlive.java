@@ -136,6 +136,8 @@ public class TestSlive {
       args.add("10");
       args.add("-" + ConfigOption.FILES.getOpt());
       args.add("10");
+      args.add("-" + ConfigOption.TRUNCATE_SIZE.getOpt());
+      args.add("0,1M");
     }
     return args.toArray(new String[args.size()]);
   }
@@ -237,6 +239,9 @@ public class TestSlive {
     Range<Long> wRange = extractor.getWriteSize();
     assertEquals(wRange.getLower().intValue(), Constants.MEGABYTES * 1);
     assertEquals(wRange.getUpper().intValue(), Constants.MEGABYTES * 2);
+    Range<Long> trRange = extractor.getTruncateSize();
+    assertEquals(trRange.getLower().intValue(), 0);
+    assertEquals(trRange.getUpper().intValue(), Constants.MEGABYTES * 1);
     Range<Long> bRange = extractor.getBlockSize();
     assertEquals(bRange.getLower().intValue(), Constants.MEGABYTES * 1);
     assertEquals(bRange.getUpper().intValue(), Constants.MEGABYTES * 2);
@@ -533,5 +538,27 @@ public class TestSlive {
       }
     };
     runOperationOk(extractor, aop, false);
+  }
+
+  @Test
+  public void testTruncateOp() throws Exception {
+    // setup a valid config
+    ConfigExtractor extractor = getTestConfig(false);
+    // ensure file created before append
+    final Path fn = new Path(getTestFile().getCanonicalPath());
+    CreateOp op = new CreateOp(extractor, rnd) {
+      protected Path getCreateFile() {
+        return fn;
+      }
+    };
+    runOperationOk(extractor, op, true);
+    // local file system (ChecksumFileSystem) currently doesn't support truncate -
+    // but we'll leave this test here anyways but can't check the results..
+    TruncateOp top = new TruncateOp(extractor, rnd) {
+      protected Path getTruncateFile() {
+        return fn;
+      }
+    };
+    runOperationOk(extractor, top, false);
   }
 }

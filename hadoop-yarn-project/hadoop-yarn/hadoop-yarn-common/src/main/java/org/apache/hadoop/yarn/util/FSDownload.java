@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 
@@ -271,7 +272,7 @@ public class FSDownload implements Callable<Path> {
   private long unpack(File localrsrc, File dst) throws IOException {
     switch (resource.getType()) {
     case ARCHIVE: {
-      String lowerDst = dst.getName().toLowerCase();
+      String lowerDst = StringUtils.toLowerCase(dst.getName());
       if (lowerDst.endsWith(".jar")) {
         RunJar.unJar(localrsrc, dst);
       } else if (lowerDst.endsWith(".zip")) {
@@ -290,7 +291,7 @@ public class FSDownload implements Callable<Path> {
     }
     break;
     case PATTERN: {
-      String lowerDst = dst.getName().toLowerCase();
+      String lowerDst = StringUtils.toLowerCase(dst.getName());
       if (lowerDst.endsWith(".jar")) {
         String p = resource.getPattern();
         RunJar.unJar(localrsrc, dst,

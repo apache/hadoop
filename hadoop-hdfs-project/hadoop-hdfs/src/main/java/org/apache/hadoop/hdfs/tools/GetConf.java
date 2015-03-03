@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -79,19 +80,19 @@ public class GetConf extends Configured implements Tool {
     private static final Map<String, CommandHandler> map;
     static  {
       map = new HashMap<String, CommandHandler>();
-      map.put(NAMENODE.getName().toLowerCase(), 
+      map.put(StringUtils.toLowerCase(NAMENODE.getName()),
           new NameNodesCommandHandler());
-      map.put(SECONDARY.getName().toLowerCase(),
+      map.put(StringUtils.toLowerCase(SECONDARY.getName()),
           new SecondaryNameNodesCommandHandler());
-      map.put(BACKUP.getName().toLowerCase(), 
+      map.put(StringUtils.toLowerCase(BACKUP.getName()),
           new BackupNodesCommandHandler());
-      map.put(INCLUDE_FILE.getName().toLowerCase(), 
+      map.put(StringUtils.toLowerCase(INCLUDE_FILE.getName()),
           new CommandHandler(DFSConfigKeys.DFS_HOSTS));
-      map.put(EXCLUDE_FILE.getName().toLowerCase(),
+      map.put(StringUtils.toLowerCase(EXCLUDE_FILE.getName()),
           new CommandHandler(DFSConfigKeys.DFS_HOSTS_EXCLUDE));
-      map.put(NNRPCADDRESSES.getName().toLowerCase(),
+      map.put(StringUtils.toLowerCase(NNRPCADDRESSES.getName()),
           new NNRpcAddressesCommandHandler());
-      map.put(CONFKEY.getName().toLowerCase(),
+      map.put(StringUtils.toLowerCase(CONFKEY.getName()),
           new PrintConfKeyCommandHandler());
     }
     
@@ -116,7 +117,7 @@ public class GetConf extends Configured implements Tool {
     }
     
     public static CommandHandler getHandler(String cmd) {
-      return map.get(cmd.toLowerCase());
+      return map.get(StringUtils.toLowerCase(cmd));
     }
   }
   

@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
+
 import org.apache.hadoop.yarn.webapp.SubView;
 
 public class AppPage extends RmView {
 
   @Override protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
+    set(DATATABLES_ID, "ResourceRequests");
+    setTableStyles(html, "ResourceRequests");
   }
 
   @Override protected Class<? extends SubView> content() {

@@ -69,7 +69,7 @@ public class TestDockerContainerExecutorWithMocks {
 
   @Before
   public void setup() {
-    assumeTrue(!Path.WINDOWS);
+    assumeTrue(Shell.LINUX);
     File f = new File("./src/test/resources/mock-container-executor");
     if(!FileUtil.canExecute(f)) {
       FileUtil.setExecutable(f, true);
@@ -101,7 +101,9 @@ public class TestDockerContainerExecutorWithMocks {
   @After
   public void tearDown() {
     try {
-      lfs.delete(workDir, true);
+      if (lfs != null) {
+        lfs.delete(workDir, true);
+      }
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

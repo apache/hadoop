@@ -37,7 +37,6 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -52,6 +51,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -137,6 +137,7 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -177,6 +178,7 @@ import org.apache.hadoop.tracing.TraceAdminProtocolPB;
 import org.apache.hadoop.tracing.TraceAdminProtocolServerSideTranslatorPB;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
+import org.slf4j.Logger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
@@ -187,9 +189,10 @@ import com.google.protobuf.BlockingService;
  */
 class NameNodeRpcServer implements NamenodeProtocols {
   
-  private static final Log LOG = NameNode.LOG;
-  private static final Log stateChangeLog = NameNode.stateChangeLog;
-  private static final Log blockStateChangeLog = NameNode.blockStateChangeLog;
+  private static final Logger LOG = NameNode.LOG;
+  private static final Logger stateChangeLog = NameNode.stateChangeLog;
+  private static final Logger blockStateChangeLog = NameNode
+      .blockStateChangeLog;
   
   // Dependencies from other parts of NN.
   protected final FSNamesystem namesystem;
@@ -1190,10 +1193,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public void setQuota(String path, long namespaceQuota, long diskspaceQuota) 
+  public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
+                       StorageType type)
       throws IOException {
     checkNNStartup();
-    namesystem.setQuota(path, namespaceQuota, diskspaceQuota);
+    namesystem.setQuota(path, namespaceQuota, storagespaceQuota, type);
   }
   
   @Override // ClientProtocol
@@ -1278,12 +1282,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration nodeReg,
       StorageReport[] report, long dnCacheCapacity, long dnCacheUsed,
       int xmitsInProgress, int xceiverCount,
-      int failedVolumes) throws IOException {
+      int failedVolumes, VolumeFailureSummary volumeFailureSummary)
+      throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, report,
         dnCacheCapacity, dnCacheUsed, xceiverCount, xmitsInProgress,
-        failedVolumes);
+        failedVolumes, volumeFailureSummary);
   }
 
   @Override // DatanodeProtocol
@@ -1508,7 +1513,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
         IncorrectVersionException ive = new IncorrectVersionException(
             messagePrefix + " and CTime of DN ('" + dnCTime +
             "') does not match CTime of NN ('" + nnCTime + "')");
-        LOG.warn(ive);
+        LOG.warn(ive.toString(), ive);
         throw ive;
       } else {
         LOG.info(messagePrefix +

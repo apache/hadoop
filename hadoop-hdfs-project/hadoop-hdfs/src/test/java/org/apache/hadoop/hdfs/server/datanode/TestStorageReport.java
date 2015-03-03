@@ -23,12 +23,16 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.*;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -101,7 +105,8 @@ public class TestStorageReport {
     Mockito.verify(nnSpy).sendHeartbeat(
         any(DatanodeRegistration.class),
         captor.capture(),
-        anyLong(), anyLong(), anyInt(), anyInt(), anyInt());
+        anyLong(), anyLong(), anyInt(), anyInt(), anyInt(),
+        Mockito.any(VolumeFailureSummary.class));
 
     StorageReport[] reports = captor.getValue();
 

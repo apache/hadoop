@@ -71,7 +71,7 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
     final Path zonePath = new Path("/TestEncryptionZone");
     fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
     dfsAdmin.createEncryptionZone(zonePath, TEST_KEY);
-    assertTrue(((KMSClientProvider)fs.getClient().provider).
+    assertTrue(((KMSClientProvider)fs.getClient().getKeyProvider()).
         getEncKeyQueueSize(TEST_KEY) > 0);
   }
 

@@ -54,7 +54,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-ls \[-d\] \[-h\] \[-R\] \[&lt;path&gt; \.\.\.\] :( |\t)*</expected-output>
+          <expected-output>^-ls \[-d\] \[-h\] \[-R\] \[-t\] \[-S\] \[-r\] \[-u\] \[&lt;path&gt; \.\.\.\] :( |\t)*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -62,11 +62,15 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*specified, the contents of /user/&lt;currentUser&gt; will be listed. Directory entries( )*</expected-output>
+          <expected-output>^\s*specified, the contents of /user/&lt;currentUser&gt; will be listed. For a directory a( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*are of the form:( )*</expected-output>
+          <expected-output>^( |\t)*list of its direct children is returned \(unless -d option is specified\).*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*Directory entries are of the form:( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -94,15 +98,35 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-h\s+Formats the sizes of files in a human-readable fashion rather than a number( )*</expected-output>
+          <expected-output>^\s*-h\s+Formats the sizes of files in a human-readable fashion( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*of bytes\.( )*</expected-output>
+          <expected-output>^\s*rather than a number of bytes\.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^\s*-R\s+Recursively list the contents of directories\.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-t\s+Sort files by modification time \(most recent first\)\.</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-S\s+Sort files by size\.</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-r\s+Reverse the order of the sort\.</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-u\s+Use time of last access instead of modification for</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*display and sorting\.</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -238,7 +262,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-count \[-q\] \[-h\] &lt;path&gt; \.\.\. :( )*</expected-output>
+          <expected-output>^-count \[-q\] \[-h\] \[-v\] &lt;path&gt; \.\.\. :( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -250,19 +274,27 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME or( )*</expected-output>
+          <expected-output>^( |\t)*DIR_COUNT FILE_COUNT CONTENT_SIZE PATHNAME( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*QUOTA REMAINING_QUOTA SPACE_QUOTA REMAINING_SPACE_QUOTA( )*</expected-output>
+          <expected-output>^( |\t)*or, with the -q option:( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME( )*</expected-output>
+          <expected-output>^( |\t)*QUOTA REM_QUOTA SPACE_QUOTA REM_SPACE_QUOTA( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*DIR_COUNT FILE_COUNT CONTENT_SIZE PATHNAME( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*The -h option shows file sizes in human readable format.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*The -v option displays a header line.( )*</expected-output>
         </comparator>
       </comparators>
     </test>

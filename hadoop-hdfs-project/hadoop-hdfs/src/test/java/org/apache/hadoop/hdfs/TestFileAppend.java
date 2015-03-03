@@ -103,9 +103,10 @@ public class TestFileAppend{
       System.arraycopy(fileContents, 0, expected, 0, expected.length);
     }
     // do a sanity check. Read the file
+    // do not check file status since the file is not yet closed.
     AppendTestUtil.checkFullFile(fileSys, name,
         AppendTestUtil.NUM_BLOCKS * AppendTestUtil.BLOCK_SIZE,
-        expected, "Read 1");
+        expected, "Read 1", false);
   }
 
   /**

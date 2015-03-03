@@ -28,12 +28,14 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -231,9 +233,29 @@ public class SchedulerUtils {
     
     // if queue has default label expression, and RR doesn't have, use the
     // default label expression of queue
-    if (labelExp == null && queueInfo != null) {
+    if (labelExp == null && queueInfo != null
+        && ResourceRequest.ANY.equals(resReq.getResourceName())) {
       labelExp = queueInfo.getDefaultNodeLabelExpression();
       resReq.setNodeLabelExpression(labelExp);
+    }
+    
+    // we don't allow specify label expression other than resourceName=ANY now
+    if (!ResourceRequest.ANY.equals(resReq.getResourceName())
+        && labelExp != null && !labelExp.trim().isEmpty()) {
+      throw new InvalidResourceRequestException(
+          "Invailid resource request, queue=" + queueInfo.getQueueName()
+              + " specified node label expression in a "
+              + "resource request has resource name = "
+              + resReq.getResourceName());
+    }
+    
+    // we don't allow specify label expression with more than one node labels now
+    if (labelExp != null && labelExp.contains("&&")) {
+      throw new InvalidResourceRequestException(
+          "Invailid resource request, queue=" + queueInfo.getQueueName()
+              + " specified more than one node label "
+              + "in a node label expression, node label expression = "
+              + labelExp);
     }
     
     if (labelExp != null && !labelExp.trim().isEmpty() && queueInfo != null) {
@@ -327,5 +349,16 @@ public class SchedulerUtils {
       }
     }
     return true;
+  }
+
+
+  public static AccessType toAccessType(QueueACL acl) {
+    switch (acl) {
+    case ADMINISTER_QUEUE:
+      return AccessType.ADMINISTER_QUEUE;
+    case SUBMIT_APPLICATIONS:
+      return AccessType.SUBMIT_APP;
+    }
+    return null;
   }
 }

@@ -56,7 +56,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
   final ConcurrentMap<ApplicationId, RMApp> apps;
   final FairSchedulerInfo fsinfo;
   final Configuration conf;
-  
+  final ResourceManager rm;
   @Inject
   public FairSchedulerAppsBlock(ResourceManager rm, ViewContext ctx,
       Configuration conf) {
@@ -73,6 +73,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       }
     }
     this.conf = conf;
+    this.rm = rm;
   }
   
   @Override public void render(Block html) {
@@ -107,7 +108,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       if (reqAppStates != null && !reqAppStates.contains(app.createApplicationState())) {
         continue;
       }
-      AppInfo appInfo = new AppInfo(app, true, WebAppUtils.getHttpSchemePrefix(conf));
+      AppInfo appInfo = new AppInfo(rm, app, true, WebAppUtils.getHttpSchemePrefix(conf));
       String percent = String.format("%.1f", appInfo.getProgress());
       ApplicationAttemptId attemptId = app.getCurrentAppAttempt().getAppAttemptId();
       int fairShare = fsinfo.getAppFairShare(attemptId);

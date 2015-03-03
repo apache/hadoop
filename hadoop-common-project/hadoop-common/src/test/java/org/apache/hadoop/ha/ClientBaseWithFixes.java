@@ -66,7 +66,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
     public static int CONNECTION_TIMEOUT = 30000;
     static final File BASETEST =
-        new File(System.getProperty("build.test.dir", "build"));
+        new File(System.getProperty("test.build.data", "build"));
 
     protected final String hostPort = initHostPort();
     protected int maxCnxns = 0;

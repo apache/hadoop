@@ -40,7 +40,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.*;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
@@ -294,10 +299,11 @@ public class TestDirectoryScanner {
         .build();
     try {
       cluster.waitActive();
+      DataNode dataNode = cluster.getDataNodes().get(0);
       bpid = cluster.getNamesystem().getBlockPoolId();
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       client = cluster.getFileSystem().getClient();
-      scanner = new DirectoryScanner(fds, CONF);
+      scanner = new DirectoryScanner(dataNode, fds, CONF);
       scanner.setRetainDiffs(true);
       FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
@@ -335,9 +341,10 @@ public class TestDirectoryScanner {
     try {
       cluster.waitActive();
       bpid = cluster.getNamesystem().getBlockPoolId();
+      DataNode dataNode = cluster.getDataNodes().get(0);
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       client = cluster.getFileSystem().getClient();
-      scanner = new DirectoryScanner(fds, CONF);
+      scanner = new DirectoryScanner(dataNode, fds, CONF);
       scanner.setRetainDiffs(true);
       FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
@@ -384,7 +391,8 @@ public class TestDirectoryScanner {
       client = cluster.getFileSystem().getClient();
       CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
                   parallelism);
-      scanner = new DirectoryScanner(fds, CONF);
+      DataNode dataNode = cluster.getDataNodes().get(0);
+      scanner = new DirectoryScanner(dataNode, fds, CONF);
       scanner.setRetainDiffs(true);
 
       // Add files with 100 blocks

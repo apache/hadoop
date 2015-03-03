@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmR
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
-import org.htrace.TraceScope;
+import org.apache.htrace.TraceScope;
 
 /** Receiver */
 @InterfaceAudience.Private
@@ -149,7 +149,9 @@ public abstract class Receiver implements DataTransferProtocol {
           (proto.hasCachingStrategy() ?
               getCachingStrategy(proto.getCachingStrategy()) :
             CachingStrategy.newDefaultStrategy()),
-          (proto.hasAllowLazyPersist() ? proto.getAllowLazyPersist() : false));
+          (proto.hasAllowLazyPersist() ? proto.getAllowLazyPersist() : false),
+          (proto.hasPinning() ? proto.getPinning(): false),
+          (PBHelper.convertBooleanList(proto.getTargetPinningsList())));
     } finally {
      if (traceScope != null) traceScope.close();
     }

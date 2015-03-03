@@ -1,0 +1,864 @@
+<!---
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+#set ( $H3 = '###' )
+#set ( $H4 = '####' )
+#set ( $H5 = '#####' )
+
+Hadoop Key Management Server (KMS) - Documentation Sets
+=======================================================
+
+Hadoop KMS is a cryptographic key management server based on Hadoop's **KeyProvider** API.
+
+It provides a client and a server components which communicate over HTTP using a REST API.
+
+The client is a KeyProvider implementation interacts with the KMS using the KMS HTTP REST API.
+
+KMS and its client have built-in security and they support HTTP SPNEGO Kerberos authentication and HTTPS secure transport.
+
+KMS is a Java web-application and it runs using a pre-configured Tomcat bundled with the Hadoop distribution.
+
+KMS Client Configuration
+------------------------
+
+The KMS client `KeyProvider` uses the **kms** scheme, and the embedded URL must be the URL of the KMS. For example, for a KMS running on `http://localhost:16000/kms`, the KeyProvider URI is `kms://http@localhost:16000/kms`. And, for a KMS running on `https://localhost:16000/kms`, the KeyProvider URI is `kms://https@localhost:16000/kms`
+
+KMS
+---
+
+$H3 KMS Configuration
+
+Configure the KMS backing KeyProvider properties in the `etc/hadoop/kms-site.xml` configuration file:
+
+```xml
+  <property>
+     <name>hadoop.kms.key.provider.uri</name>
+     <value>jceks://file@/${user.home}/kms.keystore</value>
+  </property>
+
+  <property>
+    <name>hadoop.security.keystore.java-keystore-provider.password-file</name>
+    <value>kms.keystore.password</value>
+  </property>
+```
+
+The password file is looked up in the Hadoop's configuration directory via the classpath.
+
+NOTE: You need to restart the KMS for the configuration changes to take effect.
+
+$H3 KMS Cache
+
+KMS caches keys for short period of time to avoid excessive hits to the underlying key provider.
+
+The Cache is enabled by default (can be dissabled by setting the `hadoop.kms.cache.enable` boolean property to false)
+
+The cache is used with the following 3 methods only, `getCurrentKey()` and `getKeyVersion()` and `getMetadata()`.
+
+For the `getCurrentKey()` method, cached entries are kept for a maximum of 30000 millisecond regardless the number of times the key is being access (to avoid stale keys to be considered current).
+
+For the `getKeyVersion()` method, cached entries are kept with a default inactivity timeout of 600000 milliseconds (10 mins). This time out is configurable via the following property in the `etc/hadoop/kms-site.xml` configuration file:
+
+```xml
+   <property>
+     <name>hadoop.kms.cache.enable</name>
+     <value>true</value>
+   </property>
+
+   <property>
+     <name>hadoop.kms.cache.timeout.ms</name>
+     <value>600000</value>
+   </property>
+
+   <property>
+     <name>hadoop.kms.current.key.cache.timeout.ms</name>
+     <value>30000</value>
+   </property>
+```
+
+$H3 KMS Aggregated Audit logs
+
+Audit logs are aggregated for API accesses to the GET\_KEY\_VERSION, GET\_CURRENT\_KEY, DECRYPT\_EEK, GENERATE\_EEK operations.
+
+Entries are grouped by the (user,key,operation) combined key for a configurable aggregation interval after which the number of accesses to the specified end-point by the user for a given key is flushed to the audit log.
+
+The Aggregation interval is configured via the property :
+
+      <property>
+        <name>hadoop.kms.aggregation.delay.ms</name>
+        <value>10000</value>
+      </property>
+
+$H3 Start/Stop the KMS
+
+To start/stop KMS use KMS's bin/kms.sh script. For example:
+
+    hadoop-${project.version} $ sbin/kms.sh start
+
+NOTE: Invoking the script without any parameters list all possible parameters (start, stop, run, etc.). The `kms.sh` script is a wrapper for Tomcat's `catalina.sh` script that sets the environment variables and Java System properties required to run KMS.
+
+$H3 Embedded Tomcat Configuration
+
+To configure the embedded Tomcat go to the `share/hadoop/kms/tomcat/conf`.
+
+KMS pre-configures the HTTP and Admin ports in Tomcat's `server.xml` to 16000 and 16001.
+
+Tomcat logs are also preconfigured to go to Hadoop's `logs/` directory.
+
+The following environment variables (which can be set in KMS's `etc/hadoop/kms-env.sh` script) can be used to alter those values:
+
+* KMS_HTTP_PORT
+* KMS_ADMIN_PORT
+* KMS_MAX_THREADS
+* KMS_LOGNOTE: You need to restart the KMS for the configuration changes to take effect.
+
+$H3 Loading native libraries
+
+The following environment variable (which can be set in KMS's `etc/hadoop/kms-env.sh` script) can be used to specify the location of any required native libraries. For eg. Tomact native Apache Portable Runtime (APR) libraries:
+
+* JAVA_LIBRARY_PATH
+
+$H3 KMS Security Configuration
+
+$H4 Enabling Kerberos HTTP SPNEGO Authentication
+
+Configure the Kerberos `etc/krb5.conf` file with the information of your KDC server.
+
+Create a service principal and its keytab for the KMS, it must be an `HTTP` service principal.
+
+Configure KMS `etc/hadoop/kms-site.xml` with the correct security values, for example:
+
+```xml
+   <property>
+     <name>hadoop.kms.authentication.type</name>
+     <value>kerberos</value>
+   </property>
+
+   <property>
+     <name>hadoop.kms.authentication.kerberos.keytab</name>
+     <value>${user.home}/kms.keytab</value>
+   </property>
+
+   <property>
+     <name>hadoop.kms.authentication.kerberos.principal</name>
+     <value>HTTP/localhost</value>
+   </property>
+
+   <property>
+     <name>hadoop.kms.authentication.kerberos.name.rules</name>
+     <value>DEFAULT</value>
+   </property>
+```
+
+NOTE: You need to restart the KMS for the configuration changes to take effect.
+
+$H4 KMS Proxyuser Configuration
+
+Each proxyuser must be configured in `etc/hadoop/kms-site.xml` using the following properties:
+
+```xml
+  <property>
+    <name>hadoop.kms.proxyuser.#USER#.users</name>
+    <value>*</value>
+  </property>
+
+  <property>
+    <name>hadoop.kms.proxyuser.#USER#.groups</name>
+    <value>*</value>
+  </property>
+
+  <property>
+    <name>hadoop.kms.proxyuser.#USER#.hosts</name>
+    <value>*</value>
+  </property>
+```
+
+`#USER#` is the username of the proxyuser to configure.
+
+The `users` property indicates the users that can be impersonated.
+
+The `groups` property indicates the groups users being impersonated must belong to.
+
+At least one of the `users` or `groups` properties must be defined. If both are specified, then the configured proxyuser will be able to impersonate and user in the `users` list and any user belonging to one of the groups in the `groups` list.
+
+The `hosts` property indicates from which host the proxyuser can make impersonation requests.
+
+If `users`, `groups` or `hosts` has a `*`, it means there are no restrictions for the proxyuser regarding users, groups or hosts.
+
+$H4 KMS over HTTPS (SSL)
+
+To configure KMS to work over HTTPS the following 2 properties must be set in the `etc/hadoop/kms_env.sh` script (shown with default values):
+
+* KMS_SSL_KEYSTORE_FILE=$HOME/.keystore
+* KMS_SSL_KEYSTORE_PASS=password
+
+In the KMS `tomcat/conf` directory, replace the `server.xml` file with the provided `ssl-server.xml` file.
+
+You need to create an SSL certificate for the KMS. As the `kms` Unix user, using the Java `keytool` command to create the SSL certificate:
+
+    $ keytool -genkey -alias tomcat -keyalg RSA
+
+You will be asked a series of questions in an interactive prompt. It will create the keystore file, which will be named **.keystore** and located in the `kms` user home directory.
+
+The password you enter for "keystore password" must match the value of the `KMS_SSL_KEYSTORE_PASS` environment variable set in the `kms-env.sh` script in the configuration directory.
+
+The answer to "What is your first and last name?" (i.e. "CN") must be the hostname of the machine where the KMS will be running.
+
+NOTE: You need to restart the KMS for the configuration changes to take effect.
+
+$H4 KMS Access Control
+
+KMS ACLs configuration are defined in the KMS `etc/hadoop/kms-acls.xml` configuration file. This file is hot-reloaded when it changes.
+
+KMS supports both fine grained access control as well as blacklist for kms operations via a set ACL configuration properties.
+
+A user accessing KMS is first checked for inclusion in the Access Control List for the requested operation and then checked for exclusion in the Black list for the operation before access is granted.
+
+```xml
+<configuration>
+  <property>
+    <name>hadoop.kms.acl.CREATE</name>
+    <value>*</value>
+    <description>
+          ACL for create-key operations.
+          If the user is not in the GET ACL, the key material is not returned
+          as part of the response.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.CREATE</name>
+    <value>hdfs,foo</value>
+    <description>
+          Blacklist for create-key operations.
+          If the user is in the Blacklist, the key material is not returned
+          as part of the response.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.acl.DELETE</name>
+    <value>*</value>
+    <description>
+          ACL for delete-key operations.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.DELETE</name>
+    <value>hdfs,foo</value>
+    <description>
+          Blacklist for delete-key operations.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.acl.ROLLOVER</name>
+    <value>*</value>
+    <description>
+          ACL for rollover-key operations.
+          If the user is not in the GET ACL, the key material is not returned
+          as part of the response.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.ROLLOVER</name>
+    <value>hdfs,foo</value>
+    <description>
+          Blacklist for rollover-key operations.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.acl.GET</name>
+    <value>*</value>
+    <description>
+          ACL for get-key-version and get-current-key operations.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.GET</name>
+    <value>hdfs,foo</value>
+    <description>
+          ACL for get-key-version and get-current-key operations.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.acl.GET_KEYS</name>
+    <value>*</value>
+    <description>
+         ACL for get-keys operation.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.GET_KEYS</name>
+    <value>hdfs,foo</value>
+    <description>
+          Blacklist for get-keys operation.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.acl.GET_METADATA</name>
+    <value>*</value>
+    <description>
+        ACL for get-key-metadata and get-keys-metadata operations.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.GET_METADATA</name>
+    <value>hdfs,foo</value>
+    <description>
+         Blacklist for get-key-metadata and get-keys-metadata operations.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.acl.SET_KEY_MATERIAL</name>
+    <value>*</value>
+    <description>
+            Complimentary ACL for CREATE and ROLLOVER operation to allow the client
+            to provide the key material when creating or rolling a key.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.SET_KEY_MATERIAL</name>
+    <value>hdfs,foo</value>
+    <description>
+            Complimentary Blacklist for CREATE and ROLLOVER operation to allow the client
+            to provide the key material when creating or rolling a key.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.acl.GENERATE_EEK</name>
+    <value>*</value>
+    <description>
+          ACL for generateEncryptedKey
+          CryptoExtension operations
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.GENERATE_EEK</name>
+    <value>hdfs,foo</value>
+    <description>
+          Blacklist for generateEncryptedKey
+          CryptoExtension operations
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.acl.DECRYPT_EEK</name>
+    <value>*</value>
+    <description>
+          ACL for decrypt EncryptedKey
+          CryptoExtension operations
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.blacklist.DECRYPT_EEK</name>
+    <value>hdfs,foo</value>
+    <description>
+          Blacklist for decrypt EncryptedKey
+          CryptoExtension operations
+    </description>
+  </property>
+</configuration>
+```
+
+$H4 Key Access Control
+
+KMS supports access control for all non-read operations at the Key level. All Key Access operations are classified as :
+
+* MANAGEMENT - createKey, deleteKey, rolloverNewVersion
+* GENERATE_EEK - generateEncryptedKey, warmUpEncryptedKeys
+* DECRYPT_EEK - decryptEncryptedKey
+* READ - getKeyVersion, getKeyVersions, getMetadata, getKeysMetadata, getCurrentKey
+* ALL - all of the above
+
+These can be defined in the KMS `etc/hadoop/kms-acls.xml` as follows
+
+For all keys for which a key access has not been explicitly configured, It is possible to configure a default key access control for a subset of the operation types.
+
+It is also possible to configure a "whitelist" key ACL for a subset of the operation types. The whitelist key ACL is a whitelist in addition to the explicit or default per-key ACL. That is, if no per-key ACL is explicitly set, a user will be granted access if they are present in the default per-key ACL or the whitelist key ACL. If a per-key ACL is explicitly set, a user will be granted access if they are present in the per-key ACL or the whitelist key ACL.
+
+If no ACL is configured for a specific key AND no default ACL is configured AND no root key ACL is configured for the requested operation, then access will be DENIED.
+
+**NOTE:** The default and whitelist key ACL does not support `ALL` operation qualifier.
+
+```xml
+  <property>
+    <name>key.acl.testKey1.MANAGEMENT</name>
+    <value>*</value>
+    <description>
+      ACL for create-key, deleteKey and rolloverNewVersion operations.
+    </description>
+  </property>
+
+  <property>
+    <name>key.acl.testKey2.GENERATE_EEK</name>
+    <value>*</value>
+    <description>
+      ACL for generateEncryptedKey operations.
+    </description>
+  </property>
+
+  <property>
+    <name>key.acl.testKey3.DECRYPT_EEK</name>
+    <value>admink3</value>
+    <description>
+      ACL for decryptEncryptedKey operations.
+    </description>
+  </property>
+
+  <property>
+    <name>key.acl.testKey4.READ</name>
+    <value>*</value>
+    <description>
+      ACL for getKeyVersion, getKeyVersions, getMetadata, getKeysMetadata,
+      getCurrentKey operations
+    </description>
+  </property>
+
+  <property>
+    <name>key.acl.testKey5.ALL</name>
+    <value>*</value>
+    <description>
+      ACL for ALL operations.
+    </description>
+  </property>
+
+  <property>
+    <name>whitelist.key.acl.MANAGEMENT</name>
+    <value>admin1</value>
+    <description>
+      whitelist ACL for MANAGEMENT operations for all keys.
+    </description>
+  </property>
+
+  <!--
+  'testKey3' key ACL is defined. Since a 'whitelist'
+  key is also defined for DECRYPT_EEK, in addition to
+  admink3, admin1 can also perform DECRYPT_EEK operations
+  on 'testKey3'
+-->
+  <property>
+    <name>whitelist.key.acl.DECRYPT_EEK</name>
+    <value>admin1</value>
+    <description>
+      whitelist ACL for DECRYPT_EEK operations for all keys.
+    </description>
+  </property>
+
+  <property>
+    <name>default.key.acl.MANAGEMENT</name>
+    <value>user1,user2</value>
+    <description>
+      default ACL for MANAGEMENT operations for all keys that are not
+      explicitly defined.
+    </description>
+  </property>
+
+  <property>
+    <name>default.key.acl.GENERATE_EEK</name>
+    <value>user1,user2</value>
+    <description>
+      default ACL for GENERATE_EEK operations for all keys that are not
+      explicitly defined.
+    </description>
+  </property>
+
+  <property>
+    <name>default.key.acl.DECRYPT_EEK</name>
+    <value>user1,user2</value>
+    <description>
+      default ACL for DECRYPT_EEK operations for all keys that are not
+      explicitly defined.
+    </description>
+  </property>
+
+  <property>
+    <name>default.key.acl.READ</name>
+    <value>user1,user2</value>
+    <description>
+      default ACL for READ operations for all keys that are not
+      explicitly defined.
+    </description>
+  </property>
+```
+
+$H3 KMS Delegation Token Configuration
+
+KMS delegation token secret manager can be configured with the following properties:
+
+```xml
+  <property>
+    <name>hadoop.kms.authentication.delegation-token.update-interval.sec</name>
+    <value>86400</value>
+    <description>
+      How often the master key is rotated, in seconds. Default value 1 day.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.authentication.delegation-token.max-lifetime.sec</name>
+    <value>604800</value>
+    <description>
+      Maximum lifetime of a delagation token, in seconds. Default value 7 days.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.authentication.delegation-token.renew-interval.sec</name>
+    <value>86400</value>
+    <description>
+      Renewal interval of a delagation token, in seconds. Default value 1 day.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.kms.authentication.delegation-token.removal-scan-interval.sec</name>
+    <value>3600</value>
+    <description>
+      Scan interval to remove expired delegation tokens.
+    </description>
+  </property>
+```
+
+$H3 Using Multiple Instances of KMS Behind a Load-Balancer or VIP
+
+KMS supports multiple KMS instances behind a load-balancer or VIP for scalability and for HA purposes.
+
+When using multiple KMS instances behind a load-balancer or VIP, requests from the same user may be handled by different KMS instances.
+
+KMS instances behind a load-balancer or VIP must be specially configured to work properly as a single logical service.
+
+$H4 HTTP Kerberos Principals Configuration
+
+When KMS instances are behind a load-balancer or VIP, clients will use the hostname of the VIP. For Kerberos SPNEGO authentication, the hostname of the URL is used to construct the Kerberos service name of the server, `HTTP/#HOSTNAME#`. This means that all KMS instances must have a Kerberos service name with the load-balancer or VIP hostname.
+
+In order to be able to access directly a specific KMS instance, the KMS instance must also have Keberos service name with its own hostname. This is required for monitoring and admin purposes.
+
+Both Kerberos service principal credentials (for the load-balancer/VIP hostname and for the actual KMS instance hostname) must be in the keytab file configured for authentication. And the principal name specified in the configuration must be '\*'. For example:
+
+```xml
+  <property>
+    <name>hadoop.kms.authentication.kerberos.principal</name>
+    <value>*</value>
+  </property>
+```
+
+**NOTE:** If using HTTPS, the SSL certificate used by the KMS instance must be configured to support multiple hostnames (see Java 7 `keytool` SAN extension support for details on how to do this).
+
+$H4 HTTP Authentication Signature
+
+KMS uses Hadoop Authentication for HTTP authentication. Hadoop Authentication issues a signed HTTP Cookie once the client has authenticated successfully. This HTTP Cookie has an expiration time, after which it will trigger a new authentication sequence. This is done to avoid triggering the authentication on every HTTP request of a client.
+
+A KMS instance must verify the HTTP Cookie signatures signed by other KMS instances. To do this all KMS instances must share the signing secret.
+
+This secret sharing can be done using a Zookeeper service which is configured in KMS with the following properties in the `kms-site.xml`:
+
+```xml
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider</name>
+    <value>zookeeper</value>
+    <description>
+      Indicates how the secret to sign the authentication cookies will be
+      stored. Options are 'random' (default), 'string' and 'zookeeper'.
+      If using a setup with multiple KMS instances, 'zookeeper' should be used.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.path</name>
+    <value>/hadoop-kms/hadoop-auth-signature-secret</value>
+    <description>
+      The Zookeeper ZNode path where the KMS instances will store and retrieve
+      the secret from.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.connection.string</name>
+    <value>#HOSTNAME#:#PORT#,...</value>
+    <description>
+      The Zookeeper connection string, a list of hostnames and port comma
+      separated.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.auth.type</name>
+    <value>kerberos</value>
+    <description>
+      The Zookeeper authentication type, 'none' or 'sasl' (Kerberos).
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.kerberos.keytab</name>
+    <value>/etc/hadoop/conf/kms.keytab</value>
+    <description>
+      The absolute path for the Kerberos keytab with the credentials to
+      connect to Zookeeper.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.signer.secret.provider.zookeeper.kerberos.principal</name>
+    <value>kms/#HOSTNAME#</value>
+    <description>
+      The Kerberos service principal used to connect to Zookeeper.
+    </description>
+  </property>
+```
+
+$H4 Delegation Tokens
+
+TBD
+
+$H3 KMS HTTP REST API
+
+$H4 Create a Key
+
+*REQUEST:*
+
+    POST http://HOST:PORT/kms/v1/keys
+    Content-Type: application/json
+
+    {
+      "name"        : "<key-name>",
+      "cipher"      : "<cipher>",
+      "length"      : <length>,        //int
+      "material"    : "<material>",    //base64
+      "description" : "<description>"
+    }
+
+*RESPONSE:*
+
+    201 CREATED
+    LOCATION: http://HOST:PORT/kms/v1/key/<key-name>
+    Content-Type: application/json
+
+    {
+      "name"        : "versionName",
+      "material"    : "<material>",    //base64, not present without GET ACL
+    }
+
+$H4 Rollover Key
+
+*REQUEST:*
+
+    POST http://HOST:PORT/kms/v1/key/<key-name>
+    Content-Type: application/json
+
+    {
+      "material"    : "<material>",
+    }
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    {
+      "name"        : "versionName",
+      "material"    : "<material>",    //base64, not present without GET ACL
+    }
+
+$H4 Delete Key
+
+*REQUEST:*
+
+    DELETE http://HOST:PORT/kms/v1/key/<key-name>
+
+*RESPONSE:*
+
+    200 OK
+
+$H4 Get Key Metadata
+
+*REQUEST:*
+
+    GET http://HOST:PORT/kms/v1/key/<key-name>/_metadata
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    {
+      "name"        : "<key-name>",
+      "cipher"      : "<cipher>",
+      "length"      : <length>,        //int
+      "description" : "<description>",
+      "created"     : <millis-epoc>,   //long
+      "versions"    : <versions>       //int
+    }
+
+$H4 Get Current Key
+
+*REQUEST:*
+
+    GET http://HOST:PORT/kms/v1/key/<key-name>/_currentversion
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    {
+      "name"        : "versionName",
+      "material"    : "<material>",    //base64
+    }
+
+$H4 Generate Encrypted Key for Current KeyVersion
+
+*REQUEST:*
+
+    GET http://HOST:PORT/kms/v1/key/<key-name>/_eek?eek_op=generate&num_keys=<number-of-keys-to-generate>
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+    [
+      {
+        "versionName"         : "encryptionVersionName",
+        "iv"                  : "<iv>",          //base64
+        "encryptedKeyVersion" : {
+            "versionName"       : "EEK",
+            "material"          : "<material>",    //base64
+        }
+      },
+      {
+        "versionName"         : "encryptionVersionName",
+        "iv"                  : "<iv>",          //base64
+        "encryptedKeyVersion" : {
+            "versionName"       : "EEK",
+            "material"          : "<material>",    //base64
+        }
+      },
+      ...
+    ]
+
+$H4 Decrypt Encrypted Key
+
+*REQUEST:*
+
+    POST http://HOST:PORT/kms/v1/keyversion/<version-name>/_eek?ee_op=decrypt
+    Content-Type: application/json
+
+    {
+      "name"        : "<key-name>",
+      "iv"          : "<iv>",          //base64
+      "material"    : "<material>",    //base64
+    }
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    {
+      "name"        : "EK",
+      "material"    : "<material>",    //base64
+    }
+
+$H4 Get Key Version
+
+*REQUEST:*
+
+    GET http://HOST:PORT/kms/v1/keyversion/<version-name>
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    {
+      "name"        : "versionName",
+      "material"    : "<material>",    //base64
+    }
+
+$H4 Get Key Versions
+
+*REQUEST:*
+
+    GET http://HOST:PORT/kms/v1/key/<key-name>/_versions
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    [
+      {
+        "name"        : "versionName",
+        "material"    : "<material>",    //base64
+      },
+      {
+        "name"        : "versionName",
+        "material"    : "<material>",    //base64
+      },
+      ...
+    ]
+
+$H4 Get Key Names
+
+*REQUEST:*
+
+    GET http://HOST:PORT/kms/v1/keys/names
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    [
+      "<key-name>",
+      "<key-name>",
+      ...
+    ]
+
+$H4 Get Keys Metadata
+
+    GET http://HOST:PORT/kms/v1/keys/metadata?key=<key-name>&key=<key-name>,...
+
+*RESPONSE:*
+
+    200 OK
+    Content-Type: application/json
+
+    [
+      {
+        "name"        : "<key-name>",
+        "cipher"      : "<cipher>",
+        "length"      : <length>,        //int
+        "description" : "<description>",
+        "created"     : <millis-epoc>,   //long
+        "versions"    : <versions>       //int
+      },
+      {
+        "name"        : "<key-name>",
+        "cipher"      : "<cipher>",
+        "length"      : <length>,        //int
+        "description" : "<description>",
+        "created"     : <millis-epoc>,   //long
+        "versions"    : <versions>       //int
+      },
+      ...
+    ]

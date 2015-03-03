@@ -70,6 +70,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -1434,6 +1436,79 @@ public class TestClientRMService {
     Assert.assertTrue(nodeToLabels.get(NodeId.newInstance("host2", 0))
         .containsAll(Arrays.asList("y")));
     
+    rpc.stopProxy(client, conf);
+    rm.close();
+  }
+
+  @Test
+  public void testGetLabelsToNodes() throws Exception {
+    MockRM rm = new MockRM() {
+      protected ClientRMService createClientRMService() {
+        return new ClientRMService(this.rmContext, scheduler,
+            this.rmAppManager, this.applicationACLsManager,
+            this.queueACLsManager, this.getRMContext()
+                .getRMDelegationTokenSecretManager());
+      };
+    };
+    rm.start();
+    RMNodeLabelsManager labelsMgr = rm.getRMContext().getNodeLabelManager();
+    labelsMgr.addToCluserNodeLabels(ImmutableSet.of("x", "y", "z"));
+
+    Map<NodeId, Set<String>> map = new HashMap<NodeId, Set<String>>();
+    map.put(NodeId.newInstance("host1", 0), ImmutableSet.of("x"));
+    map.put(NodeId.newInstance("host1", 1), ImmutableSet.of("z"));
+    map.put(NodeId.newInstance("host2", 0), ImmutableSet.of("y"));
+    map.put(NodeId.newInstance("host3", 0), ImmutableSet.of("y"));
+    map.put(NodeId.newInstance("host3", 1), ImmutableSet.of("z"));
+    labelsMgr.replaceLabelsOnNode(map);
+
+    // Create a client.
+    Configuration conf = new Configuration();
+    YarnRPC rpc = YarnRPC.create(conf);
+    InetSocketAddress rmAddress = rm.getClientRMService().getBindAddress();
+    LOG.info("Connecting to ResourceManager at " + rmAddress);
+    ApplicationClientProtocol client =
+        (ApplicationClientProtocol) rpc.getProxy(
+            ApplicationClientProtocol.class, rmAddress, conf);
+
+    // Get node labels collection
+    GetClusterNodeLabelsResponse response =
+        client.getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
+    Assert.assertTrue(response.getNodeLabels().containsAll(
+        Arrays.asList("x", "y", "z")));
+
+    // Get labels to nodes mapping
+    GetLabelsToNodesResponse response1 =
+        client.getLabelsToNodes(GetLabelsToNodesRequest.newInstance());
+    Map<String, Set<NodeId>> labelsToNodes = response1.getLabelsToNodes();
+    Assert.assertTrue(
+        labelsToNodes.keySet().containsAll(Arrays.asList("x", "y", "z")));
+    Assert.assertTrue(
+        labelsToNodes.get("x").containsAll(Arrays.asList(
+        NodeId.newInstance("host1", 0))));
+    Assert.assertTrue(
+        labelsToNodes.get("y").containsAll(Arrays.asList(
+        NodeId.newInstance("host2", 0), NodeId.newInstance("host3", 0))));
+    Assert.assertTrue(
+        labelsToNodes.get("z").containsAll(Arrays.asList(
+        NodeId.newInstance("host1", 1), NodeId.newInstance("host3", 1))));
+
+    // Get labels to nodes mapping for specific labels
+    Set<String> setlabels =
+        new HashSet<String>(Arrays.asList(new String[]{"x", "z"}));
+    GetLabelsToNodesResponse response2 =
+        client.getLabelsToNodes(GetLabelsToNodesRequest.newInstance(setlabels));
+    labelsToNodes = response2.getLabelsToNodes();
+    Assert.assertTrue(
+        labelsToNodes.keySet().containsAll(Arrays.asList("x", "z")));
+    Assert.assertTrue(
+        labelsToNodes.get("x").containsAll(Arrays.asList(
+        NodeId.newInstance("host1", 0))));
+    Assert.assertTrue(
+        labelsToNodes.get("z").containsAll(Arrays.asList(
+        NodeId.newInstance("host1", 1), NodeId.newInstance("host3", 1))));
+    Assert.assertEquals(labelsToNodes.get("y"), null);
+
     rpc.stopProxy(client, conf);
     rm.close();
   }

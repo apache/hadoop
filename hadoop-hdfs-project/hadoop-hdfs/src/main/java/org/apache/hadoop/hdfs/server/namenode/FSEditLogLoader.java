@@ -42,8 +42,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -595,14 +595,14 @@ public class FSEditLogLoader {
       SetNSQuotaOp setNSQuotaOp = (SetNSQuotaOp)op;
       FSDirAttrOp.unprotectedSetQuota(
           fsDir, renameReservedPathsOnUpgrade(setNSQuotaOp.src, logVersion),
-          setNSQuotaOp.nsQuota, HdfsConstants.QUOTA_DONT_SET);
+          setNSQuotaOp.nsQuota, HdfsConstants.QUOTA_DONT_SET, null);
       break;
     }
     case OP_CLEAR_NS_QUOTA: {
       ClearNSQuotaOp clearNSQuotaOp = (ClearNSQuotaOp)op;
       FSDirAttrOp.unprotectedSetQuota(
           fsDir, renameReservedPathsOnUpgrade(clearNSQuotaOp.src, logVersion),
-          HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_DONT_SET);
+          HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_DONT_SET, null);
       break;
     }
 
@@ -610,8 +610,17 @@ public class FSEditLogLoader {
       SetQuotaOp setQuotaOp = (SetQuotaOp) op;
       FSDirAttrOp.unprotectedSetQuota(fsDir,
           renameReservedPathsOnUpgrade(setQuotaOp.src, logVersion),
-          setQuotaOp.nsQuota, setQuotaOp.dsQuota);
+          setQuotaOp.nsQuota, setQuotaOp.dsQuota, null);
       break;
+
+    case OP_SET_QUOTA_BY_STORAGETYPE:
+        FSEditLogOp.SetQuotaByStorageTypeOp setQuotaByStorageTypeOp =
+          (FSEditLogOp.SetQuotaByStorageTypeOp) op;
+        FSDirAttrOp.unprotectedSetQuota(fsDir,
+          renameReservedPathsOnUpgrade(setQuotaByStorageTypeOp.src, logVersion),
+          HdfsConstants.QUOTA_DONT_SET, setQuotaByStorageTypeOp.dsQuota,
+          setQuotaByStorageTypeOp.type);
+        break;
 
     case OP_TIMES: {
       TimesOp timesOp = (TimesOp)op;
@@ -784,9 +793,6 @@ public class FSEditLogLoader {
             = startOpt.getRollingUpgradeStartupOption(); 
         if (rollingUpgradeOpt == RollingUpgradeStartupOption.ROLLBACK) {
           throw new RollingUpgradeOp.RollbackException();
-        } else if (rollingUpgradeOpt == RollingUpgradeStartupOption.DOWNGRADE) {
-          //ignore upgrade marker
-          break;
         }
       }
       // start rolling upgrade
@@ -933,7 +939,7 @@ public class FSEditLogLoader {
    */
   private void addNewBlock(FSDirectory fsDir, AddBlockOp op, INodeFile file)
       throws IOException {
-    BlockInfo[] oldBlocks = file.getBlocks();
+    BlockInfoContiguous[] oldBlocks = file.getBlocks();
     Block pBlock = op.getPenultimateBlock();
     Block newBlock= op.getLastBlock();
     
@@ -950,16 +956,16 @@ public class FSEditLogLoader {
       }
       
       oldLastBlock.setNumBytes(pBlock.getNumBytes());
-      if (oldLastBlock instanceof BlockInfoUnderConstruction) {
+      if (oldLastBlock instanceof BlockInfoContiguousUnderConstruction) {
         fsNamesys.getBlockManager().forceCompleteBlock(file,
-            (BlockInfoUnderConstruction) oldLastBlock);
+            (BlockInfoContiguousUnderConstruction) oldLastBlock);
         fsNamesys.getBlockManager().processQueuedMessagesForBlock(pBlock);
       }
     } else { // the penultimate block is null
       Preconditions.checkState(oldBlocks == null || oldBlocks.length == 0);
     }
     // add the new block
-    BlockInfo newBI = new BlockInfoUnderConstruction(
+    BlockInfoContiguous newBI = new BlockInfoContiguousUnderConstruction(
           newBlock, file.getBlockReplication());
     fsNamesys.getBlockManager().addBlockCollection(newBI, file);
     file.addBlock(newBI);
@@ -973,7 +979,7 @@ public class FSEditLogLoader {
   private void updateBlocks(FSDirectory fsDir, BlockListUpdatingOp op,
       INodesInPath iip, INodeFile file) throws IOException {
     // Update its block list
-    BlockInfo[] oldBlocks = file.getBlocks();
+    BlockInfoContiguous[] oldBlocks = file.getBlocks();
     Block[] newBlocks = op.getBlocks();
     String path = op.getPath();
     
@@ -982,7 +988,7 @@ public class FSEditLogLoader {
     
     // First, update blocks in common
     for (int i = 0; i < oldBlocks.length && i < newBlocks.length; i++) {
-      BlockInfo oldBlock = oldBlocks[i];
+      BlockInfoContiguous oldBlock = oldBlocks[i];
       Block newBlock = newBlocks[i];
       
       boolean isLastBlock = i == newBlocks.length - 1;
@@ -1000,11 +1006,11 @@ public class FSEditLogLoader {
         oldBlock.getGenerationStamp() != newBlock.getGenerationStamp();
       oldBlock.setGenerationStamp(newBlock.getGenerationStamp());
       
-      if (oldBlock instanceof BlockInfoUnderConstruction &&
+      if (oldBlock instanceof BlockInfoContiguousUnderConstruction &&
           (!isLastBlock || op.shouldCompleteLastBlock())) {
         changeMade = true;
         fsNamesys.getBlockManager().forceCompleteBlock(file,
-            (BlockInfoUnderConstruction) oldBlock);
+            (BlockInfoContiguousUnderConstruction) oldBlock);
       }
       if (changeMade) {
         // The state or gen-stamp of the block has changed. So, we may be
@@ -1033,19 +1039,19 @@ public class FSEditLogLoader {
       // We're adding blocks
       for (int i = oldBlocks.length; i < newBlocks.length; i++) {
         Block newBlock = newBlocks[i];
-        BlockInfo newBI;
+        BlockInfoContiguous newBI;
         if (!op.shouldCompleteLastBlock()) {
           // TODO: shouldn't this only be true for the last block?
           // what about an old-version fsync() where fsync isn't called
           // until several blocks in?
-          newBI = new BlockInfoUnderConstruction(
+          newBI = new BlockInfoContiguousUnderConstruction(
               newBlock, file.getBlockReplication());
         } else {
           // OP_CLOSE should add finalized blocks. This code path
           // is only executed when loading edits written by prior
           // versions of Hadoop. Current versions always log
           // OP_ADD operations as each block is allocated.
-          newBI = new BlockInfo(newBlock, file.getBlockReplication());
+          newBI = new BlockInfoContiguous(newBlock, file.getBlockReplication());
         }
         fsNamesys.getBlockManager().addBlockCollection(newBI, file);
         file.addBlock(newBI);

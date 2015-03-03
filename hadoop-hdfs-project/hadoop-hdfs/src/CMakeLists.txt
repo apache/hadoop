@@ -211,6 +211,14 @@ target_link_libraries(test_libhdfs_zerocopy
     ${OS_LINK_LIBRARIES}
 )
 
+add_executable(test_htable
+    main/native/libhdfs/common/htable.c
+    main/native/libhdfs/test/test_htable.c
+)
+target_link_libraries(test_htable
+    ${OS_LINK_LIBRARIES}
+)
+
 # Skip vecsum on Windows.  This could be made to work in the future by
 # introducing an abstraction layer over the sys/mman.h functions.
 if (NOT WIN32)

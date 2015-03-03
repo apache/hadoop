@@ -44,7 +44,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -345,14 +344,10 @@ public class TestRMAppAttemptTransitions {
     String url = null;
     final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
     try {
-      URI trackingUri =
-          StringUtils.isEmpty(appAttempt.getOriginalTrackingUrl()) ? null :
-              ProxyUriUtils
-                  .getUriFromAMUrl(scheme, appAttempt.getOriginalTrackingUrl());
       String proxy = WebAppUtils.getProxyHostAndPort(conf);
       URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
-      URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
-          appAttempt.getAppAttemptId().getApplicationId());
+      URI result = ProxyUriUtils.getProxyUri(null, proxyUri, appAttempt
+          .getAppAttemptId().getApplicationId());
       url = result.toASCIIString();
     } catch (URISyntaxException ex) {
       Assert.fail();
@@ -924,6 +919,36 @@ public class TestRMAppAttemptTransitions {
     testAppAttemptFailedState(amContainer, diagnostics);
   }
   
+  @Test(timeout = 10000)
+  public void testLaunchedAtFinalSaving() {
+    Container amContainer = allocateApplicationAttempt();
+
+    // ALLOCATED->FINAL_SAVING
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+        .getAppAttemptId(), RMAppAttemptEventType.KILL));
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+        applicationAttempt.getAppAttemptState());
+
+    // verify for both launched and launch_failed transitions in final_saving
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+        .getAppAttemptId(), RMAppAttemptEventType.LAUNCHED));
+    applicationAttempt.handle(new RMAppAttemptLaunchFailedEvent(
+        applicationAttempt.getAppAttemptId(), "Launch Failed"));
+
+    assertEquals(RMAppAttemptState.FINAL_SAVING,
+        applicationAttempt.getAppAttemptState());
+
+    testAppAttemptKilledState(amContainer, EMPTY_DIAGNOSTICS);
+
+    // verify for both launched and launch_failed transitions in killed
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+        .getAppAttemptId(), RMAppAttemptEventType.LAUNCHED));
+    applicationAttempt.handle(new RMAppAttemptLaunchFailedEvent(
+        applicationAttempt.getAppAttemptId(), "Launch Failed"));
+    assertEquals(RMAppAttemptState.KILLED,
+        applicationAttempt.getAppAttemptState());
+  }
+
   @Test
   public void testAMCrashAtAllocated() {
     Container amContainer = allocateApplicationAttempt();
@@ -1496,7 +1521,7 @@ public class TestRMAppAttemptTransitions {
       diagnostics.contains("exitCode: " + exitCode));
     if (shouldCheckURL) {
       assertTrue("Diagnostic information does not contain application proxy URL",
-      diagnostics.contains(applicationAttempt.getWebProxyBase()));
+          diagnostics.contains(applicationAttempt.getTrackingUrl()));
     }
   }
 

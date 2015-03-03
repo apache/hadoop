@@ -21,21 +21,14 @@
 #include <curl/curl.h>
 
 #include "hdfs_http_client.h"
+#include "exception.h"
 
 static pthread_mutex_t curlInitMutex = PTHREAD_MUTEX_INITIALIZER;
 static volatile int curlGlobalInited = 0;
 
 const char *hdfs_strerror(int errnoval)
 {
-    const char *msg = NULL;
-    if (errnoval < 0 || errnoval >= sys_nerr) {
-        msg = "Invalid Error Code";
-    } else if (sys_errlist == NULL) {
-        msg = "Unknown Error";
-    } else {
-        msg = sys_errlist[errnoval];
-    }
-    return msg;
+  return terror(errnoval);
 }
 
 int initResponseBuffer(struct ResponseBuffer **buffer)

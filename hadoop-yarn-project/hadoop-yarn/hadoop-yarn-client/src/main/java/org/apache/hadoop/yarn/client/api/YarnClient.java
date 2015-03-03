@@ -598,6 +598,37 @@ public abstract class YarnClient extends AbstractService {
 
   /**
    * <p>
+   * The interface used by client to get labels to nodes mapping
+   * in existing cluster
+   * </p>
+   *
+   * @return node to labels mappings
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, Set<NodeId>> getLabelsToNodes()
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by client to get labels to nodes mapping
+   * for specified labels in existing cluster
+   * </p>
+   *
+   * @param labels labels for which labels to nodes mapping has to be retrieved
+   * @return labels to nodes mappings for specific labels
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public abstract Map<String, Set<NodeId>> getLabelsToNodes(Set<String> labels)
+      throws YarnException, IOException;
+
+  /**
+   * <p>
    * The interface used by client to get node labels in the cluster
    * </p>
    *

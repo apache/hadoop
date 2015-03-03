@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.shell;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -77,9 +78,14 @@ class XAttrCommands extends FsCommand {
       name = StringUtils.popOptionWithArgument("-n", args);
       String en = StringUtils.popOptionWithArgument("-e", args);
       if (en != null) {
-        encoding = enValueOfFunc.apply(en.toUpperCase());
+        try {
+          encoding = enValueOfFunc.apply(StringUtils.toUpperCase(en));
+        } catch (IllegalArgumentException e) {
+          throw new IllegalArgumentException(
+              "Invalid/unsupported encoding option specified: " + en);
+        }
         Preconditions.checkArgument(encoding != null,
-          "Invalid/unsupported encoding option specified: " + en);
+            "Invalid/unsupported encoding option specified: " + en);
       }
 
       boolean r = StringUtils.popOption("-R", args);

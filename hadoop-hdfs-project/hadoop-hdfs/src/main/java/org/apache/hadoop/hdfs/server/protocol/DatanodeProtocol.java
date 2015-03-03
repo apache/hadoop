@@ -102,6 +102,7 @@ public interface DatanodeProtocol {
    * @param xmitsInProgress number of transfers from this datanode to others
    * @param xceiverCount number of active transceiver threads
    * @param failedVolumes number of failed volumes
+   * @param volumeFailureSummary info about volume failures
    * @throws IOException on error
    */
   @Idempotent
@@ -111,7 +112,9 @@ public interface DatanodeProtocol {
                                        long dnCacheUsed,
                                        int xmitsInProgress,
                                        int xceiverCount,
-                                       int failedVolumes) throws IOException;
+                                       int failedVolumes,
+                                       VolumeFailureSummary volumeFailureSummary)
+      throws IOException;
 
   /**
    * blockReport() tells the NameNode about all the locally-stored blocks.

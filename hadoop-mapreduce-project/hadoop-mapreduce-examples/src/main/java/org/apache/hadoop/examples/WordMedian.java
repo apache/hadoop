@@ -181,8 +181,7 @@ public class WordMedian extends Configured implements Tool {
     setConf(new Configuration());
     Configuration conf = getConf();
 
-    @SuppressWarnings("deprecation")
-    Job job = new Job(conf, "word median");
+    Job job = Job.getInstance(conf, "word median");
     job.setJarByClass(WordMedian.class);
     job.setMapperClass(WordMedianMapper.class);
     job.setCombinerClass(WordMedianReducer.class);

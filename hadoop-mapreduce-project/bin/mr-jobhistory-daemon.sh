@@ -42,5 +42,8 @@ fi
 daemonmode=$1
 shift
 
+hadoop_error "WARNING: Use of this script to ${daemonmode} the MR JobHistory daemon is deprecated."
+hadoop_error "WARNING: Attempting to execute replacement \"mapred --daemon ${daemonmode}\" instead."
+
 exec "${HADOOP_MAPRED_HOME}/bin/mapred" \
 --config "${HADOOP_CONF_DIR}" --daemon "${daemonmode}" "$@"

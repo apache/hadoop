@@ -90,7 +90,7 @@ public class FieldSelectionHelper {
       }
       pos = fieldSpec.indexOf('-');
       if (pos < 0) {
-        Integer fn = new Integer(fieldSpec);
+        Integer fn = Integer.valueOf(fieldSpec);
         fieldList.add(fn);
       } else {
         String start = fieldSpec.substring(0, pos);

@@ -6,6 +6,9 @@ Trunk (Unreleased)
     MAPREDUCE-5785. Derive heap size or mapreduce.*.memory.mb automatically.
     (Gera Shegalov and Karthik Kambatla via gera)
 
+    MAPREDUCE-5653. DistCp does not honour config-overrides for
+    mapreduce.[map,reduce].memory.mb (Ratandeep Ratti via aw)
+
   NEW FEATURES
 
     MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
@@ -94,6 +97,11 @@ Trunk (Unreleased)
     MAPREDUCE-6013. [post-HADOOP-9902] mapred version is missing (Akira AJISAKA
     via aw)
 
+    MAPREDUCE-6250. deprecate sbin/mr-jobhistory-daemon.sh (aw)
+
+    MAPREDUCE-6260. Convert site documentation to markdown (Masatake Iwasaki
+    via aw)
+
   BUG FIXES
 
     MAPREDUCE-6191. Improve clearing stale state of Java serialization
@@ -168,6 +176,11 @@ Trunk (Unreleased)
     MAPREDUCE-6161. mapred hsadmin command missing from trunk (Allen Wittenauer
     via jlowe)
 
+    MAPREDUCE-4413. MR lib dir contains jdiff (which is gpl) (Nemon Lou via aw)
+
+    MAPREDUCE-6234. TestHighRamJob fails due to the change in MAPREDUCE-5785. 
+    (Masatake Iwasaki via kasha)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
@@ -238,6 +251,10 @@ Release 2.7.0 - UNRELEASED
 
   NEW FEATURES
 
+    MAPREDUCE-6227. DFSIO for truncate. (shv via yliu)
+
+    MAPREDUCE-6228. Add truncate operation to SLive. (Plamen Jeliazkov via shv)
+
   IMPROVEMENTS
 
     MAPREDUCE-6149. Document override log4j.properties in MR job.
@@ -264,11 +281,46 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6141. History server leveldb recovery store (jlowe)
 
+    MAPREDUCE-6150. Update document of Rumen (Masatake Iwasaki via aw)
+
+    MAPREDUCE-6151. Update document of GridMix (Masatake Iwasaki via aw)
+
+    MAPREDUCE-6143. add configuration for mapreduce speculative execution in
+    MR2 (zxu via rkanter)
+
+    MAPREDUCE-5800. Use Job#getInstance instead of deprecated constructors
+    (aajisaka)
+
+    MAPREDUCE-6253. Update use of Iterator to Iterable. (Ray Chiang via devaraj)
+
+    MAPREDUCE-5335. Rename Job Tracker terminology in ShuffleSchedulerImpl.
+    (devaraj via ozawa)
+
+    MAPREDUCE-4431. mapred command should print the reason on killing already 
+    completed jobs. (devaraj via ozawa)
+
+    MAPREDUCE-6255. Fix JobCounter's format to use grouping separator.
+    (Ryu Kobayashi via ozawa)
+
+    MAPREDUCE-6256. Removed unused private methods in o.a.h.mapreduce.Job.java.
+    (Naganarasimha G R via ozawa)
+
+    MAPREDUCE-6225. Fix new findbug warnings in hadoop-mapreduce-client-core. 
+    (Varun Saxena via junping_du)
+
+    MAPREDUCE-6264. Remove httpclient dependency from hadoop-mapreduce-client.
+    (Brahma Reddy Battula via aajisaka)
+
+    MAPREDUCE-5612. Add javadoc for TaskCompletionEvent.Status.
+    (Chris Palmer via aajisaka)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
     from key and value at the end of the iteration to save memory. 
     (Zhihai Xu via kasha)
+
+    MAPREDUCE-6059. Speed up history server startup time (Siqi Li via aw)
 
   BUG FIXES
 
@@ -316,6 +368,51 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6230. Fixed RMContainerAllocator to update the new AMRMToken
     service name properly. (Jason Lowe via jianhe)
+
+    MAPREDUCE-6231. Grep example job is not working on a fully-distributed
+    cluster. (aajisaka)
+
+    MAPREDUCE-6243. Fix findbugs warnings in hadoop-rumen. (Masatake Iwasaki
+    via aajisaka)
+
+    MAPREDUCE-5988. Fix dead links to the javadocs in mapreduce project.
+    (aajisaka)
+
+    MAPREDUCE-6186. Redundant call to requireJob() while displaying the conf
+    page (Rohit Agarwal via jlowe)
+
+    MAPREDUCE-6233. org.apache.hadoop.mapreduce.TestLargeSort.testLargeSort
+    failed in trunk (zxu via rkanter)
+
+    MAPREDUCE-6221. Stringifier is left unclosed in Chain#getChainElementConf().
+    (Ted Yu via ozawa)
+
+    MAPREDUCE-4286. TestClientProtocolProviderImpls passes on failure 
+    conditions. (Devaraj K via ozawa)
+
+    MAPREDUCE-6261. NullPointerException if MapOutputBuffer.flush invoked
+    twice (Tsuyoshi OZAWA via jlowe)
+
+    MAPREDUCE-2815. JavaDoc does not generate correctly for
+    MultithreadedMapRunner. (Chris Palmer via aajisaka)
+
+    MAPREDUCE-6223. TestJobConf#testNegativeValueForTaskVmem failures. 
+    (Varun Saxena via kasha)
+
+Release 2.6.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-6237. Multiple mappers with DBInputFormat don't work because of
+    reusing conections. (Kannan Rajah via ozawa)
 
 Release 2.6.0 - 2014-11-18
 

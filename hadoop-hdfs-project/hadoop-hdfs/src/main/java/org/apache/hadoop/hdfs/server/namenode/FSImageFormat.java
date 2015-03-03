@@ -51,8 +51,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -447,9 +447,9 @@ public class FSImageFormat {
 
   /** Update the root node's attributes */
   private void updateRootAttr(INodeWithAdditionalFields root) {                                                           
-    final Quota.Counts q = root.getQuotaCounts();
-    final long nsQuota = q.get(Quota.NAMESPACE);
-    final long dsQuota = q.get(Quota.DISKSPACE);
+    final QuotaCounts q = root.getQuotaCounts();
+    final long nsQuota = q.getNameSpace();
+    final long dsQuota = q.getStorageSpace();
     FSDirectory fsDir = namesystem.dir;
     if (nsQuota != -1 || dsQuota != -1) {
       fsDir.rootDir.getDirectoryWithQuotaFeature().setQuota(nsQuota, dsQuota);
@@ -683,7 +683,7 @@ public class FSImageFormat {
 
     public void updateBlocksMap(INodeFile file) {
       // Add file->block mapping
-      final BlockInfo[] blocks = file.getBlocks();
+      final BlockInfoContiguous[] blocks = file.getBlocks();
       if (blocks != null) {
         final BlockManager bm = namesystem.getBlockManager();
         for (int i = 0; i < blocks.length; i++) {
@@ -749,9 +749,9 @@ public class FSImageFormat {
       // file
       
       // read blocks
-      BlockInfo[] blocks = new BlockInfo[numBlocks];
+      BlockInfoContiguous[] blocks = new BlockInfoContiguous[numBlocks];
       for (int j = 0; j < numBlocks; j++) {
-        blocks[j] = new BlockInfo(replication);
+        blocks[j] = new BlockInfoContiguous(replication);
         blocks[j].readFields(in);
       }
 
@@ -771,8 +771,8 @@ public class FSImageFormat {
             clientMachine = FSImageSerialization.readString(in);
             // convert the last block to BlockUC
             if (blocks.length > 0) {
-              BlockInfo lastBlk = blocks[blocks.length - 1]; 
-              blocks[blocks.length - 1] = new BlockInfoUnderConstruction(
+              BlockInfoContiguous lastBlk = blocks[blocks.length - 1];
+              blocks[blocks.length - 1] = new BlockInfoContiguousUnderConstruction(
                   lastBlk, replication);
             }
           }
@@ -823,7 +823,8 @@ public class FSImageFormat {
       final INodeDirectory dir = new INodeDirectory(inodeId, localName,
           permissions, modificationTime);
       if (nsQuota >= 0 || dsQuota >= 0) {
-        dir.addDirectoryWithQuotaFeature(nsQuota, dsQuota);
+        dir.addDirectoryWithQuotaFeature(new DirectoryWithQuotaFeature.Builder().
+            nameSpaceQuota(nsQuota).storageSpaceQuota(dsQuota).build());
       }
       if (withSnapshot) {
         dir.addSnapshotFeature(null);
@@ -904,14 +905,17 @@ public class FSImageFormat {
       final PermissionStatus permissions = PermissionStatus.read(in);
       final long modificationTime = in.readLong();
       
-      //read quotas
+      // Read quotas: quota by storage type does not need to be processed below.
+      // It is handled only in protobuf based FsImagePBINode class for newer
+      // fsImages. Tools using this class such as legacy-mode of offline image viewer
+      // should only load legacy FSImages without newer features.
       final long nsQuota = in.readLong();
       final long dsQuota = in.readLong();
-  
+
       return nsQuota == -1L && dsQuota == -1L ? new INodeDirectoryAttributes.SnapshotCopy(
           name, permissions, null, modificationTime, null)
         : new INodeDirectoryAttributes.CopyWithQuota(name, permissions,
-            null, modificationTime, nsQuota, dsQuota, null);
+            null, modificationTime, nsQuota, dsQuota, null, null);
     }
   
     private void loadFilesUnderConstruction(DataInput in,
@@ -947,9 +951,9 @@ public class FSImageFormat {
         FileUnderConstructionFeature uc = cons.getFileUnderConstructionFeature();
         oldnode.toUnderConstruction(uc.getClientName(), uc.getClientMachine());
         if (oldnode.numBlocks() > 0) {
-          BlockInfo ucBlock = cons.getLastBlock();
+          BlockInfoContiguous ucBlock = cons.getLastBlock();
           // we do not replace the inode, just replace the last block of oldnode
-          BlockInfo info = namesystem.getBlockManager().addBlockCollection(
+          BlockInfoContiguous info = namesystem.getBlockManager().addBlockCollection(
               ucBlock, oldnode);
           oldnode.setBlock(oldnode.numBlocks() - 1, info);
         }
@@ -1229,7 +1233,7 @@ public class FSImageFormat {
       final FSNamesystem sourceNamesystem = context.getSourceNamesystem();
       final INodeDirectory rootDir = sourceNamesystem.dir.rootDir;
       final long numINodes = rootDir.getDirectoryWithQuotaFeature()
-          .getSpaceConsumed().get(Quota.NAMESPACE);
+          .getSpaceConsumed().getNameSpace();
       String sdPath = newFile.getParentFile().getParentFile().getAbsolutePath();
       Step step = new Step(StepType.INODES, sdPath);
       StartupProgress prog = NameNode.getStartupProgress();

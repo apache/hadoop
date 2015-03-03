@@ -145,6 +145,17 @@
 </property>
 
 <property>
+  <name>dfs.namenode.heartbeat.recheck-interval</name>
+  <value>300000</value>
+  <description>
+    This time decides the interval to check for expired datanodes.
+    With this value and dfs.heartbeat.interval, the interval of
+    deciding the datanode is stale or not is also calculated.
+    The unit of this configuration is millisecond.
+  </description>
+</property>
+
+<property>
   <name>dfs.http.policy</name>
   <value>HTTP_ONLY</value>
   <description>Decide if HTTPS(SSL) is supported on HDFS
@@ -852,9 +863,9 @@
 <property>
   <name>dfs.namenode.num.checkpoints.retained</name>
   <value>2</value>
-  <description>The number of image checkpoint files that will be retained by
+  <description>The number of image checkpoint files (fsimage_*) that will be retained by
   the NameNode and Secondary NameNode in their storage directories. All edit
-  logs necessary to recover an up-to-date namespace from the oldest retained
+  logs (stored on edits_* files) necessary to recover an up-to-date namespace from the oldest retained
   checkpoint will also be retained.
   </description>
 </property>
@@ -863,8 +874,15 @@
   <name>dfs.namenode.num.extra.edits.retained</name>
   <value>1000000</value>
   <description>The number of extra transactions which should be retained
-  beyond what is minimally necessary for a NN restart. This can be useful for
-  audit purposes or for an HA setup where a remote Standby Node may have
+  beyond what is minimally necessary for a NN restart.
+  It does not translate directly to file's age, or the number of files kept,
+  but to the number of transactions (here "edits" means transactions).
+  One edit file may contain several transactions (edits).
+  During checkpoint, NameNode will identify the total number of edits to retain as extra by
+  checking the latest checkpoint transaction value, subtracted by the value of this property.
+  Then, it scans edits files to identify the older ones that don't include the computed range of
+  retained transactions that are to be kept around, and purges them subsequently.
+  The retainment can be useful for audit purposes or for an HA setup where a remote Standby Node may have
   been offline for some time and need to have a longer backlog of retained
   edits in order to start again.
   Typically each edit is on the order of a few hundred bytes, so the default
@@ -1288,6 +1306,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.kerberos.principal.pattern</name>
+  <value>*</value>
+  <description>
+    A client-side RegEx that can be configured to control
+    allowed realms to authenticate with (useful in cross-realm env.)
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.avoid.read.stale.datanode</name>
   <value>false</value>
   <description>
@@ -1486,6 +1513,17 @@
   <description>
     Comma-delimited set of integers denoting the desired rollover intervals 
     (in seconds) for percentile latency metrics on the Namenode and Datanode.
+    By default, percentile latency metrics are disabled.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.user.group.metrics.percentiles.intervals</name>
+  <value></value>
+  <description>
+    A comma-separated list of the granularity in seconds for the metrics
+    which describe the 50/75/90/95/99th percentile latency for group resolution
+    in milliseconds.
     By default, percentile latency metrics are disabled.
   </description>
 </property>
@@ -2254,5 +2292,11 @@
     postponedMisreplicatedBlocks.
   </description>
 </property>
+
+  <property>
+    <name>dfs.datanode.block-pinning.enabled</name>
+    <value>false</value>
+    <description>Whether pin blocks on favored DataNode.</description>
+  </property>
 
 </configuration>

@@ -32,8 +32,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -48,6 +51,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
@@ -88,7 +92,8 @@ public class AppBlock extends HtmlBlock {
       puts("Application not found: "+ aid);
       return;
     }
-    AppInfo app = new AppInfo(rmApp, true, WebAppUtils.getHttpSchemePrefix(conf));
+    AppInfo app =
+        new AppInfo(rm, rmApp, true, WebAppUtils.getHttpSchemePrefix(conf));
 
     // Check for the authorization.
     String remoteUser = request().getRemoteUser();
@@ -131,8 +136,9 @@ public class AppBlock extends HtmlBlock {
         ._("Name:", app.getName())
         ._("Application Type:", app.getApplicationType())
         ._("Application Tags:", app.getApplicationTags())
-        ._("State:", app.getState())
-        ._("FinalStatus:", app.getFinalStatus())
+        ._("YarnApplicationState:", clarifyAppState(app.getState()))
+        ._("FinalStatus Reported by AM:",
+          clairfyAppFinalStatus(app.getFinalStatus()))
         ._("Started:", Times.format(app.getStartTime()))
         ._("Elapsed:",
             StringUtils.formatTime(Times.elapsed(app.getStartTime(),
@@ -197,5 +203,70 @@ public class AppBlock extends HtmlBlock {
 
     table._();
     div._();
+
+    createResourceRequestsTable(html, app);
+  }
+
+  private void createResourceRequestsTable(Block html, AppInfo app) {
+    TBODY<TABLE<Hamlet>> tbody =
+        html.table("#ResourceRequests").thead().tr()
+          .th(".priority", "Priority")
+          .th(".resourceName", "ResourceName")
+          .th(".totalResource", "Capability")
+          .th(".numContainers", "NumContainers")
+          .th(".relaxLocality", "RelaxLocality")
+          .th(".nodeLabelExpression", "NodeLabelExpression")._()._().tbody();
+
+    Resource totalResource = Resource.newInstance(0, 0);
+    if (app.getResourceRequests() != null) {
+      for (ResourceRequest request : app.getResourceRequests()) {
+        if (request.getNumContainers() == 0) {
+          continue;
+        }
+
+        tbody.tr()
+          .td(String.valueOf(request.getPriority()))
+          .td(request.getResourceName())
+          .td(String.valueOf(request.getCapability()))
+          .td(String.valueOf(request.getNumContainers()))
+          .td(String.valueOf(request.getRelaxLocality()))
+          .td(request.getNodeLabelExpression() == null ? "N/A" : request
+              .getNodeLabelExpression())._();
+        if (request.getResourceName().equals(ResourceRequest.ANY)) {
+          Resources.addTo(totalResource,
+            Resources.multiply(request.getCapability(),
+              request.getNumContainers()));
+        }
+      }
+    }
+    html.div().$class("totalResourceRequests")
+      .h3("Total Outstanding Resource Requests: " + totalResource)._();
+    tbody._()._();
+  }
+
+  private String clarifyAppState(YarnApplicationState state) {
+    String ret = state.toString();
+    switch (state) {
+    case NEW:
+      return ret + ": waiting for application to be initialized";
+    case NEW_SAVING:
+      return ret + ": waiting for application to be persisted in state-store.";
+    case SUBMITTED:
+      return ret + ": waiting for application to be accepted by scheduler.";
+    case ACCEPTED:
+      return ret + ": waiting for AM container to be allocated, launched and"
+          + " register with RM.";
+    case RUNNING:
+      return ret + ": AM has registered with RM and started running.";
+    default:
+      return ret;
+    }
+  }
+
+  private String clairfyAppFinalStatus(FinalApplicationStatus status) {
+    if (status == FinalApplicationStatus.UNDEFINED) {
+      return "Application has not completed yet.";
+    }
+    return status.toString();
   }
 }
