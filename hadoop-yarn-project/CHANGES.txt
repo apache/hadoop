@@ -683,6 +683,9 @@ Release 2.7.0 - UNRELEASED
     all Schedulers even when using ParameterizedSchedulerTestBase. 
     (Anubhav Dhoot via devaraj)
 
+    YARN-3270. Fix node label expression not getting set in 
+    ApplicationSubmissionContext (Rohit Agarwal via wangda)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

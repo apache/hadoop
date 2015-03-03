@@ -155,6 +155,7 @@ public abstract class ApplicationSubmissionContext {
     context.setMaxAppAttempts(maxAppAttempts);
     context.setApplicationType(applicationType);
     context.setKeepContainersAcrossApplicationAttempts(keepContainers);
+    context.setNodeLabelExpression(appLabelExpression);
     context.setAMContainerResourceRequest(resourceRequest);
     return context;
   }
