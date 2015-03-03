@@ -53,9 +53,9 @@ import com.google.inject.Singleton;
 @Unstable
 @Singleton
 @Path("/ws/v2/timeline")
-public class PerNodeAggregatorWebService {
+public class TimelineAggregatorWebService {
   private static final Log LOG =
-      LogFactory.getLog(PerNodeAggregatorWebService.class);
+      LogFactory.getLog(TimelineAggregatorWebService.class);
 
   private @Context ServletContext context;
 
@@ -128,7 +128,7 @@ public class PerNodeAggregatorWebService {
       if (appId == null) {
         return Response.status(Response.Status.BAD_REQUEST).build();
       }
-      AppLevelAggregatorService service = getAggregatorService(req, appId);
+      TimelineAggregator service = getAggregatorService(req, appId);
       if (service == null) {
         LOG.error("Application not found");
         throw new NotFoundException(); // different exception?
@@ -156,13 +156,13 @@ public class PerNodeAggregatorWebService {
     }
   }
 
-  private AppLevelAggregatorService
+  private TimelineAggregator
       getAggregatorService(HttpServletRequest req, String appIdToParse) {
     String appIdString = parseApplicationId(appIdToParse);
-    final AppLevelServiceManager serviceManager =
-        (AppLevelServiceManager) context.getAttribute(
-            PerNodeAggregatorServer.AGGREGATOR_COLLECTION_ATTR_KEY);
-    return serviceManager.getService(appIdString);
+    final TimelineAggregatorsCollection aggregatorCollection =
+        (TimelineAggregatorsCollection) context.getAttribute(
+            TimelineAggregatorsCollection.AGGREGATOR_COLLECTION_ATTR_KEY);
+    return aggregatorCollection.get(appIdString);
   }
 
   private void init(HttpServletResponse response) {
