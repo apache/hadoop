@@ -31,6 +31,7 @@ import javax.ws.rs.WebApplicationException;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -162,9 +163,9 @@ public class WebServices {
         break;
       }
 
-      if (checkAppStates
-          && !appStates.contains(appReport.getYarnApplicationState().toString()
-            .toLowerCase())) {
+      if (checkAppStates &&
+          !appStates.contains(StringUtils.toLowerCase(
+              appReport.getYarnApplicationState().toString()))) {
         continue;
       }
       if (finalStatusQuery != null && !finalStatusQuery.isEmpty()) {
@@ -184,9 +185,9 @@ public class WebServices {
           continue;
         }
       }
-      if (checkAppTypes
-          && !appTypes.contains(appReport.getApplicationType().trim()
-            .toLowerCase())) {
+      if (checkAppTypes &&
+          !appTypes.contains(
+              StringUtils.toLowerCase(appReport.getApplicationType().trim()))) {
         continue;
       }
 
@@ -368,7 +369,8 @@ public class WebServices {
               if (isState) {
                 try {
                   // enum string is in the uppercase
-                  YarnApplicationState.valueOf(paramStr.trim().toUpperCase());
+                  YarnApplicationState.valueOf(
+                      StringUtils.toUpperCase(paramStr.trim()));
                 } catch (RuntimeException e) {
                   YarnApplicationState[] stateArray =
                       YarnApplicationState.values();
@@ -378,7 +380,7 @@ public class WebServices {
                       + allAppStates);
                 }
               }
-              params.add(paramStr.trim().toLowerCase());
+              params.add(StringUtils.toLowerCase(paramStr.trim()));
             }
           }
         }

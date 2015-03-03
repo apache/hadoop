@@ -59,6 +59,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
@@ -711,7 +712,7 @@ public class JobHistoryEventHandler extends AbstractService
   private void processEventForTimelineServer(HistoryEvent event, JobId jobId,
           long timestamp) {
     TimelineEvent tEvent = new TimelineEvent();
-    tEvent.setEventType(event.getEventType().name().toUpperCase());
+    tEvent.setEventType(StringUtils.toUpperCase(event.getEventType().name()));
     tEvent.setTimestamp(timestamp);
     TimelineEntity tEntity = new TimelineEntity();
 

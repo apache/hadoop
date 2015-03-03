@@ -25,7 +25,6 @@ import java.util.Arrays;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.Map;
 
 import com.google.common.base.Joiner;
@@ -42,6 +41,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.util.ResourceBundles;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * An abstract class to provide common implementation of the filesystem
@@ -227,7 +227,7 @@ public abstract class FileSystemCounterGroup<C extends Counter>
   }
 
   private String checkScheme(String scheme) {
-    String fixed = scheme.toUpperCase(Locale.US);
+    String fixed = StringUtils.toUpperCase(scheme);
     String interned = schemes.putIfAbsent(fixed, fixed);
     if (schemes.size() > MAX_NUM_SCHEMES) {
       // mistakes or abuses

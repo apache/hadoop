@@ -46,6 +46,7 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
@@ -756,7 +757,7 @@ public class ClientRMService extends AbstractService implements
       if (applicationTypes != null && !applicationTypes.isEmpty()) {
         String appTypeToMatch = caseSensitive
             ? application.getApplicationType()
-            : application.getApplicationType().toLowerCase();
+            : StringUtils.toLowerCase(application.getApplicationType());
         if (!applicationTypes.contains(appTypeToMatch)) {
           continue;
         }

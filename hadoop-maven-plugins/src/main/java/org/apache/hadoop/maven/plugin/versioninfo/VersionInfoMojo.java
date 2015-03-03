@@ -13,6 +13,7 @@
  */
 package org.apache.hadoop.maven.plugin.versioninfo;
 
+import java.util.Locale;
 import org.apache.hadoop.maven.plugin.util.Exec;
 import org.apache.hadoop.maven.plugin.util.FileSetUtils;
 import org.apache.maven.model.FileSet;
@@ -329,7 +330,8 @@ public class VersionInfoMojo extends AbstractMojo {
       }
 
       private String normalizePath(File file) {
-        return file.getPath().toUpperCase().replaceAll("\\\\", "/");
+        return file.getPath().toUpperCase(Locale.ENGLISH)
+            .replaceAll("\\\\", "/");
       }
     });
     byte[] md5 = computeMD5(files);

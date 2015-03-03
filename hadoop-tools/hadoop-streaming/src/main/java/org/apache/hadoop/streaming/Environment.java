@@ -25,6 +25,7 @@ import java.util.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * This is a class used to get the current environment
@@ -43,7 +44,7 @@ public class Environment extends Properties {
     // http://lopica.sourceforge.net/os.html
     String command = null;
     String OS = System.getProperty("os.name");
-    String lowerOs = OS.toLowerCase();
+    String lowerOs = StringUtils.toLowerCase(OS);
     if (OS.indexOf("Windows") > -1) {
       command = "cmd /C set";
     } else if (lowerOs.indexOf("ix") > -1 || lowerOs.indexOf("linux") > -1

@@ -169,7 +169,9 @@ public class DistCpV1 implements Tool {
 
     final char symbol;
 
-    private FileAttribute() {symbol = toString().toLowerCase().charAt(0);}
+    private FileAttribute() {
+      symbol = StringUtils.toLowerCase(toString()).charAt(0);
+    }
     
     static EnumSet<FileAttribute> parse(String s) {
       if (s == null || s.length() == 0) {

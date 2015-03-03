@@ -409,6 +409,8 @@ Trunk (Unreleased)
     HADOOP-10774. Update KerberosTestUtils for hadoop-auth tests when using
     IBM Java (sangamesh via aw)
 
+    HADOOP-11602. Fix toUpperCase/toLowerCase to use Locale.ENGLISH. (ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

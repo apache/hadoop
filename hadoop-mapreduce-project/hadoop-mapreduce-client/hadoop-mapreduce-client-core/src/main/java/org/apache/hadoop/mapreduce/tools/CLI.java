@@ -222,12 +222,14 @@ public class CLI extends Configured implements Tool {
       taskType = argv[2];
       taskState = argv[3];
       displayTasks = true;
-      if (!taskTypes.contains(taskType.toUpperCase())) {
+      if (!taskTypes.contains(
+          org.apache.hadoop.util.StringUtils.toUpperCase(taskType))) {
         System.out.println("Error: Invalid task-type: " + taskType);
         displayUsage(cmd);
         return exitCode;
       }
-      if (!taskStates.contains(taskState.toLowerCase())) {
+      if (!taskStates.contains(
+          org.apache.hadoop.util.StringUtils.toLowerCase(taskState))) {
         System.out.println("Error: Invalid task-state: " + taskState);
         displayUsage(cmd);
         return exitCode;
@@ -593,7 +595,8 @@ public class CLI extends Configured implements Tool {
   throws IOException, InterruptedException {
 	  
     TaskReport[] reports=null;
-    reports = job.getTaskReports(TaskType.valueOf(type.toUpperCase()));
+    reports = job.getTaskReports(TaskType.valueOf(
+        org.apache.hadoop.util.StringUtils.toUpperCase(type)));
     for (TaskReport report : reports) {
       TIPStatus status = report.getCurrentStatus();
       if ((state.equalsIgnoreCase("pending") && status ==TIPStatus.PENDING) ||

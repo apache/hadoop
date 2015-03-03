@@ -77,7 +77,7 @@ class NodesPage extends RmView {
               .th(".nodeManagerVersion", "Version")._()._().tbody();
       NodeState stateFilter = null;
       if (type != null && !type.isEmpty()) {
-        stateFilter = NodeState.valueOf(type.toUpperCase());
+        stateFilter = NodeState.valueOf(StringUtils.toUpperCase(type));
       }
       Collection<RMNode> rmNodes = this.rm.getRMContext().getRMNodes().values();
       boolean isInactive = false;

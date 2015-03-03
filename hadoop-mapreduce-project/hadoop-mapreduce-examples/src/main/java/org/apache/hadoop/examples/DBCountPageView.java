@@ -102,7 +102,7 @@ public class DBCountPageView extends Configured implements Tool {
   
   private void createConnection(String driverClassName
       , String url) throws Exception {
-    if(driverClassName.toLowerCase().contains("oracle")) {
+    if(StringUtils.toLowerCase(driverClassName).contains("oracle")) {
       isOracle = true;
     }
     Class.forName(driverClassName);

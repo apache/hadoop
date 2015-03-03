@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A factory that will find the correct codec for a given filename.
@@ -66,10 +67,10 @@ public class CompressionCodecFactory {
     codecsByClassName.put(codec.getClass().getCanonicalName(), codec);
 
     String codecName = codec.getClass().getSimpleName();
-    codecsByName.put(codecName.toLowerCase(), codec);
+    codecsByName.put(StringUtils.toLowerCase(codecName), codec);
     if (codecName.endsWith("Codec")) {
       codecName = codecName.substring(0, codecName.length() - "Codec".length());
-      codecsByName.put(codecName.toLowerCase(), codec);
+      codecsByName.put(StringUtils.toLowerCase(codecName), codec);
     }
   }
 
@@ -246,7 +247,7 @@ public class CompressionCodecFactory {
       if (codec == null) {
         // trying to get the codec by name in case the name was specified
         // instead a class
-        codec = codecsByName.get(codecName.toLowerCase());
+        codec = codecsByName.get(StringUtils.toLowerCase(codecName));
       }
       return codec;
     }

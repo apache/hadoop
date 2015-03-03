@@ -26,6 +26,7 @@ import com.sun.jersey.server.impl.inject.AbstractHttpContextInjectable;
 import com.sun.jersey.spi.inject.Injectable;
 import com.sun.jersey.spi.inject.InjectableProvider;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.StringUtils;
 
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
@@ -70,7 +71,7 @@ public class ParametersProvider
     }
     Enum op;
     try {
-      op = Enum.valueOf(enumClass, str.toUpperCase());
+      op = Enum.valueOf(enumClass, StringUtils.toUpperCase(str));
     } catch (IllegalArgumentException ex) {
       throw new IllegalArgumentException(
         MessageFormat.format("Invalid Operation [{0}]", str));

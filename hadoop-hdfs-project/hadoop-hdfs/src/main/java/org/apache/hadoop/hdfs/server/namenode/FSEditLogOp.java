@@ -123,6 +123,7 @@ import org.apache.hadoop.ipc.ClientId;
 import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.StringUtils;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
@@ -4348,7 +4349,7 @@ public abstract class FSEditLogOp {
 
     public RollingUpgradeOp(FSEditLogOpCodes code, String name) {
       super(code);
-      this.name = name.toUpperCase();
+      this.name = StringUtils.toUpperCase(name);
     }
 
     static RollingUpgradeOp getStartInstance(OpInstanceCache cache) {

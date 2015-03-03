@@ -27,12 +27,12 @@ import org.apache.hadoop.fs.swift.http.RestClientBindings;
 import org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem;
 import org.apache.hadoop.fs.swift.util.SwiftTestUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Locale;
 
 public class TestSwiftFileSystemExtendedContract extends SwiftFileSystemBaseTest {
 
@@ -115,7 +115,7 @@ public class TestSwiftFileSystemExtendedContract extends SwiftFileSystemBaseTest
   public void testFilesystemIsCaseSensitive() throws Exception {
     String mixedCaseFilename = "/test/UPPER.TXT";
     Path upper = path(mixedCaseFilename);
-    Path lower = path(mixedCaseFilename.toLowerCase(Locale.ENGLISH));
+    Path lower = path(StringUtils.toLowerCase(mixedCaseFilename));
     assertFalse("File exists" + upper, fs.exists(upper));
     assertFalse("File exists" + lower, fs.exists(lower));
     FSDataOutputStream out = fs.create(upper);

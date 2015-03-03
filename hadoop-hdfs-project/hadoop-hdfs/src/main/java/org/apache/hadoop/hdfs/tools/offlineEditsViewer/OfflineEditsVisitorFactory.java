@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * EditsVisitorFactory for different implementations of EditsVisitor
@@ -43,7 +44,7 @@ public class OfflineEditsVisitorFactory {
    */
   static public OfflineEditsVisitor getEditsVisitor(String filename,
     String processor, boolean printToScreen) throws IOException {
-    if(processor.toLowerCase().equals("binary")) {
+    if(StringUtils.equalsIgnoreCase("binary", processor)) {
       return new BinaryEditsVisitor(filename);
     }
     OfflineEditsVisitor vis;
@@ -59,9 +60,9 @@ public class OfflineEditsVisitorFactory {
         outs[1] = System.out;
         out = new TeeOutputStream(outs);
       }
-      if(processor.toLowerCase().equals("xml")) {
+      if(StringUtils.equalsIgnoreCase("xml", processor)) {
         vis = new XmlEditsVisitor(out);
-      } else if(processor.toLowerCase().equals("stats")) {
+      } else if(StringUtils.equalsIgnoreCase("stats", processor)) {
         vis = new StatisticsEditsVisitor(out);
       } else {
         throw new IOException("Unknown proccesor " + processor +

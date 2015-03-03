@@ -31,6 +31,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.api.ApplicationContext;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
@@ -147,7 +148,8 @@ public class AHSWebServices extends WebServices {
     }
     Set<String> appStates = parseQueries(statesQuery, true);
     for (String appState : appStates) {
-      switch (YarnApplicationState.valueOf(appState.toUpperCase())) {
+      switch (YarnApplicationState.valueOf(
+          StringUtils.toUpperCase(appState))) {
         case FINISHED:
         case FAILED:
         case KILLED:

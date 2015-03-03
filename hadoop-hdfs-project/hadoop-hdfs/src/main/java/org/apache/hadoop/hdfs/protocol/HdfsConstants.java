@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.util.StringUtils;
 
 /************************************
  * Some handy constants
@@ -98,7 +99,7 @@ public class HdfsConstants {
 
     /** Covert the given String to a RollingUpgradeAction. */
     public static RollingUpgradeAction fromString(String s) {
-      return MAP.get(s.toUpperCase());
+      return MAP.get(StringUtils.toUpperCase(s));
     }
   }
 

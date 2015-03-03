@@ -154,16 +154,16 @@ public class TestDFSIO implements Tool {
     static ByteMultiple parseString(String sMultiple) {
       if(sMultiple == null || sMultiple.isEmpty()) // MB by default
         return MB;
-      String sMU = sMultiple.toUpperCase();
-      if(B.name().toUpperCase().endsWith(sMU))
+      String sMU = StringUtils.toUpperCase(sMultiple);
+      if(StringUtils.toUpperCase(B.name()).endsWith(sMU))
         return B;
-      if(KB.name().toUpperCase().endsWith(sMU))
+      if(StringUtils.toUpperCase(KB.name()).endsWith(sMU))
         return KB;
-      if(MB.name().toUpperCase().endsWith(sMU))
+      if(StringUtils.toUpperCase(MB.name()).endsWith(sMU))
         return MB;
-      if(GB.name().toUpperCase().endsWith(sMU))
+      if(StringUtils.toUpperCase(GB.name()).endsWith(sMU))
         return GB;
-      if(TB.name().toUpperCase().endsWith(sMU))
+      if(StringUtils.toUpperCase(TB.name()).endsWith(sMU))
         return TB;
       throw new IllegalArgumentException("Unsupported ByteMultiple "+sMultiple);
     }
@@ -736,7 +736,7 @@ public class TestDFSIO implements Tool {
     }
 
     for (int i = 0; i < args.length; i++) { // parse command line
-      if (args[i].toLowerCase().startsWith("-read")) {
+      if (StringUtils.toLowerCase(args[i]).startsWith("-read")) {
         testType = TestType.TEST_TYPE_READ;
       } else if (args[i].equalsIgnoreCase("-write")) {
         testType = TestType.TEST_TYPE_WRITE;
@@ -755,9 +755,9 @@ public class TestDFSIO implements Tool {
         testType = TestType.TEST_TYPE_TRUNCATE;
       } else if (args[i].equalsIgnoreCase("-clean")) {
         testType = TestType.TEST_TYPE_CLEANUP;
-      } else if (args[i].toLowerCase().startsWith("-seq")) {
+      } else if (StringUtils.toLowerCase(args[i]).startsWith("-seq")) {
         isSequential = true;
-      } else if (args[i].toLowerCase().startsWith("-compression")) {
+      } else if (StringUtils.toLowerCase(args[i]).startsWith("-compression")) {
         compressionClass = args[++i];
       } else if (args[i].equalsIgnoreCase("-nrfiles")) {
         nrFiles = Integer.parseInt(args[++i]);

@@ -27,6 +27,7 @@ import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.util.HttpExceptionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -286,7 +287,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     if (hasResponse) {
       String contentType = conn.getHeaderField(CONTENT_TYPE);
-      contentType = (contentType != null) ? contentType.toLowerCase()
+      contentType = (contentType != null) ? StringUtils.toLowerCase(contentType)
                                           : null;
       if (contentType != null &&
           contentType.contains(APPLICATION_JSON_MIME)) {

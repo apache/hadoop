@@ -116,7 +116,7 @@ abstract public class Task implements Writable, Configurable {
    * BYTES_READ counter and second one is of the BYTES_WRITTEN counter.
    */
   protected static String[] getFileSystemCounterNames(String uriScheme) {
-    String scheme = uriScheme.toUpperCase();
+    String scheme = StringUtils.toUpperCase(uriScheme);
     return new String[]{scheme+"_BYTES_READ", scheme+"_BYTES_WRITTEN"};
   }
   

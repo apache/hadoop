@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -94,7 +95,8 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
   @VisibleForTesting
   public static String resolvePropertyName(SSLFactory.Mode mode,
                                            String template) {
-    return MessageFormat.format(template, mode.toString().toLowerCase());
+    return MessageFormat.format(
+        template, StringUtils.toLowerCase(mode.toString()));
   }
 
   /**

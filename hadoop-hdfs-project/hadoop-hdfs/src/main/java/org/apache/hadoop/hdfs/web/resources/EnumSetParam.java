@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.web.resources;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
+import org.apache.hadoop.util.StringUtils;
 
 abstract class EnumSetParam<E extends Enum<E>> extends Param<EnumSet<E>, EnumSetParam.Domain<E>> {
   /** Convert an EnumSet to a string of comma separated values. */
@@ -82,7 +83,7 @@ abstract class EnumSetParam<E extends Enum<E>> extends Param<EnumSet<E>, EnumSet
           i = j > 0 ? j + 1 : 0;
           j = str.indexOf(',', i);
           final String sub = j >= 0? str.substring(i, j): str.substring(i);
-          set.add(Enum.valueOf(enumClass, sub.trim().toUpperCase()));
+          set.add(Enum.valueOf(enumClass, StringUtils.toUpperCase(sub.trim())));
         }
       }
       return set;

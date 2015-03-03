@@ -30,6 +30,7 @@ import org.apache.hadoop.lib.wsrs.Param;
 import org.apache.hadoop.lib.wsrs.ParametersProvider;
 import org.apache.hadoop.lib.wsrs.ShortParam;
 import org.apache.hadoop.lib.wsrs.StringParam;
+import org.apache.hadoop.util.StringUtils;
 
 import javax.ws.rs.ext.Provider;
 import java.util.HashMap;
@@ -168,7 +169,8 @@ public class HttpFSParametersProvider extends ParametersProvider {
      */
     public OperationParam(String operation) {
       super(NAME, HttpFSFileSystem.Operation.class,
-            HttpFSFileSystem.Operation.valueOf(operation.toUpperCase()));
+            HttpFSFileSystem.Operation.valueOf(
+                StringUtils.toUpperCase(operation)));
     }
   }
 
