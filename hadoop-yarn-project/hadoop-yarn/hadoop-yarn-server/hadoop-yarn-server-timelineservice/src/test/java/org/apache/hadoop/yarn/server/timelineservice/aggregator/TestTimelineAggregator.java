@@ -18,6 +18,6 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.aggregator;
 
-public class TestBaseAggregatorService {
+public class TestTimelineAggregator {
 
 }
