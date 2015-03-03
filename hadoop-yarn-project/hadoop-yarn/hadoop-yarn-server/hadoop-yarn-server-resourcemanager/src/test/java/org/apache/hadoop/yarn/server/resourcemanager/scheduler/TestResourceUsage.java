@@ -38,7 +38,7 @@ public class TestResourceUsage {
   @Parameterized.Parameters
   public static Collection<String[]> getParameters() {
     return Arrays.asList(new String[][] { { "Pending" }, { "Used" },
-        { "Headroom" }, { "Reserved" }, { "AMUsed" } });
+        { "Reserved" }, { "AMUsed" } });
   }
 
   public TestResourceUsage(String suffix) {

@@ -50,11 +50,12 @@ public class ResourceUsage {
     writeLock = lock.writeLock();
 
     usages = new HashMap<String, UsageByLabel>();
+    usages.put(NL, new UsageByLabel(NL));
   }
 
   // Usage enum here to make implement cleaner
   private enum ResourceType {
-    USED(0), PENDING(1), AMUSED(2), RESERVED(3), HEADROOM(4);
+    USED(0), PENDING(1), AMUSED(2), RESERVED(3);
 
     private int idx;
 
@@ -71,7 +72,18 @@ public class ResourceUsage {
       resArr = new Resource[ResourceType.values().length];
       for (int i = 0; i < resArr.length; i++) {
         resArr[i] = Resource.newInstance(0, 0);
-      }
+      };
+    }
+    
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{used=" + resArr[0] + "%, ");
+      sb.append("pending=" + resArr[1] + "%, ");
+      sb.append("am_used=" + resArr[2] + "%, ");
+      sb.append("reserved=" + resArr[3] + "%, ");
+      sb.append("headroom=" + resArr[4] + "%}");
+      return sb.toString();
     }
   }
 
@@ -181,41 +193,6 @@ public class ResourceUsage {
   }
 
   /*
-   * Headroom
-   */
-  public Resource getHeadroom() {
-    return getHeadroom(NL);
-  }
-
-  public Resource getHeadroom(String label) {
-    return _get(label, ResourceType.HEADROOM);
-  }
-
-  public void incHeadroom(String label, Resource res) {
-    _inc(label, ResourceType.HEADROOM, res);
-  }
-
-  public void incHeadroom(Resource res) {
-    incHeadroom(NL, res);
-  }
-
-  public void decHeadroom(Resource res) {
-    decHeadroom(NL, res);
-  }
-
-  public void decHeadroom(String label, Resource res) {
-    _dec(label, ResourceType.HEADROOM, res);
-  }
-
-  public void setHeadroom(Resource res) {
-    setHeadroom(NL, res);
-  }
-
-  public void setHeadroom(String label, Resource res) {
-    _set(label, ResourceType.HEADROOM, res);
-  }
-
-  /*
    * AM-Used
    */
   public Resource getAMUsed() {
@@ -307,6 +284,16 @@ public class ResourceUsage {
       Resources.subtractFrom(usage.resArr[type.idx], res);
     } finally {
       writeLock.unlock();
+    }
+  }
+  
+  @Override
+  public String toString() {
+    try {
+      readLock.lock();
+      return usages.toString();
+    } finally {
+      readLock.unlock();
     }
   }
 }

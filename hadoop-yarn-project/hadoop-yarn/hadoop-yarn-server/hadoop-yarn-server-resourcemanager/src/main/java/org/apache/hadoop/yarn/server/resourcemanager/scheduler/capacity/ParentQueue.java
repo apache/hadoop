@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -378,8 +379,9 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   @Override
-  public synchronized CSAssignment assignContainers(
-      Resource clusterResource, FiCaSchedulerNode node, boolean needToUnreserve) {
+  public synchronized CSAssignment assignContainers(Resource clusterResource,
+      FiCaSchedulerNode node, boolean needToUnreserve,
+      ResourceLimits resourceLimits) {
     CSAssignment assignment = 
         new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
     Set<String> nodeLabels = node.getLabels();
@@ -408,7 +410,8 @@ public class ParentQueue extends AbstractCSQueue {
       
       // Schedule
       CSAssignment assignedToChild = 
-          assignContainersToChildQueues(clusterResource, node, localNeedToUnreserve | needToUnreserve);
+          assignContainersToChildQueues(clusterResource, node,
+              localNeedToUnreserve | needToUnreserve, resourceLimits);
       assignment.setType(assignedToChild.getType());
       
       // Done if no child-queue assigned anything
@@ -530,8 +533,29 @@ public class ParentQueue extends AbstractCSQueue {
             node.getAvailableResource(), minimumAllocation);
   }
   
-  private synchronized CSAssignment assignContainersToChildQueues(Resource cluster, 
-      FiCaSchedulerNode node, boolean needToUnreserve) {
+  private ResourceLimits getResourceLimitsOfChild(CSQueue child,
+      Resource clusterResource, ResourceLimits myLimits) {
+    /*
+     * Set head-room of a given child, limit =
+     * min(minimum-of-limit-of-this-queue-and-ancestors, this.max) - this.used
+     * + child.used. To avoid any of this queue's and its ancestors' limit
+     * being violated
+     */
+    Resource myCurrentLimit =
+        getCurrentResourceLimit(clusterResource, myLimits);
+    // My available resource = my-current-limit - my-used-resource
+    Resource myMaxAvailableResource = Resources.subtract(myCurrentLimit,
+        getUsedResources());
+    // Child's limit = my-available-resource + resource-already-used-by-child
+    Resource childLimit =
+        Resources.add(myMaxAvailableResource, child.getUsedResources());
+    
+    return new ResourceLimits(childLimit);
+  }
+  
+  private synchronized CSAssignment assignContainersToChildQueues(
+      Resource cluster, FiCaSchedulerNode node, boolean needToUnreserve,
+      ResourceLimits limits) {
     CSAssignment assignment = 
         new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
     
@@ -544,7 +568,14 @@ public class ParentQueue extends AbstractCSQueue {
         LOG.debug("Trying to assign to queue: " + childQueue.getQueuePath()
           + " stats: " + childQueue);
       }
-      assignment = childQueue.assignContainers(cluster, node, needToUnreserve);
+      
+      // Get ResourceLimits of child queue before assign containers
+      ResourceLimits childLimits =
+          getResourceLimitsOfChild(childQueue, cluster, limits);
+      
+      assignment =
+          childQueue.assignContainers(cluster, node, needToUnreserve,
+              childLimits);
       if(LOG.isDebugEnabled()) {
         LOG.debug("Assigned to queue: " + childQueue.getQueuePath() +
           " stats: " + childQueue + " --> " + 
@@ -638,10 +669,14 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   @Override
-  public synchronized void updateClusterResource(Resource clusterResource) {
+  public synchronized void updateClusterResource(Resource clusterResource,
+      ResourceLimits resourceLimits) {
     // Update all children
     for (CSQueue childQueue : childQueues) {
-      childQueue.updateClusterResource(clusterResource);
+      // Get ResourceLimits of child queue before assign containers
+      ResourceLimits childLimits =
+          getResourceLimitsOfChild(childQueue, clusterResource, resourceLimits);     
+      childQueue.updateClusterResource(clusterResource, childLimits);
     }
     
     // Update metrics

@@ -87,6 +87,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -359,7 +360,8 @@ public class TestCapacityScheduler {
     resourceManager.getResourceScheduler().handle(nodeUpdate);
   }
   
-  private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
+  private CapacitySchedulerConfiguration setupQueueConfiguration(
+      CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
@@ -383,6 +385,7 @@ public class TestCapacityScheduler {
     conf.setUserLimitFactor(B3, 100.0f);
 
     LOG.info("Setup top-level queues a and b");
+    return conf;
   }
   
   @Test
@@ -2399,6 +2402,86 @@ public class TestCapacityScheduler {
         ((LeafQueue) queueB2).getMaximumAllocation().getMemory());
     assertEquals("queue B2 max vcores allocation", 12,
         ((LeafQueue) queueB2).getMaximumAllocation().getVirtualCores());
+  }
+  
+  private void waitContainerAllocated(MockAM am, int mem, int nContainer,
+      int startContainerId, MockRM rm, MockNM nm) throws Exception {
+    for (int cId = startContainerId; cId < startContainerId + nContainer; cId++) {
+      am.allocate("*", mem, 1, new ArrayList<ContainerId>());
+      ContainerId containerId =
+          ContainerId.newContainerId(am.getApplicationAttemptId(), cId);
+      Assert.assertTrue(rm.waitForState(nm, containerId,
+          RMContainerState.ALLOCATED, 10 * 1000));
+    }
+  }
+
+  @Test
+  public void testHierarchyQueuesCurrentLimits() throws Exception {
+    /*
+     * Queue tree:
+     *          Root
+     *        /     \
+     *       A       B
+     *      / \    / | \
+     *     A1 A2  B1 B2 B3
+     */
+    YarnConfiguration conf =
+        new YarnConfiguration(
+            setupQueueConfiguration(new CapacitySchedulerConfiguration()));
+    conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
+
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 100 * GB, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    
+    waitContainerAllocated(am1, 1 * GB, 1, 2, rm1, nm1);
+
+    // Maximum resoure of b1 is 100 * 0.895 * 0.792 = 71 GB
+    // 2 GBs used by am, so it's 71 - 2 = 69G.
+    Assert.assertEquals(69 * GB,
+        am1.doHeartbeat().getAvailableResources().getMemory());
+    
+    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "b2");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+    
+    // Allocate 5 containers, each one is 8 GB in am2 (40 GB in total)
+    waitContainerAllocated(am2, 8 * GB, 5, 2, rm1, nm1);
+    
+    // Allocated one more container with 1 GB resource in b1
+    waitContainerAllocated(am1, 1 * GB, 1, 3, rm1, nm1);
+    
+    // Total is 100 GB, 
+    // B2 uses 41 GB (5 * 8GB containers and 1 AM container)
+    // B1 uses 3 GB (2 * 1GB containers and 1 AM container)
+    // Available is 100 - 41 - 3 = 56 GB
+    Assert.assertEquals(56 * GB,
+        am1.doHeartbeat().getAvailableResources().getMemory());
+    
+    // Now we submit app3 to a1 (in higher level hierarchy), to see if headroom
+    // of app1 (in queue b1) updated correctly
+    RMApp app3 = rm1.submitApp(1 * GB, "app", "user", null, "a1");
+    MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
+    
+    // Allocate 3 containers, each one is 8 GB in am3 (24 GB in total)
+    waitContainerAllocated(am3, 8 * GB, 3, 2, rm1, nm1);
+    
+    // Allocated one more container with 4 GB resource in b1
+    waitContainerAllocated(am1, 1 * GB, 1, 4, rm1, nm1);
+    
+    // Total is 100 GB, 
+    // B2 uses 41 GB (5 * 8GB containers and 1 AM container)
+    // B1 uses 4 GB (3 * 1GB containers and 1 AM container)
+    // A1 uses 25 GB (3 * 8GB containers and 1 AM container)
+    // Available is 100 - 41 - 4 - 25 = 30 GB
+    Assert.assertEquals(30 * GB,
+        am1.doHeartbeat().getAvailableResources().getMemory());
   }
 
   private void setMaxAllocMb(Configuration conf, int maxAllocMb) {

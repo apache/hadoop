@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
@@ -115,7 +116,10 @@ public class LeafQueue extends AbstractCSQueue {
   // absolute capacity as a resource (based on cluster resource)
   private Resource absoluteCapacityResource = Resources.none();
   
-  private final QueueHeadroomInfo queueHeadroomInfo = new QueueHeadroomInfo();
+  private final QueueResourceLimitsInfo queueResourceLimitsInfo =
+      new QueueResourceLimitsInfo();
+  
+  private volatile ResourceLimits currentResourceLimits = null;
   
   public LeafQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -145,13 +149,14 @@ public class LeafQueue extends AbstractCSQueue {
     this.lastClusterResource = clusterResource;
     updateAbsoluteCapacityResource(clusterResource);
     
+    this.currentResourceLimits = new ResourceLimits(clusterResource);
+    
     // Initialize headroom info, also used for calculating application 
     // master resource limits.  Since this happens during queue initialization
     // and all queues may not be realized yet, we'll use (optimistic) 
     // absoluteMaxCapacity (it will be replaced with the more accurate 
     // absoluteMaxAvailCapacity during headroom/userlimit/allocation events)
-    updateHeadroomInfo(clusterResource,
-        queueCapacities.getAbsoluteMaximumCapacity());
+    computeQueueCurrentLimitAndSetHeadroomInfo(clusterResource);
 
     CapacitySchedulerConfiguration conf = csContext.getConfiguration();
     userLimit = conf.getUserLimit(getQueuePath());
@@ -544,12 +549,12 @@ public class LeafQueue extends AbstractCSQueue {
       * become busy.
       *
       */
-     Resource queueMaxCap;
-     synchronized (queueHeadroomInfo) {
-       queueMaxCap = queueHeadroomInfo.getQueueMaxCap();
+     Resource queueCurrentLimit;
+     synchronized (queueResourceLimitsInfo) {
+       queueCurrentLimit = queueResourceLimitsInfo.getQueueCurrentLimit();
      }
      Resource queueCap = Resources.max(resourceCalculator, lastClusterResource,
-       absoluteCapacityResource, queueMaxCap);
+       absoluteCapacityResource, queueCurrentLimit);
      return Resources.multiplyAndNormalizeUp( 
           resourceCalculator,
           queueCap, 
@@ -733,8 +738,10 @@ public class LeafQueue extends AbstractCSQueue {
   
   @Override
   public synchronized CSAssignment assignContainers(Resource clusterResource,
-      FiCaSchedulerNode node, boolean needToUnreserve) {
-
+      FiCaSchedulerNode node, boolean needToUnreserve,
+      ResourceLimits currentResourceLimits) {
+    this.currentResourceLimits = currentResourceLimits;
+    
     if(LOG.isDebugEnabled()) {
       LOG.debug("assignContainers: node=" + node.getNodeName()
         + " #applications=" + activeApplications.size());
@@ -876,9 +883,9 @@ public class LeafQueue extends AbstractCSQueue {
 
   }
 
-  private synchronized CSAssignment 
-  assignReservedContainer(FiCaSchedulerApp application, 
-      FiCaSchedulerNode node, RMContainer rmContainer, Resource clusterResource) {
+  private synchronized CSAssignment assignReservedContainer(
+      FiCaSchedulerApp application, FiCaSchedulerNode node,
+      RMContainer rmContainer, Resource clusterResource) {
     // Do we still need this reservation?
     Priority priority = rmContainer.getReservedPriority();
     if (application.getTotalRequiredResources(priority) == 0) {
@@ -895,13 +902,13 @@ public class LeafQueue extends AbstractCSQueue {
     return new CSAssignment(Resources.none(), NodeType.NODE_LOCAL);
   }
   
-  protected Resource getHeadroom(User user, Resource queueMaxCap,
+  protected Resource getHeadroom(User user, Resource queueCurrentLimit,
       Resource clusterResource, FiCaSchedulerApp application, Resource required) {
-    return getHeadroom(user, queueMaxCap, clusterResource,
+    return getHeadroom(user, queueCurrentLimit, clusterResource,
 	  computeUserLimit(application, clusterResource, required, user, null));
   }
   
-  private Resource getHeadroom(User user, Resource queueMaxCap,
+  private Resource getHeadroom(User user, Resource currentResourceLimit,
       Resource clusterResource, Resource userLimit) {
     /** 
      * Headroom is:
@@ -923,8 +930,11 @@ public class LeafQueue extends AbstractCSQueue {
     Resource headroom = 
       Resources.min(resourceCalculator, clusterResource,
         Resources.subtract(userLimit, user.getUsed()),
-        Resources.subtract(queueMaxCap, queueUsage.getUsed())
+        Resources.subtract(currentResourceLimit, queueUsage.getUsed())
         );
+    // Normalize it before return
+    headroom =
+        Resources.roundDown(resourceCalculator, headroom, minimumAllocation);
     return headroom;
   }
 
@@ -1012,23 +1022,17 @@ public class LeafQueue extends AbstractCSQueue {
     return canAssign;
   }
   
-  private Resource updateHeadroomInfo(Resource clusterResource, 
-      float absoluteMaxAvailCapacity) {
-  
-    Resource queueMaxCap = 
-      Resources.multiplyAndNormalizeDown(
-          resourceCalculator, 
-          clusterResource, 
-          absoluteMaxAvailCapacity,
-          minimumAllocation);
-
-    synchronized (queueHeadroomInfo) {
-      queueHeadroomInfo.setQueueMaxCap(queueMaxCap);
-      queueHeadroomInfo.setClusterResource(clusterResource);
+  private Resource computeQueueCurrentLimitAndSetHeadroomInfo(
+      Resource clusterResource) {
+    Resource queueCurrentResourceLimit =
+        getCurrentResourceLimit(clusterResource, currentResourceLimits);
+    
+    synchronized (queueResourceLimitsInfo) {
+      queueResourceLimitsInfo.setQueueCurrentLimit(queueCurrentResourceLimit);
+      queueResourceLimitsInfo.setClusterResource(clusterResource);
     }
-    
-    return queueMaxCap;
-    
+
+    return queueCurrentResourceLimit;
   }
 
   @Lock({LeafQueue.class, FiCaSchedulerApp.class})
@@ -1043,28 +1047,22 @@ public class LeafQueue extends AbstractCSQueue {
         computeUserLimit(application, clusterResource, required,
             queueUser, requestedLabels);
 
-    //Max avail capacity needs to take into account usage by ancestor-siblings
-    //which are greater than their base capacity, so we are interested in "max avail"
-    //capacity
-    float absoluteMaxAvailCapacity = CSQueueUtils.getAbsoluteMaxAvailCapacity(
-      resourceCalculator, clusterResource, this);
-    
-    Resource queueMaxCap = 
-      updateHeadroomInfo(clusterResource, absoluteMaxAvailCapacity);
+    Resource currentResourceLimit =
+        computeQueueCurrentLimitAndSetHeadroomInfo(clusterResource);
     
     Resource headroom =
-        getHeadroom(queueUser, queueMaxCap, clusterResource, userLimit);
+        getHeadroom(queueUser, currentResourceLimit, clusterResource, userLimit);
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("Headroom calculation for user " + user + ": " + 
           " userLimit=" + userLimit + 
-          " queueMaxCap=" + queueMaxCap + 
+          " queueMaxAvailRes=" + currentResourceLimit + 
           " consumed=" + queueUser.getUsed() + 
           " headroom=" + headroom);
     }
     
     CapacityHeadroomProvider headroomProvider = new CapacityHeadroomProvider(
-      queueUser, this, application, required, queueHeadroomInfo);
+      queueUser, this, application, required, queueResourceLimitsInfo);
     
     application.setHeadroomProvider(headroomProvider);
 
@@ -1249,7 +1247,7 @@ public class LeafQueue extends AbstractCSQueue {
         application.getResourceRequest(priority, node.getNodeName());
     if (nodeLocalResourceRequest != null) {
       assigned = 
-          assignNodeLocalContainers(clusterResource, nodeLocalResourceRequest, 
+          assignNodeLocalContainers(clusterResource, nodeLocalResourceRequest,
               node, application, priority, reservedContainer, needToUnreserve); 
       if (Resources.greaterThan(resourceCalculator, clusterResource, 
           assigned, Resources.none())) {
@@ -1265,8 +1263,8 @@ public class LeafQueue extends AbstractCSQueue {
         return SKIP_ASSIGNMENT;
       }
       
-      assigned = 
-          assignRackLocalContainers(clusterResource, rackLocalResourceRequest, 
+      assigned =
+          assignRackLocalContainers(clusterResource, rackLocalResourceRequest,
               node, application, priority, reservedContainer, needToUnreserve);
       if (Resources.greaterThan(resourceCalculator, clusterResource, 
           assigned, Resources.none())) {
@@ -1282,10 +1280,10 @@ public class LeafQueue extends AbstractCSQueue {
         return SKIP_ASSIGNMENT;
       }
 
-      return new CSAssignment(
-          assignOffSwitchContainers(clusterResource, offSwitchResourceRequest,
-              node, application, priority, reservedContainer, needToUnreserve), 
-              NodeType.OFF_SWITCH);
+      return new CSAssignment(assignOffSwitchContainers(clusterResource,
+          offSwitchResourceRequest, node, application, priority,
+          reservedContainer, needToUnreserve),
+          NodeType.OFF_SWITCH);
     }
     
     return SKIP_ASSIGNMENT;
@@ -1373,7 +1371,7 @@ public class LeafQueue extends AbstractCSQueue {
       ResourceRequest nodeLocalResourceRequest, FiCaSchedulerNode node,
       FiCaSchedulerApp application, Priority priority,
       RMContainer reservedContainer, boolean needToUnreserve) {
-    if (canAssign(application, priority, node, NodeType.NODE_LOCAL, 
+    if (canAssign(application, priority, node, NodeType.NODE_LOCAL,
         reservedContainer)) {
       return assignContainer(clusterResource, node, application, priority,
           nodeLocalResourceRequest, NodeType.NODE_LOCAL, reservedContainer,
@@ -1383,9 +1381,9 @@ public class LeafQueue extends AbstractCSQueue {
     return Resources.none();
   }
 
-  private Resource assignRackLocalContainers(
-      Resource clusterResource, ResourceRequest rackLocalResourceRequest,  
-      FiCaSchedulerNode node, FiCaSchedulerApp application, Priority priority,
+  private Resource assignRackLocalContainers(Resource clusterResource,
+      ResourceRequest rackLocalResourceRequest, FiCaSchedulerNode node,
+      FiCaSchedulerApp application, Priority priority,
       RMContainer reservedContainer, boolean needToUnreserve) {
     if (canAssign(application, priority, node, NodeType.RACK_LOCAL, 
         reservedContainer)) {
@@ -1397,9 +1395,9 @@ public class LeafQueue extends AbstractCSQueue {
     return Resources.none();
   }
 
-  private Resource assignOffSwitchContainers(
-      Resource clusterResource, ResourceRequest offSwitchResourceRequest,
-      FiCaSchedulerNode node, FiCaSchedulerApp application, Priority priority, 
+  private Resource assignOffSwitchContainers(Resource clusterResource,
+      ResourceRequest offSwitchResourceRequest, FiCaSchedulerNode node,
+      FiCaSchedulerApp application, Priority priority,
       RMContainer reservedContainer, boolean needToUnreserve) {
     if (canAssign(application, priority, node, NodeType.OFF_SWITCH, 
         reservedContainer)) {
@@ -1753,15 +1751,16 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   @Override
-  public synchronized void updateClusterResource(Resource clusterResource) {
+  public synchronized void updateClusterResource(Resource clusterResource,
+      ResourceLimits currentResourceLimits) {
+    this.currentResourceLimits = currentResourceLimits;
     lastClusterResource = clusterResource;
     updateAbsoluteCapacityResource(clusterResource);
     
     // Update headroom info based on new cluster resource value
     // absoluteMaxCapacity now,  will be replaced with absoluteMaxAvailCapacity
     // during allocation
-    updateHeadroomInfo(clusterResource,
-        queueCapacities.getAbsoluteMaximumCapacity());
+    computeQueueCurrentLimitAndSetHeadroomInfo(clusterResource);
     
     // Update metrics
     CSQueueUtils.updateQueueStatistics(
@@ -1951,16 +1950,16 @@ public class LeafQueue extends AbstractCSQueue {
    * Holds shared values used by all applications in
    * the queue to calculate headroom on demand
    */
-  static class QueueHeadroomInfo {
-    private Resource queueMaxCap;
+  static class QueueResourceLimitsInfo {
+    private Resource queueCurrentLimit;
     private Resource clusterResource;
     
-    public void setQueueMaxCap(Resource queueMaxCap) {
-      this.queueMaxCap = queueMaxCap;
+    public void setQueueCurrentLimit(Resource currentLimit) {
+      this.queueCurrentLimit = currentLimit;
     }
     
-    public Resource getQueueMaxCap() {
-      return queueMaxCap;
+    public Resource getQueueCurrentLimit() {
+      return queueCurrentLimit;
     }
     
     public void setClusterResource(Resource clusterResource) {
