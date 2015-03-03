@@ -69,7 +69,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
  *
  *     // Submit the job, then poll for progress until the job is complete
  *     job.waitForCompletion(true);
- * </pre></blockquote></p>
+ * </pre></blockquote>
  * 
  * 
  */

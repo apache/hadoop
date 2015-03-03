@@ -47,7 +47,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * <code>IFile</code> is the simple <key-len, value-len, key, value> format
+ * <code>IFile</code> is the simple &lt;key-len, value-len, key, value&gt; format
  * for the intermediate map-outputs in Map-Reduce.
  *
  * There is a <code>Writer</code> to write out map-outputs in this format and 

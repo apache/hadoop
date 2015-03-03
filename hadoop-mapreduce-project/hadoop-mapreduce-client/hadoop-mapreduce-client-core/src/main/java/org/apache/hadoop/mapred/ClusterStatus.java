@@ -48,7 +48,7 @@ import org.apache.hadoop.util.StringInterner;
  *   Task capacity of the cluster. 
  *   </li>
  *   <li>
- *   The number of currently running map & reduce tasks.
+ *   The number of currently running map and reduce tasks.
  *   </li>
  *   <li>
  *   State of the <code>JobTracker</code>.
@@ -56,7 +56,7 @@ import org.apache.hadoop.util.StringInterner;
  *   <li>
  *   Details regarding black listed trackers.
  *   </li>
- * </ol></p>
+ * </ol>
  * 
  * <p>Clients can query for the latest <code>ClusterStatus</code>, via 
  * {@link JobClient#getClusterStatus()}.</p>

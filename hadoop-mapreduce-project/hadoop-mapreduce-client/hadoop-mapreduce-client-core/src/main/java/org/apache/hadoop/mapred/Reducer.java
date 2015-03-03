@@ -42,7 +42,7 @@ import org.apache.hadoop.io.Closeable;
  * <ol>
  *   <li>
  *   
- *   <h4 id="Shuffle">Shuffle</h4>
+ *   <b id="Shuffle">Shuffle</b>
  *   
  *   <p><code>Reducer</code> is input the grouped output of a {@link Mapper}.
  *   In the phase the framework, for each <code>Reducer</code>, fetches the 
@@ -51,7 +51,7 @@ import org.apache.hadoop.io.Closeable;
  *   </li>
  *   
  *   <li>
- *   <h4 id="Sort">Sort</h4>
+ *   <b id="Sort">Sort</b>
  *   
  *   <p>The framework groups <code>Reducer</code> inputs by <code>key</code>s 
  *   (since different <code>Mapper</code>s may have output the same key) in this
@@ -60,7 +60,7 @@ import org.apache.hadoop.io.Closeable;
  *   <p>The shuffle and sort phases occur simultaneously i.e. while outputs are
  *   being fetched they are merged.</p>
  *      
- *   <h5 id="SecondarySort">SecondarySort</h5>
+ *   <b id="SecondarySort">SecondarySort</b>
  *   
  *   <p>If equivalence rules for keys while grouping the intermediates are 
  *   different from those for grouping keys before reduction, then one may 
@@ -86,11 +86,11 @@ import org.apache.hadoop.io.Closeable;
  *   </li>
  *   
  *   <li>   
- *   <h4 id="Reduce">Reduce</h4>
+ *   <b id="Reduce">Reduce</b>
  *   
  *   <p>In this phase the 
  *   {@link #reduce(Object, Iterator, OutputCollector, Reporter)}
- *   method is called for each <code>&lt;key, (list of values)></code> pair in
+ *   method is called for each <code>&lt;key, (list of values)&gt;</code> pair in
  *   the grouped inputs.</p>
  *   <p>The output of the reduce task is typically written to the 
  *   {@link FileSystem} via 
@@ -156,7 +156,7 @@ import org.apache.hadoop.io.Closeable;
  *         }
  *       }
  *     }
- * </pre></blockquote></p>
+ * </pre></blockquote>
  * 
  * @see Mapper
  * @see Partitioner
@@ -171,7 +171,7 @@ public interface Reducer<K2, V2, K3, V3> extends JobConfigurable, Closeable {
    * <i>Reduces</i> values for a given key.  
    * 
    * <p>The framework calls this method for each 
-   * <code>&lt;key, (list of values)></code> pair in the grouped inputs.
+   * <code>&lt;key, (list of values)&gt;</code> pair in the grouped inputs.
    * Output values must be of the same type as input values.  Input keys must 
    * not be altered. The framework will <b>reuse</b> the key and value objects
    * that are passed into the reduce, therefore the application should clone

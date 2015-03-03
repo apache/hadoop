@@ -35,7 +35,7 @@ import org.apache.hadoop.conf.Configuration;
  * {@link ResourceUsageEmulatorPlugin} is also configured with a feedback module
  * i.e a {@link ResourceCalculatorPlugin}, to monitor the current resource 
  * usage. {@link ResourceUsageMetrics} decides the final resource usage value to
- * emulate. {@link Progressive} keeps track of the task's progress.</p>
+ * emulate. {@link Progressive} keeps track of the task's progress.
  * 
  * <br><br>
  * 

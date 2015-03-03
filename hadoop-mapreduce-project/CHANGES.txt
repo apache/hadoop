@@ -181,6 +181,9 @@ Trunk (Unreleased)
     MAPREDUCE-6234. TestHighRamJob fails due to the change in MAPREDUCE-5785. 
     (Masatake Iwasaki via kasha)
 
+    MAPREDUCE-5657. Fix Javadoc errors caused by incorrect or illegal tags in doc
+    comments. (Akira AJISAKA via ozawa)
+
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by

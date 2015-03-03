@@ -518,7 +518,7 @@ public class SwiftNativeFileSystemStore {
    * Rename through copy-and-delete. this is a consequence of the
    * Swift filesystem using the path as the hash
    * into the Distributed Hash Table, "the ring" of filenames.
-   * <p/>
+   * <p>
    * Because of the nature of the operation, it is not atomic.
    *
    * @param src source file/dir
@@ -847,7 +847,7 @@ public class SwiftNativeFileSystemStore {
   }
 
   /**
-   * Insert a throttled wait if the throttle delay >0
+   * Insert a throttled wait if the throttle delay &gt; 0
    * @throws InterruptedIOException if interrupted during sleep
    */
   public void throttle() throws InterruptedIOException {
@@ -878,7 +878,7 @@ public class SwiftNativeFileSystemStore {
    * raised. This lets the caller distinguish a file not found with
    * other reasons for failure, so handles race conditions in recursive
    * directory deletes better.
-   * <p/>
+   * <p>
    * The problem being addressed is: caller A requests a recursive directory
    * of directory /dir ; caller B requests a delete of a file /dir/file,
    * between caller A enumerating the files contents, and requesting a delete

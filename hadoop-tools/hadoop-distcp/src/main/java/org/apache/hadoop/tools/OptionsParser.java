@@ -63,7 +63,7 @@ public class OptionsParser {
    * @param args Command-line arguments (excluding the options consumed
    *              by the GenericOptionsParser).
    * @return The Options object, corresponding to the specified command-line.
-   * @throws IllegalArgumentException: Thrown if the parse fails.
+   * @throws IllegalArgumentException Thrown if the parse fails.
    */
   public static DistCpOptions parse(String args[]) throws IllegalArgumentException {
 

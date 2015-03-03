@@ -31,10 +31,10 @@ import static org.apache.hadoop.fs.swift.http.SwiftProtocolConstants.*;
 /**
  * This class implements the binding logic between Hadoop configurations
  * and the swift rest client.
- * <p/>
+ * <p>
  * The swift rest client takes a Properties instance containing
  * the string values it uses to bind to a swift endpoint.
- * <p/>
+ * <p>
  * This class extracts the values for a specific filesystem endpoint
  * and then builds an appropriate Properties file.
  */
@@ -188,7 +188,7 @@ public final class RestClientBindings {
 
   /**
    * Copy a (trimmed) property from the configuration file to the properties file.
-   * <p/>
+   * <p>
    * If marked as required and not found in the configuration, an
    * exception is raised.
    * If not required -and missing- then the property will not be set.

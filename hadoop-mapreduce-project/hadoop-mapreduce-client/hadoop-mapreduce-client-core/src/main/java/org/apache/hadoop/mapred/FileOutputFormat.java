@@ -179,7 +179,7 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
    *  Get the {@link Path} to the task's temporary output directory 
    *  for the map-reduce job
    *  
-   * <h4 id="SideEffectFiles">Tasks' Side-Effect Files</h4>
+   * <b id="SideEffectFiles">Tasks' Side-Effect Files</b>
    * 
    * <p><i>Note:</i> The following is valid only if the {@link OutputCommitter}
    *  is {@link FileOutputCommitter}. If <code>OutputCommitter</code> is not 

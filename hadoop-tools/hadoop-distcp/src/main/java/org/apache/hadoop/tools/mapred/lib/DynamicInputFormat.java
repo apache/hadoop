@@ -64,7 +64,7 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
    * tasks.
    * @param jobContext JobContext for the map job.
    * @return The list of (empty) dynamic input-splits.
-   * @throws IOException, on failure.
+   * @throws IOException
    * @throws InterruptedException
    */
   @Override
@@ -343,7 +343,7 @@ public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
    * @param inputSplit The split for which the RecordReader is required.
    * @param taskAttemptContext TaskAttemptContext for the current attempt.
    * @return DynamicRecordReader instance.
-   * @throws IOException, on failure.
+   * @throws IOException
    * @throws InterruptedException
    */
   @Override

@@ -65,7 +65,7 @@ public class DistCpUtils {
    * @param path The path of the file whose size is sought.
    * @param configuration Configuration, to retrieve the appropriate FileSystem.
    * @return The file-size, in number of bytes.
-   * @throws IOException, on failure.
+   * @throws IOException
    */
   public static long getFileSize(Path path, Configuration configuration)
                                             throws IOException {

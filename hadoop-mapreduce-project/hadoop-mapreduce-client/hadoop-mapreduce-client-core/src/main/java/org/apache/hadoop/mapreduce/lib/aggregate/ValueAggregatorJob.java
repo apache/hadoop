@@ -60,7 +60,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
  * The developer using Aggregate will need only to provide a plugin class
  * conforming to the following interface:
  * 
- * public interface ValueAggregatorDescriptor { public ArrayList<Entry>
+ * public interface ValueAggregatorDescriptor { public ArrayList&lt;Entry&gt;
  * generateKeyValPairs(Object key, Object value); public void
  * configure(Configuration conf); }
  * 

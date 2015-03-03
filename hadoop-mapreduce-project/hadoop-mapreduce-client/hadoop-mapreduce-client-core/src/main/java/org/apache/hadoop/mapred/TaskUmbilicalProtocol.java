@@ -178,7 +178,6 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
    *
    * @param taskID task's id
    * @return the most recent checkpoint (if any) for this task
-   * @throws IOException
    */
   TaskCheckpointID getCheckpointID(TaskID taskID);
 

@@ -134,6 +134,7 @@ public class Cluster {
   
   /**
    * Close the <code>Cluster</code>.
+   * @throws IOException
    */
   public synchronized void close() throws IOException {
     clientProtocolProvider.close(client);

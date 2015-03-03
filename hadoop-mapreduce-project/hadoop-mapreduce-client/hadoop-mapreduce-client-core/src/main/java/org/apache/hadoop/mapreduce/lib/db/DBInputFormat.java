@@ -319,7 +319,7 @@ public class DBInputFormat<T extends DBWritable>
    * Java object holding tuple fields.
    * @param tableName The table to read data from
    * @param conditions The condition which to select data with, 
-   * eg. '(updated > 20070101 AND length > 0)'
+   * eg. '(updated &gt; 20070101 AND length &gt; 0)'
    * @param orderBy the fieldNames in the orderBy clause.
    * @param fieldNames The field names in the table
    * @see #setInput(Job, Class, String, String)

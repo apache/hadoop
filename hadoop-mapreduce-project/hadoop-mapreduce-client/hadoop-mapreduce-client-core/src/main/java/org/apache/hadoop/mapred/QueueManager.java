@@ -46,20 +46,20 @@ import java.net.URL;
 /**
  * Class that exposes information about queues maintained by the Hadoop
  * Map/Reduce framework.
- * <p/>
+ * <p>
  * The Map/Reduce framework can be configured with one or more queues,
  * depending on the scheduler it is configured with. While some
  * schedulers work only with one queue, some schedulers support multiple
  * queues. Some schedulers also support the notion of queues within
  * queues - a feature called hierarchical queues.
- * <p/>
+ * <p>
  * Queue names are unique, and used as a key to lookup queues. Hierarchical
  * queues are named by a 'fully qualified name' such as q1:q2:q3, where
  * q2 is a child queue of q1 and q3 is a child queue of q2.
- * <p/>
+ * <p>
  * Leaf level queues are queues that contain no queues within them. Jobs
  * can be submitted only to leaf level queues.
- * <p/>
+ * <p>
  * Queues can be configured with various properties. Some of these
  * properties are common to all schedulers, and those are handled by this
  * class. Schedulers might also associate several custom properties with
@@ -69,11 +69,11 @@ import java.net.URL;
  * provided by the framework, but define their own mechanisms. In such cases,
  * it is likely that the name of the queue will be used to relate the
  * common properties of a queue with scheduler specific properties.
- * <p/>
+ * <p>
  * Information related to a queue, such as its name, properties, scheduling
  * information and children are exposed by this class via a serializable
  * class called {@link JobQueueInfo}.
- * <p/>
+ * <p>
  * Queues are configured in the configuration file mapred-queues.xml.
  * To support backwards compatibility, queues can also be configured
  * in mapred-site.xml. However, when configured in the latter, there is
@@ -102,7 +102,7 @@ public class QueueManager {
   /**
    * Factory method to create an appropriate instance of a queue
    * configuration parser.
-   * <p/>
+   * <p>
    * Returns a parser that can parse either the deprecated property
    * style queue configuration in mapred-site.xml, or one that can
    * parse hierarchical queues in mapred-queues.xml. First preference
@@ -157,7 +157,7 @@ public class QueueManager {
   /**
    * Construct a new QueueManager using configuration specified in the passed
    * in {@link org.apache.hadoop.conf.Configuration} object.
-   * <p/>
+   * <p>
    * This instance supports queue configuration specified in mapred-site.xml,
    * but without support for hierarchical queues. If no queue configuration
    * is found in mapred-site.xml, it will then look for site configuration
@@ -173,7 +173,7 @@ public class QueueManager {
   /**
    * Create an instance that supports hierarchical queues, defined in
    * the passed in configuration file.
-   * <p/>
+   * <p>
    * This is mainly used for testing purposes and should not called from
    * production code.
    *
@@ -208,7 +208,7 @@ public class QueueManager {
   /**
    * Return the set of leaf level queues configured in the system to
    * which jobs are submitted.
-   * <p/>
+   * <p>
    * The number of queues configured should be dependent on the Scheduler
    * configured. Note that some schedulers work with only one queue, whereas
    * others can support multiple queues.
@@ -222,7 +222,7 @@ public class QueueManager {
   /**
    * Return true if the given user is part of the ACL for the given
    * {@link QueueACL} name for the given queue.
-   * <p/>
+   * <p>
    * An operation is allowed if all users are provided access for this
    * operation, or if either the user or any of the groups specified is
    * provided access.
@@ -283,7 +283,7 @@ public class QueueManager {
   /**
    * Set a generic Object that represents scheduling information relevant
    * to a queue.
-   * <p/>
+   * <p>
    * A string representation of this Object will be used by the framework
    * to display in user facing applications like the JobTracker web UI and
    * the hadoop CLI.
@@ -323,7 +323,7 @@ public class QueueManager {
 
   /**
    * Refresh acls, state and scheduler properties for the configured queues.
-   * <p/>
+   * <p>
    * This method reloads configuration related to queues, but does not
    * support changes to the list of queues or hierarchy. The expected usage
    * is that an administrator can modify the queue configuration file and
@@ -431,7 +431,7 @@ public class QueueManager {
 
   /**
    * JobQueueInfo for all the queues.
-   * <p/>
+   * <p>
    * Contribs can use this data structure to either create a hierarchy or for
    * traversing.
    * They can also use this to refresh properties in case of refreshQueues
@@ -450,7 +450,7 @@ public class QueueManager {
 
   /**
    * Generates the array of QueueAclsInfo object.
-   * <p/>
+   * <p>
    * The array consists of only those queues for which user has acls.
    *
    * @return QueueAclsInfo[]

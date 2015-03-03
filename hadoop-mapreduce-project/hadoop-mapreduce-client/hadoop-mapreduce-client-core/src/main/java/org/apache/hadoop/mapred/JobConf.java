@@ -74,7 +74,7 @@ import org.apache.log4j.Level;
  *   more complex for the user to control finely
  *   (e.g. {@link #setNumMapTasks(int)}).
  *   </li>
- * </ol></p>
+ * </ol>
  * 
  * <p><code>JobConf</code> typically specifies the {@link Mapper}, combiner 
  * (if any), {@link Partitioner}, {@link Reducer}, {@link InputFormat} and 
@@ -105,7 +105,7 @@ import org.apache.log4j.Level;
  *     
  *     job.setInputFormat(SequenceFileInputFormat.class);
  *     job.setOutputFormat(SequenceFileOutputFormat.class);
- * </pre></blockquote></p>
+ * </pre></blockquote>
  * 
  * @see JobClient
  * @see ClusterStatus
@@ -486,7 +486,7 @@ public class JobConf extends Configuration {
 
   /** A new map/reduce configuration where the behavior of reading from the
    * default resources can be turned off.
-   * <p/>
+   * <p>
    * If the parameter {@code loadDefaults} is false, the new instance
    * will not load resources from the default files.
    *
@@ -993,19 +993,19 @@ public class JobConf extends Configuration {
   /**
    * Set the user defined {@link RawComparator} comparator for
    * grouping keys in the input to the combiner.
-   * <p/>
+   *
    * <p>This comparator should be provided if the equivalence rules for keys
    * for sorting the intermediates are different from those for grouping keys
    * before each call to
    * {@link Reducer#reduce(Object, java.util.Iterator, OutputCollector, Reporter)}.</p>
-   * <p/>
+   *
    * <p>For key-value pairs (K1,V1) and (K2,V2), the values (V1, V2) are passed
    * in a single call to the reduce function if K1 and K2 compare as equal.</p>
-   * <p/>
+   *
    * <p>Since {@link #setOutputKeyComparatorClass(Class)} can be used to control
    * how keys are sorted, this can be used in conjunction to simulate
    * <i>secondary sort on values</i>.</p>
-   * <p/>
+   *
    * <p><i>Note</i>: This is not a guarantee of the combiner sort being
    * <i>stable</i> in any sense. (In any case, with the order of available
    * map-outputs to the combiner being non-deterministic, it wouldn't make
@@ -1210,7 +1210,7 @@ public class JobConf extends Configuration {
    *   <li> be side-effect free</li>
    *   <li> have the same input and output key types and the same input and 
    *        output value types</li>
-   * </ul></p>
+   * </ul>
    * 
    * <p>Typically the combiner is same as the <code>Reducer</code> for the  
    * job i.e. {@link #setReducerClass(Class)}.</p>
@@ -1309,7 +1309,7 @@ public class JobConf extends Configuration {
    * A custom {@link InputFormat} is typically used to accurately control 
    * the number of map tasks for the job.</p>
    * 
-   * <h4 id="NoOfMaps">How many maps?</h4>
+   * <b id="NoOfMaps">How many maps?</b>
    * 
    * <p>The number of maps is usually driven by the total size of the inputs 
    * i.e. total number of blocks of the input files.</p>
@@ -1350,7 +1350,7 @@ public class JobConf extends Configuration {
   /**
    * Set the requisite number of reduce tasks for this job.
    * 
-   * <h4 id="NoOfReduces">How many reduces?</h4>
+   * <b id="NoOfReduces">How many reduces?</b>
    * 
    * <p>The right number of reduces seems to be <code>0.95</code> or 
    * <code>1.75</code> multiplied by (&lt;<i>no. of nodes</i>&gt; * 
@@ -1370,7 +1370,7 @@ public class JobConf extends Configuration {
    * reserve a few reduce slots in the framework for speculative-tasks, failures
    * etc.</p> 
    *
-   * <h4 id="ReducerNone">Reducer NONE</h4>
+   * <b id="ReducerNone">Reducer NONE</b>
    * 
    * <p>It is legal to set the number of reduce-tasks to <code>zero</code>.</p>
    * 
@@ -1693,9 +1693,9 @@ public class JobConf extends Configuration {
    * given task's stdout, stderr, syslog, jobconf files as arguments.</p>
    * 
    * <p>The debug command, run on the node where the map failed, is:</p>
-   * <p><pre><blockquote> 
+   * <p><blockquote><pre>
    * $script $stdout $stderr $syslog $jobconf.
-   * </blockquote></pre></p>
+   * </pre></blockquote>
    * 
    * <p> The script file is distributed through {@link DistributedCache} 
    * APIs. The script needs to be symlinked. </p>
@@ -1705,7 +1705,7 @@ public class JobConf extends Configuration {
    * job.setMapDebugScript("./myscript");
    * DistributedCache.createSymlink(job);
    * DistributedCache.addCacheFile("/debug/scripts/myscript#myscript");
-   * </pre></blockquote></p>
+   * </pre></blockquote>
    * 
    * @param mDbgScript the script name
    */
@@ -1730,9 +1730,9 @@ public class JobConf extends Configuration {
    * is given task's stdout, stderr, syslog, jobconf files as arguments.</p>
    * 
    * <p>The debug command, run on the node where the map failed, is:</p>
-   * <p><pre><blockquote> 
+   * <p><blockquote><pre>
    * $script $stdout $stderr $syslog $jobconf.
-   * </blockquote></pre></p>
+   * </pre></blockquote>
    * 
    * <p> The script file is distributed through {@link DistributedCache} 
    * APIs. The script file needs to be symlinked </p>
@@ -1742,7 +1742,7 @@ public class JobConf extends Configuration {
    * job.setReduceDebugScript("./myscript");
    * DistributedCache.createSymlink(job);
    * DistributedCache.addCacheFile("/debug/scripts/myscript#myscript");
-   * </pre></blockquote></p>
+   * </pre></blockquote>
    * 
    * @param rDbgScript the script name
    */
@@ -1785,8 +1785,6 @@ public class JobConf extends Configuration {
    * 
    * @param uri the job end notification uri
    * @see JobStatus
-   * @see <a href="{@docRoot}/org/apache/hadoop/mapred/JobClient.html#
-   *       JobCompletionAndChaining">Job Completion and Chaining</a>
    */
   public void setJobEndNotificationURI(String uri) {
     set(JobContext.MR_JOB_END_NOTIFICATION_URL, uri);
@@ -1816,7 +1814,7 @@ public class JobConf extends Configuration {
    * 
    * If a value is specified in the configuration, it is returned.
    * Else, it returns {@link JobContext#DEFAULT_MAP_MEMORY_MB}.
-   * <p/>
+   * <p>
    * For backward compatibility, if the job configuration sets the
    * key {@link #MAPRED_TASK_MAXVMEM_PROPERTY} to a value different
    * from {@link #DISABLED_MEMORY_LIMIT}, that value will be used
@@ -1842,7 +1840,7 @@ public class JobConf extends Configuration {
    * 
    * If a value is specified in the configuration, it is returned.
    * Else, it returns {@link JobContext#DEFAULT_REDUCE_MEMORY_MB}.
-   * <p/>
+   * <p>
    * For backward compatibility, if the job configuration sets the
    * key {@link #MAPRED_TASK_MAXVMEM_PROPERTY} to a value different
    * from {@link #DISABLED_MEMORY_LIMIT}, that value will be used
@@ -1915,7 +1913,6 @@ public class JobConf extends Configuration {
    * 
    * @param my_class the class to find.
    * @return a jar file that contains the class, or null.
-   * @throws IOException
    */
   public static String findContainingJar(Class my_class) {
     return ClassUtil.findContainingJar(my_class);
@@ -1924,10 +1921,10 @@ public class JobConf extends Configuration {
   /**
    * Get the memory required to run a task of this job, in bytes. See
    * {@link #MAPRED_TASK_MAXVMEM_PROPERTY}
-   * <p/>
+   * <p>
    * This method is deprecated. Now, different memory limits can be
    * set for map and reduce tasks of a job, in MB. 
-   * <p/>
+   * <p>
    * For backward compatibility, if the job configuration sets the
    * key {@link #MAPRED_TASK_MAXVMEM_PROPERTY}, that value is returned. 
    * Otherwise, this method will return the larger of the values returned by 
@@ -1953,7 +1950,7 @@ public class JobConf extends Configuration {
   /**
    * Set the maximum amount of memory any task of this job can use. See
    * {@link #MAPRED_TASK_MAXVMEM_PROPERTY}
-   * <p/>
+   * <p>
    * mapred.task.maxvmem is split into
    * mapreduce.map.memory.mb
    * and mapreduce.map.memory.mb,mapred
@@ -2073,7 +2070,7 @@ public class JobConf extends Configuration {
 
   /**
    * Parse the Maximum heap size from the java opts as specified by the -Xmx option
-   * Format: -Xmx<size>[g|G|m|M|k|K]
+   * Format: -Xmx&lt;size&gt;[g|G|m|M|k|K]
    * @param javaOpts String to parse to read maximum heap size
    * @return Maximum heap size in MB or -1 if not specified
    */

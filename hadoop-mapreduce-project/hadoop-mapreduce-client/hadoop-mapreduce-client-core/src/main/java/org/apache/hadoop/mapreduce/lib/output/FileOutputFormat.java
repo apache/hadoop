@@ -181,7 +181,7 @@ public static final String OUTDIR = "mapreduce.output.fileoutputformat.outputdir
    *  Get the {@link Path} to the task's temporary output directory 
    *  for the map-reduce job
    *  
-   * <h4 id="SideEffectFiles">Tasks' Side-Effect Files</h4>
+   * <b id="SideEffectFiles">Tasks' Side-Effect Files</b>
    * 
    * <p>Some applications need to create/write-to side-files, which differ from
    * the actual job-outputs.

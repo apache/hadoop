@@ -174,7 +174,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   /**
    * Child checking whether it can commit.
    * 
-   * <br/>
+   * <br>
    * Commit is a two-phased protocol. First the attempt informs the
    * ApplicationMaster that it is
    * {@link #commitPending(TaskAttemptID, TaskStatus)}. Then it repeatedly polls
@@ -208,7 +208,7 @@ public class TaskAttemptListenerImpl extends CompositeService
    * TaskAttempt is reporting that it is in commit_pending and it is waiting for
    * the commit Response
    * 
-   * <br/>
+   * <br>
    * Commit it a two-phased protocol. First the attempt informs the
    * ApplicationMaster that it is
    * {@link #commitPending(TaskAttemptID, TaskStatus)}. Then it repeatedly polls

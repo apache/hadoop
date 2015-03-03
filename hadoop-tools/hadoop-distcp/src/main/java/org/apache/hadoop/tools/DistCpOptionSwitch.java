@@ -105,7 +105,7 @@ public enum DistCpOptionSwitch {
    * Copy all the source files and commit them atomically to the target
    * This is typically useful in cases where there is a process
    * polling for availability of a file/dir. This option is incompatible
-   * with SYNC_FOLDERS & DELETE_MISSING
+   * with SYNC_FOLDERS and DELETE_MISSING
    */
   ATOMIC_COMMIT(DistCpConstants.CONF_LABEL_ATOMIC_COPY,
       new Option("atomic", false, "Commit all changes or none")),
