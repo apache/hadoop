@@ -4558,14 +4558,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                 + rollThreshold);
             rollEditLog();
           }
+        } catch (Exception e) {
+          FSNamesystem.LOG.error("Swallowing exception in "
+              + NameNodeEditLogRoller.class.getSimpleName() + ":", e);
+        }
+        try {
           Thread.sleep(sleepIntervalMs);
         } catch (InterruptedException e) {
           FSNamesystem.LOG.info(NameNodeEditLogRoller.class.getSimpleName()
               + " was interrupted, exiting");
           break;
-        } catch (Exception e) {
-          FSNamesystem.LOG.error("Swallowing exception in "
-              + NameNodeEditLogRoller.class.getSimpleName() + ":", e);
         }
       }
     }
