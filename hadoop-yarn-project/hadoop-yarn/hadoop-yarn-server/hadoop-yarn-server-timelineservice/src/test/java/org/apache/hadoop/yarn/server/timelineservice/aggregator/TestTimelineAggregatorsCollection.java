@@ -30,16 +30,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import com.sun.jersey.core.impl.provider.entity.XMLJAXBElementProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
 
-public class TestAppLevelServiceManager {
+public class TestTimelineAggregatorsCollection {
 
   @Test(timeout=60000)
   public void testMultithreadedAdd() throws Exception {
-    final AppLevelServiceManager serviceManager =
-        spy(new AppLevelServiceManager());
-    doReturn(new Configuration()).when(serviceManager).getConfig();
+    final TimelineAggregatorsCollection aggregatorCollection =
+        spy(new TimelineAggregatorsCollection());
+    doReturn(new Configuration()).when(aggregatorCollection).getConfig();
 
     final int NUM_APPS = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
@@ -47,7 +48,9 @@ public class TestAppLevelServiceManager {
       final String appId = String.valueOf(i);
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
-          return serviceManager.addService(appId);
+          AppLevelTimelineAggregator aggregator =
+              new AppLevelTimelineAggregator(appId);
+          return (aggregatorCollection.putIfAbsent(appId, aggregator) == aggregator);
         }
       };
       tasks.add(task);
@@ -63,15 +66,15 @@ public class TestAppLevelServiceManager {
     }
     // check the keys
     for (int i = 0; i < NUM_APPS; i++) {
-      assertTrue(serviceManager.hasService(String.valueOf(i)));
+      assertTrue(aggregatorCollection.containsKey(String.valueOf(i)));
     }
   }
 
   @Test
   public void testMultithreadedAddAndRemove() throws Exception {
-    final AppLevelServiceManager serviceManager =
-        spy(new AppLevelServiceManager());
-    doReturn(new Configuration()).when(serviceManager).getConfig();
+    final TimelineAggregatorsCollection aggregatorCollection =
+        spy(new TimelineAggregatorsCollection());
+    doReturn(new Configuration()).when(aggregatorCollection).getConfig();
 
     final int NUM_APPS = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
@@ -79,8 +82,11 @@ public class TestAppLevelServiceManager {
       final String appId = String.valueOf(i);
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
-          return serviceManager.addService(appId) &&
-              serviceManager.removeService(appId);
+          AppLevelTimelineAggregator aggregator =
+              new AppLevelTimelineAggregator(appId);
+          boolean successPut =
+              (aggregatorCollection.putIfAbsent(appId, aggregator) == aggregator);
+          return successPut && aggregatorCollection.remove(appId);
         }
       };
       tasks.add(task);
@@ -96,7 +102,7 @@ public class TestAppLevelServiceManager {
     }
     // check the keys
     for (int i = 0; i < NUM_APPS; i++) {
-      assertFalse(serviceManager.hasService(String.valueOf(i)));
+      assertFalse(aggregatorCollection.containsKey(String.valueOf(i)));
     }
   }
 }

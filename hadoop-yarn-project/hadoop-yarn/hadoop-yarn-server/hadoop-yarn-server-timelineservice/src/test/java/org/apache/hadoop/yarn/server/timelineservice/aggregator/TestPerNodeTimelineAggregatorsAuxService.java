@@ -36,10 +36,10 @@ import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
 import org.junit.Test;
 
-public class TestPerNodeAggregatorServer {
+public class TestPerNodeTimelineAggregatorsAuxService {
   private ApplicationAttemptId appAttemptId;
 
-  public TestPerNodeAggregatorServer() {
+  public TestPerNodeTimelineAggregatorsAuxService() {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
@@ -47,96 +47,97 @@ public class TestPerNodeAggregatorServer {
 
   @Test
   public void testAddApplication() throws Exception {
-    PerNodeAggregatorServer aggregator = createAggregatorAndAddApplication();
-    // aggregator should have a single app
-    assertTrue(aggregator.hasApplication(
+    PerNodeTimelineAggregatorsAuxService auxService = createAggregatorAndAddApplication();
+    // auxService should have a single app
+    assertTrue(auxService.hasApplication(
         appAttemptId.getApplicationId().toString()));
-    aggregator.close();
+    auxService.close();
   }
 
   @Test
   public void testAddApplicationNonAMContainer() throws Exception {
-    PerNodeAggregatorServer aggregator = createAggregator();
+    PerNodeTimelineAggregatorsAuxService auxService = createAggregator();
 
     ContainerId containerId = getContainerId(2L); // not an AM
     ContainerInitializationContext context =
         mock(ContainerInitializationContext.class);
     when(context.getContainerId()).thenReturn(containerId);
-    aggregator.initializeContainer(context);
-    // aggregator should not have that app
-    assertFalse(aggregator.hasApplication(
+    auxService.initializeContainer(context);
+    // auxService should not have that app
+    assertFalse(auxService.hasApplication(
         appAttemptId.getApplicationId().toString()));
   }
 
   @Test
   public void testRemoveApplication() throws Exception {
-    PerNodeAggregatorServer aggregator = createAggregatorAndAddApplication();
-    // aggregator should have a single app
+    PerNodeTimelineAggregatorsAuxService auxService = createAggregatorAndAddApplication();
+    // auxService should have a single app
     String appIdStr = appAttemptId.getApplicationId().toString();
-    assertTrue(aggregator.hasApplication(appIdStr));
+    assertTrue(auxService.hasApplication(appIdStr));
 
     ContainerId containerId = getAMContainerId();
     ContainerTerminationContext context =
         mock(ContainerTerminationContext.class);
     when(context.getContainerId()).thenReturn(containerId);
-    aggregator.stopContainer(context);
-    // aggregator should not have that app
-    assertFalse(aggregator.hasApplication(appIdStr));
-    aggregator.close();
+    auxService.stopContainer(context);
+    // auxService should not have that app
+    assertFalse(auxService.hasApplication(appIdStr));
+    auxService.close();
   }
 
   @Test
   public void testRemoveApplicationNonAMContainer() throws Exception {
-    PerNodeAggregatorServer aggregator = createAggregatorAndAddApplication();
-    // aggregator should have a single app
+    PerNodeTimelineAggregatorsAuxService auxService = createAggregatorAndAddApplication();
+    // auxService should have a single app
     String appIdStr = appAttemptId.getApplicationId().toString();
-    assertTrue(aggregator.hasApplication(appIdStr));
+    assertTrue(auxService.hasApplication(appIdStr));
 
     ContainerId containerId = getContainerId(2L); // not an AM
     ContainerTerminationContext context =
         mock(ContainerTerminationContext.class);
     when(context.getContainerId()).thenReturn(containerId);
-    aggregator.stopContainer(context);
-    // aggregator should still have that app
-    assertTrue(aggregator.hasApplication(appIdStr));
-    aggregator.close();
+    auxService.stopContainer(context);
+    // auxService should still have that app
+    assertTrue(auxService.hasApplication(appIdStr));
+    auxService.close();
   }
 
   @Test(timeout = 60000)
   public void testLaunch() throws Exception {
     ExitUtil.disableSystemExit();
-    PerNodeAggregatorServer server = null;
+    PerNodeTimelineAggregatorsAuxService auxService = null;
     try {
-      server =
-          PerNodeAggregatorServer.launchServer(new String[0]);
+      auxService =
+          PerNodeTimelineAggregatorsAuxService.launchServer(new String[0]);
     } catch (ExitUtil.ExitException e) {
       assertEquals(0, e.status);
       ExitUtil.resetFirstExitException();
       fail();
     } finally {
-      if (server != null) {
-        server.stop();
+      if (auxService != null) {
+        auxService.stop();
       }
     }
   }
 
-  private PerNodeAggregatorServer createAggregatorAndAddApplication() {
-    PerNodeAggregatorServer aggregator = createAggregator();
+  private PerNodeTimelineAggregatorsAuxService createAggregatorAndAddApplication() {
+    PerNodeTimelineAggregatorsAuxService auxService = createAggregator();
     // create an AM container
     ContainerId containerId = getAMContainerId();
     ContainerInitializationContext context =
         mock(ContainerInitializationContext.class);
     when(context.getContainerId()).thenReturn(containerId);
-    aggregator.initializeContainer(context);
-    return aggregator;
+    auxService.initializeContainer(context);
+    return auxService;
   }
 
-  private PerNodeAggregatorServer createAggregator() {
-    AppLevelServiceManager serviceManager = spy(new AppLevelServiceManager());
-    doReturn(new Configuration()).when(serviceManager).getConfig();
-    PerNodeAggregatorServer aggregator =
-        spy(new PerNodeAggregatorServer(serviceManager));
-    return aggregator;
+  private PerNodeTimelineAggregatorsAuxService createAggregator() {
+    TimelineAggregatorsCollection
+        aggregatorsCollection = spy(new TimelineAggregatorsCollection());
+    doReturn(new Configuration()).when(aggregatorsCollection).getConfig();
+    PerNodeTimelineAggregatorsAuxService auxService =
+        spy(new PerNodeTimelineAggregatorsAuxService(aggregatorsCollection));
+    return auxService;
   }
 
   private ContainerId getAMContainerId() {
