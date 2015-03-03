@@ -1074,6 +1074,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7871. NameNodeEditLogRoller can keep printing "Swallowing exception"
     message. (jing9)
 
+    HDFS-7757. Misleading error messages in FSImage.java. (Brahma Reddy Battula
+    via Arpit Agarwal)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
