@@ -30,12 +30,12 @@ import org.apache.hadoop.conf.Configuration;
  */
 @Private
 @Unstable
-public class AppLevelAggregatorService extends BaseAggregatorService {
+public class AppLevelTimelineAggregator extends TimelineAggregator {
   private final String applicationId;
   // TODO define key metadata such as flow metadata, user, and queue
 
-  public AppLevelAggregatorService(String applicationId) {
-    super(AppLevelAggregatorService.class.getName() + " - " + applicationId);
+  public AppLevelTimelineAggregator(String applicationId) {
+    super(AppLevelTimelineAggregator.class.getName() + " - " + applicationId);
     this.applicationId = applicationId;
   }
 

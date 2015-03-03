@@ -31,15 +31,15 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
  * Service that handles writes to the timeline service and writes them to the
  * backing storage.
  *
- * Classes that extend this can add their own lifecycle management or
+ * Classes that extend this can putIfAbsent their own lifecycle management or
  * customization of request handling.
  */
 @Private
 @Unstable
-public class BaseAggregatorService extends CompositeService {
-  private static final Log LOG = LogFactory.getLog(BaseAggregatorService.class);
+public abstract class TimelineAggregator extends CompositeService {
+  private static final Log LOG = LogFactory.getLog(TimelineAggregator.class);
 
-  public BaseAggregatorService(String name) {
+  public TimelineAggregator(String name) {
     super(name);
   }
 
