@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
@@ -78,7 +79,7 @@ public class SchedulerApplicationAttempt {
   private long lastVcoreSeconds = 0;
 
   protected final AppSchedulingInfo appSchedulingInfo;
-  
+  protected ApplicationAttemptId attemptId;
   protected Map<ContainerId, RMContainer> liveContainers =
       new HashMap<ContainerId, RMContainer>();
   protected final Map<Priority, Map<NodeId, RMContainer>> reservedContainers = 
@@ -132,6 +133,7 @@ public class SchedulerApplicationAttempt {
             activeUsersManager, rmContext.getEpoch());
     this.queue = queue;
     this.pendingRelease = new HashSet<ContainerId>();
+    this.attemptId = applicationAttemptId;
     if (rmContext.getRMApps() != null &&
         rmContext.getRMApps()
             .containsKey(applicationAttemptId.getApplicationId())) {
@@ -618,5 +620,16 @@ public class SchedulerApplicationAttempt {
     // newlyAllocatedContainers.add(rmContainer);
     // schedulingOpportunities
     // lastScheduledContainer
+  }
+
+  public void incNumAllocatedContainers(NodeType containerType,
+      NodeType requestType) {
+    RMAppAttempt attempt =
+        rmContext.getRMApps().get(attemptId.getApplicationId())
+          .getCurrentAppAttempt();
+    if (attempt != null) {
+      attempt.getRMAppAttemptMetrics().incNumAllocatedContainers(containerType,
+        requestType);
+    }
   }
 }

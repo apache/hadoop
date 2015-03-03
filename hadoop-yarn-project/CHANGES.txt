@@ -348,6 +348,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3281. Added RMStateStore to StateMachine visualization list.
     (Chengbing Liu via jianhe)
 
+    YARN-3272. Surface container locality info in RM web UI.
+    (Jian He via wangda)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 

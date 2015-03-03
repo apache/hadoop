@@ -204,18 +204,55 @@ public class AppBlock extends HtmlBlock {
     table._();
     div._();
 
+    createContainerLocalityTable(html, attemptMetrics);
     createResourceRequestsTable(html, app);
+  }
+
+  private void createContainerLocalityTable(Block html,
+      RMAppAttemptMetrics attemptMetrics) {
+    if (attemptMetrics == null) {
+      return;
+    }
+
+    DIV<Hamlet> div = html.div(_INFO_WRAP);
+    TABLE<DIV<Hamlet>> table =
+        div.h3(
+          "Total Allocated Containers: "
+              + attemptMetrics.getTotalAllocatedContainers()).h3("Each table cell"
+            + " represents the number of NodeLocal/RackLocal/OffSwitch containers"
+            + " satisfied by NodeLocal/RackLocal/OffSwitch resource requests.").table(
+          "#containerLocality");
+    table.
+      tr().
+        th(_TH, "").
+        th(_TH, "Node Local Request").
+        th(_TH, "Rack Local Request").
+        th(_TH, "Off Switch Request").
+      _();
+
+    String[] containersType =
+        { "Num Node Local Containers (satisfied by)", "Num Rack Local Containers (satisfied by)",
+            "Num Off Switch Containers (satisfied by)" };
+    boolean odd = false;
+    for (int i = 0; i < attemptMetrics.getLocalityStatistics().length; i++) {
+      table.tr((odd = !odd) ? _ODD : _EVEN).td(containersType[i])
+        .td(String.valueOf(attemptMetrics.getLocalityStatistics()[i][0]))
+        .td(i == 0 ? "" : String.valueOf(attemptMetrics.getLocalityStatistics()[i][1]))
+        .td(i <= 1 ? "" : String.valueOf(attemptMetrics.getLocalityStatistics()[i][2]))._();
+    }
+    table._();
+    div._();
   }
 
   private void createResourceRequestsTable(Block html, AppInfo app) {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#ResourceRequests").thead().tr()
           .th(".priority", "Priority")
-          .th(".resourceName", "ResourceName")
+          .th(".resourceName", "Resource Name")
           .th(".totalResource", "Capability")
-          .th(".numContainers", "NumContainers")
-          .th(".relaxLocality", "RelaxLocality")
-          .th(".nodeLabelExpression", "NodeLabelExpression")._()._().tbody();
+          .th(".numContainers", "Num Containers")
+          .th(".relaxLocality", "Relax Locality")
+          .th(".nodeLabelExpression", "Node Label Expression")._()._().tbody();
 
     Resource totalResource = Resource.newInstance(0, 0);
     if (app.getResourceRequests() != null) {
