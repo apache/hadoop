@@ -13,6 +13,9 @@ Trunk (Unreleased)
 
     HADOOP-10950. rework heap management vars (John Smith via aw)
 
+    HADOOP-6857. FsShell should report raw disk usage including replication
+    factor. (Byron Wong via shv)
+
     HADOOP-11657. Align the output of `hadoop fs -du` to be more Unix-like.
     (aajisaka)
 
@@ -464,9 +467,6 @@ Release 2.7.0 - UNRELEASED
     (Yongjun Zhang via wang)
 
     HADOOP-10748. HttpServer2 should not load JspServlet. (wheat9)
-
-    HADOOP-6857. FsShell should report raw disk usage including replication
-    factor. (Byron Wong via shv)
 
     HADOOP-10847. Remove the usage of sun.security.x509.* in testing code.
     (Pascal Oliva via wheat9)
