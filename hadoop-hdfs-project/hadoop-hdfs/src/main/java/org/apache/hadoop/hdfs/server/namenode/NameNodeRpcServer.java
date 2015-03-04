@@ -1145,8 +1145,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     case PREPARE:
       return namesystem.startRollingUpgrade();
     case FINALIZE:
-      namesystem.finalizeRollingUpgrade();
-      return null;
+      return namesystem.finalizeRollingUpgrade();
     default:
       throw new UnsupportedActionException(action + " is not yet supported.");
     }

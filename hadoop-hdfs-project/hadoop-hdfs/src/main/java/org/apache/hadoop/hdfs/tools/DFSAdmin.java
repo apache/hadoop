@@ -341,7 +341,7 @@ public class DFSAdmin extends FsShell {
     private static void printMessage(RollingUpgradeInfo info,
         PrintStream out) {
       if (info != null && info.isStarted()) {
-        if (!info.createdRollbackImages()) {
+        if (!info.createdRollbackImages() && !info.isFinalized()) {
           out.println(
               "Preparing for upgrade. Data is being saved for rollback."
               + "\nRun \"dfsadmin -rollingUpgrade query\" to check the status"

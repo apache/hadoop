@@ -1083,6 +1083,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7682. {{DistributedFileSystem#getFileChecksum}} of a snapshotted file
     includes non-snapshotted content. (Charles Lamb via atm)
 
+    HDFS-7869. Inconsistency in the return information while performing rolling
+    upgrade ( J.Andreina via vinayakumarb )
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
