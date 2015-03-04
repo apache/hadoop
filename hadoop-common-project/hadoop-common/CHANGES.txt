@@ -1041,6 +1041,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11605. FilterFileSystem#create with ChecksumOpt should propagate it
     to wrapped FS. (gera)
 
+    HADOOP-11674. oneByteBuf in CryptoInputStream and CryptoOutputStream
+    should be non static. (Sean Busbey via yliu)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
