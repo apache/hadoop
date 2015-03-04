@@ -244,7 +244,7 @@ public class TestRollingUpgrade {
       //finalize rolling upgrade
       final RollingUpgradeInfo finalize = dfs2.rollingUpgrade(
           RollingUpgradeAction.FINALIZE);
-      Assert.assertNull(finalize);
+      Assert.assertTrue(finalize.isFinalized());
 
       LOG.info("RESTART cluster 2 with regular startup option");
       cluster2.getNameNodeInfos()[0].setStartOpt(StartupOption.REGULAR);
@@ -405,7 +405,7 @@ public class TestRollingUpgrade {
       Assert.assertTrue(fsimage.hasRollbackFSImage());
 
       info = dfs.rollingUpgrade(RollingUpgradeAction.FINALIZE);
-      Assert.assertNull(info);
+      Assert.assertTrue(info.isFinalized());
       Assert.assertTrue(dfs.exists(foo));
 
       // Once finalized, there should be no more fsimage for rollbacks.
