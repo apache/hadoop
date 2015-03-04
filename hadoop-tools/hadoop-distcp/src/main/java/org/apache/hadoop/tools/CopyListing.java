@@ -224,7 +224,9 @@ public abstract class CopyListing extends Configured {
                                            Credentials credentials,
                                            DistCpOptions options)
       throws IOException {
-
+    if (options.shouldUseDiff()) {
+      return new GlobbedCopyListing(configuration, credentials);
+    }
     String copyListingClassName = configuration.get(DistCpConstants.
         CONF_LABEL_COPY_LISTING_CLASS, "");
     Class<? extends CopyListing> copyListingClass;

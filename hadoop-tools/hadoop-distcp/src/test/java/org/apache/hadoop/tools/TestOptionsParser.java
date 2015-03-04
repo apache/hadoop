@@ -584,7 +584,7 @@ public class TestOptionsParser {
 
     // make sure -append is only valid when -update is specified
     try {
-      options = OptionsParser.parse(new String[] { "-append",
+      OptionsParser.parse(new String[] { "-append",
               "hdfs://localhost:8020/source/first",
               "hdfs://localhost:8020/target/" });
       fail("Append should fail if update option is not specified");
@@ -595,7 +595,7 @@ public class TestOptionsParser {
 
     // make sure -append is invalid when skipCrc is specified
     try {
-      options = OptionsParser.parse(new String[] {
+      OptionsParser.parse(new String[] {
           "-append", "-update", "-skipcrccheck",
           "hdfs://localhost:8020/source/first",
           "hdfs://localhost:8020/target/" });
@@ -603,6 +603,77 @@ public class TestOptionsParser {
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
           "Append is disallowed when skipping CRC", e);
+    }
+  }
+
+  @Test
+  public void testDiffOption() {
+    Configuration conf = new Configuration();
+    Assert.assertFalse(conf.getBoolean(DistCpOptionSwitch.DIFF.getConfigLabel(),
+        false));
+
+    DistCpOptions options = OptionsParser.parse(new String[] { "-update",
+        "-delete", "-diff", "s1", "s2",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/" });
+    options.appendToConf(conf);
+    Assert.assertTrue(conf.getBoolean(DistCpOptionSwitch.DIFF.getConfigLabel(), false));
+    Assert.assertTrue(options.shouldUseDiff());
+    Assert.assertEquals("s1", options.getFromSnapshot());
+    Assert.assertEquals("s2", options.getToSnapshot());
+
+    options = OptionsParser.parse(new String[] {
+        "-delete", "-diff", "s1", ".", "-update",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/" });
+    options.appendToConf(conf);
+    Assert.assertTrue(conf.getBoolean(DistCpOptionSwitch.DIFF.getConfigLabel(),
+        false));
+    Assert.assertTrue(options.shouldUseDiff());
+    Assert.assertEquals("s1", options.getFromSnapshot());
+    Assert.assertEquals(".", options.getToSnapshot());
+
+    // -diff requires two option values
+    try {
+      OptionsParser.parse(new String[] {"-diff", "s1", "-delete", "-update",
+          "hdfs://localhost:8020/source/first",
+          "hdfs://localhost:8020/target/" });
+      fail("-diff should fail with only one snapshot name");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Must provide both the starting and ending snapshot names", e);
+    }
+
+    // make sure -diff is only valid when -update and -delete is specified
+    try {
+      OptionsParser.parse(new String[] { "-diff", "s1", "s2",
+          "hdfs://localhost:8020/source/first",
+          "hdfs://localhost:8020/target/" });
+      fail("-diff should fail if -update or -delete option is not specified");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Diff is valid only with update and delete options", e);
+    }
+
+    try {
+      OptionsParser.parse(new String[] { "-diff", "s1", "s2", "-update",
+          "hdfs://localhost:8020/source/first",
+          "hdfs://localhost:8020/target/" });
+      fail("-diff should fail if -update or -delete option is not specified");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Diff is valid only with update and delete options", e);
+    }
+
+    try {
+      OptionsParser.parse(new String[] { "-diff", "s1", "s2",
+          "-delete", "-overwrite",
+          "hdfs://localhost:8020/source/first",
+          "hdfs://localhost:8020/target/" });
+      fail("-diff should fail if -update or -delete option is not specified");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "Diff is valid only with update and delete options", e);
     }
   }
 }

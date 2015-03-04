@@ -704,6 +704,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7789. DFSck should resolve the path to support cross-FS symlinks.
     (gera)
 
+    HDFS-7535. Utilize Snapshot diff report for distcp. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

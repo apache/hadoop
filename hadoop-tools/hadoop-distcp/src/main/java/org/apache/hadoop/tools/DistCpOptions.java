@@ -42,6 +42,7 @@ public class DistCpOptions {
   private boolean append = false;
   private boolean skipCRC = false;
   private boolean blocking = true;
+  private boolean useDiff = false;
 
   private int maxMaps = DistCpConstants.DEFAULT_MAPS;
   private int mapBandwidth = DistCpConstants.DEFAULT_BANDWIDTH_MB;
@@ -60,6 +61,9 @@ public class DistCpOptions {
 
   private Path sourceFileListing;
   private List<Path> sourcePaths;
+
+  private String fromSnapshot;
+  private String toSnapshot;
 
   private Path targetPath;
 
@@ -262,6 +266,29 @@ public class DistCpOptions {
   public void setAppend(boolean append) {
     validate(DistCpOptionSwitch.APPEND, append);
     this.append = append;
+  }
+
+  public boolean shouldUseDiff() {
+    return this.useDiff;
+  }
+
+  public String getFromSnapshot() {
+    return this.fromSnapshot;
+  }
+
+  public String getToSnapshot() {
+    return this.toSnapshot;
+  }
+
+  public void setUseDiff(boolean useDiff, String fromSnapshot, String toSnapshot) {
+    validate(DistCpOptionSwitch.DIFF, useDiff);
+    this.useDiff = useDiff;
+    this.fromSnapshot = fromSnapshot;
+    this.toSnapshot = toSnapshot;
+  }
+
+  public void disableUsingDiff() {
+    this.useDiff = false;
   }
 
   /**
@@ -508,6 +535,7 @@ public class DistCpOptions {
     boolean skipCRC = (option == DistCpOptionSwitch.SKIP_CRC ?
         value : this.skipCRC);
     boolean append = (option == DistCpOptionSwitch.APPEND ? value : this.append);
+    boolean useDiff = (option == DistCpOptionSwitch.DIFF ? value : this.useDiff);
 
     if (syncFolder && atomicCommit) {
       throw new IllegalArgumentException("Atomic commit can't be used with " +
@@ -536,6 +564,10 @@ public class DistCpOptions {
       throw new IllegalArgumentException(
           "Append is disallowed when skipping CRC");
     }
+    if ((!syncFolder || !deleteMissing) && useDiff) {
+      throw new IllegalArgumentException(
+          "Diff is valid only with update and delete options");
+    }
   }
 
   /**
@@ -556,6 +588,8 @@ public class DistCpOptions {
         String.valueOf(overwrite));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.APPEND,
         String.valueOf(append));
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.DIFF,
+        String.valueOf(useDiff));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.SKIP_CRC,
         String.valueOf(skipCRC));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BANDWIDTH,

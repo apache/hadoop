@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.tools;
 
+import java.io.IOException;
+import java.util.Random;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -27,10 +30,10 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
-import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.tools.CopyListing.*;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.apache.hadoop.tools.mapred.CopyOutputFormat;
@@ -38,9 +41,6 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import java.io.IOException;
-import java.util.Random;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -62,7 +62,7 @@ public class DistCp extends Configured implements Tool {
    */
   static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
-  private static final Log LOG = LogFactory.getLog(DistCp.class);
+  static final Log LOG = LogFactory.getLog(DistCp.class);
 
   private DistCpOptions inputOptions;
   private Path metaFolder;
@@ -171,8 +171,12 @@ public class DistCp extends Configured implements Tool {
         //Don't cleanup while we are setting up.
         metaFolder = createMetaFolderPath();
         jobFS = metaFolder.getFileSystem(getConf());
-
         job = createJob();
+      }
+      if (inputOptions.shouldUseDiff()) {
+        if (!DistCpSync.sync(inputOptions, getConf())) {
+          inputOptions.disableUsingDiff();
+        }
       }
       createInputFileListing(job);
 
