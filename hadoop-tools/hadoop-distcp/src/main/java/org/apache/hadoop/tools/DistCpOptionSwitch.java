@@ -41,8 +41,6 @@ public enum DistCpOptionSwitch {
    * target file. Note that when preserving checksum type, block size is also 
    * preserved.
    *
-   * @see PRESERVE_STATUS_DEFAULT
-   *
    * If any of the optional switches are present among rbugpcaxt, then
    * only the corresponding file attribute is preserved.
    */
@@ -149,6 +147,11 @@ public enum DistCpOptionSwitch {
       new Option("append", false,
           "Reuse existing data in target files and append new data to them if possible")),
 
+  DIFF(DistCpConstants.CONF_LABEL_DIFF,
+      new Option("diff", false,
+      "Use snapshot diff report to identify the difference between source and target"),
+      2),
+
   /**
    * Should DisctpExecution be blocking
    */
@@ -176,6 +179,11 @@ public enum DistCpOptionSwitch {
   DistCpOptionSwitch(String confLabel, Option option) {
     this.confLabel = confLabel;
     this.option = option;
+  }
+
+  DistCpOptionSwitch(String confLabel, Option option, int argNum) {
+    this(confLabel, option);
+    this.option.setArgs(argNum);
   }
 
   /**
