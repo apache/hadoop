@@ -26,6 +26,9 @@ Release 2.6.1 - UNRELEASED
 
     MAPREDUCE-6300. Task list sort by task id broken. (Siqi Li via aajisaka)
 
+    MAPREDUCE-6267. Refactor JobSubmitter#copyAndConfigureFiles into it's own 
+    class. (Chris Trezzo via kasha)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

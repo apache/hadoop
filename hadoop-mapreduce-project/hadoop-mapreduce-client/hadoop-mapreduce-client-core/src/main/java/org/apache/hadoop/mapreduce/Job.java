@@ -101,6 +101,7 @@ public class Job extends JobContextImpl implements JobContext {
   private static final String TASKLOG_PULL_TIMEOUT_KEY =
            "mapreduce.client.tasklog.timeout";
   private static final int DEFAULT_TASKLOG_TIMEOUT = 60000;
+  public static final int DEFAULT_SUBMIT_REPLICATION = 10;
 
   @InterfaceStability.Evolving
   public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
