@@ -94,6 +94,8 @@ public class DistCp implements Tool {
     "\n                       -p alone is equivalent to -prbugp" +
     "\n-i                     Ignore failures" +
     "\n-log <logdir>          Write logs to <logdir>" +
+    "\n-skiptmp               Do not copy files to tmp directory and rename." +
+    "\n                       Instead, copy files directly to the final destination." +
     "\n-m <num_maps>          Maximum number of simultaneous copies" +
     "\n-overwrite             Overwrite destination" +
     "\n-update                Overwrite if src size different from dst size" +
@@ -118,7 +120,14 @@ public class DistCp implements Tool {
     "\n     specified with symbolic representation.  For examples," +
     "\n       1230k = 1230 * 1024 = 1259520" +
     "\n       891g = 891 * 1024^3 = 956703965184" +
-    
+
+    "\n\nNOTE 3: By default, distcp copies files to temporary area first, " + 
+    "\n     then renames to the final destination. Using -skiptmp " +
+    "\n     switch means that distcp copies files directly to the " +
+    "\n     destination. Recommend to use it only when you really need to " +
+    "\n     (such as to avoid copy/rename overhead in s3, where rename is " +
+    "\n     not natively supported), because it may cause damage to " +
+    "\n     existing destination file if distcp fails for some reason. " +
     "\n";
   
   private static final long BYTES_PER_MAP =  256 * 1024 * 1024;
@@ -134,7 +143,8 @@ public class DistCp implements Tool {
     PRESERVE_STATUS("-p", NAME + ".preserve.status"),
     OVERWRITE("-overwrite", NAME + ".overwrite.always"),
     UPDATE("-update", NAME + ".overwrite.ifnewer"),
-    SKIPCRC("-skipcrccheck", NAME + ".skip.crc.check");
+    SKIPCRC("-skipcrccheck", NAME + ".skip.crc.check"),
+    SKIPTMP("-skiptmp", NAME + ".skip.tmp");
 
     final String cmd, propertyname;
 
@@ -327,6 +337,7 @@ public class DistCp implements Tool {
     private byte[] buffer = null;
     private JobConf job;
     private boolean skipCRCCheck = false;
+    private boolean skipTmp = false;
 
     // stats
     private int failcount = 0;
@@ -382,10 +393,17 @@ public class DistCp implements Tool {
     private void copy(FileStatus srcstat, Path relativedst,
         OutputCollector<WritableComparable<?>, Text> outc, Reporter reporter)
         throws IOException {
-      Path absdst = new Path(destPath, relativedst);
       int totfiles = job.getInt(SRC_COUNT_LABEL, -1);
       assert totfiles >= 0 : "Invalid file count " + totfiles;
 
+      // if we are copying a single file and the dest doesn't exist, we
+      // treat it as a copy/rename. The relativedst becomes the new
+      // filename and the destPath becomes its parent directory.
+      if (totfiles == 1 && !destFileSys.exists(destPath)) {
+        relativedst = new Path(destPath.getName());
+        destPath = destPath.getParent();
+      }
+      Path  absdst = new Path(destPath, relativedst);
       // if a directory, ensure created even if empty
       if (srcstat.isDir()) {
         if (destFileSys.exists(absdst)) {
@@ -444,23 +462,16 @@ public class DistCp implements Tool {
             + " from " + srcstat.getPath());        
       }
       else {
-        if (totfiles == 1) {
-          // Copying a single file; use dst path provided by user as destination
-          // rather than destination directory, if a file
-          Path dstparent = absdst.getParent();
-          if (!(destFileSys.exists(dstparent) &&
-                destFileSys.getFileStatus(dstparent).isDir())) {
-            absdst = dstparent;
-          }
-        }
         if (destFileSys.exists(absdst) &&
             destFileSys.getFileStatus(absdst).isDir()) {
           throw new IOException(absdst + " is a directory");
         }
         if (!destFileSys.mkdirs(absdst.getParent())) {
-          throw new IOException("Failed to craete parent dir: " + absdst.getParent());
+          throw new IOException("Failed to create parent dir: " + absdst.getParent());
         }
-        rename(tmpfile, absdst);
+        if (!skipTmp){
+            rename(tmpfile, absdst);
+        }
 
         FileStatus dststat = destFileSys.getFileStatus(absdst);
         if (dststat.getLen() != srcstat.getLen()) {
@@ -530,6 +541,7 @@ public class DistCp implements Tool {
       update = job.getBoolean(Options.UPDATE.propertyname, false);
       overwrite = !update && job.getBoolean(Options.OVERWRITE.propertyname, false);
       skipCRCCheck = job.getBoolean(Options.SKIPCRC.propertyname, false);
+      skipTmp = job.getBoolean(Options.SKIPTMP.propertyname, false);
       this.job = job;
     }
 
@@ -654,7 +666,6 @@ public class DistCp implements Tool {
     LOG.info("destPath=" + args.dst);
 
     JobConf job = createJobConf(conf);
-    
     checkSrcPath(job, args.srcs);
     if (args.preservedAttributes != null) {
       job.set(PRESERVE_STATUS_LABEL, args.preservedAttributes);
@@ -671,7 +682,9 @@ public class DistCp implements Tool {
       finalize(conf, job, args.dst, args.preservedAttributes);
     } finally {
       //delete tmp
-      fullyDelete(job.get(TMP_DIR_LABEL), job);
+      if(!args.flags.contains(Options.SKIPTMP)) {
+        fullyDelete(job.get(TMP_DIR_LABEL), job);
+      }
       //delete jobDirectory
       fullyDelete(job.get(JOB_DIR_LABEL), job);
     }
@@ -945,7 +958,7 @@ public class DistCp implements Tool {
    * command line) and at most (distcp.max.map.tasks, default
    * MAX_MAPS_PER_NODE * nodes in the cluster).
    * @param totalBytes Count of total bytes for job
-   * @param job The job to configure
+   * @param job The job configuration
    * @return Count of maps to run.
    */
   private static void setMapCount(long totalBytes, JobConf job) 
@@ -962,7 +975,9 @@ public class DistCp implements Tool {
   static void fullyDelete(String dir, Configuration conf) throws IOException {
     if (dir != null) {
       Path tmp = new Path(dir);
-      tmp.getFileSystem(conf).delete(tmp, true);
+      if (tmp.getFileSystem(conf).exists(tmp)){
+        tmp.getFileSystem(conf).delete(tmp, true);
+      }
     }
   }
 
@@ -1013,9 +1028,11 @@ public class DistCp implements Tool {
     //set boolean values
     final boolean update = args.flags.contains(Options.UPDATE);
     final boolean skipCRCCheck = args.flags.contains(Options.SKIPCRC);
+    final boolean skipTmp = args.flags.contains(Options.SKIPTMP);
     final boolean overwrite = !update && args.flags.contains(Options.OVERWRITE);
     jobConf.setBoolean(Options.UPDATE.propertyname, update);
     jobConf.setBoolean(Options.SKIPCRC.propertyname, skipCRCCheck);
+    jobConf.setBoolean(Options.SKIPTMP.propertyname, skipTmp);
     jobConf.setBoolean(Options.OVERWRITE.propertyname, overwrite);
     jobConf.setBoolean(Options.IGNORE_READ_FAILURES.propertyname,
         args.flags.contains(Options.IGNORE_READ_FAILURES));
@@ -1205,9 +1222,10 @@ public class DistCp implements Tool {
           jobfs, jobDirectory, jobConf, conf);
     }
 
-    Path tmpDir = new Path(
-        (dstExists && !dstIsDir) || (!dstExists && srcCount == 1)?
-        args.dst.getParent(): args.dst, "_distcp_tmp_" + randomId);
+    String tmpDirPrefix = (dstExists && !dstIsDir) || (!dstExists && srcCount == 1) ? 
+    		args.dst.getParent().toString() : args.dst.toString();
+    Path tmpDir = new Path(tmpDirPrefix + (skipTmp? "" : "/_distcp_tmp_" + randomId));
+
     jobConf.set(TMP_DIR_LABEL, tmpDir.toUri().toString());
     LOG.info("sourcePathsCount=" + srcCount);
     LOG.info("filesToCopyCount=" + fileCount);
