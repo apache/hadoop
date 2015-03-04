@@ -200,10 +200,8 @@ public class TestDFSShell {
     
   @Test (timeout = 30000)
   public void testDu() throws IOException {
-    int replication = 2;
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(replication).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     DistributedFileSystem fs = cluster.getFileSystem();
     PrintStream psBackup = System.out;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -223,9 +221,7 @@ public class TestDFSShell {
       writeFile(fs, myFile2);
       assertTrue(fs.exists(myFile2));
       Long myFileLength = fs.getFileStatus(myFile).getLen();
-      Long myFileDiskUsed = myFileLength * replication;
       Long myFile2Length = fs.getFileStatus(myFile2).getLen();
-      Long myFile2DiskUsed = myFile2Length * replication;
       
       String[] args = new String[2];
       args[0] = "-du";
@@ -242,9 +238,7 @@ public class TestDFSShell {
       out.reset();
       // Check if size matchs as expected
       assertThat(returnString, containsString(myFileLength.toString()));
-      assertThat(returnString, containsString(myFileDiskUsed.toString()));
       assertThat(returnString, containsString(myFile2Length.toString()));
-      assertThat(returnString, containsString(myFile2DiskUsed.toString()));
       
       // Check that -du -s reports the state of the snapshot
       String snapshotName = "ss1";
@@ -269,9 +263,7 @@ public class TestDFSShell {
       returnString = out.toString();
       out.reset();
       Long combinedLength = myFileLength + myFile2Length;
-      Long combinedDiskUsed = myFileDiskUsed + myFile2DiskUsed;
       assertThat(returnString, containsString(combinedLength.toString()));
-      assertThat(returnString, containsString(combinedDiskUsed.toString()));
     } finally {
       System.setOut(psBackup);
       cluster.shutdown();

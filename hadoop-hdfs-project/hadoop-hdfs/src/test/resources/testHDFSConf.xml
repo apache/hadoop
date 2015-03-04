@@ -1086,7 +1086,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+/data15bytes</expected-output>
+          <expected-output>^15\s+/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1104,7 +1104,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+data15bytesZZ</expected-output>
+          <expected-output>^15\s+data15bytesZZ</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1125,19 +1125,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120\s+120\s+data120bytes</expected-output>
+          <expected-output>^120\s+data120bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+data15bytes</expected-output>
+          <expected-output>^15\s+data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30\s+30\s+data30bytes</expected-output>
+          <expected-output>^30\s+data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60\s+60\s+data60bytes</expected-output>
+          <expected-output>^60\s+data60bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1155,7 +1155,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+/dir0/data15bytes</expected-output>
+          <expected-output>^15\s+/dir0/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1173,7 +1173,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+dir0/data15bytes</expected-output>
+          <expected-output>^15\s+dir0/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1194,19 +1194,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*15( |\t)*/dir0/data15bytes</expected-output>
+          <expected-output>^15( |\t)*/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*30( |\t)*/dir0/data30bytes</expected-output>
+          <expected-output>^30( |\t)*/dir0/data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60( |\t)*60( |\t)*/dir0/data60bytes</expected-output>
+          <expected-output>^60( |\t)*/dir0/data60bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120( |\t)*120( |\t)*/dir0/data120bytes</expected-output>
+          <expected-output>^120( |\t)*/dir0/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1223,7 +1223,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+hdfs:///data15bytes</expected-output>
+          <expected-output>^15\s+hdfs:///data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1243,19 +1243,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120\s+120\s+hdfs:///data120bytes</expected-output>
+          <expected-output>^120\s+hdfs:///data120bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+hdfs:///data15bytes</expected-output>
+          <expected-output>^15\s+hdfs:///data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30\s+30\s+hdfs:///data30bytes</expected-output>
+          <expected-output>^30\s+hdfs:///data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60\s+60\s+hdfs:///data60bytes</expected-output>
+          <expected-output>^60\s+hdfs:///data60bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1273,7 +1273,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+hdfs:///dir0/data15bytes</expected-output>
+          <expected-output>^15\s+hdfs:///dir0/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1292,11 +1292,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+hdfs:///dir0/data15bytes</expected-output>
+          <expected-output>^15\s+hdfs:///dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^1\.0 K\s+1\.0 K\s+hdfs:///dir0/data1k</expected-output>
+          <expected-output>^1\.0 K\s+hdfs:///dir0/data1k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1317,19 +1317,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*15( |\t)*hdfs:///dir0/data15bytes</expected-output>
+          <expected-output>^15( |\t)*hdfs:///dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*30( |\t)*hdfs:///dir0/data30bytes</expected-output>
+          <expected-output>^30( |\t)*hdfs:///dir0/data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60( |\t)*60( |\t)*hdfs:///dir0/data60bytes</expected-output>
+          <expected-output>^60( |\t)*hdfs:///dir0/data60bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120( |\t)*120( |\t)*hdfs:///dir0/data120bytes</expected-output>
+          <expected-output>^120( |\t)*hdfs:///dir0/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1346,7 +1346,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*15( |\t)*NAMENODE/data15bytes</expected-output>
+          <expected-output>^15( |\t)*NAMENODE/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1366,19 +1366,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*15( |\t)*NAMENODE/data15bytes</expected-output>
+          <expected-output>^15( |\t)*NAMENODE/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*30( |\t)*NAMENODE/data30bytes</expected-output>
+          <expected-output>^30( |\t)*NAMENODE/data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60( |\t)*60( |\t)*NAMENODE/data60bytes</expected-output>
+          <expected-output>^60( |\t)*NAMENODE/data60bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120( |\t)*120( |\t)*NAMENODE/data120bytes</expected-output>
+          <expected-output>^120( |\t)*NAMENODE/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1396,7 +1396,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*15( |\t)*NAMENODE/dir0/data15bytes</expected-output>
+          <expected-output>^15( |\t)*NAMENODE/dir0/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1417,19 +1417,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*15( |\t)*NAMENODE/dir0/data15bytes</expected-output>
+          <expected-output>^15( |\t)*NAMENODE/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*30( |\t)*NAMENODE/dir0/data30bytes</expected-output>
+          <expected-output>^30( |\t)*NAMENODE/dir0/data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60( |\t)*60( |\t)*NAMENODE/dir0/data60bytes</expected-output>
+          <expected-output>^60( |\t)*NAMENODE/dir0/data60bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120( |\t)*120( |\t)*NAMENODE/dir0/data120bytes</expected-output>
+          <expected-output>^120( |\t)*NAMENODE/dir0/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1462,7 +1462,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^450\s+450\s+/dir0</expected-output>
+          <expected-output>^450\s+/dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1494,7 +1494,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^450\s+450\s+dir0</expected-output>
+          <expected-output>^450\s+dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1532,7 +1532,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^450\s+450\s+/dir0</expected-output>
+          <expected-output>^450\s+/dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1565,7 +1565,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^450\s+450\s+hdfs:///dir0</expected-output>
+          <expected-output>^450\s+hdfs:///dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1603,7 +1603,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^450\s+450\s+hdfs:///dir0</expected-output>
+          <expected-output>^450\s+hdfs:///dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1635,7 +1635,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^450\s+450\s+NAMENODE/dir0</expected-output>
+          <expected-output>^450\s+NAMENODE/dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1673,7 +1673,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^450\s+450\s+NAMENODE/dir0</expected-output>
+          <expected-output>^450\s+NAMENODE/dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4073,7 +4073,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+/data15bytes</expected-output>
+          <expected-output>^15\s+/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4092,7 +4092,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+data15bytes</expected-output>
+          <expected-output>^15\s+data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4110,7 +4110,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+/dir0/dir1/data/data15bytes</expected-output>
+          <expected-output>^15\s+/dir0/dir1/data/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4128,7 +4128,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+dir0/dir1/data/data15bytes</expected-output>
+          <expected-output>^15\s+dir0/dir1/data/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4146,11 +4146,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+/dir0/data15bytes</expected-output>
+          <expected-output>^15\s+/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30\s+30\s+/dir0/data30bytes</expected-output>
+          <expected-output>^30\s+/dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4168,11 +4168,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+dir0/data15bytes</expected-output>
+          <expected-output>^15\s+dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30\s+30\s+dir0/data30bytes</expected-output>
+          <expected-output>^30\s+dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4318,7 +4318,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+hdfs:///data15bytes</expected-output>
+          <expected-output>^15\s+hdfs:///data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4336,7 +4336,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+hdfs:///dir1/data/data15bytes</expected-output>
+          <expected-output>^15\s+hdfs:///dir1/data/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4354,11 +4354,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+hdfs:///dir0/data15bytes</expected-output>
+          <expected-output>^15\s+hdfs:///dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30\s+30\s+hdfs:///dir0/data30bytes</expected-output>
+          <expected-output>^30\s+hdfs:///dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4442,7 +4442,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+NAMENODE/data15bytes</expected-output>
+          <expected-output>^15\s+NAMENODE/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4460,7 +4460,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+NAMENODE/dir1/data/data15bytes</expected-output>
+          <expected-output>^15\s+NAMENODE/dir1/data/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4478,11 +4478,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+NAMENODE/dir0/data15bytes</expected-output>
+          <expected-output>^15\s+NAMENODE/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30\s+30\s+NAMENODE/dir0/data30bytes</expected-output>
+          <expected-output>^30\s+NAMENODE/dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4567,7 +4567,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+/data15bytes</expected-output>
+          <expected-output>^15\s+/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4586,7 +4586,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+data15bytes</expected-output>
+          <expected-output>^15\s+data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4604,7 +4604,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+/dir0/dir1/data/data15bytes</expected-output>
+          <expected-output>^15\s+/dir0/dir1/data/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4622,7 +4622,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+dir0/dir1/data/data15bytes</expected-output>
+          <expected-output>^15\s+dir0/dir1/data/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4640,11 +4640,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+/dir0/data15bytes</expected-output>
+          <expected-output>^15\s+/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30\s+30\s+/dir0/data30bytes</expected-output>
+          <expected-output>^30\s+/dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4662,11 +4662,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+dir0/data15bytes</expected-output>
+          <expected-output>^15\s+dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30\s+30\s+dir0/data30bytes</expected-output>
+          <expected-output>^30\s+dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4813,7 +4813,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+hdfs:///data15bytes</expected-output>
+          <expected-output>^15\s+hdfs:///data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4833,7 +4833,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+hdfs:///dir0/dir1/data/data15bytes</expected-output>
+          <expected-output>^15\s+hdfs:///dir0/dir1/data/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4851,11 +4851,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+hdfs:///dir0/data15bytes</expected-output>
+          <expected-output>^15\s+hdfs:///dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30\s+30\s+hdfs:///dir0/data30bytes</expected-output>
+          <expected-output>^30\s+hdfs:///dir0/data30bytes</expected-output>
         </comparator>
      </comparators>
     </test>
@@ -4940,7 +4940,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+NAMENODE/data15bytes</expected-output>
+          <expected-output>^15\s+NAMENODE/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4960,7 +4960,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+NAMENODE/dir0/dir1/data/data15bytes</expected-output>
+          <expected-output>^15\s+NAMENODE/dir0/dir1/data/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -4978,11 +4978,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15\s+15\s+NAMENODE/dir0/data15bytes</expected-output>
+          <expected-output>^15\s+NAMENODE/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30\s+30\s+NAMENODE/dir0/data30bytes</expected-output>
+          <expected-output>^30\s+NAMENODE/dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5605,7 +5605,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+/dir0</expected-output>
+          <expected-output>^0\s+/dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5623,7 +5623,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+/dir0/b</expected-output>
+          <expected-output>^0\s+/dir0/b</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5641,7 +5641,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+dir0</expected-output>
+          <expected-output>^0\s+dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5661,19 +5661,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+/dir0</expected-output>
+          <expected-output>^0\s+/dir0</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+/dir1</expected-output>
+          <expected-output>^0\s+/dir1</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+/dir2</expected-output>
+          <expected-output>^0\s+/dir2</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+/dir3</expected-output>
+          <expected-output>^0\s+/dir3</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5693,19 +5693,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+dir0</expected-output>
+          <expected-output>^0\s+dir0</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+dir1</expected-output>
+          <expected-output>^0\s+dir1</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+dir2</expected-output>
+          <expected-output>^0\s+dir2</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+dir3</expected-output>
+          <expected-output>^0\s+dir3</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5756,7 +5756,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+hdfs:///dir0</expected-output>
+          <expected-output>^0\s+hdfs:///dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5773,19 +5773,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+hdfs:///dir0</expected-output>
+          <expected-output>^0\s+hdfs:///dir0</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+hdfs:///dir1</expected-output>
+          <expected-output>^0\s+hdfs:///dir1</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+hdfs:///dir2</expected-output>
+          <expected-output>^0\s+hdfs:///dir2</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+hdfs:///dir3</expected-output>
+          <expected-output>^0\s+hdfs:///dir3</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5836,7 +5836,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+NAMENODE/dir0</expected-output>
+          <expected-output>^0\s+NAMENODE/dir0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -5853,19 +5853,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+NAMENODE/dir0</expected-output>
+          <expected-output>^0\s+NAMENODE/dir0</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+NAMENODE/dir1</expected-output>
+          <expected-output>^0\s+NAMENODE/dir1</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+NAMENODE/dir2</expected-output>
+          <expected-output>^0\s+NAMENODE/dir2</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+NAMENODE/dir3</expected-output>
+          <expected-output>^0\s+NAMENODE/dir3</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6219,7 +6219,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+/user/file0</expected-output>
+          <expected-output>^0\s+/user/file0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6252,7 +6252,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+file0</expected-output>
+          <expected-output>^0\s+file0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6270,9 +6270,9 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0( |\t)*0( |\t)*file0</expected-output>
-          <expected-output>^0( |\t)*0( |\t)*file1</expected-output>
-          <expected-output>^0( |\t)*0( |\t)*file2</expected-output>
+          <expected-output>^0( |\t)*file0</expected-output>
+          <expected-output>^0( |\t)*file1</expected-output>
+          <expected-output>^0( |\t)*file2</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6308,7 +6308,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+hdfs:///user/file0</expected-output>
+          <expected-output>^0\s+hdfs:///user/file0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6325,9 +6325,9 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0( |\t)*0( |\t)*hdfs:///file0</expected-output>
-          <expected-output>^0( |\t)*0( |\t)*hdfs:///file1</expected-output>
-          <expected-output>^0( |\t)*0( |\t)*hdfs:///file2</expected-output>
+          <expected-output>^0( |\t)*hdfs:///file0</expected-output>
+          <expected-output>^0( |\t)*hdfs:///file1</expected-output>
+          <expected-output>^0( |\t)*hdfs:///file2</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6361,7 +6361,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+NAMENODE/user/file0</expected-output>
+          <expected-output>^0\s+NAMENODE/user/file0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6378,9 +6378,9 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^0\s+0\s+hdfs://\w+[-.a-z0-9]*:[0-9]+/file0</expected-output>
-          <expected-output>^0\s+0\s+hdfs://\w+[-.a-z0-9]*:[0-9]+/file1</expected-output>
-          <expected-output>^0\s+0\s+hdfs://\w+[-.a-z0-9]*:[0-9]+/file2</expected-output>
+          <expected-output>^0\s+hdfs://\w+[-.a-z0-9]*:[0-9]+/file0</expected-output>
+          <expected-output>^0\s+hdfs://\w+[-.a-z0-9]*:[0-9]+/file1</expected-output>
+          <expected-output>^0\s+hdfs://\w+[-.a-z0-9]*:[0-9]+/file2</expected-output>
         </comparator>
       </comparators>
     </test>

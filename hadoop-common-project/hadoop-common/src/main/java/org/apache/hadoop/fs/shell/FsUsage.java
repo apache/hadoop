@@ -26,7 +26,6 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
@@ -118,7 +117,7 @@ class FsUsage extends FsCommand {
     "Note that, even without the -s option, this only shows size summaries " +
     "one level deep into a directory.\n\n" +
     "The output is in the form \n" + 
-    "\tsize\tdisk space consumed\tname(full path)\n";
+    "\tsize\tname(full path)\n"; 
 
     protected boolean summary = false;
     
@@ -133,7 +132,7 @@ class FsUsage extends FsCommand {
 
     @Override
     protected void processPathArgument(PathData item) throws IOException {
-      usagesTable = new TableBuilder(3);
+      usagesTable = new TableBuilder(2);
       // go one level deep on dirs from cmdline unless in summary mode
       if (!summary && item.stat.isDirectory()) {
         recursePath(item);
@@ -145,12 +144,16 @@ class FsUsage extends FsCommand {
 
     @Override
     protected void processPath(PathData item) throws IOException {
-      ContentSummary contentSummary = item.fs.getContentSummary(item.path);
-      long length = contentSummary.getLength();
-      long spaceConsumed = contentSummary.getSpaceConsumed();
-      usagesTable.addRow(formatSize(length), formatSize(spaceConsumed), item);
+      long length;
+      if (item.stat.isDirectory()) {
+        length = item.fs.getContentSummary(item.path).getLength();
+      } else {
+        length = item.stat.getLen();
+      }
+      usagesTable.addRow(formatSize(length), item);
     }
   }
+
   /** show disk usage summary */
   public static class Dus extends Du {
     public static final String NAME = "dus";

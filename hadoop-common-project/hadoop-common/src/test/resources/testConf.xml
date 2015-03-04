@@ -204,7 +204,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*size\s+disk space consumed\s+name\(full path\)\s*</expected-output>
+          <expected-output>^\s*size\s+name\(full path\)\s*</expected-output>
         </comparator>
       </comparators>
     </test>

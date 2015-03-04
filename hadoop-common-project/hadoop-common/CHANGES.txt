@@ -628,6 +628,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11605. FilterFileSystem#create with ChecksumOpt should propagate it
     to wrapped FS. (gera)
 
+    HADOOP-11666. Revert the format change of du output introduced by
+    HADOOP-6857. (Byron Wong via aajisaka)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
