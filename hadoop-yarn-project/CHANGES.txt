@@ -306,6 +306,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3272. Surface container locality info in RM web UI.
     (Jian He via wangda)
 
+    YARN-3285. (Backport YARN-3168) Convert branch-2 .apt.vm files of YARN to
+    markdown. (Masatake Iwasaki via jianhe)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
