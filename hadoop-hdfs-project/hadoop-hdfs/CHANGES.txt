@@ -1086,6 +1086,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7869. Inconsistency in the return information while performing rolling
     upgrade ( J.Andreina via vinayakumarb )
 
+    HDFS-7879. hdfs.dll does not export functions of the public libhdfs API.
+    (Chris Nauroth via wheat9)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
