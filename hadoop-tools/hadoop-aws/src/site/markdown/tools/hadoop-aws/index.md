@@ -213,13 +213,13 @@ If you do any of these: change your credentials immediately!
     <property>
       <name>fs.s3a.connection.establish.timeout</name>
       <value>5000</value>
-      <description>Socket connection setup timeout in seconds.</description>
+      <description>Socket connection setup timeout in milliseconds.</description>
     </property>
 
     <property>
       <name>fs.s3a.connection.timeout</name>
       <value>50000</value>
-      <description>Socket connection timeout in seconds.</description>
+      <description>Socket connection timeout in milliseconds.</description>
     </property>
 
     <property>
@@ -292,7 +292,7 @@ If you do any of these: change your credentials immediately!
       <name>fs.s3a.buffer.dir</name>
       <value>${hadoop.tmp.dir}/s3a</value>
       <description>Comma separated list of directories that will be used to buffer file
-        uploads to.</description>
+        uploads to. No effect if fs.s3a.fast.upload is true.</description>
     </property>
 
     <property>
@@ -301,6 +301,40 @@ If you do any of these: change your credentials immediately!
       <description>The implementation class of the S3A Filesystem</description>
     </property>
 
+### S3AFastOutputStream
+ **Warning: NEW in hadoop 2.7. UNSTABLE, EXPERIMENTAL: use at own risk**
+
+    <property>
+      <name>fs.s3a.fast.upload</name>
+      <value>false</value>
+      <description>Upload directly from memory instead of buffering to
+      disk first. Memory usage and parallelism can be controlled as up to
+      fs.s3a.multipart.size memory is consumed for each (part)upload actively
+      uploading (fs.s3a.threads.max) or queueing (fs.s3a.max.total.tasks)</description>
+    </property>
+
+    <property>
+      <name>fs.s3a.fast.buffer.size</name>
+      <value>1048576</value>
+      <description>Size (in bytes) of initial memory buffer allocated for an
+      upload. No effect if fs.s3a.fast.upload is false.</description>
+    </property>
+
+Writes are buffered in memory instead of to a file on local disk. This
+removes the throughput bottleneck of the local disk write and read cycle
+before starting the actual upload. Furthermore, it allows handling files that
+are larger than the remaining local disk space.
+
+However, non-trivial memory tuning is needed for optimal results and careless
+settings could cause memory overflow. Up to `fs.s3a.threads.max` parallel
+(part)uploads are active. Furthermore, up to `fs.s3a.max.total.tasks`
+additional part(uploads) can be waiting (and thus memory buffers are created).
+The memory buffer is uploaded as a single upload if it is not larger than
+`fs.s3a.multipart.threshold`. Else, a multi-part upload is initiatated and
+parts of size `fs.s3a.multipart.size` are used to protect against overflowing
+the available memory. These settings should be tuned to the envisioned
+workflow (some large files, many small ones, ...) and the physical
+limitations of the machine and cluster (memory, network bandwidth).
 
 ## Testing the S3 filesystem clients
 
@@ -334,7 +368,7 @@ each filesystem for its testing.
 The contents of each bucket will be destroyed during the test process:
 do not use the bucket for any purpose other than testing. Furthermore, for
 s3a, all in-progress multi-part uploads to the bucket will be aborted at the
-start of a test (by forcing fs.s3a.multipart.purge=true) to clean up the
+start of a test (by forcing `fs.s3a.multipart.purge=true`) to clean up the
 temporary state of previously failed tests.
 
 Example:
@@ -392,14 +426,14 @@ Example:
 ## File `contract-test-options.xml`
 
 The file `hadoop-tools/hadoop-aws/src/test/resources/contract-test-options.xml`
-must be created and configured for the test fileystems.
+must be created and configured for the test filesystems.
 
 If a specific file `fs.contract.test.fs.*` test path is not defined for
 any of the filesystems, those tests will be skipped.
 
 The standard S3 authentication details must also be provided. This can be
 through copy-and-paste of the `auth-keys.xml` credentials, or it can be
-through direct XInclude inclustion.
+through direct XInclude inclusion.
 
 #### s3://
 

@@ -83,6 +83,14 @@ public class Constants {
   // comma separated list of directories
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
 
+  // should we upload directly from memory rather than using a file buffer
+  public static final String FAST_UPLOAD = "fs.s3a.fast.upload";
+  public static final boolean DEFAULT_FAST_UPLOAD = false;
+
+  //initial size of memory buffer for a fast upload
+  public static final String FAST_BUFFER_SIZE = "fs.s3a.fast.buffer.size";
+  public static final int DEFAULT_FAST_BUFFER_SIZE = 1048576; //1MB
+
   // private | public-read | public-read-write | authenticated-read | 
   // log-delivery-write | bucket-owner-read | bucket-owner-full-control
   public static final String CANNED_ACL = "fs.s3a.acl.default";
