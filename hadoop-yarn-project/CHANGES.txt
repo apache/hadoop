@@ -692,6 +692,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3265. Fixed a deadlock in CapacityScheduler by always passing a queue's
     available resource-limit from the parent queue. (Wangda Tan via vinodkv)
 
+    YARN-3131. YarnClientImpl should check FAILED and KILLED state in
+    submitApplication (Chang Li via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

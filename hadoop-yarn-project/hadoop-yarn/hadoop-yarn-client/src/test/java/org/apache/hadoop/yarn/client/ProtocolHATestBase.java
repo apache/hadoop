@@ -646,7 +646,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
       ApplicationReport report =
           ApplicationReport.newInstance(appId, attemptId, "fakeUser",
               "fakeQueue", "fakeApplicationName", "localhost", 0, null,
-              YarnApplicationState.FAILED, "fake an application report", "",
+              YarnApplicationState.FINISHED, "fake an application report", "",
               1000l, 1200l, FinalApplicationStatus.FAILED, null, "", 50f,
               "fakeApplicationType", null);
       return report;
