@@ -1077,6 +1077,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7757. Misleading error messages in FSImage.java. (Brahma Reddy Battula
     via Arpit Agarwal)
 
+    HDFS-6565. Use jackson instead jetty json in hdfs-client.
+    (Akira Ajisaka via wheat9)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
