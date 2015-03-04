@@ -667,6 +667,8 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11620. Add support for load balancing across a group of KMS for HA.
     (Arun Suresh via wang)
 
+    HADOOP-11183. Memory-based S3AOutputstream. (Thomas Demoor via stevel)
+
   BUG FIXES
 
     HADOOP-11512. Use getTrimmedStrings when reading serialization keys
