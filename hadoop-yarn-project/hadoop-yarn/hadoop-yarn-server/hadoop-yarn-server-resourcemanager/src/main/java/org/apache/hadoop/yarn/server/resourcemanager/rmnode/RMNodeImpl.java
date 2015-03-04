@@ -571,12 +571,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         rmNode.nodeUpdateQueue.clear();
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeRemovedSchedulerEvent(rmNode));
-        
+
         if (rmNode.getHttpPort() == newNode.getHttpPort()) {
           // Reset heartbeat ID since node just restarted.
           rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
-          if (rmNode.getState() != NodeState.UNHEALTHY) {
-            // Only add new node if old state is not UNHEALTHY
+          if (rmNode.getState().equals(NodeState.RUNNING)) {
+            // Only add new node if old state is RUNNING
             rmNode.context.getDispatcher().getEventHandler().handle(
                 new NodeAddedSchedulerEvent(newNode));
           }
@@ -599,30 +599,32 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       } else {
         rmNode.httpPort = newNode.getHttpPort();
         rmNode.httpAddress = newNode.getHttpAddress();
-        rmNode.totalCapability = newNode.getTotalCapability();
+        boolean isCapabilityChanged = false;
+        if (rmNode.getTotalCapability() != newNode.getTotalCapability()) {
+          rmNode.totalCapability = newNode.getTotalCapability();
+          isCapabilityChanged = true;
+        }
       
         handleNMContainerStatus(reconnectEvent.getNMContainerStatuses(), rmNode);
 
         // Reset heartbeat ID since node just restarted.
         rmNode.getLastNodeHeartBeatResponse().setResponseId(0);
-      }
 
-      if (null != reconnectEvent.getRunningApplications()) {
         for (ApplicationId appId : reconnectEvent.getRunningApplications()) {
           handleRunningAppOnNode(rmNode, rmNode.context, appId, rmNode.nodeId);
         }
-      }
 
-      rmNode.context.getDispatcher().getEventHandler().handle(
-          new NodesListManagerEvent(
-              NodesListManagerEventType.NODE_USABLE, rmNode));
-      if (rmNode.getState().equals(NodeState.RUNNING)) {
-        // Update scheduler node's capacity for reconnect node.
-        rmNode.context.getDispatcher().getEventHandler().handle(
-            new NodeResourceUpdateSchedulerEvent(rmNode, 
-                ResourceOption.newInstance(newNode.getTotalCapability(), -1)));
+        if (isCapabilityChanged
+            && rmNode.getState().equals(NodeState.RUNNING)) {
+          // Update scheduler node's capacity for reconnect node.
+          rmNode.context
+              .getDispatcher()
+              .getEventHandler()
+              .handle(
+                  new NodeResourceUpdateSchedulerEvent(rmNode, ResourceOption
+                      .newInstance(newNode.getTotalCapability(), -1)));
+        }
       }
-      
     }
 
     private void handleNMContainerStatus(
