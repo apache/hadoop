@@ -2220,6 +2220,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
     // get block checksum for each block
     long remaining = length;
+    if (src.contains(HdfsConstants.SEPARATOR_DOT_SNAPSHOT_DIR_SEPARATOR)) {
+      remaining = Math.min(length, blockLocations.getFileLength());
+    }
     for(int i = 0; i < locatedblocks.size() && remaining > 0; i++) {
       if (refetchBlocks) {  // refetch to get fresh tokens
         blockLocations = callGetBlockLocations(namenode, src, 0, length);
