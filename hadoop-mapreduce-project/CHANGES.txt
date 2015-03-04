@@ -320,6 +320,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-5612. Add javadoc for TaskCompletionEvent.Status.
     (Chris Palmer via aajisaka)
 
+    MAPREDUCE-6248. Exposed the internal MapReduce job's information as a public
+    API in DistCp. (Jing Zhao via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
