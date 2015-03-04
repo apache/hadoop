@@ -323,6 +323,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6248. Exposed the internal MapReduce job's information as a public
     API in DistCp. (Jing Zhao via vinodkv)
 
+    MAPREDUCE-6267. Refactor JobSubmitter#copyAndConfigureFiles into it's own 
+    class. (Chris Trezzo via kasha)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
