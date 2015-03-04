@@ -45,6 +45,9 @@ Release 2.6.1 - UNRELEASED
     HADOOP-11604. Prevent ConcurrentModificationException while closing domain
     sockets during shutdown of DomainSocketWatcher thread. (cnauroth)
 
+    HADOOP-11674. oneByteBuf in CryptoInputStream and CryptoOutputStream
+    should be non static. (Sean Busbey via yliu)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

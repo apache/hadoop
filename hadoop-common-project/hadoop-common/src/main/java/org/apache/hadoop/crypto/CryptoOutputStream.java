@@ -45,7 +45,7 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Evolving
 public class CryptoOutputStream extends FilterOutputStream implements 
     Syncable, CanSetDropBehind {
-  private static final byte[] oneByteBuf = new byte[1];
+  private final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Encryptor encryptor;
   private final int bufferSize;
