@@ -173,7 +173,8 @@ public class TestDatanodeProtocolRetryPolicy {
         } else {
           DatanodeRegistration dr =
               (DatanodeRegistration) invocation.getArguments()[0];
-          datanodeRegistration.setDatanodeUuidForTesting(dr.getDatanodeUuid());
+          datanodeRegistration =
+              new DatanodeRegistration(dr.getDatanodeUuid(), dr);
           LOG.info("mockito succeeded " + datanodeRegistration);
           return datanodeRegistration;
         }

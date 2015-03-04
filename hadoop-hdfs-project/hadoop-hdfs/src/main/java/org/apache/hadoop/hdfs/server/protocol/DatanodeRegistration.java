@@ -25,6 +25,8 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /** 
  * DatanodeRegistration class contains all information the name-node needs
  * to identify and verify a data-node when it contacts the name-node.
@@ -38,6 +40,14 @@ public class DatanodeRegistration extends DatanodeID
   private final StorageInfo storageInfo;
   private ExportedBlockKeys exportedKeys;
   private final String softwareVersion;
+
+  @VisibleForTesting
+  public DatanodeRegistration(String uuid, DatanodeRegistration dnr) {
+    this(new DatanodeID(uuid, dnr),
+         dnr.getStorageInfo(),
+         dnr.getExportedKeys(),
+         dnr.getSoftwareVersion());
+  }
 
   public DatanodeRegistration(DatanodeID dn, StorageInfo info,
       ExportedBlockKeys keys, String softwareVersion) {
