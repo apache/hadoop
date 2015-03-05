@@ -414,6 +414,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6268. Fix typo in Task Attempt API's URL. (Ryu Kobayashi
     via ozawa)
 
+    MAPREDUCE-6136. MRAppMaster doesn't shutdown file systems. (Brahma 
+    Reddy Battula via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
