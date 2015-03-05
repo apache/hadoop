@@ -16,8 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.aggregator;
+package org.apache.hadoop.yarn.server.timelineservice.storage;
 
-public class TestTimelineAggregator {
-
+/**
+ * specifies the tracks along which an entity
+ * info is to be aggregated on
+ *
+ */
+public enum TimelineAggregationTrack {
+  FLOW, USER, QUEUE
 }
