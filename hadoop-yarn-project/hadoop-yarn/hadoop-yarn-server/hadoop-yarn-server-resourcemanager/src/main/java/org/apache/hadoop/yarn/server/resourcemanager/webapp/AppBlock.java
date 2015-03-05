@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -62,12 +63,16 @@ public class AppBlock extends HtmlBlock {
 
   private final Configuration conf;
   private final ResourceManager rm;
+  private final boolean rmWebAppUIActions;
 
   @Inject
   AppBlock(ResourceManager rm, ViewContext ctx, Configuration conf) {
     super(ctx);
     this.conf = conf;
     this.rm = rm;
+    this.rmWebAppUIActions =
+        conf.getBoolean(YarnConfiguration.RM_WEBAPP_UI_ACTIONS_ENABLED,
+                YarnConfiguration.DEFAULT_RM_WEBAPP_UI_ACTIONS_ENABLED);
   }
 
   @Override
@@ -112,6 +117,36 @@ public class AppBlock extends HtmlBlock {
     }
 
     setTitle(join("Application ", aid));
+
+    if (rmWebAppUIActions) {
+      // Application Kill
+      html.div()
+        .button()
+          .$onclick("confirmAction()").b("Kill Application")._()
+          ._();
+
+      StringBuilder script = new StringBuilder();
+      script.append("function confirmAction() {")
+          .append(" b = confirm(\"Are you sure?\");")
+          .append(" if (b == true) {")
+          .append(" $.ajax({")
+          .append(" type: 'PUT',")
+          .append(" url: '/ws/v1/cluster/apps/").append(aid).append("/state',")
+          .append(" contentType: 'application/json',")
+          .append(" data: '{\"state\":\"KILLED\"}',")
+          .append(" dataType: 'json'")
+          .append(" }).done(function(data){")
+          .append(" setTimeout(function(){")
+          .append(" location.href = '/cluster/app/").append(aid).append("';")
+          .append(" }, 1000);")
+          .append(" }).fail(function(data){")
+          .append(" console.log(data);")
+          .append(" });")
+          .append(" }")
+          .append("}");
+
+      html.script().$type("text/javascript")._(script.toString())._();
+    }
 
     RMAppMetrics appMerics = rmApp.getRMAppMetrics();
     
