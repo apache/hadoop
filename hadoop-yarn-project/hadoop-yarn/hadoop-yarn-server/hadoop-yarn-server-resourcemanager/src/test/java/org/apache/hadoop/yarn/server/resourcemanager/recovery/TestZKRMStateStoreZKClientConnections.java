@@ -71,6 +71,7 @@ public class TestZKRMStateStoreZKClientConnections extends
 
     ZKRMStateStore store;
     boolean forExpire = false;
+    TestForwardingWatcher oldWatcher;
     TestForwardingWatcher watcher;
     CyclicBarrier syncBarrier = new CyclicBarrier(2);
 
@@ -86,35 +87,36 @@ public class TestZKRMStateStoreZKClientConnections extends
       @Override
       public ZooKeeper getNewZooKeeper()
           throws IOException, InterruptedException {
+        oldWatcher = watcher;
+        watcher = new TestForwardingWatcher();
         return createClient(watcher, hostPort, ZK_TIMEOUT_MS);
       }
 
       @Override
-      public synchronized void processWatchEvent(WatchedEvent event)
-          throws Exception {
+      public synchronized void processWatchEvent(ZooKeeper zk,
+          WatchedEvent event) throws Exception {
 
         if (forExpire) {
           // a hack... couldn't find a way to trigger expired event.
           WatchedEvent expriredEvent = new WatchedEvent(
               Watcher.Event.EventType.None,
               Watcher.Event.KeeperState.Expired, null);
-          super.processWatchEvent(expriredEvent);
+          super.processWatchEvent(zk, expriredEvent);
           forExpire = false;
           syncBarrier.await();
         } else {
-          super.processWatchEvent(event);
+          super.processWatchEvent(zk, event);
         }
       }
     }
 
     private class TestForwardingWatcher extends
         ClientBaseWithFixes.CountdownWatcher {
-
       public void process(WatchedEvent event) {
         super.process(event);
         try {
           if (store != null) {
-            store.processWatchEvent(event);
+            store.processWatchEvent(client, event);
           }
         } catch (Throwable t) {
           LOG.error("Failed to process watcher event " + event + ": "
@@ -127,7 +129,6 @@ public class TestZKRMStateStoreZKClientConnections extends
       String workingZnode = "/Test";
       conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
-      watcher = new TestForwardingWatcher();
       this.store = new TestZKRMStateStore(conf, workingZnode);
       return this.store;
     }
@@ -239,6 +240,24 @@ public class TestZKRMStateStoreZKClientConnections extends
       LOG.error(error, e);
       fail(error);
     }
+
+    // send Disconnected event from old client session to ZKRMStateStore
+    // check the current client session is not affected.
+    Assert.assertTrue(zkClientTester.oldWatcher != null);
+    WatchedEvent disconnectedEvent = new WatchedEvent(
+        Watcher.Event.EventType.None,
+        Watcher.Event.KeeperState.Disconnected, null);
+    zkClientTester.oldWatcher.process(disconnectedEvent);
+    Assert.assertTrue(store.zkClient != null);
+
+    zkClientTester.watcher.process(disconnectedEvent);
+    Assert.assertTrue(store.zkClient == null);
+    WatchedEvent connectedEvent = new WatchedEvent(
+        Watcher.Event.EventType.None,
+        Watcher.Event.KeeperState.SyncConnected, null);
+    zkClientTester.watcher.process(connectedEvent);
+    Assert.assertTrue(store.zkClient != null);
+    Assert.assertTrue(store.zkClient == store.activeZkClient);
   }
 
   @Test(timeout = 20000)

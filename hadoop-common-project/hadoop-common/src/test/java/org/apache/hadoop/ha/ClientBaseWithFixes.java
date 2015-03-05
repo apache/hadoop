@@ -90,6 +90,14 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         // XXX this doesn't need to be volatile! (Should probably be final)
         volatile CountDownLatch clientConnected;
         volatile boolean connected;
+        protected ZooKeeper client;
+
+        public void initializeWatchedClient(ZooKeeper zk) {
+            if (client != null) {
+                throw new RuntimeException("Watched Client was already set");
+            }
+            client = zk;
+        }
 
         public CountdownWatcher() {
             reset();
@@ -191,8 +199,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
                 zk.close();
             }
         }
-
-
+        watcher.initializeWatchedClient(zk);
         return zk;
     }
 
