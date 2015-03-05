@@ -238,7 +238,8 @@ public final class DomainSocketWatcher implements Closeable {
    */
   private boolean kicked = false;
 
-  public DomainSocketWatcher(int interruptCheckPeriodMs) throws IOException {
+  public DomainSocketWatcher(int interruptCheckPeriodMs, String src)
+      throws IOException {
     if (loadingFailureReason != null) {
       throw new UnsupportedOperationException(loadingFailureReason);
     }
@@ -246,8 +247,9 @@ public final class DomainSocketWatcher implements Closeable {
     this.interruptCheckPeriodMs = interruptCheckPeriodMs;
     notificationSockets = DomainSocket.socketpair();
     watcherThread.setDaemon(true);
-    watcherThread.setUncaughtExceptionHandler(
-        new Thread.UncaughtExceptionHandler() {
+    watcherThread.setName(src + " DomainSocketWatcher");
+    watcherThread
+        .setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
           @Override
           public void uncaughtException(Thread thread, Throwable t) {
             LOG.error(thread + " terminating on unexpected exception", t);

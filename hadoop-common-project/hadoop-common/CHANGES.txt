@@ -647,6 +647,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11658. Externalize io.compression.codecs property.
     (Kai Zheng via aajisaka)
 
+    HADOOP-11648. Set DomainSocketWatcher thread name explicitly.
+    (Liang Xie via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.

@@ -712,6 +712,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7746. Add a test randomly mixing append, truncate and snapshot
     operations. (szetszwo)
 
+    HADOOP-11648. Set DomainSocketWatcher thread name explicitly.
+    (Liang Xie via ozawa)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
