@@ -184,6 +184,12 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_RM_SCHEDULER_USE_PORT_FOR_NODE_NAME = 
       false;
 
+  /** Enable Resource Manager webapp ui actions */
+  public static final String RM_WEBAPP_UI_ACTIONS_ENABLED =
+    RM_PREFIX + "webapp.ui-actions.enabled";
+  public static final boolean DEFAULT_RM_WEBAPP_UI_ACTIONS_ENABLED =
+    true;
+
   /** Whether the RM should enable Reservation System */
   public static final String RM_RESERVATION_SYSTEM_ENABLE = RM_PREFIX
       + "reservation-system.enable";

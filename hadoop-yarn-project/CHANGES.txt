@@ -94,6 +94,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2994. Document work-preserving RM restart. (Jian He via ozawa)
 
+    YARN-3249. Add a 'kill application' button to Resource Manager's Web UI.
+    (Ryu Kobayashi via ozawa)
+
   IMPROVEMENTS
 
     YARN-3005. [JDK7] Use switch statement for String instead of if-else
