@@ -633,7 +633,7 @@ public class DirectoryScanner implements Runnable {
           continue;
         }
         if (!Block.isBlockFilename(files[i])) {
-          if (isBlockMetaFile("blk_", files[i].getName())) {
+          if (isBlockMetaFile(Block.BLOCK_FILE_PREFIX, files[i].getName())) {
             long blockId = Block.getBlockId(files[i].getName());
             verifyFileLocation(files[i].getParentFile(), bpFinalizedDir,
                 blockId);

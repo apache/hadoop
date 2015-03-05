@@ -706,6 +706,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7535. Utilize Snapshot diff report for distcp. (jing9)
 
+    HDFS-1522. Combine two BLOCK_FILE_PREFIX constants into one.
+    (Dongming Liang via shv)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

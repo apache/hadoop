@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
@@ -511,7 +512,7 @@ public class TestReplication {
       String blockFile = null;
       File[] listFiles = participatedNodeDirs.listFiles();
       for (File file : listFiles) {
-        if (file.getName().startsWith("blk_")
+        if (file.getName().startsWith(Block.BLOCK_FILE_PREFIX)
             && !file.getName().endsWith("meta")) {
           blockFile = file.getName();
           for (File file1 : nonParticipatedNodeDirs) {
