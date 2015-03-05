@@ -715,6 +715,8 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11648. Set DomainSocketWatcher thread name explicitly.
     (Liang Xie via ozawa)
 
+    HDFS-7855. Separate class Packet from DFSOutputStream. (Li Bo bia jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
