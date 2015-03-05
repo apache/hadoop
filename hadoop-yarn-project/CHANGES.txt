@@ -97,6 +97,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3249. Add a 'kill application' button to Resource Manager's Web UI.
     (Ryu Kobayashi via ozawa)
 
+    YARN-2786. Created a yarn cluster CLI and seeded with one command for listing
+    node-labels collection. (Wangda Tan via vinodkv)
+
   IMPROVEMENTS
 
     YARN-3005. [JDK7] Use switch statement for String instead of if-else
