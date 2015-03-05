@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.aggregator;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -26,18 +28,24 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
-
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
+import org.apache.hadoop.util.ReflectionUtils;
 /**
  * Service that handles writes to the timeline service and writes them to the
  * backing storage.
  *
- * Classes that extend this can putIfAbsent their own lifecycle management or
+ * Classes that extend this can add their own lifecycle management or
  * customization of request handling.
  */
 @Private
 @Unstable
 public abstract class TimelineAggregator extends CompositeService {
   private static final Log LOG = LogFactory.getLog(TimelineAggregator.class);
+
+  private TimelineWriter writer;
 
   public TimelineAggregator(String name) {
     super(name);
@@ -46,6 +54,11 @@ public abstract class TimelineAggregator extends CompositeService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
+    writer = ReflectionUtils.newInstance(conf.getClass(
+        YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
+        FileSystemTimelineWriterImpl.class,
+        TimelineWriter.class), conf);
+    writer.init(conf);
   }
 
   @Override
@@ -56,6 +69,11 @@ public abstract class TimelineAggregator extends CompositeService {
   @Override
   protected void serviceStop() throws Exception {
     super.serviceStop();
+    writer.stop();
+  }
+
+  public TimelineWriter getWriter() {
+    return writer;
   }
 
   /**
@@ -69,20 +87,17 @@ public abstract class TimelineAggregator extends CompositeService {
    *
    * @param entities entities to post
    * @param callerUgi the caller UGI
+   * @return the response that contains the result of the post.
    */
-  public void postEntities(TimelineEntities entities,
-      UserGroupInformation callerUgi) {
-    // Add this output temporarily for our prototype
-    // TODO remove this after we have an actual implementation
-    LOG.info("SUCCESS - TIMELINE V2 PROTOTYPE");
-    LOG.info("postEntities(entities=" + entities + ", callerUgi=" +
-        callerUgi + ")");
-
-    // TODO implement
+  public TimelineWriteResponse postEntities(TimelineEntities entities,
+      UserGroupInformation callerUgi) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("postEntities(entities=" + entities + ", callerUgi=" +
-          callerUgi + ")");
+      LOG.debug("SUCCESS - TIMELINE V2 PROTOTYPE");
+      LOG.debug("postEntities(entities=" + entities + ", callerUgi="
+          + callerUgi + ")");
     }
+
+    return writer.write(entities);
   }
 
   /**

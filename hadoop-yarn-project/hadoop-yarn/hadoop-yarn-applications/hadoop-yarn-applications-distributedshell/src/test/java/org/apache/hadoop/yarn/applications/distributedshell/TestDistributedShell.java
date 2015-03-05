@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
@@ -50,6 +51,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.timelineservice.aggregator.PerNodeTimelineAggregatorsAuxService;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -237,6 +239,7 @@ public class TestDistributedShell {
 
     boolean verified = false;
     String errorMessage = "";
+    ApplicationId appId = null;
     while(!verified) {
       List<ApplicationReport> apps = yarnClient.getApplications();
       if (apps.size() == 0 ) {
@@ -244,6 +247,7 @@ public class TestDistributedShell {
         continue;
       }
       ApplicationReport appReport = apps.get(0);
+      appId = appReport.getApplicationId();
       if(appReport.getHost().equals("N/A")) {
         Thread.sleep(10);
         continue;
@@ -267,7 +271,7 @@ public class TestDistributedShell {
     if (!isTestingTimelineV2) {
       checkTimelineV1(haveDomain);
     } else {
-      checkTimelineV2(haveDomain);
+      checkTimelineV2(haveDomain, appId);
     }
   }
 
@@ -316,8 +320,54 @@ public class TestDistributedShell {
     }
   }
 
-  private void checkTimelineV2(boolean haveDomain) {
-    // TODO check timeline V2 here after we have a storage layer
+  private void checkTimelineV2(boolean haveDomain, ApplicationId appId) {
+    // For PoC check in /tmp/ YARN-3264
+    String tmpRoot = FileSystemTimelineWriterImpl.DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT;
+
+    File tmpRootFolder = new File(tmpRoot);
+    Assert.assertTrue(tmpRootFolder.isDirectory());
+
+    // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs
+    String outputDirApp = tmpRoot + "/DS_APP_ATTEMPT/";
+
+    File entityFolder = new File(outputDirApp);
+    Assert.assertTrue(entityFolder.isDirectory());
+
+    // there will be at least one attempt, look for that file
+    String appTimestampFileName = "appattempt_" + appId.getClusterTimestamp()
+        + "_000" + appId.getId() + "_000001"
+        + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+    String appAttemptFileName = outputDirApp + appTimestampFileName;
+    File appAttemptFile = new File(appAttemptFileName);
+    Assert.assertTrue(appAttemptFile.exists());
+
+    String outputDirContainer = tmpRoot + "/DS_CONTAINER/";
+    File containerFolder = new File(outputDirContainer);
+    Assert.assertTrue(containerFolder.isDirectory());
+
+    String containerTimestampFileName = "container_"
+        + appId.getClusterTimestamp() + "_000" + appId.getId()
+        + "_01_000002.thist";
+    String containerFileName = outputDirContainer + containerTimestampFileName;
+    File containerFile = new File(containerFileName);
+    Assert.assertTrue(containerFile.exists());
+    String appTimeStamp = appId.getClusterTimestamp() + "_" + appId.getId()
+        + "_";
+    deleteAppFiles(new File(outputDirApp), appTimeStamp);
+    deleteAppFiles(new File(outputDirContainer), appTimeStamp);
+    tmpRootFolder.delete();
+  }
+
+  private void deleteAppFiles(File rootDir, String appTimeStamp) {
+    boolean deleted = false;
+    File[] listOfFiles = rootDir.listFiles();
+    for (File f1 : listOfFiles) {
+      // list all attempts for this app and delete them
+      if (f1.getName().contains(appTimeStamp)){
+        deleted = f1.delete();
+        Assert.assertTrue(deleted);
+      }
+    }
   }
 
   /**
