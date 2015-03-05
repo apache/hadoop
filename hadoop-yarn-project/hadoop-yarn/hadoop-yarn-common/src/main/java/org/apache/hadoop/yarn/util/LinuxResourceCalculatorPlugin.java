@@ -23,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,8 +41,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private static final Log LOG =
       LogFactory.getLog(LinuxResourceCalculatorPlugin.class);
-
-  public static final int UNAVAILABLE = -1;
 
   /**
    * proc's meminfo virtual file has keys-values in the format
@@ -74,6 +73,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private static final Pattern CPU_TIME_FORMAT =
     Pattern.compile("^cpu[ \t]*([0-9]*)" +
     		            "[ \t]*([0-9]*)[ \t]*([0-9]*)[ \t].*");
+  private CpuTimeTracker cpuTimeTracker;
 
   private String procfsMemFile;
   private String procfsCpuFile;
@@ -87,12 +87,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private long inactiveSize = 0; // inactive cache memory (kB)
   private int numProcessors = 0; // number of processors on the system
   private long cpuFrequency = 0L; // CPU frequency on the system (kHz)
-  private long cumulativeCpuTime = 0L; // CPU used time since system is on (ms)
-  private long lastCumulativeCpuTime = 0L; // CPU used time read last time (ms)
-  // Unix timestamp while reading the CPU time (ms)
-  private float cpuUsage = UNAVAILABLE;
-  private long sampleTime = UNAVAILABLE;
-  private long lastSampleTime = UNAVAILABLE;
 
   boolean readMemInfoFile = false;
   boolean readCpuInfoFile = false;
@@ -106,10 +100,8 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   }
 
   public LinuxResourceCalculatorPlugin() {
-    procfsMemFile = PROCFS_MEMFILE;
-    procfsCpuFile = PROCFS_CPUINFO;
-    procfsStatFile = PROCFS_STAT;
-    jiffyLengthInMillis = ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS;
+    this(PROCFS_MEMFILE, PROCFS_CPUINFO, PROCFS_STAT,
+        ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS);
   }
 
   /**
@@ -128,6 +120,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     this.procfsCpuFile = procfsCpuFile;
     this.procfsStatFile = procfsStatFile;
     this.jiffyLengthInMillis = jiffyLengthInMillis;
+    this.cpuTimeTracker = new CpuTimeTracker(jiffyLengthInMillis);
   }
 
   /**
@@ -276,12 +269,13 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
           long uTime = Long.parseLong(mat.group(1));
           long nTime = Long.parseLong(mat.group(2));
           long sTime = Long.parseLong(mat.group(3));
-          cumulativeCpuTime = uTime + nTime + sTime; // milliseconds
+          cpuTimeTracker.updateElapsedJiffies(
+              BigInteger.valueOf(uTime + nTime + sTime),
+              getCurrentTime());
           break;
         }
         str = in.readLine();
       }
-      cumulativeCpuTime *= jiffyLengthInMillis;
     } catch (IOException io) {
       LOG.warn("Error reading the stream " + io);
     } finally {
@@ -345,32 +339,18 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   @Override
   public long getCumulativeCpuTime() {
     readProcStatFile();
-    return cumulativeCpuTime;
+    return cpuTimeTracker.cumulativeCpuTime.longValue();
   }
 
   /** {@inheritDoc} */
   @Override
   public float getCpuUsage() {
     readProcStatFile();
-    sampleTime = getCurrentTime();
-    if (lastSampleTime == UNAVAILABLE ||
-        lastSampleTime > sampleTime) {
-      // lastSampleTime > sampleTime may happen when the system time is changed
-      lastSampleTime = sampleTime;
-      lastCumulativeCpuTime = cumulativeCpuTime;
-      return cpuUsage;
+    float overallCpuUsage = cpuTimeTracker.getCpuTrackerUsagePercent();
+    if (overallCpuUsage != CpuTimeTracker.UNAVAILABLE) {
+      overallCpuUsage = overallCpuUsage / getNumProcessors();
     }
-    // When lastSampleTime is sufficiently old, update cpuUsage.
-    // Also take a sample of the current time and cumulative CPU time for the
-    // use of the next calculation.
-    final long MINIMUM_UPDATE_INTERVAL = 10 * jiffyLengthInMillis;
-    if (sampleTime > lastSampleTime + MINIMUM_UPDATE_INTERVAL) {
-	    cpuUsage = (float)(cumulativeCpuTime - lastCumulativeCpuTime) * 100F /
-	               ((float)(sampleTime - lastSampleTime) * getNumProcessors());
-	    lastSampleTime = sampleTime;
-      lastCumulativeCpuTime = cumulativeCpuTime;
-    }
-    return cpuUsage;
+    return overallCpuUsage;
   }
 
   /**

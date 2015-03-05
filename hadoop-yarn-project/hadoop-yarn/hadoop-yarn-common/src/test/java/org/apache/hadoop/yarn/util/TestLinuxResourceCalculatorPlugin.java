@@ -171,8 +171,8 @@ public class TestLinuxResourceCalculatorPlugin {
     updateStatFile(uTime, nTime, sTime);
     assertEquals(plugin.getCumulativeCpuTime(),
                  FAKE_JIFFY_LENGTH * (uTime + nTime + sTime));
-    assertEquals(plugin.getCpuUsage(), (float)(LinuxResourceCalculatorPlugin.UNAVAILABLE),0.0);
-    
+    assertEquals(plugin.getCpuUsage(), (float)(CpuTimeTracker.UNAVAILABLE),0.0);
+
     // Advance the time and sample again to test the CPU usage calculation
     uTime += 100L;
     plugin.advanceTime(200L);

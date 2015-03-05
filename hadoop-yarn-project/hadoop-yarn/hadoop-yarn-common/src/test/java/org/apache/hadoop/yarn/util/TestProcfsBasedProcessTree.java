@@ -236,8 +236,8 @@ public class TestProcfsBasedProcessTree {
   }
 
   protected ProcfsBasedProcessTree createProcessTree(String pid,
-      String procfsRootDir) {
-    return new ProcfsBasedProcessTree(pid, procfsRootDir);
+      String procfsRootDir, Clock clock) {
+    return new ProcfsBasedProcessTree(pid, procfsRootDir, clock);
   }
 
   protected void destroyProcessTree(String pid) throws IOException {
@@ -388,6 +388,8 @@ public class TestProcfsBasedProcessTree {
 
     // test processes
     String[] pids = { "100", "200", "300", "400" };
+    ControlledClock testClock = new ControlledClock(new SystemClock());
+    testClock.setTime(0);
     // create the fake procfs root directory.
     File procfsRootDir = new File(TEST_ROOT_DIR, "proc");
 
@@ -422,7 +424,7 @@ public class TestProcfsBasedProcessTree {
       // crank up the process tree class.
       Configuration conf = new Configuration();
       ProcfsBasedProcessTree processTree =
-          createProcessTree("100", procfsRootDir.getAbsolutePath());
+          createProcessTree("100", procfsRootDir.getAbsolutePath(), testClock);
       processTree.setConf(conf);
       // build the process tree.
       processTree.updateProcessTree();
@@ -444,6 +446,12 @@ public class TestProcfsBasedProcessTree {
               ? 7200L * ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS : 0L;
       Assert.assertEquals("Cumulative cpu time does not match", cumuCpuTime,
         processTree.getCumulativeCpuTime());
+
+      // verify CPU usage
+      Assert.assertEquals("Percent CPU time should be set to -1 initially",
+          -1.0, processTree.getCpuUsagePercent(),
+          0.01);
+
       // Check by enabling smaps
       setSmapsInProceTree(processTree, true);
       // RSS=Min(shared_dirty,PSS)+PrivateClean+PrivateDirty (exclude r-xs,
@@ -460,15 +468,31 @@ public class TestProcfsBasedProcessTree {
               "100", "200000", "200", "3000", "500" });
       writeStatFiles(procfsRootDir, pids, procInfos, memInfo);
 
+      long elapsedTimeBetweenUpdatesMsec = 200000;
+      testClock.setTime(elapsedTimeBetweenUpdatesMsec);
       // build the process tree.
       processTree.updateProcessTree();
 
       // verify cumulative cpu time again
+      long prevCumuCpuTime = cumuCpuTime;
       cumuCpuTime =
           ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS > 0
               ? 9400L * ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS : 0L;
       Assert.assertEquals("Cumulative cpu time does not match", cumuCpuTime,
         processTree.getCumulativeCpuTime());
+
+      double expectedCpuUsagePercent =
+          (ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS > 0) ?
+              (cumuCpuTime - prevCumuCpuTime) * 100.0 /
+                  elapsedTimeBetweenUpdatesMsec : 0;
+      // expectedCpuUsagePercent is given by (94000L - 72000) * 100/
+      //    200000;
+      // which in this case is 11. Lets verify that first
+      Assert.assertEquals(11, expectedCpuUsagePercent, 0.001);
+      Assert.assertEquals("Percent CPU time is not correct expected " +
+              expectedCpuUsagePercent, expectedCpuUsagePercent,
+          processTree.getCpuUsagePercent(),
+          0.01);
     } finally {
       FileUtil.fullyDelete(procfsRootDir);
     }
@@ -535,7 +559,8 @@ public class TestProcfsBasedProcessTree {
 
       // crank up the process tree class.
       ProcfsBasedProcessTree processTree =
-          createProcessTree("100", procfsRootDir.getAbsolutePath());
+          createProcessTree("100", procfsRootDir.getAbsolutePath(),
+              new SystemClock());
       setSmapsInProceTree(processTree, smapEnabled);
 
       // verify cumulative memory
@@ -672,7 +697,7 @@ public class TestProcfsBasedProcessTree {
       setupProcfsRootDir(procfsRootDir);
 
       // crank up the process tree class.
-      createProcessTree(pid, procfsRootDir.getAbsolutePath());
+      createProcessTree(pid, procfsRootDir.getAbsolutePath(), new SystemClock());
 
       // Let us not create stat file for pid 100.
       Assert.assertTrue(ProcfsBasedProcessTree.checkPidPgrpidForMatch(pid,
@@ -741,7 +766,8 @@ public class TestProcfsBasedProcessTree {
       writeCmdLineFiles(procfsRootDir, pids, cmdLines);
 
       ProcfsBasedProcessTree processTree =
-          createProcessTree("100", procfsRootDir.getAbsolutePath());
+          createProcessTree("100", procfsRootDir.getAbsolutePath(),
+              new SystemClock());
       // build the process tree.
       processTree.updateProcessTree();
 

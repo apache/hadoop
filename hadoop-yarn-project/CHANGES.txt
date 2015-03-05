@@ -351,6 +351,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3272. Surface container locality info in RM web UI.
     (Jian He via wangda)
 
+    YARN-3122. Metrics for container's actual CPU usage. 
+    (Anubhav Dhoot via kasha)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 

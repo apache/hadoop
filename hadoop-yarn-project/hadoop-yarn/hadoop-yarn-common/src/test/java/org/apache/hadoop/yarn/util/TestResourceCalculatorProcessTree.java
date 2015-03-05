@@ -53,6 +53,11 @@ public class TestResourceCalculatorProcessTree {
       return 0;
     }
 
+    @Override
+    public float getCpuUsagePercent() {
+      return CpuTimeTracker.UNAVAILABLE;
+    }
+
     public boolean checkPidPgrpidForMatch() {
       return false;
     }
