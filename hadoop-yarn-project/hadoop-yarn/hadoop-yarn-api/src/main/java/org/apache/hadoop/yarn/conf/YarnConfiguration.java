@@ -1927,6 +1927,12 @@ public class YarnConfiguration extends Configuration {
       = TIMELINE_SERVICE_PREFIX
       + "entity-file.fs-support-append";
 
+  /**
+   * Settings for timeline service v2.0
+   */
+  public static final String TIMELINE_SERVICE_WRITER_CLASS =
+      TIMELINE_SERVICE_PREFIX + "writer.class";
+
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service
   @Private
