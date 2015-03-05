@@ -1556,6 +1556,9 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_UI_ON_DISK_PATH_PREFIX =
       TIMELINE_SERVICE_PREFIX + "ui-on-disk-path.";
 
+  public static final String TIMELINE_SERVICE_WRITER_CLASS =
+      TIMELINE_SERVICE_PREFIX + "writer.class";
+
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service
   @Private

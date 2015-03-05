@@ -26,6 +26,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3210. Refactored timeline aggregator according to new code
     organization proposed in YARN-3166. (Li Lu via zjshen)
 
+    YARN-3264. Created backing storage write interface and a POC only FS based
+    storage implementation. (Vrushali C via zjshen)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
