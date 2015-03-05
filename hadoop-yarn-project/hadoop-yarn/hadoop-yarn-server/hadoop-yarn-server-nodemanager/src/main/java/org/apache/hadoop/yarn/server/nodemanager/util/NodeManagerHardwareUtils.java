@@ -59,6 +59,19 @@ public class NodeManagerHardwareUtils {
   public static float getContainersCores(ResourceCalculatorPlugin plugin,
       Configuration conf) {
     int numProcessors = plugin.getNumProcessors();
+    int nodeCpuPercentage = getNodeCpuPercentage(conf);
+
+    return (nodeCpuPercentage * numProcessors) / 100.0f;
+  }
+
+  /**
+   * Gets the percentage of physical CPU that is configured for YARN containers
+   * This is percent > 0 and <= 100  based on
+   * YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT
+   * @param conf Configuration object
+   * @return percent > 0 and <= 100
+   */
+  public static int getNodeCpuPercentage(Configuration conf) {
     int nodeCpuPercentage =
         Math.min(conf.getInt(
           YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT,
@@ -73,7 +86,6 @@ public class NodeManagerHardwareUtils {
               + ". Value cannot be less than or equal to 0.";
       throw new IllegalArgumentException(message);
     }
-
-    return (nodeCpuPercentage * numProcessors) / 100.0f;
+    return nodeCpuPercentage;
   }
 }

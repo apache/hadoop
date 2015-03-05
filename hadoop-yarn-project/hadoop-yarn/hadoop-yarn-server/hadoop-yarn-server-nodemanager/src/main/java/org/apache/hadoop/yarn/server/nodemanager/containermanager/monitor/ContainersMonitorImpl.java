@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
+import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
@@ -75,6 +76,7 @@ public class ContainersMonitorImpl extends AbstractService implements
   private long maxVCoresAllottedForContainers;
 
   private static final long UNKNOWN_MEMORY_LIMIT = -1L;
+  private int nodeCpuPercentageForYARN;
 
   public ContainersMonitorImpl(ContainerExecutor exec,
       AsyncDispatcher dispatcher, Context context) {
@@ -144,6 +146,9 @@ public class ContainersMonitorImpl extends AbstractService implements
         YarnConfiguration.DEFAULT_NM_VMEM_CHECK_ENABLED);
     LOG.info("Physical memory check enabled: " + pmemCheckEnabled);
     LOG.info("Virtual memory check enabled: " + vmemCheckEnabled);
+
+    nodeCpuPercentageForYARN =
+        NodeManagerHardwareUtils.getNodeCpuPercentage(conf);
 
     if (pmemCheckEnabled) {
       // Logging if actual pmem cannot be determined.
@@ -434,6 +439,16 @@ public class ContainersMonitorImpl extends AbstractService implements
             pTree.updateProcessTree();    // update process-tree
             long currentVmemUsage = pTree.getCumulativeVmem();
             long currentPmemUsage = pTree.getCumulativeRssmem();
+            // if machine has 6 cores and 3 are used,
+            // cpuUsagePercentPerCore should be 300% and
+            // cpuUsageTotalCoresPercentage should be 50%
+            float cpuUsagePercentPerCore = pTree.getCpuUsagePercent();
+            float cpuUsageTotalCoresPercentage = cpuUsagePercentPerCore /
+                resourceCalculatorPlugin.getNumProcessors();
+
+            // Multiply by 1000 to avoid losing data when converting to int
+            int milliVcoresUsed = (int) (cpuUsageTotalCoresPercentage * 1000
+                * maxVCoresAllottedForContainers /nodeCpuPercentageForYARN);
             // as processes begin with an age 1, we want to see if there
             // are processes more than 1 iteration old.
             long curMemUsageOfAgedProcesses = pTree.getCumulativeVmem(1);
@@ -451,6 +466,9 @@ public class ContainersMonitorImpl extends AbstractService implements
               ContainerMetrics.forContainer(
                   containerId, containerMetricsPeriodMs).recordMemoryUsage(
                   (int) (currentPmemUsage >> 20));
+              ContainerMetrics.forContainer(
+                  containerId, containerMetricsPeriodMs).recordCpuUsage
+                  ((int)cpuUsagePercentPerCore, milliVcoresUsed);
             }
 
             boolean isMemoryOverLimit = false;

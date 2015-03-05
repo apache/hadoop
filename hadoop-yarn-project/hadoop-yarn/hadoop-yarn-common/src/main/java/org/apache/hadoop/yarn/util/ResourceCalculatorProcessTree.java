@@ -108,12 +108,22 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
 
   /**
    * Get the CPU time in millisecond used by all the processes in the
-   * process-tree since the process-tree created
+   * process-tree since the process-tree was created
    *
    * @return cumulative CPU time in millisecond since the process-tree created
    *         return 0 if it cannot be calculated
    */
   public abstract long getCumulativeCpuTime();
+
+  /**
+   * Get the CPU usage by all the processes in the process-tree based on
+   * average between samples as a ratio of overall CPU cycles similar to top.
+   * Thus, if 2 out of 4 cores are used this should return 200.0.
+   *
+   * @return percentage CPU usage since the process-tree was created
+   *         return {@link CpuTimeTracker#UNAVAILABLE} if it cannot be calculated
+   */
+  public abstract float getCpuUsagePercent();
 
   /** Verify that the tree process id is same as its process group id.
    * @return true if the process id matches else return false.

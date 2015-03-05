@@ -66,6 +66,8 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   public static final String PROCFS_CMDLINE_FILE = "cmdline";
   public static final long PAGE_SIZE;
   public static final long JIFFY_LENGTH_IN_MILLIS; // in millisecond
+  private final CpuTimeTracker cpuTimeTracker;
+  private Clock clock;
 
   enum MemInfo {
     SIZE("Size"), RSS("Rss"), PSS("Pss"), SHARED_CLEAN("Shared_Clean"),
@@ -144,7 +146,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     new HashMap<String, ProcessInfo>();
 
   public ProcfsBasedProcessTree(String pid) {
-    this(pid, PROCFS);
+    this(pid, PROCFS, new SystemClock());
   }
 
   @Override
@@ -157,6 +159,10 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     }
   }
 
+  public ProcfsBasedProcessTree(String pid, String procfsDir) {
+    this(pid, procfsDir, new SystemClock());
+  }
+
   /**
    * Build a new process tree rooted at the pid.
    *
@@ -165,11 +171,14 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
    *
    * @param pid root of the process tree
    * @param procfsDir the root of a proc file system - only used for testing.
+   * @param clock clock for controlling time for testing
    */
-  public ProcfsBasedProcessTree(String pid, String procfsDir) {
+  public ProcfsBasedProcessTree(String pid, String procfsDir, Clock clock) {
     super(pid);
+    this.clock = clock;
     this.pid = getValidPID(pid);
     this.procfsDir = procfsDir;
+    this.cpuTimeTracker = new CpuTimeTracker(JIFFY_LENGTH_IN_MILLIS);
   }
 
   /**
@@ -445,6 +454,26 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     }
     cpuTime += incJiffies * JIFFY_LENGTH_IN_MILLIS;
     return cpuTime;
+  }
+
+  private BigInteger getTotalProcessJiffies() {
+    BigInteger totalStime = BigInteger.ZERO;
+    long totalUtime = 0;
+    for (ProcessInfo p : processTree.values()) {
+      if (p != null) {
+        totalUtime += p.getUtime();
+        totalStime = totalStime.add(p.getStime());
+      }
+    }
+    return totalStime.add(BigInteger.valueOf(totalUtime));
+  }
+
+  @Override
+  public float getCpuUsagePercent() {
+    BigInteger processTotalJiffies = getTotalProcessJiffies();
+    cpuTimeTracker.updateElapsedJiffies(processTotalJiffies,
+        clock.getTime());
+    return cpuTimeTracker.getCpuTrackerUsagePercent();
   }
 
   private static String getValidPID(String pid) {
@@ -961,5 +990,49 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         .append(" kB\n");
       return sb.toString();
     }
+  }
+
+  /**
+   * Test the {@link ProcfsBasedProcessTree}
+   *
+   * @param args
+   */
+  public static void main(String[] args) {
+    if (args.length != 1) {
+      System.out.println("Provide <pid of process to monitor>");
+      return;
+    }
+
+    int numprocessors =
+        ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, null)
+            .getNumProcessors();
+    System.out.println("Number of processors " + numprocessors);
+
+    System.out.println("Creating ProcfsBasedProcessTree for process " +
+        args[0]);
+    ProcfsBasedProcessTree procfsBasedProcessTree = new
+        ProcfsBasedProcessTree(args[0]);
+    procfsBasedProcessTree.updateProcessTree();
+
+    System.out.println(procfsBasedProcessTree.getProcessTreeDump());
+    System.out.println("Get cpu usage " + procfsBasedProcessTree
+        .getCpuUsagePercent());
+
+    try {
+      // Sleep so we can compute the CPU usage
+      Thread.sleep(500L);
+    } catch (InterruptedException e) {
+      // do nothing
+    }
+
+    procfsBasedProcessTree.updateProcessTree();
+
+    System.out.println(procfsBasedProcessTree.getProcessTreeDump());
+    System.out.println("Cpu usage  " + procfsBasedProcessTree
+        .getCpuUsagePercent());
+    System.out.println("Vmem usage in bytes " + procfsBasedProcessTree
+        .getCumulativeVmem());
+    System.out.println("Rss mem usage in bytes " + procfsBasedProcessTree
+        .getCumulativeRssmem());
   }
 }

@@ -34,7 +34,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
 
   static final Log LOG = LogFactory
       .getLog(WindowsBasedProcessTree.class);
-  
+
   static class ProcessInfo {
     String pid; // process pid
     long vmem; // virtual memory
@@ -200,6 +200,11 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
       cpuTimeMs += p.cpuTimeMsDelta;
     }
     return cpuTimeMs;
+  }
+
+  @Override
+  public float getCpuUsagePercent() {
+    return CpuTimeTracker.UNAVAILABLE;
   }
 
 }
