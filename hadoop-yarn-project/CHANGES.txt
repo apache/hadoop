@@ -89,8 +89,8 @@ Release 2.7.0 - UNRELEASED
     YARN-2217. [YARN-1492] Shared cache client side changes. 
     (Chris Trezzo via kasha)
 
-     YARN-2616 [YARN-913] Add CLI client to the registry to list, view
-     and manipulate entries. (Akshay Radia via stevel)
+    YARN-2616 [YARN-913] Add CLI client to the registry to list, view
+    and manipulate entries. (Akshay Radia via stevel)
 
     YARN-2994. Document work-preserving RM restart. (Jian He via ozawa)
 
