@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClientFaultInjector;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
@@ -176,7 +177,7 @@ public class TestCrcCorruption {
       assertTrue("Blocks do not exist in data-dir", (blocks != null) && (blocks.length > 0));
       int num = 0;
       for (int idx = 0; idx < blocks.length; idx++) {
-        if (blocks[idx].getName().startsWith("blk_") &&
+        if (blocks[idx].getName().startsWith(Block.BLOCK_FILE_PREFIX) &&
             blocks[idx].getName().endsWith(".meta")) {
           num++;
           if (num % 3 == 0) {

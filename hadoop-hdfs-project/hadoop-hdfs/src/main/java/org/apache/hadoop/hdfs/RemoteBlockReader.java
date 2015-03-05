@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
@@ -351,7 +352,8 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
       long startOffset, long firstChunkOffset, long bytesToRead, Peer peer,
       DatanodeID datanodeID, PeerCache peerCache) {
     // Path is used only for printing block and file information in debug
-    super(new Path("/blk_" + blockId + ":" + bpid + ":of:"+ file)/*too non path-like?*/,
+    super(new Path("/" + Block.BLOCK_FILE_PREFIX + blockId +
+                    ":" + bpid + ":of:"+ file)/*too non path-like?*/,
           1, verifyChecksum,
           checksum.getChecksumSize() > 0? checksum : null, 
           checksum.getBytesPerChecksum(),

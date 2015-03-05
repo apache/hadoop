@@ -319,7 +319,7 @@ public class TestDataNodeVolumeFailure {
   private boolean deteteBlocks(File dir) {
     File [] fileList = dir.listFiles();
     for(File f : fileList) {
-      if(f.getName().startsWith("blk_")) {
+      if(f.getName().startsWith(Block.BLOCK_FILE_PREFIX)) {
         if(!f.delete())
           return false;
         

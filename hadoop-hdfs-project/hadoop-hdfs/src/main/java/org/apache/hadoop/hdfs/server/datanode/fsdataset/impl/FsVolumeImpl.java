@@ -430,7 +430,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
     @Override
     public boolean accept(File dir, String name) {
-      return !name.endsWith(".meta") && name.startsWith("blk_");
+      return !name.endsWith(".meta") &&
+              name.startsWith(Block.BLOCK_FILE_PREFIX);
     }
   }
 

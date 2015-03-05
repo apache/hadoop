@@ -77,7 +77,7 @@ public class TestFileCorruption {
       File[] blocks = data_dir.listFiles();
       assertTrue("Blocks do not exist in data-dir", (blocks != null) && (blocks.length > 0));
       for (int idx = 0; idx < blocks.length; idx++) {
-        if (!blocks[idx].getName().startsWith("blk_")) {
+        if (!blocks[idx].getName().startsWith(Block.BLOCK_FILE_PREFIX)) {
           continue;
         }
         System.out.println("Deliberately removing file "+blocks[idx].getName());

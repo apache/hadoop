@@ -299,7 +299,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         out.println(sb.toString());
         sb.append(" for blockIds: \n");
         for (String blk: blocks) {
-          if(blk == null || !blk.contains("blk_")) {
+          if(blk == null || !blk.contains(Block.BLOCK_FILE_PREFIX)) {
             out.println("Incorrect blockId format: " + blk);
             continue;
           }
