@@ -697,6 +697,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-3131. YarnClientImpl should check FAILED and KILLED state in
     submitApplication (Chang Li via jlowe)
+    
+    YARN-3231. FairScheduler: Changing queueMaxRunningApps interferes with pending 
+    jobs. (Siqi Li via kasha)
 
 Release 2.6.0 - 2014-11-18
 
