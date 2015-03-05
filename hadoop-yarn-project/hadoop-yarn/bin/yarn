@@ -89,6 +89,7 @@ function print_usage(){
   echo "  classpath                             prints the class path needed to"
   echo "                                        get the Hadoop jar and the"
   echo "                                        required libraries"
+  echo "  cluster                               prints cluster information"
   echo "  daemonlog                             get/set the log level for each"
   echo "                                        daemon"
   echo ""
@@ -290,6 +291,9 @@ elif [ "$COMMAND" = "logs" ] ; then
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
 elif [ "$COMMAND" = "daemonlog" ] ; then
   CLASS=org.apache.hadoop.log.LogLevel
+  YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+elif [ "$COMMAND" = "cluster" ] ; then
+  CLASS=org.apache.hadoop.yarn.client.cli.ClusterCLI
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
 else
   CLASS=$COMMAND
