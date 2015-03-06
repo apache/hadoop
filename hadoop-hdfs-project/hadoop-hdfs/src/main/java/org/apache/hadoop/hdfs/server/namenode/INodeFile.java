@@ -900,8 +900,8 @@ public class INodeFile extends INodeWithAdditionalFields
     out.print(", fileSize=" + computeFileSize(snapshotId));
     // only compare the first block
     out.print(", blocks=");
-    out.print(blocks == null || blocks.length == 0? null: blocks[0]);
-    // TODO print striped blocks
+    BlockInfo[] blks = getBlocks();
+    out.print(blks == null || blks.length == 0? null: blks[0]);
     out.println();
   }
 
