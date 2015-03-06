@@ -13,6 +13,9 @@ Release 2.6.1 - UNRELEASED
 
     YARN-3230. Clarify application states on the web UI. (Jian He via wangda)
 
+    YARN-1809. Synchronize RM and TimeLineServer Web-UIs. (Zhijie Shen and
+    Xuan Gong via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -49,30 +49,28 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
-import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
-import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.timeline.security.authorize.TimelinePolicyProvider;
 
-public class ApplicationHistoryClientService extends AbstractService {
+public class ApplicationHistoryClientService extends AbstractService implements
+    ApplicationHistoryProtocol {
   private static final Log LOG = LogFactory
     .getLog(ApplicationHistoryClientService.class);
   private ApplicationHistoryManager history;
-  private ApplicationHistoryProtocol protocolHandler;
   private Server server;
   private InetSocketAddress bindAddress;
 
   public ApplicationHistoryClientService(ApplicationHistoryManager history) {
     super("ApplicationHistoryClientService");
     this.history = history;
-    this.protocolHandler = new ApplicationHSClientProtocolHandler();
   }
 
   protected void serviceStart() throws Exception {
@@ -85,7 +83,7 @@ public class ApplicationHistoryClientService extends AbstractService {
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT);
 
     server =
-        rpc.getServer(ApplicationHistoryProtocol.class, protocolHandler,
+        rpc.getServer(ApplicationHistoryProtocol.class, this,
           address, conf, null, conf.getInt(
             YarnConfiguration.TIMELINE_SERVICE_HANDLER_THREAD_COUNT,
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_THREAD_COUNT));
@@ -117,11 +115,6 @@ public class ApplicationHistoryClientService extends AbstractService {
   }
 
   @Private
-  public ApplicationHistoryProtocol getClientHandler() {
-    return this.protocolHandler;
-  }
-
-  @Private
   public InetSocketAddress getBindAddress() {
     return this.bindAddress;
   }
@@ -131,98 +124,97 @@ public class ApplicationHistoryClientService extends AbstractService {
     this.server.refreshServiceAcl(configuration, policyProvider);
   }
 
-  private class ApplicationHSClientProtocolHandler implements
-      ApplicationHistoryProtocol {
+  @Override
+  public CancelDelegationTokenResponse cancelDelegationToken(
+      CancelDelegationTokenRequest request) throws YarnException, IOException {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
-    @Override
-    public CancelDelegationTokenResponse cancelDelegationToken(
-        CancelDelegationTokenRequest request) throws YarnException, IOException {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public GetApplicationAttemptReportResponse getApplicationAttemptReport(
-        GetApplicationAttemptReportRequest request) throws YarnException,
-        IOException {
-      try {
-        GetApplicationAttemptReportResponse response =
-            GetApplicationAttemptReportResponse.newInstance(history
-              .getApplicationAttempt(request.getApplicationAttemptId()));
-        return response;
-      } catch (IOException e) {
-        throw new ApplicationAttemptNotFoundException(e.getMessage());
-      }
-    }
-
-    @Override
-    public GetApplicationAttemptsResponse getApplicationAttempts(
-        GetApplicationAttemptsRequest request) throws YarnException,
-        IOException {
-      GetApplicationAttemptsResponse response =
-          GetApplicationAttemptsResponse
-            .newInstance(new ArrayList<ApplicationAttemptReport>(history
-              .getApplicationAttempts(request.getApplicationId()).values()));
+  @Override
+  public GetApplicationAttemptReportResponse getApplicationAttemptReport(
+      GetApplicationAttemptReportRequest request) throws YarnException,
+      IOException {
+    ApplicationAttemptId appAttemptId = request.getApplicationAttemptId();
+    try {
+      GetApplicationAttemptReportResponse response =
+          GetApplicationAttemptReportResponse.newInstance(history
+            .getApplicationAttempt(appAttemptId));
       return response;
+    } catch (IOException e) {
+      LOG.error(e.getMessage(), e);
+      throw e;
     }
+  }
 
-    @Override
-    public GetApplicationReportResponse getApplicationReport(
-        GetApplicationReportRequest request) throws YarnException, IOException {
-      try {
-        ApplicationId applicationId = request.getApplicationId();
-        GetApplicationReportResponse response =
-            GetApplicationReportResponse.newInstance(history
-              .getApplication(applicationId));
-        return response;
-      } catch (IOException e) {
-        throw new ApplicationNotFoundException(e.getMessage());
-      }
-    }
+  @Override
+  public GetApplicationAttemptsResponse getApplicationAttempts(
+      GetApplicationAttemptsRequest request) throws YarnException, IOException {
+    GetApplicationAttemptsResponse response =
+        GetApplicationAttemptsResponse
+          .newInstance(new ArrayList<ApplicationAttemptReport>(history
+            .getApplicationAttempts(request.getApplicationId()).values()));
+    return response;
+  }
 
-    @Override
-    public GetApplicationsResponse getApplications(
-        GetApplicationsRequest request) throws YarnException, IOException {
-      GetApplicationsResponse response =
-          GetApplicationsResponse.newInstance(new ArrayList<ApplicationReport>(
-            history.getAllApplications().values()));
+  @Override
+  public GetApplicationReportResponse getApplicationReport(
+      GetApplicationReportRequest request) throws YarnException, IOException {
+    ApplicationId applicationId = request.getApplicationId();
+    try {
+      GetApplicationReportResponse response =
+          GetApplicationReportResponse.newInstance(history
+            .getApplication(applicationId));
       return response;
+    } catch (IOException e) {
+      LOG.error(e.getMessage(), e);
+      throw e;
     }
+  }
 
-    @Override
-    public GetContainerReportResponse getContainerReport(
-        GetContainerReportRequest request) throws YarnException, IOException {
-      try {
-        GetContainerReportResponse response =
-            GetContainerReportResponse.newInstance(history.getContainer(request
-              .getContainerId()));
-        return response;
-      } catch (IOException e) {
-        throw new ContainerNotFoundException(e.getMessage());
-      }
-    }
+  @Override
+  public GetApplicationsResponse
+      getApplications(GetApplicationsRequest request) throws YarnException,
+          IOException {
+    GetApplicationsResponse response =
+        GetApplicationsResponse.newInstance(new ArrayList<ApplicationReport>(
+          history.getAllApplications().values()));
+    return response;
+  }
 
-    @Override
-    public GetContainersResponse getContainers(GetContainersRequest request)
-        throws YarnException, IOException {
-      GetContainersResponse response =
-          GetContainersResponse.newInstance(new ArrayList<ContainerReport>(
-            history.getContainers(request.getApplicationAttemptId()).values()));
+  @Override
+  public GetContainerReportResponse getContainerReport(
+      GetContainerReportRequest request) throws YarnException, IOException {
+    ContainerId containerId = request.getContainerId();
+    try {
+      GetContainerReportResponse response =
+          GetContainerReportResponse.newInstance(history
+            .getContainer(containerId));
       return response;
+    } catch (IOException e) {
+      LOG.error(e.getMessage(), e);
+      throw e;
     }
+  }
 
-    @Override
-    public GetDelegationTokenResponse getDelegationToken(
-        GetDelegationTokenRequest request) throws YarnException, IOException {
-      // TODO Auto-generated method stub
-      return null;
-    }
+  @Override
+  public GetContainersResponse getContainers(GetContainersRequest request)
+      throws YarnException, IOException {
+    GetContainersResponse response =
+        GetContainersResponse.newInstance(new ArrayList<ContainerReport>(
+          history.getContainers(request.getApplicationAttemptId()).values()));
+    return response;
+  }
 
-    @Override
-    public RenewDelegationTokenResponse renewDelegationToken(
-        RenewDelegationTokenRequest request) throws YarnException, IOException {
-      // TODO Auto-generated method stub
-      return null;
-    }
+  @Override
+  public GetDelegationTokenResponse getDelegationToken(
+      GetDelegationTokenRequest request) throws YarnException, IOException {
+    return null;
+  }
+
+  @Override
+  public RenewDelegationTokenResponse renewDelegationToken(
+      RenewDelegationTokenRequest request) throws YarnException, IOException {
+    return null;
   }
 }

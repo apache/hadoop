@@ -22,9 +22,8 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
-
 import org.apache.hadoop.yarn.server.webapp.AppBlock;
+import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
@@ -40,24 +39,18 @@ public class AppPage extends AHSView {
       appId.isEmpty() ? "Bad request: missing application ID" : join(
         "Application ", $(YarnWebParams.APPLICATION_ID)));
 
-    set(DATATABLES_ID, "attempts");
-    set(initID(DATATABLES, "attempts"), attemptsTableInit());
+    set(DATATABLES_ID, "attempts ResourceRequests");
+    set(initID(DATATABLES, "attempts"), WebPageUtils.attemptsTableInit());
     setTableStyles(html, "attempts", ".queue {width:6em}", ".ui {width:8em}");
+
+    setTableStyles(html, "ResourceRequests");
+
+    set(YarnWebParams.WEB_UI_TYPE, YarnWebParams.APP_HISTORY_WEB_UI);
   }
 
   @Override
   protected Class<? extends SubView> content() {
     return AppBlock.class;
-  }
-
-  private String attemptsTableInit() {
-    return tableInit().append(", 'aaData': attemptsTableData")
-      .append(", bDeferRender: true").append(", bProcessing: true")
-
-      .append("\n, aoColumnDefs: ").append(getAttemptsTableColumnDefs())
-
-      // Sort by id upon page load
-      .append(", aaSorting: [[0, 'desc']]}").toString();
   }
 
   protected String getAttemptsTableColumnDefs() {

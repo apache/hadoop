@@ -16,18 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api;
+package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
 
-/**
- * <p>
- * The protocol between clients and the <code>ApplicationHistoryServer</code> to
- * get the information of completed applications etc.
- * </p>
- */
-@Public
-@Unstable
-public interface ApplicationHistoryProtocol extends ApplicationBaseProtocol {
+import org.apache.hadoop.yarn.server.webapp.ContainerBlock;
+import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
+
+
+public class ContainerPage extends RmView {
+
+  @Override
+  protected void preHead(Page.HTML<_> html) {
+    commonPreHead(html);
+
+    String containerId = $(YarnWebParams.CONTAINER_ID);
+    set(TITLE, containerId.isEmpty() ? "Bad request: missing container ID"
+        : join("Container ", $(YarnWebParams.CONTAINER_ID)));
+  }
+
+  @Override
+  protected Class<? extends SubView> content() {
+    return ContainerBlock.class;
+  }
+
 }

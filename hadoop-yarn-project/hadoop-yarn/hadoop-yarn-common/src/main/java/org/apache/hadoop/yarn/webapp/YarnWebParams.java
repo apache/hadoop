@@ -22,6 +22,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public interface YarnWebParams {
+  static final String RM_WEB_UI = "ResourceManager";
+  static final String APP_HISTORY_WEB_UI = "ApplicationHistoryServer";
+  
   String NM_NODENAME = "nm.id";
   String APPLICATION_ID = "app.id";
   String APPLICATION_ATTEMPT_ID = "appattempt.id";
@@ -32,4 +35,5 @@ public interface YarnWebParams {
   String APP_STATE = "app.state";
   String QUEUE_NAME = "queue.name";
   String NODE_STATE = "node.state";
+  String WEB_UI_TYPE = "web.ui.type";
 }

@@ -23,9 +23,10 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
@@ -53,6 +54,7 @@ public class RMWebApp extends WebApp implements YarnWebParams {
 
     if (rm != null) {
       bind(ResourceManager.class).toInstance(rm);
+      bind(ApplicationBaseProtocol.class).toInstance(rm.getClientRMService());
     }
     route("/", RmController.class);
     route(pajoin("/nodes", NODE_STATE), RmController.class, "nodes");
@@ -61,6 +63,9 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     route(pajoin("/app", APPLICATION_ID), RmController.class, "app");
     route("/scheduler", RmController.class, "scheduler");
     route(pajoin("/queue", QUEUE_NAME), RmController.class, "queue");
+    route(pajoin("/appattempt", APPLICATION_ATTEMPT_ID), RmController.class,
+      "appattempt");
+    route(pajoin("/container", CONTAINER_ID), RmController.class, "container");
   }
 
   @Override

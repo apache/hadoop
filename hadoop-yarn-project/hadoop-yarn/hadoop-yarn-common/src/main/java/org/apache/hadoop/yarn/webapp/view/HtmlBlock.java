@@ -30,6 +30,8 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public abstract class HtmlBlock extends TextView implements SubView {
 
+  protected static final String UNAVAILABLE = "N/A";
+
   public class Block extends Hamlet {
     Block(PrintWriter out, int level, boolean wasInline) {
       super(out, level, wasInline);

@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
+import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -32,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.webapp.AppBlock;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
@@ -75,8 +77,10 @@ public class TestAppPage {
               @Override
               public void configure(Binder binder) {
                 try {
-                  binder.bind(ResourceManager.class).toInstance(
-                      TestRMWebApp.mockRm(rmContext));
+                  ResourceManager rm = TestRMWebApp.mockRm(rmContext);
+                  binder.bind(ResourceManager.class).toInstance(rm);
+                  binder.bind(ApplicationBaseProtocol.class).toInstance(
+                    rm.getClientRMService());
                 } catch (IOException e) {
                   throw new IllegalStateException(e);
                 }

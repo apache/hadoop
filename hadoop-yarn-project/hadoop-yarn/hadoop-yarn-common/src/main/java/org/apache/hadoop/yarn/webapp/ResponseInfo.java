@@ -81,7 +81,11 @@ public class ResponseInfo implements Iterable<ResponseInfo.Item> {
   }
 
   public ResponseInfo _(String key, String url, Object anchor) {
-    items.add(Item.of(key, url, anchor));
+    if (url == null) {
+      items.add(Item.of(key, anchor, false));
+    } else {
+      items.add(Item.of(key, url, anchor));
+    }
     return this;
   }
 
