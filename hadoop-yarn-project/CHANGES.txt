@@ -713,6 +713,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3242. Asynchrony in ZK-close can lead to ZKRMStateStore watcher receiving 
     events for old client. (Zhihai Xu via kasha)
 
+    YARN-3227. Timeline renew delegation token fails when RM user's TGT is expired
+    (Zhijie Shen via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
