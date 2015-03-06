@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 
@@ -35,7 +36,7 @@ public class RmView extends TwoColumnLayout {
   protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
     set(DATATABLES_ID, "apps");
-    set(initID(DATATABLES, "apps"), appsTableInit());
+    set(initID(DATATABLES, "apps"), initAppsTable());
     setTableStyles(html, "apps", ".queue {width:6em}", ".ui {width:8em}");
 
     // Set the correct title.
@@ -59,31 +60,7 @@ public class RmView extends TwoColumnLayout {
     return AppsBlockWithMetrics.class;
   }
 
-  private String appsTableInit() {
-    // id, user, name, queue, starttime, finishtime, state, status, progress, ui
-    return tableInit()
-      .append(", 'aaData': appsTableData")
-      .append(", bDeferRender: true")
-      .append(", bProcessing: true")
-
-      .append("\n, aoColumnDefs: ")
-      .append(getAppsTableColumnDefs())
-
-      // Sort by id upon page load
-      .append(", aaSorting: [[0, 'desc']]}").toString();
-  }
-  
-  protected String getAppsTableColumnDefs() {
-    StringBuilder sb = new StringBuilder();
-    return sb
-      .append("[\n")
-      .append("{'sType':'string', 'aTargets': [0]")
-      .append(", 'mRender': parseHadoopID }")
-
-      .append("\n, {'sType':'numeric', 'aTargets': [5, 6]")
-      .append(", 'mRender': renderHadoopDate }")
-
-      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [9]")
-      .append(", 'mRender': parseHadoopProgress }]").toString();
+  protected String initAppsTable() {
+    return WebPageUtils.appsTableInit();
   }
 }

@@ -20,15 +20,16 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
 import static org.apache.hadoop.yarn.webapp.Params.TITLE;
 import static org.mockito.Mockito.mock;
-import org.junit.Assert;
 
+import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.api.ApplicationContext;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryClientService;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManager;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManagerImpl;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryStore;
@@ -68,8 +69,8 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
   @Test
   public void testView() throws Exception {
     Injector injector =
-        WebAppTests.createMockInjector(ApplicationContext.class,
-          mockApplicationHistoryManager(5, 1, 1));
+        WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
+          mockApplicationHistoryClientService(5, 1, 1));
     AHSView ahsViewInstance = injector.getInstance(AHSView.class);
 
     ahsViewInstance.render();
@@ -89,8 +90,8 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
   @Test
   public void testAppPage() throws Exception {
     Injector injector =
-        WebAppTests.createMockInjector(ApplicationContext.class,
-          mockApplicationHistoryManager(1, 5, 1));
+        WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
+          mockApplicationHistoryClientService(1, 5, 1));
     AppPage appPageInstance = injector.getInstance(AppPage.class);
 
     appPageInstance.render();
@@ -105,8 +106,8 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
   @Test
   public void testAppAttemptPage() throws Exception {
     Injector injector =
-        WebAppTests.createMockInjector(ApplicationContext.class,
-          mockApplicationHistoryManager(1, 1, 5));
+        WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
+          mockApplicationHistoryClientService(1, 1, 5));
     AppAttemptPage appAttemptPageInstance =
         injector.getInstance(AppAttemptPage.class);
 
@@ -123,8 +124,8 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
   @Test
   public void testContainerPage() throws Exception {
     Injector injector =
-        WebAppTests.createMockInjector(ApplicationContext.class,
-          mockApplicationHistoryManager(1, 1, 1));
+        WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
+          mockApplicationHistoryClientService(1, 1, 1));
     ContainerPage containerPageInstance =
         injector.getInstance(ContainerPage.class);
 
@@ -141,10 +142,12 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
     WebAppTests.flushOutput(injector);
   }
 
-  ApplicationHistoryManager mockApplicationHistoryManager(int numApps,
+  ApplicationHistoryClientService mockApplicationHistoryClientService(int numApps,
       int numAppAttempts, int numContainers) throws Exception {
     ApplicationHistoryManager ahManager =
         new MockApplicationHistoryManagerImpl(store);
+    ApplicationHistoryClientService historyClientService =
+        new ApplicationHistoryClientService(ahManager);
     for (int i = 1; i <= numApps; ++i) {
       ApplicationId appId = ApplicationId.newInstance(0, i);
       writeApplicationStartData(appId);
@@ -161,7 +164,7 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
       }
       writeApplicationFinishData(appId);
     }
-    return ahManager;
+    return historyClientService;
   }
 
   class MockApplicationHistoryManagerImpl extends ApplicationHistoryManagerImpl {
