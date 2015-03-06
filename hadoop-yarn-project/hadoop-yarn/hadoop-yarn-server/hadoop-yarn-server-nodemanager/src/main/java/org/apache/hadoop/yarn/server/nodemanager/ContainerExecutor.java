@@ -41,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
@@ -298,6 +299,11 @@ public abstract class ContainerExecutor implements Configurable {
       readLock.unlock();
     }
   }
+
+  protected String[] getRunCommand(String command, String groupId,
+      String userName, Path pidFile, Configuration conf) {
+    return getRunCommand(command, groupId, userName, pidFile, conf, null);
+  }
   
   /** 
    *  Return a command to execute the given command in OS shell.
@@ -306,7 +312,7 @@ public abstract class ContainerExecutor implements Configurable {
    *  non-Windows, groupId is ignored. 
    */
   protected String[] getRunCommand(String command, String groupId,
-      String userName, Path pidFile, Configuration conf) {
+      String userName, Path pidFile, Configuration conf, Resource resource) {
     boolean containerSchedPriorityIsSet = false;
     int containerSchedPriorityAdjustment = 
         YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY;
@@ -320,7 +326,46 @@ public abstract class ContainerExecutor implements Configurable {
     }
   
     if (Shell.WINDOWS) {
-      return new String[] { Shell.WINUTILS, "task", "create", groupId,
+      int cpuRate = -1;
+      int memory = -1;
+      if (resource != null) {
+        if (conf
+            .getBoolean(
+                YarnConfiguration.NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED,
+                YarnConfiguration.DEFAULT_NM_WINDOWS_CONTAINER_MEMORY_LIMIT_ENABLED)) {
+          memory = resource.getMemory();
+        }
+
+        if (conf.getBoolean(
+            YarnConfiguration.NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED,
+            YarnConfiguration.DEFAULT_NM_WINDOWS_CONTAINER_CPU_LIMIT_ENABLED)) {
+          int containerVCores = resource.getVirtualCores();
+          int nodeVCores = conf.getInt(YarnConfiguration.NM_VCORES,
+              YarnConfiguration.DEFAULT_NM_VCORES);
+          // cap overall usage to the number of cores allocated to YARN
+          int nodeCpuPercentage = Math
+              .min(
+                  conf.getInt(
+                      YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT,
+                      YarnConfiguration.DEFAULT_NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT),
+                  100);
+          nodeCpuPercentage = Math.max(0, nodeCpuPercentage);
+          if (nodeCpuPercentage == 0) {
+            String message = "Illegal value for "
+                + YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT
+                + ". Value cannot be less than or equal to 0.";
+            throw new IllegalArgumentException(message);
+          }
+          float yarnVCores = (nodeCpuPercentage * nodeVCores) / 100.0f;
+          // CPU should be set to a percentage * 100, e.g. 20% cpu rate limit
+          // should be set as 20 * 100. The following setting is equal to:
+          // 100 * (100 * (vcores / Total # of cores allocated to YARN))
+          cpuRate = Math.min(10000,
+              (int) ((containerVCores * 10000) / yarnVCores));
+        }
+      }
+      return new String[] { Shell.WINUTILS, "task", "create", "-m",
+          String.valueOf(memory), "-c", String.valueOf(cpuRate), groupId,
           "cmd /c " + command };
     } else {
       List<String> retCommand = new ArrayList<String>();

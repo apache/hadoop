@@ -49,6 +49,31 @@ typedef enum TaskCommandOptionType
   TaskProcessList
 } TaskCommandOption;
 
+ //----------------------------------------------------------------------------
+// Function: GetLimit
+//
+// Description:
+//  Get the resource limit value in long type given the command line argument.
+//
+// Returns:
+// TRUE: If successfully get the value
+// FALSE: otherwise
+static BOOL GetLimit(__in const wchar_t *str, __out long *value)
+{
+  wchar_t *end = NULL;
+  if (str == NULL || value == NULL) return FALSE;
+  *value = wcstol(str, &end, 10);
+  if (end == NULL || *end != '\0')
+  {
+    *value = -1;
+    return FALSE;
+  }
+  else
+  {
+    return TRUE;
+  }
+}
+
 //----------------------------------------------------------------------------
 // Function: ParseCommandLine
 //
@@ -61,7 +86,9 @@ typedef enum TaskCommandOptionType
 // FALSE: otherwise
 static BOOL ParseCommandLine(__in int argc,
                              __in_ecount(argc) wchar_t *argv[],
-                             __out TaskCommandOption *command)
+                             __out TaskCommandOption *command,
+                             __out_opt long *memory,
+                             __out_opt long *vcore)
 {
   *command = TaskInvalid;
 
@@ -88,9 +115,44 @@ static BOOL ParseCommandLine(__in int argc,
     }
   }
 
-  if (argc == 4) {
+  if (argc >= 4 && argc <= 8) {
     if (wcscmp(argv[1], L"create") == 0)
     {
+      int i;
+      for (i = 2; i < argc - 3; i++)
+      {
+        if (wcscmp(argv[i], L"-c") == 0)
+        {
+          if (vcore != NULL && !GetLimit(argv[i + 1], vcore))
+          {
+            return FALSE;
+          }
+          else
+          {
+            i++;
+            continue;
+          }
+        }
+        else if (wcscmp(argv[i], L"-m") == 0)
+        {
+          if (memory != NULL && !GetLimit(argv[i + 1], memory))
+          {
+            return FALSE;
+          }
+          else
+          {
+            i++;
+            continue;
+          }
+        }
+        else
+        {
+          break;
+        }
+      }
+      if (argc - i != 2)
+        return FALSE;
+
       *command = TaskCreate;
       return TRUE;
     }
@@ -573,7 +635,7 @@ done:
 // ERROR_SUCCESS: On success
 // GetLastError: otherwise
 DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PCWSTR cmdLine, 
-  __in LPCWSTR userName) 
+  __in LPCWSTR userName, __in long memory, __in long cpuRate)
 {
   DWORD dwErrorCode = ERROR_SUCCESS;
   DWORD exitCode = EXIT_FAILURE;
@@ -616,6 +678,12 @@ DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PC
     return dwErrorCode;
   }
   jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+  if (memory > 0)
+  {
+    jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
+    jeli.ProcessMemoryLimit = ((SIZE_T) memory) * 1024 * 1024;
+    jeli.JobMemoryLimit = ((SIZE_T) memory) * 1024 * 1024;
+  }
   if(SetInformationJobObject(jobObject, 
                              JobObjectExtendedLimitInformation, 
                              &jeli, 
@@ -626,6 +694,24 @@ DWORD CreateTaskImpl(__in_opt HANDLE logonHandle, __in PCWSTR jobObjName,__in PC
     CloseHandle(jobObject);
     return dwErrorCode;
   }
+#ifdef NTDDI_WIN8
+  if (cpuRate > 0)
+  {
+    JOBOBJECT_CPU_RATE_CONTROL_INFORMATION jcrci = { 0 };
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    jcrci.ControlFlags = JOB_OBJECT_CPU_RATE_CONTROL_ENABLE |
+      JOB_OBJECT_CPU_RATE_CONTROL_HARD_CAP;
+    jcrci.CpuRate = min(10000, cpuRate);
+    if(SetInformationJobObject(jobObject, JobObjectCpuRateControlInformation,
+          &jcrci, sizeof(jcrci)) == 0)
+    {
+      dwErrorCode = GetLastError();
+      CloseHandle(jobObject);
+      return dwErrorCode;
+    }
+  }
+#endif
 
   if (logonHandle != NULL) {
     dwErrorCode = AddNodeManagerAndUserACEsToObject(jobObject, userName, JOB_OBJECT_ALL_ACCESS);
@@ -809,10 +895,10 @@ create_process_done:
 // Returns:
 // ERROR_SUCCESS: On success
 // GetLastError: otherwise
-DWORD CreateTask(__in PCWSTR jobObjName,__in PWSTR cmdLine) 
+DWORD CreateTask(__in PCWSTR jobObjName,__in PWSTR cmdLine, __in long memory, __in long cpuRate)
 {
   // call with null logon in order to create tasks utilizing the current logon
-  return CreateTaskImpl( NULL, jobObjName, cmdLine, NULL);
+  return CreateTaskImpl( NULL, jobObjName, cmdLine, NULL, memory, cpuRate);
 }
 
 //----------------------------------------------------------------------------
@@ -893,7 +979,7 @@ DWORD CreateTaskAsUser(__in PCWSTR jobObjName,
       goto done;
   }
 
-  err = CreateTaskImpl(logonHandle, jobObjName, cmdLine, user);
+  err = CreateTaskImpl(logonHandle, jobObjName, cmdLine, user, -1, -1);
 
 done: 
   if( profileIsLoaded ) {
@@ -1095,6 +1181,8 @@ int Task(__in int argc, __in_ecount(argc) wchar_t *argv[])
 {
   DWORD dwErrorCode = ERROR_SUCCESS;
   TaskCommandOption command = TaskInvalid;
+  long memory = -1;
+  long cpuRate = -1;
   wchar_t* cmdLine = NULL;
   wchar_t buffer[16*1024] = L""; // 32K max command line
   size_t charCountBufferLeft = sizeof(buffer)/sizeof(wchar_t);
@@ -1111,7 +1199,7 @@ int Task(__in int argc, __in_ecount(argc) wchar_t *argv[])
                ARGC_COMMAND_ARGS
        };
 
-  if (!ParseCommandLine(argc, argv, &command)) {
+  if (!ParseCommandLine(argc, argv, &command, &memory, &cpuRate)) {
     dwErrorCode = ERROR_INVALID_COMMAND_LINE;
 
     fwprintf(stderr, L"Incorrect command line arguments.\n\n");
@@ -1123,7 +1211,7 @@ int Task(__in int argc, __in_ecount(argc) wchar_t *argv[])
   {
     // Create the task jobobject
     //
-    dwErrorCode = CreateTask(argv[2], argv[3]);
+    dwErrorCode = CreateTask(argv[argc-2], argv[argc-1], memory, cpuRate);
     if (dwErrorCode != ERROR_SUCCESS)
     {
       ReportErrorCode(L"CreateTask", dwErrorCode);
@@ -1238,18 +1326,30 @@ void TaskUsage()
   // jobobject's are being used.
   // ProcessTree.isSetsidSupported()
   fwprintf(stdout, L"\
-    Usage: task create [TASKNAME] [COMMAND_LINE] |\n\
-          task createAsUser [TASKNAME] [USERNAME] [PIDFILE] [COMMAND_LINE] |\n\
-          task isAlive [TASKNAME] |\n\
-          task kill [TASKNAME]\n\
-          task processList [TASKNAME]\n\
-    Creates a new task jobobject with taskname\n\
-    Creates a new task jobobject with taskname as the user provided\n\
-    Checks if task jobobject is alive\n\
-    Kills task jobobject\n\
-    Prints to stdout a list of processes in the task\n\
-    along with their resource usage. One process per line\n\
-    and comma separated info per process\n\
-    ProcessId,VirtualMemoryCommitted(bytes),\n\
-    WorkingSetSize(bytes),CpuTime(Millisec,Kernel+User)\n");
+Usage: task create [OPTOINS] [TASKNAME] [COMMAND_LINE]\n\
+         Creates a new task job object with taskname and options to set CPU\n\
+         and memory limits on the job object\n\
+\n\
+         OPTIONS: -c [cup rate] set the cpu rate limit on the job object.\n\
+                  -m [memory] set the memory limit on the job object.\n\
+         The cpu limit is an integral value of percentage * 100. The memory\n\
+         limit is an integral number of memory in MB. \n\
+         The limit will not be set if 0 or negative value is passed in as\n\
+         parameter(s).\n\
+\n\
+       task createAsUser [TASKNAME] [USERNAME] [PIDFILE] [COMMAND_LINE]\n\
+         Creates a new task jobobject with taskname as the user provided\n\
+\n\
+       task isAlive [TASKNAME]\n\
+         Checks if task job object is alive\n\
+\n\
+       task kill [TASKNAME]\n\
+         Kills task job object\n\
+\n\
+       task processList [TASKNAME]\n\
+         Prints to stdout a list of processes in the task\n\
+         along with their resource usage. One process per line\n\
+         and comma separated info per process\n\
+         ProcessId,VirtualMemoryCommitted(bytes),\n\
+         WorkingSetSize(bytes),CpuTime(Millisec,Kernel+User)\n");
 }

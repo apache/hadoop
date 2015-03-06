@@ -363,6 +363,9 @@ Release 2.7.0 - UNRELEASED
     YARN-1809. Synchronize RM and TimeLineServer Web-UIs. (Zhijie Shen and
     Xuan Gong via jianhe)
 
+    YARN-2190. Added CPU and memory limit options to the default container
+    executor for Windows containers. (Chuan Liu via jianhe)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 

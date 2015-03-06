@@ -547,4 +547,66 @@ public class TestWinUtils {
     
     assertThat(outNumber, containsString(testNumber));
   }
+
+  @Test (timeout = 30000)
+  public void testTaskCreateWithLimits() throws IOException {
+    // Generate a unique job id
+    String jobId = String.format("%f", Math.random());
+
+    // Run a task without any options
+    String out = Shell.execCommand(Shell.WINUTILS, "task", "create",
+        "job" + jobId, "cmd /c echo job" + jobId);
+    assertTrue(out.trim().equals("job" + jobId));
+
+    // Run a task without any limits
+    jobId = String.format("%f", Math.random());
+    out = Shell.execCommand(Shell.WINUTILS, "task", "create", "-c", "-1", "-m",
+        "-1", "job" + jobId, "cmd /c echo job" + jobId);
+    assertTrue(out.trim().equals("job" + jobId));
+
+    // Run a task with limits (128MB should be enough for a cmd)
+    jobId = String.format("%f", Math.random());
+    out = Shell.execCommand(Shell.WINUTILS, "task", "create", "-c", "10000", "-m",
+        "128", "job" + jobId, "cmd /c echo job" + jobId);
+    assertTrue(out.trim().equals("job" + jobId));
+
+    // Run a task without enough memory
+    try {
+      jobId = String.format("%f", Math.random());
+      out = Shell.execCommand(Shell.WINUTILS, "task", "create", "-m", "128", "job"
+          + jobId, "java -Xmx256m -version");
+      fail("Failed to get Shell.ExitCodeException with insufficient memory");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1));
+    }
+
+    // Run tasks with wrong parameters
+    //
+    try {
+      jobId = String.format("%f", Math.random());
+      Shell.execCommand(Shell.WINUTILS, "task", "create", "-c", "-1", "-m",
+          "-1", "foo", "job" + jobId, "cmd /c echo job" + jobId);
+      fail("Failed to get Shell.ExitCodeException with bad parameters");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1639));
+    }
+
+    try {
+      jobId = String.format("%f", Math.random());
+      Shell.execCommand(Shell.WINUTILS, "task", "create", "-c", "-m", "-1",
+          "job" + jobId, "cmd /c echo job" + jobId);
+      fail("Failed to get Shell.ExitCodeException with bad parameters");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1639));
+    }
+
+    try {
+      jobId = String.format("%f", Math.random());
+      Shell.execCommand(Shell.WINUTILS, "task", "create", "-c", "foo",
+          "job" + jobId, "cmd /c echo job" + jobId);
+      fail("Failed to get Shell.ExitCodeException with bad parameters");
+    } catch (Shell.ExitCodeException ece) {
+      assertThat(ece.getExitCode(), is(1639));
+    }
+  }
 }

@@ -48,6 +48,7 @@ import org.apache.hadoop.util.Shell.CommandExecutor;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -202,7 +203,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       setScriptExecutable(sb.getWrapperScriptPath(), user);
 
       shExec = buildCommandExecutor(sb.getWrapperScriptPath().toString(),
-          containerIdStr, user, pidFile,
+          containerIdStr, user, pidFile, container.getResource(),
           new File(containerWorkDir.toUri().getPath()),
           container.getLaunchContext().getEnvironment());
       
@@ -256,12 +257,12 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   }
 
   protected CommandExecutor buildCommandExecutor(String wrapperScriptPath, 
-      String containerIdStr, String user, Path pidFile, File wordDir, 
-      Map<String, String> environment) 
+      String containerIdStr, String user, Path pidFile, Resource resource,
+      File wordDir, Map<String, String> environment)
           throws IOException {
     
     String[] command = getRunCommand(wrapperScriptPath,
-        containerIdStr, user, pidFile, this.getConf());
+        containerIdStr, user, pidFile, this.getConf(), resource);
 
       LOG.info("launchContainer: " + Arrays.toString(command));
       return new ShellCommandExecutor(
