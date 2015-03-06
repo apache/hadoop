@@ -348,6 +348,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7656. Expose truncate API for HDFS httpfs. (yliu)
 
+    HDFS-6488. Support HDFS superuser in NFS gateway. (brandonli)
+
   IMPROVEMENTS
 
     HDFS-7752. Improve description for

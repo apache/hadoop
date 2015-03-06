@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Options;
@@ -166,6 +165,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   private JvmPauseMonitor pauseMonitor;
   private Nfs3HttpServer infoServer = null;
   static Nfs3Metrics metrics;
+  private String superuser;
 
   public RpcProgramNfs3(NfsConfiguration config, DatagramSocket registrationSocket,
       boolean allowInsecurePorts) throws IOException {
@@ -200,6 +200,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     UserGroupInformation.setConfiguration(config);
     SecurityUtil.login(config, NfsConfigKeys.DFS_NFS_KEYTAB_FILE_KEY,
         NfsConfigKeys.DFS_NFS_KERBEROS_PRINCIPAL_KEY);
+    superuser = config.get(NfsConfigKeys.NFS_SUPERUSER_KEY,
+        NfsConfigKeys.NFS_SUPERUSER_DEFAULT);
+    LOG.info("Configured HDFS superuser is " + superuser);
 
     if (!enableDump) {
       writeDumpDir = null;
@@ -583,12 +586,17 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     try {
-      // HDFS-5804 removed supserUserClient access
       attrs = writeManager.getFileAttr(dfsClient, handle, iug);
 
       if (attrs == null) {
         LOG.error("Can't get path for fileId: " + handle.getFileId());
         return new ACCESS3Response(Nfs3Status.NFS3ERR_STALE);
+      }
+      if(iug.getUserName(securityHandler.getUid(), "unknown").equals(superuser)) {
+        int access = Nfs3Constant.ACCESS3_LOOKUP | Nfs3Constant.ACCESS3_DELETE
+            | Nfs3Constant.ACCESS3_EXECUTE | Nfs3Constant.ACCESS3_EXTEND
+            | Nfs3Constant.ACCESS3_MODIFY | Nfs3Constant.ACCESS3_READ;
+        return new ACCESS3Response(Nfs3Status.NFS3_OK, attrs, access);
       }
       int access = Nfs3Utils.getAccessRightsForUserGroup(
           securityHandler.getUid(), securityHandler.getGid(),
