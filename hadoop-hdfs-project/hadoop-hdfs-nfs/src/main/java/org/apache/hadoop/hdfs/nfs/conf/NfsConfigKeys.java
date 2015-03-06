@@ -73,4 +73,18 @@ public class NfsConfigKeys {
   
   public static final String  NFS_METRICS_PERCENTILES_INTERVALS_KEY = "nfs.metrics.percentiles.intervals";
   public static final String  NFS_METRICS_PERCENTILES_INTERVALS_DEFAULT = "";
+  
+  /*
+   * HDFS super-user is the user with the same identity as NameNode process
+   * itself and the super-user can do anything in that permissions checks never
+   * fail for the super-user. If the following property is configured, the
+   * superuser on NFS client can access any file on HDFS. By default, the super
+   * user is not configured in the gateway. Note that, even the the superuser is
+   * configured, "nfs.exports.allowed.hosts" still takes effect. For example,
+   * the superuser will not have write access to HDFS files through the gateway
+   * if the NFS client host is not allowed to have write access in
+   * "nfs.exports.allowed.hosts".
+   */
+  public static final String  NFS_SUPERUSER_KEY = "nfs.superuser";
+  public static final String  NFS_SUPERUSER_DEFAULT = "";
 }

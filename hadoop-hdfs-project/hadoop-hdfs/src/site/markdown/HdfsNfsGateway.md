@@ -80,14 +80,33 @@ The above are the only required configuration for the NFS gateway in non-secure 
 
 The rest of the NFS gateway configurations are optional for both secure and non-secure mode.
 
-The AIX NFS client has a [few known issues](https://issues.apache.org/jira/browse/HDFS-6549) that prevent it from working correctly by default with the HDFS NFS Gateway. If you want to be able to access the HDFS NFS Gateway from AIX, you should set the following configuration setting to enable work-arounds for these issues:
+*   The AIX NFS client has a [few known issues](https://issues.apache.org/jira/browse/HDFS-6549)
+    that prevent it from working correctly by default with the HDFS NFS Gateway. If you want to
+    be able to access the HDFS NFS Gateway from AIX, you should set the following configuration
+    setting to enable work-arounds for these issues:
 
-    <property>
-      <name>nfs.aix.compatibility.mode.enabled</name>
-      <value>true</value>
-    </property>
+        <property>
+          <name>nfs.aix.compatibility.mode.enabled</name>
+          <value>true</value>
+        </property>
 
-Note that regular, non-AIX clients should NOT enable AIX compatibility mode. The work-arounds implemented by AIX compatibility mode effectively disable safeguards to ensure that listing of directory contents via NFS returns consistent results, and that all data sent to the NFS server can be assured to have been committed.
+    Note that regular, non-AIX clients should NOT enable AIX compatibility mode. The work-arounds
+    implemented by AIX compatibility mode effectively disable safeguards to ensure that listing
+    of directory contents via NFS returns consistent results, and that all data sent to the NFS
+    server can be assured to have been committed.
+
+*   HDFS super-user is the user with the same identity as NameNode process itself and
+    the super-user can do anything in that permissions checks never fail for the super-user. 
+    If the following property is configured, the superuser on NFS client can access any file
+    on HDFS. By default, the super user is not configured in the gateway.
+    Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect. 
+    For example, the superuser will not have write access to HDFS files through the gateway if
+    the NFS client host is not allowed to have write access in "nfs.exports.allowed.hosts".
+
+        <property>
+          <name>nfs.superuser</name>
+          <value>the_name_of_hdfs_superuser</value>
+        </property>
 
 It's strongly recommended for the users to update a few configuration properties based on their use cases. All the following configuration properties can be added or updated in hdfs-site.xml.
 
@@ -133,6 +152,19 @@ It's strongly recommended for the users to update a few configuration properties
         <property>
           <name>nfs.exports.allowed.hosts</name>
           <value>* rw</value>
+        </property>
+
+*   HDFS super-user is the user with the same identity as NameNode process itself and
+    the super-user can do anything in that permissions checks never fail for the super-user. 
+    If the following property is configured, the superuser on NFS client can access any file
+    on HDFS. By default, the super user is not configured in the gateway.
+    Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect. 
+    For example, the superuser will not have write access to HDFS files through the gateway if
+    the NFS client host is not allowed to have write access in "nfs.exports.allowed.hosts".
+
+        <property>
+          <name>nfs.superuser</name>
+          <value>the_name_of_hdfs_superuser</value>
         </property>
 
 *   JVM and log settings. You can export JVM settings (e.g., heap size and GC log) in
