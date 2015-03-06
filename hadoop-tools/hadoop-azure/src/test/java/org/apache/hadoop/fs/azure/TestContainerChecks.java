@@ -32,9 +32,9 @@ import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.CreateOptions;
 import org.junit.After;
 import org.junit.Test;
 
-import com.microsoft.windowsazure.storage.blob.BlobOutputStream;
-import com.microsoft.windowsazure.storage.blob.CloudBlobContainer;
-import com.microsoft.windowsazure.storage.blob.CloudBlockBlob;
+import com.microsoft.azure.storage.blob.BlobOutputStream;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
 
 /**
  * Tests that WASB creates containers only if needed.

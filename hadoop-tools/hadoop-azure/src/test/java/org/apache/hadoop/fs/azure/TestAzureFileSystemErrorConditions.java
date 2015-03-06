@@ -37,9 +37,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.TestHookOperationContext;
 import org.junit.Test;
 
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.SendingRequestEvent;
-import com.microsoft.windowsazure.storage.StorageEvent;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.SendingRequestEvent;
+import com.microsoft.azure.storage.StorageEvent;
 
 public class TestAzureFileSystemErrorConditions {
   private static final int ALL_THREE_FILE_SIZE = 1024;

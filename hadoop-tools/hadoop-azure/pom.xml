@@ -140,12 +140,13 @@
       <artifactId>httpclient</artifactId>
       <scope>compile</scope>
     </dependency>
-
+    
     <dependency>
-      <groupId>com.microsoft.windowsazure.storage</groupId>
-      <artifactId>microsoft-windowsazure-storage-sdk</artifactId>
+      <groupId>com.microsoft.azure</groupId>
+      <artifactId>azure-storage</artifactId>
       <scope>compile</scope>
     </dependency>
+    
 
     <dependency>
       <groupId>com.google.guava</groupId>

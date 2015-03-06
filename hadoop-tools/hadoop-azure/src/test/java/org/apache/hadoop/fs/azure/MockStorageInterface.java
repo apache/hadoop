@@ -22,10 +22,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,21 +37,21 @@ import org.apache.commons.httpclient.URIException;
 import org.apache.commons.httpclient.util.URIUtil;
 import org.apache.commons.lang.NotImplementedException;
 
-import com.microsoft.windowsazure.storage.CloudStorageAccount;
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.RetryPolicyFactory;
-import com.microsoft.windowsazure.storage.StorageCredentials;
-import com.microsoft.windowsazure.storage.StorageException;
-import com.microsoft.windowsazure.storage.StorageUri;
-import com.microsoft.windowsazure.storage.blob.BlobListingDetails;
-import com.microsoft.windowsazure.storage.blob.BlobProperties;
-import com.microsoft.windowsazure.storage.blob.BlobRequestOptions;
-import com.microsoft.windowsazure.storage.blob.CloudBlob;
-import com.microsoft.windowsazure.storage.blob.CloudBlobContainer;
-import com.microsoft.windowsazure.storage.blob.CloudBlobDirectory;
-import com.microsoft.windowsazure.storage.blob.CopyState;
-import com.microsoft.windowsazure.storage.blob.ListBlobItem;
-import com.microsoft.windowsazure.storage.blob.PageRange;
+import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.RetryPolicyFactory;
+import com.microsoft.azure.storage.StorageCredentials;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.StorageUri;
+import com.microsoft.azure.storage.blob.BlobListingDetails;
+import com.microsoft.azure.storage.blob.BlobProperties;
+import com.microsoft.azure.storage.blob.BlobRequestOptions;
+import com.microsoft.azure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlobDirectory;
+import com.microsoft.azure.storage.blob.CopyState;
+import com.microsoft.azure.storage.blob.ListBlobItem;
+import com.microsoft.azure.storage.blob.PageRange;
 
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriBuilderException;
@@ -357,18 +359,42 @@ public class MockStorageInterface extends StorageInterface {
       this.uri = uri;
       this.metadata = metadata;
       this.properties = new BlobProperties();
-      this.properties.setLength(length);
-      this.properties.setLastModified(
-          Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
+      
+      this.properties=updateLastModifed(this.properties);
+      this.properties=updateLength(this.properties,length);
     }
-
+    
+    protected BlobProperties updateLastModifed(BlobProperties properties){
+      try{
+          Method setLastModified =properties.getClass().
+            getDeclaredMethod("setLastModified", Date.class);
+          setLastModified.setAccessible(true);
+          setLastModified.invoke(this.properties,
+            Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
+      }catch(Exception e){
+          throw new RuntimeException(e);
+      }
+      return properties;
+    }
+    
+    protected BlobProperties updateLength(BlobProperties properties,int length) {
+      try{
+          Method setLength =properties.getClass().
+            getDeclaredMethod("setLength", long.class);
+          setLength.setAccessible(true);
+          setLength.invoke(this.properties, length);
+      }catch (Exception e){
+         throw new RuntimeException(e);
+      }
+      return properties;
+    }
+    
     protected void refreshProperties(boolean getMetadata) {
       if (backingStore.exists(convertUriToDecodedString(uri))) {
         byte[] content = backingStore.getContent(convertUriToDecodedString(uri));
         properties = new BlobProperties();
-        properties.setLength(content.length);
-        properties.setLastModified(
-            Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime());
+        this.properties=updateLastModifed(this.properties);
+        this.properties=updateLength(this.properties, content.length);
         if (getMetadata) {
           metadata = backingStore.getMetadata(convertUriToDecodedString(uri));
         }

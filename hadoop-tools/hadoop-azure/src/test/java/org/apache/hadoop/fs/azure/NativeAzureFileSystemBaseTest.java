@@ -58,9 +58,9 @@ import org.junit.Test;
 import org.apache.hadoop.fs.azure.AzureException;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem.FolderRenamePending;
 
-import com.microsoft.windowsazure.storage.AccessCondition;
-import com.microsoft.windowsazure.storage.StorageException;
-import com.microsoft.windowsazure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.AccessCondition;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudBlob;
 
 /*
  * Tests the Native Azure file system (WASB) against an actual blob store if

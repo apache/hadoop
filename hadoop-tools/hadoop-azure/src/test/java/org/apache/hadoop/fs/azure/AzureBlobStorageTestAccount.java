@@ -40,20 +40,20 @@ import org.apache.hadoop.metrics2.MetricsSink;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
-import com.microsoft.windowsazure.storage.AccessCondition;
-import com.microsoft.windowsazure.storage.CloudStorageAccount;
-import com.microsoft.windowsazure.storage.StorageCredentials;
-import com.microsoft.windowsazure.storage.StorageCredentialsAccountAndKey;
-import com.microsoft.windowsazure.storage.StorageCredentialsAnonymous;
-import com.microsoft.windowsazure.storage.blob.BlobContainerPermissions;
-import com.microsoft.windowsazure.storage.blob.BlobContainerPublicAccessType;
-import com.microsoft.windowsazure.storage.blob.BlobOutputStream;
-import com.microsoft.windowsazure.storage.blob.CloudBlobClient;
-import com.microsoft.windowsazure.storage.blob.CloudBlobContainer;
-import com.microsoft.windowsazure.storage.blob.CloudBlockBlob;
-import com.microsoft.windowsazure.storage.blob.SharedAccessBlobPermissions;
-import com.microsoft.windowsazure.storage.blob.SharedAccessBlobPolicy;
-import com.microsoft.windowsazure.storage.core.Base64;
+import com.microsoft.azure.storage.AccessCondition;
+import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.StorageCredentials;
+import com.microsoft.azure.storage.StorageCredentialsAccountAndKey;
+import com.microsoft.azure.storage.StorageCredentialsAnonymous;
+import com.microsoft.azure.storage.blob.BlobContainerPermissions;
+import com.microsoft.azure.storage.blob.BlobContainerPublicAccessType;
+import com.microsoft.azure.storage.blob.BlobOutputStream;
+import com.microsoft.azure.storage.blob.CloudBlobClient;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
+import com.microsoft.azure.storage.blob.SharedAccessBlobPermissions;
+import com.microsoft.azure.storage.blob.SharedAccessBlobPolicy;
+import com.microsoft.azure.storage.core.Base64;
 
 /**
  * Helper class to create WASB file systems backed by either a mock in-memory
