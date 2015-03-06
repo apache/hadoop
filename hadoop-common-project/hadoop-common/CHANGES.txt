@@ -653,6 +653,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11648. Set DomainSocketWatcher thread name explicitly.
     (Liang Xie via ozawa)
 
+    HADOOP-11642. Upgrade azure sdk version from 0.6.0 to 2.0.0.
+    (Shashank Khandelwal and Ivan Mitic via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.

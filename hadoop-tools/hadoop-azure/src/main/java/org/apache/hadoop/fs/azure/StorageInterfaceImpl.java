@@ -30,26 +30,26 @@ import java.util.Iterator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import com.microsoft.windowsazure.storage.AccessCondition;
-import com.microsoft.windowsazure.storage.CloudStorageAccount;
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.RetryPolicyFactory;
-import com.microsoft.windowsazure.storage.StorageCredentials;
-import com.microsoft.windowsazure.storage.StorageException;
-import com.microsoft.windowsazure.storage.StorageUri;
-import com.microsoft.windowsazure.storage.blob.BlobListingDetails;
-import com.microsoft.windowsazure.storage.blob.BlobProperties;
-import com.microsoft.windowsazure.storage.blob.BlobRequestOptions;
-import com.microsoft.windowsazure.storage.blob.CloudBlob;
-import com.microsoft.windowsazure.storage.blob.CloudBlobClient;
-import com.microsoft.windowsazure.storage.blob.CloudBlobContainer;
-import com.microsoft.windowsazure.storage.blob.CloudBlobDirectory;
-import com.microsoft.windowsazure.storage.blob.CloudBlockBlob;
-import com.microsoft.windowsazure.storage.blob.CloudPageBlob;
-import com.microsoft.windowsazure.storage.blob.CopyState;
-import com.microsoft.windowsazure.storage.blob.DeleteSnapshotsOption;
-import com.microsoft.windowsazure.storage.blob.ListBlobItem;
-import com.microsoft.windowsazure.storage.blob.PageRange;
+import com.microsoft.azure.storage.AccessCondition;
+import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.RetryPolicyFactory;
+import com.microsoft.azure.storage.StorageCredentials;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.StorageUri;
+import com.microsoft.azure.storage.blob.BlobListingDetails;
+import com.microsoft.azure.storage.blob.BlobProperties;
+import com.microsoft.azure.storage.blob.BlobRequestOptions;
+import com.microsoft.azure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.blob.CloudBlobClient;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlobDirectory;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
+import com.microsoft.azure.storage.blob.CloudPageBlob;
+import com.microsoft.azure.storage.blob.CopyState;
+import com.microsoft.azure.storage.blob.DeleteSnapshotsOption;
+import com.microsoft.azure.storage.blob.ListBlobItem;
+import com.microsoft.azure.storage.blob.PageRange;
 
 /**
  * A real implementation of the Azure interaction layer that just redirects
@@ -61,12 +61,14 @@ class StorageInterfaceImpl extends StorageInterface {
 
   @Override
   public void setRetryPolicyFactory(final RetryPolicyFactory retryPolicyFactory) {
-    serviceClient.setRetryPolicyFactory(retryPolicyFactory);
+    serviceClient.getDefaultRequestOptions().setRetryPolicyFactory(
+            retryPolicyFactory);
   }
 
   @Override
   public void setTimeoutInMs(int timeoutInMs) {
-    serviceClient.setTimeoutInMs(timeoutInMs);
+    serviceClient.getDefaultRequestOptions().setTimeoutIntervalInMs(
+            timeoutInMs);
   }
 
   @Override

@@ -29,8 +29,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.microsoft.windowsazure.storage.blob.BlobOutputStream;
-import com.microsoft.windowsazure.storage.blob.CloudBlockBlob;
+import com.microsoft.azure.storage.blob.BlobOutputStream;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
 
 public class TestOutOfBandAzureBlobOperationsLive {
   private FileSystem fs;

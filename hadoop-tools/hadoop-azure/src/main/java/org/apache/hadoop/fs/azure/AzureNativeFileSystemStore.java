@@ -65,23 +65,23 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.microsoft.windowsazure.storage.CloudStorageAccount;
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.RetryExponentialRetry;
-import com.microsoft.windowsazure.storage.RetryNoRetry;
-import com.microsoft.windowsazure.storage.StorageCredentials;
-import com.microsoft.windowsazure.storage.StorageCredentialsAccountAndKey;
-import com.microsoft.windowsazure.storage.StorageCredentialsSharedAccessSignature;
-import com.microsoft.windowsazure.storage.StorageErrorCode;
-import com.microsoft.windowsazure.storage.StorageException;
-import com.microsoft.windowsazure.storage.blob.BlobListingDetails;
-import com.microsoft.windowsazure.storage.blob.BlobProperties;
-import com.microsoft.windowsazure.storage.blob.BlobRequestOptions;
-import com.microsoft.windowsazure.storage.blob.CloudBlob;
-import com.microsoft.windowsazure.storage.blob.CopyStatus;
-import com.microsoft.windowsazure.storage.blob.DeleteSnapshotsOption;
-import com.microsoft.windowsazure.storage.blob.ListBlobItem;
-import com.microsoft.windowsazure.storage.core.Utility;
+import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.RetryExponentialRetry;
+import com.microsoft.azure.storage.RetryNoRetry;
+import com.microsoft.azure.storage.StorageCredentials;
+import com.microsoft.azure.storage.StorageCredentialsAccountAndKey;
+import com.microsoft.azure.storage.StorageCredentialsSharedAccessSignature;
+import com.microsoft.azure.storage.StorageErrorCode;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.BlobListingDetails;
+import com.microsoft.azure.storage.blob.BlobProperties;
+import com.microsoft.azure.storage.blob.BlobRequestOptions;
+import com.microsoft.azure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.blob.CopyStatus;
+import com.microsoft.azure.storage.blob.DeleteSnapshotsOption;
+import com.microsoft.azure.storage.blob.ListBlobItem;
+import com.microsoft.azure.storage.core.Utility;
 
 /**
  * Core implementation of Windows Azure Filesystem for Hadoop.
@@ -2543,7 +2543,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     try {
       checkContainer(ContainerAccessType.ReadThenWrite);
       CloudBlobWrapper blob = getBlobReference(key);
-      blob.getProperties().setLastModified(lastModified);
+      //setLastModified function is not available in 2.0.0 version. blob.uploadProperties automatically updates last modified
+      //timestamp to current time
       blob.uploadProperties(getInstrumentedContext(), folderLease);
     } catch (Exception e) {
 

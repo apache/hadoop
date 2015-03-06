@@ -25,12 +25,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import com.microsoft.windowsazure.storage.Constants.HeaderConstants;
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.SendingRequestEvent;
-import com.microsoft.windowsazure.storage.StorageCredentials;
-import com.microsoft.windowsazure.storage.StorageEvent;
-import com.microsoft.windowsazure.storage.StorageException;
+import com.microsoft.azure.storage.Constants.HeaderConstants;
+import com.microsoft.azure.storage.core.StorageCredentialsHelper;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.SendingRequestEvent;
+import com.microsoft.azure.storage.StorageCredentials;
+import com.microsoft.azure.storage.StorageEvent;
+import com.microsoft.azure.storage.StorageException;
 
 /**
  * Manages the lifetime of binding on the operation contexts to intercept send
@@ -146,7 +147,8 @@ public final class SendRequestIntercept extends StorageEvent<SendingRequestEvent
       try {
         // Sign the request. GET's have no payload so the content length is
         // zero.
-        getCredentials().signBlobAndQueueRequest(urlConnection, -1L, getOperationContext());
+        StorageCredentialsHelper.signBlobAndQueueRequest(getCredentials(),
+          urlConnection, -1L, getOperationContext());
       } catch (InvalidKeyException e) {
         // Log invalid key exception to track signing error before the send
         // fails.

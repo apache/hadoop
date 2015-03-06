@@ -74,11 +74,11 @@ import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.microsoft.windowsazure.storage.AccessCondition;
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.StorageException;
-import com.microsoft.windowsazure.storage.blob.CloudBlob;
-import com.microsoft.windowsazure.storage.core.*;
+import com.microsoft.azure.storage.AccessCondition;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.core.*;
 
 /**
  * <p>

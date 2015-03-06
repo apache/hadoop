@@ -44,10 +44,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.StorageException;
-import com.microsoft.windowsazure.storage.blob.BlobRequestOptions;
-import com.microsoft.windowsazure.storage.blob.CloudPageBlob;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.BlobRequestOptions;
+import com.microsoft.azure.storage.blob.CloudPageBlob;
 
 
 /**

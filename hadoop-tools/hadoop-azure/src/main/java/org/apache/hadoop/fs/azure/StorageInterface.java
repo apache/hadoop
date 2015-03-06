@@ -29,18 +29,18 @@ import java.util.HashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import com.microsoft.windowsazure.storage.CloudStorageAccount;
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.RetryPolicyFactory;
-import com.microsoft.windowsazure.storage.StorageCredentials;
-import com.microsoft.windowsazure.storage.StorageException;
-import com.microsoft.windowsazure.storage.blob.BlobListingDetails;
-import com.microsoft.windowsazure.storage.blob.BlobProperties;
-import com.microsoft.windowsazure.storage.blob.BlobRequestOptions;
-import com.microsoft.windowsazure.storage.blob.CloudBlob;
-import com.microsoft.windowsazure.storage.blob.CopyState;
-import com.microsoft.windowsazure.storage.blob.ListBlobItem;
-import com.microsoft.windowsazure.storage.blob.PageRange;
+import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.RetryPolicyFactory;
+import com.microsoft.azure.storage.StorageCredentials;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.BlobListingDetails;
+import com.microsoft.azure.storage.blob.BlobProperties;
+import com.microsoft.azure.storage.blob.BlobRequestOptions;
+import com.microsoft.azure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.blob.CopyState;
+import com.microsoft.azure.storage.blob.ListBlobItem;
+import com.microsoft.azure.storage.blob.PageRange;
 
 /**
  * This is a very thin layer over the methods exposed by the Windows Azure
