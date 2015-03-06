@@ -439,6 +439,7 @@ public class TimelineClientImpl extends TimelineClient {
         UserGroupInformation callerUGI = isProxyAccess ?
             UserGroupInformation.getCurrentUser().getRealUser()
             : UserGroupInformation.getCurrentUser();
+        callerUGI.checkTGTAndReloginFromKeytab();
         try {
           return callerUGI.doAs(action);
         } catch (UndeclaredThrowableException e) {
@@ -488,6 +489,7 @@ public class TimelineClientImpl extends TimelineClient {
           : UserGroupInformation.getCurrentUser();
       final String doAsUser = isProxyAccess ?
           UserGroupInformation.getCurrentUser().getShortUserName() : null;
+      callerUGI.checkTGTAndReloginFromKeytab();
       try {
         return callerUGI.doAs(new PrivilegedExceptionAction<HttpURLConnection>() {
           @Override
