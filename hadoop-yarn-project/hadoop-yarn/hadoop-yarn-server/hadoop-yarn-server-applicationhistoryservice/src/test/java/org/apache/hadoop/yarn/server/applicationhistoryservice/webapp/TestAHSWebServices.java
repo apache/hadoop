@@ -28,13 +28,11 @@ import java.util.Properties;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.lib.StaticUserWebFilter.StaticUserFilter;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
-import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -44,7 +42,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.api.ApplicationContext;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryClientService;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManagerOnTimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.TestApplicationHistoryManagerOnTimelineStore;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -79,7 +77,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 @RunWith(Parameterized.class)
 public class TestAHSWebServices extends JerseyTestBase {
 
-  private static ApplicationHistoryManagerOnTimelineStore historyManager;
+  private static ApplicationHistoryClientService historyClientService;
   private static final String[] USERS = new String[] { "foo" , "bar" };
 
   @BeforeClass
@@ -93,16 +91,23 @@ public class TestAHSWebServices extends JerseyTestBase {
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     conf.set(YarnConfiguration.YARN_ADMIN_ACL, "foo");
     ApplicationACLsManager appAclsManager = new ApplicationACLsManager(conf);
-    historyManager =
+    ApplicationHistoryManagerOnTimelineStore historyManager =
         new ApplicationHistoryManagerOnTimelineStore(dataManager, appAclsManager);
     historyManager.init(conf);
-    historyManager.start();
+    historyClientService = new ApplicationHistoryClientService(historyManager) {
+      @Override
+      protected void serviceStart() throws Exception {
+        // Do Nothing
+      }
+    };
+    historyClientService.init(conf);
+    historyClientService.start();
   }
 
   @AfterClass
   public static void tearDownClass() throws Exception {
-    if (historyManager != null) {
-      historyManager.stop();
+    if (historyClientService != null) {
+      historyClientService.stop();
     }
   }
 
@@ -118,7 +123,7 @@ public class TestAHSWebServices extends JerseyTestBase {
       bind(JAXBContextResolver.class);
       bind(AHSWebServices.class);
       bind(GenericExceptionHandler.class);
-      bind(ApplicationContext.class).toInstance(historyManager);
+      bind(ApplicationBaseProtocol.class).toInstance(historyClientService);
       serve("/*").with(GuiceContainer.class);
       filter("/*").through(TestSimpleAuthFilter.class);
     }
@@ -372,5 +377,4 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals(ContainerState.COMPLETE.toString(),
       container.getString("containerState"));
   }
-
 }

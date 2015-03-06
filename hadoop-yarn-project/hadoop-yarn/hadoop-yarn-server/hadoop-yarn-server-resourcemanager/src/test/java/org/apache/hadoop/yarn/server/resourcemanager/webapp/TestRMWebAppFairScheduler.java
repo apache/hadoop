@@ -24,10 +24,12 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -73,7 +75,8 @@ public class TestRMWebAppFairScheduler {
                   mockRm(rmContext);
               binder.bind(ResourceManager.class).toInstance
                   (mockRmWithFairScheduler);
-
+              binder.bind(ApplicationBaseProtocol.class).toInstance(
+                mockRmWithFairScheduler.getClientRMService());
             } catch (IOException e) {
               throw new IllegalStateException(e);
             }
@@ -112,6 +115,8 @@ public class TestRMWebAppFairScheduler {
                   mockRmWithApps(rmContext);
               binder.bind(ResourceManager.class).toInstance
                   (mockRmWithFairScheduler);
+              binder.bind(ApplicationBaseProtocol.class).toInstance(
+                  mockRmWithFairScheduler.getClientRMService());
 
             } catch (IOException e) {
               throw new IllegalStateException(e);
@@ -168,8 +173,10 @@ public class TestRMWebAppFairScheduler {
       IOException {
     ResourceManager rm = mock(ResourceManager.class);
     ResourceScheduler rs = mockFairScheduler();
+    ClientRMService clientRMService = mockClientRMService(rmContext);
     when(rm.getResourceScheduler()).thenReturn(rs);
     when(rm.getRMContext()).thenReturn(rmContext);
+    when(rm.getClientRMService()).thenReturn(clientRMService);
     return rm;
   }
 
@@ -188,8 +195,10 @@ public class TestRMWebAppFairScheduler {
       IOException {
     ResourceManager rm = mock(ResourceManager.class);
     ResourceScheduler rs =  mockFairSchedulerWithoutApps(rmContext);
+    ClientRMService clientRMService = mockClientRMService(rmContext);
     when(rm.getResourceScheduler()).thenReturn(rs);
     when(rm.getRMContext()).thenReturn(rmContext);
+    when(rm.getClientRMService()).thenReturn(clientRMService);
     return rm;
   }
 
@@ -213,4 +222,7 @@ public class TestRMWebAppFairScheduler {
     return fs;
   }
 
+  public static ClientRMService mockClientRMService(RMContext rmContext) {
+    return mock(ClientRMService.class);
+  }
 }

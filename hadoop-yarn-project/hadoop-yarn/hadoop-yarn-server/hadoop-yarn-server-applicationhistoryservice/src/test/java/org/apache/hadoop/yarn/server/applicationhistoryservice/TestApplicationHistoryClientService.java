@@ -77,7 +77,7 @@ public class TestApplicationHistoryClientService {
     GetApplicationReportRequest request =
         GetApplicationReportRequest.newInstance(appId);
     GetApplicationReportResponse response =
-        clientService.getClientHandler().getApplicationReport(request);
+        clientService.getApplicationReport(request);
     ApplicationReport appReport = response.getApplicationReport();
     Assert.assertNotNull(appReport);
     Assert.assertEquals(123, appReport.getApplicationResourceUsageReport()
@@ -98,7 +98,7 @@ public class TestApplicationHistoryClientService {
     ApplicationId appId1 = ApplicationId.newInstance(0, 2);
     GetApplicationsRequest request = GetApplicationsRequest.newInstance();
     GetApplicationsResponse response =
-        clientService.getClientHandler().getApplications(request);
+        clientService.getApplications(request);
     List<ApplicationReport> appReport = response.getApplicationList();
     Assert.assertNotNull(appReport);
     Assert.assertEquals(appId, appReport.get(0).getApplicationId());
@@ -113,7 +113,7 @@ public class TestApplicationHistoryClientService {
     GetApplicationAttemptReportRequest request =
         GetApplicationAttemptReportRequest.newInstance(appAttemptId);
     GetApplicationAttemptReportResponse response =
-        clientService.getClientHandler().getApplicationAttemptReport(request);
+        clientService.getApplicationAttemptReport(request);
     ApplicationAttemptReport attemptReport =
         response.getApplicationAttemptReport();
     Assert.assertNotNull(attemptReport);
@@ -131,7 +131,7 @@ public class TestApplicationHistoryClientService {
     GetApplicationAttemptsRequest request =
         GetApplicationAttemptsRequest.newInstance(appId);
     GetApplicationAttemptsResponse response =
-        clientService.getClientHandler().getApplicationAttempts(request);
+        clientService.getApplicationAttempts(request);
     List<ApplicationAttemptReport> attemptReports =
         response.getApplicationAttemptList();
     Assert.assertNotNull(attemptReports);
@@ -150,7 +150,7 @@ public class TestApplicationHistoryClientService {
     GetContainerReportRequest request =
         GetContainerReportRequest.newInstance(containerId);
     GetContainerReportResponse response =
-        clientService.getClientHandler().getContainerReport(request);
+        clientService.getContainerReport(request);
     ContainerReport container = response.getContainerReport();
     Assert.assertNotNull(container);
     Assert.assertEquals(containerId, container.getContainerId());
@@ -169,7 +169,7 @@ public class TestApplicationHistoryClientService {
     GetContainersRequest request =
         GetContainersRequest.newInstance(appAttemptId);
     GetContainersResponse response =
-        clientService.getClientHandler().getContainers(request);
+        clientService.getContainers(request);
     List<ContainerReport> containers = response.getContainerList();
     Assert.assertNotNull(containers);
     Assert.assertEquals(containerId, containers.get(0).getContainerId());

@@ -26,9 +26,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
-import org.apache.hadoop.yarn.server.api.ApplicationContext;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
@@ -40,12 +41,12 @@ import com.google.inject.Inject;
 public class ContainerBlock extends HtmlBlock {
 
   private static final Log LOG = LogFactory.getLog(ContainerBlock.class);
-  private final ApplicationContext appContext;
+  protected ApplicationBaseProtocol appBaseProt;
 
   @Inject
-  public ContainerBlock(ApplicationContext appContext, ViewContext ctx) {
+  public ContainerBlock(ApplicationBaseProtocol appBaseProt, ViewContext ctx) {
     super(ctx);
-    this.appContext = appContext;
+    this.appBaseProt = appBaseProt;
   }
 
   @Override
@@ -64,18 +65,21 @@ public class ContainerBlock extends HtmlBlock {
       return;
     }
 
-    final ContainerId containerIdFinal = containerId;
     UserGroupInformation callerUGI = getCallerUGI();
-    ContainerReport containerReport;
+    ContainerReport containerReport = null;
     try {
+      final GetContainerReportRequest request =
+          GetContainerReportRequest.newInstance(containerId);
       if (callerUGI == null) {
-        containerReport = appContext.getContainer(containerId);
+        containerReport = appBaseProt.getContainerReport(request)
+            .getContainerReport();
       } else {
         containerReport = callerUGI.doAs(
             new PrivilegedExceptionAction<ContainerReport> () {
           @Override
           public ContainerReport run() throws Exception {
-            return appContext.getContainer(containerIdFinal);
+            return appBaseProt.getContainerReport(request)
+                .getContainerReport();
           }
         });
       }
@@ -85,6 +89,7 @@ public class ContainerBlock extends HtmlBlock {
       html.p()._(message)._();
       return;
     }
+
     if (containerReport == null) {
       puts("Container not found: " + containerid);
       return;
@@ -94,7 +99,10 @@ public class ContainerBlock extends HtmlBlock {
     setTitle(join("Container ", containerid));
 
     info("Container Overview")
-      ._("State:", container.getContainerState())
+      ._(
+        "Container State:",
+        container.getContainerState() == null ? UNAVAILABLE : container
+          .getContainerState())
       ._("Exit Status:", container.getContainerExitStatus())
       ._("Node:", container.getAssignedNodeId())
       ._("Priority:", container.getPriority())
@@ -109,7 +117,8 @@ public class ContainerBlock extends HtmlBlock {
             + container.getAllocatedVCores() + " VCores")
       ._("Logs:", container.getLogUrl() == null ? "#" : container.getLogUrl(),
           container.getLogUrl() == null ? "N/A" : "Logs")
-      ._("Diagnostics:", container.getDiagnosticsInfo());
+      ._("Diagnostics:", container.getDiagnosticsInfo() == null ?
+          "" : container.getDiagnosticsInfo());
 
     html._(InfoBlock.class);
   }

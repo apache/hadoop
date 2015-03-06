@@ -18,19 +18,38 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
+import org.apache.hadoop.yarn.server.webapp.AppBlock;
+import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
 public class AppPage extends RmView {
 
-  @Override protected void preHead(Page.HTML<_> html) {
+  @Override 
+  protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
-    set(DATATABLES_ID, "ResourceRequests");
+    String appId = $(YarnWebParams.APPLICATION_ID);
+    set(
+      TITLE,
+      appId.isEmpty() ? "Bad request: missing application ID" : join(
+        "Application ", $(YarnWebParams.APPLICATION_ID)));
+
+    set(DATATABLES_ID, "attempts ResourceRequests");
+    set(initID(DATATABLES, "attempts"), WebPageUtils.attemptsTableInit());
+    setTableStyles(html, "attempts", ".queue {width:6em}", ".ui {width:8em}");
+
     setTableStyles(html, "ResourceRequests");
+
+    set(YarnWebParams.WEB_UI_TYPE, YarnWebParams.RM_WEB_UI);
   }
 
-  @Override protected Class<? extends SubView> content() {
+  @Override 
+  protected Class<? extends SubView> content() {
     return AppBlock.class;
   }
 }

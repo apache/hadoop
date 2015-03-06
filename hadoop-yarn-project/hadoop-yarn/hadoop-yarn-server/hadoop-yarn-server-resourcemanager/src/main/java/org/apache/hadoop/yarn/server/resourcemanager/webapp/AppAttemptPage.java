@@ -15,18 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
+
+package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+
 import org.apache.hadoop.yarn.server.webapp.AppAttemptBlock;
 import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
-public class AppAttemptPage extends AHSView {
+
+public class AppAttemptPage extends RmView {
 
   @Override
   protected void preHead(Page.HTML<_> html) {
@@ -47,12 +50,6 @@ public class AppAttemptPage extends AHSView {
   @Override
   protected Class<? extends SubView> content() {
     return AppAttemptBlock.class;
-  }
-
-  protected String getContainersTableColumnDefs() {
-    StringBuilder sb = new StringBuilder();
-    return sb.append("[\n").append("{'sType':'numeric', 'aTargets': [0]")
-      .append(", 'mRender': parseHadoopID }]").toString();
   }
 
 }
