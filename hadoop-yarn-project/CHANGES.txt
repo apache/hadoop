@@ -719,6 +719,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3227. Timeline renew delegation token fails when RM user's TGT is expired
     (Zhijie Shen via xgong)
 
+    YARN-3275. CapacityScheduler: Preemption happening on non-preemptable
+    queues (Eric Payne via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

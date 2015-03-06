@@ -532,6 +532,30 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
+  public void testPerQueueDisablePreemptionOverAbsMaxCapacity() {
+    int[][] qData = new int[][] {
+        //  /    A              D
+        //            B    C         E    F
+        {1000, 725, 360, 365, 275,  17, 258 },  // absCap
+        {1000,1000,1000,1000, 550, 109,1000 },  // absMaxCap
+        {1000, 741, 396, 345, 259, 110, 149 },  // used
+        {  40,  20,   0,  20,  20,  20,   0 },  // pending
+        {   0,   0,   0,   0,   0,   0,   0 },  // reserved
+        //          appA appB     appC appD
+        {   4,   2,   1,   1,   2,   1,   1 },  // apps
+        {  -1,  -1,   1,   1,  -1,   1,   1 },  // req granulrity
+        {   2,   2,   0,   0,   2,   0,   0 },  // subqueues
+    };
+    // QueueE inherits non-preemption from QueueD
+    schedConf.setPreemptionDisabled("root.queueD", true);
+    ProportionalCapacityPreemptionPolicy policy = buildPolicy(qData);
+    policy.editSchedule();
+    // appC is running on QueueE. QueueE is over absMaxCap, but is not
+    // preemptable. Therefore, appC resources should not be preempted.
+    verify(mDisp, never()).handle(argThat(new IsPreemptionRequestFor(appC)));
+  }
+
+  @Test
   public void testOverCapacityImbalance() {
     int[][] qData = new int[][]{
       //  /   A   B   C
