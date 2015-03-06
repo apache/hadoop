@@ -414,6 +414,9 @@ Trunk (Unreleased)
 
     HADOOP-11602. Fix toUpperCase/toLowerCase to use Locale.ENGLISH. (ozawa)
 
+    HADOOP-11653. shellprofiles should require .sh extension
+    (Brahma Reddy Battula via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

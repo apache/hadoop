@@ -162,13 +162,13 @@ function hadoop_import_shellprofiles
   local files2
 
   if [[ -d "${HADOOP_LIBEXEC_DIR}/shellprofile.d" ]]; then
-    files1=(${HADOOP_LIBEXEC_DIR}/shellprofile.d/*)
+    files1=(${HADOOP_LIBEXEC_DIR}/shellprofile.d/*.sh)
   else
     hadoop_error "WARNING: ${HADOOP_LIBEXEC_DIR}/shellprofile.d doesn't exist. Functionality may not work."
   fi
 
   if [[ -d "${HADOOP_CONF_DIR}/shellprofile.d" ]]; then
-    files2=(${HADOOP_CONF_DIR}/shellprofile.d/*)
+    files2=(${HADOOP_CONF_DIR}/shellprofile.d/*.sh)
   fi
 
   for i in "${files1[@]}" "${files2[@]}"
