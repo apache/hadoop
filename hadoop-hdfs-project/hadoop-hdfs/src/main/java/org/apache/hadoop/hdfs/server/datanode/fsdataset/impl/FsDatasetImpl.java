@@ -2568,6 +2568,21 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock block)
       throws IOException {
+    synchronized(this) {
+      final Replica replica = volumeMap.get(block.getBlockPoolId(),
+          block.getBlockId());
+      if (replica == null) {
+        throw new ReplicaNotFoundException(block);
+      }
+      if (replica.getGenerationStamp() < block.getGenerationStamp()) {
+        throw new IOException(
+            "Replica generation stamp < block generation stamp, block="
+            + block + ", replica=" + replica);
+      } else if (replica.getGenerationStamp() > block.getGenerationStamp()) {
+        block.setGenerationStamp(replica.getGenerationStamp());
+      }
+    }
+
     File datafile = getBlockFile(block);
     File metafile = FsDatasetUtil.getMetaFile(datafile, block.getGenerationStamp());
     BlockLocalPathInfo info = new BlockLocalPathInfo(block,
