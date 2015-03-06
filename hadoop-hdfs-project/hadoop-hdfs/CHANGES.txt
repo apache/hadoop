@@ -85,6 +85,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7871. NameNodeEditLogRoller can keep printing "Swallowing exception"
     message. (jing9)
 
+    HDFS-7885. Datanode should not trust the generation stamp provided by
+    client. (Tsz Wo Nicholas Sze via jing9)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
