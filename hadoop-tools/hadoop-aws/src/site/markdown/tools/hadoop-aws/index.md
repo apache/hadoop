@@ -141,12 +141,12 @@ If you do any of these: change your credentials immediately!
 ### Authentication properties
 
     <property>
-      <name>fs.s3a.awsAccessKeyId</name>
+      <name>fs.s3a.access.key</name>
       <description>AWS access key ID. Omit for Role-based authentication.</description>
     </property>
 
     <property>
-      <name>fs.s3a.awsSecretAccessKey</name>
+      <name>fs.s3a.secret.key</name>
       <description>AWS secret key. Omit for Role-based authentication.</description>
     </property>
 
@@ -411,13 +411,13 @@ Example:
       </property>
 
       <property>
-        <name>fs.s3a.awsAccessKeyId</name>
+        <name>fs.s3a.access.key</name>
         <description>AWS access key ID. Omit for Role-based authentication.</description>
-        <value>DONOTPCOMMITTHISKEYTOSCM</value>
+        <value>DONOTCOMMITTHISKEYTOSCM</value>
       </property>
   
       <property>
-        <name>fs.s3a.awsSecretAccessKey</name>
+        <name>fs.s3a.secret.key</name>
         <description>AWS secret key. Omit for Role-based authentication.</description>
         <value>DONOTEVERSHARETHISSECRETKEY!</value>
       </property>
