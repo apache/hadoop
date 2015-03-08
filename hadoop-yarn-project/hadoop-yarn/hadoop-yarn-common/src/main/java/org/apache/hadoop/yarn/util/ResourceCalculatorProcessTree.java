@@ -22,7 +22,8 @@ import java.lang.reflect.Constructor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 
@@ -30,7 +31,8 @@ import org.apache.hadoop.conf.Configured;
  * Interface class to obtain process resource usage
  *
  */
-@Private
+@Public
+@Evolving
 public abstract class ResourceCalculatorProcessTree extends Configured {
   static final Log LOG = LogFactory
       .getLog(ResourceCalculatorProcessTree.class);
@@ -90,9 +92,12 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
    * @param olderThanAge processes above this age are included in the
    *                      memory addition
    * @return cumulative virtual memory used by the process-tree in bytes,
-   *          for processes older than this age.
+   *          for processes older than this age. return 0 if it cannot be
+   *          calculated
    */
-  public abstract long getCumulativeVmem(int olderThanAge);
+  public long getCumulativeVmem(int olderThanAge) {
+    return 0;
+  }
 
   /**
    * Get the cumulative resident set size (rss) memory used by all the processes
@@ -104,7 +109,9 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
    *          for processes older than this age. return 0 if it cannot be
    *          calculated
    */
-  public abstract long getCumulativeRssmem(int olderThanAge);
+  public long getCumulativeRssmem(int olderThanAge) {
+    return 0;
+  }
 
   /**
    * Get the CPU time in millisecond used by all the processes in the
@@ -113,7 +120,9 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
    * @return cumulative CPU time in millisecond since the process-tree created
    *         return 0 if it cannot be calculated
    */
-  public abstract long getCumulativeCpuTime();
+  public long getCumulativeCpuTime() {
+    return 0;
+  }
 
   /**
    * Get the CPU usage by all the processes in the process-tree based on
@@ -123,7 +132,9 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
    * @return percentage CPU usage since the process-tree was created
    *         return {@link CpuTimeTracker#UNAVAILABLE} if it cannot be calculated
    */
-  public abstract float getCpuUsagePercent();
+  public float getCpuUsagePercent() {
+    return -1;
+  }
 
   /** Verify that the tree process id is same as its process group id.
    * @return true if the process id matches else return false.

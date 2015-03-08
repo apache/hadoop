@@ -366,6 +366,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2190. Added CPU and memory limit options to the default container
     executor for Windows containers. (Chuan Liu via jianhe)
 
+    YARN-3296. Mark ResourceCalculatorProcessTree class as Public for configurable
+    resource monitoring. (Hitesh Shah via junping_du)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
