@@ -32,8 +32,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.fs.s3.S3Credentials;
-
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
@@ -159,12 +157,22 @@ public class S3AFileSystem extends FileSystem {
         this.getWorkingDirectory());
 
     // Try to get our credentials or just connect anonymously
-    S3Credentials s3Credentials = new S3Credentials();
-    s3Credentials.initialize(name, conf);
+    String accessKey = conf.get(ACCESS_KEY, null);
+    String secretKey = conf.get(SECRET_KEY, null);
+
+    String userInfo = name.getUserInfo();
+    if (userInfo != null) {
+      int index = userInfo.indexOf(':');
+      if (index != -1) {
+        accessKey = userInfo.substring(0, index);
+        secretKey = userInfo.substring(index + 1);
+      } else {
+        accessKey = userInfo;
+      }
+    }
 
     AWSCredentialsProviderChain credentials = new AWSCredentialsProviderChain(
-        new BasicAWSCredentialsProvider(s3Credentials.getAccessKey(),
-                                        s3Credentials.getSecretAccessKey()),
+        new BasicAWSCredentialsProvider(accessKey, secretKey),
         new InstanceProfileCredentialsProvider(),
         new AnonymousAWSCredentialsProvider()
     );

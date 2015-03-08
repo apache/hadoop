@@ -1050,6 +1050,8 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11674. oneByteBuf in CryptoInputStream and CryptoOutputStream
     should be non static. (Sean Busbey via yliu)
 
+    HADOOP-11670. Regression: s3a auth setup broken. (Adam Budde via stevel)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
