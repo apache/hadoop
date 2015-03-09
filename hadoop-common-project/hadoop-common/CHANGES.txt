@@ -184,6 +184,9 @@ Trunk (Unreleased)
     HADOOP-11593. Convert site documentation from apt to markdown (stragglers)
     (Masatake Iwasaki via aw)
 
+    HADOOP-11673. Skip using JUnit Assume in TestCodec. (Brahma Reddy Battula
+    via cdouglas)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
