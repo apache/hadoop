@@ -1151,8 +1151,13 @@ public class TestFileTruncate {
 
   public static void checkBlockRecovery(Path p, DistributedFileSystem dfs)
       throws IOException {
+    checkBlockRecovery(p, dfs, SUCCESS_ATTEMPTS, SLEEP);
+  }
+
+  public static void checkBlockRecovery(Path p, DistributedFileSystem dfs,
+      int attempts, long sleepMs) throws IOException {
     boolean success = false;
-    for(int i = 0; i < SUCCESS_ATTEMPTS; i++) {
+    for(int i = 0; i < attempts; i++) {
       LocatedBlocks blocks = getLocatedBlocks(p, dfs);
       boolean noLastBlock = blocks.getLastLocatedBlock() == null;
       if(!blocks.isUnderConstruction() &&
@@ -1160,9 +1165,9 @@ public class TestFileTruncate {
         success = true;
         break;
       }
-      try { Thread.sleep(SLEEP); } catch (InterruptedException ignored) {}
+      try { Thread.sleep(sleepMs); } catch (InterruptedException ignored) {}
     }
-    assertThat("inode should complete in ~" + SLEEP * SUCCESS_ATTEMPTS + " ms.",
+    assertThat("inode should complete in ~" + sleepMs * attempts + " ms.",
         success, is(true));
   }
 
