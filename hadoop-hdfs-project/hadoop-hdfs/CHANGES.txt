@@ -734,6 +734,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7411. Change decommission logic to throttle by blocks rather than
     nodes in each interval. (Andrew Wang via cdouglas)
 
+    HDFS-7898. Change TestAppendSnapshotTruncate to fail-fast.
+    (Tsz Wo Nicholas Sze via jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
