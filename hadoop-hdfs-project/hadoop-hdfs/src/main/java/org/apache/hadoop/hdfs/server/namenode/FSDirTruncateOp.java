@@ -83,6 +83,13 @@ final class FSDirTruncateOp {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
       }
       INodeFile file = INodeFile.valueOf(iip.getLastINode(), src);
+
+      // not support truncating file with striped blocks
+      if (file.isStriped()) {
+        throw new UnsupportedOperationException(
+            "Cannot truncate file with striped block " + src);
+      }
+
       final BlockStoragePolicy lpPolicy = fsd.getBlockManager()
           .getStoragePolicy("LAZY_PERSIST");
 
@@ -216,10 +223,10 @@ final class FSDirTruncateOp {
     BlockInfo oldBlock = file.getLastBlock();
     boolean shouldCopyOnTruncate = shouldCopyOnTruncate(fsn, file, oldBlock);
     if (newBlock == null) {
-      newBlock = (shouldCopyOnTruncate) ? fsn.createNewBlock() : new Block(
-          oldBlock.getBlockId(), oldBlock.getNumBytes(),
-          fsn.nextGenerationStamp(fsn.getBlockIdManager().isLegacyBlock(
-              oldBlock)));
+      newBlock = (shouldCopyOnTruncate) ? fsn.createNewBlock(file.isStriped())
+          : new Block(oldBlock.getBlockId(), oldBlock.getNumBytes(),
+              fsn.nextGenerationStamp(fsn.getBlockIdManager().isLegacyBlock(
+                  oldBlock)));
     }
 
     BlockInfoContiguousUnderConstruction truncatedBlockUC;
@@ -231,7 +238,7 @@ final class FSDirTruncateOp {
           file.getPreferredBlockReplication());
       truncatedBlockUC.setNumBytes(oldBlock.getNumBytes() - lastBlockDelta);
       truncatedBlockUC.setTruncateBlock(oldBlock);
-      file.setLastBlock(truncatedBlockUC, blockManager.getStorages(oldBlock));
+      file.convertLastBlockToUC(truncatedBlockUC, blockManager.getStorages(oldBlock));
       blockManager.addBlockCollection(truncatedBlockUC, file);
 
       NameNode.stateChangeLog.debug(

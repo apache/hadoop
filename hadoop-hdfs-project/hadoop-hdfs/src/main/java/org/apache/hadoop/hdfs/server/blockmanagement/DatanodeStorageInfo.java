@@ -210,6 +210,7 @@ public class DatanodeStorageInfo {
     return getState() == State.FAILED && numBlocks != 0;
   }
 
+  @VisibleForTesting
   public String getStorageID() {
     return storageID;
   }
