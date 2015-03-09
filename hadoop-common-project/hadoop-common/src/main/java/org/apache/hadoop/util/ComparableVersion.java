@@ -37,7 +37,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Locale;
 import java.util.Properties;
 import java.util.Stack;
 
@@ -363,7 +362,7 @@ public class ComparableVersion
 
         items = new ListItem();
 
-        version = version.toLowerCase( Locale.ENGLISH );
+        version = StringUtils.toLowerCase(version);
 
         ListItem list = items;
 

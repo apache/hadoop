@@ -1243,7 +1243,7 @@ public class WebHdfsFileSystem extends FileSystem
     if (query == null) {
       return url;
     }
-    final String lower = query.toLowerCase();
+    final String lower = StringUtils.toLowerCase(query);
     if (!lower.startsWith(OFFSET_PARAM_PREFIX)
         && !lower.contains("&" + OFFSET_PARAM_PREFIX)) {
       return url;
@@ -1254,7 +1254,7 @@ public class WebHdfsFileSystem extends FileSystem
     for(final StringTokenizer st = new StringTokenizer(query, "&");
         st.hasMoreTokens();) {
       final String token = st.nextToken();
-      if (!token.toLowerCase().startsWith(OFFSET_PARAM_PREFIX)) {
+      if (!StringUtils.toLowerCase(token).startsWith(OFFSET_PARAM_PREFIX)) {
         if (b == null) {
           b = new StringBuilder("?").append(token);
         } else {

@@ -433,7 +433,7 @@ public class JobBuilder {
       return Values.SUCCESS;
     }
     
-    return Values.valueOf(name.toUpperCase());
+    return Values.valueOf(StringUtils.toUpperCase(name));
   }
 
   private void processTaskUpdatedEvent(TaskUpdatedEvent event) {

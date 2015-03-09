@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapreduce;
 
+import org.apache.hadoop.util.StringUtils;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -151,9 +152,10 @@ public class TestTypeConverter {
         .newRecord(org.apache.hadoop.yarn.api.records.QueueInfo.class);
     queueInfo.setQueueState(org.apache.hadoop.yarn.api.records.QueueState.STOPPED);
     org.apache.hadoop.mapreduce.QueueInfo returned =
-      TypeConverter.fromYarn(queueInfo, new Configuration());
+        TypeConverter.fromYarn(queueInfo, new Configuration());
     Assert.assertEquals("queueInfo translation didn't work.",
-      returned.getState().toString(), queueInfo.getQueueState().toString().toLowerCase());
+        returned.getState().toString(),
+        StringUtils.toLowerCase(queueInfo.getQueueState().toString()));
   }
 
   /**

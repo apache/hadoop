@@ -44,6 +44,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsPlugin;
 import org.apache.hadoop.metrics2.filter.GlobFilter;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Metrics configuration for MetricsSystemImpl
@@ -85,12 +86,12 @@ class MetricsConfig extends SubsetConfiguration {
   private ClassLoader pluginLoader;
 
   MetricsConfig(Configuration c, String prefix) {
-    super(c, prefix.toLowerCase(Locale.US), ".");
+    super(c, StringUtils.toLowerCase(prefix), ".");
   }
 
   static MetricsConfig create(String prefix) {
-    return loadFirst(prefix, "hadoop-metrics2-"+ prefix.toLowerCase(Locale.US)
-                     +".properties", DEFAULT_FILE_NAME);
+    return loadFirst(prefix, "hadoop-metrics2-" +
+        StringUtils.toLowerCase(prefix) + ".properties", DEFAULT_FILE_NAME);
   }
 
   static MetricsConfig create(String prefix, String... fileNames) {

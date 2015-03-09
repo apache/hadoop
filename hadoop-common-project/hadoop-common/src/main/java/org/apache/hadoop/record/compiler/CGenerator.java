@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Iterator;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * C Code generator front-end for Hadoop record I/O.
@@ -46,8 +47,10 @@ class CGenerator extends CodeGenerator {
     try {
       FileWriter hh = new FileWriter(name+".h");
       try {
-        hh.write("#ifndef __"+name.toUpperCase().replace('.','_')+"__\n");
-        hh.write("#define __"+name.toUpperCase().replace('.','_')+"__\n");
+        hh.write("#ifndef __"+
+            StringUtils.toUpperCase(name).replace('.','_')+"__\n");
+        hh.write("#define __"+
+            StringUtils.toUpperCase(name).replace('.','_')+"__\n");
         hh.write("#include \"recordio.h\"\n");
         for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
           hh.write("#include \""+iter.next().getName()+".h\"\n");
@@ -61,7 +64,8 @@ class CGenerator extends CodeGenerator {
         }
          */
 
-        hh.write("#endif //"+name.toUpperCase().replace('.','_')+"__\n");
+        hh.write("#endif //"+
+            StringUtils.toUpperCase(name).replace('.','_')+"__\n");
       } finally {
         hh.close();
       }

@@ -32,6 +32,7 @@ import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
 import org.apache.hadoop.util.LightWeightCache;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
 
@@ -359,10 +360,10 @@ public class NfsExports {
     AccessPrivilege privilege = AccessPrivilege.READ_ONLY;
     switch (parts.length) {
     case 1:
-      host = parts[0].toLowerCase().trim();
+      host = StringUtils.toLowerCase(parts[0]).trim();
       break;
     case 2:
-      host = parts[0].toLowerCase().trim();
+      host = StringUtils.toLowerCase(parts[0]).trim();
       String option = parts[1].trim();
       if ("rw".equalsIgnoreCase(option)) {
         privilege = AccessPrivilege.READ_WRITE;

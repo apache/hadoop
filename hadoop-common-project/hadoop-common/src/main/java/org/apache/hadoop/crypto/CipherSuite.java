@@ -19,6 +19,7 @@
 package org.apache.hadoop.crypto;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Defines properties of a CipherSuite. Modeled after the ciphers in
@@ -97,7 +98,7 @@ public enum CipherSuite {
     String[] parts = name.split("/");
     StringBuilder suffix = new StringBuilder();
     for (String part : parts) {
-      suffix.append(".").append(part.toLowerCase());
+      suffix.append(".").append(StringUtils.toLowerCase(part));
     }
     
     return suffix.toString();

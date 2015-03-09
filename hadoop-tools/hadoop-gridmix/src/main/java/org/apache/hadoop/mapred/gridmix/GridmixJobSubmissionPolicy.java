@@ -25,6 +25,7 @@ import org.apache.hadoop.mapred.gridmix.Statistics.ClusterStats;
 
 import java.util.concurrent.CountDownLatch;
 import java.io.IOException;
+import org.apache.hadoop.util.StringUtils;
 
 enum GridmixJobSubmissionPolicy {
 
@@ -84,6 +85,6 @@ enum GridmixJobSubmissionPolicy {
   public static GridmixJobSubmissionPolicy getPolicy(
     Configuration conf, GridmixJobSubmissionPolicy defaultPolicy) {
     String policy = conf.get(JOB_SUBMISSION_POLICY, defaultPolicy.name());
-    return valueOf(policy.toUpperCase());
+    return valueOf(StringUtils.toUpperCase(policy));
   }
 }

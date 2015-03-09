@@ -33,6 +33,7 @@ import org.apache.hadoop.lib.service.Scheduler;
 import org.apache.hadoop.lib.util.Check;
 import org.apache.hadoop.lib.util.ConfigurationUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -254,7 +255,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
   private Set<String> toLowerCase(Collection<String> collection) {
     Set<String> set = new HashSet<String>();
     for (String value : collection) {
-      set.add(value.toLowerCase());
+      set.add(StringUtils.toLowerCase(value));
     }
     return set;
   }
@@ -300,7 +301,8 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
 
   protected void validateNamenode(String namenode) throws FileSystemAccessException {
     if (nameNodeWhitelist.size() > 0 && !nameNodeWhitelist.contains("*")) {
-      if (!nameNodeWhitelist.contains(namenode.toLowerCase())) {
+      if (!nameNodeWhitelist.contains(
+          StringUtils.toLowerCase(namenode))) {
         throw new FileSystemAccessException(FileSystemAccessException.ERROR.H05, namenode, "not in whitelist");
       }
     }

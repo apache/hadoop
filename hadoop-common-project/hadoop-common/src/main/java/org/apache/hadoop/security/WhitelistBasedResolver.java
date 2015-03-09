@@ -138,7 +138,8 @@ public class WhitelistBasedResolver extends SaslPropertiesResolver {
         QualityOfProtection.PRIVACY.toString());
 
     for (int i=0; i < qop.length; i++) {
-      qop[i] = QualityOfProtection.valueOf(qop[i].toUpperCase()).getSaslQop();
+      qop[i] = QualityOfProtection.valueOf(
+          StringUtils.toUpperCase(qop[i])).getSaslQop();
     }
 
     saslProps.put(Sasl.QOP, StringUtils.join(",", qop));

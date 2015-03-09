@@ -22,6 +22,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
 public abstract class EnumSetParam<E extends Enum<E>> extends Param<EnumSet<E>> {
@@ -37,7 +38,7 @@ public abstract class EnumSetParam<E extends Enum<E>> extends Param<EnumSet<E>> 
     final EnumSet<E> set = EnumSet.noneOf(klass);
     if (!str.isEmpty()) {
       for (String sub : str.split(",")) {
-        set.add(Enum.valueOf(klass, sub.trim().toUpperCase()));
+        set.add(Enum.valueOf(klass, StringUtils.toUpperCase(sub.trim())));
       }
     }
     return set;

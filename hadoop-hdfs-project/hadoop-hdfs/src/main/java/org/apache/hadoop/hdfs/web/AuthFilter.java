@@ -39,6 +39,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Subclass of {@link AuthenticationFilter} that
@@ -96,7 +97,7 @@ public class AuthFilter extends AuthenticationFilter {
 
     final Map<String, List<String>> m = new HashMap<String, List<String>>();
     for(Map.Entry<String, String[]> entry : original.entrySet()) {
-      final String key = entry.getKey().toLowerCase();
+      final String key = StringUtils.toLowerCase(entry.getKey());
       List<String> strings = m.get(key);
       if (strings == null) {
         strings = new ArrayList<String>();

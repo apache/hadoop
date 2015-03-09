@@ -45,6 +45,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
@@ -280,7 +281,7 @@ public class TestMapRed extends Configured implements Tool {
     public void map(WritableComparable key, Text value,
                     OutputCollector<Text, Text> output,
                     Reporter reporter) throws IOException {
-      String str = value.toString().toLowerCase();
+      String str = StringUtils.toLowerCase(value.toString());
       output.collect(new Text(str), value);
     }
 

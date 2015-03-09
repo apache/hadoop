@@ -33,6 +33,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -51,6 +52,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.apache.hadoop.hdfs.server.datanode.web.webhdfs.WebHdfsHandler.APPLICATION_JSON_UTF8;
 import static org.apache.hadoop.hdfs.server.datanode.web.webhdfs.WebHdfsHandler.WEBHDFS_PREFIX;
 import static org.apache.hadoop.hdfs.server.datanode.web.webhdfs.WebHdfsHandler.WEBHDFS_PREFIX_LENGTH;
+
 /**
  * Implement the read-only WebHDFS API for fsimage.
  */
@@ -141,7 +143,7 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
   private static String getOp(QueryStringDecoder decoder) {
     Map<String, List<String>> parameters = decoder.parameters();
     return parameters.containsKey("op")
-            ? parameters.get("op").get(0).toUpperCase() : null;
+        ? StringUtils.toUpperCase(parameters.get("op").get(0)) : null;
   }
 
   private static String getPath(QueryStringDecoder decoder)

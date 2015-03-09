@@ -51,6 +51,7 @@ import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.mapred.UniformSizeInputFormat;
 
 import com.google.common.collect.Maps;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Utility functions used in DistCp.
@@ -121,8 +122,9 @@ public class DistCpUtils {
    */
   public static Class<? extends InputFormat> getStrategy(Configuration conf,
                                                                  DistCpOptions options) {
-    String confLabel = "distcp." +
-        options.getCopyStrategy().toLowerCase(Locale.getDefault()) + ".strategy.impl";
+    String confLabel = "distcp."
+        + StringUtils.toLowerCase(options.getCopyStrategy())
+        + ".strategy" + ".impl";
     return conf.getClass(confLabel, UniformSizeInputFormat.class, InputFormat.class);
   }
 
@@ -221,7 +223,8 @@ public class DistCpUtils {
 
     final boolean preserveXAttrs = attributes.contains(FileAttribute.XATTR);
     if (preserveXAttrs || preserveRawXattrs) {
-      final String rawNS = XAttr.NameSpace.RAW.name().toLowerCase();
+      final String rawNS =
+          StringUtils.toLowerCase(XAttr.NameSpace.RAW.name());
       Map<String, byte[]> srcXAttrs = srcFileStatus.getXAttrs();
       Map<String, byte[]> targetXAttrs = getXAttrs(targetFS, path);
       if (srcXAttrs != null && !srcXAttrs.equals(targetXAttrs)) {
@@ -321,7 +324,8 @@ public class DistCpUtils {
          copyListingFileStatus.setXAttrs(srcXAttrs);
       } else {
         Map<String, byte[]> trgXAttrs = Maps.newHashMap();
-        final String rawNS = XAttr.NameSpace.RAW.name().toLowerCase();
+        final String rawNS =
+            StringUtils.toLowerCase(XAttr.NameSpace.RAW.name());
         for (Map.Entry<String, byte[]> ent : srcXAttrs.entrySet()) {
           final String xattrName = ent.getKey();
           if (xattrName.startsWith(rawNS)) {

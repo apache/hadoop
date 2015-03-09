@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
@@ -58,7 +59,7 @@ public class Rcc implements RccConstants {
     for (int i=0; i<args.length; i++) {
       if ("-l".equalsIgnoreCase(args[i]) ||
           "--language".equalsIgnoreCase(args[i])) {
-        language = args[i+1].toLowerCase();
+        language = StringUtils.toLowerCase(args[i+1]);
         i++;
       } else if ("-d".equalsIgnoreCase(args[i]) ||
                  "--destdir".equalsIgnoreCase(args[i])) {
@@ -69,7 +70,7 @@ public class Rcc implements RccConstants {
         if (arg.startsWith("-")) {
           arg = arg.substring(1);
         }
-        cmdargs.add(arg.toLowerCase());
+        cmdargs.add(StringUtils.toLowerCase(arg));
       } else {
         recFiles.add(args[i]);
       }

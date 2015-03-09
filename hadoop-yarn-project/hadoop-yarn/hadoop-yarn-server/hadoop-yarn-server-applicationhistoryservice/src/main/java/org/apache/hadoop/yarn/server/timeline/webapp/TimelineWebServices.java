@@ -52,6 +52,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
@@ -417,7 +418,7 @@ public class TimelineWebServices {
     String[] strs = str.split(delimiter);
     List<Field> fieldList = new ArrayList<Field>();
     for (String s : strs) {
-      s = s.trim().toUpperCase();
+      s = StringUtils.toUpperCase(s.trim());
       if (s.equals("EVENTS")) {
         fieldList.add(Field.EVENTS);
       } else if (s.equals("LASTEVENTONLY")) {

@@ -28,6 +28,7 @@ import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
 import com.sun.jersey.spi.container.ContainerResponseFilter;
 import com.sun.jersey.spi.container.ResourceFilter;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A filter to change parameter names to lower cases
@@ -75,7 +76,7 @@ public class ParamFilter implements ResourceFilter {
       final MultivaluedMap<String, String> parameters) {
     UriBuilder b = UriBuilder.fromUri(uri).replaceQuery("");
     for(Map.Entry<String, List<String>> e : parameters.entrySet()) {
-      final String key = e.getKey().toLowerCase();
+      final String key = StringUtils.toLowerCase(e.getKey());
       for(String v : e.getValue()) {
         b = b.queryParam(key, v);
       }

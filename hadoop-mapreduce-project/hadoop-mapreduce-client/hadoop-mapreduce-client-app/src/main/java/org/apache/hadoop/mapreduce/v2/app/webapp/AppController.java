@@ -22,7 +22,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.util.Locale;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -226,8 +225,9 @@ public class AppController extends Controller implements AMParams {
     if (app.getJob() != null) {
       try {
         String tt = $(TASK_TYPE);
-        tt = tt.isEmpty() ? "All" : StringUtils.capitalize(MRApps.taskType(tt).
-            toString().toLowerCase(Locale.US));
+        tt = tt.isEmpty() ? "All" : StringUtils.capitalize(
+            org.apache.hadoop.util.StringUtils.toLowerCase(
+                MRApps.taskType(tt).toString()));
         setTitle(join(tt, " Tasks for ", $(JOB_ID)));
       } catch (Exception e) {
         LOG.error("Failed to render tasks page with task type : "

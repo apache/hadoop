@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.commons.lang.math.LongRange;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -213,7 +214,7 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     // Convert applicationTags to lower case and add
     this.applicationTags = new HashSet<String>();
     for (String tag : tags) {
-      this.applicationTags.add(tag.toLowerCase());
+      this.applicationTags.add(StringUtils.toLowerCase(tag));
     }
   }
 
@@ -258,7 +259,8 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   public void setApplicationStates(Set<String> applicationStates) {
     EnumSet<YarnApplicationState> appStates = null;
     for (YarnApplicationState state : YarnApplicationState.values()) {
-      if (applicationStates.contains(state.name().toLowerCase())) {
+      if (applicationStates.contains(
+          StringUtils.toLowerCase(state.name()))) {
         if (appStates == null) {
           appStates = EnumSet.of(state);
         } else {

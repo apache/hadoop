@@ -47,6 +47,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.util.HttpExceptionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -169,7 +170,7 @@ public abstract class DelegationTokenAuthenticationHandler
     boolean requestContinues = true;
     String op = ServletUtils.getParameter(request,
         KerberosDelegationTokenAuthenticator.OP_PARAM);
-    op = (op != null) ? op.toUpperCase() : null;
+    op = (op != null) ? StringUtils.toUpperCase(op) : null;
     if (DELEGATION_TOKEN_OPS.contains(op) &&
         !request.getMethod().equals("OPTIONS")) {
       KerberosDelegationTokenAuthenticator.DelegationTokenOperation dtOp =

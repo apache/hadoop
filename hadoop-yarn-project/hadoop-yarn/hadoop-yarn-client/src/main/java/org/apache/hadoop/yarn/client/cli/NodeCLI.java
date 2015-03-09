@@ -111,7 +111,8 @@ public class NodeCLI extends YarnCLI {
         if (types != null) {
           for (String type : types) {
             if (!type.trim().isEmpty()) {
-              nodeStates.add(NodeState.valueOf(type.trim().toUpperCase()));
+              nodeStates.add(NodeState.valueOf(
+                  org.apache.hadoop.util.StringUtils.toUpperCase(type.trim())));
             }
           }
         }
