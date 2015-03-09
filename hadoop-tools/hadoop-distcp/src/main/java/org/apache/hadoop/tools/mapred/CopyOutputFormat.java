@@ -97,13 +97,13 @@ public class CopyOutputFormat<K, V> extends TextOutputFormat<K, V> {
     }
   }
 
-  /** @inheritDoc */
+  /** {@inheritDoc} */
   @Override
   public OutputCommitter getOutputCommitter(TaskAttemptContext context) throws IOException {
     return new CopyCommitter(getOutputPath(context), context);
   }
 
-  /** @inheritDoc */
+  /** {@inheritDoc} */
   @Override
   public void checkOutputSpecs(JobContext context) throws IOException {
     Configuration conf = context.getConfiguration();

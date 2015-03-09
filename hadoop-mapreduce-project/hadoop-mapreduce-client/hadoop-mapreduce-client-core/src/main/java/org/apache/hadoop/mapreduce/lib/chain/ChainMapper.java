@@ -57,24 +57,24 @@ import org.apache.hadoop.mapreduce.lib.chain.Chain.ChainBlockingQueue;
  * ChainMapper, this is done by the addMapper for the last mapper in the chain.
  * </p>
  * ChainMapper usage pattern:
- * <p/>
+ * <p>
  * 
  * <pre>
  * ...
  * Job = new Job(conf);
- * <p/>
+ *
  * Configuration mapAConf = new Configuration(false);
  * ...
  * ChainMapper.addMapper(job, AMap.class, LongWritable.class, Text.class,
  *   Text.class, Text.class, true, mapAConf);
- * <p/>
+ *
  * Configuration mapBConf = new Configuration(false);
  * ...
  * ChainMapper.addMapper(job, BMap.class, Text.class, Text.class,
  *   LongWritable.class, Text.class, false, mapBConf);
- * <p/>
+ *
  * ...
- * <p/>
+ *
  * job.waitForComplettion(true);
  * ...
  * </pre>

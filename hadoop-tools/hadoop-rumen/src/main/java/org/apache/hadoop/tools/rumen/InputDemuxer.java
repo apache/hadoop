@@ -45,12 +45,12 @@ public interface InputDemuxer extends Closeable {
   public void bindTo(Path path, Configuration conf) throws IOException;
 
   /**
-   * Get the next <name, input> pair. The name should preserve the original job
+   * Get the next &lt;name, input&gt; pair. The name should preserve the original job
    * history file or job conf file name. The input object should be closed
    * before calling getNext() again. The old input object would be invalid after
    * calling getNext() again.
    * 
-   * @return the next <name, input> pair.
+   * @return the next &lt;name, input&gt; pair.
    */
   public Pair<String, InputStream> getNext() throws IOException;
 }

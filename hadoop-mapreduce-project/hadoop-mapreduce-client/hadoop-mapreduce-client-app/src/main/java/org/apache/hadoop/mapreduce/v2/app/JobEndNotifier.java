@@ -44,7 +44,6 @@ import org.mortbay.log.Log;
  * proxy if needed</li><li>
  * The URL may contain sentinels which will be replaced by jobId and jobStatus 
  * (eg. SUCCEEDED/KILLED/FAILED) </li> </ul>
- * </p>
  */
 public class JobEndNotifier implements Configurable {
   private static final String JOB_ID = "$jobId";

@@ -199,7 +199,7 @@ public class MultiFileWordCount extends Configured implements Tool {
   }
 
   /**
-   * This Mapper is similar to the one in {@link WordCount.MapClass}.
+   * This Mapper is similar to the one in {@link WordCount.TokenizerMapper}.
    */
   public static class MapClass extends 
       Mapper<WordOffset, Text, Text, IntWritable> {

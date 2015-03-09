@@ -113,7 +113,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
  *       }
  *     }
  *     
- * </pre></blockquote></p>
+ * </pre></blockquote>
  *
  * It is also very common to use the DistributedCache by using
  * {@link org.apache.hadoop.util.GenericOptionsParser}.

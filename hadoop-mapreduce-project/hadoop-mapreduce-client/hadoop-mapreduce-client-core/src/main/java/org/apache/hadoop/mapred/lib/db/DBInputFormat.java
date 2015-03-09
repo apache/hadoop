@@ -195,8 +195,8 @@ public class DBInputFormat<T  extends DBWritable>
    * @param inputClass the class object implementing DBWritable, which is the 
    * Java object holding tuple fields.
    * @param tableName The table to read data from
-   * @param conditions The condition which to select data with, eg. '(updated >
-   * 20070101 AND length > 0)'
+   * @param conditions The condition which to select data with, eg. '(updated &gt;
+   * 20070101 AND length &gt; 0)'
    * @param orderBy the fieldNames in the orderBy clause.
    * @param fieldNames The field names in the table
    * @see #setInput(JobConf, Class, String, String)

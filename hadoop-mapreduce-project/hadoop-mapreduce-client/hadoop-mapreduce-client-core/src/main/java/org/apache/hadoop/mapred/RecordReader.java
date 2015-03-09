@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  *   
  * <p><code>RecordReader</code>, typically, converts the byte-oriented view of 
  * the input, provided by the <code>InputSplit</code>, and presents a 
- * record-oriented view for the {@link Mapper} & {@link Reducer} tasks for 
+ * record-oriented view for the {@link Mapper} and {@link Reducer} tasks for
  * processing. It thus assumes the responsibility of processing record 
  * boundaries and presenting the tasks with keys and values.</p>
  * 

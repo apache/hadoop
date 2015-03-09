@@ -78,7 +78,7 @@ public class Modular {
     return x >= 1? x - 1: x < 0? x + 1: x;
   }
 
-  /** Given 0 < x < y,
+  /** Given 0 &lt; x &lt; y,
    * return x^(-1) mod y.
    */
   public static long modInverse(final long x, final long y) {

@@ -50,7 +50,7 @@ import java.io.IOException;
  * all Mappers and the Reduce in the chain use matching output and input key and
  * value classes as no conversion is done by the chaining code.
  * </p>
- * </p> Using the ChainMapper and the ChainReducer classes is possible to
+ * <p> Using the ChainMapper and the ChainReducer classes is possible to
  * compose Map/Reduce jobs that look like <code>[MAP+ / REDUCE MAP*]</code>. And
  * immediate benefit of this pattern is a dramatic reduction in disk IO. </p>
  * <p>
@@ -59,26 +59,26 @@ import java.io.IOException;
  * element in the chain.
  * </p>
  * ChainReducer usage pattern:
- * <p/>
+ * <p>
  * 
  * <pre>
  * ...
  * Job = new Job(conf);
  * ....
- * <p/>
+ *
  * Configuration reduceConf = new Configuration(false);
  * ...
  * ChainReducer.setReducer(job, XReduce.class, LongWritable.class, Text.class,
  *   Text.class, Text.class, true, reduceConf);
- * <p/>
+ *
  * ChainReducer.addMapper(job, CMap.class, Text.class, Text.class,
  *   LongWritable.class, Text.class, false, null);
- * <p/>
+ *
  * ChainReducer.addMapper(job, DMap.class, LongWritable.class, Text.class,
  *   LongWritable.class, LongWritable.class, true, null);
- * <p/>
+ *
  * ...
- * <p/>
+ *
  * job.waitForCompletion(true);
  * ...
  * </pre>

@@ -345,7 +345,7 @@ public class MRApps extends Apps {
    * {@link MRJobConfig#MAPREDUCE_JOB_CLASSLOADER} is set to true, and
    * the APP_CLASSPATH environment variable is set.
    * @param conf
-   * @returns the created job classloader, or null if the job classloader is not
+   * @return the created job classloader, or null if the job classloader is not
    * enabled or the APP_CLASSPATH environment variable is not set
    * @throws IOException
    */

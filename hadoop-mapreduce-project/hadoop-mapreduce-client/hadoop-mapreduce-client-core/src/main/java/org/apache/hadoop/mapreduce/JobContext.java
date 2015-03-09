@@ -289,7 +289,6 @@ public interface JobContext extends MRJobConfig {
    * Get the timestamps of the archives.  Used by internal
    * DistributedCache and MapReduce code.
    * @return a string array of timestamps 
-   * @throws IOException
    */
   public String[] getArchiveTimestamps();
 
@@ -297,7 +296,6 @@ public interface JobContext extends MRJobConfig {
    * Get the timestamps of the files.  Used by internal
    * DistributedCache and MapReduce code.
    * @return a string array of timestamps 
-   * @throws IOException
    */
   public String[] getFileTimestamps();
 

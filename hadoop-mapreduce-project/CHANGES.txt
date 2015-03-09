@@ -166,6 +166,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6136. MRAppMaster doesn't shutdown file systems. (Brahma 
     Reddy Battula via ozawa)
 
+    MAPREDUCE-5657. [JDK8] Fix Javadoc errors caused by incorrect or illegal
+    tags in doc comments. (Akira AJISAKA via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -77,7 +77,7 @@ public abstract class RetriableCommand {
    *  2. the command may no longer be retried (e.g. runs out of retry-attempts).
    * @param arguments The list of arguments for the command.
    * @return Generic "Object" from doExecute(), on success.
-   * @throws IOException, IOException, on complete failure.
+   * @throws Exception
    */
   public Object execute(Object... arguments) throws Exception {
     Exception latestException;

@@ -50,7 +50,7 @@ import org.apache.hadoop.util.ToolRunner;
  * where $S=[0,1)^2$ is a unit square,
  * $x=(x_1,x_2)$ is a 2-dimensional point,
  * and $f$ is a function describing the inscribed circle of the square $S$,
- * $f(x)=1$ if $(2x_1-1)^2+(2x_2-1)^2 <= 1$ and $f(x)=0$, otherwise.
+ * $f(x)=1$ if $(2x_1-1)^2+(2x_2-1)^2 &lt;= 1$ and $f(x)=0$, otherwise.
  * It is easy to see that Pi is equal to $4I$.
  * So an approximation of Pi is obtained once $I$ is evaluated numerically.
  * 
@@ -155,7 +155,7 @@ public class QuasiMonteCarlo extends Configured implements Tool {
     /** Map method.
      * @param offset samples starting from the (offset+1)th sample.
      * @param size the number of samples for this map
-     * @param context output {ture->numInside, false->numOutside}
+     * @param context output {ture-&gt;numInside, false-&gt;numOutside}
      */
     public void map(LongWritable offset,
                     LongWritable size,

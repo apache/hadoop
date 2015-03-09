@@ -45,7 +45,7 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * Mapper class that executes the DistCp copy operation.
- * Implements the o.a.h.mapreduce.Mapper<> interface.
+ * Implements the o.a.h.mapreduce.Mapper interface.
  */
 public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> {
 
@@ -182,10 +182,11 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   }
 
   /**
-   * Implementation of the Mapper<>::map(). Does the copy.
+   * Implementation of the Mapper::map(). Does the copy.
    * @param relPath The target path.
    * @param sourceFileStatus The source path.
    * @throws IOException
+   * @throws InterruptedException
    */
   @Override
   public void map(Text relPath, CopyListingFileStatus sourceFileStatus,

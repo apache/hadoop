@@ -35,7 +35,7 @@ import org.apache.hadoop.util.ToolRunner;
  * A map/reduce program that uses a BBP-type method to compute exact 
  * binary digits of Pi.
  * This program is designed for computing the n th bit of Pi,
- * for large n, say n >= 10^8.
+ * for large n, say n &gt;= 10^8.
  * For computing lower bits of Pi, consider using bbp.
  *
  * The actually computation is done by DistSum jobs.

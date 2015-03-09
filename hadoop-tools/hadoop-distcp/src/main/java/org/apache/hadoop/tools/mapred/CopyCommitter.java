@@ -70,7 +70,7 @@ public class CopyCommitter extends FileOutputCommitter {
     this.taskAttemptContext = context;
   }
 
-  /** @inheritDoc */
+  /** {@inheritDoc} */
   @Override
   public void commitJob(JobContext jobContext) throws IOException {
     Configuration conf = jobContext.getConfiguration();
@@ -103,7 +103,7 @@ public class CopyCommitter extends FileOutputCommitter {
     }
   }
 
-  /** @inheritDoc */
+  /** {@inheritDoc} */
   @Override
   public void abortJob(JobContext jobContext,
                        JobStatus.State state) throws IOException {

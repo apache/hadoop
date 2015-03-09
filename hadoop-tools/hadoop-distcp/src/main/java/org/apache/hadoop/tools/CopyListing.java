@@ -38,10 +38,10 @@ import com.google.common.collect.Sets;
 /**
  * The CopyListing abstraction is responsible for how the list of
  * sources and targets is constructed, for DistCp's copy function.
- * The copy-listing should be a SequenceFile<Text, CopyListingFileStatus>,
- * located at the path specified to buildListing(),
- * each entry being a pair of (Source relative path, source file status),
- * all the paths being fully qualified.
+ * The copy-listing should be a
+ * SequenceFile&lt;Text, CopyListingFileStatus&gt;, located at the path
+ * specified to buildListing(), each entry being a pair of (Source relative
+ * path, source file status), all the paths being fully qualified.
  */
 public abstract class CopyListing extends Configured {
 
@@ -95,8 +95,8 @@ public abstract class CopyListing extends Configured {
    * Validate input and output paths
    *
    * @param options - Input options
-   * @throws InvalidInputException: If inputs are invalid
-   * @throws IOException: any Exception with FS 
+   * @throws InvalidInputException If inputs are invalid
+   * @throws IOException any Exception with FS
    */
   protected abstract void validatePaths(DistCpOptions options)
       throws IOException, InvalidInputException;
@@ -105,7 +105,7 @@ public abstract class CopyListing extends Configured {
    * The interface to be implemented by sub-classes, to create the source/target file listing.
    * @param pathToListFile Path on HDFS where the listing file is written.
    * @param options Input Options for DistCp (indicating source/target paths.)
-   * @throws IOException: Thrown on failure to create the listing file.
+   * @throws IOException Thrown on failure to create the listing file.
    */
   protected abstract void doBuildListing(Path pathToListFile,
                                          DistCpOptions options) throws IOException;

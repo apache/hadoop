@@ -236,7 +236,7 @@ public class SwiftTestUtils extends org.junit.Assert {
 
   /**
    * Convert a byte to a character for printing. If the
-   * byte value is < 32 -and hence unprintable- the byte is
+   * byte value is &lt; 32 -and hence unprintable- the byte is
    * returned as a two digit hex value
    * @param b byte
    * @return the printable character string

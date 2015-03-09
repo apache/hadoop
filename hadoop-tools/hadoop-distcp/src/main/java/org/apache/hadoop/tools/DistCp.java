@@ -80,7 +80,7 @@ public class DistCp extends Configured implements Tool {
    * (E.g. source-paths, target-location, etc.)
    * @param inputOptions Options (indicating source-paths, target-location.)
    * @param configuration The Hadoop configuration against which the Copy-mapper must run.
-   * @throws Exception, on failure.
+   * @throws Exception
    */
   public DistCp(Configuration configuration, DistCpOptions inputOptions) throws Exception {
     Configuration config = new Configuration(configuration);
@@ -147,7 +147,7 @@ public class DistCp extends Configured implements Tool {
    * Implements the core-execution. Creates the file-list for copy,
    * and launches the Hadoop-job, to do the copy.
    * @return Job handle
-   * @throws Exception, on failure.
+   * @throws Exception
    */
   public Job execute() throws Exception {
     Job job = createAndSubmitJob();
