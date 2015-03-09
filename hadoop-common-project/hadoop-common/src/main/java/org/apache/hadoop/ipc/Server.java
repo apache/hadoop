@@ -1324,10 +1324,15 @@ public abstract class Server {
           saslResponse = processSaslMessage(saslMessage);
         } catch (IOException e) {
           rpcMetrics.incrAuthenticationFailures();
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(StringUtils.stringifyException(e));
+          }
           // attempting user could be null
+          IOException tce = (IOException) getTrueCause(e);
           AUDITLOG.warn(AUTH_FAILED_FOR + this.toString() + ":"
-              + attemptingUser + " (" + e.getLocalizedMessage() + ")");
-          throw (IOException) getTrueCause(e);
+              + attemptingUser + " (" + e.getLocalizedMessage()
+              + ") with true cause: (" + tce.getLocalizedMessage() + ")");
+          throw tce;
         }
         
         if (saslServer != null && saslServer.isComplete()) {
