@@ -167,7 +167,7 @@ Release 2.7.0 - UNRELEASED
     Reddy Battula via ozawa)
 
     MAPREDUCE-5657. [JDK8] Fix Javadoc errors caused by incorrect or illegal
-    tags in doc comments. (Akira AJISAKA via ozawa)
+    tags in doc comments. (Akira AJISAKA and Andrew Purtell via ozawa)
 
 Release 2.6.1 - UNRELEASED
 
