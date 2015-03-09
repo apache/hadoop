@@ -366,16 +366,19 @@ public final class FSImageFormatPBINode {
         INodeSection.FileUnderConstructionFeature uc = f.getFileUC();
         file.toUnderConstruction(uc.getClientName(), uc.getClientMachine());
         BlockInfo lastBlk = file.getLastBlock();
-        // replace the last block of file
-        final BlockInfo ucBlk;
-        if (stripeFeature != null) {
-          BlockInfoStriped striped = (BlockInfoStriped) lastBlk;
-          ucBlk = new BlockInfoStripedUnderConstruction(striped,
-              striped.getDataBlockNum(), striped.getParityBlockNum());
-        } else {
-          ucBlk = new BlockInfoContiguousUnderConstruction(lastBlk, replication);
+        if (lastBlk != null) {
+          // replace the last block of file
+          final BlockInfo ucBlk;
+          if (stripeFeature != null) {
+            BlockInfoStriped striped = (BlockInfoStriped) lastBlk;
+            ucBlk = new BlockInfoStripedUnderConstruction(striped,
+                striped.getDataBlockNum(), striped.getParityBlockNum());
+          } else {
+            ucBlk = new BlockInfoContiguousUnderConstruction(lastBlk,
+                replication);
+          }
+          file.setBlock(file.numBlocks() - 1, ucBlk);
         }
-        file.setBlock(file.numBlocks() - 1, ucBlk);
       }
       return file;
     }

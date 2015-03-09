@@ -123,6 +123,11 @@ public class BlockInfoStriped extends BlockInfo {
     return -1;
   }
 
+  int getStorageBlockIndex(DatanodeStorageInfo storage) {
+    int i = this.findStorageInfo(storage);
+    return i == -1 ? -1 : indices[i];
+  }
+
   @Override
   boolean removeStorage(DatanodeStorageInfo storage) {
     int dnIndex = findStorageInfoFromEnd(storage);
