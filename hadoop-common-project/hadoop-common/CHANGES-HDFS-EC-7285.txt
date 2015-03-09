@@ -15,4 +15,6 @@
     HADOOP-11643. Define EC schema API for ErasureCodec. Contributed by Kai Zheng
     ( Kai Zheng )
 
+    HADOOP-11646. Erasure Coder API for encoding and decoding of block group
+    ( Kai Zheng via vinayakumarb )
 

@@ -15,23 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.erasurecode.rawcoder;
+package org.apache.hadoop.io.erasurecode.coder;
 
 /**
- * RawErasureCoder is a common interface for {@link RawErasureEncoder} and
- * {@link RawErasureDecoder} as both encoder and decoder share some properties.
+ * An erasure coder to perform encoding or decoding given a group. Generally it
+ * involves calculating necessary internal steps according to codec logic. For
+ * each step,it calculates necessary input blocks to read chunks from and output
+ * parity blocks to write parity chunks into from the group. It also takes care
+ * of appropriate raw coder to use for the step. And encapsulates all the
+ * necessary info (input blocks, output blocks and raw coder) into a step
+ * represented by {@link ErasureCodingStep}. ErasureCoder callers can use the
+ * step to do the real work with retrieved input and output chunks.
  *
- * RawErasureCoder is part of ErasureCodec framework, where ErasureCoder is
- * used to encode/decode a group of blocks (BlockGroup) according to the codec
- * specific BlockGroup layout and logic. An ErasureCoder extracts chunks of
- * data from the blocks and can employ various low level RawErasureCoders to
- * perform encoding/decoding against the chunks.
+ * Note, currently only one coding step is supported. Will support complex cases
+ * of multiple coding steps.
  *
- * To distinguish from ErasureCoder, here RawErasureCoder is used to mean the
- * low level constructs, since it only takes care of the math calculation with
- * a group of byte buffers.
  */
-public interface RawErasureCoder {
+public interface ErasureCoder {
 
   /**
    * Initialize with the important parameters for the code.
@@ -71,8 +71,7 @@ public interface RawErasureCoder {
   public boolean preferNativeBuffer();
 
   /**
-   * Should be called when release this coder. Good chance to release encoding
-   * or decoding buffers
+   * Release the resources if any. Good chance to invoke RawErasureCoder#release.
    */
   public void release();
 }
