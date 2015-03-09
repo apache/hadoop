@@ -36,6 +36,7 @@ import org.apache.directory.server.core.kerberos.KeyDerivationInterceptor;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
 import org.apache.directory.server.core.partition.ldif.LdifPartition;
+import org.apache.directory.server.kerberos.KerberosConfig;
 import org.apache.directory.server.kerberos.kdc.KdcServer;
 import org.apache.directory.server.kerberos.shared.crypto.encryption.KerberosKeyFactory;
 import org.apache.directory.server.kerberos.shared.keytab.Keytab;
@@ -418,7 +419,15 @@ public class MiniKdc {
       IOUtils.closeQuietly(is1);
     }
 
-    kdc = new KdcServer();
+    KerberosConfig kerberosConfig = new KerberosConfig();
+    kerberosConfig.setMaximumRenewableLifetime(Long.parseLong(conf
+        .getProperty(MAX_RENEWABLE_LIFETIME)));
+    kerberosConfig.setMaximumTicketLifetime(Long.parseLong(conf
+        .getProperty(MAX_TICKET_LIFETIME)));
+    kerberosConfig.setSearchBaseDn(String.format("dc=%s,dc=%s", orgName,
+        orgDomain));
+    kerberosConfig.setPaEncTimestampRequired(false);
+    kdc = new KdcServer(kerberosConfig);
     kdc.setDirectoryService(ds);
 
     // transport
@@ -431,12 +440,6 @@ public class MiniKdc {
       throw new IllegalArgumentException("Invalid transport: " + transport);
     }
     kdc.setServiceName(conf.getProperty(INSTANCE));
-    kdc.getConfig().setMaximumRenewableLifetime(
-            Long.parseLong(conf.getProperty(MAX_RENEWABLE_LIFETIME)));
-    kdc.getConfig().setMaximumTicketLifetime(
-            Long.parseLong(conf.getProperty(MAX_TICKET_LIFETIME)));
-
-    kdc.getConfig().setPaEncTimestampRequired(false);
     kdc.start();
 
     StringBuilder sb = new StringBuilder();
