@@ -737,6 +737,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3275. CapacityScheduler: Preemption happening on non-preemptable
     queues (Eric Payne via jlowe)
 
+    YARN-3287. Made TimelineClient put methods do as the correct login context.
+    (Daryn Sharp and Jonathan Eagles via zjshen)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
