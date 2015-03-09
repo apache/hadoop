@@ -34,7 +34,7 @@ public abstract class EnumParam<E extends Enum<E>> extends Param<E> {
 
   @Override
   protected E parse(String str) throws Exception {
-    return Enum.valueOf(klass, str.toUpperCase());
+    return Enum.valueOf(klass, StringUtils.toUpperCase(str));
   }
 
   @Override

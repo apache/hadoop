@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.lib.util.Check;
 import org.apache.hadoop.lib.util.ConfigurationUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
@@ -202,7 +203,7 @@ public class Server {
    * @param config server configuration.
    */
   public Server(String name, String homeDir, String configDir, String logDir, String tempDir, Configuration config) {
-    this.name = Check.notEmpty(name, "name").trim().toLowerCase();
+    this.name = StringUtils.toLowerCase(Check.notEmpty(name, "name").trim());
     this.homeDir = Check.notEmpty(homeDir, "homeDir");
     this.configDir = Check.notEmpty(configDir, "configDir");
     this.logDir = Check.notEmpty(logDir, "logDir");

@@ -394,7 +394,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public QueueState getState(String queue) {
     String state = get(getQueuePrefix(queue) + STATE);
     return (state != null) ? 
-        QueueState.valueOf(state.toUpperCase()) : QueueState.RUNNING;
+        QueueState.valueOf(StringUtils.toUpperCase(state)) : QueueState.RUNNING;
   }
   
   public void setAccessibleNodeLabels(String queue, Set<String> labels) {
@@ -490,7 +490,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
   
   private static String getAclKey(QueueACL acl) {
-    return "acl_" + acl.toString().toLowerCase();
+    return "acl_" + StringUtils.toLowerCase(acl.toString());
   }
 
   public AccessControlList getAcl(String queue, QueueACL acl) {

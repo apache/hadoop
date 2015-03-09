@@ -35,6 +35,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -214,23 +215,25 @@ public class FileBench extends Configured implements Tool {
           if (!(fmt == Format.txt || cod == CCodec.pln)) {
             for (CType typ : ct) {
               String fn =
-                fmt.name().toUpperCase() + "_" +
-                cod.name().toUpperCase() + "_" +
-                typ.name().toUpperCase();
+                StringUtils.toUpperCase(fmt.name()) + "_" +
+                StringUtils.toUpperCase(cod.name()) + "_" +
+                StringUtils.toUpperCase(typ.name());
               typ.configure(job);
-              System.out.print(rwop.name().toUpperCase() + " " + fn + ": ");
+              System.out.print(
+                  StringUtils.toUpperCase(rwop.name()) + " " + fn + ": ");
               System.out.println(rwop.exec(fn, job) / 1000 +
                   " seconds");
             }
           } else {
             String fn =
-              fmt.name().toUpperCase() + "_" +
-              cod.name().toUpperCase();
+              StringUtils.toUpperCase(fmt.name()) + "_" +
+              StringUtils.toUpperCase(cod.name());
             Path p = new Path(root, fn);
             if (rwop == RW.r && !fs.exists(p)) {
               fn += cod.getExt();
             }
-            System.out.print(rwop.name().toUpperCase() + " " + fn + ": ");
+            System.out.print(
+                StringUtils.toUpperCase(rwop.name()) + " " + fn + ": ");
             System.out.println(rwop.exec(fn, job) / 1000 +
                 " seconds");
           }

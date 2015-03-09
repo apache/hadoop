@@ -1296,7 +1296,7 @@ public class TestIPC {
     
     StringBuilder hexString = new StringBuilder();
     
-    for (String line : hexdump.toUpperCase().split("\n")) {
+    for (String line : StringUtils.toUpperCase(hexdump).split("\n")) {
       hexString.append(line.substring(0, LAST_HEX_COL).replace(" ", ""));
     }
     return StringUtils.hexStringToByte(hexString.toString());

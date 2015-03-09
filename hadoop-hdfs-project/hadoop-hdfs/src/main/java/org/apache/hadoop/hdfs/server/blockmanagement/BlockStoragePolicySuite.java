@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -131,7 +132,8 @@ public class BlockStoragePolicySuite {
   }
 
   public static String buildXAttrName() {
-    return XAttrNS.toString().toLowerCase() + "." + STORAGE_POLICY_XATTR_NAME;
+    return StringUtils.toLowerCase(XAttrNS.toString())
+        + "." + STORAGE_POLICY_XATTR_NAME;
   }
 
   public static XAttr buildXAttr(byte policyId) {

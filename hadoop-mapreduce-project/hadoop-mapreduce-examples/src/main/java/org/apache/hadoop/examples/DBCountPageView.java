@@ -102,7 +102,7 @@ public class DBCountPageView extends Configured implements Tool {
   
   private void createConnection(String driverClassName
       , String url) throws Exception {
-    
+
     Class.forName(driverClassName);
     connection = DriverManager.getConnection(url);
     connection.setAutoCommit(false);

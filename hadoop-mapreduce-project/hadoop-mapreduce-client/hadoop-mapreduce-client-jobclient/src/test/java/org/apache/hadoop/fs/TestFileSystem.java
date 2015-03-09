@@ -49,6 +49,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 
 public class TestFileSystem extends TestCase {
   private static final Log LOG = FileSystem.LOG;
@@ -556,7 +557,8 @@ public class TestFileSystem extends TestCase {
   static void checkPath(MiniDFSCluster cluster, FileSystem fileSys) throws IOException {
     InetSocketAddress add = cluster.getNameNode().getNameNodeAddress();
     // Test upper/lower case
-    fileSys.checkPath(new Path("hdfs://" + add.getHostName().toUpperCase() + ":" + add.getPort()));
+    fileSys.checkPath(new Path("hdfs://"
+        + StringUtils.toUpperCase(add.getHostName()) + ":" + add.getPort()));
   }
 
   public void testFsClose() throws Exception {

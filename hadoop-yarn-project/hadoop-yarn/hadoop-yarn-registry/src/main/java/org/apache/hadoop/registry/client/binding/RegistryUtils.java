@@ -88,7 +88,8 @@ public class RegistryUtils {
    * @return the converted username
    */
   public static String convertUsername(String username) {
-    String converted= username.toLowerCase(Locale.ENGLISH);
+    String converted =
+        org.apache.hadoop.util.StringUtils.toLowerCase(username);
     int atSymbol = converted.indexOf('@');
     if (atSymbol > 0) {
       converted = converted.substring(0, atSymbol);

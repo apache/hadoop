@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.slive;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * An operation output has the following object format whereby simple types are
@@ -67,7 +68,8 @@ class OperationOutput {
           "Invalid key format - no type seperator - " + TYPE_SEP);
     }
     try {
-      dataType = OutputType.valueOf(key.substring(0, place).toUpperCase());
+      dataType = OutputType.valueOf(
+          StringUtils.toUpperCase(key.substring(0, place)));
     } catch (Exception e) {
       throw new IllegalArgumentException(
           "Invalid key format - invalid output type", e);

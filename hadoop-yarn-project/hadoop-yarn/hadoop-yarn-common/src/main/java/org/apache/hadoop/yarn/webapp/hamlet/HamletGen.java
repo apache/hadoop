@@ -26,7 +26,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -35,6 +34,7 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 
 import org.slf4j.Logger;
@@ -241,7 +241,7 @@ public class HamletGen {
     puts(indent, "\n",
          "private <T extends _> ", retName, "<T> ", methodName,
          "_(T e, boolean inline) {\n",
-         "  return new ", retName, "<T>(\"", retName.toLowerCase(Locale.US),
+         "  return new ", retName, "<T>(\"", StringUtils.toLowerCase(retName),
          "\", e, opt(", !endTagOptional.contains(retName), ", inline, ",
          retName.equals("PRE"), ")); }");
   }
@@ -258,7 +258,7 @@ public class HamletGen {
       puts(0, ") {");
       puts(indent,
            topMode ? "" : "  closeAttrs();\n",
-           "  return ", retName.toLowerCase(Locale.US), "_(this, ",
+           "  return ", StringUtils.toLowerCase(retName), "_" + "(this, ",
            isInline(className, retName), ");\n", "}");
     } else if (params.length == 1) {
       puts(0, "String selector) {");

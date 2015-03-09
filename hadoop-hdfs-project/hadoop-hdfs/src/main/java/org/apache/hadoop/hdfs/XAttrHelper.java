@@ -24,6 +24,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttr.NameSpace;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -57,16 +58,20 @@ public class XAttrHelper {
     }
     
     NameSpace ns;
-    final String prefix = name.substring(0, prefixIndex).toLowerCase();
-    if (prefix.equals(NameSpace.USER.toString().toLowerCase())) {
+    final String prefix = name.substring(0, prefixIndex);
+    if (StringUtils.equalsIgnoreCase(prefix, NameSpace.USER.toString())) {
       ns = NameSpace.USER;
-    } else if (prefix.equals(NameSpace.TRUSTED.toString().toLowerCase())) {
+    } else if (
+        StringUtils.equalsIgnoreCase(prefix, NameSpace.TRUSTED.toString())) {
       ns = NameSpace.TRUSTED;
-    } else if (prefix.equals(NameSpace.SYSTEM.toString().toLowerCase())) {
+    } else if (
+        StringUtils.equalsIgnoreCase(prefix, NameSpace.SYSTEM.toString())) {
       ns = NameSpace.SYSTEM;
-    } else if (prefix.equals(NameSpace.SECURITY.toString().toLowerCase())) {
+    } else if (
+        StringUtils.equalsIgnoreCase(prefix, NameSpace.SECURITY.toString())) {
       ns = NameSpace.SECURITY;
-    } else if (prefix.equals(NameSpace.RAW.toString().toLowerCase())) {
+    } else if (
+        StringUtils.equalsIgnoreCase(prefix, NameSpace.RAW.toString())) {
       ns = NameSpace.RAW;
     } else {
       throw new HadoopIllegalArgumentException("An XAttr name must be " +
@@ -145,7 +150,7 @@ public class XAttrHelper {
     }
     
     String namespace = xAttr.getNameSpace().toString();
-    return namespace.toLowerCase() + "." + xAttr.getName();
+    return StringUtils.toLowerCase(namespace) + "." + xAttr.getName();
   }
 
   /**

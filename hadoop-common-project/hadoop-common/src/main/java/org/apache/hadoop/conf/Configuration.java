@@ -1434,11 +1434,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return defaultValue;
     }
 
-    valueString = valueString.toLowerCase();
-
-    if ("true".equals(valueString))
+    if (StringUtils.equalsIgnoreCase("true", valueString))
       return true;
-    else if ("false".equals(valueString))
+    else if (StringUtils.equalsIgnoreCase("false", valueString))
       return false;
     else return defaultValue;
   }

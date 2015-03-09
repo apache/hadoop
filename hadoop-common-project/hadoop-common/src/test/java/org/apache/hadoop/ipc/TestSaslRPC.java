@@ -181,7 +181,7 @@ public class TestSaslRPC {
     StringBuilder sb = new StringBuilder();
     int i = 0;
     for (QualityOfProtection qop:qops){
-     sb.append(qop.name().toLowerCase());
+     sb.append(org.apache.hadoop.util.StringUtils.toLowerCase(qop.name()));
      if (++i < qops.length){
        sb.append(",");
      }

@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Defines the types of supported storage media. The default storage
@@ -78,7 +79,7 @@ public enum StorageType {
   }
 
   public static StorageType parseStorageType(String s) {
-    return StorageType.valueOf(s.toUpperCase());
+    return StorageType.valueOf(StringUtils.toUpperCase(s));
   }
 
   private static List<StorageType> getNonTransientTypes() {

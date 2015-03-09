@@ -21,6 +21,7 @@ import com.sun.javadoc.DocErrorReporter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 class StabilityOptions {
   public static final String STABLE_OPTION = "-stable";
@@ -28,7 +29,7 @@ class StabilityOptions {
   public static final String UNSTABLE_OPTION = "-unstable";
 
   public static Integer optionLength(String option) {
-    String opt = option.toLowerCase();
+    String opt = option.toLowerCase(Locale.ENGLISH);
     if (opt.equals(UNSTABLE_OPTION)) return 1;
     if (opt.equals(EVOLVING_OPTION)) return 1;
     if (opt.equals(STABLE_OPTION)) return 1;
@@ -38,7 +39,7 @@ class StabilityOptions {
   public static void validOptions(String[][] options,
       DocErrorReporter reporter) {
     for (int i = 0; i < options.length; i++) {
-      String opt = options[i][0].toLowerCase();
+      String opt = options[i][0].toLowerCase(Locale.ENGLISH);
       if (opt.equals(UNSTABLE_OPTION)) {
 	RootDocProcessor.stability = UNSTABLE_OPTION;
       } else if (opt.equals(EVOLVING_OPTION)) {

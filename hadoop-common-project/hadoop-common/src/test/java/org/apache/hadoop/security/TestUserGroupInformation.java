@@ -26,6 +26,7 @@ import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.*;
 
 import javax.security.auth.Subject;
@@ -212,7 +213,7 @@ public class TestUserGroupInformation {
         userName = userName.substring(sp + 1);
       }
       // user names are case insensitive on Windows. Make consistent
-      userName = userName.toLowerCase();
+      userName = StringUtils.toLowerCase(userName);
     }
     // get the groups
     pp = Runtime.getRuntime().exec(Shell.WINDOWS ?
@@ -232,7 +233,7 @@ public class TestUserGroupInformation {
     String loginUserName = login.getShortUserName();
     if(Shell.WINDOWS) {
       // user names are case insensitive on Windows. Make consistent
-      loginUserName = loginUserName.toLowerCase();
+      loginUserName = StringUtils.toLowerCase(loginUserName);
     }
     assertEquals(userName, loginUserName);
 

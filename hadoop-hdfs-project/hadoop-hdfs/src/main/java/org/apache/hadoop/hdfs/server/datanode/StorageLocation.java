@@ -28,6 +28,7 @@ import java.util.regex.Matcher;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Encapsulates the URI and storage medium that together describe a
@@ -88,7 +89,8 @@ public class StorageLocation {
       String classString = matcher.group(1);
       location = matcher.group(2);
       if (!classString.isEmpty()) {
-        storageType = StorageType.valueOf(classString.toUpperCase());
+        storageType =
+            StorageType.valueOf(StringUtils.toUpperCase(classString));
       }
     }
 

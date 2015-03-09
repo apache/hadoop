@@ -155,16 +155,16 @@ public class TestDFSIO implements Tool {
     static ByteMultiple parseString(String sMultiple) {
       if(sMultiple == null || sMultiple.isEmpty()) // MB by default
         return MB;
-      String sMU = sMultiple.toUpperCase();
-      if(B.name().toUpperCase().endsWith(sMU))
+      String sMU = StringUtils.toUpperCase(sMultiple);
+      if(StringUtils.toUpperCase(B.name()).endsWith(sMU))
         return B;
-      if(KB.name().toUpperCase().endsWith(sMU))
+      if(StringUtils.toUpperCase(KB.name()).endsWith(sMU))
         return KB;
-      if(MB.name().toUpperCase().endsWith(sMU))
+      if(StringUtils.toUpperCase(MB.name()).endsWith(sMU))
         return MB;
-      if(GB.name().toUpperCase().endsWith(sMU))
+      if(StringUtils.toUpperCase(GB.name()).endsWith(sMU))
         return GB;
-      if(TB.name().toUpperCase().endsWith(sMU))
+      if(StringUtils.toUpperCase(TB.name()).endsWith(sMU))
         return TB;
       throw new IllegalArgumentException("Unsupported ByteMultiple "+sMultiple);
     }

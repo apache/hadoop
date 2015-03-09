@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import javax.net.ssl.HostnameVerifier;
@@ -137,8 +138,8 @@ public class SSLFactory implements ConnectionConfigurator {
 
   private HostnameVerifier getHostnameVerifier(Configuration conf)
       throws GeneralSecurityException, IOException {
-    return getHostnameVerifier(conf.get(SSL_HOSTNAME_VERIFIER_KEY, "DEFAULT").
-        trim().toUpperCase());
+    return getHostnameVerifier(StringUtils.toUpperCase(
+        conf.get(SSL_HOSTNAME_VERIFIER_KEY, "DEFAULT").trim()));
   }
 
   public static HostnameVerifier getHostnameVerifier(String verifier)

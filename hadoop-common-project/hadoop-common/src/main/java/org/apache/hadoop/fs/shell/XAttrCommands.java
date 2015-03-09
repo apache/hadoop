@@ -79,7 +79,7 @@ class XAttrCommands extends FsCommand {
       String en = StringUtils.popOptionWithArgument("-e", args);
       if (en != null) {
         try {
-          encoding = enValueOfFunc.apply(en.toUpperCase(Locale.ENGLISH));
+          encoding = enValueOfFunc.apply(StringUtils.toUpperCase(en));
         } catch (IllegalArgumentException e) {
           throw new IllegalArgumentException(
               "Invalid/unsupported encoding option specified: " + en);

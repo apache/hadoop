@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
+import org.apache.hadoop.util.StringUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -439,7 +440,8 @@ public class FSOperations {
     @Override
     public JSONObject execute(FileSystem fs) throws IOException {
       boolean result = fs.truncate(path, newLength);
-      return toJSON(HttpFSFileSystem.TRUNCATE_JSON.toLowerCase(), result);
+      return toJSON(
+          StringUtils.toLowerCase(HttpFSFileSystem.TRUNCATE_JSON), result);
     }
 
   }
@@ -568,7 +570,8 @@ public class FSOperations {
     @Override
     public JSONObject execute(FileSystem fs) throws IOException {
       boolean deleted = fs.delete(path, recursive);
-      return toJSON(HttpFSFileSystem.DELETE_JSON.toLowerCase(), deleted);
+      return toJSON(
+          StringUtils.toLowerCase(HttpFSFileSystem.DELETE_JSON), deleted);
     }
 
   }

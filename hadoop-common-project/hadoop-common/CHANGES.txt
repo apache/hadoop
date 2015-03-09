@@ -642,6 +642,8 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11670. Regression: s3a auth setup broken. (Adam Budde via stevel)
 
+    HADOOP-11602. Fix toUpperCase/toLowerCase to use Locale.ENGLISH. (ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

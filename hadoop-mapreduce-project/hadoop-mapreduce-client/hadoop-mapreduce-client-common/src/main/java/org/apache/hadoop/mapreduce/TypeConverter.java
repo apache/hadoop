@@ -41,6 +41,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -314,7 +315,7 @@ public class TypeConverter {
       QueueState state) {
     org.apache.hadoop.mapreduce.QueueState qState =
       org.apache.hadoop.mapreduce.QueueState.getState(
-        state.toString().toLowerCase());
+          StringUtils.toLowerCase(state.toString()));
     return qState;
   }
 

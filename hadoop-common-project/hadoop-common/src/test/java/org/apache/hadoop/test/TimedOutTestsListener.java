@@ -29,6 +29,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 
+import org.apache.hadoop.util.StringUtils;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
@@ -93,8 +94,9 @@ public class TimedOutTestsListener extends RunListener {
           thread.getPriority(),
           thread.getId(),
           Thread.State.WAITING.equals(thread.getState()) ? 
-              "in Object.wait()" : thread.getState().name().toLowerCase(),
-          Thread.State.WAITING.equals(thread.getState()) ? 
+              "in Object.wait()" :
+              StringUtils.toLowerCase(thread.getState().name()),
+          Thread.State.WAITING.equals(thread.getState()) ?
               "WAITING (on object monitor)" : thread.getState()));
       for (StackTraceElement stackTraceElement : e.getValue()) {
         dump.append("\n        at ");

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.slive;
 
 import org.apache.hadoop.fs.slive.Constants.Distribution;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * This class holds the data representing what an operations distribution and
@@ -52,7 +53,7 @@ class OperationData {
       percent = (Double.parseDouble(pieces[0]) / 100.0d);
     } else if (pieces.length >= 2) {
       percent = (Double.parseDouble(pieces[0]) / 100.0d);
-      distribution = Distribution.valueOf(pieces[1].toUpperCase());
+      distribution = Distribution.valueOf(StringUtils.toUpperCase(pieces[1]));
     }
   }
 
