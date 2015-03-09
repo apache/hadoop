@@ -293,4 +293,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_SEPARATOR = ";";
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY = "nfs.exports.allowed.hosts";
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY_DEFAULT = "* rw";
+
+  public static final String HADOOP_MEMORY_MANAGER_KEY = "hadoop.memory.manager";
+  public static final String HADOOP_MEMORY_MANAGER_DEFAULT = "org.apache.hadoop.util.offheap.NativeMemoryManager";
 }
