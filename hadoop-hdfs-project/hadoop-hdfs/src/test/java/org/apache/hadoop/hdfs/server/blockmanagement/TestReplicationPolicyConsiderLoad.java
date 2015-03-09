@@ -137,7 +137,7 @@ public class TestReplicationPolicyConsiderLoad {
       // returns false
       for (int i = 0; i < 3; i++) {
         DatanodeDescriptor d = dnManager.getDatanode(dnrList.get(i));
-        dnManager.startDecommission(d);
+        dnManager.getDecomManager().startDecommission(d);
         d.setDecommissioned();
       }
       assertEquals((double)load/3, dnManager.getFSClusterStats()

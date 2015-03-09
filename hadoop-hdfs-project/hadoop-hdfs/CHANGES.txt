@@ -719,6 +719,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7855. Separate class Packet from DFSOutputStream. (Li Bo bia jing9)
 
+    HDFS-7411. Change decommission logic to throttle by blocks rather than
+    nodes in each interval. (Andrew Wang via cdouglas)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

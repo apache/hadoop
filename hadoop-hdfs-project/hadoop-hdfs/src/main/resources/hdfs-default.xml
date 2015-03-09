@@ -736,10 +736,25 @@
 </property>
 
 <property>
-  <name>dfs.namenode.decommission.nodes.per.interval</name>
-  <value>5</value>
-  <description>The number of nodes namenode checks if decommission is complete
-  in each dfs.namenode.decommission.interval.</description>
+  <name>dfs.namenode.decommission.blocks.per.interval</name>
+  <value>500000</value>
+  <description>The approximate number of blocks to process per 
+      decommission interval, as defined in dfs.namenode.decommission.interval.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.decommission.max.concurrent.tracked.nodes</name>
+  <value>100</value>
+  <description>
+    The maximum number of decommission-in-progress datanodes nodes that will be
+    tracked at one time by the namenode. Tracking a decommission-in-progress
+    datanode consumes additional NN memory proportional to the number of blocks
+    on the datnode. Having a conservative limit reduces the potential impact
+    of decomissioning a large number of nodes at once.
+      
+    A value of 0 means no limit will be enforced.
+  </description>
 </property>
 
 <property>
