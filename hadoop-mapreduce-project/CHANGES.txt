@@ -181,9 +181,6 @@ Trunk (Unreleased)
     MAPREDUCE-6234. TestHighRamJob fails due to the change in MAPREDUCE-5785. 
     (Masatake Iwasaki via kasha)
 
-    MAPREDUCE-5657. Fix Javadoc errors caused by incorrect or illegal tags in doc
-    comments. (Akira AJISAKA via ozawa)
-
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
     MAPREDUCE-5985. native-task: Fix build on macosx. Contributed by
@@ -416,6 +413,9 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6136. MRAppMaster doesn't shutdown file systems. (Brahma 
     Reddy Battula via ozawa)
+
+    MAPREDUCE-5657. Fix Javadoc errors caused by incorrect or illegal tags in doc
+    comments. (Akira AJISAKA and Andrew Purtell via ozawa)
 
 Release 2.6.1 - UNRELEASED
 
