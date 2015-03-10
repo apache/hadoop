@@ -415,7 +415,19 @@ function hadoop_common_slave_mode_execute
 
   # if --slaves is still on the command line, remove it
   # to prevent loops
-  argv=(${argv[@]/--slaves})
+  # Also remove --hostnames and --hosts along with arg values
+  local argsSize=${#argv[@]};
+  for (( i = 0; i < $argsSize; i++ ))
+  do
+    if [[ "${argv[$i]}" =~ ^--slaves$ ]]; then
+      unset argv[$i]
+    elif [[ "${argv[$i]}" =~ ^--hostnames$ ]] ||
+      [[ "${argv[$i]}" =~ ^--hosts$ ]]; then
+      unset argv[$i];
+      let i++;
+      unset argv[$i];
+    fi
+  done
   hadoop_connect_to_hosts -- "${argv[@]}"
 }
 
