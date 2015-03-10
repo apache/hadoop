@@ -740,6 +740,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3287. Made TimelineClient put methods do as the correct login context.
     (Daryn Sharp and Jonathan Eagles via zjshen)
 
+    YARN-3300. Outstanding_resource_requests table should not be shown in AHS.
+    (Xuan Gong via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
