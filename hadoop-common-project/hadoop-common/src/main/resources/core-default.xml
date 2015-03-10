@@ -573,6 +573,12 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>fs.AbstractFileSystem.ftp.impl</name>
+  <value>org.apache.hadoop.fs.ftp.FtpFs</value>
+  <description>The FileSystem for Ftp: uris.</description>
+</property>
+
+<property>
   <name>fs.ftp.host</name>
   <value>0.0.0.0</value>
   <description>FTP filesystem connects to this server</description>
