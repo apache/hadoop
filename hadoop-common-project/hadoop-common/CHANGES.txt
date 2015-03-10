@@ -187,6 +187,9 @@ Trunk (Unreleased)
     HADOOP-11673. Skip using JUnit Assume in TestCodec. (Brahma Reddy Battula
     via cdouglas)
 
+    HADOOP-10115. Exclude duplicate jars in hadoop package under different
+    component's lib (Vinayakumar B via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
