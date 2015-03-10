@@ -26,6 +26,9 @@ Trunk - Unreleased
     YARN-3199. Fair Scheduler documentation improvements (Rohit Agarwal via
     aw)
 
+    YARN-2280. Resource manager web service fields are not accessible
+    (Krisztian Horvath via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
