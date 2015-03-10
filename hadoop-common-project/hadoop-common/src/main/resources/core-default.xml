@@ -978,6 +978,20 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>ipc.client.tcpnodelay</name>
+  <value>true</value>
+  <description>Use TCP_NODELAY flag to bypass Nagle's algorithm transmission delays.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.low-latency</name>
+  <value>false</value>
+  <description>Use low-latency QoS markers for IPC connections.
+  </description>
+</property>
+
+<property>
   <name>ipc.server.listen.queue.size</name>
   <value>128</value>
   <description>Indicates the length of the listen queue for servers accepting

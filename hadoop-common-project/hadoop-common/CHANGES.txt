@@ -432,6 +432,9 @@ Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-11226. Add a configuration to set ipc.Client's traffic class with
+    IPTOS_LOWDELAY|IPTOS_RELIABILITY. (Gopal V via ozawa)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
