@@ -737,6 +737,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7898. Change TestAppendSnapshotTruncate to fail-fast.
     (Tsz Wo Nicholas Sze via jing9)
 
+    HDFS-6806. HDFS Rolling upgrade document should mention the versions
+    available. (J.Andreina via aajisaka)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
