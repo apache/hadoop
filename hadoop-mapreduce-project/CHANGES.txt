@@ -348,6 +348,9 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6059. Speed up history server startup time (Siqi Li via aw)
 
+    MAPREDUCE-4815. Speed up FileOutputCommitter#commitJob for many output
+    files. (Siqi Li via gera)
+
   BUG FIXES
 
     MAPREDUCE-6210. Use getApplicationAttemptId() instead of getApplicationId()

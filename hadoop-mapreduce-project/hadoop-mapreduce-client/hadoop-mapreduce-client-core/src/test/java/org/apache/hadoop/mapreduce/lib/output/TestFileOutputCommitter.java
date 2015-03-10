@@ -109,12 +109,15 @@ public class TestFileOutputCommitter extends TestCase {
     }
   }
   
-  public void testRecovery() throws Exception {
+  private void testRecoveryInternal(int commitVersion, int recoveryVersion)
+      throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1);
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+        commitVersion);
     JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
     FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
@@ -130,30 +133,57 @@ public class TestFileOutputCommitter extends TestCase {
 
     // do commit
     committer.commitTask(tContext);
+
     Path jobTempDir1 = committer.getCommittedTaskPath(tContext);
     File jtd = new File(jobTempDir1.toUri().getPath());
-    assertTrue(jtd.exists());
-    validateContent(jtd);    
-    
+    if (commitVersion == 1) {
+      assertTrue("Version 1 commits to temporary dir " + jtd, jtd.exists());
+      validateContent(jtd);
+    } else {
+      assertFalse("Version 2 commits to output dir " + jtd, jtd.exists());
+    }
+
     //now while running the second app attempt, 
     //recover the task output from first attempt
     Configuration conf2 = job.getConfiguration();
     conf2.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf2.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 2);
+    conf2.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+        recoveryVersion);
     JobContext jContext2 = new JobContextImpl(conf2, taskID.getJobID());
     TaskAttemptContext tContext2 = new TaskAttemptContextImpl(conf2, taskID);
     FileOutputCommitter committer2 = new FileOutputCommitter(outDir, tContext2);
     committer2.setupJob(tContext2);
     Path jobTempDir2 = committer2.getCommittedTaskPath(tContext2);
     File jtd2 = new File(jobTempDir2.toUri().getPath());
-    
+
     committer2.recoverTask(tContext2);
-    assertTrue(jtd2.exists());
-    validateContent(jtd2);
-    
+    if (recoveryVersion == 1) {
+      assertTrue("Version 1 recovers to " + jtd2, jtd2.exists());
+      validateContent(jtd2);
+    } else {
+      assertFalse("Version 2 commits to output dir " + jtd2, jtd2.exists());
+      if (commitVersion == 1) {
+        assertTrue("Version 2  recovery moves to output dir from "
+            + jtd , jtd.list().length == 0);
+      }
+    }
+
     committer2.commitJob(jContext2);
     validateContent(outDir);
     FileUtil.fullyDelete(new File(outDir.toString()));
+  }
+
+  public void testRecoveryV1() throws Exception {
+    testRecoveryInternal(1, 1);
+  }
+
+  public void testRecoveryV2() throws Exception {
+    testRecoveryInternal(2, 2);
+  }
+
+  public void testRecoveryUpgradeV1V2() throws Exception {
+    testRecoveryInternal(1, 2);
   }
 
   private void validateContent(Path dir) throws IOException {
@@ -197,12 +227,14 @@ public class TestFileOutputCommitter extends TestCase {
     assert(fileCount > 0);
     assert(dataFileFound && indexFileFound);
   }
-  
-  public void testCommitter() throws Exception {
-    Job job = Job.getInstance();
+
+  private void testCommitterInternal(int version) throws Exception {
+  Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+        version);
     JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
     FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
@@ -225,11 +257,22 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
-  public void testMapFileOutputCommitter() throws Exception {
+  public void testCommitterV1() throws Exception {
+    testCommitterInternal(1);
+  }
+
+  public void testCommitterV2() throws Exception {
+    testCommitterInternal(2);
+  }
+
+  private void testMapFileOutputCommitterInternal(int version)
+      throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+        version);
     JobContext jContext = new JobContextImpl(conf, taskID.getJobID());    
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
     FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
@@ -251,12 +294,38 @@ public class TestFileOutputCommitter extends TestCase {
     validateMapFileOutputContent(FileSystem.get(job.getConfiguration()), outDir);
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
+
+  public void testMapFileOutputCommitterV1() throws Exception {
+    testMapFileOutputCommitterInternal(1);
+  }
   
-  public void testAbort() throws IOException, InterruptedException {
+  public void testMapFileOutputCommitterV2() throws Exception {
+    testMapFileOutputCommitterInternal(2);
+  }
+
+  public void testInvalidVersionNumber() throws IOException {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION, 3);
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
+    try {
+      new FileOutputCommitter(outDir, tContext);
+      fail("should've thrown an exception!");
+    } catch (IOException e) {
+      //test passed
+    }
+  }
+
+  private void testAbortInternal(int version)
+      throws IOException, InterruptedException {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+        version);
     JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
     FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
@@ -285,6 +354,14 @@ public class TestFileOutputCommitter extends TestCase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  public void testAbortV1() throws IOException, InterruptedException {
+    testAbortInternal(1);
+  }
+
+  public void testAbortV2() throws IOException, InterruptedException {
+    testAbortInternal(2);
+  }
+
   public static class FakeFileSystem extends RawLocalFileSystem {
     public FakeFileSystem() {
       super();
@@ -301,13 +378,16 @@ public class TestFileOutputCommitter extends TestCase {
   }
 
   
-  public void testFailAbort() throws IOException, InterruptedException {
+  private void testFailAbortInternal(int version)
+      throws IOException, InterruptedException {
     Job job = Job.getInstance();
     Configuration conf = job.getConfiguration();
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "faildel:///");
     conf.setClass("fs.faildel.impl", FakeFileSystem.class, FileSystem.class);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1);
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+        version);
     FileOutputFormat.setOutputPath(job, outDir);
     JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
@@ -351,6 +431,14 @@ public class TestFileOutputCommitter extends TestCase {
     assertTrue(th.getMessage().contains("fake delete failed"));
     assertTrue("job temp dir does not exists", jobTmpDir.exists());
     FileUtil.fullyDelete(new File(outDir.toString()));
+  }
+
+  public void testFailAbortV1() throws Exception {
+    testFailAbortInternal(1);
+  }
+
+  public void testFailAbortV2() throws Exception {
+    testFailAbortInternal(2);
   }
 
   public static String slurp(File f) throws IOException {
