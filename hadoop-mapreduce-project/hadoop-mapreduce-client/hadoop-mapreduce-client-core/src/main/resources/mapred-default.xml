@@ -1360,6 +1360,14 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.hard-kill-timeout-ms</name>
+  <value>10000</value>
+  <description>
+     Number of milliseconds to wait before the job client kills the application.
+  </description>
+</property>
+
+<property>
   <description>CLASSPATH for MR applications. A comma-separated list
   of CLASSPATH entries. If mapreduce.application.framework is set then this
   must specify the appropriate classpath for that archive, and the name of

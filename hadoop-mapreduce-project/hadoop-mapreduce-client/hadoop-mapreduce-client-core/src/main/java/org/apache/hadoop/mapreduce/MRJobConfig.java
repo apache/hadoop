@@ -644,6 +644,11 @@ public interface MRJobConfig {
   public static final int DEFAULT_MR_AM_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD =
       50;
 
+  public static final String MR_AM_HARD_KILL_TIMEOUT_MS =
+      MR_AM_PREFIX + "hard-kill-timeout-ms";
+  public static final long DEFAULT_MR_AM_HARD_KILL_TIMEOUT_MS =
+      10 * 1000l;
+
   /**
    * The threshold in terms of seconds after which an unsatisfied mapper request
    * triggers reducer preemption to free space. Default 0 implies that the reduces
