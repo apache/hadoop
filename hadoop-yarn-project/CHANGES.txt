@@ -381,6 +381,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3296. Mark ResourceCalculatorProcessTree class as Public for configurable
     resource monitoring. (Hitesh Shah via junping_du)
 
+    YARN-3187. Documentation of Capacity Scheduler Queue mapping based on user
+    or group. (Gururaj Shetty via jianhe)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
