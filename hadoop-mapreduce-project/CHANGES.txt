@@ -257,6 +257,8 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-4742. Fix typo in nnbench#displayUsage. (Liang Xie via ozawa)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
