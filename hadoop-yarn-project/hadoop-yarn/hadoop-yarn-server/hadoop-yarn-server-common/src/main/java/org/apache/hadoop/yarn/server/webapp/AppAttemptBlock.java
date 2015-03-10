@@ -19,6 +19,11 @@ package org.apache.hadoop.yarn.server.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ATTEMPT_ID;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.WEB_UI_TYPE;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._EVEN;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._ODD;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
@@ -38,7 +43,9 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -59,6 +66,7 @@ public class AppAttemptBlock extends HtmlBlock {
 
   @Override
   protected void render(Block html) {
+    String webUiType = $(WEB_UI_TYPE);
     String attemptid = $(APPLICATION_ATTEMPT_ID);
     if (attemptid.isEmpty()) {
       puts("Bad request: requires application attempt ID");
@@ -213,6 +221,45 @@ public class AppAttemptBlock extends HtmlBlock {
       ._("var containersTableData=" + containersTableData)._();
 
     tbody._()._();
+
+    if (webUiType.equals(YarnWebParams.RM_WEB_UI)) {
+      createContainerLocalityTable(html); // TODO:YARN-3284
+    }
+  }
+
+  //TODO: YARN-3284
+  //The containerLocality metrics will be exposed from AttemptReport
+  private void createContainerLocalityTable(Block html) {
+    int totalAllocatedContainers = 0; //TODO: YARN-3284
+    int[][] localityStatistics = new int[0][0];//TODO:YARN-3284
+    DIV<Hamlet> div = html.div(_INFO_WRAP);
+    TABLE<DIV<Hamlet>> table =
+        div.h3(
+          "Total Allocated Containers: "
+              + totalAllocatedContainers).h3("Each table cell"
+            + " represents the number of NodeLocal/RackLocal/OffSwitch containers"
+            + " satisfied by NodeLocal/RackLocal/OffSwitch resource requests.").table(
+          "#containerLocality");
+    table.
+      tr().
+        th(_TH, "").
+        th(_TH, "Node Local Request").
+        th(_TH, "Rack Local Request").
+        th(_TH, "Off Switch Request").
+      _();
+
+    String[] containersType =
+        { "Num Node Local Containers (satisfied by)", "Num Rack Local Containers (satisfied by)",
+            "Num Off Switch Containers (satisfied by)" };
+    boolean odd = false;
+    for (int i = 0; i < localityStatistics.length; i++) {
+      table.tr((odd = !odd) ? _ODD : _EVEN).td(containersType[i])
+        .td(String.valueOf(localityStatistics[i][0]))
+        .td(i == 0 ? "" : String.valueOf(localityStatistics[i][1]))
+        .td(i <= 1 ? "" : String.valueOf(localityStatistics[i][2]))._();
+    }
+    table._();
+    div._();
   }
 
   private boolean hasAMContainer(ContainerId containerId,

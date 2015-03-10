@@ -42,6 +42,8 @@ public class AppAttemptPage extends AHSView {
     set(DATATABLES_ID, "containers");
     set(initID(DATATABLES, "containers"), WebPageUtils.containersTableInit());
     setTableStyles(html, "containers", ".queue {width:6em}", ".ui {width:8em}");
+
+    set(YarnWebParams.WEB_UI_TYPE, YarnWebParams.APP_HISTORY_WEB_UI);
   }
 
   @Override
