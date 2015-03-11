@@ -740,6 +740,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-6806. HDFS Rolling upgrade document should mention the versions
     available. (J.Andreina via aajisaka)
 
+    HDFS-7491. Add incremental blockreport latency to DN metrics.
+    (Ming Ma via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
