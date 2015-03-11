@@ -383,6 +383,10 @@ abstract class StorageInterface {
      *
      * @param source
      *            A <code>java.net.URI</code> The URI of a source blob.
+     * @param options
+     *            A {@link BlobRequestOptions} object that specifies any additional options for the request. Specifying
+     *            <code>null</code> will use the default request options from the associated service client (
+     *            {@link CloudBlobClient}).
      * @param opContext
      *            An {@link OperationContext} object that represents the context for the current operation. This object
      *            is used to track requests to the storage service, and to provide additional runtime information about
@@ -394,7 +398,7 @@ abstract class StorageInterface {
      *
      */
     public abstract void startCopyFromBlob(URI source,
-        OperationContext opContext)
+        BlobRequestOptions options, OperationContext opContext)
         throws StorageException, URISyntaxException;
     
     /**

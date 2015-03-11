@@ -429,7 +429,7 @@ public class MockStorageInterface extends StorageInterface {
     }
 
     @Override
-    public void startCopyFromBlob(URI source,
+    public void startCopyFromBlob(URI source, BlobRequestOptions options,
         OperationContext opContext) throws StorageException, URISyntaxException {
       backingStore.copy(convertUriToDecodedString(source), convertUriToDecodedString(uri));
       //TODO: set the backingStore.properties.CopyState and
