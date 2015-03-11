@@ -1,0 +1,69 @@
+<!---
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
+Apache Hadoop ${project.version}
+================================
+
+Apache Hadoop ${project.version} is a minor release in the 2.x.y release
+line, building upon the previous stable release 2.4.1.
+
+Here is a short overview of the major features and improvements.
+
+*   Common
+
+    *   Authentication improvements when using an HTTP proxy server. This is
+        useful when accessing WebHDFS via a proxy server.
+
+    *   A new Hadoop metrics sink that allows writing directly to Graphite.
+
+    *   [Specification work](./hadoop-project-dist/hadoop-common/filesystem/index.html)
+        related to the Hadoop Compatible Filesystem (HCFS) effort.
+
+*   HDFS
+
+    *   Support for POSIX-style filesystem extended attributes. See the
+        [user documentation](./hadoop-project-dist/hadoop-hdfs/ExtendedAttributes.html)
+        for more details.
+
+    *   Using the OfflineImageViewer, clients can now browse an fsimage via
+        the WebHDFS API.
+
+    *   The NFS gateway received a number of supportability improvements and
+        bug fixes. The Hadoop portmapper is no longer required to run the gateway,
+        and the gateway is now able to reject connections from unprivileged ports.
+
+    *   The SecondaryNameNode, JournalNode, and DataNode web UIs have been
+        modernized with HTML5 and Javascript.
+
+*   YARN
+
+    *   YARN's REST APIs now support write/modify operations. Users can submit and
+        kill applications through REST APIs.
+
+    *   The timeline store in YARN, used for storing generic and
+        application-specific information for applications, supports authentication
+        through Kerberos.
+
+    *   The Fair Scheduler supports dynamic hierarchical user queues, user queues
+        are created dynamically at runtime under any specified parent-queue.
+
+Getting Started
+===============
+
+The Hadoop documentation includes the information you need to get started using
+Hadoop. Begin with the
+[Single Node Setup](./hadoop-project-dist/hadoop-common/SingleCluster.html) which
+shows you how to set up a single-node Hadoop installation. Then move on to the
+[Cluster Setup](./hadoop-project-dist/hadoop-common/ClusterSetup.html) to learn how
+to set up a multi-node Hadoop installation.
