@@ -141,12 +141,10 @@ Notes
 -----
 
 ContainerId string format is changed if RM restarts with work-preserving recovery enabled. It used to be such format:
-
-    Container_{clusterTimestamp}_{appId}_{attemptId}_{containerId}, e.g. Container_1410901177871_0001_01_000005.
+`Container_{clusterTimestamp}_{appId}_{attemptId}_{containerId}`, e.g. `Container_1410901177871_0001_01_000005`.
 
 It is now changed to:
-
-    Container_e{epoch}_{clusterTimestamp}_{appId}_{attemptId}_{containerId}, e.g. Container_e17_1410901177871_0001_01_000005.
+`Container_`**e{epoch}**`_{clusterTimestamp}_{appId}_{attemptId}_{containerId}`, e.g. `Container_`**e17**`_1410901177871_0001_01_000005`.
  
 Here, the additional epoch number is a monotonically increasing integer which starts from 0 and is increased by 1 each time RM restarts. If epoch number is 0, it is omitted and the containerId string format stays the same as before.
 

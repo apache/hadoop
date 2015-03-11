@@ -63,11 +63,11 @@ Usage: `yarn application [options] `
 
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
-| -appStates States | Works with -list to filter applications based on input comma-separated list of application states. The valid application state can be one of the following:  ALL, NEW, NEW\_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED |
-| -appTypes Types | Works with -list to filter applications based on input comma-separated list of application types. |
+| -appStates \<States\> | Works with -list to filter applications based on input comma-separated list of application states. The valid application state can be one of the following:  ALL, NEW, NEW\_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED |
+| -appTypes \<Types\> | Works with -list to filter applications based on input comma-separated list of application types. |
 | -list | Lists applications from the RM. Supports optional use of -appTypes to filter applications based on application type, and -appStates to filter applications based on application state. |
-| -kill ApplicationId | Kills the application. |
-| -status ApplicationId | Prints the status of the application. |
+| -kill \<ApplicationId\> | Kills the application. |
+| -status \<ApplicationId\> | Prints the status of the application. |
 
 Prints application(s) report/kill application
 
@@ -78,8 +78,8 @@ Usage: `yarn applicationattempt [options] `
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -help | Help |
-| -list ApplicationId | Lists applications attempts from the RM |
-| -status Application Attempt Id | Prints the status of the application attempt. |
+| -list \<ApplicationId\> | Lists applications attempts for the given application. |
+| -status \<Application Attempt Id\> | Prints the status of the application attempt. |
 
 prints applicationattempt(s) report
 
@@ -96,8 +96,8 @@ Usage: `yarn container [options] `
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -help | Help |
-| -list ApplicationId | Lists containers for the application attempt. |
-| -status ContainerId | Prints the status of the container. |
+| -list \<Application Attempt Id\> | Lists containers for the application attempt. |
+| -status \<ContainerId\> | Prints the status of the container. |
 
 prints container(s) report
 
@@ -114,10 +114,10 @@ Usage: `yarn logs -applicationId <application ID> [options] `
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -applicationId \<application ID\> | Specifies an application id |
-| -appOwner AppOwner | AppOwner (assumed to be current user if not specified) |
-| -containerId ContainerId | ContainerId (must be specified if node address is specified) |
+| -appOwner \<AppOwner\> | AppOwner (assumed to be current user if not specified) |
+| -containerId \<ContainerId\> | ContainerId (must be specified if node address is specified) |
 | -help | Help |
-| -nodeAddress NodeAddress | NodeAddress in the format nodename:port (must be specified if container id is specified) |
+| -nodeAddress \<NodeAddress\> | NodeAddress in the format nodename:port (must be specified if container id is specified) |
 
 Dump the container logs
 
@@ -129,8 +129,8 @@ Usage: `yarn node [options] `
 |:---- |:---- |
 | -all | Works with -list to list all nodes. |
 | -list | Lists all running nodes. Supports optional use of -states to filter nodes based on node state, and -all to list all nodes. |
-| -states States | Works with -list to filter nodes based on input comma-separated list of node states. |
-| -status NodeId | Prints the status report of the node. |
+| -states \<States\> | Works with -list to filter nodes based on input comma-separated list of node states. |
+| -status \<NodeId\> | Prints the status report of the node. |
 
 Prints node report(s)
 
@@ -141,7 +141,7 @@ Usage: `yarn queue [options] `
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
 | -help | Help |
-| -status QueueName | Prints the status of the queue. |
+| -status \<QueueName\> | Prints the status of the queue. |
 
 Prints queue information
 
