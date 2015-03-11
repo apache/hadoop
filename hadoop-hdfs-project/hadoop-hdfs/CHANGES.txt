@@ -91,6 +91,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7610. Fix removal of dynamically added DN volumes (Lei (Eddy) Xu via
     Colin P. McCabe)
 
+    HDFS-7830. DataNode does not release the volume lock when adding a volume
+    fails. (Lei Xu via Colin P. Mccabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

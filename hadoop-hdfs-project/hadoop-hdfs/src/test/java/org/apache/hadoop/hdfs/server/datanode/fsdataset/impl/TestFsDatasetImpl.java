@@ -36,11 +36,13 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -59,13 +61,16 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -320,5 +325,41 @@ public class TestFsDatasetImpl {
     assertTrue(volumeList.getVolumes().contains(newVolume));
     assertFalse(volumeList.getVolumes().contains(brokenVolume));
     assertEquals(NUM_VOLUMES - 1, volumeList.getVolumes().size());
+  }
+
+  @Test
+  public void testAddVolumeFailureReleasesInUseLock() throws IOException {
+    FsDatasetImpl spyDataset = spy(dataset);
+    FsVolumeImpl mockVolume = mock(FsVolumeImpl.class);
+    File badDir = new File(BASE_DIR, "bad");
+    badDir.mkdirs();
+    doReturn(mockVolume).when(spyDataset)
+        .createFsVolume(anyString(), any(File.class), any(StorageType.class));
+    doThrow(new IOException("Failed to getVolumeMap()"))
+      .when(mockVolume).getVolumeMap(
+        anyString(),
+        any(ReplicaMap.class),
+        any(RamDiskReplicaLruTracker.class));
+
+    Storage.StorageDirectory sd = createStorageDirectory(badDir);
+    sd.lock();
+    DataStorage.VolumeBuilder builder = new DataStorage.VolumeBuilder(storage, sd);
+    when(storage.prepareVolume(eq(datanode), eq(badDir),
+        Matchers.<List<NamespaceInfo>>any()))
+        .thenReturn(builder);
+
+    StorageLocation location = StorageLocation.parse(badDir.toString());
+    List<NamespaceInfo> nsInfos = Lists.newArrayList();
+    for (String bpid : BLOCK_POOL_IDS) {
+      nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, bpid, 1));
+    }
+
+    try {
+      spyDataset.addVolume(location, nsInfos);
+      fail("Expect to throw MultipleIOException");
+    } catch (MultipleIOException e) {
+    }
+
+    FsDatasetTestUtil.assertFileLockReleased(badDir.toString());
   }
 }
