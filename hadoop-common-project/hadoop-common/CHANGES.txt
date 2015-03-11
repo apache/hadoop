@@ -426,6 +426,9 @@ Trunk (Unreleased)
     HADOOP-11668. hadoop-daemons.sh bw compat broke with --slaves change
     (Vinayakumar B via aw)
 
+    HADOOP-11703. git should ignore .DS_Store files on Mac OS X (Abin Shahab
+    via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
