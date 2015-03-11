@@ -291,12 +291,14 @@ class BPServiceActor implements Runnable {
 
     // Send incremental block reports to the Namenode outside the lock
     boolean success = false;
+    final long startTime = Time.monotonicNow();
     try {
       bpNamenode.blockReceivedAndDeleted(bpRegistration,
           bpos.getBlockPoolId(),
           reports.toArray(new StorageReceivedDeletedBlocks[reports.size()]));
       success = true;
     } finally {
+      dn.getMetrics().addIncrementalBlockReport(Time.monotonicNow()-startTime);
       if (!success) {
         synchronized (pendingIncrementalBRperStorage) {
           for (StorageReceivedDeletedBlocks report : reports) {

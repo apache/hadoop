@@ -72,6 +72,8 @@ public class TestDataNodeMetrics {
       DataNode datanode = datanodes.get(0);
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       assertCounter("BytesWritten", LONG_FILE_LEN, rb);
+      assertTrue("Expected non-zero number of incremental block reports",
+          getLongCounter("IncrementalBlockReportsNumOps", rb) > 0);
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
