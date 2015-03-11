@@ -302,6 +302,8 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `HeartbeatsAvgTime` | Average heartbeat time in milliseconds |
 | `BlockReportsNumOps` | Total number of block report operations |
 | `BlockReportsAvgTime` | Average time of block report operations in milliseconds |
+| `IncrementalBlockReportsNumOps` | Total number of incremental block report operations |
+| `IncrementalBlockReportsAvgTime` | Average time of incremental block report operations in milliseconds |
 | `CacheReportsNumOps` | Total number of cache report operations |
 | `CacheReportsAvgTime` | Average time of cache report operations in milliseconds |
 | `PacketAckRoundTripTimeNanosNumOps` | Total number of ack round trip |

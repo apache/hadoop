@@ -107,6 +107,7 @@ public class DataNodeMetrics {
   @Metric MutableRate replaceBlockOp;
   @Metric MutableRate heartbeats;
   @Metric MutableRate blockReports;
+  @Metric MutableRate incrementalBlockReports;
   @Metric MutableRate cacheReports;
   @Metric MutableRate packetAckRoundTripTimeNanos;
   final MutableQuantiles[] packetAckRoundTripTimeNanosQuantiles;
@@ -199,6 +200,10 @@ public class DataNodeMetrics {
 
   public void addBlockReport(long latency) {
     blockReports.add(latency);
+  }
+
+  public void addIncrementalBlockReport(long latency) {
+    incrementalBlockReports.add(latency);
   }
 
   public void addCacheReport(long latency) {
