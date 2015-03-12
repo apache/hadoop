@@ -31,7 +31,6 @@
 
 #include "org_apache_hadoop_io_compress_snappy_SnappyDecompressor.h"
 
-static jfieldID SnappyDecompressor_clazz;
 static jfieldID SnappyDecompressor_compressedDirectBuf;
 static jfieldID SnappyDecompressor_compressedDirectBufLen;
 static jfieldID SnappyDecompressor_uncompressedDirectBuf;
@@ -79,8 +78,6 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyDecompres
   LOAD_DYNAMIC_SYMBOL(__dlsym_snappy_uncompress, dlsym_snappy_uncompress, env, libsnappy, "snappy_uncompress");
 #endif
 
-  SnappyDecompressor_clazz = (*env)->GetStaticFieldID(env, clazz, "clazz",
-                                                   "Ljava/lang/Class;");
   SnappyDecompressor_compressedDirectBuf = (*env)->GetFieldID(env,clazz,
                                                            "compressedDirectBuf",
                                                            "Ljava/nio/Buffer;");
@@ -99,25 +96,20 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyDecompres
   char* uncompressed_bytes = NULL;
   snappy_status ret;
   // Get members of SnappyDecompressor
-  jobject clazz = (*env)->GetStaticObjectField(env,thisj, SnappyDecompressor_clazz);
   jobject compressed_direct_buf = (*env)->GetObjectField(env,thisj, SnappyDecompressor_compressedDirectBuf);
   jint compressed_direct_buf_len = (*env)->GetIntField(env,thisj, SnappyDecompressor_compressedDirectBufLen);
   jobject uncompressed_direct_buf = (*env)->GetObjectField(env,thisj, SnappyDecompressor_uncompressedDirectBuf);
   size_t uncompressed_direct_buf_len = (*env)->GetIntField(env, thisj, SnappyDecompressor_directBufferSize);
 
   // Get the input direct buffer
-  LOCK_CLASS(env, clazz, "SnappyDecompressor");
   compressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, compressed_direct_buf);
-  UNLOCK_CLASS(env, clazz, "SnappyDecompressor");
 
   if (compressed_bytes == 0) {
     return (jint)0;
   }
 
   // Get the output direct buffer
-  LOCK_CLASS(env, clazz, "SnappyDecompressor");
   uncompressed_bytes = (char *)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
-  UNLOCK_CLASS(env, clazz, "SnappyDecompressor");
 
   if (uncompressed_bytes == 0) {
     return (jint)0;

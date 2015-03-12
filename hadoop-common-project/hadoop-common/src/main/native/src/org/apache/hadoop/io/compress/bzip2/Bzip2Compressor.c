@@ -25,7 +25,6 @@
 #include "org_apache_hadoop_io_compress_bzip2.h"
 #include "org_apache_hadoop_io_compress_bzip2_Bzip2Compressor.h"
 
-static jfieldID Bzip2Compressor_clazz;
 static jfieldID Bzip2Compressor_stream;
 static jfieldID Bzip2Compressor_uncompressedDirectBuf;
 static jfieldID Bzip2Compressor_uncompressedDirectBufOff;
@@ -74,8 +73,6 @@ Java_org_apache_hadoop_io_compress_bzip2_Bzip2Compressor_initIDs(
                         "BZ2_bzCompressEnd");
 
     // Initialize the requisite fieldIds.
-    Bzip2Compressor_clazz = (*env)->GetStaticFieldID(env, class, "clazz", 
-                                                     "Ljava/lang/Class;");
     Bzip2Compressor_stream = (*env)->GetFieldID(env, class, "stream", "J");
     Bzip2Compressor_finish = (*env)->GetFieldID(env, class, "finish", "Z");
     Bzip2Compressor_finished = (*env)->GetFieldID(env, class, "finished", "Z");
@@ -155,9 +152,7 @@ Java_org_apache_hadoop_io_compress_bzip2_Bzip2Compressor_deflateBytesDirect(
         return (jint)0;
     } 
 
-    jobject clazz = (*env)->GetStaticObjectField(env, this, 
-                                                 Bzip2Compressor_clazz);
-    jobject uncompressed_direct_buf = (*env)->GetObjectField(env, this, 
+    jobject uncompressed_direct_buf = (*env)->GetObjectField(env, this,
                                      Bzip2Compressor_uncompressedDirectBuf);
     jint uncompressed_direct_buf_off = (*env)->GetIntField(env, this, 
                                    Bzip2Compressor_uncompressedDirectBufOff);
@@ -173,12 +168,10 @@ Java_org_apache_hadoop_io_compress_bzip2_Bzip2Compressor_deflateBytesDirect(
                                               Bzip2Compressor_finish);
 
     // Get the input and output direct buffers.
-    LOCK_CLASS(env, clazz, "Bzip2Compressor");
     char* uncompressed_bytes = (*env)->GetDirectBufferAddress(env, 
                                                 uncompressed_direct_buf);
     char* compressed_bytes = (*env)->GetDirectBufferAddress(env, 
                                                 compressed_direct_buf);
-    UNLOCK_CLASS(env, clazz, "Bzip2Compressor");
 
     if (!uncompressed_bytes || !compressed_bytes) {
         return (jint)0;

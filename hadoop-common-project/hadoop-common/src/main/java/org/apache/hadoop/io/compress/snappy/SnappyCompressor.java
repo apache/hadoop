@@ -37,10 +37,6 @@ public class SnappyCompressor implements Compressor {
       LogFactory.getLog(SnappyCompressor.class.getName());
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64 * 1024;
 
-  // HACK - Use this as a global lock in the JNI layer
-  @SuppressWarnings({"unchecked", "unused"})
-  private static Class clazz = SnappyCompressor.class;
-
   private int directBufferSize;
   private Buffer compressedDirectBuf = null;
   private int uncompressedDirectBufLen;

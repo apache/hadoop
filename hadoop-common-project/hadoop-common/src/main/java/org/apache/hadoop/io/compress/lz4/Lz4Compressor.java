@@ -37,10 +37,6 @@ public class Lz4Compressor implements Compressor {
       LogFactory.getLog(Lz4Compressor.class.getName());
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64 * 1024;
 
-  // HACK - Use this as a global lock in the JNI layer
-  @SuppressWarnings({"unchecked", "unused"})
-  private static Class clazz = Lz4Compressor.class;
-
   private int directBufferSize;
   private Buffer compressedDirectBuf = null;
   private int uncompressedDirectBufLen;

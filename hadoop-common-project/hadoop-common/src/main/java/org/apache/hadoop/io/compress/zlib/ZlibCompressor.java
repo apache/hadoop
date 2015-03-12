@@ -41,9 +41,6 @@ public class ZlibCompressor implements Compressor {
 
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64*1024;
 
-  // HACK - Use this as a global lock in the JNI layer
-  private static Class clazz = ZlibCompressor.class;
-
   private long stream;
   private CompressionLevel level;
   private CompressionStrategy strategy;
