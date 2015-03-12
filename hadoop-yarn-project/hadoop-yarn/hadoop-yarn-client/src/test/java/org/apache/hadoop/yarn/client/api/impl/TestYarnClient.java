@@ -117,7 +117,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
-import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -613,13 +612,15 @@ public class TestYarnClient {
       ContainerReport container = ContainerReport.newInstance(
           ContainerId.newContainerId(attempt.getApplicationAttemptId(), 1), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
-          "diagnosticInfo", "logURL", 0, ContainerState.RUNNING);
+          "diagnosticInfo", "logURL", 0, ContainerState.RUNNING,
+          "http://" + NodeId.newInstance("host", 2345).toString());
       containerReports.add(container);
 
       ContainerReport container1 = ContainerReport.newInstance(
           ContainerId.newContainerId(attempt.getApplicationAttemptId(), 2), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
-          "diagnosticInfo", "logURL", 0, ContainerState.RUNNING);
+          "diagnosticInfo", "logURL", 0, ContainerState.RUNNING,
+          "http://" + NodeId.newInstance("host", 2345).toString());
       containerReports.add(container1);
       containers.put(attempt.getApplicationAttemptId(), containerReports);
       
@@ -630,18 +631,21 @@ public class TestYarnClient {
       container = ContainerReport.newInstance(
           ContainerId.newContainerId(attempt.getApplicationAttemptId(), 1), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
-          "diagnosticInfo", "logURL", 0, null);
+          "diagnosticInfo", "logURL", 0, null,
+          "http://" + NodeId.newInstance("host", 2345).toString());
       containerReportsForAHS.add(container);
 
       container1 = ContainerReport.newInstance(
           ContainerId.newContainerId(attempt.getApplicationAttemptId(), 2), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
-          "diagnosticInfo", "HSlogURL", 0, null);
+          "diagnosticInfo", "HSlogURL", 0, null,
+          "http://" + NodeId.newInstance("host", 2345).toString());
       containerReportsForAHS.add(container1);
       ContainerReport container2 = ContainerReport.newInstance(
           ContainerId.newContainerId(attempt.getApplicationAttemptId(),3), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
-          "diagnosticInfo", "HSlogURL", 0, ContainerState.COMPLETE);
+          "diagnosticInfo", "HSlogURL", 0, ContainerState.COMPLETE,
+          "http://" + NodeId.newInstance("host", 2345).toString());
       containerReportsForAHS.add(container2);
       containersFromAHS.put(attempt.getApplicationAttemptId(), containerReportsForAHS);
 

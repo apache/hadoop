@@ -63,7 +63,7 @@ public class ApplicationCLI extends YarnCLI {
     "%30s\t%20s\t%35s\t%35s"
       + System.getProperty("line.separator");
   private static final String CONTAINER_PATTERN = 
-    "%30s\t%20s\t%20s\t%20s\t%20s\t%35s"
+    "%30s\t%20s\t%20s\t%20s\t%20s\t%20s\t%35s"
       + System.getProperty("line.separator");
 
   private static final String APP_TYPE_CMD = "appTypes";
@@ -355,6 +355,9 @@ public class ApplicationCLI extends YarnCLI {
       containerReportStr.println(containerReport.getLogUrl());
       containerReportStr.print("\tHost : ");
       containerReportStr.println(containerReport.getAssignedNode());
+      containerReportStr.print("\tNodeHttpAddress : ");
+      containerReportStr.println(containerReport.getNodeHttpAddress() == null
+          ? "N/A" : containerReport.getNodeHttpAddress());
       containerReportStr.print("\tDiagnostics : ");
       containerReportStr.print(containerReport.getDiagnosticsInfo());
     } else {
@@ -595,7 +598,7 @@ public class ApplicationCLI extends YarnCLI {
         .getContainers(ConverterUtils.toApplicationAttemptId(appAttemptId));
     writer.println("Total number of containers " + ":" + appsReport.size());
     writer.printf(CONTAINER_PATTERN, "Container-Id", "Start Time",
-        "Finish Time", "State", "Host", "LOG-URL");
+        "Finish Time", "State", "Host", "Node Http Address", "LOG-URL");
     for (ContainerReport containerReport : appsReport) {
       writer.printf(
           CONTAINER_PATTERN,
@@ -603,7 +606,9 @@ public class ApplicationCLI extends YarnCLI {
           Times.format(containerReport.getCreationTime()),
           Times.format(containerReport.getFinishTime()),      
           containerReport.getContainerState(), containerReport
-              .getAssignedNode(), containerReport.getLogUrl());
+              .getAssignedNode(), containerReport.getNodeHttpAddress() == null
+                  ? "N/A" : containerReport.getNodeHttpAddress(),
+          containerReport.getLogUrl());
     }
     writer.flush();
   }

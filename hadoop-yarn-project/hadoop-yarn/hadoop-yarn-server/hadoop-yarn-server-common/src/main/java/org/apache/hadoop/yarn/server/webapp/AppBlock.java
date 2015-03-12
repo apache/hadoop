@@ -285,15 +285,12 @@ public class AppBlock extends HtmlBlock {
       }
       long startTime = 0L;
       String logsLink = null;
+      String nodeLink = null;
       if (containerReport != null) {
         ContainerInfo container = new ContainerInfo(containerReport);
         startTime = container.getStartedTime();
         logsLink = containerReport.getLogUrl();
-      }
-      String nodeLink = null;
-      if (appAttempt.getHost() != null && appAttempt.getRpcPort() >= 0
-          && appAttempt.getRpcPort() < 65536) {
-        nodeLink = appAttempt.getHost() + ":" + appAttempt.getRpcPort();
+        nodeLink = containerReport.getNodeHttpAddress();
       }
       // AppAttemptID numerical value parsed by parseHadoopID in
       // yarn.dt.plugins.js
@@ -304,8 +301,8 @@ public class AppBlock extends HtmlBlock {
         .append(appAttempt.getAppAttemptId())
         .append("</a>\",\"")
         .append(startTime)
-        .append("\",\"<a href='")
-        .append("#") // TODO: replace with node http address (YARN-1884)
+        .append("\",\"<a ")
+        .append(nodeLink == null ? "#" : "href='" + nodeLink)
         .append("'>")
         .append(nodeLink == null ? "N/A" : StringEscapeUtils
             .escapeJavaScript(StringEscapeUtils.escapeHtml(nodeLink)))

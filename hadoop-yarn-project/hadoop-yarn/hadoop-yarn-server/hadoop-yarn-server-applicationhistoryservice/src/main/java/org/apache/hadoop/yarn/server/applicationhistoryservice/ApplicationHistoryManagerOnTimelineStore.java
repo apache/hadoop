@@ -415,6 +415,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     String diagnosticsInfo = null;
     int exitStatus = ContainerExitStatus.INVALID;
     ContainerState state = null;
+    String nodeHttpAddress = null;
     Map<String, Object> entityInfo = entity.getOtherInfo();
     if (entityInfo != null) {
       if (entityInfo
@@ -443,6 +444,12 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           .containsKey(ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO)) {
         allocatedPriority = (Integer) entityInfo.get(
                 ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO);
+      }
+      if (entityInfo.containsKey(
+          ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO)) {
+        nodeHttpAddress =
+            (String) entityInfo
+              .get(ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO);
       }
     }
     List<TimelineEvent> events = entity.getEvents();
@@ -493,7 +500,8 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         Resource.newInstance(allocatedMem, allocatedVcore),
         NodeId.newInstance(allocatedHost, allocatedPort),
         Priority.newInstance(allocatedPriority),
-        createdTime, finishedTime, diagnosticsInfo, logUrl, exitStatus, state);
+        createdTime, finishedTime, diagnosticsInfo, logUrl, exitStatus, state,
+        nodeHttpAddress);
   }
 
   private ApplicationReportExt generateApplicationReport(TimelineEntity entity,
