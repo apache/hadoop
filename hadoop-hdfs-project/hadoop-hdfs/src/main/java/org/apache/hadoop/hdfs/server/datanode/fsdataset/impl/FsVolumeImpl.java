@@ -289,7 +289,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
   }
 
-  long getDfsUsed() throws IOException {
+  @VisibleForTesting
+  public long getDfsUsed() throws IOException {
     long dfsUsed = 0;
     synchronized(dataset) {
       for(BlockPoolSlice s : bpSlices.values()) {
