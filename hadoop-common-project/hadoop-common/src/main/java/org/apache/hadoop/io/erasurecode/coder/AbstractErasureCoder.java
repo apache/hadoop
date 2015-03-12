@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
+import org.apache.hadoop.conf.Configured;
+
 /**
  * A common class of basic facilities to be shared by encoder and decoder
  *
  * It implements the {@link ErasureCoder} interface.
  */
-public abstract class AbstractErasureCoder implements ErasureCoder {
+public abstract class AbstractErasureCoder
+    extends Configured implements ErasureCoder {
 
   private int numDataUnits;
   private int numParityUnits;

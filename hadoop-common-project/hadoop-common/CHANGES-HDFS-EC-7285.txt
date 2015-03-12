@@ -18,3 +18,7 @@
     HADOOP-11646. Erasure Coder API for encoding and decoding of block group
     ( Kai Zheng via vinayakumarb )
 
+    HADOOP-11705. Make erasure coder configurable. Contributed by Kai Zheng
+    ( Kai Zheng )    
+
+

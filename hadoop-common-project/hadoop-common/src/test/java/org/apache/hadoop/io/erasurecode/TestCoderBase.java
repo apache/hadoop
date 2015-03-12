@@ -43,6 +43,12 @@ public abstract class TestCoderBase {
   // may go to different coding implementations.
   protected boolean usingDirectBuffer = true;
 
+  /**
+   * Prepare before running the case.
+   * @param numDataUnits
+   * @param numParityUnits
+   * @param erasedIndexes
+   */
   protected void prepare(int numDataUnits, int numParityUnits,
                          int[] erasedIndexes) {
     this.numDataUnits = numDataUnits;

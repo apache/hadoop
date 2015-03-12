@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
@@ -29,6 +30,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
   protected Class<? extends ErasureEncoder> encoderClass;
   protected Class<? extends ErasureDecoder> decoderClass;
 
+  private Configuration conf;
   protected int numChunksInBlock = 16;
 
   /**
@@ -46,6 +48,19 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
   }
 
   /**
+   * Prepare before running the case.
+   * @param conf
+   * @param numDataUnits
+   * @param numParityUnits
+   * @param erasedIndexes
+   */
+  protected void prepare(Configuration conf, int numDataUnits,
+                         int numParityUnits, int[] erasedIndexes) {
+    this.conf = conf;
+    super.prepare(numDataUnits, numParityUnits, erasedIndexes);
+  }
+
+  /**
    * Generating source data, encoding, recovering and then verifying.
    * RawErasureCoder mainly uses ECChunk to pass input and output data buffers,
    * it supports two kinds of ByteBuffers, one is array backed, the other is
@@ -56,6 +71,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     this.usingDirectBuffer = usingDirectBuffer;
 
     ErasureEncoder encoder = createEncoder();
+
     // Generate data and encode
     ECBlockGroup blockGroup = prepareBlockGroupForEncoding();
     // Backup all the source chunks for later recovering because some coders
@@ -65,17 +81,25 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     // Make a copy of a strip for later comparing
     TestBlock[] toEraseBlocks = copyDataBlocksToErase(clonedDataBlocks);
 
-    ErasureCodingStep codingStep = encoder.encode(blockGroup);
-    performCodingStep(codingStep);
+    ErasureCodingStep codingStep;
+    try {
+      codingStep = encoder.encode(blockGroup);
+      performCodingStep(codingStep);
+    } finally {
+      encoder.release();
+    }
     // Erase the copied sources
     eraseSomeDataBlocks(clonedDataBlocks);
 
     //Decode
     blockGroup = new ECBlockGroup(clonedDataBlocks, blockGroup.getParityBlocks());
     ErasureDecoder decoder = createDecoder();
-    codingStep = decoder.decode(blockGroup);
-    performCodingStep(codingStep);
-
+    try {
+      codingStep = decoder.decode(blockGroup);
+      performCodingStep(codingStep);
+    } finally {
+      decoder.release();
+    }
     //Compare
     compareAndVerify(toEraseBlocks, codingStep.getOutputBlocks());
   }
@@ -138,6 +162,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     }
 
     encoder.initialize(numDataUnits, numParityUnits, chunkSize);
+    encoder.setConf(conf);
     return encoder;
   }
 
@@ -154,6 +179,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     }
 
     decoder.initialize(numDataUnits, numParityUnits, chunkSize);
+    decoder.setConf(conf);
     return decoder;
   }
 
