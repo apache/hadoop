@@ -22,7 +22,10 @@ import java.io.File;
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -64,9 +67,14 @@ class FsDatasetAsyncDiskService {
   private static final long THREADS_KEEP_ALIVE_SECONDS = 60; 
   
   private final DataNode datanode;
+  private final FsDatasetImpl fsdatasetImpl;
   private final ThreadGroup threadGroup;
   private Map<File, ThreadPoolExecutor> executors
       = new HashMap<File, ThreadPoolExecutor>();
+  private Map<String, Set<Long>> deletedBlockIds 
+      = new HashMap<String, Set<Long>>();
+  private static final int MAX_DELETED_BLOCKS = 64;
+  private int numDeletedBlocks = 0;
   
   /**
    * Create a AsyncDiskServices with a set of volumes (specified by their
@@ -75,8 +83,9 @@ class FsDatasetAsyncDiskService {
    * The AsyncDiskServices uses one ThreadPool per volume to do the async
    * disk operations.
    */
-  FsDatasetAsyncDiskService(DataNode datanode) {
+  FsDatasetAsyncDiskService(DataNode datanode, FsDatasetImpl fsdatasetImpl) {
     this.datanode = datanode;
+    this.fsdatasetImpl = fsdatasetImpl;
     this.threadGroup = new ThreadGroup(getClass().getSimpleName());
   }
 
@@ -286,7 +295,27 @@ class FsDatasetAsyncDiskService {
         LOG.info("Deleted " + block.getBlockPoolId() + " "
             + block.getLocalBlock() + " file " + blockFile);
       }
+      updateDeletedBlockId(block);
       IOUtils.cleanup(null, volumeRef);
+    }
+  }
+  
+  private synchronized void updateDeletedBlockId(ExtendedBlock block) {
+    Set<Long> blockIds = deletedBlockIds.get(block.getBlockPoolId());
+    if (blockIds == null) {
+      blockIds = new HashSet<Long>();
+      deletedBlockIds.put(block.getBlockPoolId(), blockIds);
+    }
+    blockIds.add(block.getBlockId());
+    numDeletedBlocks++;
+    if (numDeletedBlocks == MAX_DELETED_BLOCKS) {
+      for (Entry<String, Set<Long>> e : deletedBlockIds.entrySet()) {
+        String bpid = e.getKey();
+        Set<Long> bs = e.getValue();
+        fsdatasetImpl.removeDeletedBlocks(bpid, bs);
+        bs.clear();
+      }
+      numDeletedBlocks = 0;
     }
   }
 }
