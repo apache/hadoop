@@ -445,41 +445,42 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
-   * Removes a collection of volumes from FsDataset.
-   * @param volumes the root directories of the volumes.
+   * Removes a set of volumes from FsDataset.
+   * @param volumesToRemove a set of absolute root path of each volume.
+   * @param clearFailure set true to clear failure information.
    *
    * DataNode should call this function before calling
    * {@link DataStorage#removeVolumes(java.util.Collection)}.
    */
   @Override
-  public synchronized void removeVolumes(Collection<StorageLocation> volumes) {
-    Set<String> volumeSet = new HashSet<>();
-    for (StorageLocation sl : volumes) {
-      volumeSet.add(sl.getFile().getAbsolutePath());
+  public synchronized void removeVolumes(
+      Set<File> volumesToRemove, boolean clearFailure) {
+    // Make sure that all volumes are absolute path.
+    for (File vol : volumesToRemove) {
+      Preconditions.checkArgument(vol.isAbsolute(),
+          String.format("%s is not absolute path.", vol.getPath()));
     }
     for (int idx = 0; idx < dataStorage.getNumStorageDirs(); idx++) {
       Storage.StorageDirectory sd = dataStorage.getStorageDir(idx);
-      String volume = sd.getRoot().getAbsolutePath();
-      if (volumeSet.contains(volume)) {
-        LOG.info("Removing " + volume + " from FsDataset.");
+      final File absRoot = sd.getRoot().getAbsoluteFile();
+      if (volumesToRemove.contains(absRoot)) {
+        LOG.info("Removing " + absRoot + " from FsDataset.");
 
         // Disable the volume from the service.
         asyncDiskService.removeVolume(sd.getCurrentDir());
-        this.volumes.removeVolume(sd.getRoot());
+        volumes.removeVolume(absRoot, clearFailure);
 
         // Removed all replica information for the blocks on the volume. Unlike
         // updating the volumeMap in addVolume(), this operation does not scan
         // disks.
         for (String bpid : volumeMap.getBlockPoolList()) {
-          List<Block> blocks = new ArrayList<Block>();
           for (Iterator<ReplicaInfo> it = volumeMap.replicas(bpid).iterator();
-              it.hasNext(); ) {
+               it.hasNext(); ) {
             ReplicaInfo block = it.next();
-            String absBasePath =
-                  new File(block.getVolume().getBasePath()).getAbsolutePath();
-            if (absBasePath.equals(volume)) {
+            final File absBasePath =
+                new File(block.getVolume().getBasePath()).getAbsoluteFile();
+            if (absBasePath.equals(absRoot)) {
               invalidate(bpid, block);
-              blocks.add(block);
               it.remove();
             }
           }
@@ -1975,50 +1976,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   /**
    * check if a data directory is healthy
-   * if some volumes failed - make sure to remove all the blocks that belong
-   * to these volumes
-   * @throws DiskErrorException
+   *
+   * if some volumes failed - the caller must emove all the blocks that belong
+   * to these failed volumes.
+   * @return the failed volumes. Returns null if no volume failed.
    */
   @Override // FsDatasetSpi
-  public void checkDataDir() throws DiskErrorException {
-    long totalBlocks=0, removedBlocks=0;
-    List<FsVolumeImpl> failedVols =  volumes.checkDirs();
-    
-    // If there no failed volumes return
-    if (failedVols == null) { 
-      return;
-    }
-    
-    // Otherwise remove blocks for the failed volumes
-    long mlsec = Time.now();
-    synchronized (this) {
-      for (FsVolumeImpl fv: failedVols) {
-        for (String bpid : fv.getBlockPoolList()) {
-          Iterator<ReplicaInfo> ib = volumeMap.replicas(bpid).iterator();
-          while(ib.hasNext()) {
-            ReplicaInfo b = ib.next();
-            totalBlocks++;
-            // check if the volume block belongs to still valid
-            if(b.getVolume() == fv) {
-              LOG.warn("Removing replica " + bpid + ":" + b.getBlockId()
-                  + " on failed volume " + fv.getCurrentDir().getAbsolutePath());
-              ib.remove();
-              removedBlocks++;
-            }
-          }
-        }
-      }
-    } // end of sync
-    mlsec = Time.now() - mlsec;
-    LOG.warn("Removed " + removedBlocks + " out of " + totalBlocks +
-        "(took " + mlsec + " millisecs)");
-
-    // report the error
-    StringBuilder sb = new StringBuilder();
-    for (FsVolumeImpl fv : failedVols) {
-      sb.append(fv.getCurrentDir().getAbsolutePath() + ";");
-    }
-    throw new DiskErrorException("DataNode failed volumes:" + sb);
+  public Set<File> checkDataDir() {
+   return volumes.checkDirs();
   }
     
 

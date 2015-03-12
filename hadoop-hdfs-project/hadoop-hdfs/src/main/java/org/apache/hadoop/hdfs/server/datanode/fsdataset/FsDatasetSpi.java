@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -113,9 +114,11 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * If the FSDataset supports block scanning, this function removes
    * the volumes from the block scanner.
    *
-   * @param volumes      The storage locations of the volumes to remove.
+   * @param volumes  The paths of the volumes to be removed.
+   * @param clearFailure set true to clear the failure information about the
+   *                     volumes.
    */
-  public void removeVolumes(Collection<StorageLocation> volumes);
+  public void removeVolumes(Set<File> volumes, boolean clearFailure);
 
   /** @return a storage with the given storage ID */
   public DatanodeStorage getStorage(final String storageUuid);
@@ -388,9 +391,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
     /**
      * Check if all the data directories are healthy
-     * @throws DiskErrorException
+     * @return A set of unhealthy data directories.
      */
-  public void checkDataDir() throws DiskErrorException;
+  public Set<File> checkDataDir();
 
   /**
    * Shutdown the FSDataset

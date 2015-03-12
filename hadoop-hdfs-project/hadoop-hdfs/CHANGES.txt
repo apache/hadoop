@@ -1162,6 +1162,9 @@ Release 2.7.0 - UNRELEASED
       HDFS-7806. Refactor: move StorageType from hadoop-hdfs to
       hadoop-common. (Xiaoyu Yao via Arpit Agarwal)
 
+      HDFS-7722. DataNode#checkDiskError should also remove Storage when error
+      is found. (Lei Xu via Colin P. McCabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
