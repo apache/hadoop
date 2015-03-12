@@ -757,6 +757,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-3338. Exclude jline dependency from YARN. (Zhijie Shen via xgong)
 
+    YARN-3154. Added additional APIs in LogAggregationContext to avoid aggregating
+    running logs of application when rolling is enabled. (Xuan Gong via vinodkv)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
