@@ -195,10 +195,10 @@ public class TestFsDatasetImpl {
     final String[] dataDirs =
         conf.get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY).split(",");
     final String volumePathToRemove = dataDirs[0];
-    List<StorageLocation> volumesToRemove = new ArrayList<StorageLocation>();
-    volumesToRemove.add(StorageLocation.parse(volumePathToRemove));
+    Set<File> volumesToRemove = new HashSet<>();
+    volumesToRemove.add(StorageLocation.parse(volumePathToRemove).getFile());
 
-    dataset.removeVolumes(volumesToRemove);
+    dataset.removeVolumes(volumesToRemove, true);
     int expectedNumVolumes = dataDirs.length - 1;
     assertEquals("The volume has been removed from the volumeList.",
         expectedNumVolumes, dataset.getVolumes().size());
@@ -206,7 +206,7 @@ public class TestFsDatasetImpl {
         expectedNumVolumes, dataset.storageMap.size());
 
     try {
-      dataset.asyncDiskService.execute(volumesToRemove.get(0).getFile(),
+      dataset.asyncDiskService.execute(volumesToRemove.iterator().next(),
           new Runnable() {
             @Override
             public void run() {}
@@ -248,8 +248,9 @@ public class TestFsDatasetImpl {
 
     when(storage.getNumStorageDirs()).thenReturn(numExistingVolumes + 1);
     when(storage.getStorageDir(numExistingVolumes)).thenReturn(sd);
-    List<StorageLocation> volumesToRemove = Arrays.asList(loc);
-    dataset.removeVolumes(volumesToRemove);
+    Set<File> volumesToRemove = new HashSet<>();
+    volumesToRemove.add(loc.getFile());
+    dataset.removeVolumes(volumesToRemove, true);
     assertEquals(numExistingVolumes, dataset.getVolumes().size());
   }
 
@@ -278,12 +279,13 @@ public class TestFsDatasetImpl {
     final FsVolumeImpl newVolume = mock(FsVolumeImpl.class);
     final FsVolumeReference newRef = mock(FsVolumeReference.class);
     when(newRef.getVolume()).thenReturn(newVolume);
+    when(newVolume.getBasePath()).thenReturn("data4");
     FsVolumeImpl blockedVolume = volumeList.getVolumes().get(1);
     doAnswer(new Answer() {
       @Override
       public Object answer(InvocationOnMock invocationOnMock)
           throws Throwable {
-        volumeList.removeVolume(new File("data4"));
+        volumeList.removeVolume(new File("data4"), false);
         volumeList.addVolume(newRef);
         return null;
       }

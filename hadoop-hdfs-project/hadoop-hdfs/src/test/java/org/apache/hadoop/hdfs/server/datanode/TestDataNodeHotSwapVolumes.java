@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockMissingException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
@@ -95,6 +97,8 @@ public class TestDataNodeHotSwapVolumes {
     conf.setInt(DFSConfigKeys.DFS_DF_INTERVAL_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
         1000);
+    /* Allow 1 volume failure */
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
 
     MiniDFSNNTopology nnTopology =
         MiniDFSNNTopology.simpleFederatedTopology(numNameNodes);
@@ -645,5 +649,66 @@ public class TestDataNodeHotSwapVolumes {
     // Bring the removed directory back. It only successes if all metadata about
     // this directory were removed from the previous step.
     dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, oldDataDir);
+  }
+
+  /** Get the FsVolume on the given basePath */
+  private FsVolumeImpl getVolume(DataNode dn, File basePath) {
+    for (FsVolumeSpi vol : dn.getFSDataset().getVolumes()) {
+      if (vol.getBasePath().equals(basePath.getPath())) {
+        return (FsVolumeImpl)vol;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Verify that {@link DataNode#checkDiskErrors()} removes all metadata in
+   * DataNode upon a volume failure. Thus we can run reconfig on the same
+   * configuration to reload the new volume on the same directory as the failed one.
+   */
+  @Test(timeout=60000)
+  public void testDirectlyReloadAfterCheckDiskError()
+      throws IOException, TimeoutException, InterruptedException,
+      ReconfigurationException {
+    startDFSCluster(1, 2);
+    createFile(new Path("/test"), 32, (short)2);
+
+    DataNode dn = cluster.getDataNodes().get(0);
+    final String oldDataDir = dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY);
+    File dirToFail = new File(cluster.getDataDirectory(), "data1");
+
+    FsVolumeImpl failedVolume = getVolume(dn, dirToFail);
+    assertTrue("No FsVolume was found for " + dirToFail,
+        failedVolume != null);
+    long used = failedVolume.getDfsUsed();
+
+    try {
+      assertTrue("Couldn't chmod local vol: " + dirToFail,
+          FileUtil.setExecutable(dirToFail, false));
+      // Call and wait DataNode to detect disk failure.
+      long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
+      dn.checkDiskErrorAsync();
+      while (dn.getLastDiskErrorCheck() == lastDiskErrorCheck) {
+        Thread.sleep(100);
+      }
+
+      createFile(new Path("/test1"), 32, (short)2);
+      assertEquals(used, failedVolume.getDfsUsed());
+    } finally {
+      // Need to restore the mode on dirToFail. Otherwise, if an Exception
+      // is thrown above, the following tests can not delete this data directory
+      // and thus fail to start MiniDFSCluster.
+      assertTrue("Couldn't restore executable for: " + dirToFail,
+          FileUtil.setExecutable(dirToFail, true));
+    }
+
+    dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, oldDataDir);
+
+    createFile(new Path("/test2"), 32, (short)2);
+    FsVolumeImpl restoredVolume = getVolume(dn, dirToFail);
+    assertTrue(restoredVolume != null);
+    assertTrue(restoredVolume != failedVolume);
+    // More data has been written to this volume.
+    assertTrue(restoredVolume.getDfsUsed() > used);
   }
 }

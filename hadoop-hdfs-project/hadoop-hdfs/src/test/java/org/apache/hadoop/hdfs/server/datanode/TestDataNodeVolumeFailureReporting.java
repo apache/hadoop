@@ -403,23 +403,6 @@ public class TestDataNodeVolumeFailureReporting {
     checkFailuresAtNameNode(dm, dns.get(0), true, dn1Vol1.getAbsolutePath());
     checkFailuresAtNameNode(dm, dns.get(1), true, dn2Vol1.getAbsolutePath());
 
-    // Reconfigure each DataNode to remove its failed volumes.
-    reconfigureDataNode(dns.get(0), dn1Vol2);
-    reconfigureDataNode(dns.get(1), dn2Vol2);
-
-    DataNodeTestUtils.triggerHeartbeat(dns.get(0));
-    DataNodeTestUtils.triggerHeartbeat(dns.get(1));
-
-    checkFailuresAtDataNode(dns.get(0), 1, true);
-    checkFailuresAtDataNode(dns.get(1), 1, true);
-
-    // NN sees reduced capacity, but no volume failures.
-    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 0,
-        origCapacity - (1*dnCapacity), WAIT_FOR_HEARTBEATS);
-    checkAggregateFailuresAtNameNode(true, 0);
-    checkFailuresAtNameNode(dm, dns.get(0), true);
-    checkFailuresAtNameNode(dm, dns.get(1), true);
-
     // Reconfigure again to try to add back the failed volumes.
     reconfigureDataNode(dns.get(0), dn1Vol1, dn1Vol2);
     reconfigureDataNode(dns.get(1), dn2Vol1, dn2Vol2);
@@ -460,6 +443,25 @@ public class TestDataNodeVolumeFailureReporting {
     checkAggregateFailuresAtNameNode(false, 2);
     checkFailuresAtNameNode(dm, dns.get(0), false, dn1Vol1.getAbsolutePath());
     checkFailuresAtNameNode(dm, dns.get(1), false, dn2Vol1.getAbsolutePath());
+
+    // Replace failed volume with healthy volume and run reconfigure DataNode.
+    // The failed volume information should be cleared.
+    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn1Vol1, true));
+    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn2Vol1, true));
+    reconfigureDataNode(dns.get(0), dn1Vol1, dn1Vol2);
+    reconfigureDataNode(dns.get(1), dn2Vol1, dn2Vol2);
+
+    DataNodeTestUtils.triggerHeartbeat(dns.get(0));
+    DataNodeTestUtils.triggerHeartbeat(dns.get(1));
+
+    checkFailuresAtDataNode(dns.get(0), 1, true);
+    checkFailuresAtDataNode(dns.get(1), 1, true);
+
+    DFSTestUtil.waitForDatanodeStatus(dm, 3, 0, 0,
+        origCapacity, WAIT_FOR_HEARTBEATS);
+    checkAggregateFailuresAtNameNode(true, 0);
+    checkFailuresAtNameNode(dm, dns.get(0), true);
+    checkFailuresAtNameNode(dm, dns.get(1), true);
   }
 
   /**
