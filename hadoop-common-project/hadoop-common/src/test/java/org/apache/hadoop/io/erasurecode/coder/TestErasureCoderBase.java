@@ -162,7 +162,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     }
 
     encoder.initialize(numDataUnits, numParityUnits, chunkSize);
-    encoder.setConf(conf);
+    ((AbstractErasureCoder)encoder).setConf(conf);
     return encoder;
   }
 
@@ -179,7 +179,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     }
 
     decoder.initialize(numDataUnits, numParityUnits, chunkSize);
-    decoder.setConf(conf);
+    ((AbstractErasureCoder)decoder).setConf(conf);
     return decoder;
   }
 
