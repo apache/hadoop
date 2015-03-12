@@ -104,7 +104,12 @@ public class ContainerBlock extends HtmlBlock {
         container.getContainerState() == null ? UNAVAILABLE : container
           .getContainerState())
       ._("Exit Status:", container.getContainerExitStatus())
-      ._("Node:", container.getAssignedNodeId())
+      ._(
+        "Node:",
+        container.getNodeHttpAddress() == null ? "#" : container
+          .getNodeHttpAddress(),
+        container.getNodeHttpAddress() == null ? "N/A" : container
+          .getNodeHttpAddress())
       ._("Priority:", container.getPriority())
       ._("Started:", Times.format(container.getStartedTime()))
       ._(

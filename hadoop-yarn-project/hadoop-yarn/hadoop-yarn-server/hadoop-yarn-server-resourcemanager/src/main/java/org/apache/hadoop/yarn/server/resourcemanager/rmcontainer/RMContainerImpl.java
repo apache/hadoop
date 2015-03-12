@@ -41,7 +41,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRunningOnNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
@@ -573,10 +572,29 @@ public class RMContainerImpl implements RMContainer {
           this.getAllocatedResource(), this.getAllocatedNode(),
           this.getAllocatedPriority(), this.getCreationTime(),
           this.getFinishTime(), this.getDiagnosticsInfo(), this.getLogURL(),
-          this.getContainerExitStatus(), this.getContainerState());
+          this.getContainerExitStatus(), this.getContainerState(),
+          this.getNodeHttpAddress());
     } finally {
       this.readLock.unlock();
     }
     return containerReport;
+  }
+
+  @Override
+  public String getNodeHttpAddress() {
+    try {
+      readLock.lock();
+      if (container.getNodeHttpAddress() != null) {
+        StringBuilder httpAddress = new StringBuilder();
+        httpAddress.append(WebAppUtils.getHttpSchemePrefix(rmContext
+            .getYarnConfiguration()));
+        httpAddress.append(container.getNodeHttpAddress());
+        return httpAddress.toString();
+      } else {
+        return null;
+      }
+    } finally {
+      readLock.unlock();
+    }
   }
 }

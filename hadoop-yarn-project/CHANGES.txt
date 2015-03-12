@@ -752,6 +752,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3295. Fix documentation nits found in markdown conversion.
     (Masatake Iwasaki via ozawa)
 
+    YARN-1884. Added nodeHttpAddress into ContainerReport and fixed the link to NM
+    web page. (Xuan Gong via zjshen)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

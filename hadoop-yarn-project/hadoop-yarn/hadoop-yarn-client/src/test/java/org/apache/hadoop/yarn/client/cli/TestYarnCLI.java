@@ -224,7 +224,8 @@ public class TestYarnCLI {
     ContainerId containerId = ContainerId.newContainerId(attemptId, 1);
     ContainerReport container = ContainerReport.newInstance(containerId, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
-        "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+        "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE,
+        "http://" + NodeId.newInstance("host", 2345).toString());
     when(client.getContainerReport(any(ContainerId.class))).thenReturn(
         container);
     int result = cli.run(new String[] { "container", "-status",
@@ -240,6 +241,7 @@ public class TestYarnCLI {
     pw.println("\tState : COMPLETE");
     pw.println("\tLOG-URL : logURL");
     pw.println("\tHost : host:1234");
+    pw.println("\tNodeHttpAddress : http://host:2345");
     pw.println("\tDiagnostics : diagnosticInfo");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
@@ -259,13 +261,16 @@ public class TestYarnCLI {
     long time1=1234,time2=5678;
     ContainerReport container = ContainerReport.newInstance(containerId, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, time1, time2,
-        "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+        "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE,
+        "http://" + NodeId.newInstance("host", 2345).toString());
     ContainerReport container1 = ContainerReport.newInstance(containerId1, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, time1, time2,
-        "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+        "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE,
+        "http://" + NodeId.newInstance("host", 2345).toString());
     ContainerReport container2 = ContainerReport.newInstance(containerId2, null,
         NodeId.newInstance("host", 1234), Priority.UNDEFINED, time1,0,
-        "diagnosticInfo", "", 0, ContainerState.RUNNING);
+        "diagnosticInfo", "", 0, ContainerState.RUNNING,
+        "http://" + NodeId.newInstance("host", 2345).toString());
     List<ContainerReport> reports = new ArrayList<ContainerReport>();
     reports.add(container);
     reports.add(container1);
@@ -273,6 +278,7 @@ public class TestYarnCLI {
     DateFormat dateFormat=new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy");
     when(client.getContainers(any(ApplicationAttemptId.class))).thenReturn(
         reports);
+    sysOutStream.reset();
     int result = cli.run(new String[] { "container", "-list",
         attemptId.toString() });
     assertEquals(0, result);
@@ -285,24 +291,28 @@ public class TestYarnCLI {
     pw.print("\t         Finish Time");
     pw.print("\t               State");
     pw.print("\t                Host");
+    pw.print("\t   Node Http Address");
     pw.println("\t                            LOG-URL");
     pw.print(" container_1234_0005_01_000001");
     pw.print("\t"+dateFormat.format(new Date(time1)));
     pw.print("\t"+dateFormat.format(new Date(time2)));
     pw.print("\t            COMPLETE");
     pw.print("\t           host:1234");
+    pw.print("\t    http://host:2345");
     pw.println("\t                             logURL");
     pw.print(" container_1234_0005_01_000002");
     pw.print("\t"+dateFormat.format(new Date(time1)));
     pw.print("\t"+dateFormat.format(new Date(time2)));
     pw.print("\t            COMPLETE");
     pw.print("\t           host:1234");
+    pw.print("\t    http://host:2345");
     pw.println("\t                             logURL");
     pw.print(" container_1234_0005_01_000003");
     pw.print("\t"+dateFormat.format(new Date(time1)));
     pw.print("\t                 N/A");
     pw.print("\t             RUNNING");
     pw.print("\t           host:1234");
+    pw.print("\t    http://host:2345");
     pw.println("\t                                   ");
     pw.close();
     String appReportStr = baos.toString("UTF-8");

@@ -77,7 +77,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
-import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -715,7 +714,8 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     public ContainerReport createFakeContainerReport() {
       return ContainerReport.newInstance(createFakeContainerId(), null,
           NodeId.newInstance("localhost", 0), null, 1000l, 1200l, "", "", 0,
-          ContainerState.COMPLETE);
+          ContainerState.COMPLETE,
+          "http://" + NodeId.newInstance("localhost", 0).toString());
     }
 
     public List<ContainerReport> createFakeContainerReports() {
