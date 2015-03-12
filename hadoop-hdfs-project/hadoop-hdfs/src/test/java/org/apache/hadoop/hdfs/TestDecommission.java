@@ -85,6 +85,7 @@ public class TestDecommission {
   static final int NAMENODE_REPLICATION_INTERVAL = 1; //replication interval
 
   final Random myrand = new Random();
+  Path dir;
   Path hostsFile;
   Path excludeFile;
   FileSystem localFileSys;
@@ -97,7 +98,7 @@ public class TestDecommission {
     // Set up the hosts/exclude files.
     localFileSys = FileSystem.getLocal(conf);
     Path workingDir = localFileSys.getWorkingDirectory();
-    Path dir = new Path(workingDir, PathUtils.getTestDirName(getClass()) + "/work-dir/decommission");
+    dir = new Path(workingDir, PathUtils.getTestDirName(getClass()) + "/work-dir/decommission");
     hostsFile = new Path(dir, "hosts");
     excludeFile = new Path(dir, "exclude");
     
@@ -118,7 +119,7 @@ public class TestDecommission {
   
   @After
   public void teardown() throws IOException {
-    cleanupFile(localFileSys, excludeFile.getParent());
+    cleanupFile(localFileSys, dir);
     if (cluster != null) {
       cluster.shutdown();
     }

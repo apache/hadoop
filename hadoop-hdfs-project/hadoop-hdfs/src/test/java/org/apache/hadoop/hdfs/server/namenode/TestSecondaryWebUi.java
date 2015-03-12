@@ -19,19 +19,24 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
 
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+
+import javax.management.AttributeNotFoundException;
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import javax.management.*;
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.net.URL;
 
 public class TestSecondaryWebUi {
   
@@ -77,19 +82,5 @@ public class TestSecondaryWebUi {
             "CheckpointEditlogDirectories");
     Assert.assertArrayEquals(checkpointEditlogDir,
             snn.getCheckpointEditlogDirectories());
-  }
-
-  @Test
-  public void testSecondaryWebUiJsp()
-          throws IOException, MalformedObjectNameException,
-                 AttributeNotFoundException, MBeanException,
-                 ReflectionException, InstanceNotFoundException {
-    String pageContents = DFSTestUtil.urlGet(new URL("http://localhost:" +
-        SecondaryNameNode.getHttpAddress(conf).getPort() + "/status.jsp"));
-    Assert.assertTrue("Didn't find \"Last Checkpoint\"",
-        pageContents.contains("Last Checkpoint"));
-    Assert.assertTrue("Didn't find Checkpoint Transactions: 500",
-        pageContents.contains("Checkpoint Transactions: 500"));
-
   }
 }
