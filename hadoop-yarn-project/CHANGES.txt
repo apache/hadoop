@@ -755,6 +755,8 @@ Release 2.7.0 - UNRELEASED
     YARN-1884. Added nodeHttpAddress into ContainerReport and fixed the link to NM
     web page. (Xuan Gong via zjshen)
 
+    YARN-3338. Exclude jline dependency from YARN. (Zhijie Shen via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
