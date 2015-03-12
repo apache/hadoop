@@ -191,12 +191,14 @@ public class AppAttemptBlock extends HtmlBlock {
         .append(url("container", container.getContainerId()))
         .append("'>")
         .append(container.getContainerId())
-        .append("</a>\",\"<a href='")
-        .append("#") // TODO: replace with node http address (YARN-1884)
+        .append("</a>\",\"<a ")
+        .append(
+          container.getNodeHttpAddress() == null ? "#" : "href='"
+              + container.getNodeHttpAddress())
         .append("'>")
-        .append(container.getAssignedNodeId() == null ? "N/A" :
+        .append(container.getNodeHttpAddress() == null ? "N/A" :
             StringEscapeUtils.escapeJavaScript(StringEscapeUtils
-                .escapeHtml(container.getAssignedNodeId())))
+                .escapeHtml(container.getNodeHttpAddress())))
         .append("</a>\",\"")
         .append(container.getContainerExitStatus()).append("\",\"<a href='")
         .append(container.getLogUrl() == null ?

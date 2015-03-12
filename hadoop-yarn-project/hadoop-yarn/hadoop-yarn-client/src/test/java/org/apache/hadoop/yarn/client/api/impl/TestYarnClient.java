@@ -501,13 +501,16 @@ public class TestYarnClient {
       ContainerReport container = ContainerReport.newInstance(
           ContainerId.newContainerId(attempt.getApplicationAttemptId(), 1), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
-          "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+          "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE,
+          "http://" + NodeId.newInstance("host", 2345).toString());
       containerReports.add(container);
 
       ContainerReport container1 = ContainerReport.newInstance(
           ContainerId.newContainerId(attempt.getApplicationAttemptId(), 2), null,
           NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
-          "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+          "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE,
+          "http://" + NodeId.newInstance("host", 2345).toString());
+
       containerReports.add(container1);
       containers.put(attempt.getApplicationAttemptId(), containerReports);
 

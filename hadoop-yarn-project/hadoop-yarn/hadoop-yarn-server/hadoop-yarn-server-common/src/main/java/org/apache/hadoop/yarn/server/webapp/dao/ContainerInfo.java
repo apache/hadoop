@@ -42,6 +42,7 @@ public class ContainerInfo {
   protected String logUrl;
   protected int containerExitStatus;
   protected ContainerState containerState;
+  protected String nodeHttpAddress;
 
   public ContainerInfo() {
     // JAXB needs this
@@ -64,6 +65,7 @@ public class ContainerInfo {
     logUrl = container.getLogUrl();
     containerExitStatus = container.getContainerExitStatus();
     containerState = container.getContainerState();
+    nodeHttpAddress = container.getNodeHttpAddress();
   }
 
   public String getContainerId() {
@@ -114,4 +116,7 @@ public class ContainerInfo {
     return containerState;
   }
 
+  public String getNodeHttpAddress() {
+    return nodeHttpAddress;
+  }
 }

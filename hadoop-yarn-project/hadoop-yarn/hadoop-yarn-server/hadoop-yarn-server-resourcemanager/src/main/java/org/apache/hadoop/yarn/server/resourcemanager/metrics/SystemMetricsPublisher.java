@@ -179,7 +179,7 @@ public class SystemMetricsPublisher extends CompositeService {
               container.getAllocatedResource(),
               container.getAllocatedNode(),
               container.getAllocatedPriority(),
-              createdTime));
+              createdTime, container.getNodeHttpAddress()));
     }
   }
 
@@ -380,6 +380,9 @@ public class SystemMetricsPublisher extends CompositeService {
         event.getAllocatedNode().getPort());
     entityInfo.put(ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO,
         event.getAllocatedPriority().getPriority());
+    entityInfo.put(
+      ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO,
+      event.getNodeHttpAddress());
     entity.setOtherInfo(entityInfo);
     TimelineEvent tEvent = new TimelineEvent();
     tEvent.setEventType(ContainerMetricsConstants.CREATED_EVENT_TYPE);
