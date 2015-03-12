@@ -29,13 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import javax.naming.CommunicationException;
-import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
-import javax.naming.directory.Attribute;
-import javax.naming.directory.Attributes;
-import javax.naming.directory.BasicAttribute;
-import javax.naming.directory.BasicAttributes;
-import javax.naming.directory.DirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 
@@ -49,46 +43,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 @SuppressWarnings("unchecked")
-public class TestLdapGroupsMapping {
-  private DirContext mockContext;
-  
-  private LdapGroupsMapping mappingSpy = spy(new LdapGroupsMapping());
-  private NamingEnumeration mockUserNamingEnum = mock(NamingEnumeration.class);
-  private NamingEnumeration mockGroupNamingEnum = mock(NamingEnumeration.class);
-  private String[] testGroups = new String[] {"group1", "group2"};
-  
+public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
   @Before
   public void setupMocks() throws NamingException {
-    mockContext = mock(DirContext.class);
-    doReturn(mockContext).when(mappingSpy).getDirContext();
-            
     SearchResult mockUserResult = mock(SearchResult.class);
-    // We only ever call hasMoreElements once for the user NamingEnum, so 
-    // we can just have one return value
-    when(mockUserNamingEnum.hasMoreElements()).thenReturn(true);
     when(mockUserNamingEnum.nextElement()).thenReturn(mockUserResult);
     when(mockUserResult.getNameInNamespace()).thenReturn("CN=some_user,DC=test,DC=com");
-    
-    SearchResult mockGroupResult = mock(SearchResult.class);
-    // We're going to have to define the loop here. We want two iterations,
-    // to get both the groups
-    when(mockGroupNamingEnum.hasMoreElements()).thenReturn(true, true, false);
-    when(mockGroupNamingEnum.nextElement()).thenReturn(mockGroupResult);
-    
-    // Define the attribute for the name of the first group
-    Attribute group1Attr = new BasicAttribute("cn");
-    group1Attr.add(testGroups[0]);
-    Attributes group1Attrs = new BasicAttributes();
-    group1Attrs.put(group1Attr);
-    
-    // Define the attribute for the name of the second group
-    Attribute group2Attr = new BasicAttribute("cn");
-    group2Attr.add(testGroups[1]);
-    Attributes group2Attrs = new BasicAttributes();
-    group2Attrs.put(group2Attr);
-    
-    // This search result gets reused, so return group1, then group2
-    when(mockGroupResult.getAttributes()).thenReturn(group1Attrs, group2Attrs);
   }
   
   @Test

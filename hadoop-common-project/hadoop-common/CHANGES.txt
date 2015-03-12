@@ -18,6 +18,9 @@ Release 2.7.6 - UNRELEASED
     HADOOP-13263. Reload cached groups in background after expiry.
     (Stephen O'Donnell via Arpit Agarwal)
 
+    HADOOP-9477. Add posixGroups support for LDAP groups mapping service.
+    (Dapeng Sun via Yongjun Zhang)
+
   OPTIMIZATIONS
 
   BUG FIXES
