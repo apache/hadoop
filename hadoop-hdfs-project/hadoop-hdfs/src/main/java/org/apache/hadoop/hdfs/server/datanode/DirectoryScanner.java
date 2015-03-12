@@ -443,13 +443,14 @@ public class DirectoryScanner implements Runnable {
         int d = 0; // index for blockpoolReport
         int m = 0; // index for memReprot
         while (m < memReport.length && d < blockpoolReport.length) {
-          FinalizedReplica memBlock = memReport[Math.min(m, memReport.length - 1)];
-          ScanInfo info = blockpoolReport[Math.min(
-              d, blockpoolReport.length - 1)];
+          FinalizedReplica memBlock = memReport[m];
+          ScanInfo info = blockpoolReport[d];
           if (info.getBlockId() < memBlock.getBlockId()) {
-            // Block is missing in memory
-            statsRecord.missingMemoryBlocks++;
-            addDifference(diffRecord, statsRecord, info);
+            if (!dataset.isDeletingBlock(bpid, info.getBlockId())) {
+              // Block is missing in memory
+              statsRecord.missingMemoryBlocks++;
+              addDifference(diffRecord, statsRecord, info);
+            }
             d++;
             continue;
           }
@@ -495,8 +496,11 @@ public class DirectoryScanner implements Runnable {
                         current.getBlockId(), current.getVolume());
         }
         while (d < blockpoolReport.length) {
-          statsRecord.missingMemoryBlocks++;
-          addDifference(diffRecord, statsRecord, blockpoolReport[d++]);
+          if (!dataset.isDeletingBlock(bpid, blockpoolReport[d].getBlockId())) {
+            statsRecord.missingMemoryBlocks++;
+            addDifference(diffRecord, statsRecord, blockpoolReport[d]);
+          }
+          d++;
         }
         LOG.info(statsRecord.toString());
       } //end for

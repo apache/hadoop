@@ -429,4 +429,9 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public boolean getPinning(ExtendedBlock block) throws IOException {
     return false;
   }
+  
+  @Override
+  public boolean isDeletingBlock(String bpid, long blockId) {
+    return false;
+  }
 }

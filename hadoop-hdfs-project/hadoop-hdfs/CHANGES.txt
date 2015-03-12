@@ -1139,6 +1139,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7830. DataNode does not release the volume lock when adding a volume
     fails. (Lei Xu via Colin P. Mccabe)
 
+    HDFS-6833.  DirectoryScanner should not register a deleting block with
+    memory of DataNode.  (Shinichi Yamashita via szetszwo)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode

@@ -237,6 +237,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private volatile boolean fsRunning;
 
   final ReplicaMap volumeMap;
+  final Map<String, Set<Long>> deletingBlock;
   final RamDiskReplicaTracker ramDiskReplicaTracker;
   final RamDiskAsyncLazyPersistService asyncLazyPersistService;
 
@@ -298,8 +299,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             VolumeChoosingPolicy.class), conf);
     volumes = new FsVolumeList(volumeFailureInfos, datanode.getBlockScanner(),
         blockChooserImpl);
-    asyncDiskService = new FsDatasetAsyncDiskService(datanode);
+    asyncDiskService = new FsDatasetAsyncDiskService(datanode, this);
     asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode);
+    deletingBlock = new HashMap<String, Set<Long>>();
 
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       addVolume(dataLocations, storage.getStorageDir(idx));
@@ -1795,7 +1797,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               +  ". Parent not found for file " + f);
           continue;
         }
-        volumeMap.remove(bpid, invalidBlks[i]);
+        ReplicaInfo removing = volumeMap.remove(bpid, invalidBlks[i]);
+        addDeletingBlock(bpid, removing.getBlockId());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Block file " + removing.getBlockFile().getName()
+              + " is to be deleted");
+        }
       }
 
       if (v.isTransientStorage()) {
@@ -3004,6 +3011,36 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         
     FileStatus fss = localFS.getFileStatus(new Path(f.getAbsolutePath()));
     return fss.getPermission().getStickyBit();
+  }
+  
+  @Override
+  public boolean isDeletingBlock(String bpid, long blockId) {
+    synchronized(deletingBlock) {
+      Set<Long> s = deletingBlock.get(bpid);
+      return s != null ? s.contains(blockId) : false;
+    }
+  }
+  
+  public void removeDeletedBlocks(String bpid, Set<Long> blockIds) {
+    synchronized (deletingBlock) {
+      Set<Long> s = deletingBlock.get(bpid);
+      if (s != null) {
+        for (Long id : blockIds) {
+          s.remove(id);
+        }
+      }
+    }
+  }
+  
+  private void addDeletingBlock(String bpid, Long blockId) {
+    synchronized(deletingBlock) {
+      Set<Long> s = deletingBlock.get(bpid);
+      if (s == null) {
+        s = new HashSet<Long>();
+        deletingBlock.put(bpid, s);
+      }
+      s.add(blockId);
+    }
   }
 }
 
