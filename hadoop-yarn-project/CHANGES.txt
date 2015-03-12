@@ -380,6 +380,9 @@ Release 2.6.1 - 2015-09-23
     YARN-2890. MiniYarnCluster should turn on timeline service if
     configured to do so. (Mit Desai via hitesh)
 
+    YARN-3154. Added additional APIs in LogAggregationContext to avoid aggregating
+    running logs of application when rolling is enabled. (Xuan Gong via vinodkv)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -116,6 +115,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final Context context;
   private final int retentionSize;
   private final long rollingMonitorInterval;
+  private final boolean logAggregationInRolling;
   private final NodeId nodeId;
 
   private final Map<ContainerId, ContainerLogAggregator> containerLogAggregators =
@@ -191,9 +191,14 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       }
       this.rollingMonitorInterval = configuredRollingMonitorInterval;
     }
+    this.logAggregationInRolling =
+        this.rollingMonitorInterval <= 0 || this.logAggregationContext == null
+            || this.logAggregationContext.getRolledLogsIncludePattern() == null
+            || this.logAggregationContext.getRolledLogsIncludePattern()
+              .isEmpty() ? false : true;
   }
 
-  private void uploadLogsForContainers() {
+  private void uploadLogsForContainers(boolean appFinished) {
     if (this.logAggregationDisabled) {
       return;
     }
@@ -260,7 +265,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           containerLogAggregators.put(container, aggregator);
         }
         Set<Path> uploadedFilePathsInThisCycle =
-            aggregator.doContainerLogAggregation(writer);
+            aggregator.doContainerLogAggregation(writer, appFinished);
         if (uploadedFilePathsInThisCycle.size() > 0) {
           uploadedLogsInThisCycle = true;
         }
@@ -391,12 +396,12 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     while (!this.appFinishing.get() && !this.aborted.get()) {
       synchronized(this) {
         try {
-          if (this.rollingMonitorInterval > 0) {
+          if (logAggregationInRolling) {
             wait(this.rollingMonitorInterval * 1000);
             if (this.appFinishing.get() || this.aborted.get()) {
               break;
             }
-            uploadLogsForContainers();
+            uploadLogsForContainers(false);
           } else {
             wait(THREAD_SLEEP_TIME);
           }
@@ -412,7 +417,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     }
 
     // App is finished, upload the container logs.
-    uploadLogsForContainers();
+    uploadLogsForContainers(true);
 
     // Remove the local app-log-dirs
     List<Path> localAppLogDirs = new ArrayList<Path>();
@@ -521,7 +526,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       this.containerId = containerId;
     }
 
-    public Set<Path> doContainerLogAggregation(LogWriter writer) {
+    public Set<Path> doContainerLogAggregation(LogWriter writer,
+        boolean appFinished) {
       LOG.info("Uploading logs for container " + containerId
           + ". Current good log dirs are "
           + StringUtils.join(",", dirsHandler.getLogDirsForRead()));
@@ -529,7 +535,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       final LogValue logValue =
           new LogValue(dirsHandler.getLogDirsForRead(), containerId,
             userUgi.getShortUserName(), logAggregationContext,
-            this.uploadedFileMeta);
+            this.uploadedFileMeta, appFinished);
       try {
         writer.append(logKey, logValue);
       } catch (Exception e) {
