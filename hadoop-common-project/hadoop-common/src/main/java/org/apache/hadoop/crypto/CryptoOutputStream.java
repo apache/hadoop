@@ -40,6 +40,9 @@ import com.google.common.base.Preconditions;
  * padding = pos%(algorithm blocksize); 
  * <p/>
  * The underlying stream offset is maintained as state.
+ *
+ * Note that while some of this class' methods are synchronized, this is just to
+ * match the threadsafety behavior of DFSOutputStream. See HADOOP-11710.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -125,7 +128,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
    * @throws IOException
    */
   @Override
-  public void write(byte[] b, int off, int len) throws IOException {
+  public synchronized void write(byte[] b, int off, int len) throws IOException {
     checkStream();
     if (b == null) {
       throw new NullPointerException();
@@ -212,14 +215,16 @@ public class CryptoOutputStream extends FilterOutputStream implements
   }
   
   @Override
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
     if (closed) {
       return;
     }
-    
-    super.close();
-    freeBuffers();
-    closed = true;
+    try {
+      super.close();
+      freeBuffers();
+    } finally {
+      closed = true;
+    }
   }
   
   /**
@@ -227,7 +232,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
    * underlying stream, then do the flush.
    */
   @Override
-  public void flush() throws IOException {
+  public synchronized void flush() throws IOException {
     checkStream();
     encrypt();
     super.flush();
