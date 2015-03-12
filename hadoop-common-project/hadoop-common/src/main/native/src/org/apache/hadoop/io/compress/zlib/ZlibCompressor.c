@@ -28,7 +28,6 @@
 #include "org_apache_hadoop_io_compress_zlib.h"
 #include "org_apache_hadoop_io_compress_zlib_ZlibCompressor.h"
 
-static jfieldID ZlibCompressor_clazz;
 static jfieldID ZlibCompressor_stream;
 static jfieldID ZlibCompressor_uncompressedDirectBuf;
 static jfieldID ZlibCompressor_uncompressedDirectBufOff;
@@ -141,8 +140,6 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_initIDs(
 #endif
 
 	// Initialize the requisite fieldIds
-    ZlibCompressor_clazz = (*env)->GetStaticFieldID(env, class, "clazz",
-                                                      "Ljava/lang/Class;");
     ZlibCompressor_stream = (*env)->GetFieldID(env, class, "stream", "J");
     ZlibCompressor_finish = (*env)->GetFieldID(env, class, "finish", "Z");
     ZlibCompressor_finished = (*env)->GetFieldID(env, class, "finished", "Z");
@@ -239,7 +236,6 @@ JNIEXPORT jint JNICALL
 Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_deflateBytesDirect(
 	JNIEnv *env, jobject this
 	) {
-    jobject clazz = NULL;
     jobject uncompressed_direct_buf = NULL;
     jint uncompressed_direct_buf_off = 0;
     jint uncompressed_direct_buf_len = 0;
@@ -260,9 +256,6 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_deflateBytesDirect(
 		return (jint)0;
     }
 
-    // Get members of ZlibCompressor
-    clazz = (*env)->GetStaticObjectField(env, this,
-                                                 ZlibCompressor_clazz);
 	uncompressed_direct_buf = (*env)->GetObjectField(env, this,
 									ZlibCompressor_uncompressedDirectBuf);
 	uncompressed_direct_buf_off = (*env)->GetIntField(env, this,
@@ -278,20 +271,16 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_deflateBytesDirect(
 	finish = (*env)->GetBooleanField(env, this, ZlibCompressor_finish);
 
     // Get the input direct buffer
-    LOCK_CLASS(env, clazz, "ZlibCompressor");
     uncompressed_bytes = (*env)->GetDirectBufferAddress(env,
 											uncompressed_direct_buf);
-    UNLOCK_CLASS(env, clazz, "ZlibCompressor");
 
   	if (uncompressed_bytes == 0) {
     	return (jint)0;
 	}
 
     // Get the output direct buffer
-    LOCK_CLASS(env, clazz, "ZlibCompressor");
     compressed_bytes = (*env)->GetDirectBufferAddress(env,
 										compressed_direct_buf);
-    UNLOCK_CLASS(env, clazz, "ZlibCompressor");
 
   	if (compressed_bytes == 0) {
 		return (jint)0;

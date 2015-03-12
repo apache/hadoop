@@ -25,7 +25,6 @@
 #include "lz4.h"
 
 
-static jfieldID Lz4Decompressor_clazz;
 static jfieldID Lz4Decompressor_compressedDirectBuf;
 static jfieldID Lz4Decompressor_compressedDirectBufLen;
 static jfieldID Lz4Decompressor_uncompressedDirectBuf;
@@ -34,8 +33,6 @@ static jfieldID Lz4Decompressor_directBufferSize;
 JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Decompressor_initIDs
 (JNIEnv *env, jclass clazz){
 
-  Lz4Decompressor_clazz = (*env)->GetStaticFieldID(env, clazz, "clazz",
-                                                   "Ljava/lang/Class;");
   Lz4Decompressor_compressedDirectBuf = (*env)->GetFieldID(env,clazz,
                                                            "compressedDirectBuf",
                                                            "Ljava/nio/Buffer;");
@@ -54,25 +51,20 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Decompressor_de
   char *uncompressed_bytes;
 
   // Get members of Lz4Decompressor
-  jobject clazz = (*env)->GetStaticObjectField(env,thisj, Lz4Decompressor_clazz);
   jobject compressed_direct_buf = (*env)->GetObjectField(env,thisj, Lz4Decompressor_compressedDirectBuf);
   jint compressed_direct_buf_len = (*env)->GetIntField(env,thisj, Lz4Decompressor_compressedDirectBufLen);
   jobject uncompressed_direct_buf = (*env)->GetObjectField(env,thisj, Lz4Decompressor_uncompressedDirectBuf);
   size_t uncompressed_direct_buf_len = (*env)->GetIntField(env, thisj, Lz4Decompressor_directBufferSize);
 
   // Get the input direct buffer
-  LOCK_CLASS(env, clazz, "Lz4Decompressor");
   compressed_bytes = (const char*)(*env)->GetDirectBufferAddress(env, compressed_direct_buf);
-  UNLOCK_CLASS(env, clazz, "Lz4Decompressor");
 
   if (compressed_bytes == 0) {
     return (jint)0;
   }
 
   // Get the output direct buffer
-  LOCK_CLASS(env, clazz, "Lz4Decompressor");
   uncompressed_bytes = (char *)(*env)->GetDirectBufferAddress(env, uncompressed_direct_buf);
-  UNLOCK_CLASS(env, clazz, "Lz4Decompressor");
 
   if (uncompressed_bytes == 0) {
     return (jint)0;

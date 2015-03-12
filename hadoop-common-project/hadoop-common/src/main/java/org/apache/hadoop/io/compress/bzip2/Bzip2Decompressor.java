@@ -38,9 +38,6 @@ public class Bzip2Decompressor implements Decompressor {
   
   private static final Log LOG = LogFactory.getLog(Bzip2Decompressor.class);
 
-  // HACK - Use this as a global lock in the JNI layer.
-  private static Class<Bzip2Decompressor> clazz = Bzip2Decompressor.class;
-  
   private long stream;
   private boolean conserveMemory;
   private int directBufferSize;

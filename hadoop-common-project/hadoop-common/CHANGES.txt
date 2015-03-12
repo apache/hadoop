@@ -450,6 +450,9 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-10027. *Compressor_deflateBytesDirect passes instance instead of
+    jclass to GetStaticObjectField. (Hui Zheng via cnauroth)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
