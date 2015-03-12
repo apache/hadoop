@@ -169,11 +169,6 @@ public class TestJournalNode {
     assertTrue("Bad contents: " + pageContents,
         pageContents.contains(
             "Hadoop:service=JournalNode,name=JvmMetrics"));
-    
-    // Check JSP page.
-    pageContents = DFSTestUtil.urlGet(
-        new URL(urlRoot + "/journalstatus.jsp"));
-    assertTrue(pageContents.contains("JournalNode"));
 
     // Create some edits on server side
     byte[] EDITS_DATA = QJMTestUtil.createTxnData(1, 3);

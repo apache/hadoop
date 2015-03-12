@@ -20,10 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.management.ManagementFactory;
-import java.net.InetSocketAddress;
-import java.net.URL;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -36,9 +36,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.junit.Test;
-
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
 
 /**
  * DFS_HOSTS and DFS_HOSTS_EXCLUDE tests
@@ -77,7 +74,7 @@ public class TestHostsFiles {
   }
 
   @Test
-  public void testHostsExcludeDfshealthJsp() throws Exception {
+  public void testHostsExcludeInUI() throws Exception {
     Configuration conf = getConf();
     short REPLICATION_FACTOR = 2;
     final Path filePath = new Path("/testFile");
@@ -122,16 +119,12 @@ public class TestHostsFiles {
       // Check the block still has sufficient # replicas across racks
       DFSTestUtil.waitForReplication(cluster, b, 2, REPLICATION_FACTOR, 0);
       
-      InetSocketAddress nnHttpAddress = cluster.getNameNode().getHttpAddress();
-      LOG.info("nnaddr = '" + nnHttpAddress + "'");
-      String nnHostName = nnHttpAddress.getHostName();
-      URL nnjsp = new URL("http://" + nnHostName + ":" + nnHttpAddress.getPort() + "/dfshealth.jsp");
-      LOG.info("fetching " + nnjsp);
-      String dfshealthPage = StringEscapeUtils.unescapeHtml(DFSTestUtil.urlGet(nnjsp));
-      LOG.info("got " + dfshealthPage);
-      assertTrue("dfshealth should contain " + nnHostName + ", got:" + dfshealthPage,
-          dfshealthPage.contains(nnHostName));
-
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName =
+          new ObjectName("Hadoop:service=NameNode,name=NameNodeInfo");
+      String nodes = (String) mbs.getAttribute(mxbeanName, "LiveNodes");
+      assertTrue("Live nodes should contain the decommissioned node",
+          nodes.contains("Decommissioned"));
     } finally {
       cluster.shutdown();
     }
