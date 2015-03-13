@@ -383,6 +383,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
 
   private void appendUCParts(StringBuilder sb) {
     sb.append("{UCState=").append(blockUCState)
+      .append(", truncateBlock=" + truncateBlock)
       .append(", primaryNodeIndex=").append(primaryNodeIndex)
       .append(", replicas=[");
     if (replicas != null) {
