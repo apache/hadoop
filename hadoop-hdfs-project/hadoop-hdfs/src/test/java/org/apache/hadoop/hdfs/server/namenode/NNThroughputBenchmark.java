@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -891,9 +893,9 @@ public class NNThroughputBenchmark implements Tool {
     NamespaceInfo nsInfo;
     DatanodeRegistration dnRegistration;
     DatanodeStorage storage; //only one storage 
-    final ArrayList<Block> blocks;
+    final ArrayList<BlockReportReplica> blocks;
     int nrBlocks; // actual number of blocks
-    long[] blockReportList;
+    BlockListAsLongs blockReportList;
     final int dnIdx;
 
     private static int getNodePort(int num) throws IOException {
@@ -904,7 +906,7 @@ public class NNThroughputBenchmark implements Tool {
 
     TinyDatanode(int dnIdx, int blockCapacity) throws IOException {
       this.dnIdx = dnIdx;
-      this.blocks = new ArrayList<Block>(blockCapacity);
+      this.blocks = new ArrayList<BlockReportReplica>(blockCapacity);
       this.nrBlocks = 0;
     }
 
@@ -934,8 +936,7 @@ public class NNThroughputBenchmark implements Tool {
       //first block reports
       storage = new DatanodeStorage(DatanodeStorage.generateUuid());
       final StorageBlockReport[] reports = {
-          new StorageBlockReport(storage,
-              new BlockListAsLongs(null, null).getBlockListAsLongs())
+          new StorageBlockReport(storage, BlockListAsLongs.EMPTY)
       };
       nameNodeProto.blockReport(dnRegistration, 
           nameNode.getNamesystem().getBlockPoolId(), reports);
@@ -968,19 +969,21 @@ public class NNThroughputBenchmark implements Tool {
         }
         return false;
       }
-      blocks.set(nrBlocks, blk);
+      blocks.set(nrBlocks, new BlockReportReplica(blk));
       nrBlocks++;
       return true;
     }
 
     void formBlockReport() {
       // fill remaining slots with blocks that do not exist
-      for(int idx = blocks.size()-1; idx >= nrBlocks; idx--)
-        blocks.set(idx, new Block(blocks.size() - idx, 0, 0));
-      blockReportList = new BlockListAsLongs(blocks).getBlockListAsLongs();
+      for (int idx = blocks.size()-1; idx >= nrBlocks; idx--) {
+        Block block = new Block(blocks.size() - idx, 0, 0);
+        blocks.set(idx, new BlockReportReplica(block));
+      }
+      blockReportList = BlockListAsLongs.EMPTY;
     }
 
-    long[] getBlockReportList() {
+    BlockListAsLongs getBlockReportList() {
       return blockReportList;
     }
 

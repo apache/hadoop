@@ -17,342 +17,458 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
+import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.CodedOutputStream;
 
-/**
- * This class provides an interface for accessing list of blocks that
- * has been implemented as long[].
- * This class is useful for block report. Rather than send block reports
- * as a Block[] we can send it as a long[].
- *
- * The structure of the array is as follows:
- * 0: the length of the finalized replica list;
- * 1: the length of the under-construction replica list;
- * - followed by finalized replica list where each replica is represented by
- *   3 longs: one for the blockId, one for the block length, and one for
- *   the generation stamp;
- * - followed by the invalid replica represented with three -1s;
- * - followed by the under-construction replica list where each replica is
- *   represented by 4 longs: three for the block id, length, generation 
- *   stamp, and the fourth for the replica state.
- */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class BlockListAsLongs implements Iterable<Block> {
-  /**
-   * A finalized block as 3 longs
-   *   block-id and block length and generation stamp
-   */
-  private static final int LONGS_PER_FINALIZED_BLOCK = 3;
+public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
+  private final static int CHUNK_SIZE = 64*1024; // 64K
+  private static long[] EMPTY_LONGS = new long[]{0, 0};
 
-  /**
-   * An under-construction block as 4 longs
-   *   block-id and block length, generation stamp and replica state
-   */
-  private static final int LONGS_PER_UC_BLOCK = 4;
-
-  /** Number of longs in the header */
-  private static final int HEADER_SIZE = 2;
-
-  /**
-   * Returns the index of the first long in blockList
-   * belonging to the specified block.
-   * The first long contains the block id.
-   */
-  private int index2BlockId(int blockIndex) {
-    if(blockIndex < 0 || blockIndex > getNumberOfBlocks())
-      return -1;
-    int finalizedSize = getNumberOfFinalizedReplicas();
-    if(blockIndex < finalizedSize)
-      return HEADER_SIZE + blockIndex * LONGS_PER_FINALIZED_BLOCK;
-    return HEADER_SIZE + (finalizedSize + 1) * LONGS_PER_FINALIZED_BLOCK
-            + (blockIndex - finalizedSize) * LONGS_PER_UC_BLOCK;
-  }
-
-  private final long[] blockList;
-  
-  /**
-   * Create block report from finalized and under construction lists of blocks.
-   * 
-   * @param finalized - list of finalized blocks
-   * @param uc - list of under construction blocks
-   */
-  public BlockListAsLongs(final List<? extends Replica> finalized,
-                          final List<? extends Replica> uc) {
-    int finalizedSize = finalized == null ? 0 : finalized.size();
-    int ucSize = uc == null ? 0 : uc.size();
-    int len = HEADER_SIZE
-              + (finalizedSize + 1) * LONGS_PER_FINALIZED_BLOCK
-              + ucSize * LONGS_PER_UC_BLOCK;
-
-    blockList = new long[len];
-
-    // set the header
-    blockList[0] = finalizedSize;
-    blockList[1] = ucSize;
-
-    // set finalized blocks
-    for (int i = 0; i < finalizedSize; i++) {
-      setBlock(i, finalized.get(i));
-    }
-
-    // set invalid delimiting block
-    setDelimitingBlock(finalizedSize);
-
-    // set under construction blocks
-    for (int i = 0; i < ucSize; i++) {
-      setBlock(finalizedSize + i, uc.get(i));
-    }
-  }
-
-  /**
-   * Create block report from a list of finalized blocks.  Used by
-   * NNThroughputBenchmark.
-   *
-   * @param blocks - list of finalized blocks
-   */
-  public BlockListAsLongs(final List<? extends Block> blocks) {
-    int finalizedSize = blocks == null ? 0 : blocks.size();
-    int len = HEADER_SIZE
-              + (finalizedSize + 1) * LONGS_PER_FINALIZED_BLOCK;
-
-    blockList = new long[len];
-
-    // set the header
-    blockList[0] = finalizedSize;
-    blockList[1] = 0;
-
-    // set finalized blocks
-    for (int i = 0; i < finalizedSize; i++) {
-      setBlock(i, blocks.get(i));
-    }
-
-    // set invalid delimiting block
-    setDelimitingBlock(finalizedSize);
-  }
-
-  public BlockListAsLongs() {
-    this((long[])null);
-  }
-
-  /**
-   * Constructor
-   * @param iBlockList - BlockListALongs create from this long[] parameter
-   */
-  public BlockListAsLongs(final long[] iBlockList) {
-    if (iBlockList == null) {
-      blockList = new long[HEADER_SIZE];
-      return;
-    }
-    blockList = iBlockList;
-  }
-
-  public long[] getBlockListAsLongs() {
-    return blockList;
-  }
-
-  /**
-   * Iterates over blocks in the block report.
-   * Avoids object allocation on each iteration.
-   */
-  @InterfaceAudience.Private
-  @InterfaceStability.Evolving
-  public class BlockReportIterator implements Iterator<Block> {
-    private int currentBlockIndex;
-    private final Block block;
-    private ReplicaState currentReplicaState;
-
-    BlockReportIterator() {
-      this.currentBlockIndex = 0;
-      this.block = new Block();
-      this.currentReplicaState = null;
-    }
-
+  public static BlockListAsLongs EMPTY = new BlockListAsLongs() {
     @Override
-    public boolean hasNext() {
-      return currentBlockIndex < getNumberOfBlocks();
+    public int getNumberOfBlocks() {
+      return 0;
     }
-
     @Override
-    public Block next() {
-      block.set(blockId(currentBlockIndex),
-                blockLength(currentBlockIndex),
-                blockGenerationStamp(currentBlockIndex));
-      currentReplicaState = blockReplicaState(currentBlockIndex);
-      currentBlockIndex++;
-      return block;
+    public ByteString getBlocksBuffer() {
+      return ByteString.EMPTY;
     }
-
     @Override
-    public void remove() {
-      throw new UnsupportedOperationException("Sorry. can't remove.");
+    public long[] getBlockListAsLongs() {
+      return EMPTY_LONGS;
     }
+    @Override
+    public Iterator<BlockReportReplica> iterator() {
+      return Collections.emptyIterator();
+    }
+  };
 
-    /**
-     * Get the state of the current replica.
-     * The state corresponds to the replica returned
-     * by the latest {@link #next()}. 
-     */
-    public ReplicaState getCurrentReplicaState() {
-      return currentReplicaState;
-    }
+  /**
+   * Prepare an instance to in-place decode the given ByteString buffer
+   * @param numBlocks - blocks in the buffer
+   * @param blocksBuf - ByteString encoded varints
+   * @return BlockListAsLongs
+   */
+  public static BlockListAsLongs decodeBuffer(final int numBlocks,
+      final ByteString blocksBuf) {
+    return new BufferDecoder(numBlocks, blocksBuf);
   }
 
   /**
-   * Returns an iterator over blocks in the block report. 
+   * Prepare an instance to in-place decode the given ByteString buffers
+   * @param numBlocks - blocks in the buffers
+   * @param blocksBufs - list of ByteString encoded varints
+   * @return BlockListAsLongs
    */
-  @Override
-  public Iterator<Block> iterator() {
-    return getBlockReportIterator();
+  public static BlockListAsLongs decodeBuffers(final int numBlocks,
+      final List<ByteString> blocksBufs) {
+    // this doesn't actually copy the data
+    return decodeBuffer(numBlocks, ByteString.copyFrom(blocksBufs));
   }
 
   /**
-   * Returns {@link BlockReportIterator}. 
+   * Prepare an instance to in-place decode the given list of Longs.  Note
+   * it's much more efficient to decode ByteString buffers and only exists
+   * for compatibility.
+   * @param blocksList - list of longs
+   * @return BlockListAsLongs
    */
-  public BlockReportIterator getBlockReportIterator() {
-    return new BlockReportIterator();
+  public static BlockListAsLongs decodeLongs(List<Long> blocksList) {
+    return blocksList.isEmpty() ? EMPTY : new LongsDecoder(blocksList);
+  }
+
+  /**
+   * Prepare an instance to encode the collection of replicas into an
+   * efficient ByteString.
+   * @param replicas - replicas to encode
+   * @return BlockListAsLongs
+   */
+  public static BlockListAsLongs encode(
+      final Collection<? extends Replica> replicas) {
+    BlockListAsLongs.Builder builder = builder();
+    for (Replica replica : replicas) {
+      builder.add(replica);
+    }
+    return builder.build();
+  }
+
+  public static Builder builder() {
+    return new BlockListAsLongs.Builder();
   }
 
   /**
    * The number of blocks
    * @return - the number of blocks
    */
-  public int getNumberOfBlocks() {
-    assert blockList.length == HEADER_SIZE + 
-            (blockList[0] + 1) * LONGS_PER_FINALIZED_BLOCK +
-            blockList[1] * LONGS_PER_UC_BLOCK :
-              "Number of blocks is inconcistent with the array length";
-    return getNumberOfFinalizedReplicas() + getNumberOfUCReplicas();
-  }
+  abstract public int getNumberOfBlocks();
 
   /**
-   * Returns the number of finalized replicas in the block report.
+   * Very efficient encoding of the block report into a ByteString to avoid
+   * the overhead of protobuf repeating fields.  Primitive repeating fields
+   * require re-allocs of an ArrayList<Long> and the associated (un)boxing
+   * overhead which puts pressure on GC.
+   * 
+   * The structure of the buffer is as follows:
+   * - each replica is represented by 4 longs:
+   *   blockId, block length, genstamp, replica state
+   *
+   * @return ByteString encoded block report
    */
-  private int getNumberOfFinalizedReplicas() {
-    return (int)blockList[0];
-  }
+  abstract public ByteString getBlocksBuffer();
 
   /**
-   * Returns the number of under construction replicas in the block report.
+   * List of ByteStrings that encode this block report
+   *
+   * @return ByteStrings
    */
-  private int getNumberOfUCReplicas() {
-    return (int)blockList[1];
-  }
-
-  /**
-   * Returns the id of the specified replica of the block report.
-   */
-  private long blockId(int index) {
-    return blockList[index2BlockId(index)];
-  }
-
-  /**
-   * Returns the length of the specified replica of the block report.
-   */
-  private long blockLength(int index) {
-    return blockList[index2BlockId(index) + 1];
-  }
-
-  /**
-   * Returns the generation stamp of the specified replica of the block report.
-   */
-  private long blockGenerationStamp(int index) {
-    return blockList[index2BlockId(index) + 2];
-  }
-
-  /**
-   * Returns the state of the specified replica of the block report.
-   */
-  private ReplicaState blockReplicaState(int index) {
-    if(index < getNumberOfFinalizedReplicas())
-      return ReplicaState.FINALIZED;
-    return ReplicaState.getState((int)blockList[index2BlockId(index) + 3]);
-  }
-
-  /**
-   * Corrupt the generation stamp of the block with the given index.
-   * Not meant to be used outside of tests.
-   */
-  @VisibleForTesting
-  public long corruptBlockGSForTesting(final int blockIndex, Random rand) {
-    long oldGS = blockList[index2BlockId(blockIndex) + 2];
-    while (blockList[index2BlockId(blockIndex) + 2] == oldGS) {
-      blockList[index2BlockId(blockIndex) + 2] = rand.nextInt();
-    }
-    return oldGS;
-  }
-
-  /**
-   * Corrupt the length of the block with the given index by truncation.
-   * Not meant to be used outside of tests.
-   */
-  @VisibleForTesting
-  public long corruptBlockLengthForTesting(final int blockIndex, Random rand) {
-    long oldLength = blockList[index2BlockId(blockIndex) + 1];
-    blockList[index2BlockId(blockIndex) + 1] =
-        rand.nextInt((int) oldLength - 1);
-    return oldLength;
-  }
-  
-  /**
-   * Set the indexTh block
-   * @param index - the index of the block to set
-   * @param r - the block is set to the value of the this Replica
-   */
-  private void setBlock(final int index, final Replica r) {
-    int pos = index2BlockId(index);
-    blockList[pos] = r.getBlockId();
-    blockList[pos + 1] = r.getNumBytes();
-    blockList[pos + 2] = r.getGenerationStamp();
-    if(index < getNumberOfFinalizedReplicas())
-      return;
-    assert r.getState() != ReplicaState.FINALIZED :
-      "Must be under-construction replica.";
-    blockList[pos + 3] = r.getState().getValue();
-  }
-
-  /**
-   * Set the indexTh block
-   * @param index - the index of the block to set
-   * @param b - the block is set to the value of the this Block
-   */
-  private void setBlock(final int index, final Block b) {
-    int pos = index2BlockId(index);
-    blockList[pos] = b.getBlockId();
-    blockList[pos + 1] = b.getNumBytes();
-    blockList[pos + 2] = b.getGenerationStamp();
-  }
-
-  /**
-   * Set the invalid delimiting block between the finalized and
-   * the under-construction lists.
-   * The invalid block has all three fields set to -1.
-   * @param finalizedSzie - the size of the finalized list
-   */
-  private void setDelimitingBlock(final int finalizedSzie) {
-    int idx = HEADER_SIZE + finalizedSzie * LONGS_PER_FINALIZED_BLOCK;
-    blockList[idx] = -1;
-    blockList[idx+1] = -1;
-    blockList[idx+2] = -1;
-  }
-
-  public long getMaxGsInBlockList() {
-    long maxGs = -1;
-    Iterator<Block> iter = getBlockReportIterator();
-    while (iter.hasNext()) {
-      Block b = iter.next();
-      if (b.getGenerationStamp() > maxGs) {
-        maxGs = b.getGenerationStamp();
+  public List<ByteString> getBlocksBuffers() {
+    final ByteString blocksBuf = getBlocksBuffer();
+    final List<ByteString> buffers;
+    final int size = blocksBuf.size();
+    if (size <= CHUNK_SIZE) {
+      buffers = Collections.singletonList(blocksBuf);
+    } else {
+      buffers = new ArrayList<ByteString>();
+      for (int pos=0; pos < size; pos += CHUNK_SIZE) {
+        // this doesn't actually copy the data
+        buffers.add(blocksBuf.substring(pos, Math.min(pos+CHUNK_SIZE, size)));
       }
     }
-    return maxGs;
+    return buffers;
+  }
+
+  /**
+   * Convert block report to old-style list of longs.  Only used to
+   * re-encode the block report when the DN detects an older NN. This is
+   * inefficient, but in practice a DN is unlikely to be upgraded first
+   * 
+   * The structure of the array is as follows:
+   * 0: the length of the finalized replica list;
+   * 1: the length of the under-construction replica list;
+   * - followed by finalized replica list where each replica is represented by
+   *   3 longs: one for the blockId, one for the block length, and one for
+   *   the generation stamp;
+   * - followed by the invalid replica represented with three -1s;
+   * - followed by the under-construction replica list where each replica is
+   *   represented by 4 longs: three for the block id, length, generation 
+   *   stamp, and the fourth for the replica state.
+   * @return list of longs
+   */
+  abstract public long[] getBlockListAsLongs();
+
+  /**
+   * Returns a singleton iterator over blocks in the block report.  Do not
+   * add the returned blocks to a collection.
+   * @return Iterator
+   */
+  abstract public Iterator<BlockReportReplica> iterator();
+
+  public static class Builder {
+    private final ByteString.Output out;
+    private final CodedOutputStream cos;
+    private int numBlocks = 0;
+    private int numFinalized = 0;
+
+    Builder() {
+      out = ByteString.newOutput(64*1024);
+      cos = CodedOutputStream.newInstance(out);
+    }
+
+    public void add(Replica replica) {
+      try {
+        // zig-zag to reduce size of legacy blocks
+        cos.writeSInt64NoTag(replica.getBlockId());
+        cos.writeRawVarint64(replica.getBytesOnDisk());
+        cos.writeRawVarint64(replica.getGenerationStamp());
+        ReplicaState state = replica.getState();
+        // although state is not a 64-bit value, using a long varint to
+        // allow for future use of the upper bits
+        cos.writeRawVarint64(state.getValue());
+        if (state == ReplicaState.FINALIZED) {
+          numFinalized++;
+        }
+        numBlocks++;
+      } catch (IOException ioe) {
+        // shouldn't happen, ByteString.Output doesn't throw IOE
+        throw new IllegalStateException(ioe);
+      }
+    }
+
+    public int getNumberOfBlocks() {
+      return numBlocks;
+    }
+    
+    public BlockListAsLongs build() {
+      try {
+        cos.flush();
+      } catch (IOException ioe) {
+        // shouldn't happen, ByteString.Output doesn't throw IOE
+        throw new IllegalStateException(ioe);
+      }
+      return new BufferDecoder(numBlocks, numFinalized, out.toByteString());
+    }
+  }
+
+  // decode new-style ByteString buffer based block report
+  private static class BufferDecoder extends BlockListAsLongs {
+    // reserve upper bits for future use.  decoding masks off these bits to
+    // allow compatibility for the current through future release that may
+    // start using the bits
+    private static long NUM_BYTES_MASK = (-1L) >>> (64 - 48);
+    private static long REPLICA_STATE_MASK = (-1L) >>> (64 - 4);
+
+    private final ByteString buffer;
+    private final int numBlocks;
+    private int numFinalized;
+
+    BufferDecoder(final int numBlocks, final ByteString buf) {
+      this(numBlocks, -1, buf);
+    }
+
+    BufferDecoder(final int numBlocks, final int numFinalized,
+        final ByteString buf) {
+      this.numBlocks = numBlocks;
+      this.numFinalized = numFinalized;
+      this.buffer = buf;
+    }
+
+    @Override
+    public int getNumberOfBlocks() {
+      return numBlocks;
+    }
+
+    @Override
+    public ByteString getBlocksBuffer() {
+      return buffer;
+    }
+
+    @Override
+    public long[] getBlockListAsLongs() {
+      // terribly inefficient but only occurs if server tries to transcode
+      // an undecoded buffer into longs - ie. it will never happen but let's
+      // handle it anyway
+      if (numFinalized == -1) {
+        int n = 0;
+        for (Replica replica : this) {
+          if (replica.getState() == ReplicaState.FINALIZED) {
+            n++;
+          }
+        }
+        numFinalized = n;
+      }
+      int numUc = numBlocks - numFinalized;
+      int size = 2 + 3*(numFinalized+1) + 4*(numUc);
+      long[] longs = new long[size];
+      longs[0] = numFinalized;
+      longs[1] = numUc;
+
+      int idx = 2;
+      int ucIdx = idx + 3*numFinalized;
+      // delimiter block
+      longs[ucIdx++] = -1;
+      longs[ucIdx++] = -1;
+      longs[ucIdx++] = -1;
+
+      for (BlockReportReplica block : this) {
+        switch (block.getState()) {
+          case FINALIZED: {
+            longs[idx++] = block.getBlockId();
+            longs[idx++] = block.getNumBytes();
+            longs[idx++] = block.getGenerationStamp();
+            break;
+          }
+          default: {
+            longs[ucIdx++] = block.getBlockId();
+            longs[ucIdx++] = block.getNumBytes();
+            longs[ucIdx++] = block.getGenerationStamp();
+            longs[ucIdx++] = block.getState().getValue();
+            break;
+          }
+        }
+      }
+      return longs;
+    }
+
+    @Override
+    public Iterator<BlockReportReplica> iterator() {
+      return new Iterator<BlockReportReplica>() {
+        final BlockReportReplica block = new BlockReportReplica();
+        final CodedInputStream cis = buffer.newCodedInput();
+        private int currentBlockIndex = 0;
+
+        @Override
+        public boolean hasNext() {
+          return currentBlockIndex < numBlocks;
+        }
+
+        @Override
+        public BlockReportReplica next() {
+          currentBlockIndex++;
+          try {
+            // zig-zag to reduce size of legacy blocks and mask off bits
+            // we don't (yet) understand
+            block.setBlockId(cis.readSInt64());
+            block.setNumBytes(cis.readRawVarint64() & NUM_BYTES_MASK);
+            block.setGenerationStamp(cis.readRawVarint64());
+            long state = cis.readRawVarint64() & REPLICA_STATE_MASK;
+            block.setState(ReplicaState.getState((int)state));
+          } catch (IOException e) {
+            throw new IllegalStateException(e);
+          }
+          return block;
+        }
+
+        @Override
+        public void remove() {
+          throw new UnsupportedOperationException();
+        }
+      };
+    }
+  }
+
+  // decode old style block report of longs
+  private static class LongsDecoder extends BlockListAsLongs {
+    private final List<Long> values;
+    private final int finalizedBlocks;
+    private final int numBlocks;
+
+    // set the header
+    LongsDecoder(List<Long> values) {
+      this.values = values.subList(2, values.size());
+      this.finalizedBlocks = values.get(0).intValue();
+      this.numBlocks = finalizedBlocks + values.get(1).intValue();
+    }
+
+    @Override
+    public int getNumberOfBlocks() {
+      return numBlocks;
+    }
+
+    @Override
+    public ByteString getBlocksBuffer() {
+      Builder builder = builder();
+      for (Replica replica : this) {
+        builder.add(replica);
+      }
+      return builder.build().getBlocksBuffer();
+    }
+
+    @Override
+    public long[] getBlockListAsLongs() {
+      long[] longs = new long[2+values.size()];
+      longs[0] = finalizedBlocks;
+      longs[1] = numBlocks - finalizedBlocks;
+      for (int i=0; i < longs.length; i++) {
+        longs[i] = values.get(i);
+      }
+      return longs;
+    }
+
+    @Override
+    public Iterator<BlockReportReplica> iterator() {
+      return new Iterator<BlockReportReplica>() {
+        private final BlockReportReplica block = new BlockReportReplica();
+        final Iterator<Long> iter = values.iterator();
+        private int currentBlockIndex = 0;
+
+        @Override
+        public boolean hasNext() {
+          return currentBlockIndex < numBlocks;
+        }
+
+        @Override
+        public BlockReportReplica next() {
+          if (currentBlockIndex == finalizedBlocks) {
+            // verify the presence of the delimiter block
+            readBlock();
+            Preconditions.checkArgument(block.getBlockId() == -1 &&
+                                        block.getNumBytes() == -1 &&
+                                        block.getGenerationStamp() == -1,
+                                        "Invalid delimiter block");
+          }
+
+          readBlock();
+          if (currentBlockIndex++ < finalizedBlocks) {
+            block.setState(ReplicaState.FINALIZED);
+          } else {
+            block.setState(ReplicaState.getState(iter.next().intValue()));
+          }
+          return block;
+        }
+
+        private void readBlock() {
+          block.setBlockId(iter.next());
+          block.setNumBytes(iter.next());
+          block.setGenerationStamp(iter.next());
+        }
+
+        @Override
+        public void remove() {
+          throw new UnsupportedOperationException();
+        }
+      };
+    }
+  }
+  
+  @InterfaceAudience.Private
+  public static class BlockReportReplica extends Block implements Replica {
+    private ReplicaState state;
+    private BlockReportReplica() {
+    }
+    public BlockReportReplica(Block block) {
+      super(block);
+      if (block instanceof BlockReportReplica) {
+        this.state = ((BlockReportReplica)block).getState();
+      } else {
+        this.state = ReplicaState.FINALIZED;
+      }
+    }
+    public void setState(ReplicaState state) {
+      this.state = state;
+    }
+    @Override
+    public ReplicaState getState() {
+      return state;
+    }
+    @Override
+    public long getBytesOnDisk() {
+      return getNumBytes();
+    }
+    @Override
+    public long getVisibleLength() {
+      throw new UnsupportedOperationException();
+    }
+    @Override
+    public String getStorageUuid() {
+      throw new UnsupportedOperationException();
+    }
+    @Override
+    public boolean isOnTransientStorage() {
+      throw new UnsupportedOperationException();
+    }
+    @Override
+    public boolean equals(Object o) {
+      return super.equals(o);
+    }
+    @Override
+    public int hashCode() {
+      return super.hashCode();
+    }
   }
 }

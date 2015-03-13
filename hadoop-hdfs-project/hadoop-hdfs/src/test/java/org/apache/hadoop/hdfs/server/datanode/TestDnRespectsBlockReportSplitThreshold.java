@@ -98,7 +98,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
       assertThat(reports.length, is(expectedReportsPerCall));
 
       for (StorageBlockReport report : reports) {
-        BlockListAsLongs blockList = new BlockListAsLongs(report.getBlocks());
+        BlockListAsLongs blockList = report.getBlocks();
         numBlocksReported += blockList.getNumberOfBlocks();
       }
     }
