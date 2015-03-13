@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
+import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
 import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyBuilder;
 import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyParser;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
@@ -56,6 +57,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.readReverseOrderedLong;
 import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.writeReverseOrderedLong;
+import static org.apache.hadoop.yarn.server.timeline.TimelineDataManager.DEFAULT_DOMAIN_ID;
 import static org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.prefixMatches;
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 
@@ -549,12 +551,13 @@ public class LeveldbTimelineStore extends AbstractService
   public TimelineEntities getEntities(String entityType,
       Long limit, Long windowStart, Long windowEnd, String fromId, Long fromTs,
       NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
-      EnumSet<Field> fields) throws IOException {
+      EnumSet<Field> fields, CheckAcl checkAcl) throws IOException {
     if (primaryFilter == null) {
       // if no primary filter is specified, prefix the lookup with
       // ENTITY_ENTRY_PREFIX
       return getEntityByTime(ENTITY_ENTRY_PREFIX, entityType, limit,
-          windowStart, windowEnd, fromId, fromTs, secondaryFilters, fields);
+          windowStart, windowEnd, fromId, fromTs, secondaryFilters, 
+          fields, checkAcl);
     } else {
       // if a primary filter is specified, prefix the lookup with
       // INDEXED_ENTRY_PREFIX + primaryFilterName + primaryFilterValue +
@@ -564,7 +567,7 @@ public class LeveldbTimelineStore extends AbstractService
           .add(GenericObjectMapper.write(primaryFilter.getValue()), true)
           .add(ENTITY_ENTRY_PREFIX).getBytesForLookup();
       return getEntityByTime(base, entityType, limit, windowStart, windowEnd,
-          fromId, fromTs, secondaryFilters, fields);
+          fromId, fromTs, secondaryFilters, fields, checkAcl);
     }
   }
 
@@ -586,7 +589,7 @@ public class LeveldbTimelineStore extends AbstractService
   private TimelineEntities getEntityByTime(byte[] base,
       String entityType, Long limit, Long starttime, Long endtime,
       String fromId, Long fromTs, Collection<NameValuePair> secondaryFilters,
-      EnumSet<Field> fields) throws IOException {
+      EnumSet<Field> fields, CheckAcl checkAcl) throws IOException {
     LeveldbIterator iterator = null;
     try {
       KeyBuilder kb = KeyBuilder.newInstance().add(base).add(entityType);
@@ -683,7 +686,12 @@ public class LeveldbTimelineStore extends AbstractService
           }
         }
         if (filterPassed) {
-          entities.addEntity(entity);
+          if (entity.getDomainId() == null) {
+            entity.setDomainId(DEFAULT_DOMAIN_ID);
+          }
+          if (checkAcl == null || checkAcl.check(entity)) {
+            entities.addEntity(entity);
+          }
         }
       }
       return entities;

@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.junit.After;
 import org.junit.Assert;
@@ -40,7 +41,8 @@ public class TestTimelineDataManager extends TimelineStoreTestUtils {
   private FileContext fsContext;
   private File fsPath;
   private TimelineDataManager dataManaer;
-
+  private static TimelineACLsManager aclsManager;
+  private static AdminACLsManager adminACLsManager;
   @Before
   public void setup() throws Exception {
     fsPath = new File("target", this.getClass().getSimpleName() +
@@ -58,8 +60,12 @@ public class TestTimelineDataManager extends TimelineStoreTestUtils {
     loadVerificationEntityData();
     loadTestDomainData();
 
-    TimelineACLsManager aclsManager = new TimelineACLsManager(conf);
+    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
+    aclsManager = new TimelineACLsManager(conf);
     dataManaer = new TimelineDataManager(store, aclsManager);
+    conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    conf.set(YarnConfiguration.YARN_ADMIN_ACL, "admin");
+    adminACLsManager = new AdminACLsManager(conf);
   }
 
   @After
@@ -82,6 +88,22 @@ public class TestTimelineDataManager extends TimelineStoreTestUtils {
     Assert.assertEquals("OLD_ENTITY_TYPE_1", entity.getEntityType());
     Assert.assertEquals(
         TimelineDataManager.DEFAULT_DOMAIN_ID, entity.getDomainId());
+  }
+
+  @Test
+  public void testGetEntitiesAclEnabled() throws Exception {
+    AdminACLsManager oldAdminACLsManager =
+      aclsManager.setAdminACLsManager(adminACLsManager);
+    try {
+      TimelineEntities entities = dataManaer.getEntities(
+        "ACL_ENTITY_TYPE_1", null, null, null, null, null, null, 1l, null,
+        UserGroupInformation.createUserForTesting("owner_1", new String[] {"group1"}));
+      Assert.assertEquals(1, entities.getEntities().size());
+      Assert.assertEquals("ACL_ENTITY_ID_11",
+        entities.getEntities().get(0).getEntityId());
+    } finally {
+      aclsManager.setAdminACLsManager(oldAdminACLsManager);
+    }
   }
 
   @Test

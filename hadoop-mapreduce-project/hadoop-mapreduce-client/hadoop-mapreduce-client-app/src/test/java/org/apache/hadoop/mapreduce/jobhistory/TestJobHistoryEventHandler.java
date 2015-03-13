@@ -464,7 +464,7 @@ public class TestJobHistoryEventHandler {
               t.appAttemptId, 200, t.containerId, "nmhost", 3000, 4000),
               currentTime - 10));
       TimelineEntities entities = ts.getEntities("MAPREDUCE_JOB", null, null,
-              null, null, null, null, null, null);
+              null, null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
       TimelineEntity tEntity = entities.getEntities().get(0);
       Assert.assertEquals(t.jobId.toString(), tEntity.getEntityId());
@@ -480,7 +480,7 @@ public class TestJobHistoryEventHandler {
               new HashMap<JobACL, AccessControlList>(), "default"),
               currentTime + 10));
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
-              null, null, null, null, null);
+              null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
       Assert.assertEquals(t.jobId.toString(), tEntity.getEntityId());
@@ -498,7 +498,7 @@ public class TestJobHistoryEventHandler {
               new JobQueueChangeEvent(TypeConverter.fromYarn(t.jobId), "q2"),
               currentTime - 20));
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
-              null, null, null, null, null);
+              null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
       Assert.assertEquals(t.jobId.toString(), tEntity.getEntityId());
@@ -520,7 +520,7 @@ public class TestJobHistoryEventHandler {
               new JobFinishedEvent(TypeConverter.fromYarn(t.jobId), 0, 0, 0, 0,
               0, new Counters(), new Counters(), new Counters()), currentTime));
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
-              null, null, null, null, null);
+              null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
       Assert.assertEquals(t.jobId.toString(), tEntity.getEntityId());
@@ -546,7 +546,7 @@ public class TestJobHistoryEventHandler {
             new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(t.jobId),
             0, 0, 0, JobStateInternal.KILLED.toString()), currentTime + 20));
       entities = ts.getEntities("MAPREDUCE_JOB", null, null, null,
-              null, null, null, null, null);
+              null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
       Assert.assertEquals(t.jobId.toString(), tEntity.getEntityId());
@@ -575,7 +575,7 @@ public class TestJobHistoryEventHandler {
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
             new TaskStartedEvent(t.taskID, 0, TaskType.MAP, "")));
       entities = ts.getEntities("MAPREDUCE_TASK", null, null, null,
-              null, null, null, null, null);
+              null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
       Assert.assertEquals(t.taskID.toString(), tEntity.getEntityId());
@@ -588,7 +588,7 @@ public class TestJobHistoryEventHandler {
       handleEvent(jheh, new JobHistoryEvent(t.jobId,
             new TaskStartedEvent(t.taskID, 0, TaskType.REDUCE, "")));
       entities = ts.getEntities("MAPREDUCE_TASK", null, null, null,
-              null, null, null, null, null);
+              null, null, null, null, null, null);
       Assert.assertEquals(1, entities.getEntities().size());
       tEntity = entities.getEntities().get(0);
       Assert.assertEquals(t.taskID.toString(), tEntity.getEntityId());

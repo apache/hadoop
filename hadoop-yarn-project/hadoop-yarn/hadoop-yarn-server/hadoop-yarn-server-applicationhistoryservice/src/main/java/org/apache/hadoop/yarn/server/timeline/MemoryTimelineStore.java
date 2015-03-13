@@ -47,6 +47,9 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
+import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
+
+import static org.apache.hadoop.yarn.server.timeline.TimelineDataManager.DEFAULT_DOMAIN_ID;
 
 /**
  * In-memory implementation of {@link TimelineStore}. This
@@ -79,7 +82,7 @@ public class MemoryTimelineStore
   public synchronized TimelineEntities getEntities(String entityType, Long limit,
       Long windowStart, Long windowEnd, String fromId, Long fromTs,
       NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
-      EnumSet<Field> fields) {
+      EnumSet<Field> fields, CheckAcl checkAcl) throws IOException {
     if (limit == null) {
       limit = DEFAULT_LIMIT;
     }
@@ -146,7 +149,12 @@ public class MemoryTimelineStore
           continue;
         }
       }
-      entitiesSelected.add(entity);
+      if (entity.getDomainId() == null) {
+        entity.setDomainId(DEFAULT_DOMAIN_ID);
+      }
+      if (checkAcl == null || checkAcl.check(entity)) {
+        entitiesSelected.add(entity);
+      }
     }
     List<TimelineEntity> entitiesToReturn = new ArrayList<TimelineEntity>();
     for (TimelineEntity entitySelected : entitiesSelected) {
