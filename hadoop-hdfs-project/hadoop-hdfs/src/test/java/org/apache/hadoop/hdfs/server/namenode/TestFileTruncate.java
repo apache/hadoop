@@ -178,6 +178,36 @@ public class TestFileTruncate {
     fs.delete(dir, true);
   }
 
+  /** Truncate the same file multiple times until its size is zero. */
+  @Test
+  public void testSnapshotTruncateThenDeleteSnapshot() throws IOException {
+    Path dir = new Path("/testSnapshotTruncateThenDeleteSnapshot");
+    fs.mkdirs(dir);
+    fs.allowSnapshot(dir);
+    final Path p = new Path(dir, "file");
+    final byte[] data = new byte[BLOCK_SIZE];
+    DFSUtil.getRandom().nextBytes(data);
+    writeContents(data, data.length, p);
+    final String snapshot = "s0";
+    fs.createSnapshot(dir, snapshot);
+    Block lastBlock = getLocatedBlocks(p).getLastLocatedBlock()
+        .getBlock().getLocalBlock();
+    final int newLength = data.length - 1;
+    assert newLength % BLOCK_SIZE != 0 :
+        " newLength must not be multiple of BLOCK_SIZE";
+    final boolean isReady = fs.truncate(p, newLength);
+    LOG.info("newLength=" + newLength + ", isReady=" + isReady);
+    assertEquals("File must be closed for truncating at the block boundary",
+        isReady, newLength % BLOCK_SIZE == 0);
+    fs.deleteSnapshot(dir, snapshot);
+    if (!isReady) {
+      checkBlockRecovery(p);
+    }
+    checkFullFile(p, newLength, data);
+    assertBlockNotPresent(lastBlock);
+    fs.delete(dir, true);
+  }
+
   /**
    * Truncate files and then run other operations such as
    * rename, set replication, set permission, etc.
