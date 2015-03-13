@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
+import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
 
 /**
  * This interface is for retrieving timeline information.
@@ -106,7 +107,7 @@ public interface TimelineReader {
   TimelineEntities getEntities(String entityType,
       Long limit, Long windowStart, Long windowEnd, String fromId, Long fromTs,
       NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
-      EnumSet<Field> fieldsToRetrieve) throws IOException;
+      EnumSet<Field> fieldsToRetrieve, CheckAcl checkAcl) throws IOException;
 
   /**
    * This method retrieves the entity information for a given entity.
