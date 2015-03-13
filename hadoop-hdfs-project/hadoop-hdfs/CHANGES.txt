@@ -746,6 +746,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7435. PB encoding of block reports is very inefficient.
     (Daryn Sharp via kihwal)
 
+    HDFS-2605. Remove redundant "Release 0.21.1" section from CHANGES.txt.
+    (Allen Wittenauer via shv)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
@@ -10298,8 +10301,6 @@ Release 0.22.0 - 2011-11-29
     execution order of test methods (Laxman, Uma Maheswara Rao G via shv)
 
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
-
-Release 0.21.1 - Unreleased
 
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
 
