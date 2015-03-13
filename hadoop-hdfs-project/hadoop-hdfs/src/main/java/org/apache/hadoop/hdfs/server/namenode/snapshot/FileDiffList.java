@@ -20,8 +20,11 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -125,9 +128,19 @@ public class FileDiffList extends
         continue;
       break;
     }
-    // Collect the remaining blocks of the file
-    while(i < removedBlocks.length) {
-      collectedBlocks.addDeleteBlock(removedBlocks[i++]);
+    // Check if last block is part of truncate recovery
+    BlockInfoContiguous lastBlock = file.getLastBlock();
+    Block dontRemoveBlock = null;
+    if(lastBlock != null && lastBlock.getBlockUCState().equals(
+        HdfsServerConstants.BlockUCState.UNDER_RECOVERY)) {
+      dontRemoveBlock = ((BlockInfoContiguousUnderConstruction) lastBlock)
+          .getTruncateBlock();
+    }
+    // Collect the remaining blocks of the file, ignoring truncate block
+    for(;i < removedBlocks.length; i++) {
+      if(dontRemoveBlock == null || !removedBlocks[i].equals(dontRemoveBlock)) {
+        collectedBlocks.addDeleteBlock(removedBlocks[i]);
+      }
     }
   }
 }

@@ -1148,6 +1148,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7926. NameNode implementation of ClientProtocol.truncate(..) is not 
     idempotent (Tsz Wo Nicholas Sze via brandonli)
 
+    HDFS-7903. Cannot recover block after truncate and delete snapshot.
+    (Plamen Jeliazkov via shv)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
