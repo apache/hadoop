@@ -22,17 +22,17 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 
-public class TestCryptoStreamsWithOpensslAesCtrCryptoCodec 
-    extends TestCryptoStreams {
-  
+public class TestCryptoStreamsWithJceAesCtrCryptoCodec extends 
+    TestCryptoStreams {
+
   @BeforeClass
   public static void init() throws Exception {
     Configuration conf = new Configuration();
     conf.set(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_KEY,
-        OpensslAesCtrCryptoCodec.class.getName());
+        JceAesCtrCryptoCodec.class.getName());
     codec = CryptoCodec.getInstance(conf);
-    Assert.assertEquals(OpensslAesCtrCryptoCodec.class.getCanonicalName(), 
+    Assert.assertEquals(JceAesCtrCryptoCodec.class.getCanonicalName(),
         codec.getClass().getCanonicalName());
   }
 }

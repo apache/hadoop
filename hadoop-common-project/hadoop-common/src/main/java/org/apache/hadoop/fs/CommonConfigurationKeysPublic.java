@@ -19,6 +19,9 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.JceAesCtrCryptoCodec;
+import org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec;
 
 /** 
  * This class contains constants for configuration keys used
@@ -299,6 +302,14 @@ public class CommonConfigurationKeysPublic {
     "hadoop.security.saslproperties.resolver.class";
   public static final String HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX = 
     "hadoop.security.crypto.codec.classes";
+  public static final String
+      HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_KEY =
+      HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
+          + CipherSuite.AES_CTR_NOPADDING.getConfigSuffix();
+  public static final String
+      HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_DEFAULT =
+      OpensslAesCtrCryptoCodec.class.getName() + "," +
+          JceAesCtrCryptoCodec.class.getName();
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY =
     "hadoop.security.crypto.cipher.suite";
