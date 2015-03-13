@@ -228,7 +228,7 @@ class BPServiceActor implements Runnable {
     bpos.verifyAndSetNamespaceInfo(nsInfo);
     
     // Second phase of the handshake with the NN.
-    register();
+    register(nsInfo);
   }
 
   // This is useful to make sure NN gets Heartbeat before Blockreport
@@ -468,8 +468,7 @@ class BPServiceActor implements Runnable {
 
     for(Map.Entry<DatanodeStorage, BlockListAsLongs> kvPair : perVolumeBlockLists.entrySet()) {
       BlockListAsLongs blockList = kvPair.getValue();
-      reports[i++] = new StorageBlockReport(
-          kvPair.getKey(), blockList.getBlockListAsLongs());
+      reports[i++] = new StorageBlockReport(kvPair.getKey(), blockList);
       totalBlockCount += blockList.getNumberOfBlocks();
     }
 
@@ -774,10 +773,11 @@ class BPServiceActor implements Runnable {
    *  
    * issued by the namenode to recognize registered datanodes.
    * 
+   * @param nsInfo current NamespaceInfo
    * @see FSNamesystem#registerDatanode(DatanodeRegistration)
    * @throws IOException
    */
-  void register() throws IOException {
+  void register(NamespaceInfo nsInfo) throws IOException {
     // The handshake() phase loaded the block pool storage
     // off disk - so update the bpRegistration object from that info
     bpRegistration = bpos.createRegistration();
@@ -788,6 +788,7 @@ class BPServiceActor implements Runnable {
       try {
         // Use returned registration from namenode with updated fields
         bpRegistration = bpNamenode.registerDatanode(bpRegistration);
+        bpRegistration.setNamespaceInfo(nsInfo);
         break;
       } catch(EOFException e) {  // namenode might have just restarted
         LOG.info("Problem connecting to server: " + nnAddr + " :"
@@ -915,9 +916,9 @@ class BPServiceActor implements Runnable {
     if (shouldRun()) {
       // re-retrieve namespace info to make sure that, if the NN
       // was restarted, we still match its version (HDFS-2120)
-      retrieveNamespaceInfo();
+      NamespaceInfo nsInfo = retrieveNamespaceInfo();
       // and re-register
-      register();
+      register(nsInfo);
       scheduleHeartbeat();
     }
   }

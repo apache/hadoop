@@ -1575,30 +1575,26 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     Map<DatanodeStorage, BlockListAsLongs> blockReportsMap =
         new HashMap<DatanodeStorage, BlockListAsLongs>();
 
-    Map<String, ArrayList<ReplicaInfo>> finalized =
-        new HashMap<String, ArrayList<ReplicaInfo>>();
-    Map<String, ArrayList<ReplicaInfo>> uc =
-        new HashMap<String, ArrayList<ReplicaInfo>>();
+    Map<String, BlockListAsLongs.Builder> builders =
+        new HashMap<String, BlockListAsLongs.Builder>();
 
     List<FsVolumeImpl> curVolumes = getVolumes();
     for (FsVolumeSpi v : curVolumes) {
-      finalized.put(v.getStorageID(), new ArrayList<ReplicaInfo>());
-      uc.put(v.getStorageID(), new ArrayList<ReplicaInfo>());
+      builders.put(v.getStorageID(), BlockListAsLongs.builder());
     }
 
     synchronized(this) {
       for (ReplicaInfo b : volumeMap.replicas(bpid)) {
         switch(b.getState()) {
           case FINALIZED:
-            finalized.get(b.getVolume().getStorageID()).add(b);
-            break;
           case RBW:
           case RWR:
-            uc.get(b.getVolume().getStorageID()).add(b);
+            builders.get(b.getVolume().getStorageID()).add(b);
             break;
           case RUR:
             ReplicaUnderRecovery rur = (ReplicaUnderRecovery)b;
-            uc.get(rur.getVolume().getStorageID()).add(rur.getOriginalReplica());
+            builders.get(rur.getVolume().getStorageID())
+                .add(rur.getOriginalReplica());
             break;
           case TEMPORARY:
             break;
@@ -1609,10 +1605,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     for (FsVolumeImpl v : curVolumes) {
-      ArrayList<ReplicaInfo> finalizedList = finalized.get(v.getStorageID());
-      ArrayList<ReplicaInfo> ucList = uc.get(v.getStorageID());
       blockReportsMap.put(v.toDatanodeStorage(),
-                          new BlockListAsLongs(finalizedList, ucList));
+                          builders.get(v.getStorageID()).build());
     }
 
     return blockReportsMap;

@@ -237,6 +237,8 @@ message BlockReportRequestProto {
 message StorageBlockReportProto {
   required DatanodeStorageProto storage = 1;    // Storage
   repeated uint64 blocks = 2 [packed=true];
+  optional uint64 numberOfBlocks = 3;
+  repeated bytes blocksBuffers = 4;
 }
 
 /**
