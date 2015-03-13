@@ -111,6 +111,9 @@ Release 2.6.1 - UNRELEASED
     YARN-3287. Made TimelineClient put methods do as the correct login context.
     (Daryn Sharp and Jonathan Eagles via zjshen)
 
+    YARN-3267. Timelineserver applies the ACL rules after applying the limit on
+    the number of records (Chang Li via jeagles)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

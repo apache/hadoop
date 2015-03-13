@@ -90,6 +90,31 @@ public class TimelineDataManager extends AbstractService {
     super.serviceInit(conf);
   }
 
+  public interface CheckAcl {
+    boolean check(TimelineEntity entity) throws IOException;
+  }
+
+  class CheckAclImpl implements CheckAcl {
+    final UserGroupInformation ugi;
+
+    public CheckAclImpl(UserGroupInformation callerUGI) {
+      ugi = callerUGI;
+    }
+
+    public boolean check(TimelineEntity entity) throws IOException {
+      try{
+        return timelineACLsManager.checkAccess(
+          ugi, ApplicationAccessType.VIEW_APP, entity);
+      } catch (YarnException e) {
+        LOG.info("Error when verifying access for user " + ugi
+          + " on the events of the timeline entity "
+          + new EntityIdentifier(entity.getEntityId(),
+          entity.getEntityType()), e);
+        return false;
+      }
+    }
+  }
+
   /**
    * Get the timeline entities that the given user have access to. The meaning
    * of each argument has been documented with
@@ -118,28 +143,9 @@ public class TimelineDataManager extends AbstractService {
         fromTs,
         primaryFilter,
         secondaryFilter,
-        fields);
-    if (entities != null) {
-      Iterator<TimelineEntity> entitiesItr =
-          entities.getEntities().iterator();
-      while (entitiesItr.hasNext()) {
-        TimelineEntity entity = entitiesItr.next();
-        addDefaultDomainIdIfAbsent(entity);
-        try {
-          // check ACLs
-          if (!timelineACLsManager.checkAccess(
-              callerUGI, ApplicationAccessType.VIEW_APP, entity)) {
-            entitiesItr.remove();
-          }
-        } catch (YarnException e) {
-          LOG.error("Error when verifying access for user " + callerUGI
-              + " on the events of the timeline entity "
-              + new EntityIdentifier(entity.getEntityId(),
-                  entity.getEntityType()), e);
-          entitiesItr.remove();
-        }
-      }
-    }
+        fields,
+        new CheckAclImpl(callerUGI));
+
     if (entities == null) {
       return new TimelineEntities();
     }
