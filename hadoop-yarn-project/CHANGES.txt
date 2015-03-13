@@ -387,6 +387,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3187. Documentation of Capacity Scheduler Queue mapping based on user
     or group. (Gururaj Shetty via jianhe)
 
+    YARN-2854. Updated the documentation of the timeline service and the generic
+    history service. (Naganarasimha G R via zjshen)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 
