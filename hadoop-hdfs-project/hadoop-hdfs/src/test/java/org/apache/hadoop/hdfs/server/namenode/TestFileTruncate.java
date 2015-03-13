@@ -166,6 +166,8 @@ public class TestFileTruncate {
       LOG.info("newLength=" + newLength + ", isReady=" + isReady);
       assertEquals("File must be closed for truncating at the block boundary",
           isReady, newLength % BLOCK_SIZE == 0);
+      assertEquals("Truncate is not idempotent",
+          isReady, fs.truncate(p, newLength));
       if (!isReady) {
         checkBlockRecovery(p);
       }
