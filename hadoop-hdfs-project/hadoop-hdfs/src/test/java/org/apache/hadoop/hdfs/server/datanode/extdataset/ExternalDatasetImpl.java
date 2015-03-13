@@ -195,7 +195,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
     final Map<DatanodeStorage, BlockListAsLongs> result =
 	new HashMap<DatanodeStorage, BlockListAsLongs>();
 
-    result.put(storage, new BlockListAsLongs(null, null));
+    result.put(storage, BlockListAsLongs.EMPTY);
     return result;
   }
 

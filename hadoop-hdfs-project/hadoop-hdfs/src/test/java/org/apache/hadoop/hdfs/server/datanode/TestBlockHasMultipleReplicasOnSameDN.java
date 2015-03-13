@@ -107,17 +107,18 @@ public class TestBlockHasMultipleReplicasOnSameDN {
     StorageBlockReport reports[] =
         new StorageBlockReport[cluster.getStoragesPerDatanode()];
 
-    ArrayList<Block> blocks = new ArrayList<Block>();
+    ArrayList<Replica> blocks = new ArrayList<Replica>();
 
     for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
-      blocks.add(locatedBlock.getBlock().getLocalBlock());
+      Block localBlock = locatedBlock.getBlock().getLocalBlock();
+      blocks.add(new FinalizedReplica(localBlock, null, null));
     }
 
+    BlockListAsLongs bll = BlockListAsLongs.encode(blocks);
     for (int i = 0; i < cluster.getStoragesPerDatanode(); ++i) {
-      BlockListAsLongs bll = new BlockListAsLongs(blocks);
       FsVolumeSpi v = dn.getFSDataset().getVolumes().get(i);
       DatanodeStorage dns = new DatanodeStorage(v.getStorageID());
-      reports[i] = new StorageBlockReport(dns, bll.getBlockListAsLongs());
+      reports[i] = new StorageBlockReport(dns, bll);
     }
 
     // Should not assert!

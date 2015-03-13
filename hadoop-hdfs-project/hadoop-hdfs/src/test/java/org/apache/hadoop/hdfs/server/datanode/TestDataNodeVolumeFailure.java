@@ -25,11 +25,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -188,7 +186,7 @@ public class TestDataNodeVolumeFailure {
         DatanodeStorage dnStorage = kvPair.getKey();
         BlockListAsLongs blockList = kvPair.getValue();
         reports[reportIndex++] =
-            new StorageBlockReport(dnStorage, blockList.getBlockListAsLongs());
+            new StorageBlockReport(dnStorage, blockList);
     }
     
     cluster.getNameNodeRpc().blockReport(dnR, bpid, reports);
