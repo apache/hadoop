@@ -257,8 +257,6 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
-    MAPREDUCE-4742. Fix typo in nnbench#displayUsage. (Liang Xie via ozawa)
-
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -439,6 +437,8 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-5657. Fix Javadoc errors caused by incorrect or illegal tags in doc
     comments. (Akira AJISAKA and Andrew Purtell via ozawa)
+
+    MAPREDUCE-4742. Fix typo in nnbench#displayUsage. (Liang Xie via ozawa)
 
 Release 2.6.1 - UNRELEASED
 
