@@ -70,7 +70,7 @@ public class ContainerLauncherImpl extends AbstractService implements
     new ConcurrentHashMap<ContainerId, Container>(); 
   private final AppContext context;
   protected ThreadPoolExecutor launcherPool;
-  protected static final int INITIAL_POOL_SIZE = 10;
+  protected int initialPoolSize;
   private int limitOnPoolSize;
   private Thread eventHandlingThread;
   protected BlockingQueue<ContainerLauncherEvent> eventQueue =
@@ -246,6 +246,12 @@ public class ContainerLauncherImpl extends AbstractService implements
         MRJobConfig.MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT,
         MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT);
     LOG.info("Upper limit on the thread pool size is " + this.limitOnPoolSize);
+
+    this.initialPoolSize = conf.getInt(
+        MRJobConfig.MR_AM_CONTAINERLAUNCHER_THREADPOOL_INITIAL_SIZE,
+        MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREADPOOL_INITIAL_SIZE);
+    LOG.info("The thread pool initial size is " + this.initialPoolSize);
+
     super.serviceInit(conf);
     cmProxy = new ContainerManagementProtocolProxy(conf);
   }
@@ -256,7 +262,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         "ContainerLauncher #%d").setDaemon(true).build();
 
     // Start with a default core-pool size of 10 and change it dynamically.
-    launcherPool = new ThreadPoolExecutor(INITIAL_POOL_SIZE,
+    launcherPool = new ThreadPoolExecutor(initialPoolSize,
         Integer.MAX_VALUE, 1, TimeUnit.HOURS,
         new LinkedBlockingQueue<Runnable>(),
         tf);
@@ -289,11 +295,11 @@ public class ContainerLauncherImpl extends AbstractService implements
             int idealPoolSize = Math.min(limitOnPoolSize, numNodes);
 
             if (poolSize < idealPoolSize) {
-              // Bump up the pool size to idealPoolSize+INITIAL_POOL_SIZE, the
+              // Bump up the pool size to idealPoolSize+initialPoolSize, the
               // later is just a buffer so we are not always increasing the
               // pool-size
               int newPoolSize = Math.min(limitOnPoolSize, idealPoolSize
-                  + INITIAL_POOL_SIZE);
+                  + initialPoolSize);
               LOG.info("Setting ContainerLauncher pool size to " + newPoolSize
                   + " as number-of-nodes to talk to is " + numNodes);
               launcherPool.setCorePoolSize(newPoolSize);
