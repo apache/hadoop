@@ -30,7 +30,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -84,7 +83,7 @@ public class ShortCircuitRegistry {
 
   private static final int SHM_LENGTH = 8192;
 
-  public static class RegisteredShm extends ShortCircuitShm
+  private static class RegisteredShm extends ShortCircuitShm
       implements DomainSocketWatcher.Handler {
     private final String clientName;
     private final ShortCircuitRegistry registry;
@@ -383,15 +382,5 @@ public class ShortCircuitRegistry {
       enabled = false;
     }
     IOUtils.closeQuietly(watcher);
-  }
-
-  public static interface Visitor {
-    void accept(HashMap<ShmId, RegisteredShm> segments,
-                HashMultimap<ExtendedBlockId, Slot> slots);
-  }
-
-  @VisibleForTesting
-  public synchronized void visit(Visitor visitor) {
-    visitor.accept(segments, slots);
   }
 }
