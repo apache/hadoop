@@ -340,6 +340,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6263. Configurable timeout between YARNRunner terminate the 
     application and forcefully kill. (Eric Payne via junping_du)
 
+    MAPREDUCE-6265. Make ContainerLauncherImpl.INITIAL_POOL_SIZE configurable 
+    to better control to launch/kill containers. (Zhihai Xu via ozawa)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 

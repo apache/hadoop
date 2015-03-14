@@ -1694,4 +1694,12 @@
     calculated as (heapSize / mapreduce.heap.memory-mb.ratio).
   </description>
 </property>
+
+<property>
+  <name>yarn.app.mapreduce.am.containerlauncher.threadpool-initial-size</name>
+  <value>10</value>
+  <description>The initial size of thread pool to launch containers in the
+    app master.
+  </description>
+</property>
 </configuration>
