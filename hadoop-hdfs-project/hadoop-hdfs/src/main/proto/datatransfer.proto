@@ -179,6 +179,12 @@ message OpRequestShortCircuitAccessProto {
    * The shared memory slot to use, if we are using one.
    */
   optional ShortCircuitShmSlotProto slotId = 3;
+
+  /**
+   * True if the client supports verifying that the file descriptor has been
+   * sent successfully.
+   */
+  optional bool supportsReceiptVerification = 4 [default = false];
 }
 
 message ReleaseShortCircuitAccessRequestProto {
@@ -228,6 +234,11 @@ enum Status {
   OOB_RESERVED2 = 10;         // Reserved
   OOB_RESERVED3 = 11;         // Reserved
   IN_PROGRESS = 12;
+}
+
+enum ShortCircuitFdResponse {
+  DO_NOT_USE_RECEIPT_VERIFICATION = 0;
+  USE_RECEIPT_VERIFICATION = 1;
 }
 
 message PipelineAckProto {

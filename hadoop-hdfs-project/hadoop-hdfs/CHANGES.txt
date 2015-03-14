@@ -1177,6 +1177,9 @@ Release 2.7.0 - UNRELEASED
       HDFS-7722. DataNode#checkDiskError should also remove Storage when error
       is found. (Lei Xu via Colin P. McCabe)
 
+      HDFS-7915. The DataNode can sometimes allocate a ShortCircuitShm slot and
+      fail to tell the DFSClient about it because of a network error (cmccabe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
