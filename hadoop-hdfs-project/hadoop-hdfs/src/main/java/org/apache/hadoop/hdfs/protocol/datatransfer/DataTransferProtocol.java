@@ -138,10 +138,13 @@ public interface DataTransferProtocol {
    *                          to use no slot id.
    * @param maxVersion      Maximum version of the block data the client 
    *                          can understand.
+   * @param supportsReceiptVerification  True if the client supports
+   *                          receipt verification.
    */
   public void requestShortCircuitFds(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken,
-      SlotId slotId, int maxVersion) throws IOException;
+      SlotId slotId, int maxVersion, boolean supportsReceiptVerification)
+        throws IOException;
 
   /**
    * Release a pair of short-circuit FDs requested earlier.
