@@ -1100,6 +1100,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11710. Make CryptoOutputStream behave like DFSOutputStream wrt
     synchronization. (Sean Busbey via yliu)
 
+    HADOOP-11558. Fix dead links to doc of hadoop-tools. (Masatake Iwasaki
+    via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

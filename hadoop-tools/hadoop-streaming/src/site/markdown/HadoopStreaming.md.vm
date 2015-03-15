@@ -201,7 +201,7 @@ To specify additional local temp directories use:
      -D mapred.system.dir=/tmp/system
      -D mapred.temp.dir=/tmp/temp
 
-**Note:** For more details on job configuration parameters see: [mapred-default.xml](./mapred-default.xml)
+**Note:** For more details on job configuration parameters see: [mapred-default.xml](../hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml)
 
 $H4 Specifying Map-Only Jobs
 
@@ -322,7 +322,7 @@ More Usage Examples
 
 $H3 Hadoop Partitioner Class
 
-Hadoop has a library class, [KeyFieldBasedPartitioner](../../api/org/apache/hadoop/mapred/lib/KeyFieldBasedPartitioner.html), that is useful for many applications. This class allows the Map/Reduce framework to partition the map outputs based on certain key fields, not the whole keys. For example:
+Hadoop has a library class, [KeyFieldBasedPartitioner](../api/org/apache/hadoop/mapred/lib/KeyFieldBasedPartitioner.html), that is useful for many applications. This class allows the Map/Reduce framework to partition the map outputs based on certain key fields, not the whole keys. For example:
 
     hadoop jar hadoop-streaming-${project.version}.jar \
       -D stream.map.output.field.separator=. \
@@ -372,7 +372,7 @@ Sorting within each partition for the reducer(all 4 fields used for sorting)
 
 $H3 Hadoop Comparator Class
 
-Hadoop has a library class, [KeyFieldBasedComparator](../../api/org/apache/hadoop/mapreduce/lib/partition/KeyFieldBasedComparator.html), that is useful for many applications. This class provides a subset of features provided by the Unix/GNU Sort. For example:
+Hadoop has a library class, [KeyFieldBasedComparator](../api/org/apache/hadoop/mapreduce/lib/partition/KeyFieldBasedComparator.html), that is useful for many applications. This class provides a subset of features provided by the Unix/GNU Sort. For example:
 
     hadoop jar hadoop-streaming-${project.version}.jar \
       -D mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator \
@@ -406,7 +406,7 @@ Sorting output for the reducer (where second field used for sorting)
 
 $H3 Hadoop Aggregate Package
 
-Hadoop has a library package called [Aggregate](../../org/apache/hadoop/mapred/lib/aggregate/package-summary.html). Aggregate provides a special reducer class and a special combiner class, and a list of simple aggregators that perform aggregations such as "sum", "max", "min" and so on over a sequence of values. Aggregate allows you to define a mapper plugin class that is expected to generate "aggregatable items" for each input key/value pair of the mappers. The combiner/reducer will aggregate those aggregatable items by invoking the appropriate aggregators.
+Hadoop has a library package called [Aggregate](../api/org/apache/hadoop/mapred/lib/aggregate/package-summary.html). Aggregate provides a special reducer class and a special combiner class, and a list of simple aggregators that perform aggregations such as "sum", "max", "min" and so on over a sequence of values. Aggregate allows you to define a mapper plugin class that is expected to generate "aggregatable items" for each input key/value pair of the mappers. The combiner/reducer will aggregate those aggregatable items by invoking the appropriate aggregators.
 
 To use Aggregate, simply specify "-reducer aggregate":
 
@@ -441,7 +441,7 @@ The python program myAggregatorForKeyCount.py looks like:
 
 $H3 Hadoop Field Selection Class
 
-Hadoop has a library class, [FieldSelectionMapReduce](../../api/org/apache/hadoop/mapred/lib/FieldSelectionMapReduce.html), that effectively allows you to process text data like the unix "cut" utility. The map function defined in the class treats each input key/value pair as a list of fields. You can specify the field separator (the default is the tab character). You can select an arbitrary list of fields as the map output key, and an arbitrary list of fields as the map output value. Similarly, the reduce function defined in the class treats each input key/value pair as a list of fields. You can select an arbitrary list of fields as the reduce output key, and an arbitrary list of fields as the reduce output value. For example:
+Hadoop has a library class, [FieldSelectionMapReduce](../api/org/apache/hadoop/mapred/lib/FieldSelectionMapReduce.html), that effectively allows you to process text data like the unix "cut" utility. The map function defined in the class treats each input key/value pair as a list of fields. You can specify the field separator (the default is the tab character). You can select an arbitrary list of fields as the map output key, and an arbitrary list of fields as the map output value. Similarly, the reduce function defined in the class treats each input key/value pair as a list of fields. You can select an arbitrary list of fields as the reduce output key, and an arbitrary list of fields as the reduce output value. For example:
 
     hadoop jar hadoop-streaming-${project.version}.jar \
       -D mapreduce.map.output.key.field.separator=. \
@@ -480,7 +480,7 @@ As an example, consider the problem of zipping (compressing) a set of files acro
 
 $H3 How many reducers should I use?
 
-See MapReduce Tutorial for details: [Reducer](./MapReduceTutorial.html#Reducer)
+See MapReduce Tutorial for details: [Reducer](../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html#Reducer)
 
 $H3 If I set up an alias in my shell script, will that work after -mapper?
 
@@ -556,4 +556,4 @@ A streaming process can use the stderr to emit status information. To set a stat
 
 $H3 How do I get the Job variables in a streaming job's mapper/reducer?
 
-See [Configured Parameters](./MapReduceTutorial.html#Configured_Parameters). During the execution of a streaming job, the names of the "mapred" parameters are transformed. The dots ( . ) become underscores ( \_ ). For example, mapreduce.job.id becomes mapreduce\_job\_id and mapreduce.job.jar becomes mapreduce\_job\_jar. In your code, use the parameter names with the underscores.
+See [Configured Parameters](../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html#Configured_Parameters). During the execution of a streaming job, the names of the "mapred" parameters are transformed. The dots ( . ) become underscores ( \_ ). For example, mapreduce.job.id becomes mapreduce\_job\_id and mapreduce.job.jar becomes mapreduce\_job\_jar. In your code, use the parameter names with the underscores.
