@@ -186,7 +186,7 @@ public abstract class Receiver implements DataTransferProtocol {
     try {
       requestShortCircuitFds(PBHelper.convert(proto.getHeader().getBlock()),
           PBHelper.convert(proto.getHeader().getToken()),
-          slotId, proto.getMaxVersion());
+          slotId, proto.getMaxVersion(), true);
     } finally {
       if (traceScope != null) traceScope.close();
     }
