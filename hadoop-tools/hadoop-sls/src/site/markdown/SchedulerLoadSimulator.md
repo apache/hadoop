@@ -43,7 +43,7 @@ The Yarn Scheduler Load Simulator (SLS) is such a tool, which can simulate large
 o
 The simulator will exercise the real Yarn `ResourceManager` removing the network factor by simulating `NodeManagers` and `ApplicationMasters` via handling and dispatching `NM`/`AMs` heartbeat events from within the same JVM. To keep tracking of scheduler behavior and performance, a scheduler wrapper will wrap the real scheduler.
 
-The size of the cluster and the application load can be loaded from configuration files, which are generated from job history files directly by adopting [Apache Rumen](https://hadoop.apache.org/docs/stable/rumen.html).
+The size of the cluster and the application load can be loaded from configuration files, which are generated from job history files directly by adopting [Apache Rumen](../hadoop-rumen/Rumen.html).
 
 The simulator will produce real time metrics while executing, including:
 
