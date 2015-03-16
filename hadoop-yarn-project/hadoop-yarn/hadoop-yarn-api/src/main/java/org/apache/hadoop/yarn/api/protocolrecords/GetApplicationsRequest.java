@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.util.Records;
  * <p>The request from clients to get a report of Applications
  * in the cluster from the <code>ResourceManager</code>.</p>
  *
- *
  * @see ApplicationClientProtocol#getApplications(GetApplicationsRequest)
  */
 @Public

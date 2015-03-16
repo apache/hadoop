@@ -71,14 +71,13 @@ public interface ZookeeperConfigOptions {
    * The SASL client username: {@value}.
    * <p>
    * Set this to the <i>short</i> name of the client, e.g, "user",
-   * not <code>user/host</code>, or <code>user/host@REALM</code>
+   * not {@code user/host}, or {@code user/host@REALM}
    */
   String PROP_ZK_SASL_CLIENT_USERNAME = "zookeeper.sasl.client.username";
 
   /**
    * The SASL Server context, referring to a context in the JVM's
    * JAAS context file: {@value}
-   * <p>
    */
   String PROP_ZK_SERVER_SASL_CONTEXT =
       ZooKeeperSaslServer.LOGIN_CONTEXT_NAME_KEY;

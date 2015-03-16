@@ -125,7 +125,7 @@ public abstract class NMClient extends AbstractService {
    * Set the NM Token cache of the <code>NMClient</code>. This cache must be
    * shared with the {@link AMRMClient} that requested the containers managed
    * by this <code>NMClient</code>
-   * <p/>
+   * <p>
    * If a NM token cache is not set, the {@link NMTokenCache#getSingleton()}
    * singleton instance will be used.
    *
@@ -139,7 +139,7 @@ public abstract class NMClient extends AbstractService {
    * Get the NM token cache of the <code>NMClient</code>. This cache must be
    * shared with the {@link AMRMClient} that requested the containers managed
    * by this <code>NMClient</code>
-   * <p/>
+   * <p>
    * If a NM token cache is not set, the {@link NMTokenCache#getSingleton()}
    * singleton instance will be used.
    *

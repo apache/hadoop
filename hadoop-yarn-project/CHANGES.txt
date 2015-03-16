@@ -769,6 +769,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3171. Sort by Application id, AppAttempt and ContainerID doesn't work
     in ATS / RM web ui. (Naganarasimha G R via xgong)
 
+    YARN-1453. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in 
+    doc comments. (Akira AJISAKA, Andrew Purtell, and Allen Wittenauer via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

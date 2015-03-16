@@ -88,7 +88,7 @@ public final class StringHelper {
   }
 
   /**
-   * Join on slash & colon (e.g., path args in routing spec)
+   * Join on slash and colon (e.g., path args in routing spec)
    * @param args to join
    * @return args joined with /:
    */
@@ -116,7 +116,7 @@ public final class StringHelper {
   }
 
   /**
-   * Split on space & trim results.
+   * Split on space and trim results.
    * @param s the string to split
    * @return an iterable of strings
    */
@@ -125,7 +125,7 @@ public final class StringHelper {
   }
 
   /**
-   * Split on _ & trim results
+   * Split on _ and trim results
    * @param s the string to split
    * @return an iterable of strings
    */

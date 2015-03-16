@@ -24,16 +24,15 @@ import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The request sent by the <code>ApplicationMaster</code> to 
- * <code>ResourceManager</code> on registration.</p>
- * 
- * <p>The registration includes details such as:
- *   <ul>
- *     <li>Hostname on which the AM is running.</li>
- *     <li>RPC Port</li>
- *     <li>Tracking URL</li>
- *   </ul>
- * </p>
+ * The request sent by the {@code ApplicationMaster} to {@code ResourceManager}
+ * on registration.
+ * <p>
+ * The registration includes details such as:
+ * <ul>
+ *   <li>Hostname on which the AM is running.</li>
+ *   <li>RPC Port</li>
+ *   <li>Tracking URL</li>
+ * </ul>
  * 
  * @see ApplicationMasterProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)
  */
@@ -83,20 +82,20 @@ public abstract class RegisterApplicationMasterRequest {
   public abstract void setHost(String host);
 
   /**
-   * Get the <em>RPC port</em> on which the <code>ApplicationMaster</code> 
-   * is responding. 
-   * @return the <em>RPC port<em> on which the <code>ApplicationMaster</code> is 
-   *         responding
+   * Get the <em>RPC port</em> on which the {@code ApplicationMaster} is
+   * responding.
+   * @return the <em>RPC port</em> on which the {@code ApplicationMaster}
+   *         is responding
    */
   @Public
   @Stable
   public abstract int getRpcPort();
   
   /**
-   * Set the <em>RPC port<em> on which the <code>ApplicationMaster</code> is 
+   * Set the <em>RPC port</em> on which the {@code ApplicationMaster} is
    * responding.
-   * @param port <em>RPC port<em> on which the <code>ApplicationMaster</code> is 
-   *             responding
+   * @param port <em>RPC port</em> on which the {@code ApplicationMaster}
+   *             is responding
    */
   @Public
   @Stable

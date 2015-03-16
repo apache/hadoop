@@ -25,19 +25,18 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The finalization request sent by the <code>ApplicationMaster</code> to
- * inform the <code>ResourceManager</code> about its completion.</p>
- *
- * <p>The final request includes details such:
- *   <ul>
- *     <li>Final state of the <code>ApplicationMaster</code></li>
- *     <li>
- *       Diagnostic information in case of failure of the
- *       <code>ApplicationMaster</code>
- *     </li>
- *     <li>Tracking URL</li>
- *   </ul>
- * </p>
+ * The finalization request sent by the {@code ApplicationMaster} to
+ * inform the {@code ResourceManager} about its completion.
+ * <p>
+ * The final request includes details such:
+ * <ul>
+ *   <li>Final state of the {@code ApplicationMaster}</li>
+ *   <li>
+ *     Diagnostic information in case of failure of the
+ *     {@code ApplicationMaster}
+ *   </li>
+ *   <li>Tracking URL</li>
+ * </ul>
  *
  * @see ApplicationMasterProtocol#finishApplicationMaster(FinishApplicationMasterRequest)
  */

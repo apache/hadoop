@@ -25,17 +25,16 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p><code>ContainerStatus</code> represents the current status of a 
- * <code>Container</code>.</p>
- * 
- * <p>It provides details such as:
- *   <ul>
- *     <li><code>ContainerId</code> of the container.</li>
- *     <li><code>ContainerState</code> of the container.</li>
- *     <li><em>Exit status</em> of a completed container.</li>
- *     <li><em>Diagnostic</em> message for a failed container.</li>
- *   </ul>
- * </p>
+ * {@code ContainerStatus} represents the current status of a
+ * {@code Container}.
+ * <p>
+ * It provides details such as:
+ * <ul>
+ *   <li>{@code ContainerId} of the container.</li>
+ *   <li>{@code ContainerState} of the container.</li>
+ *   <li><em>Exit status</em> of a completed container.</li>
+ *   <li><em>Diagnostic</em> message for a failed container.</li>
+ * </ul>
  */
 @Public
 @Stable

@@ -181,7 +181,7 @@ public class ProxyUriUtils {
   
   /**
    * Returns the scheme if present in the url
-   * eg. "https://issues.apache.org/jira/browse/YARN" > "https"
+   * eg. "https://issues.apache.org/jira/browse/YARN" {@literal ->} "https"
    */
   public static String getSchemeFromUrl(String url) {
     int index = 0;

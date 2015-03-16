@@ -45,17 +45,15 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * <p>
  * Initializes {@link TimelineAuthenticationFilter} which provides support for
  * Kerberos HTTP SPNEGO authentication.
- * <p/>
  * <p>
  * It enables Kerberos HTTP SPNEGO plus delegation token authentication for the
  * timeline server.
- * <p/>
- * Refer to the <code>core-default.xml</code> file, after the comment 'HTTP
+ * <p>
+ * Refer to the {@code core-default.xml} file, after the comment 'HTTP
  * Authentication' for details on the configuration options. All related
- * configuration properties have 'hadoop.http.authentication.' as prefix.
+ * configuration properties have {@code hadoop.http.authentication.} as prefix.
  */
 public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
 
@@ -71,14 +69,11 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
   Map<String, String> filterConfig;
 
   /**
-   * <p>
    * Initializes {@link TimelineAuthenticationFilter}
-   * <p/>
    * <p>
    * Propagates to {@link TimelineAuthenticationFilter} configuration all YARN
    * configuration properties prefixed with
-   * "yarn.timeline-service.authentication."
-   * </p>
+   * {@code yarn.timeline-service.authentication.}
    * 
    * @param container
    *          The filter container

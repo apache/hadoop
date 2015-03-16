@@ -35,7 +35,7 @@ public abstract class NodeLabelsStore implements Closeable {
   }
   
   /**
-   * Store node -> label
+   * Store node {@literal ->} label
    */
   public abstract void updateNodeToLabelsMappings(
       Map<NodeId, Set<String>> nodeToLabels) throws IOException;
@@ -54,7 +54,6 @@ public abstract class NodeLabelsStore implements Closeable {
   
   /**
    * Recover labels and node to labels mappings from store
-   * @param conf
    */
   public abstract void recover() throws IOException;
   

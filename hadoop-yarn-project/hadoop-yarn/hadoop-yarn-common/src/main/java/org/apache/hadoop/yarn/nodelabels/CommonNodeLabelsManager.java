@@ -344,7 +344,7 @@ public class CommonNodeLabelsManager extends AbstractService {
   /**
    * add more labels to nodes
    * 
-   * @param addedLabelsToNode node -> labels map
+   * @param addedLabelsToNode node {@literal ->} labels map
    */
   public void addLabelsToNode(Map<NodeId, Set<String>> addedLabelsToNode)
       throws IOException {
@@ -614,7 +614,7 @@ public class CommonNodeLabelsManager extends AbstractService {
    * remove labels from nodes, labels being removed most be contained by these
    * nodes
    * 
-   * @param removeLabelsFromNode node -> labels map
+   * @param removeLabelsFromNode node {@literal ->} labels map
    */
   public void
       removeLabelsFromNode(Map<NodeId, Set<String>> removeLabelsFromNode)
@@ -668,7 +668,7 @@ public class CommonNodeLabelsManager extends AbstractService {
   /**
    * replace labels to nodes
    * 
-   * @param replaceLabelsToNode node -> labels map
+   * @param replaceLabelsToNode node {@literal ->} labels map
    */
   public void replaceLabelsOnNode(Map<NodeId, Set<String>> replaceLabelsToNode)
       throws IOException {

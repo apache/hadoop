@@ -93,7 +93,6 @@ public class ApplicationACLsManager {
    * @param applicationAccessType
    * @param applicationOwner
    * @param applicationId
-   * @throws AccessControlException
    */
   public boolean checkAccess(UserGroupInformation callerUGI,
       ApplicationAccessType applicationAccessType, String applicationOwner,
