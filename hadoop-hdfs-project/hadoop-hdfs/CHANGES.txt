@@ -321,6 +321,8 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-2360. Ugly stacktrace when quota exceeds. (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
