@@ -2021,5 +2021,10 @@ public class JobConf extends Configuration {
   }
   
 
+  /* For debugging. Dump configurations to system output as XML format. */
+  public static void main(String[] args) throws Exception {
+    new JobConf(new Configuration()).writeXml(System.out);
+  }
+
 }
 

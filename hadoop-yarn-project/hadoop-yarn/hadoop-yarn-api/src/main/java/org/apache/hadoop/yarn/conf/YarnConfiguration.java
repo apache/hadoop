@@ -1808,4 +1808,9 @@ public class YarnConfiguration extends Configuration {
     }
     return clusterId;
   }
+
+  /* For debugging. mp configurations to system output as XML format. */
+  public static void main(String[] args) throws Exception {
+    new YarnConfiguration(new Configuration()).writeXml(System.out);
+  }
 }
