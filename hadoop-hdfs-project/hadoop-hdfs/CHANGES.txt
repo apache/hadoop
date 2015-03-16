@@ -364,6 +364,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-6488. Support HDFS superuser in NFS gateway. (brandonli)
 
+    HDFS-7838. Expose truncate API for libhdfs. (yliu)
+
   IMPROVEMENTS
 
     HDFS-7752. Improve description for
