@@ -19,9 +19,10 @@
 /**
  * Basic services for the YARN registry
  * <ul>
- *   <li>The {@link org.apache.hadoop.registry.server.services.RegistryAdminService}</ol>
- *   extends the shared Yarn Registry client with registry setup and
- *   (potentially asynchronous) administrative actions.
+ *   <li>
+ *     The {@link org.apache.hadoop.registry.server.services.RegistryAdminService}
+ *     extends the shared Yarn Registry client with registry setup and
+ *     (potentially asynchronous) administrative actions.
  *   </li>
  *   <li>
  *     The {@link org.apache.hadoop.registry.server.services.MicroZookeeperService}
@@ -33,8 +34,6 @@
  *     extends the standard YARN composite service by making its add and remove
  *     methods public. It is a utility service used in parts of the codebase
  *   </li>
- *
  * </ul>
- *
  */
 package org.apache.hadoop.registry.server.services;

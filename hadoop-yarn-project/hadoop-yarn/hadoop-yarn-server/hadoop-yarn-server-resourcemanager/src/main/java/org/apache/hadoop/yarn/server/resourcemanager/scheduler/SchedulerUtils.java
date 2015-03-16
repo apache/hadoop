@@ -194,8 +194,7 @@ public class SchedulerUtils {
    * Utility method to validate a resource request, by insuring that the
    * requested memory/vcore is non-negative and not greater than max
    * 
-   * @throws <code>InvalidResourceRequestException</code> when there is invalid
-   *         request
+   * @throws InvalidResourceRequestException when there is invalid request
    */
   public static void validateResourceRequest(ResourceRequest resReq,
       Resource maximumResource, String queueName, YarnScheduler scheduler)

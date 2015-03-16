@@ -32,7 +32,7 @@ import org.apache.hadoop.registry.client.impl.zk.RegistryOperationsService;
  *
  * For SASL, the client must be operating in the context of an authed user.
  *
- * For id:pass the client must have the relevant id & password, SASL is
+ * For id:pass the client must have the relevant id and password, SASL is
  * not used even if the client has credentials.
  *
  * For anonymous, nothing is used.

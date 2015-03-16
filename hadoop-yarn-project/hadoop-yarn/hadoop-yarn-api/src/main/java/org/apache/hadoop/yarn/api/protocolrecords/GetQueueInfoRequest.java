@@ -63,7 +63,7 @@ public abstract class GetQueueInfoRequest {
   public abstract void setQueueName(String queueName);
 
   /**
-   * Is information about <em>active applications<e/m> required?
+   * Is information about <em>active applications</em> required?
    * @return <code>true</code> if applications' information is to be included,
    *         else <code>false</code>
    */

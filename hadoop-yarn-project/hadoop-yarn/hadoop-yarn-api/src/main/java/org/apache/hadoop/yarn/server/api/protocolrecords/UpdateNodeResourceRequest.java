@@ -54,7 +54,7 @@ public abstract class UpdateNodeResourceRequest {
   
   /**
    * Get the map from <code>NodeId</code> to <code>ResourceOption</code>.
-   * @return the map of <NodeId, ResourceOption>
+   * @return the map of {@code <NodeId, ResourceOption>}
    */
   @Public
   @Evolving
@@ -62,7 +62,7 @@ public abstract class UpdateNodeResourceRequest {
   
   /**
    * Set the map from <code>NodeId</code> to <code>ResourceOption</code>.
-   * @param nodeResourceMap the map of <NodeId, ResourceOption>
+   * @param nodeResourceMap the map of {@code <NodeId, ResourceOption>}
    */
   @Public
   @Evolving

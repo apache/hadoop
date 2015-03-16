@@ -23,22 +23,22 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 
 /**
- * <p><code>LocalResourceType</code> specifies the <em>type</em>
- * of a resource localized by the <code>NodeManager</code>.</p> 
- *
- * <p>The <em>type</em> can be one of:
- *   <ul>
- *     <li>
- *       {@link #FILE} - Regular file i.e. uninterpreted bytes. 
- *     </li>
- *     <li>
- *       {@link #ARCHIVE} - Archive, which is automatically unarchived by the 
- *       <code>NodeManager</code>.
- *     </li>
- *     <li>
- *       {@link #PATTERN} - A hybrid between {@link #ARCHIVE} and {@link #FILE}.
- *   </ul>
- * </p>
+ * {@code LocalResourceType} specifies the <em>type</em>
+ * of a resource localized by the {@code NodeManager}.
+ * <p>
+ * The <em>type</em> can be one of:
+ * <ul>
+ *   <li>
+ *     {@link #FILE} - Regular file i.e. uninterpreted bytes.
+ *   </li>
+ *   <li>
+ *     {@link #ARCHIVE} - Archive, which is automatically unarchived by the
+ *     <code>NodeManager</code>.
+ *   </li>
+ *   <li>
+ *     {@link #PATTERN} - A hybrid between {@link #ARCHIVE} and {@link #FILE}.
+ *   </li>
+ * </ul>
  *
  * @see LocalResource
  * @see ContainerLaunchContext

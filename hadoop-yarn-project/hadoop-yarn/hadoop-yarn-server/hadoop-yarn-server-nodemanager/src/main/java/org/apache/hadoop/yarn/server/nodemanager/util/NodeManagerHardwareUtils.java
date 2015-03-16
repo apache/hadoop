@@ -65,11 +65,11 @@ public class NodeManagerHardwareUtils {
   }
 
   /**
-   * Gets the percentage of physical CPU that is configured for YARN containers
-   * This is percent > 0 and <= 100  based on
-   * YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT
+   * Gets the percentage of physical CPU that is configured for YARN containers.
+   * This is percent {@literal >} 0 and {@literal <=} 100 based on
+   * {@link YarnConfiguration#NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT}
    * @param conf Configuration object
-   * @return percent > 0 and <= 100
+   * @return percent {@literal >} 0 and {@literal <=} 100
    */
   public static int getNodeCpuPercentage(Configuration conf) {
     int nodeCpuPercentage =

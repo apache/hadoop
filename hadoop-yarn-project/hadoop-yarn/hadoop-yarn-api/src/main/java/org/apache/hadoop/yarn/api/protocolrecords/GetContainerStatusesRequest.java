@@ -28,11 +28,9 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>
  * The request sent by the <code>ApplicationMaster</code> to the
  * <code>NodeManager</code> to get {@link ContainerStatus} of requested
  * containers.
- * </p>
  * 
  * @see ContainerManagementProtocol#getContainerStatuses(GetContainerStatusesRequest)
  */

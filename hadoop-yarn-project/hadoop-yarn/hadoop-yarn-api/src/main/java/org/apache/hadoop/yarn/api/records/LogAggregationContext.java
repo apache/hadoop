@@ -24,30 +24,37 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p><code>LogAggregationContext</code> represents all of the
- * information needed by the <code>NodeManager</code> to handle
- * the logs for an application.</p>
- *
- * <p>It includes details such as:
- *   <ul>
- *     <li>includePattern. It uses Java Regex to filter the log files
+ * {@code LogAggregationContext} represents all of the
+ * information needed by the {@code NodeManager} to handle
+ * the logs for an application.
+ * <p>
+ * It includes details such as:
+ * <ul>
+ *   <li>
+ *     includePattern. It uses Java Regex to filter the log files
  *     which match the defined include pattern and those log files
- *     will be uploaded when the application finishes. </li>
- *     <li>excludePattern. It uses Java Regex to filter the log files
+ *     will be uploaded when the application finishes.
+ *   </li>
+ *   <li>
+ *     excludePattern. It uses Java Regex to filter the log files
  *     which match the defined exclude pattern and those log files
  *     will not be uploaded when application finishes. If the log file
  *     name matches both the include and the exclude pattern, this file
- *     will be excluded eventually</li>
- *     <li>rolledLogsIncludePattern. It uses Java Regex to filter the log files
+ *     will be excluded eventually.
+ *   </li>
+ *   <li>
+ *     rolledLogsIncludePattern. It uses Java Regex to filter the log files
  *     which match the defined include pattern and those log files
- *     will be aggregated in a rolling fashion.</li>
- *     <li>rolledLogsExcludePattern. It uses Java Regex to filter the log files
+ *     will be aggregated in a rolling fashion.
+ *   </li>
+ *   <li>
+ *     rolledLogsExcludePattern. It uses Java Regex to filter the log files
  *     which match the defined exclude pattern and those log files
  *     will not be aggregated in a rolling fashion. If the log file
  *     name matches both the include and the exclude pattern, this file
- *     will be excluded eventually</li>
- *   </ul>
- * </p>
+ *     will be excluded eventually.
+ *   </li>
+ * </ul>
  *
  * @see ApplicationSubmissionContext
  */
