@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
@@ -676,6 +677,11 @@ public class INodeFile extends INodeWithAdditionalFields
 
     final long ssDeltaNoReplication;
     short replication;
+
+    if (isStriped()) {
+      return computeQuotaUsageWithStriped(bsps, counts);
+    }
+    
     if (last < lastSnapshotId) {
       ssDeltaNoReplication = computeFileSize(true, false);
       replication = getFileReplication();
@@ -695,6 +701,23 @@ public class INodeFile extends INodeWithAdditionalFields
         counts.addTypeSpace(t, ssDeltaNoReplication);
       }
     }
+    return counts;
+  }
+
+  /**
+   * Compute quota of striped file
+   * @param bsps
+   * @param counts
+   * @param useCache
+   * @param lastSnapshotId
+   * @return quota counts
+   */
+  public final QuotaCounts computeQuotaUsageWithStriped(
+      BlockStoragePolicySuite bsps, QuotaCounts counts) {
+    long nsDelta = 1;
+    final long ssDelta = storagespaceConsumed();
+    counts.addNameSpace(nsDelta);
+    counts.addStorageSpace(ssDelta);
     return counts;
   }
 
@@ -776,23 +799,37 @@ public class INodeFile extends INodeWithAdditionalFields
    * @return file size
    */
   public final long computeFileSize(boolean includesLastUcBlock,
-      boolean usePreferredBlockSize4LastUcBlock) {
-    if (blocks == null || blocks.length == 0) {
+                                    boolean usePreferredBlockSize4LastUcBlock) {
+    BlockInfo[] blockInfos = getBlocks();
+    // In case of contiguous blocks
+    if (blockInfos == null || blockInfos.length == 0) {
       return 0;
     }
-    final int last = blocks.length - 1;
+    final int last = blockInfos.length - 1;
     //check if the last block is BlockInfoUnderConstruction
-    long size = blocks[last].getNumBytes();
-    if (blocks[last] instanceof BlockInfoContiguousUnderConstruction) {
-       if (!includesLastUcBlock) {
-         size = 0;
-       } else if (usePreferredBlockSize4LastUcBlock) {
-         size = getPreferredBlockSize();
-       }
+    long size = blockInfos[last].getNumBytes();
+    if (blockInfos[last] instanceof BlockInfoContiguousUnderConstruction) {
+      if (!includesLastUcBlock) {
+        size = 0;
+      } else if (usePreferredBlockSize4LastUcBlock) {
+        size = getPreferredBlockSize();
+      }
+    } else if (blockInfos[last] instanceof BlockInfoStripedUnderConstruction) {
+      if (!includesLastUcBlock) {
+        size = 0;
+      } else if (usePreferredBlockSize4LastUcBlock) {
+        // Striped blocks keeps block group which counts
+        // (data blocks num + parity blocks num). When you
+        // count actual used size by BlockInfoStripedUC must
+        // be multiplied by these blocks number.
+        BlockInfoStripedUnderConstruction blockInfoStripedUC
+            = (BlockInfoStripedUnderConstruction) blockInfos[last];
+        size = getPreferredBlockSize() * blockInfoStripedUC.getTotalBlockNum();
+      }
     }
     //sum other blocks
-    for(int i = 0; i < last; i++) {
-      size += blocks[i].getNumBytes();
+    for (int i = 0; i < last; i++) {
+      size += blockInfos[i].getNumBytes();
     }
     return size;
   }
