@@ -37,9 +37,6 @@ Trunk (Unreleased)
 
     HADOOP-11565. Add --slaves shell option (aw)
 
-    HADOOP-9477. Add posixGroups support for LDAP groups mapping service.
-    (Dapeng Sun via Yongjun Zhang)
-
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
@@ -446,6 +443,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11226. Add a configuration to set ipc.Client's traffic class with
     IPTOS_LOWDELAY|IPTOS_RELIABILITY. (Gopal V via ozawa)
+
+    HADOOP-9477. Add posixGroups support for LDAP groups mapping service.
+    (Dapeng Sun via Yongjun Zhang)
 
   IMPROVEMENTS
 
