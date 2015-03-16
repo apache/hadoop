@@ -78,7 +78,7 @@ public class TestDockerContainerExecutor {
   private int id = 0;
   private String appSubmitter;
   private String dockerUrl;
-  private String testImage = "centos";
+  private String testImage = "centos:latest";
   private String dockerExec;
   private String containerIdStr;
 
