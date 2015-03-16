@@ -1157,6 +1157,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7915. The DataNode can sometimes allocate a ShortCircuitShm slot and
     fail to tell the DFSClient about it because of a network error (cmccabe)
 
+    HDFS-7886. Fix TestFileTruncate falures. (Plamen Jeliazkov and shv)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
