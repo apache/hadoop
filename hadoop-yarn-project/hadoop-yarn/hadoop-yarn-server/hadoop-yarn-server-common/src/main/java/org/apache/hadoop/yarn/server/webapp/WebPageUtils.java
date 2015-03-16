@@ -44,7 +44,7 @@ public class WebPageUtils {
     StringBuilder sb = new StringBuilder();
     return sb
       .append("[\n")
-      .append("{'sType':'numeric', 'aTargets': [0]")
+      .append("{'sType':'string', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }")
       .append("\n, {'sType':'numeric', 'aTargets': " +
           (isFairSchedulerPage ? "[6, 7]": "[5, 6]"))
@@ -63,7 +63,7 @@ public class WebPageUtils {
 
   private static String getAttemptsTableColumnDefs() {
     StringBuilder sb = new StringBuilder();
-    return sb.append("[\n").append("{'sType':'numeric', 'aTargets': [0]")
+    return sb.append("[\n").append("{'sType':'string', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }")
       .append("\n, {'sType':'numeric', 'aTargets': [1]")
       .append(", 'mRender': renderHadoopDate }]").toString();
@@ -79,7 +79,7 @@ public class WebPageUtils {
 
   private static String getContainersTableColumnDefs() {
     StringBuilder sb = new StringBuilder();
-    return sb.append("[\n").append("{'sType':'numeric', 'aTargets': [0]")
+    return sb.append("[\n").append("{'sType':'string', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }]").toString();
   }
 

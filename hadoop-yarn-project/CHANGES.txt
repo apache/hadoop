@@ -208,6 +208,9 @@ Release 2.6.1 - 2015-09-09
     YARN-1884. Added nodeHttpAddress into ContainerReport and fixed the link to NM
     web page. (Xuan Gong via zjshen)
 
+    YARN-3171. Sort by Application id, AppAttempt and ContainerID doesn't work
+    in ATS / RM web ui. (Naganarasimha G R via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
