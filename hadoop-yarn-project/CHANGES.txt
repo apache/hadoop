@@ -772,6 +772,9 @@ Release 2.7.0 - UNRELEASED
     YARN-1453. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in 
     doc comments. (Akira AJISAKA, Andrew Purtell, and Allen Wittenauer via ozawa)
 
+    YARN-3349. Treat all exceptions as failure in
+    TestFSRMStateStore#testFSRMStateStoreClientRetry. (Zhihai Xu via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
