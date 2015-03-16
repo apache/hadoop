@@ -766,6 +766,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3267. Timelineserver applies the ACL rules after applying the limit on
     the number of records (Chang Li via jeagles)
 
+    YARN-3171. Sort by Application id, AppAttempt and ContainerID doesn't work
+    in ATS / RM web ui. (Naganarasimha G R via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
