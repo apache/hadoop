@@ -253,6 +253,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4414. Add main methods to JobConf and YarnConfiguration,
+    for debug purposes. (Plamen Jeliazkov via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
