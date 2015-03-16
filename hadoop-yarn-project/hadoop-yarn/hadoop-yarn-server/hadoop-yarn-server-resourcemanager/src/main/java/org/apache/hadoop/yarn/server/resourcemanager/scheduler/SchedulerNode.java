@@ -114,7 +114,7 @@ public abstract class SchedulerNode {
 
   /**
    * Get the name of the node for scheduling matching decisions.
-   * <p/>
+   * <p>
    * Typically this is the 'hostname' reported by the node, but it could be
    * configured to be 'hostname:port' reported by the node via the
    * {@link YarnConfiguration#RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME} constant.

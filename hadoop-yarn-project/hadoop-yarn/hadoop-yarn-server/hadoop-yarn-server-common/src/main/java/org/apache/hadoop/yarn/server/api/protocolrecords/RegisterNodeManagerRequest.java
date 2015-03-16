@@ -52,7 +52,8 @@ public abstract class RegisterNodeManagerRequest {
    * We introduce this here because currently YARN RM doesn't persist nodes info
    * for application running. When RM restart happened, we cannot determinate if
    * a node should do application cleanup (like log-aggregation, status update,
-   * etc.) or not. <p/>
+   * etc.) or not.
+   * <p>
    * When we have this running application list in node manager register
    * request, we can recover nodes info for running applications. And then we
    * can take actions accordingly

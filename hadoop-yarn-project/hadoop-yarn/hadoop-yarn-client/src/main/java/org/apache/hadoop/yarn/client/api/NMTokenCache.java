@@ -34,26 +34,26 @@ import com.google.common.annotations.VisibleForTesting;
 /**
  * NMTokenCache manages NMTokens required for an Application Master
  * communicating with individual NodeManagers.
- * <p/>
+ * <p>
  * By default Yarn client libraries {@link AMRMClient} and {@link NMClient} use
  * {@link #getSingleton()} instance of the cache.
  * <ul>
- * <li>Using the singleton instance of the cache is appropriate when running a
- * single ApplicationMaster in the same JVM.</li>
- * <li>When using the singleton, users don't need to do anything special,
- * {@link AMRMClient} and {@link NMClient} are already set up to use the default
- * singleton {@link NMTokenCache}</li>
+ *   <li>
+ *     Using the singleton instance of the cache is appropriate when running a
+ *     single ApplicationMaster in the same JVM.
+ *   </li>
+ *   <li>
+ *     When using the singleton, users don't need to do anything special,
+ *     {@link AMRMClient} and {@link NMClient} are already set up to use the
+ *     default singleton {@link NMTokenCache}
+ *     </li>
  * </ul>
- * <p/>
  * If running multiple Application Masters in the same JVM, a different cache
  * instance should be used for each Application Master.
- * <p/>
  * <ul>
- * <li>
- * If using the {@link AMRMClient} and the {@link NMClient}, setting up and using
- * an instance cache is as follows:
- * <p/>
- * 
+ *   <li>
+ *     If using the {@link AMRMClient} and the {@link NMClient}, setting up
+ *     and using an instance cache is as follows:
  * <pre>
  *   NMTokenCache nmTokenCache = new NMTokenCache();
  *   AMRMClient rmClient = AMRMClient.createAMRMClient();
@@ -61,12 +61,10 @@ import com.google.common.annotations.VisibleForTesting;
  *   nmClient.setNMTokenCache(nmTokenCache);
  *   ...
  * </pre>
- * </li>
- * <li>
- * If using the {@link AMRMClientAsync} and the {@link NMClientAsync}, setting up
- * and using an instance cache is as follows:
- * <p/>
- * 
+ *   </li>
+ *   <li>
+ *     If using the {@link AMRMClientAsync} and the {@link NMClientAsync},
+ *     setting up and using an instance cache is as follows:
  * <pre>
  *   NMTokenCache nmTokenCache = new NMTokenCache();
  *   AMRMClient rmClient = AMRMClient.createAMRMClient();
@@ -76,13 +74,11 @@ import com.google.common.annotations.VisibleForTesting;
  *   NMClientAsync nmClientAsync = new NMClientAsync("nmClient", nmClient, [NM_CALLBACK]);
  *   ...
  * </pre>
- * </li>
- * <li>
- * If using {@link ApplicationMasterProtocol} and
- * {@link ContainerManagementProtocol} directly, setting up and using an
- * instance cache is as follows:
- * <p/>
- * 
+ *   </li>
+ *   <li>
+ *     If using {@link ApplicationMasterProtocol} and
+ *     {@link ContainerManagementProtocol} directly, setting up and using an
+ *     instance cache is as follows:
  * <pre>
  *   NMTokenCache nmTokenCache = new NMTokenCache();
  *   ...
@@ -100,12 +96,12 @@ import com.google.common.annotations.VisibleForTesting;
  *   nmPro.startContainer(container, containerContext);
  *   ...
  * </pre>
- * </li>
+ *   </li>
  * </ul>
- * It is also possible to mix the usage of a client (<code>AMRMClient</code> or
- * <code>NMClient</code>, or the async versions of them) with a protocol proxy (
- * <code>ContainerManagementProtocolProxy</code> or
- * <code>ApplicationMasterProtocol</code>).
+ * It is also possible to mix the usage of a client ({@code AMRMClient} or
+ * {@code NMClient}, or the async versions of them) with a protocol proxy
+ * ({@code ContainerManagementProtocolProxy} or
+ * {@code ApplicationMasterProtocol}).
  */
 @Public
 @Evolving

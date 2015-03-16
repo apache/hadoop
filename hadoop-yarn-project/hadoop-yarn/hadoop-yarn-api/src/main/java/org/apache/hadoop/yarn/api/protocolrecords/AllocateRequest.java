@@ -35,19 +35,18 @@ import org.apache.hadoop.yarn.util.Records;
  * <code>ResourceManager</code> to obtain resources in the cluster.</p> 
  *
  * <p>The request includes:
- *   <ul>
- *     <li>A response id to track duplicate responses.</li>
- *     <li>Progress information.</li>
- *     <li>
- *       A list of {@link ResourceRequest} to inform the 
- *       <code>ResourceManager</code> about the application's 
- *       resource requirements.
- *     </li>
- *     <li>
- *       A list of unused {@link Container} which are being returned. 
- *     </li>
- *   </ul>
- * </p>
+ * <ul>
+ *   <li>A response id to track duplicate responses.</li>
+ *   <li>Progress information.</li>
+ *   <li>
+ *     A list of {@link ResourceRequest} to inform the
+ *     <code>ResourceManager</code> about the application's
+ *     resource requirements.
+ *   </li>
+ *   <li>
+ *     A list of unused {@link Container} which are being returned.
+ *   </li>
+ * </ul>
  * 
  * @see ApplicationMasterProtocol#allocate(AllocateRequest)
  */

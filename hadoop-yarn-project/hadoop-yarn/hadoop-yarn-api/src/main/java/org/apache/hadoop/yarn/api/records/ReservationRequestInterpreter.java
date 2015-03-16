@@ -33,14 +33,13 @@ public enum ReservationRequestInterpreter {
    * Requires that exactly ONE among the {@link ReservationRequest} submitted as
    * of a {@link ReservationDefinition} is satisfied to satisfy the overall
    * {@link ReservationDefinition}.
-   * 
+   * <p>
    * WHEN TO USE THIS: This is useful when the user have multiple equivalent
    * ways to run an application, and wants to expose to the ReservationAgent
-   * such flexibility. For example an application could use one <32GB,16core>
-   * container for 10min, or 16 <2GB,1core> containers for 15min, the
-   * ReservationAgent will decide which one of the two it is best for the system
-   * to place.
-   * 
+   * such flexibility. For example an application could use one
+   * {@literal <32GB,16core>} container for 10min, or 16 {@literal <2GB,1core>}
+   * containers for 15min, the ReservationAgent will decide which one of the
+   * two it is best for the system to place.
    */
   R_ANY,
 
@@ -49,16 +48,16 @@ public enum ReservationRequestInterpreter {
    * {@link ReservationDefinition} are satisfied for the overall
    * {@link ReservationDefinition} to be satisfied. No constraints are imposed
    * on the temporal ordering of the allocation used to satisfy the
-   * ResourceRequeusts.
-   * 
+   * ResourceRequests.
+   * <p>
    * WHEN TO USE THIS: This is useful to capture a scenario in which the user
    * cares for multiple ReservationDefinition to be all accepted, or none. For
-   * example, a user might want a reservation R1: with 10 x <8GB,4core> for
-   * 10min, and a reservation R2: with 2 <1GB,1core> for 1h, and only if both
-   * are satisfied the workflow run in this reservation succeeds. The key
-   * differentiator from ALL and ORDER, ORDER_NO_GAP, is that ALL imposes no
-   * restrictions on the relative allocations used to place R1 and R2 above.
-   * 
+   * example, a user might want a reservation R1: with 10 x
+   * {@literal <8GB,4core>} for 10min, and a reservation R2:
+   * with 2 {@literal <1GB,1core>} for 1h, and only if both are satisfied
+   * the workflow run in this reservation succeeds. The key differentiator
+   * from ALL and ORDER, ORDER_NO_GAP, is that ALL imposes no restrictions
+   * on the relative allocations used to place R1 and R2 above.
    */
   R_ALL,
 
@@ -73,15 +72,16 @@ public enum ReservationRequestInterpreter {
    * constraints are imposed on temporal gaps between subsequent allocations
    * (the last instant of the previous allocation can be an arbitrary long
    * period of time before the first instant of the subsequent allocation).
-   * 
+   * <p>
    * WHEN TO USE THIS: Like ALL this requires all ReservationDefinitions to be
    * placed, but it also imposes a time ordering on the allocations used. This
    * is important if the ReservationDefinition(s) are used to describe a
    * workflow with inherent inter-stage dependencies. For example, a first job
-   * runs in a ReservaitonDefinition R1 (10 x <1GB,1core> for 20min), and its
-   * output is consumed by a second job described by a ReservationDefinition R2
-   * (5 x <1GB,1core>) for 50min). R2 allocation cannot overlap R1, as R2 models
-   * a job depending on the output of the job modeled by R1.
+   * runs in a ReservaitonDefinition R1 (10 x {@literal <1GB,1core>}
+   * for 20min), and its output is consumed by a second job described by
+   * a ReservationDefinition R2 (5 x {@literal <1GB,1core>}) for 50min).
+   * R2 allocation cannot overlap R1, as R2 models a job depending on
+   * the output of the job modeled by R1.
    */
   R_ORDER,
 

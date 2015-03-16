@@ -135,9 +135,6 @@ public interface ApplicationClientProtocol extends ApplicationBaseProtocol {
    * @return (empty) response on accepting the submission
    * @throws YarnException
    * @throws IOException
-   * @throws InvalidResourceRequestException
-   *           The exception is thrown when a {@link ResourceRequest} is out of
-   *           the range of the configured lower and upper resource boundaries.
    * @see #getNewApplication(GetNewApplicationRequest)
    */
   @Public

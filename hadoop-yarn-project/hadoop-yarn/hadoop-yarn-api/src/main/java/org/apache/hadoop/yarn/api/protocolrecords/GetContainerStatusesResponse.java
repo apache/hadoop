@@ -32,11 +32,9 @@ import org.apache.hadoop.yarn.api.records.SerializedException;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>
  * The response sent by the <code>NodeManager</code> to the
  * <code>ApplicationMaster</code> when asked to obtain the
  * <code>ContainerStatus</code> of requested containers.
- * </p>
  * 
  * @see ContainerManagementProtocol#getContainerStatuses(GetContainerStatusesRequest)
  */

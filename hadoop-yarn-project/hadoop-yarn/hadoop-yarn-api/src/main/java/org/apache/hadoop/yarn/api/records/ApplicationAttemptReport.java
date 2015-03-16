@@ -24,24 +24,19 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>
- * <code>ApplicationAttemptReport</code> is a report of an application attempt.
- * </p>
- * 
+ * {@code ApplicationAttemptReport} is a report of an application attempt.
  * <p>
  * It includes details such as:
  * <ul>
- * <li>{@link ApplicationAttemptId} of the application.</li>
- * <li>Host on which the <code>ApplicationMaster</code> of this attempt is
- * running.</li>
- * <li>RPC port of the <code>ApplicationMaster</code> of this attempt.</li>
- * <li>Tracking URL.</li>
- * <li>Diagnostic information in case of errors.</li>
- * <li>{@link YarnApplicationAttemptState} of the application attempt.</li>
- * <li>{@link ContainerId} of the master Container.</li>
+ *   <li>{@link ApplicationAttemptId} of the application.</li>
+ *   <li>Host on which the <code>ApplicationMaster</code> of this attempt is
+ *   running.</li>
+ *   <li>RPC port of the <code>ApplicationMaster</code> of this attempt.</li>
+ *   <li>Tracking URL.</li>
+ *   <li>Diagnostic information in case of errors.</li>
+ *   <li>{@link YarnApplicationAttemptState} of the application attempt.</li>
+ *   <li>{@link ContainerId} of the master Container.</li>
  * </ul>
- * </p>
- * 
  */
 @Public
 @Unstable

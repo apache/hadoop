@@ -349,7 +349,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * Set the NM token cache for the <code>AMRMClient</code>. This cache must
    * be shared with the {@link NMClient} used to manage containers for the
    * <code>AMRMClient</code>
-   * <p/>
+   * <p>
    * If a NM token cache is not set, the {@link NMTokenCache#getSingleton()}
    * singleton instance will be used.
    *
@@ -363,7 +363,7 @@ public abstract class AMRMClient<T extends AMRMClient.ContainerRequest> extends
    * Get the NM token cache of the <code>AMRMClient</code>. This cache must be
    * shared with the {@link NMClient} used to manage containers for the
    * <code>AMRMClient</code>.
-   * <p/>
+   * <p>
    * If a NM token cache is not set, the {@link NMTokenCache#getSingleton()}
    * singleton instance will be used.
    *

@@ -24,27 +24,22 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>
- * <code>ContainerReport</code> is a report of an container.
- * </p>
- * 
+ * {@code ContainerReport} is a report of an container.
  * <p>
  * It includes details such as:
  * <ul>
- * <li>{@link ContainerId} of the container.</li>
- * <li>Allocated Resources to the container.</li>
- * <li>Assigned Node id.</li>
- * <li>Assigned Priority.</li>
- * <li>Creation Time.</li>
- * <li>Finish Time.</li>
- * <li>Container Exit Status.</li>
- * <li>{@link ContainerState} of the container.</li>
- * <li>Diagnostic information in case of errors.</li>
- * <li>Log URL.</li>
- * <li>nodeHttpAddress</li>
+ *   <li>{@link ContainerId} of the container.</li>
+ *   <li>Allocated Resources to the container.</li>
+ *   <li>Assigned Node id.</li>
+ *   <li>Assigned Priority.</li>
+ *   <li>Creation Time.</li>
+ *   <li>Finish Time.</li>
+ *   <li>Container Exit Status.</li>
+ *   <li>{@link ContainerState} of the container.</li>
+ *   <li>Diagnostic information in case of errors.</li>
+ *   <li>Log URL.</li>
+ *   <li>nodeHttpAddress</li>
  * </ul>
- * </p>
- * 
  */
 
 @Public

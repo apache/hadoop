@@ -65,41 +65,31 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 public interface ApplicationBaseProtocol {
 
   /**
-   * <p>
    * The interface used by clients to get a report of an Application from the
    * <code>ResourceManager</code> or <code>ApplicationHistoryServer</code>.
-   * </p>
-   *
    * <p>
    * The client, via {@link GetApplicationReportRequest} provides the
    * {@link ApplicationId} of the application.
-   * </p>
-   *
    * <p>
    * In secure mode,the <code>ResourceManager</code> or
    * <code>ApplicationHistoryServer</code> verifies access to the application,
    * queue etc. before accepting the request.
-   * </p>
-   *
    * <p>
    * The <code>ResourceManager</code> or <code>ApplicationHistoryServer</code>
    * responds with a {@link GetApplicationReportResponse} which includes the
    * {@link ApplicationReport} for the application.
-   * </p>
-   *
    * <p>
    * If the user does not have <code>VIEW_APP</code> access then the following
    * fields in the report will be set to stubbed values:
    * <ul>
-   * <li>host - set to "N/A"</li>
-   * <li>RPC port - set to -1</li>
-   * <li>client token - set to "N/A"</li>
-   * <li>diagnostics - set to "N/A"</li>
-   * <li>tracking URL - set to "N/A"</li>
-   * <li>original tracking URL - set to "N/A"</li>
-   * <li>resource usage report - all values are -1</li>
+   *   <li>host - set to "N/A"</li>
+   *   <li>RPC port - set to -1</li>
+   *   <li>client token - set to "N/A"</li>
+   *   <li>diagnostics - set to "N/A"</li>
+   *   <li>tracking URL - set to "N/A"</li>
+   *   <li>original tracking URL - set to "N/A"</li>
+   *   <li>resource usage report - all values are -1</li>
    * </ul>
-   * </p>
    *
    * @param request
    *          request for an application report
@@ -148,40 +138,30 @@ public interface ApplicationBaseProtocol {
           IOException;
 
   /**
-   * <p>
    * The interface used by clients to get a report of an Application Attempt
    * from the <code>ResourceManager</code> or
    * <code>ApplicationHistoryServer</code>
-   * </p>
-   *
    * <p>
    * The client, via {@link GetApplicationAttemptReportRequest} provides the
    * {@link ApplicationAttemptId} of the application attempt.
-   * </p>
-   *
    * <p>
    * In secure mode,the <code>ResourceManager</code> or
    * <code>ApplicationHistoryServer</code> verifies access to the method before
    * accepting the request.
-   * </p>
-   *
    * <p>
    * The <code>ResourceManager</code> or <code>ApplicationHistoryServer</code>
    * responds with a {@link GetApplicationAttemptReportResponse} which includes
    * the {@link ApplicationAttemptReport} for the application attempt.
-   * </p>
-   *
    * <p>
    * If the user does not have <code>VIEW_APP</code> access then the following
    * fields in the report will be set to stubbed values:
    * <ul>
-   * <li>host</li>
-   * <li>RPC port</li>
-   * <li>client token</li>
-   * <li>diagnostics - set to "N/A"</li>
-   * <li>tracking URL</li>
+   *   <li>host</li>
+   *   <li>RPC port</li>
+   *   <li>client token</li>
+   *   <li>diagnostics - set to "N/A"</li>
+   *   <li>tracking URL</li>
    * </ul>
-   * </p>
    *
    * @param request
    *          request for an application attempt report

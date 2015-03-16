@@ -56,28 +56,22 @@ public abstract class AHSClient extends AbstractService {
   }
 
   /**
-   * <p>
    * Get a report of the given Application.
-   * </p>
-   * 
    * <p>
    * In secure mode, <code>YARN</code> verifies access to the application, queue
    * etc. before accepting the request.
-   * </p>
-   * 
    * <p>
    * If the user does not have <code>VIEW_APP</code> access then the following
    * fields in the report will be set to stubbed values:
    * <ul>
-   * <li>host - set to "N/A"</li>
-   * <li>RPC port - set to -1</li>
-   * <li>client token - set to "N/A"</li>
-   * <li>diagnostics - set to "N/A"</li>
-   * <li>tracking URL - set to "N/A"</li>
-   * <li>original tracking URL - set to "N/A"</li>
-   * <li>resource usage report - all values are -1</li>
+   *   <li>host - set to "N/A"</li>
+   *   <li>RPC port - set to -1</li>
+   *   <li>client token - set to "N/A"</li>
+   *   <li>diagnostics - set to "N/A"</li>
+   *   <li>tracking URL - set to "N/A"</li>
+   *   <li>original tracking URL - set to "N/A"</li>
+   *   <li>resource usage report - all values are -1</li>
    * </ul>
-   * </p>
    * 
    * @param appId
    *          {@link ApplicationId} of the application that needs a report
@@ -121,7 +115,7 @@ public abstract class AHSClient extends AbstractService {
    *          a report
    * @return application attempt report
    * @throws YarnException
-   * @throws {@link ApplicationAttemptNotFoundException} if application attempt
+   * @throws ApplicationAttemptNotFoundException if application attempt
    *         not found
    * @throws IOException
    */
@@ -157,7 +151,7 @@ public abstract class AHSClient extends AbstractService {
    *          {@link ContainerId} of the container that needs a report
    * @return container report
    * @throws YarnException
-   * @throws {@link ContainerNotFoundException} if container not found
+   * @throws ContainerNotFoundException if container not found
    * @throws IOException
    */
   public abstract ContainerReport getContainerReport(ContainerId containerId)

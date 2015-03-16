@@ -71,7 +71,7 @@ public class ComputeFairShares {
    * fair shares. The min and max shares and of the Schedulables are assumed to
    * be set beforehand. We compute the fairest possible allocation of shares to
    * the Schedulables that respects their min and max shares.
-   * 
+   * <p>
    * To understand what this method does, we must first define what weighted
    * fair sharing means in the presence of min and max shares. If there
    * were no minimum or maximum shares, then weighted fair sharing would be
@@ -79,30 +79,31 @@ public class ComputeFairShares {
    * Schedulable and all slots were assigned. Minimum and maximum shares add a
    * further twist - Some Schedulables may have a min share higher than their
    * assigned share or a max share lower than their assigned share.
-   * 
+   * <p>
    * To deal with these possibilities, we define an assignment of slots as being
    * fair if there exists a ratio R such that: Schedulables S where S.minShare
-   * > R * S.weight are given share S.minShare - Schedulables S where S.maxShare
-   * < R * S.weight are given S.maxShare - All other Schedulables S are
-   * assigned share R * S.weight - The sum of all the shares is totalSlots.
-   * 
+   * {@literal >} R * S.weight are given share S.minShare - Schedulables S
+   * where S.maxShare {@literal <} R * S.weight are given S.maxShare -
+   * All other Schedulables S are assigned share R * S.weight -
+   * The sum of all the shares is totalSlots.
+   * <p>
    * We call R the weight-to-slots ratio because it converts a Schedulable's
    * weight to the number of slots it is assigned.
-   * 
+   * <p>
    * We compute a fair allocation by finding a suitable weight-to-slot ratio R.
    * To do this, we use binary search. Given a ratio R, we compute the number of
    * slots that would be used in total with this ratio (the sum of the shares
    * computed using the conditions above). If this number of slots is less than
    * totalSlots, then R is too small and more slots could be assigned. If the
    * number of slots is more than totalSlots, then R is too large.
-   * 
+   * <p>
    * We begin the binary search with a lower bound on R of 0 (which means that
    * all Schedulables are only given their minShare) and an upper bound computed
    * to be large enough that too many slots are given (by doubling R until we
    * use more than totalResources resources). The helper method
    * resourceUsedWithWeightToResourceRatio computes the total resources used with a
    * given value of R.
-   * 
+   * <p>
    * The running time of this algorithm is linear in the number of Schedulables,
    * because resourceUsedWithWeightToResourceRatio is linear-time and the number of
    * iterations of binary search is a constant (dependent on desired precision).
