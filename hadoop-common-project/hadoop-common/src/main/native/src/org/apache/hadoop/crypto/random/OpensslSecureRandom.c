@@ -29,6 +29,10 @@
 #include <sys/types.h>
 #endif
 
+#if defined(__FreeBSD__)
+#include <pthread_np.h>
+#endif
+
 #ifdef WINDOWS
 #include <windows.h>
 #endif
@@ -274,7 +278,19 @@ static void pthreads_locking_callback(int mode, int type, char *file, int line)
 
 static unsigned long pthreads_thread_id(void)
 {
-  return (unsigned long)syscall(SYS_gettid);
+  unsigned long thread_id = 0;
+#if defined(__linux__)
+  thread_id = (unsigned long)syscall(SYS_gettid);
+#elif defined(__FreeBSD__)
+  thread_id = (unsigned long)pthread_getthreadid_np();
+#elif defined(__sun)
+  thread_id = (unsigned long)pthread_self();
+#elif defined(__APPLE__)
+  (void)pthread_threadid_np(pthread_self(), &thread_id);
+#else
+#error "Platform not supported"
+#endif
+  return thread_id;
 }
 
 #endif /* UNIX */
