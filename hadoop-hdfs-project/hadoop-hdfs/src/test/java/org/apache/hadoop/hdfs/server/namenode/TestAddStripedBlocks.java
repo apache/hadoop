@@ -265,9 +265,9 @@ public class TestAddStripedBlocks {
       ReplicaBeingWritten replica = new ReplicaBeingWritten(block, null, null,
           null);
       blocks.add(replica);
-      BlockListAsLongs bll = new BlockListAsLongs(null, blocks);
+      BlockListAsLongs bll = BlockListAsLongs.encode(blocks);
       StorageBlockReport[] reports = {new StorageBlockReport(storage,
-          bll.getBlockListAsLongs())};
+          bll)};
       cluster.getNameNodeRpc().blockReport(dn.getDNRegistrationForBP(bpId),
           bpId, reports);
     }

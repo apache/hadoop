@@ -511,8 +511,8 @@ public class DecommissionManager {
      */
     private void processBlocksForDecomInternal(
         final DatanodeDescriptor datanode,
-        final Iterator<BlockInfo> it,
-        final List<BlockInfo> insufficientlyReplicated,
+        final Iterator<? extends BlockInfo> it,
+        final List<BlockInfoContiguous> insufficientlyReplicated,
         boolean pruneSufficientlyReplicated) {
       boolean firstReplicationLog = true;
       int underReplicatedBlocks = 0;
