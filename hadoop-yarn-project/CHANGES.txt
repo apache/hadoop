@@ -58,6 +58,9 @@ Release 2.8.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    YARN-3339. TestDockerContainerExecutor should pull a single image and not
+    the entire centos repository. (Ravindra Kumar Naik via raviprak)
+
   BUG FIXES
 
 Release 2.7.0 - UNRELEASED
