@@ -449,6 +449,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-11692. Improve authentication failure WARN message to avoid user
+    confusion. (Yongjun Zhang)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -1087,9 +1090,6 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11686. MiniKDC cannot change ORG_NAME or ORG_DOMAIN.
     (Duo Zhang via wheat9)
-
-    HADOOP-11692. Improve authentication failure WARN message to avoid user
-    confusion. (Yongjun Zhang)
 
     HADOOP-11618. DelegateToFileSystem erroneously uses default FS's port in
     constructor. (Brahma Reddy Battula via gera)
