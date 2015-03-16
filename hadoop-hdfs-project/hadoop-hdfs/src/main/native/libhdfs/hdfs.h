@@ -396,6 +396,21 @@ extern  "C" {
                           int bufferSize, short replication, tSize blocksize);
 
     /**
+     * hdfsTruncateFile - Truncate a hdfs file to given lenght.
+     * @param fs The configured filesystem handle.
+     * @param path The full path to the file.
+     * @param newlength The size the file is to be truncated to
+     * @return 1 if the file has been truncated to the desired newlength 
+     *         and is immediately available to be reused for write operations 
+     *         such as append.
+     *         0 if a background process of adjusting the length of the last 
+     *         block has been started, and clients should wait for it to
+     *         complete before proceeding with further file updates.
+     *         -1 on error.
+     */
+    int hdfsTruncateFile(hdfsFS fs, const char* path, tOffset newlength);
+
+    /**
      * hdfsUnbufferFile - Reduce the buffering done on a file.
      *
      * @param file  The file to unbuffer.
