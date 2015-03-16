@@ -68,9 +68,6 @@ Trunk (Unreleased)
     HADOOP-7659. fs -getmerge isn't guaranteed to work well over non-HDFS
     filesystems (harsh)
 
-    HADOOP-8059. Add javadoc to InterfaceAudience and InterfaceStability.
-    (Brandon Li via suresh)
-
     HADOOP-8434. Add tests for Configuration setter methods.
     (Madhukara Phatak via suresh)
 
@@ -693,6 +690,9 @@ Release 2.7.0 - UNRELEASED
     (Shashank Khandelwal and Ivan Mitic via cnauroth)
 
     HADOOP-11714. Add more trace log4j messages to SpanReceiverHost (cmccabe)
+
+    HADOOP-8059. Add javadoc to InterfaceAudience and InterfaceStability.
+    (Brandon Li via suresh)
 
   OPTIMIZATIONS
 
