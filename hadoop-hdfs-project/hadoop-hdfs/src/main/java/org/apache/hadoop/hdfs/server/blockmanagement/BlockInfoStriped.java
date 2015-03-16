@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 
 /**
@@ -34,6 +35,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
  * array to record the block index for each triplet.
  */
 public class BlockInfoStriped extends BlockInfo {
+  private final int   chunkSize = HdfsConstants.BLOCK_STRIPED_CHUNK_SIZE;
   private final short dataBlockNum;
   private final short parityBlockNum;
   /**
@@ -56,7 +58,7 @@ public class BlockInfoStriped extends BlockInfo {
     this.setBlockCollection(b.getBlockCollection());
   }
 
-  short getTotalBlockNum() {
+  public short getTotalBlockNum() {
     return (short) (dataBlockNum + parityBlockNum);
   }
 
@@ -176,6 +178,14 @@ public class BlockInfoStriped extends BlockInfo {
         storage.insertToList(newBlockGroup);
       }
     }
+  }
+
+  public long spaceConsumed() {
+    // In case striped blocks, total usage by this striped blocks should
+    // be the total of data blocks and parity blocks because
+    // `getNumBytes` is the total of actual data block size.
+    return ((getNumBytes() - 1) / (dataBlockNum * chunkSize) + 1)
+        * chunkSize * parityBlockNum + getNumBytes();
   }
 
   @Override
