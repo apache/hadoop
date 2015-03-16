@@ -100,11 +100,11 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
           workingDirPathURI.toString());
       conf.set(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
         "100,6000");
-      conf.setInt(YarnConfiguration.FS_RM_STATE_STORE_NUM_RETRIES, 5);
+      conf.setInt(YarnConfiguration.FS_RM_STATE_STORE_NUM_RETRIES, 8);
       conf.setLong(YarnConfiguration.FS_RM_STATE_STORE_RETRY_INTERVAL_MS,
           900L);
       this.store = new TestFileSystemRMStore(conf);
-      Assert.assertEquals(store.getNumRetries(), 5);
+      Assert.assertEquals(store.getNumRetries(), 8);
       Assert.assertEquals(store.getRetryInterval(), 900L);
       return store;
     }
@@ -277,12 +277,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
                 ApplicationStateData.newInstance(111, 111, "user", null,
                     RMAppState.ACCEPTED, "diagnostics", 333));
           } catch (Exception e) {
-            // TODO 0 datanode exception will not be retried by dfs client, fix
-            // that separately.
-            if (!e.getMessage().contains("could only be replicated" +
-                " to 0 nodes instead of minReplication (=1)")) {
-              assertionFailedInThread.set(true);
-            }
+            assertionFailedInThread.set(true);
             e.printStackTrace();
           }
         }
