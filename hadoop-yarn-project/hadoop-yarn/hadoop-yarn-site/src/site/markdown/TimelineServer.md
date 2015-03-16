@@ -43,7 +43,7 @@ Overview
 
 ### Current Status
 
-  Current version of Timeline sever has been completed. Essential functionality of the timeline server can work in both secure and non secure modes. The generic history service is also ridden on the timeline store. In subsequent releases we will be rolling out next generation timeline service which is scalable and reliable. Finally, the Application specific information is only available via RESTful APIs, using JSON type content - ability to install framework specific UIs in YARN isn't supported yet.
+  The essential functionality of the timeline server have been completed and it can work in both secure and non secure modes. The generic history service is also built on timeline store. In subsequent releases we will be rolling out next generation timeline service which is scalable and reliable. Currently, Application specific information is only available via RESTful APIs using JSON type content. The ability to install framework specific UIs in YARN is not supported yet.
 
 ### Timeline Structure
 
@@ -72,7 +72,7 @@ Deployment
 |:---- |:---- |
 | `yarn.timeline-service.enabled` | Indicate to clients whether Timeline service is enabled or not. If enabled, the TimelineClient library used by end-users will post entities and events to the Timeline server. Defaults to false. |
 | `yarn.resourcemanager.system-metrics-publisher.enabled` | The setting that controls whether yarn system metrics is published on the timeline server or not by RM. Defaults to false. |
-| `yarn.timeline-service.generic-application-history.enabled` | Indicate to clients whether to query generic application data from timeline history-service. If not enabled then application data is only queried from Resource Manager. Defaults to false. |
+| `yarn.timeline-service.generic-application-history.enabled` | Indicate to clients whether to query generic application data from timeline history-service or not. If not enabled then application data is queried only from Resource Manager. Defaults to false. |
 
 #### Advanced configuration
 
@@ -141,16 +141,16 @@ Deployment
 </property>
 
 <property>
-    <description>The setting that controls whether yarn system metrics is
-    published on the timeline server or not by RM.</description>
-    <name>yarn.resourcemanager.system-metrics-publisher.enabled</name>
-    <value>true</value>
+  <description>The setting that controls whether yarn system metrics is
+  published on the timeline server or not by RM.</description>
+  <name>yarn.resourcemanager.system-metrics-publisher.enabled</name>
+  <value>true</value>
 </property>
 
 <property>
-  <description>Indicate to clients whether to query generic application data from
-  timeline history-service. If not enabled then application data is only queried 
-  from Resource Manager</description>
+  <description>Indicate to clients whether to query generic application
+  data from timeline history-service or not. If not enabled then application
+  data is queried only from Resource Manager.</description>
   <name>yarn.timeline-service.generic-application-history.enabled</name>
   <value>true</value>
 </property>
@@ -167,7 +167,7 @@ Deployment
   Or users can start the Timeline server / history service as a daemon:
 
 ```
-  $ yarn --daemon start timelineserver
+  $ $HADOOP_YARN_HOME/sbin/yarn-daemon.sh start timelineserver
 ```
 
 ### Accessing generic-data via command-line
