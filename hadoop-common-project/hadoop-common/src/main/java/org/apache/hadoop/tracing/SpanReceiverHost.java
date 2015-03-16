@@ -134,20 +134,27 @@ public class SpanReceiverHost implements TraceAdminProtocol {
     String[] receiverNames =
         config.getTrimmedStrings(SPAN_RECEIVERS_CONF_KEY);
     if (receiverNames == null || receiverNames.length == 0) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("No span receiver names found in " +
+                  SPAN_RECEIVERS_CONF_KEY + ".");
+      }
       return;
     }
     // It's convenient to have each daemon log to a random trace file when
     // testing.
     if (config.get(LOCAL_FILE_SPAN_RECEIVER_PATH) == null) {
-      config.set(LOCAL_FILE_SPAN_RECEIVER_PATH,
-          getUniqueLocalTraceFileName());
+      String uniqueFile = getUniqueLocalTraceFileName();
+      config.set(LOCAL_FILE_SPAN_RECEIVER_PATH, uniqueFile);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Set " + LOCAL_FILE_SPAN_RECEIVER_PATH + " to " +  uniqueFile);
+      }
     }
     for (String className : receiverNames) {
       try {
         SpanReceiver rcvr = loadInstance(className, EMPTY);
         Trace.addReceiver(rcvr);
         receivers.put(highestId++, rcvr);
-        LOG.info("SpanReceiver " + className + " was loaded successfully.");
+        LOG.info("Loaded SpanReceiver " + className + " successfully.");
       } catch (IOException e) {
         LOG.error("Failed to load SpanReceiver", e);
       }
