@@ -191,8 +191,9 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     this.memToMemMergeOutputsThreshold = 
             jobConf.getInt(MRJobConfig.REDUCE_MEMTOMEM_THRESHOLD, ioSortFactor);
     this.mergeThreshold = (long)(this.memoryLimit * 
-                          jobConf.getFloat(MRJobConfig.SHUFFLE_MERGE_PERCENT, 
-                                           0.90f));
+                          jobConf.getFloat(
+                            MRJobConfig.SHUFFLE_MERGE_PERCENT,
+                            MRJobConfig.DEFAULT_SHUFFLE_MERGE_PERCENT));
     LOG.info("MergerManager: memoryLimit=" + memoryLimit + ", " +
              "maxSingleShuffleLimit=" + maxSingleShuffleLimit + ", " +
              "mergeThreshold=" + mergeThreshold + ", " + 

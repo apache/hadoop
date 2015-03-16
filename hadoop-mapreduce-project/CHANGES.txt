@@ -253,6 +253,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-6105. Inconsistent configuration in property
+    mapreduce.reduce.shuffle.merge.percent. (Ray Chiang via harsh)
+
     MAPREDUCE-4414. Add main methods to JobConf and YarnConfiguration,
     for debug purposes. (Plamen Jeliazkov via harsh)
 
