@@ -756,6 +756,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-2605. Remove redundant "Release 0.21.1" section from CHANGES.txt.
     (Allen Wittenauer via shv)
 
+    HDFS-7940. Add tracing to DFSClient#setQuotaByStorageType (Rakesh R via
+    Colin P. McCabe)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
