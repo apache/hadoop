@@ -390,7 +390,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             + " for application " + submissionContext.getApplicationId(), e);
         throw e;
       }
-      
+      SchedulerUtils.normalizeRequest(amReq, scheduler.getResourceCalculator(),
+          scheduler.getClusterResource(),
+          scheduler.getMinimumResourceCapability(),
+          scheduler.getMaximumResourceCapability(),
+          scheduler.getMinimumResourceCapability());
       return amReq;
     }
     
