@@ -383,7 +383,7 @@ class JobSubmitter {
   throws IOException {
     // add tokens and secrets coming from a token storage file
     String binaryTokenFilename =
-      conf.get("mapreduce.job.credentials.binary");
+      conf.get(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY);
     if (binaryTokenFilename != null) {
       Credentials binary = Credentials.readTokenStorageFile(
           FileSystem.getLocal(conf).makeQualified(
