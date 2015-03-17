@@ -41,8 +41,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 public class DfsTask extends Task {
 
   /**
-   * Default sink for {@link java.lang.System.out System.out}
-   * and {@link java.lang.System.err System.err}.
+   * Default sink for {@link java.lang.System#out}
+   * and {@link java.lang.System#err}.
    */
   private static final OutputStream nullOut = new OutputStream() {
       public void write(int b)    { /* ignore */ }
@@ -171,7 +171,7 @@ public class DfsTask extends Task {
   }
 
   /**
-   * Invoke {@link org.apache.hadoop.fs.FsShell#doMain FsShell.doMain} after a
+   * Invoke {@link org.apache.hadoop.fs.FsShell#main} after a
    * few cursory checks of the configuration.
    */
   public void execute() throws BuildException {

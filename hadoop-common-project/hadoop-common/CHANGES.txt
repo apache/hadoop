@@ -1108,6 +1108,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11638. OpensslSecureRandom.c pthreads_thread_id should support FreeBSD
     and Solaris in addition to Linux. (Kiran Kumar M R via cnauroth)
 
+    HADOOP-11720. [JDK8] Fix javadoc errors caused by incorrect or illegal
+    tags in hadoop-tools. (Akira AJISAKA via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
