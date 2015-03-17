@@ -30,8 +30,6 @@ import java.util.Set;
 
 import org.junit.Test;
 
-import com.sun.tools.javac.code.Attribute.Array;
-
 public class TestRandomAlgorithm {
   private static final int[][] parameters = new int[][] {
     {5, 1, 1}, 

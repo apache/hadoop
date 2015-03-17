@@ -253,6 +253,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4653. TestRandomAlgorithm has an unused "import" statement.
+    (Amir Sanjar via harsh)
+
     MAPREDUCE-6100. replace "mapreduce.job.credentials.binary" with
     MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY for better readability.
     (Zhihai Xu via harsh)
