@@ -2799,10 +2799,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     for (BlockInfo b : blocks.getToDeleteList()) {
       if (trackBlockCounts) {
-        BlockInfo bi = getStoredBlock(b);
-        if (bi.isComplete()) {
+        if (b.isComplete()) {
           numRemovedComplete++;
-          if (blockManager.checkMinStorage(bi, bi.numNodes())) {
+          if (blockManager.checkMinStorage(b, b.numNodes())) {
             numRemovedSafe++;
           }
         }

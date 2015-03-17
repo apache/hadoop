@@ -2967,13 +2967,13 @@ public class BlockManager implements BlockStatsMXBean {
   
   /** Set replication for the blocks. */
   public void setReplication(final short oldRepl, final short newRepl,
-      final String src, final BlockInfo... blocks) {
+      final String src, final BlockInfoContiguous... blocks) {
     if (newRepl == oldRepl) {
       return;
     }
 
     // update needReplication priority queues
-    for(BlockInfo b : blocks) {
+    for(BlockInfoContiguous b : blocks) {
       updateNeededReplications(b, 0, newRepl-oldRepl);
     }
       
@@ -2981,7 +2981,7 @@ public class BlockManager implements BlockStatsMXBean {
       // old replication > the new one; need to remove copies
       LOG.info("Decreasing replication from " + oldRepl + " to " + newRepl
           + " for " + src);
-      for(BlockInfo b : blocks) {
+      for(BlockInfoContiguous b : blocks) {
         processOverReplicatedBlock(b, newRepl, null, null);
       }
     } else { // replication factor is increased
@@ -3267,10 +3267,7 @@ public class BlockManager implements BlockStatsMXBean {
     //
     // Modify the blocks->datanode map and node's map.
     //
-    BlockInfo storedBlock = getStoredBlock(block);
-    if (storedBlock != null) {
-      pendingReplications.decrement(getStoredBlock(block), node);
-    }
+    pendingReplications.decrement(getStoredBlock(block), node);
     processAndHandleReportedBlock(storageInfo, block, ReplicaState.FINALIZED,
         delHintNode);
   }
