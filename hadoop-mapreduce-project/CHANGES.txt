@@ -263,6 +263,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-4414. Add main methods to JobConf and YarnConfiguration,
     for debug purposes. (Plamen Jeliazkov via harsh)
 
+    MAPREDUCE-5755. MapTask.MapOutputBuffer#compare/swap should have
+    @Override annotation. (ozawa)
+
   OPTIMIZATIONS
 
   BUG FIXES
