@@ -79,7 +79,7 @@ public final class CopyListingFileStatus extends FileStatus {
   /**
    * Returns the full logical ACL.
    *
-   * @return List<AclEntry> containing full logical ACL
+   * @return List containing full logical ACL
    */
   public List<AclEntry> getAclEntries() {
     return AclUtil.getAclFromPermAndEntries(getPermission(),
@@ -89,7 +89,7 @@ public final class CopyListingFileStatus extends FileStatus {
   /**
    * Sets optional ACL entries.
    *
-   * @param aclEntries List<AclEntry> containing all ACL entries
+   * @param aclEntries List containing all ACL entries
    */
   public void setAclEntries(List<AclEntry> aclEntries) {
     this.aclEntries = aclEntries;
@@ -98,7 +98,7 @@ public final class CopyListingFileStatus extends FileStatus {
   /**
    * Returns all xAttrs.
    * 
-   * @return Map<String, byte[]> containing all xAttrs
+   * @return Map containing all xAttrs
    */
   public Map<String, byte[]> getXAttrs() {
     return xAttrs != null ? xAttrs : Collections.<String, byte[]>emptyMap();
@@ -107,7 +107,7 @@ public final class CopyListingFileStatus extends FileStatus {
   /**
    * Sets optional xAttrs.
    * 
-   * @param xAttrs Map<String, byte[]> containing all xAttrs
+   * @param xAttrs Map containing all xAttrs
    */
   public void setXAttrs(Map<String, byte[]> xAttrs) {
     this.xAttrs = xAttrs;
