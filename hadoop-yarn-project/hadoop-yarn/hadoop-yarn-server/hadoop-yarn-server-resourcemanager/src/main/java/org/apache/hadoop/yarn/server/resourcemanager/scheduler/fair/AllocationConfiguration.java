@@ -33,9 +33,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import javax.annotation.concurrent.ThreadSafe;
-
-@ThreadSafe
 public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   private static final AccessControlList EVERYBODY_ACL = new AccessControlList("*");
   private static final AccessControlList NOBODY_ACL = new AccessControlList(" ");
@@ -207,16 +204,12 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   }
 
   public ResourceWeights getQueueWeight(String queue) {
-    synchronized (queueWeights) {
-      ResourceWeights weight = queueWeights.get(queue);
-      return (weight == null) ? ResourceWeights.NEUTRAL : weight;
-    }
+    ResourceWeights weight = queueWeights.get(queue);
+    return (weight == null) ? ResourceWeights.NEUTRAL : weight;
   }
 
   public void setQueueWeight(String queue, ResourceWeights weight) {
-    synchronized (queueWeights) {
-      queueWeights.put(queue, weight);
-    }
+    queueWeights.put(queue, weight);
   }
   
   public int getUserMaxApps(String user) {
