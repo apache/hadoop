@@ -675,7 +675,7 @@ public class TestFileCreation {
 
       // restart cluster with the same namenode port as before.
       // This ensures that leases are persisted in fsimage.
-      cluster.shutdown();
+      cluster.shutdown(false, false);
       try {
         Thread.sleep(2*MAX_IDLE_TIME);
       } catch (InterruptedException e) {
@@ -687,7 +687,7 @@ public class TestFileCreation {
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
-      cluster.shutdown();
+      cluster.shutdown(false, false);
       try {
         Thread.sleep(5000);
       } catch (InterruptedException e) {

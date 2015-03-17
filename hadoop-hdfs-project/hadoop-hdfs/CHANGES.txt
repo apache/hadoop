@@ -14,6 +14,9 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-5356. MiniDFSCluster should close all open FileSystems when shutdown()
+    (Rakesh R via vinayakumarb)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -519,8 +519,8 @@ public class TestRenameWithSnapshots {
     File fsnAfter = new File(testDir, "dumptree_after");
     
     SnapshotTestHelper.dumpTree2File(fsdir, fsnBefore);
-    
-    cluster.shutdown();
+
+    cluster.shutdown(false, false);
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(REPL).build();
     cluster.waitActive();
