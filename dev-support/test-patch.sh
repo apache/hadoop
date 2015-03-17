@@ -292,6 +292,10 @@ prebuildWithoutPatch () {
     cd -
   fi
   echo "Compiling $(pwd)"
+  if [[ -d "$(pwd)"/hadoop-hdfs-project/hadoop-hdfs/target/test/data/dfs ]]; then
+    echo "Changing permission $(pwd)/hadoop-hdfs-project/hadoop-hdfs/target/test/data/dfs to avoid broken builds "
+    chmod +x -R "$(pwd)/hadoop-hdfs-project/hadoop-hdfs/target/test/data/dfs"
+  fi
   echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
   $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
