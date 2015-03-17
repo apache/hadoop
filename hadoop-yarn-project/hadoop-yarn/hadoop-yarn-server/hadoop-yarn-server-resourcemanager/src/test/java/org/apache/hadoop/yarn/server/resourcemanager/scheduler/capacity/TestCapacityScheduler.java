@@ -2543,6 +2543,33 @@ public class TestCapacityScheduler {
         + "queue-a's max capacity will be violated if container allocated");
   }
 
+  // Test verifies AM Used resource for LeafQueue when AM ResourceRequest is
+  // lesser than minimumAllocation
+  @Test(timeout = 30000)
+  public void testAMUsedResource() throws Exception {
+    MockRM rm = setUpMove();
+    Configuration conf = rm.getConfig();
+    int minAllocMb =
+        conf.getInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
+    int amMemory = 50;
+    assertTrue("AM memory is greater than or equql to minAllocation",
+        amMemory < minAllocMb);
+    Resource minAllocResource = Resource.newInstance(minAllocMb, 1);
+    String queueName = "a1";
+    RMApp rmApp = rm.submitApp(amMemory, "app-1", "user_0", null, queueName);
+       
+    assertEquals("RMApp does not containes minimum allocation",
+        minAllocResource, rmApp.getAMResourceRequest().getCapability());
+    
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    LeafQueue queueA =
+        (LeafQueue) ((CapacityScheduler) scheduler).getQueue(queueName);
+    assertEquals("Minimum Resource for AM is incorrect", minAllocResource,
+        queueA.getUser("user_0").getResourceUsage().getAMUsed());
+    rm.stop();
+  }
+
   private void setMaxAllocMb(Configuration conf, int maxAllocMb) {
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         maxAllocMb);
