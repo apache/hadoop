@@ -3088,6 +3088,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throw new IllegalArgumentException("Don't support Quota for storage type : "
         + type.toString());
     }
+    TraceScope scope = getPathTraceScope("setQuotaByStorageType", src);
     try {
       namenode.setQuota(src, HdfsConstants.QUOTA_DONT_SET, quota, type);
     } catch (RemoteException re) {
@@ -3096,6 +3097,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         QuotaByStorageTypeExceededException.class,
         UnresolvedPathException.class,
         SnapshotAccessControlException.class);
+    } finally {
+      scope.close();
     }
   }
   /**
