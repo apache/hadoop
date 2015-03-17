@@ -48,7 +48,7 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 
 /**
  * Tests the use of the
- * {@link org.apache.hadoop.mapreduce.filecache.DistributedCache} within the
+ * {@link org.apache.hadoop.filecache.DistributedCache} within the
  * full MR flow as well as the LocalJobRunner. This ought to be part of the
  * filecache package, but that package is not currently in mapred, so cannot
  * depend on MR for testing.
