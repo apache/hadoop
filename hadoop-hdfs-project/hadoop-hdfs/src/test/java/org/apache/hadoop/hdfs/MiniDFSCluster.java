@@ -60,6 +60,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -118,6 +119,7 @@ import org.apache.hadoop.util.ToolRunner;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -523,7 +525,8 @@ public class MiniDFSCluster {
   private boolean federation;
   private boolean checkExitOnShutdown = true;
   protected final int storagesPerDatanode;
-  
+  private Set<FileSystem> fileSystems = Sets.newHashSet();
+
   /**
    * A unique instance identifier for the cluster. This
    * is used to disambiguate HA filesystems in the case where
@@ -1705,6 +1708,13 @@ public class MiniDFSCluster {
    * Shutdown all the nodes in the cluster.
    */
   public void shutdown(boolean deleteDfsDir) {
+    shutdown(deleteDfsDir, true);
+  }
+
+  /**
+   * Shutdown all the nodes in the cluster.
+   */
+  public void shutdown(boolean deleteDfsDir, boolean closeFileSystem) {
     LOG.info("Shutting down the Mini HDFS Cluster");
     if (checkExitOnShutdown)  {
       if (ExitUtil.terminateCalled()) {
@@ -1713,6 +1723,16 @@ public class MiniDFSCluster {
         ExitUtil.resetFirstExitException();
         throw new AssertionError("Test resulted in an unexpected exit");
       }
+    }
+    if (closeFileSystem) {
+      for (FileSystem fs : fileSystems) {
+        try {
+          fs.close();
+        } catch (IOException ioe) {
+          LOG.warn("Exception while closing file system", ioe);
+        }
+      }
+      fileSystems.clear();
     }
     shutdownDataNodes();
     for (NameNodeInfo nnInfo : nameNodes) {
@@ -2144,8 +2164,10 @@ public class MiniDFSCluster {
    * Get a client handle to the DFS cluster for the namenode at given index.
    */
   public DistributedFileSystem getFileSystem(int nnIndex) throws IOException {
-    return (DistributedFileSystem)FileSystem.get(getURI(nnIndex),
-        nameNodes[nnIndex].conf);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(
+        getURI(nnIndex), nameNodes[nnIndex].conf);
+    fileSystems.add(dfs);
+    return dfs;
   }
 
   /**
@@ -2153,7 +2175,9 @@ public class MiniDFSCluster {
    * This simulating different threads working on different FileSystem instances.
    */
   public FileSystem getNewFileSystemInstance(int nnIndex) throws IOException {
-    return FileSystem.newInstance(getURI(nnIndex), nameNodes[nnIndex].conf);
+    FileSystem dfs = FileSystem.newInstance(getURI(nnIndex), nameNodes[nnIndex].conf);
+    fileSystems.add(dfs);
+    return dfs;
   }
   
   /**
