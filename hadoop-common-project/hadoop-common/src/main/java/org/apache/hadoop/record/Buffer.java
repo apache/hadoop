@@ -25,10 +25,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A byte sequence that is used as a Java native type for buffer.
- * It is resizable and distinguishes between the count of the seqeunce and
+ * It is resizable and distinguishes between the count of the sequence and
  * the current capacity.
  * 
- * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
+ * @deprecated Replaced by <a href="http://avro.apache.org/">Avro</a>.
  */
 @Deprecated
 @InterfaceAudience.Public
@@ -124,7 +124,7 @@ public class Buffer implements Comparable, Cloneable {
   
   /**
    * Change the capacity of the backing storage.
-   * The data is preserved if newCapacity >= getCount().
+   * The data is preserved if newCapacity {@literal >=} getCount().
    * @param newCapacity The new capacity in bytes.
    */
   public void setCapacity(int newCapacity) {
@@ -162,7 +162,7 @@ public class Buffer implements Comparable, Cloneable {
   public void truncate() {
     setCapacity(count);
   }
-  
+
   /**
    * Append specified bytes to the buffer.
    *
