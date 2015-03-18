@@ -58,7 +58,6 @@ public abstract class TimelineClient extends AbstractService implements
    * @return a timeline client
    */
   protected ApplicationId contextAppId;
-  protected String timelineServiceAddress;
 
   @Public
   public static TimelineClient createTimelineClient() {
@@ -242,7 +241,6 @@ public abstract class TimelineClient extends AbstractService implements
    * @param address
    *          the timeline service address
    */
-  public void setTimelineServiceAddress(String address) {
-    timelineServiceAddress = address;
-  }
+  public abstract void setTimelineServiceAddress(String address);
+  
 }

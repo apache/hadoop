@@ -965,6 +965,12 @@
     <name>yarn.nodemanager.container-manager.thread-count</name>
     <value>20</value>
   </property>
+  
+    <property>
+    <description>Number of threads aggregator service uses.</description>
+    <name>yarn.nodemanager.aggregator-service.thread-count</name>
+    <value>5</value>
+  </property>
 
   <property>
     <description>Number of threads used in cleanup.</description>
@@ -1039,6 +1045,13 @@
     <description>Address where the localizer IPC is.</description>
     <name>yarn.nodemanager.localizer.address</name>
     <value>${yarn.nodemanager.hostname}:8040</value>
+  </property>
+  
+  
+  <property>
+    <description>Address where the aggregator service IPC is.</description>
+    <name>yarn.nodemanager.aggregator-service.address</name>
+    <value>${yarn.nodemanager.hostname}:8048</value>
   </property>
 
   <property>
