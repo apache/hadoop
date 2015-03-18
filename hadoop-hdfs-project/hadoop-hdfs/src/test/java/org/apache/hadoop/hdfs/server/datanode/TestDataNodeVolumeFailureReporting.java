@@ -91,6 +91,7 @@ public class TestDataNodeVolumeFailureReporting {
     // been simulated by denying execute access.  This is based on the maximum
     // number of datanodes and the maximum number of storages per data node used
     // throughout the tests in this suite.
+    assumeTrue(!Path.WINDOWS);
     int maxDataNodes = 3;
     int maxStoragesPerDataNode = 4;
     for (int i = 0; i < maxDataNodes; i++) {
@@ -100,7 +101,9 @@ public class TestDataNodeVolumeFailureReporting {
       }
     }
     IOUtils.cleanup(LOG, fs);
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+    }
   }
 
   /**
