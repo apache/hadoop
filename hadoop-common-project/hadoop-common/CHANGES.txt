@@ -1111,6 +1111,10 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11720. [JDK8] Fix javadoc errors caused by incorrect or illegal
     tags in hadoop-tools. (Akira AJISAKA via ozawa)
 
+    HADOOP-11722. Some Instances of Services using
+    ZKDelegationTokenSecretManager go down when old token cannot be deleted.
+    (Arun Suresh via atm)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
