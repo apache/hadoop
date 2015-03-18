@@ -618,6 +618,16 @@ public abstract class BaseAMRMProxyTest {
     }
 
     @Override
+    public Map<ApplicationId, String> getRegisteredAggregators() {
+      return null;
+    }
+
+    @Override
+    public Map<ApplicationId, String> getKnownAggregators() {
+      return null;
+    }
+
+    @Override
     public ConcurrentMap<ContainerId, Container> getContainers() {
       return null;
     }

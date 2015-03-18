@@ -813,6 +813,11 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "container-manager.thread-count";
   public static final int DEFAULT_NM_CONTAINER_MGR_THREAD_COUNT = 20;
   
+  /** Number of threads container manager uses.*/
+  public static final String NM_AGGREGATOR_SERVICE_THREAD_COUNT =
+    NM_PREFIX + "aggregator-service.thread-count";
+  public static final int DEFAULT_NM_AGGREGATOR_SERVICE_THREAD_COUNT = 5;
+  
   /** Number of threads used in cleanup.*/
   public static final String NM_DELETE_THREAD_COUNT = 
     NM_PREFIX +  "delete.thread-count";
@@ -839,6 +844,13 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_LOCALIZER_PORT = 8040;
   public static final String DEFAULT_NM_LOCALIZER_ADDRESS = "0.0.0.0:" +
     DEFAULT_NM_LOCALIZER_PORT;
+  
+  /** Address where the aggregator service IPC is.*/
+  public static final String NM_AGGREGATOR_SERVICE_ADDRESS =
+    NM_PREFIX + "aggregator-service.address";
+  public static final int DEFAULT_NM_AGGREGATOR_SERVICE_PORT = 8048;
+  public static final String DEFAULT_NM_AGGREGATOR_SERVICE_ADDRESS = 
+      "0.0.0.0:" + DEFAULT_NM_LOCALIZER_PORT;
   
   /** Interval in between cache cleanups.*/
   public static final String NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS =

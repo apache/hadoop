@@ -118,6 +118,15 @@ public class TimelineClientImpl extends TimelineClient {
   private float timelineServiceVersion;
   private TimelineWriter timelineWriter;
 
+  private volatile String timelineServiceAddress;
+  
+  // Retry parameters for identifying new timeline service
+  // TODO consider to merge with connection retry
+  private int maxServiceRetries;
+  private long serviceRetryInterval;
+  
+  private boolean timelineServiceV2 = false;
+
   @Private
   @VisibleForTesting
   TimelineClientConnectionRetry connectionRetry;
@@ -264,6 +273,7 @@ public class TimelineClientImpl extends TimelineClient {
 
   public TimelineClientImpl(ApplicationId applicationId) {
     super(TimelineClientImpl.class.getName(), applicationId);
+    this.timelineServiceV2 = true;
   }
 
   protected void serviceInit(Configuration conf) throws Exception {
@@ -292,22 +302,35 @@ public class TimelineClientImpl extends TimelineClient {
     client = new Client(new URLConnectionClientHandler(
         new TimelineURLConnectionFactory()), cc);
     TimelineJerseyRetryFilter retryFilter = new TimelineJerseyRetryFilter();
-    client.addFilter(retryFilter);
-
-    if (YarnConfiguration.useHttps(conf)) {
-      timelineServiceAddress = conf.get(
-          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS);
-    } else {
-      timelineServiceAddress = conf.get(
-          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS);
+    // TODO need to cleanup filter retry later.
+    if (!timelineServiceV2) {
+      client.addFilter(retryFilter);
     }
-    LOG.info("Timeline service address: " + resURI);
-    timelineServiceVersion =
-        conf.getFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_VERSION);
-    LOG.info("Timeline service address: " + timelineServiceAddress);
+
+    // old version timeline service need to get address from configuration
+    // while new version need to auto discovery (with retry).
+    if (timelineServiceV2) {
+      maxServiceRetries = conf.getInt(
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES);
+      serviceRetryInterval = conf.getLong(
+          YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
+    } else {
+      if (YarnConfiguration.useHttps(conf)) {
+        setTimelineServiceAddress(conf.get(
+            YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS));
+      } else {
+        setTimelineServiceAddress(conf.get(
+            YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS));
+      }
+      timelineServiceVersion =
+          conf.getFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
+              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_VERSION);
+      LOG.info("Timeline service address: " + getTimelineServiceAddress());
+    } 
     super.serviceInit(conf);
   }
 
@@ -379,14 +402,67 @@ public class TimelineClientImpl extends TimelineClient {
     if (async) {
       params.add("async", Boolean.TRUE.toString());
     }
-    putObjects(constructResURI(getConfig(), timelineServiceAddress, true),
-        "entities", params, entitiesContainer);
+    putObjects("entities", params, entitiesContainer);
   }
 
   @Override
   public void putDomain(TimelineDomain domain) throws IOException,
       YarnException {
     timelineWriter.putDomain(domain);
+  }
+  
+  // Used for new timeline service only
+  @Private
+  public void putObjects(String path, MultivaluedMap<String, String> params, 
+      Object obj) throws IOException, YarnException {
+    
+    // timelineServiceAddress could haven't be initialized yet 
+    // or stale (only for new timeline service)
+    int retries = pollTimelineServiceAddress(this.maxServiceRetries);
+    
+    // timelineServiceAddress could be stale, add retry logic here.
+    boolean needRetry = true;
+    while (needRetry) {
+      try {
+        URI uri = constructResURI(getConfig(), timelineServiceAddress, true);
+        putObjects(uri, path, params, obj);
+        needRetry = false;
+      }
+      catch (Exception e) {
+        // TODO only handle exception for timelineServiceAddress being updated.
+        // skip retry for other exceptions.
+        checkRetryWithSleep(retries, e);
+        retries--;
+      }
+    }
+  }
+  
+  /**
+   * Check if reaching to maximum of retries.
+   * @param retries
+   * @param e
+   */
+  private void checkRetryWithSleep(int retries, Exception e) throws 
+      YarnException, IOException {
+    if (retries > 0) {
+      try {
+        Thread.sleep(this.serviceRetryInterval);
+      } catch (InterruptedException ex) {
+        Thread.currentThread().interrupt();
+      }
+    } else {
+      LOG.error(
+        "TimelineClient has reached to max retry times :" + 
+        this.maxServiceRetries + " for service address: " + 
+        timelineServiceAddress);
+      if (e instanceof YarnException) {
+        throw (YarnException)e;
+      } else if (e instanceof IOException) {
+        throw (IOException)e;
+      } else {
+        throw new YarnException(e);
+      }
+    }
   }
 
   private void putObjects(
@@ -419,11 +495,21 @@ public class TimelineClientImpl extends TimelineClient {
     }
   }
 
+  @Override
+  public void setTimelineServiceAddress(String address) {
+    this.timelineServiceAddress = address;
+  }
+  
+  private String getTimelineServiceAddress() {
+    return this.timelineServiceAddress;
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public Token<TimelineDelegationTokenIdentifier> getDelegationToken(
       final String renewer) throws IOException, YarnException {
-    PrivilegedExceptionAction<Token<TimelineDelegationTokenIdentifier>> getDTAction =
+    PrivilegedExceptionAction<Token<TimelineDelegationTokenIdentifier>>
+        getDTAction =
         new PrivilegedExceptionAction<Token<TimelineDelegationTokenIdentifier>>() {
 
           @Override
@@ -432,8 +518,10 @@ public class TimelineClientImpl extends TimelineClient {
             DelegationTokenAuthenticatedURL authUrl =
                 new DelegationTokenAuthenticatedURL(authenticator,
                     connConfigurator);
+            // TODO we should add retry logic here if timelineServiceAddress is
+            // not available immediately.
             return (Token) authUrl.getDelegationToken(
-                constructResURI(getConfig(), timelineServiceAddress, false).toURL(),
+                constructResURI(getConfig(), getTimelineServiceAddress(), false).toURL(),
                 token, renewer, doAsUser);
           }
         };
@@ -528,6 +616,24 @@ public class TimelineClientImpl extends TimelineClient {
         createTimelineClientRetryOpForOperateDelegationToken(action);
 
     return connectionRetry.retryOn(tokenRetryOp);
+  }
+
+  /**
+   * Poll TimelineServiceAddress for maximum of retries times if it is null
+   * @param retries
+   * @return the left retry times
+   */
+  private int pollTimelineServiceAddress(int retries) {
+    while (timelineServiceAddress == null && retries > 0) {
+      try {
+        Thread.sleep(this.serviceRetryInterval);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      timelineServiceAddress = getTimelineServiceAddress();
+      retries--;
+    }
+    return retries;
   }
 
   private class TimelineURLConnectionFactory

@@ -384,6 +384,23 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     }
     this.amrmToken = amRMToken;
   }
+  
+
+  @Override
+  public String getAggregatorAddr() {
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getAggregatorAddr();
+  }
+  
+  @Override
+  public void setAggregatorAddr(String aggregatorAddr) {
+    maybeInitBuilder();
+    if (aggregatorAddr == null) {
+      builder.clearAggregatorAddr();
+      return;
+    }
+    builder.setAggregatorAddr(aggregatorAddr);
+  }
 
   @Override
   public synchronized Priority getApplicationPriority() {
