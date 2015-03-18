@@ -127,6 +127,25 @@ public abstract class AllocateResponse {
     response.setAMRMToken(amRMToken);
     return response;
   }
+  
+  @Public
+  @Unstable
+  public static AllocateResponse newInstance(int responseId,
+      List<ContainerStatus> completedContainers,
+      List<Container> allocatedContainers, List<NodeReport> updatedNodes,
+      Resource availResources, AMCommand command, int numClusterNodes,
+      PreemptionMessage preempt, List<NMToken> nmTokens, Token amRMToken,
+      List<Container> increasedContainers,
+      List<Container> decreasedContainers,
+      String aggregatorAddr) {
+    AllocateResponse response =
+        newInstance(responseId, completedContainers, allocatedContainers,
+          updatedNodes, availResources, command, numClusterNodes, preempt,
+          nmTokens, increasedContainers, decreasedContainers);
+    response.setAMRMToken(amRMToken);
+    response.setAggregatorAddr(aggregatorAddr);
+    return response;
+  }
 
   /**
    * If the <code>ResourceManager</code> needs the
@@ -328,4 +347,18 @@ public abstract class AllocateResponse {
   @Private
   @Unstable
   public abstract void setApplicationPriority(Priority priority);
+
+  /**
+   * The address of aggregator that belong to this app
+   *
+   * @return The address of aggregator that belong to this attempt
+   */
+  @Public
+  @Unstable
+  public abstract String getAggregatorAddr();
+  
+  @Private
+  @Unstable
+  public abstract void setAggregatorAddr(String aggregatorAddr);
+
 }

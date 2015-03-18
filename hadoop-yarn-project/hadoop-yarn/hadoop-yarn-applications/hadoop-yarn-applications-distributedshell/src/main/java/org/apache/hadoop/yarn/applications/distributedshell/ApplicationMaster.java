@@ -41,6 +41,9 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
@@ -108,6 +111,7 @@ import org.apache.log4j.LogManager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * An ApplicationMaster for executing shell commands on a set of launched
@@ -220,6 +224,13 @@ public class ApplicationMaster {
   private String appMasterTrackingUrl = "";
   
   private boolean newTimelineService = false;
+  
+  // For posting entities in new timeline service in a non-blocking way
+  // TODO replace with event loop in TimelineClient.
+  private static ExecutorService threadPool = 
+      Executors.newCachedThreadPool(
+          new ThreadFactoryBuilder().setNameFormat("TimelineService #%d")
+          .build());
 
   // App Master configuration
   // No. of containers to run shell command on
@@ -320,6 +331,19 @@ public class ApplicationMaster {
       }
       appMaster.run();
       result = appMaster.finish();
+      
+      threadPool.shutdown();
+      
+      while (!threadPool.isTerminated()) { // wait for all posting thread to finish
+        try {
+          if (!threadPool.awaitTermination(30, TimeUnit.SECONDS)) {
+            threadPool.shutdownNow(); // send interrupt to hurry them along
+          }
+        } catch (InterruptedException e) {
+          LOG.warn("Timeline client service stop interrupted!");
+          break;
+        }
+      }
     } catch (Throwable t) {
       LOG.fatal("Error running ApplicationMaster", t);
       LogManager.shutdown();
@@ -631,13 +655,15 @@ public class ApplicationMaster {
     amRMClient = AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
     amRMClient.init(conf);
     amRMClient.start();
-
+   
     containerListener = createNMCallbackHandler();
     nmClientAsync = new NMClientAsyncImpl(containerListener);
     nmClientAsync.init(conf);
     nmClientAsync.start();
 
     startTimelineClient(conf);
+    // need to bind timelineClient
+    amRMClient.registerTimelineClient(timelineClient);
     if(timelineClient != null) {
       if (newTimelineService) {
         publishApplicationAttemptEventOnNewTimelineService(timelineClient, 
@@ -719,7 +745,12 @@ public class ApplicationMaster {
           if (conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
               YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)) {
             // Creating the Timeline Client
-            timelineClient = TimelineClient.createTimelineClient();
+            if (newTimelineService) {
+              timelineClient = TimelineClient.createTimelineClient(
+                  appAttemptID.getApplicationId());
+            } else {
+              timelineClient = TimelineClient.createTimelineClient();
+            }
             timelineClient.init(conf);
             timelineClient.start();
           } else {
@@ -809,7 +840,7 @@ public class ApplicationMaster {
     if(timelineClient != null) {
       timelineClient.stop();
     }
-
+    
     return success;
   }
 
@@ -1360,6 +1391,18 @@ public class ApplicationMaster {
   }
   
   private static void publishContainerStartEventOnNewTimelineService(
+      final TimelineClient timelineClient, final Container container, 
+      final String domainId, final UserGroupInformation ugi) {
+    Runnable publishWrapper = new Runnable() {
+      public void run() {
+        publishContainerStartEventOnNewTimelineServiceBase(timelineClient, 
+            container, domainId, ugi);
+      }
+    };
+    threadPool.execute(publishWrapper);
+  }
+
+  private static void publishContainerStartEventOnNewTimelineServiceBase(
       final TimelineClient timelineClient, Container container, String domainId,
       UserGroupInformation ugi) {
     final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity = 
@@ -1391,10 +1434,22 @@ public class ApplicationMaster {
           e instanceof UndeclaredThrowableException ? e.getCause() : e);
     }
   }
-
+  
   private static void publishContainerEndEventOnNewTimelineService(
-      final TimelineClient timelineClient, ContainerStatus container,
-      String domainId, UserGroupInformation ugi) {
+      final TimelineClient timelineClient, final ContainerStatus container,
+      final String domainId, final UserGroupInformation ugi) {
+    Runnable publishWrapper = new Runnable() {
+      public void run() {
+          publishContainerEndEventOnNewTimelineServiceBase(timelineClient, 
+              container, domainId, ugi);
+      }
+    };
+    threadPool.execute(publishWrapper);
+  }
+  
+  private static void publishContainerEndEventOnNewTimelineServiceBase(
+      final TimelineClient timelineClient, final ContainerStatus container,
+      final String domainId, final UserGroupInformation ugi) {
     final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity = 
         new org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity();
     entity.setId(container.getContainerId().toString());
@@ -1425,6 +1480,20 @@ public class ApplicationMaster {
   }
 
   private static void publishApplicationAttemptEventOnNewTimelineService(
+      final TimelineClient timelineClient, final String appAttemptId,
+      final DSEvent appEvent, final String domainId, 
+      final UserGroupInformation ugi) {
+  
+    Runnable publishWrapper = new Runnable() {
+      public void run() {
+        publishApplicationAttemptEventOnNewTimelineServiceBase(timelineClient, 
+            appAttemptId, appEvent, domainId, ugi);
+      }
+    };
+    threadPool.execute(publishWrapper);
+  }
+  
+  private static void publishApplicationAttemptEventOnNewTimelineServiceBase(
       final TimelineClient timelineClient, String appAttemptId,
       DSEvent appEvent, String domainId, UserGroupInformation ugi) {
     final org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity entity = 

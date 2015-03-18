@@ -94,10 +94,9 @@ public class PerNodeTimelineAggregatorsAuxService extends AuxiliaryService {
    * @return whether it was added successfully
    */
   public boolean addApplication(ApplicationId appId) {
-    String appIdString = appId.toString();
     AppLevelTimelineAggregator aggregator =
-        new AppLevelTimelineAggregator(appIdString);
-    return (aggregatorCollection.putIfAbsent(appIdString, aggregator)
+        new AppLevelTimelineAggregator(appId.toString());
+    return (aggregatorCollection.putIfAbsent(appId, aggregator)
         == aggregator);
   }
 

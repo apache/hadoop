@@ -63,6 +63,10 @@ import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.AggregatorNodemanagerProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewAggregatorsInfoRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewAggregatorsInfoResponse;
+import org.apache.hadoop.yarn.server.api.records.AppAggregatorsMap;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -72,6 +76,14 @@ public class TestRPC {
   private static final String EXCEPTION_MSG = "test error";
   private static final String EXCEPTION_CAUSE = "exception cause";
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+  
+  public static final String ILLEGAL_NUMBER_MESSAGE = 
+      "aggregators' number in ReportNewAggregatorsInfoRequest is not ONE.";
+  
+  public static final String DEFAULT_AGGREGATOR_ADDR = "localhost:0";
+  
+  public static final ApplicationId DEFAULT_APP_ID = 
+      ApplicationId.newInstance(0, 0);
   
   @Test
   public void testUnknownCall() {
@@ -100,7 +112,65 @@ public class TestRPC {
               + "\\$ApplicationClientProtocolService\\$BlockingInterface protocol."));
     } catch (Exception e) {
       e.printStackTrace();
+    } finally {
+      server.stop();
     }
+  }
+  
+  @Test
+  public void testRPCOnAggregatorNodeManagerProtocol() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.IPC_RPC_IMPL, HadoopYarnProtoRPC.class
+        .getName());
+    YarnRPC rpc = YarnRPC.create(conf);
+    String bindAddr = "localhost:0";
+    InetSocketAddress addr = NetUtils.createSocketAddr(bindAddr);
+    Server server = rpc.getServer(AggregatorNodemanagerProtocol.class,
+        new DummyNMAggregatorService(), addr, conf, null, 1);
+    server.start();
+
+    // Test unrelated protocol wouldn't get response
+    ApplicationClientProtocol unknownProxy = (ApplicationClientProtocol) rpc.getProxy(
+        ApplicationClientProtocol.class, NetUtils.getConnectAddress(server), conf);
+
+    try {
+      unknownProxy.getNewApplication(Records
+          .newRecord(GetNewApplicationRequest.class));
+      Assert.fail("Excepted RPC call to fail with unknown method.");
+    } catch (YarnException e) {
+      Assert.assertTrue(e.getMessage().matches(
+          "Unknown method getNewApplication called on.*"
+              + "org.apache.hadoop.yarn.proto.ApplicationClientProtocol"
+              + "\\$ApplicationClientProtocolService\\$BlockingInterface protocol."));
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    
+    // Test AggregatorNodemanagerProtocol get proper response
+    AggregatorNodemanagerProtocol proxy = (AggregatorNodemanagerProtocol)rpc.getProxy(
+        AggregatorNodemanagerProtocol.class, NetUtils.getConnectAddress(server), conf);
+    // Verify request with DEFAULT_APP_ID and DEFAULT_AGGREGATOR_ADDR get 
+    // normally response.
+    try {
+      ReportNewAggregatorsInfoRequest request = 
+          ReportNewAggregatorsInfoRequest.newInstance(
+              DEFAULT_APP_ID, DEFAULT_AGGREGATOR_ADDR);
+      proxy.reportNewAggregatorInfo(request);
+    } catch (YarnException e) {
+      Assert.fail("RPC call failured is not expected here.");
+    }
+    
+    // Verify empty request get YarnException back (by design in 
+    // DummyNMAggregatorService)
+    try {
+      proxy.reportNewAggregatorInfo(Records
+          .newRecord(ReportNewAggregatorsInfoRequest.class));
+      Assert.fail("Excepted RPC call to fail with YarnException.");
+    } catch (YarnException e) {
+      Assert.assertTrue(e.getMessage().contains(ILLEGAL_NUMBER_MESSAGE));
+    }
+    
+    server.stop();
   }
 
   @Test
@@ -169,10 +239,10 @@ public class TestRPC {
       System.out.println("Test Exception is " + e.getMessage());
     } catch (Exception ex) {
       ex.printStackTrace();
+    } finally {
+      server.stop();
     }
     Assert.assertTrue(exception);
-    
-    server.stop();
     Assert.assertNotNull(statuses.get(0));
     Assert.assertEquals(ContainerState.RUNNING, statuses.get(0).getState());
   }
@@ -262,4 +332,32 @@ public class TestRPC {
             .buildTokenService(addr).toString());
     return containerToken;
   }
+  
+  // A dummy implementation for AggregatorNodemanagerProtocol for test purpose, 
+  // it only can accept one appID, aggregatorAddr pair or throw exceptions
+  public class DummyNMAggregatorService 
+      implements AggregatorNodemanagerProtocol {
+    
+    @Override
+    public ReportNewAggregatorsInfoResponse reportNewAggregatorInfo(
+        ReportNewAggregatorsInfoRequest request)
+        throws YarnException, IOException {
+      List<AppAggregatorsMap> appAggregators = request.getAppAggregatorsList();
+      if (appAggregators.size() == 1) {
+        // check default appID and aggregatorAddr
+        AppAggregatorsMap appAggregator = appAggregators.get(0);
+        Assert.assertEquals(appAggregator.getApplicationId(), 
+            DEFAULT_APP_ID);
+        Assert.assertEquals(appAggregator.getAggregatorAddr(), 
+            DEFAULT_AGGREGATOR_ADDR);
+      } else {
+        throw new YarnException(ILLEGAL_NUMBER_MESSAGE);
+      }
+      
+      ReportNewAggregatorsInfoResponse response =
+          recordFactory.newRecordInstance(ReportNewAggregatorsInfoResponse.class);
+      return response;
+    }
+  }
+  
 }
