@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
 
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -153,6 +154,27 @@ public class MetricsOverviewTable extends HtmlBlock {
         
       }
     }
+    
+    SchedulerInfo schedulerInfo=new SchedulerInfo(this.rm);
+    
+    div.h3("Scheduler Metrics").
+    table("#schedulermetricsoverview").
+    thead().$class("ui-widget-header").
+      tr().
+        th().$class("ui-state-default")._("Scheduler Type")._().
+        th().$class("ui-state-default")._("Scheduling Resource Type")._().
+        th().$class("ui-state-default")._("Minimum Allocation")._().
+        th().$class("ui-state-default")._("Maximum Allocation")._().
+      _().
+    _().
+    tbody().$class("ui-widget-content").
+      tr().
+        td(String.valueOf(schedulerInfo.getSchedulerType())).
+        td(String.valueOf(schedulerInfo.getSchedulerResourceTypes())).
+        td(schedulerInfo.getMinAllocation().toString()).
+        td(schedulerInfo.getMaxAllocation().toString()).
+      _().
+    _()._();
 
     div._();
   }

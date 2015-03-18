@@ -172,7 +172,7 @@ public class AppAttemptBlock extends HtmlBlock {
       ._("Diagnostics Info:", appAttempt.getDiagnosticsInfo() == null ?
           "" : appAttempt.getDiagnosticsInfo());
 
-    html._(InfoBlock.class);
+
 
     if (exceptionWhenGetContainerReports) {
       html
@@ -182,6 +182,19 @@ public class AppAttemptBlock extends HtmlBlock {
               + ".")._();
       return;
     }
+
+    // TODO need to render applicationHeadRoom value from
+    // ApplicationAttemptMetrics after YARN-3284
+    if (webUiType.equals(YarnWebParams.RM_WEB_UI)) {
+      if (!isApplicationInFinalState(appAttempt.getAppAttemptState())) {
+        DIV<Hamlet> pdiv = html._(InfoBlock.class).div(_INFO_WRAP);
+        info("Application Attempt Overview").clear();
+        info("Application Attempt Metrics")._(
+            "Application Attempt Headroom : ", 0);
+        pdiv._();
+      }
+    }
+    html._(InfoBlock.class);
 
     // Container Table
     TBODY<TABLE<Hamlet>> tbody =
@@ -272,5 +285,11 @@ public class AppAttemptBlock extends HtmlBlock {
       }
     }
     return false;
+  }
+  
+  private boolean isApplicationInFinalState(YarnApplicationAttemptState state) {
+    return state == YarnApplicationAttemptState.FINISHED
+        || state == YarnApplicationAttemptState.FAILED
+        || state == YarnApplicationAttemptState.KILLED;
   }
 }

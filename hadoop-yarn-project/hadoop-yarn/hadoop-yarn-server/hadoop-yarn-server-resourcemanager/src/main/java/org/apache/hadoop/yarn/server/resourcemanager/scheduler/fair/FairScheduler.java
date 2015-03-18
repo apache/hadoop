@@ -938,9 +938,10 @@ public class FairScheduler extends
       application.updateBlacklist(blacklistAdditions, blacklistRemovals);
       ContainersAndNMTokensAllocation allocation =
           application.pullNewlyAllocatedContainersAndNMTokens();
-      return new Allocation(allocation.getContainerList(),
-        application.getHeadroom(), preemptionContainerIds, null, null,
-        allocation.getNMTokenList());
+      Resource headroom = application.getHeadroom();
+      application.setApplicationHeadroomForMetrics(headroom);
+      return new Allocation(allocation.getContainerList(), headroom,
+          preemptionContainerIds, null, null, allocation.getNMTokenList());
     }
   }
   

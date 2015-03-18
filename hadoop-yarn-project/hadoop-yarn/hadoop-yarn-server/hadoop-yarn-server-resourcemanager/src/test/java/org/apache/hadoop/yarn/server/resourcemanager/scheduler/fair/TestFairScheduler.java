@@ -1379,12 +1379,16 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     ApplicationAttemptId id11 = createAppAttemptId(1, 1);
+    createMockRMApp(id11);
     scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1", false);
     scheduler.addApplicationAttempt(id11, false, false);
     ApplicationAttemptId id21 = createAppAttemptId(2, 1);
+    createMockRMApp(id21);
     scheduler.addApplication(id21.getApplicationId(), "root.queue2", "user1", false);
     scheduler.addApplicationAttempt(id21, false, false);
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
+    createMockRMApp(id22);
+
     scheduler.addApplication(id22.getApplicationId(), "root.queue2", "user1", false);
     scheduler.addApplicationAttempt(id22, false, false);
 
@@ -2717,9 +2721,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
     scheduler.handle(nodeEvent2);
     
-    ApplicationAttemptId appId = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    scheduler.addApplication(appId.getApplicationId(), "queue1", "user1", false);
-    scheduler.addApplicationAttempt(appId, false, false);
+    ApplicationAttemptId attemptId =
+        createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+    createMockRMApp(attemptId);
+
+    scheduler.addApplication(attemptId.getApplicationId(), "queue1", "user1",
+        false);
+    scheduler.addApplicationAttempt(attemptId, false, false);
     
     // 1 request with 2 nodes on the same rack. another request with 1 node on
     // a different rack
@@ -2731,21 +2739,24 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     asks.add(createResourceRequest(1024, node3.getRackName(), 1, 1, true));
     asks.add(createResourceRequest(1024, ResourceRequest.ANY, 1, 2, true));
 
-    scheduler.allocate(appId, asks, new ArrayList<ContainerId>(), null, null);
+    scheduler.allocate(attemptId, asks, new ArrayList<ContainerId>(), null,
+        null);
     
     // node 1 checks in
     scheduler.update();
     NodeUpdateSchedulerEvent updateEvent1 = new NodeUpdateSchedulerEvent(node1);
     scheduler.handle(updateEvent1);
     // should assign node local
-    assertEquals(1, scheduler.getSchedulerApp(appId).getLiveContainers().size());
+    assertEquals(1, scheduler.getSchedulerApp(attemptId).getLiveContainers()
+        .size());
 
     // node 2 checks in
     scheduler.update();
     NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
     scheduler.handle(updateEvent2);
     // should assign rack local
-    assertEquals(2, scheduler.getSchedulerApp(appId).getLiveContainers().size());
+    assertEquals(2, scheduler.getSchedulerApp(attemptId).getLiveContainers()
+        .size());
   }
   
   @Test (timeout = 5000)
@@ -3855,6 +3866,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     // send application request
     ApplicationAttemptId appAttemptId =
             createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+    createMockRMApp(appAttemptId);
+
     scheduler.addApplication(appAttemptId.getApplicationId(), "queue11", "user11", false);
     scheduler.addApplicationAttempt(appAttemptId, false, false);
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();

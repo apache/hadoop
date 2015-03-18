@@ -59,6 +59,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3243. CapacityScheduler should pass headroom from parent to children
     to make sure ParentQueue obey its capacity limits. (Wangda Tan via jianhe)
 
+    YARN-3273. Improve scheduler UI to facilitate scheduling analysis and
+    debugging. (Rohith Sharmaks via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
