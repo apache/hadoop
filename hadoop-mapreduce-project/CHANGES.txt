@@ -458,6 +458,9 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-4742. Fix typo in nnbench#displayUsage. (Liang Xie via ozawa)
 
+    MAPREDUCE-6277. Job can post multiple history files if attempt loses
+    connection to the RM (Chang Li via jlowe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
