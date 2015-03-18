@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
+import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
 import org.apache.hadoop.hdfs.web.resources.OffsetParam;
 import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
@@ -63,6 +64,10 @@ class ParameterParser {
 
   long offset() {
     return new OffsetParam(param(OffsetParam.NAME)).getOffset();
+  }
+
+  long length() {
+    return new LengthParam(param(LengthParam.NAME)).getLength();
   }
 
   String namenodeId() {

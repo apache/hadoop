@@ -21,10 +21,15 @@ package org.apache.hadoop.hdfs.web;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -45,6 +50,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.web.resources.LengthParam;
+import org.apache.hadoop.hdfs.web.resources.OffsetParam;
+import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -517,6 +525,43 @@ public class TestWebHDFS {
     } catch (AccessControlException ace) {
       Assert.assertTrue(ace.getMessage().startsWith(
           WebHdfsFileSystem.CANT_FALLBACK_TO_INSECURE_MSG));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testWebHdfsOffsetAndLength() throws Exception{
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final int OFFSET = 42;
+    final int LENGTH = 512;
+    final String PATH = "/foo";
+    byte[] CONTENTS = new byte[1024];
+    RANDOM.nextBytes(CONTENTS);
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      final WebHdfsFileSystem fs =
+          WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
+      try (OutputStream os = fs.create(new Path(PATH))) {
+        os.write(CONTENTS);
+      }
+      InetSocketAddress addr = cluster.getNameNode().getHttpAddress();
+      URL url = new URL("http", addr.getHostString(), addr
+          .getPort(), WebHdfsFileSystem.PATH_PREFIX + PATH + "?op=OPEN" +
+          Param.toSortedString("&", new OffsetParam((long) OFFSET),
+                               new LengthParam((long) LENGTH))
+      );
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setInstanceFollowRedirects(true);
+      Assert.assertEquals(LENGTH, conn.getContentLength());
+      byte[] subContents = new byte[LENGTH];
+      byte[] realContents = new byte[LENGTH];
+      System.arraycopy(CONTENTS, OFFSET, subContents, 0, LENGTH);
+      IOUtils.readFully(conn.getInputStream(), realContents);
+      Assert.assertArrayEquals(subContents, realContents);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
