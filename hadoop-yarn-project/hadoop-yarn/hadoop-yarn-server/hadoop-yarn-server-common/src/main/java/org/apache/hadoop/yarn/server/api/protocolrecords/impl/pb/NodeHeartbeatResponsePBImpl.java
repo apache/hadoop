@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppAggregatorsMapProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
@@ -55,6 +56,8 @@ public class NodeHeartbeatResponsePBImpl extends
   private List<ContainerId> containersToBeRemovedFromNM = null;
   private List<ApplicationId> applicationsToCleanup = null;
   private Map<ApplicationId, ByteBuffer> systemCredentials = null;
+  
+  Map<ApplicationId, String> appAggregatorsMap = null;
 
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
@@ -96,6 +99,10 @@ public class NodeHeartbeatResponsePBImpl extends
     if (this.systemCredentials != null) {
       addSystemCredentialsToProto();
     }
+    
+    if (this.appAggregatorsMap != null) {
+      addAppAggregatorsMapToProto();
+    }
   }
 
   private void addSystemCredentialsToProto() {
@@ -106,6 +113,16 @@ public class NodeHeartbeatResponsePBImpl extends
         .setAppId(convertToProtoFormat(entry.getKey()))
         .setCredentialsForApp(ProtoUtils.convertToProtoFormat(
             entry.getValue().duplicate())));
+    }
+  }
+  
+  private void addAppAggregatorsMapToProto() {
+    maybeInitBuilder();
+    builder.clearAppAggregatorsMap();
+    for (Map.Entry<ApplicationId, String> entry : appAggregatorsMap.entrySet()) {
+      builder.addAppAggregatorsMap(AppAggregatorsMapProto.newBuilder()
+        .setAppId(convertToProtoFormat(entry.getKey()))
+        .setAppAggregatorAddr(entry.getValue()));
     }
   }
 
@@ -417,6 +434,15 @@ public class NodeHeartbeatResponsePBImpl extends
     initSystemCredentials();
     return systemCredentials;
   }
+  
+  @Override
+  public Map<ApplicationId, String> getAppAggregatorsMap() {
+    if (this.appAggregatorsMap != null) {
+      return this.appAggregatorsMap;
+    }
+    initAppAggregatorsMap();
+    return appAggregatorsMap;
+  }
 
   private void initSystemCredentials() {
     NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
@@ -426,6 +452,16 @@ public class NodeHeartbeatResponsePBImpl extends
       ApplicationId appId = convertFromProtoFormat(c.getAppId());
       ByteBuffer byteBuffer = ProtoUtils.convertFromProtoFormat(c.getCredentialsForApp());
       this.systemCredentials.put(appId, byteBuffer);
+    }
+  }
+  
+  private void initAppAggregatorsMap() {
+    NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<AppAggregatorsMapProto> list = p.getAppAggregatorsMapList();
+    this.appAggregatorsMap = new HashMap<ApplicationId, String> ();
+    for (AppAggregatorsMapProto c : list) {
+      ApplicationId appId = convertFromProtoFormat(c.getAppId());
+      this.appAggregatorsMap.put(appId, c.getAppAggregatorAddr());
     }
   }
 
@@ -438,6 +474,17 @@ public class NodeHeartbeatResponsePBImpl extends
     maybeInitBuilder();
     this.systemCredentials = new HashMap<ApplicationId, ByteBuffer>();
     this.systemCredentials.putAll(systemCredentials);
+  }
+  
+  @Override
+  public void setAppAggregatorsMap(
+      Map<ApplicationId, String> appAggregatorsMap) {
+    if (appAggregatorsMap == null || appAggregatorsMap.isEmpty()) {
+      return;
+    }
+    maybeInitBuilder();
+    this.appAggregatorsMap = new HashMap<ApplicationId, String>();
+    this.appAggregatorsMap.putAll(appAggregatorsMap);
   }
 
   @Override

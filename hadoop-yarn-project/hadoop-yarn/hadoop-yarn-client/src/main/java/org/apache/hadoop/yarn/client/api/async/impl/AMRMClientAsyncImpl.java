@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.client.api.AMRMClient;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.impl.AMRMClientImpl;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -64,6 +65,8 @@ extends AMRMClientAsync<T> {
   
   private volatile boolean keepRunning;
   private volatile float progress;
+  
+  private volatile String aggregatorAddr;
   
   private volatile Throwable savedException;
   
@@ -304,7 +307,17 @@ extends AMRMClientAsync<T> {
           if (!allocated.isEmpty()) {
             handler.onContainersAllocated(allocated);
           }
-
+          
+          String aggregatorAddress = response.getAggregatorAddr();
+          TimelineClient timelineClient = client.getRegisteredTimeineClient();
+          if (timelineClient != null && aggregatorAddress != null 
+              && !aggregatorAddress.isEmpty()) {
+            if (aggregatorAddr == null || 
+                !aggregatorAddr.equals(aggregatorAddress)) {
+              aggregatorAddr = aggregatorAddress;
+              timelineClient.setTimelineServiceAddress(aggregatorAddress);
+            }
+          }
           progress = handler.getProgress();
         } catch (Throwable ex) {
           handler.onError(ex);

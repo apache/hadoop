@@ -111,4 +111,21 @@ public class TestAllocateResponse {
     Assert.assertEquals(0, r.getIncreasedContainers().size());
     Assert.assertEquals(0, r.getDecreasedContainers().size());
   }
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void testAllocateResponseWithAggregatorAddress() {
+    final String aggregatorAddr = "localhost:0";
+    AllocateResponse r =
+        AllocateResponse.newInstance(3, new ArrayList<ContainerStatus>(),
+            new ArrayList<Container>(), new ArrayList<NodeReport>(), null,
+            AMCommand.AM_RESYNC, 3, null, new ArrayList<NMToken>(), null, 
+            null, null, aggregatorAddr);
+
+    AllocateResponseProto p = ((AllocateResponsePBImpl) r).getProto();
+    r = new AllocateResponsePBImpl(p);
+
+    // check value
+    Assert.assertEquals(aggregatorAddr, r.getAggregatorAddr());
+  }
 }

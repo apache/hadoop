@@ -15,37 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.yarn.util.Records;
 
-public enum RMAppEventType {
-  // Source: ClientRMService
-  START,
-  RECOVER,
-  KILL,
-  MOVE, // Move app to a new queue
+public abstract class ReportNewAggregatorsInfoResponse {
 
-  // Source: Scheduler and RMAppManager
-  APP_REJECTED,
+  @Private
+  public static ReportNewAggregatorsInfoResponse newInstance() {
+    ReportNewAggregatorsInfoResponse response =
+        Records.newRecord(ReportNewAggregatorsInfoResponse.class);
+    return response;
+  }
 
-  // Source: Scheduler
-  APP_ACCEPTED,
-  
-  // TODO add source later
-  AGGREGATOR_UPDATE,
-
-  // Source: RMAppAttempt
-  ATTEMPT_REGISTERED,
-  ATTEMPT_UNREGISTERED,
-  ATTEMPT_FINISHED, // Will send the final state
-  ATTEMPT_FAILED,
-  ATTEMPT_KILLED,
-  NODE_UPDATE,
-  
-  // Source: Container and ResourceTracker
-  APP_RUNNING_ON_NODE,
-
-  // Source: RMStateStore
-  APP_NEW_SAVED,
-  APP_UPDATE_SAVED,
 }

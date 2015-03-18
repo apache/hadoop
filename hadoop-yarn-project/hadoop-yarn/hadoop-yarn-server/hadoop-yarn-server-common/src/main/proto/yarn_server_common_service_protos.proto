@@ -62,6 +62,7 @@ message NodeHeartbeatRequestProto {
   optional MasterKeyProto last_known_nm_token_master_key = 3;
   optional NodeLabelsProto nodeLabels = 4;
   repeated LogAggregationReportProto log_aggregation_reports_for_apps = 5;
+  repeated AppAggregatorsMapProto registered_aggregators = 6;
 }
 
 message LogAggregationReportProto {
@@ -82,12 +83,32 @@ message NodeHeartbeatResponseProto {
   repeated ContainerIdProto containers_to_be_removed_from_nm = 9;
   repeated SystemCredentialsForAppsProto system_credentials_for_apps = 10;
   optional bool areNodeLabelsAcceptedByRM = 11 [default = false];
+  repeated AppAggregatorsMapProto app_aggregators_map = 12;
 }
 
 message SystemCredentialsForAppsProto {
   optional ApplicationIdProto appId = 1;
   optional bytes credentialsForApp = 2;
 }
+
+////////////////////////////////////////////////////////////////////////
+////// From aggregator_nodemanager_protocol ////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message AppAggregatorsMapProto {
+  optional ApplicationIdProto appId = 1;
+  optional string appAggregatorAddr = 2;
+}
+
+//////////////////////////////////////////////////////
+/////// aggregator_nodemanager_protocol //////////////
+//////////////////////////////////////////////////////
+message ReportNewAggregatorsInfoRequestProto {
+  repeated AppAggregatorsMapProto app_aggregators = 1;
+}
+
+message ReportNewAggregatorsInfoResponseProto {
+}
+
 
 message NMContainerStatusProto {
   optional ContainerIdProto container_id = 1;

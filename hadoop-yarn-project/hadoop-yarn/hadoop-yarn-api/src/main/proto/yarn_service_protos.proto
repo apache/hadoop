@@ -87,6 +87,7 @@ message AllocateResponseProto {
   repeated ContainerResourceIncreaseProto increased_containers = 10;
   repeated ContainerResourceDecreaseProto decreased_containers = 11;
   optional hadoop.common.TokenProto am_rm_token = 12;
+  optional string aggregator_addr = 13;
 }
 
 enum SchedulerResourceTypes {

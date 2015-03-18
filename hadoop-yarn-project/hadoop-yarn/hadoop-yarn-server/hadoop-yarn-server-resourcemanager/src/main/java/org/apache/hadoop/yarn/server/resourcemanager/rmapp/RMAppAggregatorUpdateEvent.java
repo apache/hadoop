@@ -18,34 +18,19 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-public enum RMAppEventType {
-  // Source: ClientRMService
-  START,
-  RECOVER,
-  KILL,
-  MOVE, // Move app to a new queue
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
-  // Source: Scheduler and RMAppManager
-  APP_REJECTED,
+public class RMAppAggregatorUpdateEvent extends RMAppEvent {
 
-  // Source: Scheduler
-  APP_ACCEPTED,
+  private final String appAggregatorAddr;
   
-  // TODO add source later
-  AGGREGATOR_UPDATE,
-
-  // Source: RMAppAttempt
-  ATTEMPT_REGISTERED,
-  ATTEMPT_UNREGISTERED,
-  ATTEMPT_FINISHED, // Will send the final state
-  ATTEMPT_FAILED,
-  ATTEMPT_KILLED,
-  NODE_UPDATE,
+  public RMAppAggregatorUpdateEvent(ApplicationId appId, String appAggregatorAddr) {
+    super(appId, RMAppEventType.AGGREGATOR_UPDATE);
+    this.appAggregatorAddr = appAggregatorAddr;
+  }
   
-  // Source: Container and ResourceTracker
-  APP_RUNNING_ON_NODE,
-
-  // Source: RMStateStore
-  APP_NEW_SAVED,
-  APP_UPDATE_SAVED,
+  public String getAppAggregatorAddr(){
+    return this.appAggregatorAddr;
+  }
+  
 }

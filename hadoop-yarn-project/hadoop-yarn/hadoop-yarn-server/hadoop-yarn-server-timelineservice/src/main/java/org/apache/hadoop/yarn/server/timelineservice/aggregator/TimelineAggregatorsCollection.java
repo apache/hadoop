@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.aggregator;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,9 +32,15 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.api.AggregatorNodemanagerProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewAggregatorsInfoRequest;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -62,6 +70,12 @@ public class TimelineAggregatorsCollection extends CompositeService {
 
   // REST server for this aggregator collection
   private HttpServer2 timelineRestServer;
+  
+  private String timelineRestServerBindAddress;
+  
+  private AggregatorNodemanagerProtocol nmAggregatorService;
+  
+  private InetSocketAddress nmAggregatorServiceAddress;
 
   static final String AGGREGATOR_COLLECTION_ATTR_KEY = "aggregator.collection";
 
@@ -73,6 +87,16 @@ public class TimelineAggregatorsCollection extends CompositeService {
     super(TimelineAggregatorsCollection.class.getName());
   }
 
+  @Override
+  public void serviceInit(Configuration conf) throws Exception {
+    this.nmAggregatorServiceAddress = conf.getSocketAddr(
+        YarnConfiguration.NM_BIND_HOST,
+        YarnConfiguration.NM_AGGREGATOR_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_AGGREGATOR_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_AGGREGATOR_SERVICE_PORT);
+    
+  }
+  
   @Override
   protected void serviceStart() throws Exception {
     startWebApp();
@@ -95,9 +119,13 @@ public class TimelineAggregatorsCollection extends CompositeService {
    * starting the app level service
    * @return the aggregator associated with id after the potential put.
    */
-  public TimelineAggregator putIfAbsent(String id, TimelineAggregator aggregator) {
+  public TimelineAggregator putIfAbsent(ApplicationId appId, 
+      TimelineAggregator aggregator) {
+    String id = appId.toString();
+    TimelineAggregator aggregatorInTable;
+    boolean aggregatorIsNew = false;
     synchronized (aggregators) {
-      TimelineAggregator aggregatorInTable = aggregators.get(id);
+      aggregatorInTable = aggregators.get(id);
       if (aggregatorInTable == null) {
         try {
           // initialize, start, and add it to the collection so it can be
@@ -106,16 +134,30 @@ public class TimelineAggregatorsCollection extends CompositeService {
           aggregator.start();
           aggregators.put(id, aggregator);
           LOG.info("the aggregator for " + id + " was added");
-          return aggregator;
+          aggregatorInTable = aggregator;
+          aggregatorIsNew = true;
         } catch (Exception e) {
           throw new YarnRuntimeException(e);
         }
       } else {
         String msg = "the aggregator for " + id + " already exists!";
         LOG.error(msg);
-        return aggregatorInTable;
+      }
+      
+    }
+    // Report to NM if a new aggregator is added.
+    if (aggregatorIsNew) {
+      try {
+        reportNewAggregatorToNM(appId);
+      } catch (Exception e) {
+        // throw exception here as it cannot be used if failed report to NM
+        LOG.error("Failed to report a new aggregator for application: " + appId + 
+            " to NM Aggregator Services.");
+        throw new YarnRuntimeException(e);
       }
     }
+    
+    return aggregatorInTable;
   }
 
   /**
@@ -167,7 +209,10 @@ public class TimelineAggregatorsCollection extends CompositeService {
     String bindAddress = WebAppUtils.getWebAppBindURL(conf,
         YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
         WebAppUtils.getAHSWebAppURLWithoutScheme(conf));
-    LOG.info("Instantiating the per-node aggregator webapp at " + bindAddress);
+    this.timelineRestServerBindAddress = WebAppUtils.getResolvedAddress(
+        NetUtils.createSocketAddr(bindAddress));
+    LOG.info("Instantiating the per-node aggregator webapp at " + 
+        timelineRestServerBindAddress);
     try {
       Configuration confForInfoServer = new Configuration(conf);
       confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
@@ -200,4 +245,27 @@ public class TimelineAggregatorsCollection extends CompositeService {
       throw new YarnRuntimeException(msg, e);
     }
   }
+  
+  private void reportNewAggregatorToNM(ApplicationId appId) 
+      throws YarnException, IOException {
+    this.nmAggregatorService = getNMAggregatorService();
+    ReportNewAggregatorsInfoRequest request = 
+        ReportNewAggregatorsInfoRequest.newInstance(appId,
+            this.timelineRestServerBindAddress);
+    LOG.info("Report a new aggregator for application: " + appId + 
+        " to NM Aggregator Services.");
+    nmAggregatorService.reportNewAggregatorInfo(request);
+  }
+  
+  // protected for test
+  protected AggregatorNodemanagerProtocol getNMAggregatorService(){
+    Configuration conf = getConfig();
+    final YarnRPC rpc = YarnRPC.create(conf);
+    
+    // TODO Security settings.
+    return (AggregatorNodemanagerProtocol) rpc.getProxy(
+        AggregatorNodemanagerProtocol.class,
+        nmAggregatorServiceAddress, conf);
+  }
+  
 }
