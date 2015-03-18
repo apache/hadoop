@@ -698,7 +698,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       if (System.currentTimeMillis() - retrystartTime >= retryInterval) {
         LOG.error("Could not contact RM after " + retryInterval + " milliseconds.");
         eventHandler.handle(new JobEvent(this.getJob().getID(),
-                                         JobEventType.INTERNAL_ERROR));
+                                         JobEventType.JOB_AM_REBOOT));
         throw new YarnRuntimeException("Could not contact RM after " +
                                 retryInterval + " milliseconds.");
       }
