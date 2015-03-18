@@ -86,6 +86,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     }
 
     encoder.initialize(numDataUnits, numParityUnits, chunkSize);
+    encoder.setConf(getConf());
     return encoder;
   }
 
@@ -102,6 +103,7 @@ public abstract class TestRawCoderBase extends TestCoderBase {
     }
 
     decoder.initialize(numDataUnits, numParityUnits, chunkSize);
+    decoder.setConf(getConf());
     return decoder;
   }
 

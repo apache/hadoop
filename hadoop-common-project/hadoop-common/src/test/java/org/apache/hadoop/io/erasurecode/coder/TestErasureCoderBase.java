@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.ECBlock;
-import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
+import org.apache.hadoop.io.erasurecode.ECChunk;
 import org.apache.hadoop.io.erasurecode.TestCoderBase;
 
 /**
@@ -30,7 +29,6 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
   protected Class<? extends ErasureEncoder> encoderClass;
   protected Class<? extends ErasureDecoder> decoderClass;
 
-  private Configuration conf;
   protected int numChunksInBlock = 16;
 
   /**
@@ -45,19 +43,6 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     public TestBlock(ECChunk[] chunks) {
       this.chunks = chunks;
     }
-  }
-
-  /**
-   * Prepare before running the case.
-   * @param conf
-   * @param numDataUnits
-   * @param numParityUnits
-   * @param erasedIndexes
-   */
-  protected void prepare(Configuration conf, int numDataUnits,
-                         int numParityUnits, int[] erasedIndexes) {
-    this.conf = conf;
-    super.prepare(numDataUnits, numParityUnits, erasedIndexes);
   }
 
   /**
@@ -162,7 +147,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     }
 
     encoder.initialize(numDataUnits, numParityUnits, chunkSize);
-    ((AbstractErasureCoder)encoder).setConf(conf);
+    encoder.setConf(getConf());
     return encoder;
   }
 
@@ -179,7 +164,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
     }
 
     decoder.initialize(numDataUnits, numParityUnits, chunkSize);
-    ((AbstractErasureCoder)decoder).setConf(conf);
+    decoder.setConf(getConf());
     return decoder;
   }
 
