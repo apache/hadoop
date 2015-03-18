@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.server.nodemanager.aggregatormanager.NMAggregatorService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -95,6 +96,7 @@ public class NodeManager extends CompositeService
   private Context context;
   private AsyncDispatcher dispatcher;
   private ContainerManagerImpl containerManager;
+  private NMAggregatorService nmAggregatorService;
   private NodeStatusUpdater nodeStatusUpdater;
   private NodeResourceMonitor nodeResourceMonitor;
   private static CompositeServiceShutdownHook nodeManagerShutdownHook;
@@ -172,6 +174,10 @@ public class NodeManager extends CompositeService
       LocalDirsHandlerService dirsHandler) {
     return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
       metrics, dirsHandler);
+  }
+  
+  protected NMAggregatorService createNMAggregatorService(Context context) {
+    return new NMAggregatorService(context);
   }
 
   protected WebServer createWebServer(Context nmContext,
@@ -348,6 +354,9 @@ public class NodeManager extends CompositeService
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     DefaultMetricsSystem.initialize("NodeManager");
+    
+    this.nmAggregatorService = createNMAggregatorService(context);
+    addService(nmAggregatorService);
 
     // StatusUpdater should be added last so that it get started last 
     // so that we make sure everything is up before registering with RM. 
@@ -443,6 +452,12 @@ public class NodeManager extends CompositeService
 
     protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
+    
+    protected Map<ApplicationId, String> registeredAggregators =
+        new ConcurrentHashMap<ApplicationId, String>();
+    
+    protected Map<ApplicationId, String> knownAggregators =
+        new ConcurrentHashMap<ApplicationId, String>();
 
     protected final ConcurrentMap<ContainerId,
         org.apache.hadoop.yarn.api.records.Container> increasedContainers =
@@ -588,6 +603,29 @@ public class NodeManager extends CompositeService
         getLogAggregationStatusForApps() {
       return this.logAggregationReportForApps;
     }
+    
+    @Override
+    public Map<ApplicationId, String> getRegisteredAggregators() {
+      return this.registeredAggregators;
+    }
+
+    public void addRegisteredAggregators(
+        Map<ApplicationId, String> newRegisteredAggregators) {
+      this.registeredAggregators.putAll(newRegisteredAggregators);
+      // Update to knownAggregators as well so it can immediately be consumed by 
+      // this NM's TimelineClient.
+      this.knownAggregators.putAll(newRegisteredAggregators);
+    }
+    
+    @Override
+    public Map<ApplicationId, String> getKnownAggregators() {
+      return this.knownAggregators;
+    }
+
+    public void addKnownAggregators(
+        Map<ApplicationId, String> knownAggregators) {
+      this.knownAggregators.putAll(knownAggregators);
+    }
   }
 
 
@@ -663,6 +701,11 @@ public class NodeManager extends CompositeService
   @VisibleForTesting
   public Context getNMContext() {
     return this.context;
+  }
+  
+  // For testing
+  NMAggregatorService getNMAggregatorService() {
+    return this.nmAggregatorService;
   }
 
   public static void main(String[] args) throws IOException {

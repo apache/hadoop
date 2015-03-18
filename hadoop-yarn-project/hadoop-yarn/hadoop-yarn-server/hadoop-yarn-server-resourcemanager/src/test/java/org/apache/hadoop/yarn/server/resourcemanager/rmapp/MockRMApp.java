@@ -296,4 +296,18 @@ public class MockRMApp implements RMApp {
   public String getAppNodeLabelExpression() {
     return null;
   }
+
+  public String getAggregatorAddr() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+  
+  @Override
+  public void removeAggregatorAddr() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public void setAggregatorAddr(String aggregatorAddr) {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
 }

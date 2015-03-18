@@ -32,6 +32,7 @@ import java.util.concurrent.Future;
 
 import com.sun.jersey.core.impl.provider.entity.XMLJAXBElementProvider;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.junit.Test;
 
 public class TestTimelineAggregatorsCollection {
@@ -45,11 +46,11 @@ public class TestTimelineAggregatorsCollection {
     final int NUM_APPS = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
     for (int i = 0; i < NUM_APPS; i++) {
-      final String appId = String.valueOf(i);
+      final ApplicationId appId = ApplicationId.newInstance(0L, i);
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
           AppLevelTimelineAggregator aggregator =
-              new AppLevelTimelineAggregator(appId);
+              new AppLevelTimelineAggregator(appId.toString());
           return (aggregatorCollection.putIfAbsent(appId, aggregator) == aggregator);
         }
       };
@@ -79,14 +80,14 @@ public class TestTimelineAggregatorsCollection {
     final int NUM_APPS = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
     for (int i = 0; i < NUM_APPS; i++) {
-      final String appId = String.valueOf(i);
+      final ApplicationId appId = ApplicationId.newInstance(0L, i);
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
           AppLevelTimelineAggregator aggregator =
-              new AppLevelTimelineAggregator(appId);
+              new AppLevelTimelineAggregator(appId.toString());
           boolean successPut =
               (aggregatorCollection.putIfAbsent(appId, aggregator) == aggregator);
-          return successPut && aggregatorCollection.remove(appId);
+          return successPut && aggregatorCollection.remove(appId.toString());
         }
       };
       tasks.add(task);

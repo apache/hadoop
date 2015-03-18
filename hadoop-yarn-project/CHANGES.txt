@@ -29,6 +29,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3264. Created backing storage write interface and a POC only FS based
     storage implementation. (Vrushali C via zjshen)
 
+    YARN-3039. Implemented the app-level timeline aggregator discovery service.
+    (Junping Du via zjshen)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
