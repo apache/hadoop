@@ -1190,6 +1190,10 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7697. Mark the PB OIV tool as experimental. (Lei Xu via wheat9)
 
+    HDFS-7914. TestJournalNode#testFailToStartWithBadConfig fails when the
+    default dfs.journalnode.http-address port 8480 is in use. (Xiaoyu Yao via
+    Arpit Agarwal)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
