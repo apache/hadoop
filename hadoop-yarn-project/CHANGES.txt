@@ -338,6 +338,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2777. Mark the end of individual log in aggregated log.
     (Varun Saxena via xgong)
 
+    YARN-3273. Improve scheduler UI to facilitate scheduling analysis and
+    debugging. (Rohith Sharmaks via jianhe)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 

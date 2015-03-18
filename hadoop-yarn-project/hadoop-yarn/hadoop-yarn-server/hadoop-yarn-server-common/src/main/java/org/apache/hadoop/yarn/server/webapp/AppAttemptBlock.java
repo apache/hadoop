@@ -162,8 +162,6 @@ public class AppAttemptBlock extends HtmlBlock {
       ._("Diagnostics Info:", appAttempt.getDiagnosticsInfo() == null ?
           "" : appAttempt.getDiagnosticsInfo());
 
-    html._(InfoBlock.class);
-
     if (exceptionWhenGetContainerReports) {
       html
         .p()

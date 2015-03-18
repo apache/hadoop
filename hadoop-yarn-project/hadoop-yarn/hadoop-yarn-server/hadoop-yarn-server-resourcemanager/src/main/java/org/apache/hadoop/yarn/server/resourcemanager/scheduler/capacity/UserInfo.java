@@ -32,14 +32,19 @@ public class UserInfo {
   protected ResourceInfo resourcesUsed;
   protected int numPendingApplications;
   protected int numActiveApplications;
+  protected ResourceInfo AMResourceUsed;
+  protected ResourceInfo userResourceLimit;
 
   UserInfo() {}
 
-  UserInfo(String username, Resource resUsed, int activeApps, int pendingApps) {
+  UserInfo(String username, Resource resUsed, int activeApps, int pendingApps,
+      Resource amResUsed, Resource resourceLimit) {
     this.username = username;
     this.resourcesUsed = new ResourceInfo(resUsed);
     this.numActiveApplications = activeApps;
     this.numPendingApplications = pendingApps;
+    this.AMResourceUsed = new ResourceInfo(amResUsed);
+    this.userResourceLimit = new ResourceInfo(resourceLimit);
   }
 
   public String getUsername() {
@@ -56,5 +61,13 @@ public class UserInfo {
 
   public int getNumActiveApplications() {
     return numActiveApplications;
+  }
+
+  public ResourceInfo getAMResourcesUsed() {
+    return AMResourceUsed;
+  }
+
+  public ResourceInfo getUserResourceLimit() {
+    return userResourceLimit;
   }
 }

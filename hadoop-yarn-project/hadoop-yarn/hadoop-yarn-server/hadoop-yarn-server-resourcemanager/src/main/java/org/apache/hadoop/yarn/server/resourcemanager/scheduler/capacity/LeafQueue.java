@@ -420,10 +420,13 @@ public class LeafQueue extends AbstractCSQueue {
    */
   public synchronized ArrayList<UserInfo> getUsers() {
     ArrayList<UserInfo> usersToReturn = new ArrayList<UserInfo>();
-    for (Map.Entry<String, User> entry: users.entrySet()) {
-      usersToReturn.add(new UserInfo(entry.getKey(), Resources.clone(
-        entry.getValue().getUsed()), entry.getValue().getActiveApplications(),
-        entry.getValue().getPendingApplications()));
+    for (Map.Entry<String, User> entry : users.entrySet()) {
+      User user = entry.getValue();
+      usersToReturn.add(new UserInfo(entry.getKey(), Resources.clone(user
+          .getUsed()), user.getActiveApplications(), user
+          .getPendingApplications(), Resources.clone(user
+          .getConsumedAMResources()), Resources.clone(user
+          .getUserResourceLimit())));
     }
     return usersToReturn;
   }
@@ -1158,7 +1161,7 @@ public class LeafQueue extends AbstractCSQueue {
           " clusterCapacity: " + clusterResource
       );
     }
-
+    user.setUserResourceLimit(limit);
     return limit;
   }
   
@@ -1818,6 +1821,7 @@ public class LeafQueue extends AbstractCSQueue {
   @VisibleForTesting
   public static class User {
     ResourceUsage userResourceUsage = new ResourceUsage();
+    volatile Resource userResourceLimit = Resource.newInstance(0, 0);
     int pendingApplications = 0;
     int activeApplications = 0;
 
@@ -1886,6 +1890,14 @@ public class LeafQueue extends AbstractCSQueue {
           userResourceUsage.decUsed(label, resource);
         }
       }
+    }
+
+    public Resource getUserResourceLimit() {
+      return userResourceLimit;
+    }
+
+    public void setUserResourceLimit(Resource userResourceLimit) {
+      this.userResourceLimit = userResourceLimit;
     }
   }
 

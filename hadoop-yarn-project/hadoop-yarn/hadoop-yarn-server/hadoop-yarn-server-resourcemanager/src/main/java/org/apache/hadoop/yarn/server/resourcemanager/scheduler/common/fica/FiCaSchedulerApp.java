@@ -268,7 +268,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         minimumAllocation, numCont);
     ContainersAndNMTokensAllocation allocation =
         pullNewlyAllocatedContainersAndNMTokens();
-    return new Allocation(allocation.getContainerList(), getHeadroom(), null,
+    Resource headroom = getHeadroom();
+    setApplicationHeadroomForMetrics(headroom);
+    return new Allocation(allocation.getContainerList(), headroom, null,
       currentContPreemption, Collections.singletonList(rr),
       allocation.getNMTokenList());
   }
