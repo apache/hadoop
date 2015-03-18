@@ -175,6 +175,23 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the tracking url for the application master.
    */
   String getTrackingUrl();
+  
+  /**
+   * The aggregator address for the application.
+   * @return the address for the application's aggregator.
+   */
+  String getAggregatorAddr();
+  
+  /**
+   * Set aggregator address for the application
+   * @param aggregatorAddr the address of aggregator
+   */
+  void setAggregatorAddr(String aggregatorAddr);
+  
+  /**
+   * Remove aggregator address when application is finished or killed.
+   */
+  void removeAggregatorAddr();
 
   /**
    * The original tracking url for the application master.

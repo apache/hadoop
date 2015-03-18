@@ -95,6 +95,18 @@ public abstract class MockAsm extends MockApps {
       throw new UnsupportedOperationException("Not supported yet.");
     }
     @Override
+    public String getAggregatorAddr() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public void setAggregatorAddr(String aggregatorAddr) {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public void removeAggregatorAddr() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
     public ApplicationId getApplicationId() {
       throw new UnsupportedOperationException("Not supported yet.");
     }

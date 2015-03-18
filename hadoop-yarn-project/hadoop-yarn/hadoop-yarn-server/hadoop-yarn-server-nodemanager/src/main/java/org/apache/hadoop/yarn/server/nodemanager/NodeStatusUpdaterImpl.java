@@ -725,7 +725,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                         .getContainerTokenSecretManager().getCurrentKey(),
                     NodeStatusUpdaterImpl.this.context
                         .getNMTokenSecretManager().getCurrentKey(),
-                    nodeLabelsForHeartbeat);
+                    nodeLabelsForHeartbeat,
+                    NodeStatusUpdaterImpl.this.context.getRegisteredAggregators());
 
             if (logAggregationEnabled) {
               // pull log aggregation status for application running in this NM
@@ -820,6 +821,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               dispatcher.getEventHandler().handle(
                   new CMgrSignalContainersEvent(containersToSignal));
             }
+
+            Map<ApplicationId, String> knownAggregators = response.getAppAggregatorsMap();
+            ((NodeManager.NMContext)context).addKnownAggregators(knownAggregators);
+
           } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM
             dispatcher.getEventHandler().handle(

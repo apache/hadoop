@@ -16,36 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "AggregatorNodemanagerProtocol";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.yarn;
 
-public enum RMAppEventType {
-  // Source: ClientRMService
-  START,
-  RECOVER,
-  KILL,
-  MOVE, // Move app to a new queue
+import "yarn_server_common_service_protos.proto";
 
-  // Source: Scheduler and RMAppManager
-  APP_REJECTED,
-
-  // Source: Scheduler
-  APP_ACCEPTED,
-  
-  // TODO add source later
-  AGGREGATOR_UPDATE,
-
-  // Source: RMAppAttempt
-  ATTEMPT_REGISTERED,
-  ATTEMPT_UNREGISTERED,
-  ATTEMPT_FINISHED, // Will send the final state
-  ATTEMPT_FAILED,
-  ATTEMPT_KILLED,
-  NODE_UPDATE,
-  
-  // Source: Container and ResourceTracker
-  APP_RUNNING_ON_NODE,
-
-  // Source: RMStateStore
-  APP_NEW_SAVED,
-  APP_UPDATE_SAVED,
+service AggregatorNodemanagerProtocolService {
+  rpc reportNewAggregatorInfo (ReportNewAggregatorsInfoRequestProto) returns (ReportNewAggregatorsInfoResponseProto);
 }
