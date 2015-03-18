@@ -273,7 +273,7 @@ public class TestApplicationLimits {
     LeafQueue queue = (LeafQueue)queues.get(A);
     
     LOG.info("Queue 'A' -" +
-    		" aMResourceLimit=" + queue.getAMResourceLimit() + 
+    		" AMResourceLimit=" + queue.getAMResourceLimit() +
     		" UserAMResourceLimit=" + 
     		queue.getUserAMResourceLimit());
     

@@ -35,7 +35,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected int userLimit;
   protected UsersInfo users; // To add another level in the XML
   protected float userLimitFactor;
-  protected ResourceInfo aMResourceLimit;
+  protected ResourceInfo AMResourceLimit;
   protected ResourceInfo userAMResourceLimit;
   protected boolean preemptionDisabled;
 
@@ -52,7 +52,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     userLimit = q.getUserLimit();
     users = new UsersInfo(q.getUsers());
     userLimitFactor = q.getUserLimitFactor();
-    aMResourceLimit = new ResourceInfo(q.getAMResourceLimit());
+    AMResourceLimit = new ResourceInfo(q.getAMResourceLimit());
     userAMResourceLimit = new ResourceInfo(q.getUserAMResourceLimit());
     preemptionDisabled = q.getPreemptionDisabled();
   }
@@ -91,7 +91,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   }
   
   public ResourceInfo getAMResourceLimit() {
-    return aMResourceLimit;
+    return AMResourceLimit;
   }
   
   public ResourceInfo getUserAMResourceLimit() {
