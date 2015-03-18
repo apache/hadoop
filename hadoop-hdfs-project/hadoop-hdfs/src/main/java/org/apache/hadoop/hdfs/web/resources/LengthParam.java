@@ -46,4 +46,9 @@ public class LengthParam extends LongParam {
   public String getName() {
     return NAME;
   }
+
+  public long getLength() {
+    Long v = getValue();
+    return v == null ? -1 : v;
+  }
 }
