@@ -11,6 +11,7 @@ Release 2.7.1 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
     YARN-3487. CapacityScheduler scheduler lock obtained unnecessarily when 
     calling getQueue (Jason Lowe via wangda)
 
@@ -25,6 +26,8 @@ Release 2.7.1 - UNRELEASED
 
     YARN-3522. Fixed DistributedShell to instantiate TimeLineClient as the
     correct user. (Zhijie Shen via jianhe)
+
+    YARN-3351. AppMaster tracking URL is broken in HA. (Anubhav Dhoot via kasha)
 
 Release 2.7.0 - 2015-04-20
 
