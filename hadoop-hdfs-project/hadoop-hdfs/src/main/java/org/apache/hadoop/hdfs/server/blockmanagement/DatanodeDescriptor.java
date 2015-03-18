@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.Arrays;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -41,6 +42,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -94,6 +96,33 @@ public class DatanodeDescriptor extends DatanodeInfo {
     BlockTargetPair(Block block, DatanodeStorageInfo[] targets) {
       this.block = block;
       this.targets = targets;
+    }
+  }
+
+  /** Block and targets pair */
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
+  public static class BlockECRecoveryInfo {
+    public final ExtendedBlock block;
+    public final DatanodeDescriptor[] sources;
+    public final DatanodeStorageInfo[] targets;
+    public final short[] missingBlockIndices;
+
+    BlockECRecoveryInfo(ExtendedBlock block, DatanodeDescriptor[] sources,
+        DatanodeStorageInfo[] targets, short[] missingBlockIndices) {
+      this.block = block;
+      this.sources = sources;
+      this.targets = targets;
+      this.missingBlockIndices = missingBlockIndices;
+    }
+
+    @Override
+    public String toString() {
+      return new StringBuilder().append("BlockECRecoveryInfo(\n  ").
+          append("Recovering ").append(block).
+          append(" From: ").append(Arrays.asList(sources)).
+          append(" To: ").append(Arrays.asList(targets)).append(")\n").
+          toString();
     }
   }
 
@@ -217,12 +246,17 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long bandwidth;
 
   /** A queue of blocks to be replicated by this datanode */
-  private final BlockQueue<BlockTargetPair> replicateBlocks = new BlockQueue<BlockTargetPair>();
+  private final BlockQueue<BlockTargetPair> replicateBlocks =
+      new BlockQueue<>();
+  /** A queue of blocks to be erasure coded by this datanode */
+  private final BlockQueue<BlockECRecoveryInfo> erasurecodeBlocks =
+      new BlockQueue<>();
   /** A queue of blocks to be recovered by this datanode */
-  private final BlockQueue<BlockInfoContiguousUnderConstruction> recoverBlocks =
-                                new BlockQueue<BlockInfoContiguousUnderConstruction>();
+  private final BlockQueue<BlockInfoContiguousUnderConstruction>
+      recoverBlocks = new BlockQueue<>();
   /** A set of blocks to be invalidated by this datanode */
-  private final LightWeightHashSet<Block> invalidateBlocks = new LightWeightHashSet<Block>();
+  private final LightWeightHashSet<Block> invalidateBlocks =
+      new LightWeightHashSet<>();
 
   /* Variables for maintaining number of blocks scheduled to be written to
    * this storage. This count is approximate and might be slightly bigger
@@ -375,6 +409,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
       this.invalidateBlocks.clear();
       this.recoverBlocks.clear();
       this.replicateBlocks.clear();
+      this.erasurecodeBlocks.clear();
     }
     // pendingCached, cached, and pendingUncached are protected by the
     // FSN lock.
@@ -597,6 +632,20 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
+   * Store block erasure coding work.
+   */
+  void addBlockToBeErasureCoded(ExtendedBlock block, DatanodeDescriptor[] sources,
+      DatanodeStorageInfo[] targets, short[] missingBlockIndicies) {
+    assert(block != null && sources != null && sources.length > 0);
+    BlockECRecoveryInfo task = new BlockECRecoveryInfo(block, sources, targets,
+        missingBlockIndicies);
+    erasurecodeBlocks.offer(task);
+    BlockManager.LOG.debug("Adding block recovery task " + task +
+        "to " + getName() + ", current queue size is " +
+        erasurecodeBlocks.size());
+  }
+
+  /**
    * Store block recovery work.
    */
   void addBlockToBeRecovered(BlockInfoContiguousUnderConstruction block) {
@@ -628,6 +677,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
+   * The number of work items that are pending to be replicated
+   */
+  int getNumberOfBlocksToBeErasureCoded() {
+    return erasurecodeBlocks.size();
+  }
+
+  /**
    * The number of block invalidation items that are pending to 
    * be sent to the datanode
    */
@@ -639,6 +695,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   public List<BlockTargetPair> getReplicationCommand(int maxTransfers) {
     return replicateBlocks.poll(maxTransfers);
+  }
+
+  public List<BlockECRecoveryInfo> getErasureCodeCommand(int maxTransfers) {
+    return erasurecodeBlocks.poll(maxTransfers);
   }
 
   public BlockInfoContiguousUnderConstruction[] getLeaseRecoveryCommand(int maxTransfers) {
@@ -840,6 +900,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
     int repl = replicateBlocks.size();
     if (repl > 0) {
       sb.append(" ").append(repl).append(" blocks to be replicated;");
+    }
+    int ec = erasurecodeBlocks.size();
+    if(ec > 0) {
+      sb.append(" ").append(ec).append(" blocks to be erasure coded;");
     }
     int inval = invalidateBlocks.size();
     if (inval > 0) {
