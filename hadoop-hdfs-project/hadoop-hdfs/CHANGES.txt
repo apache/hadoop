@@ -1178,6 +1178,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7948. TestDataNodeHotSwapVolumes#testAddVolumeFailures failed on
     Windows. (Xiaoyu Yao via Arpit Agarwal)
 
+    HDFS-7950. Fix TestFsDatasetImpl#testAddVolumes failure on Windows.
+    (Xiaoyu Yao via Arpit Agarwal)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
