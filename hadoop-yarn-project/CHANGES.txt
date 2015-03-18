@@ -78,6 +78,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3205 FileSystemRMStateStore should disable FileSystem Cache to avoid
     get a Filesystem with an old configuration. (Zhihai Xu via ozawa)
 
+    YARN-3351. AppMaster tracking URL is broken in HA. (Anubhav Dhoot via kasha)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
