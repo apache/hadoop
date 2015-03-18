@@ -521,7 +521,7 @@ public class TestDataNodeHotSwapVolumes {
         dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY).split(",");
     assertEquals(4, effectiveVolumes.length);
     for (String ev : effectiveVolumes) {
-      assertThat(new File(ev).getCanonicalPath(),
+      assertThat(StorageLocation.parse(ev).getFile().getCanonicalPath(),
           is(not(anyOf(is(newDirs.get(0)), is(newDirs.get(2))))));
     }
   }
