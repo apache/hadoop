@@ -84,7 +84,10 @@ public class FileSystemRMStateStore extends RMStateStore {
   protected static final String AMRMTOKEN_SECRET_MANAGER_NODE =
       "AMRMTokenSecretManagerNode";
 
+  @VisibleForTesting
   protected FileSystem fs;
+  @VisibleForTesting
+  protected Configuration fsConf;
 
   private Path rootDirPath;
   @Private
@@ -121,14 +124,23 @@ public class FileSystemRMStateStore extends RMStateStore {
     // create filesystem only now, as part of service-start. By this time, RM is
     // authenticated with kerberos so we are good to create a file-system
     // handle.
-    Configuration conf = new Configuration(getConfig());
-    conf.setBoolean("dfs.client.retry.policy.enabled", true);
+    fsConf = new Configuration(getConfig());
+    fsConf.setBoolean("dfs.client.retry.policy.enabled", true);
     String retryPolicy =
-        conf.get(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
+        fsConf.get(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
           YarnConfiguration.DEFAULT_FS_RM_STATE_STORE_RETRY_POLICY_SPEC);
-    conf.set("dfs.client.retry.policy.spec", retryPolicy);
+    fsConf.set("dfs.client.retry.policy.spec", retryPolicy);
 
-    fs = fsWorkingPath.getFileSystem(conf);
+    String scheme = fsWorkingPath.toUri().getScheme();
+    if (scheme == null) {
+      scheme = FileSystem.getDefaultUri(fsConf).getScheme();
+    }
+    if (scheme != null) {
+      String disableCacheName = String.format("fs.%s.impl.disable.cache", scheme);
+      fsConf.setBoolean(disableCacheName, true);
+    }
+
+    fs = fsWorkingPath.getFileSystem(fsConf);
     mkdirsWithRetries(rmDTSecretManagerRoot);
     mkdirsWithRetries(rmAppRoot);
     mkdirsWithRetries(amrmTokenSecretManagerRoot);

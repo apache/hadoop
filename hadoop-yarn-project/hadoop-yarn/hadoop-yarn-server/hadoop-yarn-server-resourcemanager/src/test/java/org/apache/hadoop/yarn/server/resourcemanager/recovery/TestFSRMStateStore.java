@@ -106,6 +106,11 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       this.store = new TestFileSystemRMStore(conf);
       Assert.assertEquals(store.getNumRetries(), 8);
       Assert.assertEquals(store.getRetryInterval(), 900L);
+      Assert.assertTrue(store.fs.getConf() == store.fsConf);
+      FileSystem previousFs = store.fs;
+      store.startInternal();
+      Assert.assertTrue(store.fs != previousFs);
+      Assert.assertTrue(store.fs.getConf() == store.fsConf);
       return store;
     }
 

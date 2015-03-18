@@ -72,6 +72,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3305. Normalize AM resource request on app submission. (Rohith Sharmaks
     via jianhe)
 
+    YARN-3205 FileSystemRMStateStore should disable FileSystem Cache to avoid
+    get a Filesystem with an old configuration. (Zhihai Xu via ozawa)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
