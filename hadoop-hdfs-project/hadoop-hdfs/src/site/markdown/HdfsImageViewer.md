@@ -55,6 +55,11 @@ The Offline Image Viewer provides several output processors:
     and numFiles is the number of files form the image which size falls
     in this segment.
 
+4. Delimited (experimental): Generate a text file with all of the elements
+   common to both inodes and inodes-under-construction, separated by a
+   delimiter. The default delimiter is \t, though this may be changed via
+   the -delimiter argument.
+
 Usage
 -----
 
@@ -137,6 +142,8 @@ Options
 | `-addr` *address* | Specify the address(host:port) to listen. (localhost:5978 by default). This option is used with Web processor. |
 | `-maxSize` *size* | Specify the range [0, maxSize] of file sizes to be analyzed in bytes (128GB by default). This option is used with FileDistribution processor. |
 | `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
+| `-delimiter` *arg* | Delimiting string to use with Delimited processor. |
+| `-t`\|`--temp` *temporary dir* | Use temporary dir to cache intermediate result to generate Delimited outputs. If not set, Delimited processor constructs the namespace in memory before outputting text. |
 | `-h`\|`--help` | Display the tool usage and help information and exit. |
 
 Analyzing Results
