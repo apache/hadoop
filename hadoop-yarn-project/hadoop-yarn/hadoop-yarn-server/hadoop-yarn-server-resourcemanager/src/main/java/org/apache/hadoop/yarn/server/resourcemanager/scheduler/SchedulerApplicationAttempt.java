@@ -632,4 +632,14 @@ public class SchedulerApplicationAttempt {
         requestType);
     }
   }
+
+  public void setApplicationHeadroomForMetrics(Resource headroom) {
+    RMAppAttempt attempt =
+        rmContext.getRMApps().get(attemptId.getApplicationId())
+            .getCurrentAppAttempt();
+    if (attempt != null) {
+      attempt.getRMAppAttemptMetrics().setApplicationAttemptHeadRoom(
+          Resources.clone(headroom));
+    }
+  }
 }

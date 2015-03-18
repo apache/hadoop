@@ -18,15 +18,59 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import java.util.EnumSet;
+
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSeeAlso;
+
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 
 @XmlRootElement
 @XmlSeeAlso({ CapacitySchedulerInfo.class, FairSchedulerInfo.class,
   FifoSchedulerInfo.class })
 public class SchedulerInfo {
+  protected String schedulerName;
+  protected ResourceInfo minAllocResource;
+  protected ResourceInfo maxAllocResource;
+  protected EnumSet<SchedulerResourceTypes> schedulingResourceTypes;
 
   public SchedulerInfo() {
   } // JAXB needs this
+
+  public SchedulerInfo(final ResourceManager rm) {
+    ResourceScheduler rs = rm.getResourceScheduler();
+
+    if (rs instanceof CapacityScheduler) {
+      this.schedulerName = "Capacity Scheduler";
+    } else if (rs instanceof FairScheduler) {
+      this.schedulerName = "Fair Scheduler";
+    } else if (rs instanceof FifoScheduler) {
+      this.schedulerName = "Fifo Scheduler";
+    }
+    this.minAllocResource = new ResourceInfo(rs.getMinimumResourceCapability());
+    this.maxAllocResource = new ResourceInfo(rs.getMaximumResourceCapability());
+    this.schedulingResourceTypes = rs.getSchedulingResourceTypes();
+  }
+
+  public String getSchedulerType() {
+    return this.schedulerName;
+  }
+
+  public ResourceInfo getMinAllocation() {
+    return this.minAllocResource;
+  }
+
+  public ResourceInfo getMaxAllocation() {
+    return this.maxAllocResource;
+  }
+
+  public String getSchedulerResourceTypes() {
+    return this.schedulingResourceTypes.toString();
+  }
 
 }
