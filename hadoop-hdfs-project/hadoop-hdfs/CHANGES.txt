@@ -1169,6 +1169,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7886. Fix TestFileTruncate falures. (Plamen Jeliazkov and shv)
 
+    HDFS-7946. TestDataNodeVolumeFailureReporting NPE on Windows. (Xiaoyu Yao
+    via Arpit Agarwal)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
