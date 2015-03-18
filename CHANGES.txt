@@ -66,6 +66,8 @@ Release 1.3.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-5556. mapred docs have incorrect classpath (harsh)
+
     MAPREDUCE-5272. Minor error in javadoc of TestMRWithDistributedCache
     (Zhijie Shen via harsh)
 
