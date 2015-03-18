@@ -449,6 +449,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11692. Improve authentication failure WARN message to avoid user
     confusion. (Yongjun Zhang)
 
+    HADOOP-11659. o.a.h.fs.FileSystem.Cache#remove should use a single hash map
+    lookup. (Brahma Reddy Battula via aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
