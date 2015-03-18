@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
+import org.apache.hadoop.conf.Configuration;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -31,6 +32,7 @@ import static org.junit.Assert.assertTrue;
 public abstract class TestCoderBase {
   protected static Random RAND = new Random();
 
+  private Configuration conf;
   protected int numDataUnits;
   protected int numParityUnits;
   protected int chunkSize = 16 * 1024;
@@ -49,12 +51,21 @@ public abstract class TestCoderBase {
    * @param numParityUnits
    * @param erasedIndexes
    */
-  protected void prepare(int numDataUnits, int numParityUnits,
-                         int[] erasedIndexes) {
+  protected void prepare(Configuration conf, int numDataUnits,
+                         int numParityUnits, int[] erasedIndexes) {
+    this.conf = conf;
     this.numDataUnits = numDataUnits;
     this.numParityUnits = numParityUnits;
     this.erasedDataIndexes = erasedIndexes != null ?
         erasedIndexes : new int[] {0};
+  }
+
+  /**
+   * Get the conf the test.
+   * @return configuration
+   */
+  protected Configuration getConf() {
+    return this.conf;
   }
 
   /**

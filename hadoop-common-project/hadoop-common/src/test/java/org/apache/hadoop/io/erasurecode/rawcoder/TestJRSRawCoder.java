@@ -46,37 +46,37 @@ public class TestJRSRawCoder extends TestRawCoderBase {
 
   @Test
   public void testCodingNoDirectBuffer_10x4() {
-    prepare(10, 4, null);
+    prepare(null, 10, 4, null);
     testCoding(false);
   }
 
   @Test
   public void testCodingDirectBuffer_10x4() {
-    prepare(10, 4, null);
+    prepare(null, 10, 4, null);
     testCoding(true);
   }
 
   @Test
   public void testCodingDirectBuffer_10x4_erasure_of_2_4() {
-    prepare(10, 4, new int[] {2, 4});
+    prepare(null, 10, 4, new int[] {2, 4});
     testCoding(true);
   }
 
   @Test
   public void testCodingDirectBuffer_10x4_erasing_all() {
-    prepare(10, 4, new int[] {0, 1, 2, 3});
+    prepare(null, 10, 4, new int[] {0, 1, 2, 3});
     testCoding(true);
   }
 
   @Test
   public void testCodingNoDirectBuffer_3x3() {
-    prepare(3, 3, null);
+    prepare(null, 3, 3, null);
     testCoding(false);
   }
 
   @Test
   public void testCodingDirectBuffer_3x3() {
-    prepare(3, 3, null);
+    prepare(null, 3, 3, null);
     testCoding(true);
   }
 
