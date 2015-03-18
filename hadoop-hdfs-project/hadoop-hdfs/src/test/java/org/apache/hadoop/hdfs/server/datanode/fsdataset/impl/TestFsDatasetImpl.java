@@ -330,7 +330,7 @@ public class TestFsDatasetImpl {
     Storage.StorageDirectory sd = createStorageDirectory(badDir);
     sd.lock();
     DataStorage.VolumeBuilder builder = new DataStorage.VolumeBuilder(storage, sd);
-    when(storage.prepareVolume(eq(datanode), eq(badDir),
+    when(storage.prepareVolume(eq(datanode), eq(badDir.getAbsoluteFile()),
         Matchers.<List<NamespaceInfo>>any()))
         .thenReturn(builder);
 
