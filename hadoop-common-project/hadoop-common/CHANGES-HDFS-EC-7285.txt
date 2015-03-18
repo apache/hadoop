@@ -19,6 +19,9 @@
     ( Kai Zheng via vinayakumarb )
 
     HADOOP-11705. Make erasure coder configurable. Contributed by Kai Zheng
-    ( Kai Zheng )    
+    ( Kai Zheng )
+
+    HADOOP-11706. Refine a little bit erasure coder API. Contributed by Kai Zheng
+    ( Kai Zheng )
 
 
