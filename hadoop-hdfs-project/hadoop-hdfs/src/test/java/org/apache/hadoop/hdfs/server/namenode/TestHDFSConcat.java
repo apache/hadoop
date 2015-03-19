@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -387,6 +388,22 @@ public class TestHDFSConcat {
       fail("didn't fail with invalid arguments");
     } catch (Exception e) {
       // exspected
+    }
+
+    // the source file's preferred block size cannot be greater than the target
+    {
+      final Path src1 = new Path(parentDir, "src1");
+      DFSTestUtil.createFile(dfs, src1, fileLen, REPL_FACTOR, 0L);
+      final Path src2 = new Path(parentDir, "src2");
+      // create a file whose preferred block size is greater than the target
+      DFSTestUtil.createFile(dfs, src2, 1024, fileLen,
+          dfs.getDefaultBlockSize(trg) * 2, REPL_FACTOR, 0L);
+      try {
+        dfs.concat(trg, new Path[] {src1, src2});
+        fail("didn't fail for src with greater preferred block size");
+      } catch (Exception e) {
+        GenericTestUtils.assertExceptionContains("preferred block size", e);
+      }
     }
   }
 
