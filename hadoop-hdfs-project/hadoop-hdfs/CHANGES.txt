@@ -1218,6 +1218,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7932. Speed up the shutdown of datanode during rolling upgrade.(kihwal)
 
+    HDFS-7930. commitBlockSynchronization() does not remove locations. (yliu)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
