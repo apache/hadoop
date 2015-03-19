@@ -847,7 +847,7 @@ public interface ClientProtocol {
 
   /**
    * Rolling upgrade operations.
-   * @param action either query, start or finailze.
+   * @param action either query, prepare or finalize.
    * @return rolling upgrade information.
    */
   @Idempotent

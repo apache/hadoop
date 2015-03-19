@@ -1270,7 +1270,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Rolling upgrade: start/finalize/query.
+   * Rolling upgrade: prepare/finalize/query.
    */
   public RollingUpgradeInfo rollingUpgrade(RollingUpgradeAction action)
       throws IOException {
