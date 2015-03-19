@@ -10,8 +10,43 @@ Requirements:
 * ProtocolBuffer 2.5.0
 * CMake 2.6 or newer (if compiling native code), must be 3.0 or newer on Mac
 * Zlib devel (if compiling native code)
-* openssl devel ( if compiling native hadoop-pipes )
+* openssl devel ( if compiling native hadoop-pipes and to get the best HDFS encryption performance )
+* Jansson C XML parsing library ( if compiling libwebhdfs )
+* Linux FUSE (Filesystem in Userspace) version 2.6 or above ( if compiling fuse_dfs )
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
+
+----------------------------------------------------------------------------------
+Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
+
+* Oracle JDK 1.7 (preferred)
+  $ sudo apt-get purge openjdk*
+  $ sudo apt-get install software-properties-common
+  $ sudo add-apt-repository ppa:webupd8team/java
+  $ sudo apt-get update
+  $ sudo apt-get install oracle-java7-installer
+* Maven
+  $ sudo apt-get -y install maven
+* Native libraries
+  $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev
+* ProtocolBuffer 2.5.0
+  $ wget https://protobuf.googlecode.com/svn/rc/protobuf-2.5.0.tar.gz
+  $ tar -zxvf protobuf-2.5.0.tar.gz
+  $ cd protobuf-2.5.0.tar.gz
+  $ ./configure
+  $ make
+  $ sudo make install
+  $ sudo ldconfig
+
+Optional packages:
+
+* Snappy compression
+  $ sudo apt-get install snappy libsnappy-dev
+* Bzip2
+  $ sudo apt-get install bzip2 libbz2-dev
+* Jansson (C Library for JSON)
+  $ sudo apt-get install libjansson-dev
+* Linux FUSE
+  $ sudo apt-get install fuse libfuse-dev
 
 ----------------------------------------------------------------------------------
 Maven main modules:
@@ -90,7 +125,7 @@ Maven build goals:
   * Use -Drequire.openssl to fail the build if libcrypto.so is not found.
     If this option is not specified and the openssl library is missing,
     we silently build a version of libhadoop.so that cannot make use of
-    openssl. This option is recommended if you plan on making use of openssl 
+    openssl. This option is recommended if you plan on making use of openssl
     and want to get more repeatable builds.
   * Use -Dopenssl.prefix to specify a nonstandard location for the libcrypto
     header files and library files. You do not need this option if you have
@@ -128,8 +163,8 @@ Protocol Buffer compiler
 The version of Protocol Buffer compiler, protoc, must match the version of the
 protobuf JAR.
 
-If you have multiple versions of protoc in your system, you can set in your 
-build shell the HADOOP_PROTOC_PATH environment variable to point to the one you 
+If you have multiple versions of protoc in your system, you can set in your
+build shell the HADOOP_PROTOC_PATH environment variable to point to the one you
 want to use for the Hadoop build. If you don't define this environment variable,
 protoc is looked up in the PATH.
 ----------------------------------------------------------------------------------
@@ -258,8 +293,8 @@ Several tests require that the user must have the Create Symbolic Links
 privilege.
 
 All Maven goals are the same as described above with the exception that
-native code is built by enabling the 'native-win' Maven profile. -Pnative-win 
-is enabled by default when building on Windows since the native components 
+native code is built by enabling the 'native-win' Maven profile. -Pnative-win
+is enabled by default when building on Windows since the native components
 are required (not optional) on Windows.
 
 If native code bindings for zlib are required, then the zlib headers must be
@@ -278,4 +313,3 @@ http://www.zlib.net/
 Building distributions:
 
  * Build distribution with native code    : mvn package [-Pdist][-Pdocs][-Psrc][-Dtar]
-
