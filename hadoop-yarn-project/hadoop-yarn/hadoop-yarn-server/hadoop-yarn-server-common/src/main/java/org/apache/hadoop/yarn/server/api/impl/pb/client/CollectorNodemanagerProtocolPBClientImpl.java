@@ -30,18 +30,18 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.ReportNewAggregatorsInfoRequestProto;
-import org.apache.hadoop.yarn.server.api.AggregatorNodemanagerProtocol;
-import org.apache.hadoop.yarn.server.api.AggregatorNodemanagerProtocolPB;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewAggregatorsInfoRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewAggregatorsInfoResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReportNewAggregatorsInfoRequestPBImpl;
-import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReportNewAggregatorsInfoResponsePBImpl;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.ReportNewCollectorInfoRequestProto;
+import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
+import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocolPB;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReportNewCollectorInfoRequestPBImpl;
+import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReportNewCollectorInfoResponsePBImpl;
 
 import com.google.protobuf.ServiceException;
 
-public class AggregatorNodemanagerProtocolPBClientImpl implements
-    AggregatorNodemanagerProtocol, Closeable {
+public class CollectorNodemanagerProtocolPBClientImpl implements
+    CollectorNodemanagerProtocol, Closeable {
 
   // Not a documented config. Only used for tests internally
   static final String NM_COMMAND_TIMEOUT = YarnConfiguration.YARN_PREFIX
@@ -51,39 +51,39 @@ public class AggregatorNodemanagerProtocolPBClientImpl implements
    * Maximum of 1 minute timeout for a Node to react to the command
    */
   static final int DEFAULT_COMMAND_TIMEOUT = 60000;
-  
-  private AggregatorNodemanagerProtocolPB proxy;
-  
+
+  private CollectorNodemanagerProtocolPB proxy;
+
   @Private
-  public AggregatorNodemanagerProtocolPBClientImpl(long clientVersion,
+  public CollectorNodemanagerProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, AggregatorNodemanagerProtocolPB.class,
+    RPC.setProtocolEngine(conf, CollectorNodemanagerProtocolPB.class,
       ProtobufRpcEngine.class);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
     int expireIntvl = conf.getInt(NM_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT);
     proxy =
-        (AggregatorNodemanagerProtocolPB) RPC.getProxy(
-            AggregatorNodemanagerProtocolPB.class,
+        (CollectorNodemanagerProtocolPB) RPC.getProxy(
+            CollectorNodemanagerProtocolPB.class,
             clientVersion, addr, ugi, conf,
             NetUtils.getDefaultSocketFactory(conf), expireIntvl);
   }
-  
+
   @Override
-  public ReportNewAggregatorsInfoResponse reportNewAggregatorInfo(
-      ReportNewAggregatorsInfoRequest request) throws YarnException, IOException {
-  
-    ReportNewAggregatorsInfoRequestProto requestProto =
-        ((ReportNewAggregatorsInfoRequestPBImpl) request).getProto();
+  public ReportNewCollectorInfoResponse reportNewCollectorInfo(
+      ReportNewCollectorInfoRequest request) throws YarnException, IOException {
+
+    ReportNewCollectorInfoRequestProto requestProto =
+        ((ReportNewCollectorInfoRequestPBImpl) request).getProto();
     try {
-      return new ReportNewAggregatorsInfoResponsePBImpl(
-          proxy.reportNewAggregatorInfo(null, requestProto));
+      return new ReportNewCollectorInfoResponsePBImpl(
+          proxy.reportNewCollectorInfo(null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;
     }
   }
-  
+
   @Override
   public void close() {
     if (this.proxy != null) {

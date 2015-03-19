@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.nodemanager.aggregatormanager;
+package org.apache.hadoop.yarn.server.nodemanager.collectormanager;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -25,46 +25,43 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.CompositeService;
-
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.server.api.AggregatorNodemanagerProtocol;
-import org.apache.hadoop.yarn.server.api.records.AppAggregatorsMap;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewAggregatorsInfoRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewAggregatorsInfoResponse;
+import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoResponse;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 
-public class NMAggregatorService extends CompositeService implements 
-    AggregatorNodemanagerProtocol {
+public class NMCollectorService extends CompositeService implements
+    CollectorNodemanagerProtocol {
 
-  private static final Log LOG = LogFactory.getLog(NMAggregatorService.class);
+  private static final Log LOG = LogFactory.getLog(NMCollectorService.class);
 
   final Context context;
-  
+
   private Server server;
 
-  public NMAggregatorService(Context context) {
-    
-    super(NMAggregatorService.class.getName());
+  public NMCollectorService(Context context) {
+
+    super(NMCollectorService.class.getName());
     this.context = context;
   }
 
   @Override
   protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
-    
-    InetSocketAddress aggregatorServerAddress = conf.getSocketAddr(
+
+    InetSocketAddress collectorServerAddress = conf.getSocketAddr(
         YarnConfiguration.NM_BIND_HOST,
-        YarnConfiguration.NM_AGGREGATOR_SERVICE_ADDRESS,
-        YarnConfiguration.DEFAULT_NM_AGGREGATOR_SERVICE_ADDRESS,
-        YarnConfiguration.DEFAULT_NM_AGGREGATOR_SERVICE_PORT);
+        YarnConfiguration.NM_COLLECTOR_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_PORT);
 
     Configuration serverConf = new Configuration(conf);
 
@@ -72,42 +69,42 @@ public class NMAggregatorService extends CompositeService implements
     YarnRPC rpc = YarnRPC.create(conf);
 
     server =
-        rpc.getServer(AggregatorNodemanagerProtocol.class, this, 
-            aggregatorServerAddress, serverConf,
+        rpc.getServer(CollectorNodemanagerProtocol.class, this,
+            collectorServerAddress, serverConf,
             this.context.getNMTokenSecretManager(),
-            conf.getInt(YarnConfiguration.NM_AGGREGATOR_SERVICE_THREAD_COUNT, 
-                YarnConfiguration.DEFAULT_NM_AGGREGATOR_SERVICE_THREAD_COUNT));
+            conf.getInt(YarnConfiguration.NM_COLLECTOR_SERVICE_THREAD_COUNT,
+                YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_THREAD_COUNT));
 
     server.start();
     // start remaining services
     super.serviceStart();
-    LOG.info("NMAggregatorService started at " + aggregatorServerAddress);
+    LOG.info("NMCollectorService started at " + collectorServerAddress);
   }
 
-  
+
   @Override
   public void serviceStop() throws Exception {
     if (server != null) {
       server.stop();
     }
-    // TODO may cleanup app aggregators running on this NM in future.
+    // TODO may cleanup app collectors running on this NM in future.
     super.serviceStop();
   }
 
   @Override
-  public ReportNewAggregatorsInfoResponse reportNewAggregatorInfo(
-      ReportNewAggregatorsInfoRequest request) throws IOException {
-    List<AppAggregatorsMap> newAggregatorsList = request.getAppAggregatorsList();
-    if (newAggregatorsList != null && !newAggregatorsList.isEmpty()) {
-      Map<ApplicationId, String> newAggregatorsMap = 
+  public ReportNewCollectorInfoResponse reportNewCollectorInfo(
+      ReportNewCollectorInfoRequest request) throws IOException {
+    List<AppCollectorsMap> newCollectorsList = request.getAppCollectorsList();
+    if (newCollectorsList != null && !newCollectorsList.isEmpty()) {
+      Map<ApplicationId, String> newCollectorsMap =
           new HashMap<ApplicationId, String>();
-      for (AppAggregatorsMap aggregator : newAggregatorsList) {
-        newAggregatorsMap.put(aggregator.getApplicationId(), aggregator.getAggregatorAddr());
+      for (AppCollectorsMap collector : newCollectorsList) {
+        newCollectorsMap.put(collector.getApplicationId(), collector.getCollectorAddr());
       }
-      ((NodeManager.NMContext)context).addRegisteredAggregators(newAggregatorsMap);
+      ((NodeManager.NMContext)context).addRegisteredCollectors(newCollectorsMap);
     }
-    
-    return ReportNewAggregatorsInfoResponse.newInstance();
+
+    return ReportNewCollectorInfoResponse.newInstance();
   }
-  
+
 }

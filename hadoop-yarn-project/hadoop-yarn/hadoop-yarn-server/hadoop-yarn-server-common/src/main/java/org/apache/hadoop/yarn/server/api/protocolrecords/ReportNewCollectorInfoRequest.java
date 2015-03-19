@@ -22,32 +22,32 @@ import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.server.api.records.AppAggregatorsMap;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
 import org.apache.hadoop.yarn.util.Records;
 
 @Private
-public abstract class ReportNewAggregatorsInfoRequest {
-  
-  public static ReportNewAggregatorsInfoRequest newInstance(
-      List<AppAggregatorsMap> appAggregatorsList) {
-    ReportNewAggregatorsInfoRequest request =
-        Records.newRecord(ReportNewAggregatorsInfoRequest.class);
-    request.setAppAggregatorsList(appAggregatorsList);
+public abstract class ReportNewCollectorInfoRequest {
+
+  public static ReportNewCollectorInfoRequest newInstance(
+      List<AppCollectorsMap> appCollectorsList) {
+    ReportNewCollectorInfoRequest request =
+        Records.newRecord(ReportNewCollectorInfoRequest.class);
+    request.setAppCollectorsList(appCollectorsList);
     return request;
   }
-  
-  public static ReportNewAggregatorsInfoRequest newInstance(
-      ApplicationId id, String aggregatorAddr) {
-    ReportNewAggregatorsInfoRequest request =
-        Records.newRecord(ReportNewAggregatorsInfoRequest.class);
-    request.setAppAggregatorsList(
-        Arrays.asList(AppAggregatorsMap.newInstance(id, aggregatorAddr)));
+
+  public static ReportNewCollectorInfoRequest newInstance(
+      ApplicationId id, String collectorAddr) {
+    ReportNewCollectorInfoRequest request =
+        Records.newRecord(ReportNewCollectorInfoRequest.class);
+    request.setAppCollectorsList(
+        Arrays.asList(AppCollectorsMap.newInstance(id, collectorAddr)));
     return request;
   }
-  
-  public abstract List<AppAggregatorsMap> getAppAggregatorsList();
-  
-  public abstract void setAppAggregatorsList(
-      List<AppAggregatorsMap> appAggregatorsList);
-  
+
+  public abstract List<AppCollectorsMap> getAppCollectorsList();
+
+  public abstract void setAppCollectorsList(
+      List<AppCollectorsMap> appCollectorsList);
+
 }

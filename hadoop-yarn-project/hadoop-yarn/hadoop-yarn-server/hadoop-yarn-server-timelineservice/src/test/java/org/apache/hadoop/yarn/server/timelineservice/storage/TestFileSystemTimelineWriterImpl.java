@@ -27,12 +27,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.Test;
-import org.apache.commons.io.FileUtils;
 
 public class TestFileSystemTimelineWriterImpl {
 
@@ -42,9 +42,6 @@ public class TestFileSystemTimelineWriterImpl {
    */
   @Test
   public void testWriteEntityToFile() throws Exception {
-    String name =  "unit_test_BaseAggregator_testWriteEntityToFile_"
-        + Long.toString(System.currentTimeMillis());
-
     TimelineEntities te = new TimelineEntities();
     TimelineEntity entity = new TimelineEntity();
     String id = "hello";
@@ -55,25 +52,27 @@ public class TestFileSystemTimelineWriterImpl {
     entity.setModifiedTime(1425016502000L);
     te.addEntity(entity);
 
-    FileSystemTimelineWriterImpl fsi = new FileSystemTimelineWriterImpl();
-    fsi.serviceInit(new Configuration());
-    fsi.write(te);
+    try (FileSystemTimelineWriterImpl fsi =
+        new FileSystemTimelineWriterImpl()) {
+      fsi.serviceInit(new Configuration());
+      fsi.write(te);
 
-    String fileName = fsi.getOutputRoot() + "/" + type + "/" + id
-        + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
-    Path path = Paths.get(fileName);
-    File f = new File(fileName);
-    assertTrue(f.exists() && !f.isDirectory());
-    List<String> data = Files.readAllLines(path, StandardCharsets.UTF_8);
-    // ensure there's only one entity + 1 new line
-    assertTrue(data.size() == 2);
-    String d = data.get(0);
-    // confirm the contents same as what was written
-    assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
+      String fileName = fsi.getOutputRoot() + "/" + type + "/" + id
+          + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+      Path path = Paths.get(fileName);
+      File f = new File(fileName);
+      assertTrue(f.exists() && !f.isDirectory());
+      List<String> data = Files.readAllLines(path, StandardCharsets.UTF_8);
+      // ensure there's only one entity + 1 new line
+      assertTrue(data.size() == 2);
+      String d = data.get(0);
+      // confirm the contents same as what was written
+      assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
 
-    // delete the directory
-    File outputDir = new File(fsi.getOutputRoot());
-    FileUtils.deleteDirectory(outputDir);
-    assertTrue(!(f.exists()));
+      // delete the directory
+      File outputDir = new File(fsi.getOutputRoot());
+      FileUtils.deleteDirectory(outputDir);
+      assertTrue(!(f.exists()));
+    }
   }
 }

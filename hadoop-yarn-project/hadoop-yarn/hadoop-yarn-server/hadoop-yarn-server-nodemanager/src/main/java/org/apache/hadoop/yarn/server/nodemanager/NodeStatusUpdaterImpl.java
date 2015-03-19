@@ -689,7 +689,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                     NodeStatusUpdaterImpl.this.context
                         .getNMTokenSecretManager().getCurrentKey(),
                     nodeLabelsForHeartbeat,
-                    NodeStatusUpdaterImpl.this.context.getRegisteredAggregators());
+                    NodeStatusUpdaterImpl.this.context.getRegisteredCollectors());
 
             if (logAggregationEnabled) {
               // pull log aggregation status for application running in this NM
@@ -766,10 +766,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               ((NMContext) context)
                 .setSystemCrendentialsForApps(parseCredentials(systemCredentials));
             }
-            
-            Map<ApplicationId, String> knownAggregators = response.getAppAggregatorsMap();
-            ((NodeManager.NMContext)context).addKnownAggregators(knownAggregators);
-            
+
+            Map<ApplicationId, String> knownCollectors =
+                response.getAppCollectorsMap();
+            ((NodeManager.NMContext)context).addKnownCollectors(knownCollectors);
+
           } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM
             dispatcher.getEventHandler().handle(

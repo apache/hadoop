@@ -47,7 +47,7 @@ public class TimelineWriteResponse {
 
   /**
    * Get a list of {@link TimelineWriteError} instances
-   * 
+   *
    * @return a list of {@link TimelineWriteError} instances
    */
   @XmlElement(name = "errors")
@@ -57,7 +57,7 @@ public class TimelineWriteResponse {
 
   /**
    * Add a single {@link TimelineWriteError} instance into the existing list
-   * 
+   *
    * @param error
    *          a single {@link TimelineWriteError} instance
    */
@@ -67,7 +67,7 @@ public class TimelineWriteResponse {
 
   /**
    * Add a list of {@link TimelineWriteError} instances into the existing list
-   * 
+   *
    * @param errors
    *          a list of {@link TimelineWriteError} instances
    */
@@ -77,7 +77,7 @@ public class TimelineWriteResponse {
 
   /**
    * Set the list to the given list of {@link TimelineWriteError} instances
-   * 
+   *
    * @param errors
    *          a list of {@link TimelineWriteError} instances
    */
@@ -107,7 +107,7 @@ public class TimelineWriteResponse {
 
     /**
      * Get the entity Id
-     * 
+     *
      * @return the entity Id
      */
     @XmlElement(name = "entity")
@@ -117,7 +117,7 @@ public class TimelineWriteResponse {
 
     /**
      * Set the entity Id
-     * 
+     *
      * @param entityId
      *          the entity Id
      */
@@ -127,7 +127,7 @@ public class TimelineWriteResponse {
 
     /**
      * Get the entity type
-     * 
+     *
      * @return the entity type
      */
     @XmlElement(name = "entitytype")
@@ -137,7 +137,7 @@ public class TimelineWriteResponse {
 
     /**
      * Set the entity type
-     * 
+     *
      * @param entityType
      *          the entity type
      */
@@ -147,7 +147,7 @@ public class TimelineWriteResponse {
 
     /**
      * Get the error code
-     * 
+     *
      * @return an error code
      */
     @XmlElement(name = "errorcode")
@@ -157,7 +157,7 @@ public class TimelineWriteResponse {
 
     /**
      * Set the error code to the given error code
-     * 
+     *
      * @param errorCode
      *          an error code
      */

@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppAggregatorsMapProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorsMapProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
@@ -56,8 +56,8 @@ public class NodeHeartbeatResponsePBImpl extends
   private List<ContainerId> containersToBeRemovedFromNM = null;
   private List<ApplicationId> applicationsToCleanup = null;
   private Map<ApplicationId, ByteBuffer> systemCredentials = null;
-  
-  Map<ApplicationId, String> appAggregatorsMap = null;
+
+  Map<ApplicationId, String> appCollectorsMap = null;
 
   private MasterKey containerTokenMasterKey = null;
   private MasterKey nmTokenMasterKey = null;
@@ -99,9 +99,9 @@ public class NodeHeartbeatResponsePBImpl extends
     if (this.systemCredentials != null) {
       addSystemCredentialsToProto();
     }
-    
-    if (this.appAggregatorsMap != null) {
-      addAppAggregatorsMapToProto();
+
+    if (this.appCollectorsMap != null) {
+      addAppCollectorsMapToProto();
     }
   }
 
@@ -115,14 +115,14 @@ public class NodeHeartbeatResponsePBImpl extends
             entry.getValue().duplicate())));
     }
   }
-  
-  private void addAppAggregatorsMapToProto() {
+
+  private void addAppCollectorsMapToProto() {
     maybeInitBuilder();
-    builder.clearAppAggregatorsMap();
-    for (Map.Entry<ApplicationId, String> entry : appAggregatorsMap.entrySet()) {
-      builder.addAppAggregatorsMap(AppAggregatorsMapProto.newBuilder()
+    builder.clearAppCollectorsMap();
+    for (Map.Entry<ApplicationId, String> entry : appCollectorsMap.entrySet()) {
+      builder.addAppCollectorsMap(AppCollectorsMapProto.newBuilder()
         .setAppId(convertToProtoFormat(entry.getKey()))
-        .setAppAggregatorAddr(entry.getValue()));
+        .setAppCollectorAddr(entry.getValue()));
     }
   }
 
@@ -434,14 +434,14 @@ public class NodeHeartbeatResponsePBImpl extends
     initSystemCredentials();
     return systemCredentials;
   }
-  
+
   @Override
-  public Map<ApplicationId, String> getAppAggregatorsMap() {
-    if (this.appAggregatorsMap != null) {
-      return this.appAggregatorsMap;
+  public Map<ApplicationId, String> getAppCollectorsMap() {
+    if (this.appCollectorsMap != null) {
+      return this.appCollectorsMap;
     }
-    initAppAggregatorsMap();
-    return appAggregatorsMap;
+    initAppCollectorsMap();
+    return appCollectorsMap;
   }
 
   private void initSystemCredentials() {
@@ -454,14 +454,14 @@ public class NodeHeartbeatResponsePBImpl extends
       this.systemCredentials.put(appId, byteBuffer);
     }
   }
-  
-  private void initAppAggregatorsMap() {
+
+  private void initAppCollectorsMap() {
     NodeHeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
-    List<AppAggregatorsMapProto> list = p.getAppAggregatorsMapList();
-    this.appAggregatorsMap = new HashMap<ApplicationId, String> ();
-    for (AppAggregatorsMapProto c : list) {
+    List<AppCollectorsMapProto> list = p.getAppCollectorsMapList();
+    this.appCollectorsMap = new HashMap<ApplicationId, String> ();
+    for (AppCollectorsMapProto c : list) {
       ApplicationId appId = convertFromProtoFormat(c.getAppId());
-      this.appAggregatorsMap.put(appId, c.getAppAggregatorAddr());
+      this.appCollectorsMap.put(appId, c.getAppCollectorAddr());
     }
   }
 
@@ -475,16 +475,16 @@ public class NodeHeartbeatResponsePBImpl extends
     this.systemCredentials = new HashMap<ApplicationId, ByteBuffer>();
     this.systemCredentials.putAll(systemCredentials);
   }
-  
+
   @Override
-  public void setAppAggregatorsMap(
-      Map<ApplicationId, String> appAggregatorsMap) {
-    if (appAggregatorsMap == null || appAggregatorsMap.isEmpty()) {
+  public void setAppCollectorsMap(
+      Map<ApplicationId, String> appCollectorsMap) {
+    if (appCollectorsMap == null || appCollectorsMap.isEmpty()) {
       return;
     }
     maybeInitBuilder();
-    this.appAggregatorsMap = new HashMap<ApplicationId, String>();
-    this.appAggregatorsMap.putAll(appAggregatorsMap);
+    this.appCollectorsMap = new HashMap<ApplicationId, String>();
+    this.appCollectorsMap.putAll(appCollectorsMap);
   }
 
   @Override

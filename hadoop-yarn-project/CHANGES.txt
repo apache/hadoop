@@ -32,13 +32,16 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3039. Implemented the app-level timeline aggregator discovery service.
     (Junping Du via zjshen)
 
+    YARN-3333. Rename TimelineAggregator etc. to TimelineCollector. (Sangjin Lee
+    via junping_du)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
 
   BUG FIXES
 
-Trunk - Unreleased 
+Trunk - Unreleased
 
   INCOMPATIBLE CHANGES
 

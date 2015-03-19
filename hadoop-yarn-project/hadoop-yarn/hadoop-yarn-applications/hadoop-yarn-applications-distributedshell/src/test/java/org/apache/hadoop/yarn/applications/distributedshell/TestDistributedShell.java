@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.timelineservice.aggregator.PerNodeTimelineAggregatorsAuxService;
+import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.junit.After;
 import org.junit.Assert;
@@ -67,7 +67,7 @@ public class TestDistributedShell {
   protected MiniYARNCluster yarnCluster = null;  
   protected YarnConfiguration conf = null;
   private static final int NUM_NMS = 1;
-  private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_aggregator";
+  private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_collector";
 
   protected final static String APPMASTER_JAR =
       JarFinder.getJar(ApplicationMaster.class);
@@ -91,14 +91,14 @@ public class TestDistributedShell {
     // mark if we need to launch the v1 timeline server
     boolean enableATSV1 = false;
     if (!currTestName.getMethodName().toLowerCase().contains("v2")) {
-      // disable aux-service based timeline aggregators
+      // disable aux-service based timeline collectors
       conf.set(YarnConfiguration.NM_AUX_SERVICES, "");
       enableATSV1 = true;
     } else {
-      // enable aux-service based timeline aggregators
+      // enable aux-service based timeline collectors
       conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
       conf.set(YarnConfiguration.NM_AUX_SERVICES + "." + TIMELINE_AUX_SERVICE_NAME
-        + ".class", PerNodeTimelineAggregatorsAuxService.class.getName());
+        + ".class", PerNodeTimelineCollectorsAuxService.class.getName());
     }
     conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);

@@ -120,7 +120,7 @@ public abstract class AllocateResponse {
     response.setAMRMToken(amRMToken);
     return response;
   }
-  
+
   @Public
   @Unstable
   public static AllocateResponse newInstance(int responseId,
@@ -130,13 +130,13 @@ public abstract class AllocateResponse {
       PreemptionMessage preempt, List<NMToken> nmTokens, Token amRMToken,
       List<ContainerResourceIncrease> increasedContainers,
       List<ContainerResourceDecrease> decreasedContainers,
-      String aggregatorAddr) {
+      String collectorAddr) {
     AllocateResponse response =
         newInstance(responseId, completedContainers, allocatedContainers,
           updatedNodes, availResources, command, numClusterNodes, preempt,
           nmTokens, increasedContainers, decreasedContainers);
     response.setAMRMToken(amRMToken);
-    response.setAggregatorAddr(aggregatorAddr);
+    response.setCollectorAddr(collectorAddr);
     return response;
   }
 
@@ -323,18 +323,18 @@ public abstract class AllocateResponse {
   @Private
   @Unstable
   public abstract void setAMRMToken(Token amRMToken);
-  
+
   /**
-   * The address of aggregator that belong to this app
+   * The address of collector that belong to this app
    *
-   * @return The address of aggregator that belong to this attempt
+   * @return The address of collector that belong to this attempt
    */
   @Public
   @Unstable
-  public abstract String getAggregatorAddr();
-  
+  public abstract String getCollectorAddr();
+
   @Private
   @Unstable
-  public abstract void setAggregatorAddr(String aggregatorAddr);
-  
+  public abstract void setCollectorAddr(String collectorAddr);
+
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.aggregator;
+package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import java.io.IOException;
 
@@ -27,12 +27,12 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 /**
  * Service that handles writes to the timeline service and writes them to the
  * backing storage.
@@ -42,12 +42,12 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 @Private
 @Unstable
-public abstract class TimelineAggregator extends CompositeService {
-  private static final Log LOG = LogFactory.getLog(TimelineAggregator.class);
+public abstract class TimelineCollector extends CompositeService {
+  private static final Log LOG = LogFactory.getLog(TimelineCollector.class);
 
   private TimelineWriter writer;
 
-  public TimelineAggregator(String name) {
+  public TimelineCollector(String name) {
     super(name);
   }
 

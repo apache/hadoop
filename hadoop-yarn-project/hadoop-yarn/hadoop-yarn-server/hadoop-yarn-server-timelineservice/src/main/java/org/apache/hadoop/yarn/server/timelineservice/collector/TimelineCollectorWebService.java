@@ -16,12 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.aggregator;
+package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -36,7 +42,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
@@ -53,9 +58,9 @@ import com.google.inject.Singleton;
 @Unstable
 @Singleton
 @Path("/ws/v2/timeline")
-public class TimelineAggregatorWebService {
+public class TimelineCollectorWebService {
   private static final Log LOG =
-      LogFactory.getLog(TimelineAggregatorWebService.class);
+      LogFactory.getLog(TimelineCollectorWebService.class);
 
   private @Context ServletContext context;
 
@@ -95,12 +100,12 @@ public class TimelineAggregatorWebService {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res) {
     init(res);
-    return new AboutInfo("Timeline API");
+    return new AboutInfo("Timeline Collector API");
   }
 
   /**
-   * Accepts writes to the aggregator, and returns a response. It simply routes
-   * the request to the app level aggregator. It expects an application as a
+   * Accepts writes to the collector, and returns a response. It simply routes
+   * the request to the app level collector. It expects an application as a
    * context.
    */
   @PUT
@@ -128,12 +133,12 @@ public class TimelineAggregatorWebService {
       if (appId == null) {
         return Response.status(Response.Status.BAD_REQUEST).build();
       }
-      TimelineAggregator service = getAggregatorService(req, appId);
-      if (service == null) {
+      TimelineCollector collector = getCollector(req, appId);
+      if (collector == null) {
         LOG.error("Application not found");
         throw new NotFoundException(); // different exception?
       }
-      service.postEntities(entities, callerUgi);
+      collector.postEntities(entities, callerUgi);
       return Response.ok().build();
     } catch (Exception e) {
       LOG.error("Error putting entities", e);
@@ -143,8 +148,6 @@ public class TimelineAggregatorWebService {
   }
 
   private String parseApplicationId(String appId) {
-    // Make sure the appId is not null and is valid
-    ApplicationId appID;
     try {
       if (appId != null) {
         return ConverterUtils.toApplicationId(appId.trim()).toString();
@@ -156,13 +159,13 @@ public class TimelineAggregatorWebService {
     }
   }
 
-  private TimelineAggregator
-      getAggregatorService(HttpServletRequest req, String appIdToParse) {
+  private TimelineCollector
+      getCollector(HttpServletRequest req, String appIdToParse) {
     String appIdString = parseApplicationId(appIdToParse);
-    final TimelineAggregatorsCollection aggregatorCollection =
-        (TimelineAggregatorsCollection) context.getAttribute(
-            TimelineAggregatorsCollection.AGGREGATOR_COLLECTION_ATTR_KEY);
-    return aggregatorCollection.get(appIdString);
+    final TimelineCollectorManager collectorManager =
+        (TimelineCollectorManager) context.getAttribute(
+            TimelineCollectorManager.COLLECTOR_MANAGER_ATTR_KEY);
+    return collectorManager.get(appIdString);
   }
 
   private void init(HttpServletResponse response) {

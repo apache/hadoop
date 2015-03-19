@@ -116,14 +116,14 @@ public class TimelineClientImpl extends TimelineClient {
   private URI resURI;
   private UserGroupInformation authUgi;
   private String doAsUser;
-  
+
   private volatile String timelineServiceAddress;
-  
+
   // Retry parameters for identifying new timeline service
   // TODO consider to merge with connection retry
   private int maxServiceRetries;
   private long serviceRetryInterval;
-  
+
   private boolean newTimelineService = false;
 
   @Private
@@ -323,7 +323,7 @@ public class TimelineClientImpl extends TimelineClient {
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS));
       }
       LOG.info("Timeline service address: " + getTimelineServiceAddress());
-    } 
+    }
     super.serviceInit(conf);
   }
 
@@ -374,16 +374,16 @@ public class TimelineClientImpl extends TimelineClient {
       YarnException {
     doPosting(domain, "domain");
   }
-  
+
   // Used for new timeline service only
   @Private
-  public void putObjects(String path, MultivaluedMap<String, String> params, 
+  public void putObjects(String path, MultivaluedMap<String, String> params,
       Object obj) throws IOException, YarnException {
-    
-    // timelineServiceAddress could haven't be initialized yet 
+
+    // timelineServiceAddress could haven't be initialized yet
     // or stale (only for new timeline service)
     int retries = pollTimelineServiceAddress(this.maxServiceRetries);
-    
+
     // timelineServiceAddress could be stale, add retry logic here.
     boolean needRetry = true;
     while (needRetry) {
@@ -400,13 +400,13 @@ public class TimelineClientImpl extends TimelineClient {
       }
     }
   }
-  
+
   /**
    * Check if reaching to maximum of retries.
    * @param retries
    * @param e
    */
-  private void checkRetryWithSleep(int retries, Exception e) throws 
+  private void checkRetryWithSleep(int retries, Exception e) throws
       YarnException, IOException {
     if (retries > 0) {
       try {
@@ -416,8 +416,8 @@ public class TimelineClientImpl extends TimelineClient {
       }
     } else {
       LOG.error(
-        "TimelineClient has reached to max retry times :" + 
-        this.maxServiceRetries + " for service address: " + 
+        "TimelineClient has reached to max retry times :" +
+        this.maxServiceRetries + " for service address: " +
         timelineServiceAddress);
       if (e instanceof YarnException) {
         throw (YarnException)e;
@@ -488,12 +488,12 @@ public class TimelineClientImpl extends TimelineClient {
     }
     return resp;
   }
-  
+
   @Override
   public void setTimelineServiceAddress(String address) {
     this.timelineServiceAddress = address;
   }
-  
+
   private String getTimelineServiceAddress() {
     return this.timelineServiceAddress;
   }
@@ -642,7 +642,7 @@ public class TimelineClientImpl extends TimelineClient {
       throw new YarnRuntimeException("Unknown resource type");
     }
   }
-  
+
   /**
    * Poll TimelineServiceAddress for maximum of retries times if it is null
    * @param retries
