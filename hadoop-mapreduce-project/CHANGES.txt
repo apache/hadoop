@@ -463,6 +463,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6277. Job can post multiple history files if attempt loses
     connection to the RM (Chang Li via jlowe)
 
+    MAPREDUCE-6275. Race condition in FileOutputCommitter v2 for
+    user-specified task output subdirs (Gera Shegalov and Siqi Li via jlowe)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
