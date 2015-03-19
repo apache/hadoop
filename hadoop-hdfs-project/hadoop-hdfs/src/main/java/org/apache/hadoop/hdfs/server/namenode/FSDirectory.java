@@ -267,6 +267,10 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  boolean shouldSkipQuotaChecks() {
+    return skipQuotaCheck;
+  }
+
   /** Enable quota verification */
   void enableQuotaChecks() {
     skipQuotaCheck = false;
@@ -1738,7 +1742,7 @@ public class FSDirectory implements Closeable {
    * update quota of each inode and check to see if quota is exceeded. 
    * See {@link #updateCount(INodesInPath, long, long, boolean)}
    */ 
-  private void updateCountNoQuotaCheck(INodesInPath inodesInPath,
+  void updateCountNoQuotaCheck(INodesInPath inodesInPath,
       int numOfINodes, long nsDelta, long dsDelta) {
     assert hasWriteLock();
     try {
@@ -1877,7 +1881,7 @@ public class FSDirectory implements Closeable {
    *          Pass null if a node is not being moved.
    * @throws QuotaExceededException if quota limit is exceeded.
    */
-  private static void verifyQuota(INode[] inodes, int pos, long nsDelta,
+  static void verifyQuota(INode[] inodes, int pos, long nsDelta,
       long dsDelta, INode commonAncestor) throws QuotaExceededException {
     if (nsDelta <= 0 && dsDelta <= 0) {
       // if quota is being freed or not being consumed

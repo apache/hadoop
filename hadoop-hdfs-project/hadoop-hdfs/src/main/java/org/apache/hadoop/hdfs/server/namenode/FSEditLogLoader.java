@@ -387,7 +387,7 @@ public class FSEditLogLoader {
                 "for append");
           }
           LocatedBlock lb = fsNamesys.prepareFileForWrite(path,
-              oldFile, addCloseOp.clientName, addCloseOp.clientMachine, false, iip.getLatestSnapshotId(), false);
+              iip, addCloseOp.clientName, addCloseOp.clientMachine, false, false);
           newFile = INodeFile.valueOf(fsDir.getINode(path),
               path, true);
           

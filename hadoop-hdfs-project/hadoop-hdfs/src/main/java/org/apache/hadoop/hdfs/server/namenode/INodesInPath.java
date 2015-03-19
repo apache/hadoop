@@ -67,6 +67,10 @@ public class INodesInPath {
     return iip;
   }
 
+  public int length() {
+    return inodes.length;
+  }
+
   /**
    * Given some components, create a path name.
    * @param components The path components
