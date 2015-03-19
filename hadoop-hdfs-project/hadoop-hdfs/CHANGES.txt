@@ -764,6 +764,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7054. Make DFSOutputStream tracing more fine-grained (cmccabe)
 
+    HDFS.7849. Update documentation for enabling a new feature in rolling
+    upgrade ( J.Andreina via vinayakumarb )
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
