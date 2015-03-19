@@ -55,7 +55,8 @@ import java.util.Map;
 import static java.lang.Thread.sleep;
 
 public class TestApplicationMasterService {
-  private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
+  private static final Log LOG = LogFactory
+      .getLog(TestApplicationMasterService.class);
 
   private final int GB = 1024;
   private static YarnConfiguration conf;

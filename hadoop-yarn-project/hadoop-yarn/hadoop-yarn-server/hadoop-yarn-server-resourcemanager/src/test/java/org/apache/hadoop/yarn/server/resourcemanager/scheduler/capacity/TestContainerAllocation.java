@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.RMSecretManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.TestFifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -68,7 +67,8 @@ import com.google.common.collect.Sets;
 
 public class TestContainerAllocation {
 
-  private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
+  private static final Log LOG = LogFactory
+      .getLog(TestContainerAllocation.class);
 
   private final int GB = 1024;
 
