@@ -67,8 +67,8 @@ extends AMRMClientAsync<T> {
   private volatile boolean keepRunning;
   private volatile float progress;
   
-  private volatile String aggregatorAddr;
-  
+  private volatile String collectorAddr;
+
   private volatile Throwable savedException;
 
   /**
@@ -354,15 +354,15 @@ extends AMRMClientAsync<T> {
           if (!allocated.isEmpty()) {
             handler.onContainersAllocated(allocated);
           }
-          
-          String aggregatorAddress = response.getAggregatorAddr();
+
+          String collectorAddress = response.getCollectorAddr();
           TimelineClient timelineClient = client.getRegisteredTimeineClient();
-          if (timelineClient != null && aggregatorAddress != null 
-              && !aggregatorAddress.isEmpty()) {
-            if (aggregatorAddr == null || 
-                !aggregatorAddr.equals(aggregatorAddress)) {
-              aggregatorAddr = aggregatorAddress;
-              timelineClient.setTimelineServiceAddress(aggregatorAddress);
+          if (timelineClient != null && collectorAddress != null
+              && !collectorAddress.isEmpty()) {
+            if (collectorAddr == null ||
+                !collectorAddr.equals(collectorAddress)) {
+              collectorAddr = collectorAddress;
+              timelineClient.setTimelineServiceAddress(collectorAddress);
             }
           }
           progress = handler.getProgress();

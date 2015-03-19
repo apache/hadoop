@@ -302,17 +302,17 @@ public class MockRMApp implements RMApp {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 
-  public String getAggregatorAddr() {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-  
-  @Override
-  public void removeAggregatorAddr() {
+  public String getCollectorAddr() {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 
   @Override
-  public void setAggregatorAddr(String aggregatorAddr) {
+  public void removeCollectorAddr() {
+    throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  @Override
+  public void setCollectorAddr(String collectorAddr) {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 }

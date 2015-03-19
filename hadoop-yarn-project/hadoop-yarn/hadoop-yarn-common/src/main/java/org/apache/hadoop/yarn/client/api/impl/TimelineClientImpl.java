@@ -118,12 +118,11 @@ public class TimelineClientImpl extends TimelineClient {
   private TimelineWriter timelineWriter;
 
   private volatile String timelineServiceAddress;
-  
+
   // Retry parameters for identifying new timeline service
   // TODO consider to merge with connection retry
   private int maxServiceRetries;
   private long serviceRetryInterval;
-  
   private boolean timelineServiceV2 = false;
 
   @Private
@@ -327,7 +326,7 @@ public class TimelineClientImpl extends TimelineClient {
           conf.getFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
               YarnConfiguration.DEFAULT_TIMELINE_SERVICE_VERSION);
       LOG.info("Timeline service address: " + getTimelineServiceAddress());
-    } 
+    }
     super.serviceInit(conf);
   }
 
@@ -400,16 +399,16 @@ public class TimelineClientImpl extends TimelineClient {
       YarnException {
     timelineWriter.putDomain(domain);
   }
-  
+
   // Used for new timeline service only
   @Private
-  public void putObjects(String path, MultivaluedMap<String, String> params, 
+  public void putObjects(String path, MultivaluedMap<String, String> params,
       Object obj) throws IOException, YarnException {
-    
-    // timelineServiceAddress could haven't be initialized yet 
+
+    // timelineServiceAddress could haven't be initialized yet
     // or stale (only for new timeline service)
     int retries = pollTimelineServiceAddress(this.maxServiceRetries);
-    
+
     // timelineServiceAddress could be stale, add retry logic here.
     boolean needRetry = true;
     while (needRetry) {
@@ -426,13 +425,13 @@ public class TimelineClientImpl extends TimelineClient {
       }
     }
   }
-  
+
   /**
    * Check if reaching to maximum of retries.
    * @param retries
    * @param e
    */
-  private void checkRetryWithSleep(int retries, Exception e) throws 
+  private void checkRetryWithSleep(int retries, Exception e) throws
       YarnException, IOException {
     if (retries > 0) {
       try {
@@ -442,8 +441,8 @@ public class TimelineClientImpl extends TimelineClient {
       }
     } else {
       LOG.error(
-        "TimelineClient has reached to max retry times :" + 
-        this.maxServiceRetries + " for service address: " + 
+        "TimelineClient has reached to max retry times :" +
+        this.maxServiceRetries + " for service address: " +
         timelineServiceAddress);
       if (e instanceof YarnException) {
         throw (YarnException)e;
@@ -489,7 +488,7 @@ public class TimelineClientImpl extends TimelineClient {
   public void setTimelineServiceAddress(String address) {
     this.timelineServiceAddress = address;
   }
-  
+
   private String getTimelineServiceAddress() {
     return this.timelineServiceAddress;
   }

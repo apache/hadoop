@@ -19,33 +19,33 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.ReportNewAggregatorsInfoResponseProto;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewAggregatorsInfoResponse;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.ReportNewCollectorInfoResponseProto;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoResponse;
 
 import com.google.protobuf.TextFormat;
 
 @Private
 @Unstable
-public class ReportNewAggregatorsInfoResponsePBImpl extends
-    ReportNewAggregatorsInfoResponse {
+public class ReportNewCollectorInfoResponsePBImpl extends
+    ReportNewCollectorInfoResponse {
 
-  ReportNewAggregatorsInfoResponseProto proto = 
-      ReportNewAggregatorsInfoResponseProto.getDefaultInstance();
-  
-  ReportNewAggregatorsInfoResponseProto.Builder builder = null;
-  
+  ReportNewCollectorInfoResponseProto proto =
+      ReportNewCollectorInfoResponseProto.getDefaultInstance();
+
+  ReportNewCollectorInfoResponseProto.Builder builder = null;
+
   boolean viaProto = false;
-  
-  public ReportNewAggregatorsInfoResponsePBImpl() {
-    builder = ReportNewAggregatorsInfoResponseProto.newBuilder();
+
+  public ReportNewCollectorInfoResponsePBImpl() {
+    builder = ReportNewCollectorInfoResponseProto.newBuilder();
   }
 
-  public ReportNewAggregatorsInfoResponsePBImpl(ReportNewAggregatorsInfoResponseProto proto) {
+  public ReportNewCollectorInfoResponsePBImpl(ReportNewCollectorInfoResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
-  
-  public ReportNewAggregatorsInfoResponseProto getProto() {
+
+  public ReportNewCollectorInfoResponseProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;

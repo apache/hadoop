@@ -276,7 +276,7 @@ extends AbstractService {
    * @return Current number of nodes in the cluster
    */
   public abstract int getClusterNodeCount();
-  
+
   /**
    * Register TimelineClient to AMRMClient.
    * @param timelineClient
@@ -284,7 +284,7 @@ extends AbstractService {
   public void registerTimelineClient(TimelineClient timelineClient) {
     client.registerTimelineClient(timelineClient);
   }
-  
+
   /**
    * Get registered timeline client.
    * @return
