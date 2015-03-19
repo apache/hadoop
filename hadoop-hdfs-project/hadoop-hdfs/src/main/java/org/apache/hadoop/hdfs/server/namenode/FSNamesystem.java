@@ -4791,6 +4791,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           throw new IOException("Block (=" + lastblock + ") not found");
         }
       }
+      final long oldGenerationStamp = storedBlock.getGenerationStamp();
+      final long oldNumBytes = storedBlock.getNumBytes();
       //
       // The implementation of delete operation (see @deleteInternal method)
       // first removes the file paths from namespace, and delays the removal
@@ -4845,8 +4847,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         storedBlock.setNumBytes(newlength);
 
         // find the DatanodeDescriptor objects
-        // There should be no locations in the blockManager till now because the
-        // file is underConstruction
         ArrayList<DatanodeDescriptor> trimmedTargets =
             new ArrayList<DatanodeDescriptor>(newtargets.length);
         ArrayList<String> trimmedStorages =
@@ -4883,6 +4883,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 trimmedTargets.toArray(new DatanodeID[trimmedTargets.size()]),
                 trimmedStorages.toArray(new String[trimmedStorages.size()]));
         iFile.setLastBlock(storedBlock, trimmedStorageInfos);
+        if (closeFile) {
+          blockManager.markBlockReplicasAsCorrupt(storedBlock,
+              oldGenerationStamp, oldNumBytes, trimmedStorageInfos);
+        }
       }
 
       if (closeFile) {

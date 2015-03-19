@@ -100,6 +100,8 @@ Release 2.6.1 - UNRELEASED
     HDFS-7929. inotify unable fetch pre-upgrade edit log segments once upgrade
     starts (Zhe Zhang via Colin P. McCabe)
 
+    HDFS-7930. commitBlockSynchronization() does not remove locations. (yliu)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
