@@ -1202,6 +1202,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7943. Append cannot handle the last block with length greater than
     the preferred block size. (jing9)
 
+    HDFS-7929. inotify unable fetch pre-upgrade edit log segments once upgrade
+    starts (Zhe Zhang via Colin P. McCabe)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode

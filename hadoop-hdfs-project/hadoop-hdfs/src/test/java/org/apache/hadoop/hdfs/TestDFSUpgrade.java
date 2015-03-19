@@ -28,7 +28,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -42,7 +45,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.TestParallelImageWrite;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.BeforeClass;
@@ -450,7 +455,50 @@ public class TestDFSUpgrade {
       assertTrue(Storage.is203LayoutVersion(lv));
     }
   }
-  
+
+  @Test
+  public void testPreserveEditLogs() throws Exception {
+    conf = new HdfsConfiguration();
+    conf = UpgradeUtilities.initializeStorageStateConf(1, conf);
+    String[] nameNodeDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION, false);
+
+    log("Normal NameNode upgrade", 1);
+    File[] created =
+        UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+    List<String> beforeUpgrade = new LinkedList<>();
+    for (final File createdDir : created) {
+      List<String> fileNameList =
+          IOUtils.listDirectory(createdDir, EditLogsFilter.INSTANCE);
+      beforeUpgrade.addAll(fileNameList);
+    }
+
+    cluster = createCluster();
+
+    List<String> afterUpgrade = new LinkedList<>();
+    for (final File createdDir : created) {
+      List<String> fileNameList =
+          IOUtils.listDirectory(createdDir, EditLogsFilter.INSTANCE);
+      afterUpgrade.addAll(fileNameList);
+    }
+
+    for (String s : beforeUpgrade) {
+      assertTrue(afterUpgrade.contains(s));
+    }
+
+    cluster.shutdown();
+    UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+  }
+
+  private static enum EditLogsFilter implements FilenameFilter {
+    INSTANCE;
+
+    @Override
+    public boolean accept(File dir, String name) {
+      return name.startsWith(NNStorage.NameNodeFile.EDITS.getName());
+    }
+  }
+
   public static void main(String[] args) throws Exception {
     TestDFSUpgrade t = new TestDFSUpgrade();
     TestDFSUpgrade.initialize();
