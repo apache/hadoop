@@ -60,7 +60,7 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
-import org.apache.hadoop.yarn.server.nodemanager.aggregatormanager.NMAggregatorService;
+import org.apache.hadoop.yarn.server.nodemanager.collectormanager.NMCollectorService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -99,7 +99,7 @@ public class NodeManager extends CompositeService
   private Context context;
   private AsyncDispatcher dispatcher;
   private ContainerManagerImpl containerManager;
-  private NMAggregatorService nmAggregatorService;
+  private NMCollectorService nmCollectorService;
   private NodeStatusUpdater nodeStatusUpdater;
   private NodeResourceMonitor nodeResourceMonitor;
   private static CompositeServiceShutdownHook nodeManagerShutdownHook;
@@ -184,9 +184,9 @@ public class NodeManager extends CompositeService
           metrics, dirsHandler);
     }
   }
-  
-  protected NMAggregatorService createNMAggregatorService(Context context) {
-    return new NMAggregatorService(context);
+
+  protected NMCollectorService createNMCollectorService(Context context) {
+    return new NMCollectorService(context);
   }
 
   protected WebServer createWebServer(Context nmContext,
@@ -372,9 +372,9 @@ public class NodeManager extends CompositeService
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
 
     DefaultMetricsSystem.initialize("NodeManager");
-    
-    this.nmAggregatorService = createNMAggregatorService(context);
-    addService(nmAggregatorService);
+
+    this.nmCollectorService = createNMCollectorService(context);
+    addService(nmCollectorService);
 
     // StatusUpdater should be added last so that it get started last 
     // so that we make sure everything is up before registering with RM. 
@@ -467,11 +467,11 @@ public class NodeManager extends CompositeService
 
     protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
-    
-    protected Map<ApplicationId, String> registeredAggregators =
+
+    protected Map<ApplicationId, String> registeredCollectors =
         new ConcurrentHashMap<ApplicationId, String>();
-    
-    protected Map<ApplicationId, String> knownAggregators =
+
+    protected Map<ApplicationId, String> knownCollectors =
         new ConcurrentHashMap<ApplicationId, String>();
 
     protected final ConcurrentMap<ContainerId,
@@ -655,26 +655,26 @@ public class NodeManager extends CompositeService
     }
 
     @Override
-    public Map<ApplicationId, String> getRegisteredAggregators() {
-      return this.registeredAggregators;
+    public Map<ApplicationId, String> getRegisteredCollectors() {
+      return this.registeredCollectors;
     }
 
-    public void addRegisteredAggregators(
-        Map<ApplicationId, String> newRegisteredAggregators) {
-      this.registeredAggregators.putAll(newRegisteredAggregators);
-      // Update to knownAggregators as well so it can immediately be consumed by 
+    public void addRegisteredCollectors(
+        Map<ApplicationId, String> newRegisteredCollectors) {
+      this.registeredCollectors.putAll(newRegisteredCollectors);
+      // Update to knownCollectors as well so it can immediately be consumed by
       // this NM's TimelineClient.
-      this.knownAggregators.putAll(newRegisteredAggregators);
-    }
-    
-    @Override
-    public Map<ApplicationId, String> getKnownAggregators() {
-      return this.knownAggregators;
+      this.knownCollectors.putAll(newRegisteredCollectors);
     }
 
-    public void addKnownAggregators(
-        Map<ApplicationId, String> knownAggregators) {
-      this.knownAggregators.putAll(knownAggregators);
+    @Override
+    public Map<ApplicationId, String> getKnownCollectors() {
+      return this.knownCollectors;
+    }
+
+    public void addKnownCollectors(
+        Map<ApplicationId, String> knownCollectors) {
+      this.knownCollectors.putAll(knownCollectors);
     }
   }
 
@@ -774,10 +774,10 @@ public class NodeManager extends CompositeService
   public Context getNMContext() {
     return this.context;
   }
-  
+
   // For testing
-  NMAggregatorService getNMAggregatorService() {
-    return this.nmAggregatorService;
+  NMCollectorService getNMCollectorService() {
+    return this.nmCollectorService;
   }
 
   public static void main(String[] args) throws IOException {

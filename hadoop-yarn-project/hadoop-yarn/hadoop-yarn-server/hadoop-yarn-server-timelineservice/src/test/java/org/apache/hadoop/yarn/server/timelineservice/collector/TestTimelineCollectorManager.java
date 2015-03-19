@@ -16,11 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.aggregator;
+package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import java.util.ArrayList;
@@ -30,18 +31,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import com.sun.jersey.core.impl.provider.entity.XMLJAXBElementProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
 import org.junit.Test;
 
-public class TestTimelineAggregatorsCollection {
+public class TestTimelineCollectorManager {
 
   @Test(timeout=60000)
   public void testMultithreadedAdd() throws Exception {
-    final TimelineAggregatorsCollection aggregatorCollection =
-        spy(new TimelineAggregatorsCollection());
-    doReturn(new Configuration()).when(aggregatorCollection).getConfig();
+    final TimelineCollectorManager collectorManager = createCollectorManager();
 
     final int NUM_APPS = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
@@ -49,9 +48,9 @@ public class TestTimelineAggregatorsCollection {
       final ApplicationId appId = ApplicationId.newInstance(0L, i);
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
-          AppLevelTimelineAggregator aggregator =
-              new AppLevelTimelineAggregator(appId.toString());
-          return (aggregatorCollection.putIfAbsent(appId, aggregator) == aggregator);
+          AppLevelTimelineCollector collector =
+              new AppLevelTimelineCollector(appId.toString());
+          return (collectorManager.putIfAbsent(appId, collector) == collector);
         }
       };
       tasks.add(task);
@@ -67,15 +66,14 @@ public class TestTimelineAggregatorsCollection {
     }
     // check the keys
     for (int i = 0; i < NUM_APPS; i++) {
-      assertTrue(aggregatorCollection.containsKey(String.valueOf(i)));
+      final ApplicationId appId = ApplicationId.newInstance(0L, i);
+      assertTrue(collectorManager.containsKey(appId.toString()));
     }
   }
 
   @Test
   public void testMultithreadedAddAndRemove() throws Exception {
-    final TimelineAggregatorsCollection aggregatorCollection =
-        spy(new TimelineAggregatorsCollection());
-    doReturn(new Configuration()).when(aggregatorCollection).getConfig();
+    final TimelineCollectorManager collectorManager = createCollectorManager();
 
     final int NUM_APPS = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
@@ -83,11 +81,11 @@ public class TestTimelineAggregatorsCollection {
       final ApplicationId appId = ApplicationId.newInstance(0L, i);
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
-          AppLevelTimelineAggregator aggregator =
-              new AppLevelTimelineAggregator(appId.toString());
+          AppLevelTimelineCollector collector =
+              new AppLevelTimelineCollector(appId.toString());
           boolean successPut =
-              (aggregatorCollection.putIfAbsent(appId, aggregator) == aggregator);
-          return successPut && aggregatorCollection.remove(appId.toString());
+              (collectorManager.putIfAbsent(appId, collector) == collector);
+          return successPut && collectorManager.remove(appId.toString());
         }
       };
       tasks.add(task);
@@ -103,7 +101,18 @@ public class TestTimelineAggregatorsCollection {
     }
     // check the keys
     for (int i = 0; i < NUM_APPS; i++) {
-      assertFalse(aggregatorCollection.containsKey(String.valueOf(i)));
+      final ApplicationId appId = ApplicationId.newInstance(0L, i);
+      assertFalse(collectorManager.containsKey(appId.toString()));
     }
+  }
+
+  private TimelineCollectorManager createCollectorManager() {
+    final TimelineCollectorManager collectorManager =
+        spy(new TimelineCollectorManager());
+    doReturn(new Configuration()).when(collectorManager).getConfig();
+    CollectorNodemanagerProtocol nmCollectorService =
+        mock(CollectorNodemanagerProtocol.class);
+    doReturn(nmCollectorService).when(collectorManager).getNMCollectorService();
+    return collectorManager;
   }
 }

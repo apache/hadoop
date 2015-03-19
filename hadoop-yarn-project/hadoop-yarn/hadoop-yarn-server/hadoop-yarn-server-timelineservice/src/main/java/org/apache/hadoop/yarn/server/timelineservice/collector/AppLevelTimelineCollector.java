@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.aggregator;
+package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -30,12 +30,12 @@ import org.apache.hadoop.conf.Configuration;
  */
 @Private
 @Unstable
-public class AppLevelTimelineAggregator extends TimelineAggregator {
+public class AppLevelTimelineCollector extends TimelineCollector {
   private final String applicationId;
   // TODO define key metadata such as flow metadata, user, and queue
 
-  public AppLevelTimelineAggregator(String applicationId) {
-    super(AppLevelTimelineAggregator.class.getName() + " - " + applicationId);
+  public AppLevelTimelineCollector(String applicationId) {
+    super(AppLevelTimelineCollector.class.getName() + " - " + applicationId);
     this.applicationId = applicationId;
   }
 

@@ -189,7 +189,7 @@ public class Client {
 
   // Command line options
   private Options opts;
-  
+
   private String timelineServiceVersion;
 
   private static final String shellCommandPath = "shellCommands";
@@ -373,11 +373,11 @@ public class Client {
       throw new IllegalArgumentException("Invalid virtual cores specified for application master, exiting."
           + " Specified virtual cores=" + amVCores);
     }
-    
+
     if (cliParser.hasOption("timeline_service_version")) {
-      timelineServiceVersion = 
+      timelineServiceVersion =
         cliParser.getOptionValue("timeline_service_version", "v1");
-      if (! (timelineServiceVersion.trim().equalsIgnoreCase("v1") || 
+      if (! (timelineServiceVersion.trim().equalsIgnoreCase("v1") ||
           timelineServiceVersion.trim().equalsIgnoreCase("v2"))) {
         throw new IllegalArgumentException(
               "timeline_service_version is not set properly, should be 'v1' or 'v2'");

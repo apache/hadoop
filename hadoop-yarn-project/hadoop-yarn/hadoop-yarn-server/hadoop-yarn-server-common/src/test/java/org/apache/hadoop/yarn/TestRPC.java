@@ -63,10 +63,10 @@ import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.server.api.AggregatorNodemanagerProtocol;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewAggregatorsInfoRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewAggregatorsInfoResponse;
-import org.apache.hadoop.yarn.server.api.records.AppAggregatorsMap;
+import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoResponse;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -76,15 +76,15 @@ public class TestRPC {
   private static final String EXCEPTION_MSG = "test error";
   private static final String EXCEPTION_CAUSE = "exception cause";
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-  
-  public static final String ILLEGAL_NUMBER_MESSAGE = 
-      "aggregators' number in ReportNewAggregatorsInfoRequest is not ONE.";
-  
-  public static final String DEFAULT_AGGREGATOR_ADDR = "localhost:0";
-  
-  public static final ApplicationId DEFAULT_APP_ID = 
+
+  public static final String ILLEGAL_NUMBER_MESSAGE =
+      "collectors' number in ReportNewCollectorInfoRequest is not ONE.";
+
+  public static final String DEFAULT_COLLECTOR_ADDR = "localhost:0";
+
+  public static final ApplicationId DEFAULT_APP_ID =
       ApplicationId.newInstance(0, 0);
-  
+
   @Test
   public void testUnknownCall() {
     Configuration conf = new Configuration();
@@ -116,17 +116,17 @@ public class TestRPC {
       server.stop();
     }
   }
-  
+
   @Test
-  public void testRPCOnAggregatorNodeManagerProtocol() throws IOException {
+  public void testRPCOnCollectorNodeManagerProtocol() throws IOException {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.IPC_RPC_IMPL, HadoopYarnProtoRPC.class
         .getName());
     YarnRPC rpc = YarnRPC.create(conf);
     String bindAddr = "localhost:0";
     InetSocketAddress addr = NetUtils.createSocketAddr(bindAddr);
-    Server server = rpc.getServer(AggregatorNodemanagerProtocol.class,
-        new DummyNMAggregatorService(), addr, conf, null, 1);
+    Server server = rpc.getServer(CollectorNodemanagerProtocol.class,
+        new DummyNMCollectorService(), addr, conf, null, 1);
     server.start();
 
     // Test unrelated protocol wouldn't get response
@@ -145,31 +145,31 @@ public class TestRPC {
     } catch (Exception e) {
       e.printStackTrace();
     }
-    
-    // Test AggregatorNodemanagerProtocol get proper response
-    AggregatorNodemanagerProtocol proxy = (AggregatorNodemanagerProtocol)rpc.getProxy(
-        AggregatorNodemanagerProtocol.class, NetUtils.getConnectAddress(server), conf);
-    // Verify request with DEFAULT_APP_ID and DEFAULT_AGGREGATOR_ADDR get 
+
+    // Test CollectorNodemanagerProtocol get proper response
+    CollectorNodemanagerProtocol proxy = (CollectorNodemanagerProtocol)rpc.getProxy(
+        CollectorNodemanagerProtocol.class, NetUtils.getConnectAddress(server), conf);
+    // Verify request with DEFAULT_APP_ID and DEFAULT_COLLECTOR_ADDR get
     // normally response.
     try {
-      ReportNewAggregatorsInfoRequest request = 
-          ReportNewAggregatorsInfoRequest.newInstance(
-              DEFAULT_APP_ID, DEFAULT_AGGREGATOR_ADDR);
-      proxy.reportNewAggregatorInfo(request);
+      ReportNewCollectorInfoRequest request =
+          ReportNewCollectorInfoRequest.newInstance(
+              DEFAULT_APP_ID, DEFAULT_COLLECTOR_ADDR);
+      proxy.reportNewCollectorInfo(request);
     } catch (YarnException e) {
       Assert.fail("RPC call failured is not expected here.");
     }
-    
-    // Verify empty request get YarnException back (by design in 
-    // DummyNMAggregatorService)
+
+    // Verify empty request get YarnException back (by design in
+    // DummyNMCollectorService)
     try {
-      proxy.reportNewAggregatorInfo(Records
-          .newRecord(ReportNewAggregatorsInfoRequest.class));
+      proxy.reportNewCollectorInfo(Records
+          .newRecord(ReportNewCollectorInfoRequest.class));
       Assert.fail("Excepted RPC call to fail with YarnException.");
     } catch (YarnException e) {
       Assert.assertTrue(e.getMessage().contains(ILLEGAL_NUMBER_MESSAGE));
     }
-    
+
     server.stop();
   }
 
@@ -177,21 +177,21 @@ public class TestRPC {
   public void testHadoopProtoRPC() throws Exception {
     test(HadoopYarnProtoRPC.class.getName());
   }
-  
+
   private void test(String rpcClass) throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.IPC_RPC_IMPL, rpcClass);
     YarnRPC rpc = YarnRPC.create(conf);
     String bindAddr = "localhost:0";
     InetSocketAddress addr = NetUtils.createSocketAddr(bindAddr);
-    Server server = rpc.getServer(ContainerManagementProtocol.class, 
+    Server server = rpc.getServer(ContainerManagementProtocol.class,
             new DummyContainerManager(), addr, conf, null, 1);
     server.start();
     RPC.setProtocolEngine(conf, ContainerManagementProtocolPB.class, ProtobufRpcEngine.class);
-    ContainerManagementProtocol proxy = (ContainerManagementProtocol) 
-        rpc.getProxy(ContainerManagementProtocol.class, 
+    ContainerManagementProtocol proxy = (ContainerManagementProtocol)
+        rpc.getProxy(ContainerManagementProtocol.class,
             NetUtils.getConnectAddress(server), conf);
-    ContainerLaunchContext containerLaunchContext = 
+    ContainerLaunchContext containerLaunchContext =
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
     ApplicationId applicationId = ApplicationId.newInstance(0, 0);
@@ -255,7 +255,7 @@ public class TestRPC {
     public GetContainerStatusesResponse getContainerStatuses(
         GetContainerStatusesRequest request)
     throws YarnException {
-      GetContainerStatusesResponse response = 
+      GetContainerStatusesResponse response =
           recordFactory.newRecordInstance(GetContainerStatusesResponse.class);
       response.setContainerStatuses(statuses);
       return response;
@@ -287,9 +287,9 @@ public class TestRPC {
     }
 
     @Override
-    public StopContainersResponse stopContainers(StopContainersRequest request) 
+    public StopContainersResponse stopContainers(StopContainersRequest request)
     throws YarnException {
-      Exception e = new Exception(EXCEPTION_MSG, 
+      Exception e = new Exception(EXCEPTION_MSG,
           new Exception(EXCEPTION_CAUSE));
       throw new YarnException(e);
     }
@@ -332,32 +332,32 @@ public class TestRPC {
             .buildTokenService(addr).toString());
     return containerToken;
   }
-  
-  // A dummy implementation for AggregatorNodemanagerProtocol for test purpose, 
-  // it only can accept one appID, aggregatorAddr pair or throw exceptions
-  public class DummyNMAggregatorService 
-      implements AggregatorNodemanagerProtocol {
-    
+
+  // A dummy implementation for CollectorNodemanagerProtocol for test purpose,
+  // it only can accept one appID, collectorAddr pair or throw exceptions
+  public class DummyNMCollectorService
+      implements CollectorNodemanagerProtocol {
+
     @Override
-    public ReportNewAggregatorsInfoResponse reportNewAggregatorInfo(
-        ReportNewAggregatorsInfoRequest request)
+    public ReportNewCollectorInfoResponse reportNewCollectorInfo(
+        ReportNewCollectorInfoRequest request)
         throws YarnException, IOException {
-      List<AppAggregatorsMap> appAggregators = request.getAppAggregatorsList();
-      if (appAggregators.size() == 1) {
-        // check default appID and aggregatorAddr
-        AppAggregatorsMap appAggregator = appAggregators.get(0);
-        Assert.assertEquals(appAggregator.getApplicationId(), 
+      List<AppCollectorsMap> appCollectors = request.getAppCollectorsList();
+      if (appCollectors.size() == 1) {
+        // check default appID and collectorAddr
+        AppCollectorsMap appCollector = appCollectors.get(0);
+        Assert.assertEquals(appCollector.getApplicationId(),
             DEFAULT_APP_ID);
-        Assert.assertEquals(appAggregator.getAggregatorAddr(), 
-            DEFAULT_AGGREGATOR_ADDR);
+        Assert.assertEquals(appCollector.getCollectorAddr(),
+            DEFAULT_COLLECTOR_ADDR);
       } else {
         throw new YarnException(ILLEGAL_NUMBER_MESSAGE);
       }
-      
-      ReportNewAggregatorsInfoResponse response =
-          recordFactory.newRecordInstance(ReportNewAggregatorsInfoResponse.class);
+
+      ReportNewCollectorInfoResponse response =
+          recordFactory.newRecordInstance(ReportNewCollectorInfoResponse.class);
       return response;
     }
   }
-  
+
 }

@@ -79,7 +79,7 @@ import org.apache.hadoop.yarn.server.timeline.TimelineVersion;
 import org.apache.hadoop.yarn.server.timeline.TimelineVersionWatcher;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.server.timelineservice.aggregator.PerNodeTimelineAggregatorsAuxService;
+import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.junit.After;
 import org.junit.Assert;
@@ -100,7 +100,7 @@ public class TestDistributedShell {
   protected YarnConfiguration conf = null;
   private static final int NUM_NMS = 1;
   private static final float DEFAULT_TIMELINE_VERSION = 1.0f;
-  private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_aggregator";
+  private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_collector";
 
   protected final static String APPMASTER_JAR =
       JarFinder.getJar(ApplicationMaster.class);
@@ -161,7 +161,7 @@ public class TestDistributedShell {
       // enable aux-service based timeline aggregators
       conf.set(YarnConfiguration.NM_AUX_SERVICES, TIMELINE_AUX_SERVICE_NAME);
       conf.set(YarnConfiguration.NM_AUX_SERVICES + "." + TIMELINE_AUX_SERVICE_NAME
-        + ".class", PerNodeTimelineAggregatorsAuxService.class.getName());
+        + ".class", PerNodeTimelineCollectorsAuxService.class.getName());
     } else {
       Assert.fail("Wrong timeline version number: " + timelineVersion);
     }

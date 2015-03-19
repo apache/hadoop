@@ -965,10 +965,10 @@
     <name>yarn.nodemanager.container-manager.thread-count</name>
     <value>20</value>
   </property>
-  
+
     <property>
-    <description>Number of threads aggregator service uses.</description>
-    <name>yarn.nodemanager.aggregator-service.thread-count</name>
+    <description>Number of threads collector service uses.</description>
+    <name>yarn.nodemanager.collector-service.thread-count</name>
     <value>5</value>
   </property>
 
@@ -1046,11 +1046,11 @@
     <name>yarn.nodemanager.localizer.address</name>
     <value>${yarn.nodemanager.hostname}:8040</value>
   </property>
-  
-  
+
+
   <property>
-    <description>Address where the aggregator service IPC is.</description>
-    <name>yarn.nodemanager.aggregator-service.address</name>
+    <description>Address where the collector service IPC is.</description>
+    <name>yarn.nodemanager.collector-service.address</name>
     <value>${yarn.nodemanager.hostname}:8048</value>
   </property>
 

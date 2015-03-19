@@ -70,19 +70,19 @@ public interface Context {
   ConcurrentMap<ApplicationId, Application> getApplications();
 
   Map<ApplicationId, Credentials> getSystemCredentialsForApps();
-  
+
   /**
-   * Get the registered aggregators that located on this NM. 
+   * Get the registered collectors that located on this NM.
    * @return registered
    */
-  Map<ApplicationId, String> getRegisteredAggregators();
-  
+  Map<ApplicationId, String> getRegisteredCollectors();
+
   /**
-   * Return the known aggregators which get from RM for all active applications
+   * Return the known collectors which get from RM for all active applications
    * running on this NM.
-   * @return known aggregators.
+   * @return known collectors.
    */
-  Map<ApplicationId, String> getKnownAggregators();
+  Map<ApplicationId, String> getKnownCollectors();
 
   ConcurrentMap<ContainerId, Container> getContainers();
 

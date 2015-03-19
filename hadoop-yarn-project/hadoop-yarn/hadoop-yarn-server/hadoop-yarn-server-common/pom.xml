@@ -150,7 +150,7 @@
                   <include>yarn_server_common_service_protos.proto</include>
                   <include>ResourceTracker.proto</include>
                   <include>SCMUploader.proto</include>
-                  <include>aggregatornodemanager_protocol.proto</include>
+                  <include>collectornodemanager_protocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
