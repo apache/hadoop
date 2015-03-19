@@ -348,44 +348,61 @@ public class FileOutputCommitter extends OutputCommitter {
    * @param to the path data is going to.
    * @throws IOException on any error
    */
-  private static void mergePaths(FileSystem fs, final FileStatus from,
-      final Path to)
-    throws IOException {
-     LOG.debug("Merging data from "+from+" to "+to);
-     if(from.isFile()) {
-       if(fs.exists(to)) {
-         if(!fs.delete(to, true)) {
-           throw new IOException("Failed to delete "+to);
-         }
-       }
+  private void mergePaths(FileSystem fs, final FileStatus from,
+      final Path to) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Merging data from " + from + " to " + to);
+    }
+    FileStatus toStat;
+    try {
+      toStat = fs.getFileStatus(to);
+    } catch (FileNotFoundException fnfe) {
+      toStat = null;
+    }
 
-       if(!fs.rename(from.getPath(), to)) {
-         throw new IOException("Failed to rename "+from+" to "+to);
-       }
-     } else if(from.isDirectory()) {
-       if(fs.exists(to)) {
-         FileStatus toStat = fs.getFileStatus(to);
-         if(!toStat.isDirectory()) {
-           if(!fs.delete(to, true)) {
-             throw new IOException("Failed to delete "+to);
-           }
-           if(!fs.rename(from.getPath(), to)) {
-             throw new IOException("Failed to rename "+from+" to "+to);
-           }
-         } else {
-           //It is a directory so merge everything in the directories
-           for(FileStatus subFrom: fs.listStatus(from.getPath())) {
-             Path subTo = new Path(to, subFrom.getPath().getName());
-             mergePaths(fs, subFrom, subTo);
-           }
-         }
-       } else {
-         //it does not exist just rename
-         if(!fs.rename(from.getPath(), to)) {
-           throw new IOException("Failed to rename "+from+" to "+to);
-         }
-       }
-     }
+    if (from.isFile()) {
+      if (toStat != null) {
+        if (!fs.delete(to, true)) {
+          throw new IOException("Failed to delete " + to);
+        }
+      }
+
+      if (!fs.rename(from.getPath(), to)) {
+        throw new IOException("Failed to rename " + from + " to " + to);
+      }
+    } else if (from.isDirectory()) {
+      if (toStat != null) {
+        if (!toStat.isDirectory()) {
+          if (!fs.delete(to, true)) {
+            throw new IOException("Failed to delete " + to);
+          }
+          renameOrMerge(fs, from, to);
+        } else {
+          //It is a directory so merge everything in the directories
+          for (FileStatus subFrom : fs.listStatus(from.getPath())) {
+            Path subTo = new Path(to, subFrom.getPath().getName());
+            mergePaths(fs, subFrom, subTo);
+          }
+        }
+      } else {
+        renameOrMerge(fs, from, to);
+      }
+    }
+  }
+
+  private void renameOrMerge(FileSystem fs, FileStatus from, Path to)
+      throws IOException {
+    if (algorithmVersion == 1) {
+      if (!fs.rename(from.getPath(), to)) {
+        throw new IOException("Failed to rename " + from + " to " + to);
+      }
+    } else {
+      fs.mkdirs(to);
+      for (FileStatus subFrom : fs.listStatus(from.getPath())) {
+        Path subTo = new Path(to, subFrom.getPath().getName());
+        mergePaths(fs, subFrom, subTo);
+      }
+    }
   }
 
   @Override
@@ -546,8 +563,9 @@ public class FileOutputCommitter extends OutputCommitter {
       Path previousCommittedTaskPath = getCommittedTaskPath(
           previousAttempt, context);
       FileSystem fs = previousCommittedTaskPath.getFileSystem(context.getConfiguration());
-
-      LOG.debug("Trying to recover task from " + previousCommittedTaskPath);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Trying to recover task from " + previousCommittedTaskPath);
+      }
       if (algorithmVersion == 1) {
         if (fs.exists(previousCommittedTaskPath)) {
           Path committedTaskPath = getCommittedTaskPath(context);
