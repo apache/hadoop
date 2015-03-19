@@ -97,6 +97,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7587. Edit log corruption can happen if append fails with a quota
     violation. (jing9)
 
+    HDFS-7929. inotify unable fetch pre-upgrade edit log segments once upgrade
+    starts (Zhe Zhang via Colin P. McCabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
