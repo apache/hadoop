@@ -145,7 +145,7 @@ public class TeraSort extends Configured implements Tool {
      * Read the cut points from the given sequence file.
      * @param fs the file system
      * @param p the path to read
-     * @param job the job config
+     * @param conf the job config
      * @return the strings to split the partitions on
      * @throws IOException
      */
