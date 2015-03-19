@@ -1216,6 +1216,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7816. Unable to open webhdfs paths with "+". (wheat9 via kihwal)
 
+    HDFS-7932. Speed up the shutdown of datanode during rolling upgrade.(kihwal)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
