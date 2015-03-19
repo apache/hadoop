@@ -21,37 +21,37 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
-import org.apache.hadoop.yarn.server.api.records.AppAggregatorsMap;
+import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
 
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppAggregatorsMapProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppAggregatorsMapProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorsMapProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.AppCollectorsMapProtoOrBuilder;
 
 import com.google.protobuf.TextFormat;
 
 @Private
 @Unstable
-public class AppAggregatorsMapPBImpl extends AppAggregatorsMap {
+public class AppCollectorsMapPBImpl extends AppCollectorsMap {
 
-  AppAggregatorsMapProto proto = 
-      AppAggregatorsMapProto.getDefaultInstance();
-  
-  AppAggregatorsMapProto.Builder builder = null;
+  AppCollectorsMapProto proto =
+      AppCollectorsMapProto.getDefaultInstance();
+
+  AppCollectorsMapProto.Builder builder = null;
   boolean viaProto = false;
-  
+
   private ApplicationId appId = null;
-  private String aggregatorAddr = null;
-  
-  public AppAggregatorsMapPBImpl() {
-    builder = AppAggregatorsMapProto.newBuilder();
+  private String collectorAddr = null;
+
+  public AppCollectorsMapPBImpl() {
+    builder = AppCollectorsMapProto.newBuilder();
   }
 
-  public AppAggregatorsMapPBImpl(AppAggregatorsMapProto proto) {
+  public AppCollectorsMapPBImpl(AppCollectorsMapProto proto) {
     this.proto = proto;
     viaProto = true;
   }
-  
-  public AppAggregatorsMapProto getProto() {
+
+  public AppCollectorsMapProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -77,24 +77,24 @@ public class AppAggregatorsMapPBImpl extends AppAggregatorsMap {
   public String toString() {
     return TextFormat.shortDebugString(getProto());
   }
-  
+
   @Override
   public ApplicationId getApplicationId() {
-    AppAggregatorsMapProtoOrBuilder p = viaProto ? proto : builder;
+    AppCollectorsMapProtoOrBuilder p = viaProto ? proto : builder;
     if (this.appId == null && p.hasAppId()) {
       this.appId = convertFromProtoFormat(p.getAppId());
     }
     return this.appId;
   }
-  
+
   @Override
-  public String getAggregatorAddr() {
-    AppAggregatorsMapProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.aggregatorAddr == null 
-        && p.hasAppAggregatorAddr()) {
-      this.aggregatorAddr = p.getAppAggregatorAddr();
+  public String getCollectorAddr() {
+    AppCollectorsMapProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.collectorAddr == null
+        && p.hasAppCollectorAddr()) {
+      this.collectorAddr = p.getAppCollectorAddr();
     }
-    return this.aggregatorAddr;
+    return this.collectorAddr;
   }
 
   @Override
@@ -105,31 +105,31 @@ public class AppAggregatorsMapPBImpl extends AppAggregatorsMap {
     }
     this.appId = appId;
   }
-  
+
   @Override
-  public void setAggregatorAddr(String aggregatorAddr) {
+  public void setCollectorAddr(String collectorAddr) {
     maybeInitBuilder();
-    if (aggregatorAddr == null) {
-      builder.clearAppAggregatorAddr();
+    if (collectorAddr == null) {
+      builder.clearAppCollectorAddr();
     }
-    this.aggregatorAddr = aggregatorAddr;
+    this.collectorAddr = collectorAddr;
   }
-  
+
   private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
     return new ApplicationIdPBImpl(p);
   }
-  
+
   private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
     return ((ApplicationIdPBImpl) t).getProto();
   }
-  
+
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = AppAggregatorsMapProto.newBuilder(proto);
+      builder = AppCollectorsMapProto.newBuilder(proto);
     }
     viaProto = false;
   }
-  
+
   private void mergeLocalToProto() {
     if (viaProto) {
       maybeInitBuilder();
@@ -138,13 +138,13 @@ public class AppAggregatorsMapPBImpl extends AppAggregatorsMap {
     proto = builder.build();
     viaProto = true;
   }
-  
+
   private void mergeLocalToBuilder() {
     if (this.appId != null) {
       builder.setAppId(convertToProtoFormat(this.appId));
     }
-    if (this.aggregatorAddr != null) {
-      builder.setAppAggregatorAddr(this.aggregatorAddr);
+    if (this.collectorAddr != null) {
+      builder.setAppCollectorAddr(this.collectorAddr);
     }
   }
 

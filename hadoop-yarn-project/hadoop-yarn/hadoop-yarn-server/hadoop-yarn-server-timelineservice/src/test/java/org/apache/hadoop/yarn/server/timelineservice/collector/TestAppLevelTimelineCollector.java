@@ -16,36 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+package org.apache.hadoop.yarn.server.timelineservice.collector;
 
-public enum RMAppEventType {
-  // Source: ClientRMService
-  START,
-  RECOVER,
-  KILL,
-  MOVE, // Move app to a new queue
 
-  // Source: Scheduler and RMAppManager
-  APP_REJECTED,
-
-  // Source: Scheduler
-  APP_ACCEPTED,
-
-  // TODO add source later
-  COLLECTOR_UPDATE,
-
-  // Source: RMAppAttempt
-  ATTEMPT_REGISTERED,
-  ATTEMPT_UNREGISTERED,
-  ATTEMPT_FINISHED, // Will send the final state
-  ATTEMPT_FAILED,
-  ATTEMPT_KILLED,
-  NODE_UPDATE,
-  
-  // Source: Container and ResourceTracker
-  APP_RUNNING_ON_NODE,
-
-  // Source: RMStateStore
-  APP_NEW_SAVED,
-  APP_UPDATE_SAVED,
+public class TestAppLevelTimelineCollector {
 }

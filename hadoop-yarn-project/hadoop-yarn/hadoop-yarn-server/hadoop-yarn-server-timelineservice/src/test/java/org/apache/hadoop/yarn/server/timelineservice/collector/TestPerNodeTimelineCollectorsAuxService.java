@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.aggregator;
+package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -32,14 +32,15 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
 import org.junit.Test;
 
-public class TestPerNodeTimelineAggregatorsAuxService {
+public class TestPerNodeTimelineCollectorsAuxService {
   private ApplicationAttemptId appAttemptId;
 
-  public TestPerNodeTimelineAggregatorsAuxService() {
+  public TestPerNodeTimelineCollectorsAuxService() {
     ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
     appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
@@ -47,7 +48,8 @@ public class TestPerNodeTimelineAggregatorsAuxService {
 
   @Test
   public void testAddApplication() throws Exception {
-    PerNodeTimelineAggregatorsAuxService auxService = createAggregatorAndAddApplication();
+    PerNodeTimelineCollectorsAuxService auxService =
+        createCollectorAndAddApplication();
     // auxService should have a single app
     assertTrue(auxService.hasApplication(
         appAttemptId.getApplicationId().toString()));
@@ -56,7 +58,7 @@ public class TestPerNodeTimelineAggregatorsAuxService {
 
   @Test
   public void testAddApplicationNonAMContainer() throws Exception {
-    PerNodeTimelineAggregatorsAuxService auxService = createAggregator();
+    PerNodeTimelineCollectorsAuxService auxService = createCollector();
 
     ContainerId containerId = getContainerId(2L); // not an AM
     ContainerInitializationContext context =
@@ -70,7 +72,8 @@ public class TestPerNodeTimelineAggregatorsAuxService {
 
   @Test
   public void testRemoveApplication() throws Exception {
-    PerNodeTimelineAggregatorsAuxService auxService = createAggregatorAndAddApplication();
+    PerNodeTimelineCollectorsAuxService auxService =
+        createCollectorAndAddApplication();
     // auxService should have a single app
     String appIdStr = appAttemptId.getApplicationId().toString();
     assertTrue(auxService.hasApplication(appIdStr));
@@ -87,7 +90,8 @@ public class TestPerNodeTimelineAggregatorsAuxService {
 
   @Test
   public void testRemoveApplicationNonAMContainer() throws Exception {
-    PerNodeTimelineAggregatorsAuxService auxService = createAggregatorAndAddApplication();
+    PerNodeTimelineCollectorsAuxService auxService =
+        createCollectorAndAddApplication();
     // auxService should have a single app
     String appIdStr = appAttemptId.getApplicationId().toString();
     assertTrue(auxService.hasApplication(appIdStr));
@@ -105,10 +109,11 @@ public class TestPerNodeTimelineAggregatorsAuxService {
   @Test(timeout = 60000)
   public void testLaunch() throws Exception {
     ExitUtil.disableSystemExit();
-    PerNodeTimelineAggregatorsAuxService auxService = null;
+    PerNodeTimelineCollectorsAuxService auxService = null;
     try {
       auxService =
-          PerNodeTimelineAggregatorsAuxService.launchServer(new String[0]);
+          PerNodeTimelineCollectorsAuxService.launchServer(new String[0],
+              createCollectorManager());
     } catch (ExitUtil.ExitException e) {
       assertEquals(0, e.status);
       ExitUtil.resetFirstExitException();
@@ -120,8 +125,9 @@ public class TestPerNodeTimelineAggregatorsAuxService {
     }
   }
 
-  private PerNodeTimelineAggregatorsAuxService createAggregatorAndAddApplication() {
-    PerNodeTimelineAggregatorsAuxService auxService = createAggregator();
+  private PerNodeTimelineCollectorsAuxService
+      createCollectorAndAddApplication() {
+    PerNodeTimelineCollectorsAuxService auxService = createCollector();
     // create an AM container
     ContainerId containerId = getAMContainerId();
     ContainerInitializationContext context =
@@ -131,13 +137,21 @@ public class TestPerNodeTimelineAggregatorsAuxService {
     return auxService;
   }
 
-  private PerNodeTimelineAggregatorsAuxService createAggregator() {
-    TimelineAggregatorsCollection
-        aggregatorsCollection = spy(new TimelineAggregatorsCollection());
-    doReturn(new Configuration()).when(aggregatorsCollection).getConfig();
-    PerNodeTimelineAggregatorsAuxService auxService =
-        spy(new PerNodeTimelineAggregatorsAuxService(aggregatorsCollection));
+  private PerNodeTimelineCollectorsAuxService createCollector() {
+    TimelineCollectorManager collectorManager = createCollectorManager();
+    PerNodeTimelineCollectorsAuxService auxService =
+        spy(new PerNodeTimelineCollectorsAuxService(collectorManager));
     return auxService;
+  }
+
+  private TimelineCollectorManager createCollectorManager() {
+    TimelineCollectorManager collectorManager =
+        spy(new TimelineCollectorManager());
+    doReturn(new Configuration()).when(collectorManager).getConfig();
+    CollectorNodemanagerProtocol nmCollectorService =
+        mock(CollectorNodemanagerProtocol.class);
+    doReturn(nmCollectorService).when(collectorManager).getNMCollectorService();
+    return collectorManager;
   }
 
   private ContainerId getAMContainerId() {

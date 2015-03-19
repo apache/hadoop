@@ -16,8 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.aggregator;
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "CollectorNodemanagerProtocol";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.yarn;
 
+import "yarn_server_common_service_protos.proto";
 
-public class TestAppLevelTimelineAggregator {
+service CollectorNodemanagerProtocolService {
+  rpc reportNewCollectorInfo (ReportNewCollectorInfoRequestProto) returns (ReportNewCollectorInfoResponseProto);
 }

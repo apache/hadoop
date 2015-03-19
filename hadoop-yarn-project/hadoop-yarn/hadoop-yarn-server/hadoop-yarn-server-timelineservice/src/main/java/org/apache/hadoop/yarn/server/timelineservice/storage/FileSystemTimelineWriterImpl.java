@@ -65,7 +65,7 @@ public class FileSystemTimelineWriterImpl extends AbstractService
    * Stores the entire information in {@link TimelineEntity} to the
    * timeline store. Any errors occurring for individual write request objects
    * will be reported in the response.
-   * 
+   *
    * @param data
    *          a {@link TimelineEntity} object
    * @return {@link TimelineWriteResponse} object.
@@ -116,10 +116,10 @@ public class FileSystemTimelineWriterImpl extends AbstractService
    * Aggregates the entity information to the timeline store based on which
    * track this entity is to be rolled up to The tracks along which aggregations
    * are to be done are given by {@link TimelineAggregationTrack}
-   * 
+   *
    * Any errors occurring for individual write request objects will be reported
    * in the response.
-   * 
+   *
    * @param data
    *          a {@link TimelineEntity} object
    *          a {@link TimelineAggregationTrack} enum value
