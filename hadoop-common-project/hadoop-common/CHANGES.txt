@@ -1121,6 +1121,9 @@ Release 2.7.0 - UNRELEASED
     ZKDelegationTokenSecretManager go down when old token cannot be deleted.
     (Arun Suresh via atm)
 
+    HADOOP-10703. HttpServer2 creates multiple authentication filters.
+    (Benoy Antony via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

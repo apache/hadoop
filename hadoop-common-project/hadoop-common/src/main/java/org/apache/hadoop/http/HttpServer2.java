@@ -594,15 +594,18 @@ public final class HttpServer2 implements FilterContainer {
   public void addFilter(String name, String classname,
       Map<String, String> parameters) {
 
+    FilterHolder filterHolder = getFilterHolder(name, classname, parameters);
     final String[] USER_FACING_URLS = { "*.html", "*.jsp" };
-    defineFilter(webAppContext, name, classname, parameters, USER_FACING_URLS);
+    FilterMapping fmap = getFilterMapping(name, USER_FACING_URLS);
+    defineFilter(webAppContext, filterHolder, fmap);
     LOG.info(
         "Added filter " + name + " (class=" + classname + ") to context " + webAppContext.getDisplayName());
     final String[] ALL_URLS = { "/*" };
+    fmap = getFilterMapping(name, ALL_URLS);
     for (Map.Entry<Context, Boolean> e : defaultContexts.entrySet()) {
       if (e.getValue()) {
         Context ctx = e.getKey();
-        defineFilter(ctx, name, classname, parameters, ALL_URLS);
+        defineFilter(ctx, filterHolder, fmap);
         LOG.info("Added filter " + name + " (class=" + classname
             + ") to context " + ctx.getDisplayName());
       }
@@ -614,9 +617,11 @@ public final class HttpServer2 implements FilterContainer {
   public void addGlobalFilter(String name, String classname,
       Map<String, String> parameters) {
     final String[] ALL_URLS = { "/*" };
-    defineFilter(webAppContext, name, classname, parameters, ALL_URLS);
+    FilterHolder filterHolder = getFilterHolder(name, classname, parameters);
+    FilterMapping fmap = getFilterMapping(name, ALL_URLS);
+    defineFilter(webAppContext, filterHolder, fmap);
     for (Context ctx : defaultContexts.keySet()) {
-      defineFilter(ctx, name, classname, parameters, ALL_URLS);
+      defineFilter(ctx, filterHolder, fmap);
     }
     LOG.info("Added global filter '" + name + "' (class=" + classname + ")");
   }
@@ -626,17 +631,35 @@ public final class HttpServer2 implements FilterContainer {
    */
   public static void defineFilter(Context ctx, String name,
       String classname, Map<String,String> parameters, String[] urls) {
+    FilterHolder filterHolder = getFilterHolder(name, classname, parameters);
+    FilterMapping fmap = getFilterMapping(name, urls);
+    defineFilter(ctx, filterHolder, fmap);
+  }
 
-    FilterHolder holder = new FilterHolder();
-    holder.setName(name);
-    holder.setClassName(classname);
-    holder.setInitParameters(parameters);
+  /**
+   * Define a filter for a context and set up default url mappings.
+   */
+  private static void defineFilter(Context ctx, FilterHolder holder,
+      FilterMapping fmap) {
+    ServletHandler handler = ctx.getServletHandler();
+    handler.addFilter(holder, fmap);
+  }
+
+  private static FilterMapping getFilterMapping(String name, String[] urls) {
     FilterMapping fmap = new FilterMapping();
     fmap.setPathSpecs(urls);
     fmap.setDispatches(Handler.ALL);
     fmap.setFilterName(name);
-    ServletHandler handler = ctx.getServletHandler();
-    handler.addFilter(holder, fmap);
+    return fmap;
+  }
+
+  private static FilterHolder getFilterHolder(String name, String classname,
+      Map<String, String> parameters) {
+    FilterHolder holder = new FilterHolder();
+    holder.setName(name);
+    holder.setClassName(classname);
+    holder.setInitParameters(parameters);
+    return holder;
   }
 
   /**
