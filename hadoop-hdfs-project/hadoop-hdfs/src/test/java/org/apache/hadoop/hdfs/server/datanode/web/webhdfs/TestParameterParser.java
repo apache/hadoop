@@ -56,13 +56,12 @@ public class TestParameterParser {
 
   @Test
   public void testDecodePath() {
-    final String SCAPED_PATH = "hdfs-6662/test%25251%26%3Dtest?op=OPEN";
-    final String EXPECTED_PATH = "/hdfs-6662/test%251&=test";
+    final String ESCAPED_PATH = "/test%25+1%26%3Dtest?op=OPEN&foo=bar";
+    final String EXPECTED_PATH = "/test%+1&=test";
 
-    Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
+    Configuration conf = new Configuration();
     QueryStringDecoder decoder = new QueryStringDecoder(
-      WebHdfsHandler.WEBHDFS_PREFIX + "/"
-      + SCAPED_PATH);
+      WebHdfsHandler.WEBHDFS_PREFIX + ESCAPED_PATH);
     ParameterParser testParser = new ParameterParser(decoder, conf);
     Assert.assertEquals(EXPECTED_PATH, testParser.path());
   }
