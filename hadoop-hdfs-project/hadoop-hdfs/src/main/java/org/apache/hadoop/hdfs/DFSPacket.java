@@ -21,9 +21,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.channels.ClosedChannelException;
+import java.util.Arrays;
+
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
+import org.apache.htrace.Span;
 
 /****************************************************************
  * DFSPacket is used by DataStreamer and DFSOutputStream.
@@ -33,6 +36,7 @@ import org.apache.hadoop.hdfs.util.ByteArrayManager;
 
 class DFSPacket {
   public static final long HEART_BEAT_SEQNO = -1L;
+  private static long[] EMPTY = new long[0];
   private final long seqno; // sequence number of buffer in block
   private final long offsetInBlock; // offset in block
   private boolean syncBlock; // this packet forces the current block to disk
@@ -59,6 +63,9 @@ class DFSPacket {
   private int checksumPos;
   private final int dataStart;
   private int dataPos;
+  private long[] traceParents = EMPTY;
+  private int traceParentsUsed;
+  private Span span;
 
   /**
    * Create a new packet.
@@ -266,5 +273,71 @@ class DFSPacket {
         " offsetInBlock: " + this.offsetInBlock +
         " lastPacketInBlock: " + this.lastPacketInBlock +
         " lastByteOffsetInBlock: " + this.getLastByteOffsetBlock();
+  }
+
+  /**
+   * Add a trace parent span for this packet.<p/>
+   *
+   * Trace parent spans for a packet are the trace spans responsible for
+   * adding data to that packet.  We store them as an array of longs for
+   * efficiency.<p/>
+   *
+   * Protected by the DFSOutputStream dataQueue lock.
+   */
+  public void addTraceParent(Span span) {
+    if (span == null) {
+      return;
+    }
+    addTraceParent(span.getSpanId());
+  }
+
+  public void addTraceParent(long id) {
+    if (traceParentsUsed == traceParents.length) {
+      int newLength = (traceParents.length == 0) ? 8 :
+          traceParents.length * 2;
+      traceParents = Arrays.copyOf(traceParents, newLength);
+    }
+    traceParents[traceParentsUsed] = id;
+    traceParentsUsed++;
+  }
+
+  /**
+   * Get the trace parent spans for this packet.<p/>
+   *
+   * Will always be non-null.<p/>
+   *
+   * Protected by the DFSOutputStream dataQueue lock.
+   */
+  public long[] getTraceParents() {
+    // Remove duplicates from the array.
+    int len = traceParentsUsed;
+    Arrays.sort(traceParents, 0, len);
+    int i = 0, j = 0;
+    long prevVal = 0; // 0 is not a valid span id
+    while (true) {
+      if (i == len) {
+        break;
+      }
+      long val = traceParents[i];
+      if (val != prevVal) {
+        traceParents[j] = val;
+        j++;
+        prevVal = val;
+      }
+      i++;
+    }
+    if (j < traceParents.length) {
+      traceParents = Arrays.copyOf(traceParents, j);
+      traceParentsUsed = traceParents.length;
+    }
+    return traceParents;
+  }
+
+  public void setTraceSpan(Span span) {
+    this.span = span;
+  }
+
+  public Span getTraceSpan() {
+    return span;
   }
 }

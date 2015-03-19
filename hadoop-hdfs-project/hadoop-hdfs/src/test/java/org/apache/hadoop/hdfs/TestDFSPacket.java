@@ -65,4 +65,29 @@ public class TestDFSPacket {
       }
     }
   }
+
+  @Test
+  public void testAddParentsGetParents() throws Exception {
+    DFSPacket p = new DFSPacket(null, maxChunksPerPacket,
+                                0, 0, checksumSize, false);
+    long parents[] = p.getTraceParents();
+    Assert.assertEquals(0, parents.length);
+    p.addTraceParent(123);
+    p.addTraceParent(123);
+    parents = p.getTraceParents();
+    Assert.assertEquals(1, parents.length);
+    Assert.assertEquals(123, parents[0]);
+    parents = p.getTraceParents(); // test calling 'get' again.
+    Assert.assertEquals(1, parents.length);
+    Assert.assertEquals(123, parents[0]);
+    p.addTraceParent(1);
+    p.addTraceParent(456);
+    p.addTraceParent(789);
+    parents = p.getTraceParents();
+    Assert.assertEquals(4, parents.length);
+    Assert.assertEquals(1, parents[0]);
+    Assert.assertEquals(123, parents[1]);
+    Assert.assertEquals(456, parents[2]);
+    Assert.assertEquals(789, parents[3]);
+  }
 }
