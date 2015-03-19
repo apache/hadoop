@@ -1124,6 +1124,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10703. HttpServer2 creates multiple authentication filters.
     (Benoy Antony via wheat9)
 
+    HADOOP-11729. Fix link to cgroups doc in site.xml. (Masatake Iwasaki via
+    ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
