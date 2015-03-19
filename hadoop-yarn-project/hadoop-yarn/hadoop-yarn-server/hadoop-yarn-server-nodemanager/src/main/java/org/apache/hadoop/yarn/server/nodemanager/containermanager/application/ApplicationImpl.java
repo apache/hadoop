@@ -496,10 +496,11 @@ public class ApplicationImpl implements Application {
           new LogHandlerAppFinishedEvent(app.appId));
 
       app.context.getNMTokenSecretManager().appFinished(app.getAppId());
-      // Remove aggregator info for finished apps.
-      // TODO check we remove related aggregators info in failure cases (YARN-3038)
-      app.context.getRegisteredAggregators().remove(app.getAppId());
-      app.context.getKnownAggregators().remove(app.getAppId());
+      // Remove collectors info for finished apps.
+      // TODO check we remove related collectors info in failure cases
+      // (YARN-3038)
+      app.context.getRegisteredCollectors().remove(app.getAppId());
+      app.context.getKnownCollectors().remove(app.getAppId());
     }
   }
 

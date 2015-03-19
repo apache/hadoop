@@ -384,22 +384,22 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     }
     this.amrmToken = amRMToken;
   }
-  
+
 
   @Override
-  public String getAggregatorAddr() {
+  public String getCollectorAddr() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getAggregatorAddr();
+    return p.getCollectorAddr();
   }
-  
+
   @Override
-  public void setAggregatorAddr(String aggregatorAddr) {
+  public void setCollectorAddr(String collectorAddr) {
     maybeInitBuilder();
-    if (aggregatorAddr == null) {
-      builder.clearAggregatorAddr();
+    if (collectorAddr == null) {
+      builder.clearCollectorAddr();
       return;
     }
-    builder.setAggregatorAddr(aggregatorAddr);
+    builder.setCollectorAddr(collectorAddr);
   }
 
   @Override

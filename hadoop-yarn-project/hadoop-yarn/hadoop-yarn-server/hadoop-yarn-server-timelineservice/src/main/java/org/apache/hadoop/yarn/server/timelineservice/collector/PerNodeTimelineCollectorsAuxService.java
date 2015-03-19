@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.aggregator;
+package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import java.nio.ByteBuffer;
 
@@ -42,85 +42,85 @@ import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * The top-level server for the per-node timeline aggregator collection. Currently
+ * The top-level server for the per-node timeline collector manager. Currently
  * it is defined as an auxiliary service to accommodate running within another
  * daemon (e.g. node manager).
  */
 @Private
 @Unstable
-public class PerNodeTimelineAggregatorsAuxService extends AuxiliaryService {
+public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
   private static final Log LOG =
-      LogFactory.getLog(PerNodeTimelineAggregatorsAuxService.class);
+      LogFactory.getLog(PerNodeTimelineCollectorsAuxService.class);
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
-  private final TimelineAggregatorsCollection aggregatorCollection;
+  private final TimelineCollectorManager collectorManager;
 
-  public PerNodeTimelineAggregatorsAuxService() {
+  public PerNodeTimelineCollectorsAuxService() {
     // use the same singleton
-    this(TimelineAggregatorsCollection.getInstance());
+    this(TimelineCollectorManager.getInstance());
   }
 
-  @VisibleForTesting PerNodeTimelineAggregatorsAuxService(
-      TimelineAggregatorsCollection aggregatorCollection) {
-    super("timeline_aggregator");
-    this.aggregatorCollection = aggregatorCollection;
+  @VisibleForTesting PerNodeTimelineCollectorsAuxService(
+      TimelineCollectorManager collectorsManager) {
+    super("timeline_collector");
+    this.collectorManager = collectorsManager;
   }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    aggregatorCollection.init(conf);
+    collectorManager.init(conf);
     super.serviceInit(conf);
   }
 
   @Override
   protected void serviceStart() throws Exception {
-    aggregatorCollection.start();
+    collectorManager.start();
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
-    aggregatorCollection.stop();
+    collectorManager.stop();
     super.serviceStop();
   }
 
   // these methods can be used as the basis for future service methods if the
-  // per-node aggregator runs separate from the node manager
+  // per-node collector runs separate from the node manager
   /**
-   * Creates and adds an app level aggregator for the specified application id.
-   * The aggregator is also initialized and started. If the service already
+   * Creates and adds an app level collector for the specified application id.
+   * The collector is also initialized and started. If the service already
    * exists, no new service is created.
    *
    * @return whether it was added successfully
    */
   public boolean addApplication(ApplicationId appId) {
-    AppLevelTimelineAggregator aggregator =
-        new AppLevelTimelineAggregator(appId.toString());
-    return (aggregatorCollection.putIfAbsent(appId, aggregator)
-        == aggregator);
+    AppLevelTimelineCollector collector =
+        new AppLevelTimelineCollector(appId.toString());
+    return (collectorManager.putIfAbsent(appId, collector)
+        == collector);
   }
 
   /**
-   * Removes the app level aggregator for the specified application id. The
-   * aggregator is also stopped as a result. If the aggregator does not exist, no
+   * Removes the app level collector for the specified application id. The
+   * collector is also stopped as a result. If the collector does not exist, no
    * change is made.
    *
    * @return whether it was removed successfully
    */
   public boolean removeApplication(ApplicationId appId) {
     String appIdString = appId.toString();
-    return aggregatorCollection.remove(appIdString);
+    return collectorManager.remove(appIdString);
   }
 
   /**
-   * Creates and adds an app level aggregator for the specified application id.
-   * The aggregator is also initialized and started. If the aggregator already
-   * exists, no new aggregator is created.
+   * Creates and adds an app level collector for the specified application id.
+   * The collector is also initialized and started. If the collector already
+   * exists, no new collector is created.
    */
   @Override
   public void initializeContainer(ContainerInitializationContext context) {
     // intercept the event of the AM container being created and initialize the
-    // app level aggregator service
+    // app level collector service
     if (isApplicationMaster(context)) {
       ApplicationId appId = context.getContainerId().
           getApplicationAttemptId().getApplicationId();
@@ -129,14 +129,14 @@ public class PerNodeTimelineAggregatorsAuxService extends AuxiliaryService {
   }
 
   /**
-   * Removes the app level aggregator for the specified application id. The
-   * aggregator is also stopped as a result. If the aggregator does not exist, no
+   * Removes the app level collector for the specified application id. The
+   * collector is also stopped as a result. If the collector does not exist, no
    * change is made.
    */
   @Override
   public void stopContainer(ContainerTerminationContext context) {
     // intercept the event of the AM container being stopped and remove the app
-    // level aggregator service
+    // level collector service
     if (isApplicationMaster(context)) {
       ApplicationId appId = context.getContainerId().
           getApplicationAttemptId().getApplicationId();
@@ -154,7 +154,7 @@ public class PerNodeTimelineAggregatorsAuxService extends AuxiliaryService {
 
   @VisibleForTesting
   boolean hasApplication(String appId) {
-    return aggregatorCollection.containsKey(appId);
+    return collectorManager.containsKey(appId);
   }
 
   @Override
@@ -173,30 +173,33 @@ public class PerNodeTimelineAggregatorsAuxService extends AuxiliaryService {
   }
 
   @VisibleForTesting
-  public static PerNodeTimelineAggregatorsAuxService launchServer(String[] args) {
+  public static PerNodeTimelineCollectorsAuxService
+      launchServer(String[] args, TimelineCollectorManager collectorManager) {
     Thread
       .setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
-    StringUtils.startupShutdownMessage(PerNodeTimelineAggregatorsAuxService.class, args,
-        LOG);
-    PerNodeTimelineAggregatorsAuxService auxService = null;
+    StringUtils.startupShutdownMessage(
+        PerNodeTimelineCollectorsAuxService.class, args, LOG);
+    PerNodeTimelineCollectorsAuxService auxService = null;
     try {
-      auxService = new PerNodeTimelineAggregatorsAuxService();
+      auxService = collectorManager == null ?
+          new PerNodeTimelineCollectorsAuxService() :
+          new PerNodeTimelineCollectorsAuxService(collectorManager);
       ShutdownHookManager.get().addShutdownHook(new ShutdownHook(auxService),
           SHUTDOWN_HOOK_PRIORITY);
       YarnConfiguration conf = new YarnConfiguration();
       auxService.init(conf);
       auxService.start();
     } catch (Throwable t) {
-      LOG.fatal("Error starting PerNodeAggregatorServer", t);
-      ExitUtil.terminate(-1, "Error starting PerNodeAggregatorServer");
+      LOG.fatal("Error starting PerNodeTimelineCollectorServer", t);
+      ExitUtil.terminate(-1, "Error starting PerNodeTimelineCollectorServer");
     }
     return auxService;
   }
 
   private static class ShutdownHook implements Runnable {
-    private final PerNodeTimelineAggregatorsAuxService auxService;
+    private final PerNodeTimelineCollectorsAuxService auxService;
 
-    public ShutdownHook(PerNodeTimelineAggregatorsAuxService auxService) {
+    public ShutdownHook(PerNodeTimelineCollectorsAuxService auxService) {
       this.auxService = auxService;
     }
 
@@ -206,6 +209,6 @@ public class PerNodeTimelineAggregatorsAuxService extends AuxiliaryService {
   }
 
   public static void main(String[] args) {
-    launchServer(args);
+    launchServer(args, null);
   }
 }

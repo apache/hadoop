@@ -16,14 +16,22 @@
  * limitations under the License.
  */
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "AggregatorNodemanagerProtocol";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-package hadoop.yarn;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import "yarn_server_common_service_protos.proto";
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
-service AggregatorNodemanagerProtocolService {
-  rpc reportNewAggregatorInfo (ReportNewAggregatorsInfoRequestProto) returns (ReportNewAggregatorsInfoResponseProto);
+public class RMAppCollectorUpdateEvent extends RMAppEvent {
+
+  private final String appCollectorAddr;
+
+  public RMAppCollectorUpdateEvent(ApplicationId appId,
+      String appCollectorAddr) {
+    super(appId, RMAppEventType.COLLECTOR_UPDATE);
+    this.appCollectorAddr = appCollectorAddr;
+  }
+
+  public String getAppCollectorAddr(){
+    return this.appCollectorAddr;
+  }
+
 }

@@ -15,18 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.api.protocolrecords;
+
+package org.apache.hadoop.yarn.server.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.Records;
 
-public abstract class ReportNewAggregatorsInfoResponse {
 
-  @Private
-  public static ReportNewAggregatorsInfoResponse newInstance() {
-    ReportNewAggregatorsInfoResponse response =
-        Records.newRecord(ReportNewAggregatorsInfoResponse.class);
-    return response;
+@Private
+public abstract class AppCollectorsMap {
+
+  public static AppCollectorsMap newInstance(
+      ApplicationId id, String collectorAddr) {
+    AppCollectorsMap appCollectorsMap =
+        Records.newRecord(AppCollectorsMap.class);
+    appCollectorsMap.setApplicationId(id);
+    appCollectorsMap.setCollectorAddr(collectorAddr);
+    return appCollectorsMap;
   }
+
+  public abstract ApplicationId getApplicationId();
+
+  public abstract void setApplicationId(ApplicationId id);
+
+  public abstract String getCollectorAddr();
+
+  public abstract void setCollectorAddr(String addr);
 
 }
