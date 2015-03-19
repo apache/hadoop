@@ -135,7 +135,7 @@ public class TestContainerLaunchRPC {
 
     Assert.fail("timeout exception should have occurred!");
   }
-  
+
   public static Token newContainerToken(NodeId nodeId, byte[] password,
       ContainerTokenIdentifier tokenIdentifier) {
     // RPC layer client expects ip:port as service for tokens

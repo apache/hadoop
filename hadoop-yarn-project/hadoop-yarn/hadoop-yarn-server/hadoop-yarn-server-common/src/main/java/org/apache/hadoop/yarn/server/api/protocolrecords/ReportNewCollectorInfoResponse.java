@@ -15,19 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.api;
+package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.yarn.proto.AggregatorNodemanagerProtocol.AggregatorNodemanagerProtocolService;
+import org.apache.hadoop.yarn.util.Records;
 
-@Private
-@Unstable
-@ProtocolInfo(
-    protocolName = "org.apache.hadoop.yarn.server.api.AggregatorNodemanagerProtocolPB",
-    protocolVersion = 1)
-public interface AggregatorNodemanagerProtocolPB extends 
-    AggregatorNodemanagerProtocolService.BlockingInterface {
+public abstract class ReportNewCollectorInfoResponse {
+
+  @Private
+  public static ReportNewCollectorInfoResponse newInstance() {
+    ReportNewCollectorInfoResponse response =
+        Records.newRecord(ReportNewCollectorInfoResponse.class);
+    return response;
+  }
 
 }

@@ -84,7 +84,7 @@ message NodeHeartbeatRequestProto {
   optional MasterKeyProto last_known_nm_token_master_key = 3;
   optional NodeLabelsProto nodeLabels = 4;
   repeated LogAggregationReportProto log_aggregation_reports_for_apps = 5;
-  repeated AppAggregatorsMapProto registered_aggregators = 6;
+  repeated AppCollectorsMapProto registered_collectors = 6;
 }
 
 message LogAggregationReportProto {
@@ -109,7 +109,7 @@ message NodeHeartbeatResponseProto {
   repeated SignalContainerRequestProto containers_to_signal = 13;
   optional ResourceProto resource = 14;
   optional ContainerQueuingLimitProto container_queuing_limit = 15;
-  repeated AppAggregatorsMapProto app_aggregators_map = 16;
+  repeated AppCollectorsMapProto app_collectors_map = 16;
 }
 
 message ContainerQueuingLimitProto {
@@ -123,21 +123,21 @@ message SystemCredentialsForAppsProto {
 }
 
 ////////////////////////////////////////////////////////////////////////
-////// From aggregator_nodemanager_protocol ////////////////////////////
+////// From collector_nodemanager_protocol ////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-message AppAggregatorsMapProto {
+message AppCollectorsMapProto {
   optional ApplicationIdProto appId = 1;
-  optional string appAggregatorAddr = 2;
+  optional string appCollectorAddr = 2;
 }
 
 //////////////////////////////////////////////////////
-/////// aggregator_nodemanager_protocol //////////////
+/////// collector_nodemanager_protocol //////////////
 //////////////////////////////////////////////////////
-message ReportNewAggregatorsInfoRequestProto {
-  repeated AppAggregatorsMapProto app_aggregators = 1;
+message ReportNewCollectorInfoRequestProto {
+  repeated AppCollectorsMapProto app_collectors = 1;
 }
 
-message ReportNewAggregatorsInfoResponseProto {
+message ReportNewCollectorInfoResponseProto {
 }
 
 

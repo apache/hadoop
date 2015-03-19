@@ -40,10 +40,10 @@ public interface NodeHeartbeatResponse {
   List<ContainerId> getContainersToBeRemovedFromNM();
 
   List<ApplicationId> getApplicationsToCleanup();
-  
-  // This tells NM the aggregators' address info of related Apps
-  Map<ApplicationId, String> getAppAggregatorsMap();
-  void setAppAggregatorsMap(Map<ApplicationId, String> appAggregatorsMap);
+
+  // This tells NM the collectors' address info of related apps
+  Map<ApplicationId, String> getAppCollectorsMap();
+  void setAppCollectorsMap(Map<ApplicationId, String> appCollectorsMap);
 
   void setResponseId(int responseId);
   void setNodeAction(NodeAction action);

@@ -109,14 +109,14 @@ public class TestYarnServerApiClasses {
     original.setLastKnownNMTokenMasterKey(getMasterKey());
     original.setNodeStatus(getNodeStatus());
     original.setNodeLabels(getValidNodeLabels());
-    Map<ApplicationId, String> aggregators = getAggregators();
-    original.setRegisteredAggregators(aggregators);
+    Map<ApplicationId, String> collectors = getCollectors();
+    original.setRegisteredCollectors(collectors);
     NodeHeartbeatRequestPBImpl copy = new NodeHeartbeatRequestPBImpl(
         original.getProto());
     assertEquals(1, copy.getLastKnownContainerTokenMasterKey().getKeyId());
     assertEquals(1, copy.getLastKnownNMTokenMasterKey().getKeyId());
     assertEquals("localhost", copy.getNodeStatus().getNodeId().getHost());
-    assertEquals(aggregators, copy.getRegisteredAggregators());
+    assertEquals(collectors, copy.getRegisteredCollectors());
     // check labels are coming with valid values
     Assert.assertTrue(original.getNodeLabels()
         .containsAll(copy.getNodeLabels()));
@@ -153,8 +153,8 @@ public class TestYarnServerApiClasses {
     original.setNextHeartBeatInterval(1000);
     original.setNodeAction(NodeAction.NORMAL);
     original.setResponseId(100);
-    Map<ApplicationId, String> aggregators = getAggregators();
-    original.setAppAggregatorsMap(aggregators);
+    Map<ApplicationId, String> collectors = getCollectors();
+    original.setAppCollectorsMap(collectors);
 
     NodeHeartbeatResponsePBImpl copy = new NodeHeartbeatResponsePBImpl(
         original.getProto());
@@ -164,7 +164,7 @@ public class TestYarnServerApiClasses {
     assertEquals(1, copy.getContainerTokenMasterKey().getKeyId());
     assertEquals(1, copy.getNMTokenMasterKey().getKeyId());
     assertEquals("testDiagnosticMessage", copy.getDiagnosticsMessage());
-    assertEquals(aggregators, copy.getAppAggregatorsMap());
+    assertEquals(collectors, copy.getAppCollectorsMap());
     assertEquals(false, copy.getAreNodeLabelsAcceptedByRM());
    }
 
@@ -344,15 +344,15 @@ public class TestYarnServerApiClasses {
     return nodeLabels;
   }
 
-  private Map<ApplicationId, String> getAggregators() {
+  private Map<ApplicationId, String> getCollectors() {
     ApplicationId appID = ApplicationId.newInstance(1L, 1);
-    String aggregatorAddr = "localhost:0";
-    Map<ApplicationId, String> aggregatorMap = 
+    String collectorAddr = "localhost:0";
+    Map<ApplicationId, String> collectorMap =
         new HashMap<ApplicationId, String>();
-    aggregatorMap.put(appID, aggregatorAddr);
-    return aggregatorMap;
+    collectorMap.put(appID, collectorAddr);
+    return collectorMap;
   }
-  
+
   private ContainerStatus getContainerStatus(int applicationId,
       int containerID, int appAttemptId) {
     ContainerStatus status = recordFactory

@@ -15,22 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.api;
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.yarn.proto.CollectorNodemanagerProtocol.CollectorNodemanagerProtocolService;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+@Private
+@Unstable
+@ProtocolInfo(
+    protocolName = "org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocolPB",
+    protocolVersion = 1)
+public interface CollectorNodemanagerProtocolPB extends
+    CollectorNodemanagerProtocolService.BlockingInterface {
 
-public class RMAppAggregatorUpdateEvent extends RMAppEvent {
-
-  private final String appAggregatorAddr;
-  
-  public RMAppAggregatorUpdateEvent(ApplicationId appId, String appAggregatorAddr) {
-    super(appId, RMAppEventType.AGGREGATOR_UPDATE);
-    this.appAggregatorAddr = appAggregatorAddr;
-  }
-  
-  public String getAppAggregatorAddr(){
-    return this.appAggregatorAddr;
-  }
-  
 }

@@ -242,5 +242,5 @@ public abstract class TimelineClient extends AbstractService implements
    *          the timeline service address
    */
   public abstract void setTimelineServiceAddress(String address);
-  
+
 }
