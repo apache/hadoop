@@ -2314,4 +2314,11 @@
     <description>Whether pin blocks on favored DataNode.</description>
   </property>
 
+<property>
+  <name>dfs.client.block.write.locateFollowingBlock.initial.delay.ms</name>
+  <value>400</value>
+  <description>The initial delay (unit is ms) for locateFollowingBlock,
+    the delay time will increase exponentially(double) for each retry.
+  </description>
+</property>
 </configuration>

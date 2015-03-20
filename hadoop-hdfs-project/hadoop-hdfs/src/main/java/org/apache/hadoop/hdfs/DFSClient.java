@@ -24,6 +24,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAUL
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT;
@@ -305,6 +307,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     final int nCachedConnRetry;
     final int nBlockWriteRetry;
     final int nBlockWriteLocateFollowingRetry;
+    final int blockWriteLocateFollowingInitialDelayMs;
     final long defaultBlockSize;
     final long prefetchSize;
     final short defaultReplication;
@@ -416,6 +419,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       nBlockWriteLocateFollowingRetry = conf.getInt(
           DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
           DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT);
+      blockWriteLocateFollowingInitialDelayMs = conf.getInt(
+          DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_KEY,
+          DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_DEFAULT);
       uMask = FsPermission.getUMask(conf);
       connectToDnViaHostname = conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME,
           DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
@@ -565,6 +571,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
             + ", effective=null");
       }
       return dataChecksum;
+    }
+
+    @VisibleForTesting
+    public int getBlockWriteLocateFollowingInitialDelayMs() {
+      return blockWriteLocateFollowingInitialDelayMs;
     }
   }
  

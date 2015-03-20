@@ -1433,7 +1433,8 @@ public class DFSOutputStream extends FSOutputSummer
     private LocatedBlock locateFollowingBlock(long start,
         DatanodeInfo[] excludedNodes)  throws IOException {
       int retries = dfsClient.getConf().nBlockWriteLocateFollowingRetry;
-      long sleeptime = 400;
+      long sleeptime = dfsClient.getConf().
+          blockWriteLocateFollowingInitialDelayMs;
       while (true) {
         long localstart = Time.now();
         while (true) {
@@ -2253,7 +2254,8 @@ public class DFSOutputStream extends FSOutputSummer
   // be called during unit tests
   private void completeFile(ExtendedBlock last) throws IOException {
     long localstart = Time.now();
-    long localTimeout = 400;
+    long sleeptime = dfsClient.getConf().
+        blockWriteLocateFollowingInitialDelayMs;
     boolean fileComplete = false;
     int retries = dfsClient.getConf().nBlockWriteLocateFollowingRetry;
     while (!fileComplete) {
@@ -2276,8 +2278,8 @@ public class DFSOutputStream extends FSOutputSummer
                 + " does not have enough number of replicas.");
           }
           retries--;
-          Thread.sleep(localTimeout);
-          localTimeout *= 2;
+          Thread.sleep(sleeptime);
+          sleeptime *= 2;
           if (Time.now() - localstart > 5000) {
             DFSClient.LOG.info("Could not complete " + src + " retrying...");
           }
