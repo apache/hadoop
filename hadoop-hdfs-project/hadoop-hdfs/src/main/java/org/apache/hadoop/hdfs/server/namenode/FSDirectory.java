@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.security.AccessControlException;
@@ -677,7 +678,7 @@ public class FSDirectory implements Closeable {
    * @param checkQuota if true then check if quota is exceeded
    * @throws QuotaExceededException if the new count violates any quota limit
    */
-   void updateCount(INodesInPath iip, int numOfINodes,
+  void updateCount(INodesInPath iip, int numOfINodes,
                     QuotaCounts counts, boolean checkQuota)
                     throws QuotaExceededException {
     assert hasWriteLock();
@@ -1050,7 +1051,7 @@ public class FSDirectory implements Closeable {
     INodeFile file = iip.getLastINode().asFile();
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     boolean onBlockBoundary =
-        unprotectedTruncate(iip, newLength, collectedBlocks, mtime);
+        unprotectedTruncate(iip, newLength, collectedBlocks, mtime, null);
 
     if(! onBlockBoundary) {
       BlockInfoContiguous oldBlock = file.getLastBlock();
@@ -1073,11 +1074,11 @@ public class FSDirectory implements Closeable {
 
   boolean truncate(INodesInPath iip, long newLength,
                    BlocksMapUpdateInfo collectedBlocks,
-                   long mtime)
+                   long mtime, QuotaCounts delta)
       throws IOException {
     writeLock();
     try {
-      return unprotectedTruncate(iip, newLength, collectedBlocks, mtime);
+      return unprotectedTruncate(iip, newLength, collectedBlocks, mtime, delta);
     } finally {
       writeUnlock();
     }
@@ -1097,20 +1098,47 @@ public class FSDirectory implements Closeable {
    */
   boolean unprotectedTruncate(INodesInPath iip, long newLength,
                               BlocksMapUpdateInfo collectedBlocks,
-                              long mtime) throws IOException {
+                              long mtime, QuotaCounts delta) throws IOException {
     assert hasWriteLock();
     INodeFile file = iip.getLastINode().asFile();
     int latestSnapshot = iip.getLatestSnapshotId();
     file.recordModification(latestSnapshot, true);
-    long oldDiskspaceNoRep = file.storagespaceConsumedNoReplication();
+
+    verifyQuotaForTruncate(iip, file, newLength, delta);
+
     long remainingLength =
         file.collectBlocksBeyondMax(newLength, collectedBlocks);
     file.excludeSnapshotBlocks(latestSnapshot, collectedBlocks);
     file.setModificationTime(mtime);
-    updateCount(iip, 0, file.storagespaceConsumedNoReplication() - oldDiskspaceNoRep,
-      file.getBlockReplication(), true);
     // return whether on a block boundary
     return (remainingLength - newLength) == 0;
+  }
+
+  private void verifyQuotaForTruncate(INodesInPath iip, INodeFile file,
+      long newLength, QuotaCounts delta) throws QuotaExceededException {
+    if (!getFSNamesystem().isImageLoaded() || shouldSkipQuotaChecks()) {
+      // Do not check quota if edit log is still being processed
+      return;
+    }
+    final long diff = file.computeQuotaDeltaForTruncate(newLength);
+    final short repl = file.getBlockReplication();
+    delta.addStorageSpace(diff * repl);
+    final BlockStoragePolicy policy = getBlockStoragePolicySuite()
+        .getPolicy(file.getStoragePolicyID());
+    List<StorageType> types = policy.chooseStorageTypes(repl);
+    for (StorageType t : types) {
+      if (t.supportTypeQuota()) {
+        delta.addTypeSpace(t, diff);
+      }
+    }
+    if (diff > 0) {
+      readLock();
+      try {
+        verifyQuota(iip, iip.length() - 1, delta, null);
+      } finally {
+        readUnlock();
+      }
+    }
   }
 
   /**
