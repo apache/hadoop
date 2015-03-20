@@ -531,6 +531,49 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     verifyJobPriority(jobId, "NORMAL", conf, createJobClient());
   }
 
+  /**
+   * Test -list option displays job name.
+   * The name is capped to 20 characters for display.
+   */
+  public void testJobName() throws Exception {
+    Configuration conf = createJobConf();
+    CLI jc = createJobClient();
+    Job job = MapReduceTestUtil.createJob(conf, getInputDir(), getOutputDir(),
+        1, 1, "short_name");
+    job.setJobName("mapreduce");
+    job.setPriority(JobPriority.NORMAL);
+    job.waitForCompletion(true);
+    String jobId = job.getJobID().toString();
+    verifyJobName(jobId, "mapreduce", conf, jc);
+    Job job2 = MapReduceTestUtil.createJob(conf, getInputDir(), getOutputDir(),
+        1, 1, "long_name");
+    job2.setJobName("mapreduce_job_with_long_name");
+    job2.setPriority(JobPriority.NORMAL);
+    job2.waitForCompletion(true);
+    jobId = job2.getJobID().toString();
+    verifyJobName(jobId, "mapreduce_job_with_l", conf, jc);
+  }
+
+  protected void verifyJobName(String jobId, String name,
+      Configuration conf, CLI jc) throws Exception {
+    PipedInputStream pis = new PipedInputStream();
+    PipedOutputStream pos = new PipedOutputStream(pis);
+    int exitCode = runTool(conf, jc,
+        new String[] { "-list", "all" }, pos);
+    assertEquals("Exit code", 0, exitCode);
+    BufferedReader br = new BufferedReader(new InputStreamReader(pis));
+    String line = null;
+    while ((line = br.readLine()) != null) {
+      LOG.info("line = " + line);
+      if (!line.contains(jobId)) {
+        continue;
+      }
+      assertTrue(line.contains(name));
+      break;
+    }
+    pis.close();
+  }
+
   protected CLI createJobClient() throws IOException {
     return new CLI();
   }

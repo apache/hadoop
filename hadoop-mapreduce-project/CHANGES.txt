@@ -9,6 +9,9 @@ Trunk (Unreleased)
     MAPREDUCE-5653. DistCp does not honour config-overrides for
     mapreduce.[map,reduce].memory.mb (Ratandeep Ratti via aw)
 
+    MAPREDUCE-4424. 'mapred job -list' command should show the job name
+    as well. (Avinash Kujur via aajisaka)
+
   NEW FEATURES
 
     MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
