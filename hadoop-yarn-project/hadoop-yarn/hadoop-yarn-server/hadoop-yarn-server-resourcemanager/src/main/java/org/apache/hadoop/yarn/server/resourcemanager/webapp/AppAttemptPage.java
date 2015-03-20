@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
-import org.apache.hadoop.yarn.server.webapp.AppAttemptBlock;
 import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
@@ -49,7 +48,7 @@ public class AppAttemptPage extends RmView {
 
   @Override
   protected Class<? extends SubView> content() {
-    return AppAttemptBlock.class;
+    return RMAppAttemptBlock.class;
   }
 
 }

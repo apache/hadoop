@@ -43,13 +43,13 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
-
 import com.google.inject.Inject;
 
 public class AppAttemptBlock extends HtmlBlock {
 
   private static final Log LOG = LogFactory.getLog(AppAttemptBlock.class);
   protected ApplicationBaseProtocol appBaseProt;
+  protected ApplicationAttemptId appAttemptId = null;
 
   @Inject
   public AppAttemptBlock(ApplicationBaseProtocol appBaseProt, ViewContext ctx) {
@@ -65,7 +65,6 @@ public class AppAttemptBlock extends HtmlBlock {
       return;
     }
 
-    ApplicationAttemptId appAttemptId = null;
     try {
       appAttemptId = ConverterUtils.toApplicationAttemptId(attemptid);
     } catch (IllegalArgumentException e) {
