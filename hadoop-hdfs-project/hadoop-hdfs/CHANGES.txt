@@ -10,6 +10,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-2360. Ugly stacktrace when quota exceeds. (harsh)
 
+    HDFS-7835. make initial sleeptime in locateFollowingBlock configurable for
+    DFSClient. (Zhihai Xu via Yongjun Zhang)
+
   OPTIMIZATIONS
 
   BUG FIXES
