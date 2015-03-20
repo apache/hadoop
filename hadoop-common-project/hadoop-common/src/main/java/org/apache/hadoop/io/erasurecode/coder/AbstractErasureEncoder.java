@@ -30,7 +30,8 @@ public abstract class AbstractErasureEncoder extends AbstractErasureCoder
 
   @Override
   public ErasureCodingStep encode(ECBlockGroup blockGroup) {
-    return performEncoding(blockGroup);
+    // We may have more than this when considering complicate cases. HADOOP-11550
+    return prepareEncodingStep(blockGroup);
   }
 
   /**
@@ -38,7 +39,8 @@ public abstract class AbstractErasureEncoder extends AbstractErasureCoder
    * @param blockGroup
    * @return encoding step for caller to do the real work
    */
-  protected abstract ErasureCodingStep performEncoding(ECBlockGroup blockGroup);
+  protected abstract ErasureCodingStep prepareEncodingStep(
+      ECBlockGroup blockGroup);
 
   protected ECBlock[] getInputBlocks(ECBlockGroup blockGroup) {
     return blockGroup.getDataBlocks();

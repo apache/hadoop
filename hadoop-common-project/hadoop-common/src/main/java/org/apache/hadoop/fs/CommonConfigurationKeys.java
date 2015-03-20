@@ -137,6 +137,21 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       false;
 
   /**
+   * Erasure Coding configuration family
+   */
+
+  /** Supported erasure codec classes */
+  public static final String IO_ERASURECODE_CODECS_KEY = "io.erasurecode.codecs";
+
+  /** Use XOR raw coder when possible for the RS codec */
+  public static final String IO_ERASURECODE_CODEC_RS_USEXOR_KEY =
+      "io.erasurecode.codec.rs.usexor";
+
+  /** Raw coder factory for the RS codec */
+  public static final String IO_ERASURECODE_CODEC_RS_RAWCODER_KEY =
+      "io.erasurecode.codec.rs.rawcoder";
+
+  /**
    * Service Authorization
    */
   public static final String 

@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.io.erasurecode.coder;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureCoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureCoderFactory;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 
 /**
  * A common class of basic facilities to be shared by encoder and decoder
@@ -30,6 +35,66 @@ public abstract class AbstractErasureCoder
   private int numDataUnits;
   private int numParityUnits;
   private int chunkSize;
+
+  /**
+   * Create raw decoder using the factory specified by rawCoderFactoryKey
+   * @param rawCoderFactoryKey
+   * @return raw decoder
+   */
+  protected RawErasureDecoder createRawDecoder(String rawCoderFactoryKey) {
+    RawErasureCoder rawCoder = createRawCoder(getConf(),
+        rawCoderFactoryKey, false);
+    return (RawErasureDecoder) rawCoder;
+  }
+
+  /**
+   * Create raw encoder using the factory specified by rawCoderFactoryKey
+   * @param rawCoderFactoryKey
+   * @return raw encoder
+   */
+  protected RawErasureEncoder createRawEncoder(String rawCoderFactoryKey) {
+    RawErasureCoder rawCoder = createRawCoder(getConf(),
+        rawCoderFactoryKey, true);
+    return (RawErasureEncoder) rawCoder;
+  }
+
+  /**
+   * Create raw coder using specified conf and raw coder factory key.
+   * @param conf
+   * @param rawCoderFactoryKey
+   * @param isEncoder
+   * @return raw coder
+   */
+  protected static RawErasureCoder createRawCoder(Configuration conf,
+      String rawCoderFactoryKey, boolean isEncoder) {
+
+    if (conf == null) {
+      return null;
+    }
+
+    Class<? extends RawErasureCoderFactory> factClass = null;
+    factClass = conf.getClass(rawCoderFactoryKey,
+        factClass, RawErasureCoderFactory.class);
+
+    if (factClass == null) {
+      return null;
+    }
+
+    RawErasureCoderFactory fact;
+    try {
+      fact = factClass.newInstance();
+    } catch (InstantiationException e) {
+      throw new RuntimeException("Failed to create raw coder", e);
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException("Failed to create raw coder", e);
+    }
+
+    if (fact != null) {
+      return isEncoder ? fact.createEncoder() : fact.createDecoder();
+    }
+
+    return null;
+  }
 
   @Override
   public void initialize(int numDataUnits, int numParityUnits,

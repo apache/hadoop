@@ -26,3 +26,6 @@
 
     HADOOP-11707. Add factory to create raw erasure coder. Contributed by Kai Zheng
     ( Kai Zheng )
+
+    HADOOP-11647. Reed-Solomon ErasureCoder. Contributed by Kai Zheng
+    ( Kai Zheng )
