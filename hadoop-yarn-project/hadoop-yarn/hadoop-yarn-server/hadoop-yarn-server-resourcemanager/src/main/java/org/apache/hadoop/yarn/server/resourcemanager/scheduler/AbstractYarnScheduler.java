@@ -358,14 +358,15 @@ public abstract class AbstractYarnScheduler
         container));
 
       // recover scheduler node
-      nodes.get(nm.getNodeID()).recoverContainer(rmContainer);
+      SchedulerNode schedulerNode = nodes.get(nm.getNodeID());
+      schedulerNode.recoverContainer(rmContainer);
 
       // recover queue: update headroom etc.
       Queue queue = schedulerAttempt.getQueue();
       queue.recoverContainer(clusterResource, schedulerAttempt, rmContainer);
 
       // recover scheduler attempt
-      schedulerAttempt.recoverContainer(rmContainer);
+      schedulerAttempt.recoverContainer(schedulerNode, rmContainer);
             
       // set master container for the current running AMContainer for this
       // attempt.
