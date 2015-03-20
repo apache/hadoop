@@ -411,6 +411,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2854. Updated the documentation of the timeline service and the generic
     history service. (Naganarasimha G R via zjshen)
 
+    YARN-2777. Mark the end of individual log in aggregated log.
+    (Varun Saxena via xgong)
+
   OPTIMIZATIONS
 
     YARN-2990. FairScheduler's delay-scheduling always waits for node-local and 

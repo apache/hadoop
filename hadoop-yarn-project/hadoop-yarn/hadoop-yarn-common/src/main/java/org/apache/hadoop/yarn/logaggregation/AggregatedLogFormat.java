@@ -711,6 +711,7 @@ public class AggregatedLogFormat {
                   pendingRead > buf.length ? buf.length : (int) pendingRead;
         len = valueStream.read(buf, 0, toRead);
       }
+      out.println("End of LogType:" + fileType);
       out.println("");
     }
 
