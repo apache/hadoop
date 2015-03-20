@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
 public class TestOverReplicatedBlocks {
@@ -171,10 +172,10 @@ public class TestOverReplicatedBlocks {
       long waitTime = DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT * 1000 *
         (DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_DEFAULT + 1);
       do {
-        nodeInfo = 
-          namesystem.getBlockManager().getDatanodeManager().getDatanode(dnReg);
-        lastHeartbeat = nodeInfo.getLastUpdate();
-      } while(now() - lastHeartbeat < waitTime);
+        nodeInfo = namesystem.getBlockManager().getDatanodeManager()
+            .getDatanode(dnReg);
+        lastHeartbeat = nodeInfo.getLastUpdateMonotonic();
+      } while (monotonicNow() - lastHeartbeat < waitTime);
       fs.setReplication(fileName, (short)3);
 
       BlockLocation locs[] = fs.getFileBlockLocations(

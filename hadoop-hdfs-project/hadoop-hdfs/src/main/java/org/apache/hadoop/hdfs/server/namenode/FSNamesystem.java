@@ -88,6 +88,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -277,7 +278,6 @@ import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
@@ -683,7 +683,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       namesystem.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     }
 
-    long loadStart = now();
+    long loadStart = monotonicNow();
     try {
       namesystem.loadFSImage(startOpt);
     } catch (IOException ioe) {
@@ -691,7 +691,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       fsImage.close();
       throw ioe;
     }
-    long timeTakenToLoadFSImage = now() - loadStart;
+    long timeTakenToLoadFSImage = monotonicNow() - loadStart;
     LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
     NameNodeMetrics nnMetrics = NameNode.getNameNodeMetrics();
     if (nnMetrics != null) {
@@ -5071,6 +5071,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
      * <br> >0 safe mode is on, but we are in extension period 
      */
     private long reached = -1;  
+    private long reachedTimestamp = -1;
     /** Total number of blocks. */
     int blockTotal; 
     /** Number of safe blocks. */
@@ -5171,6 +5172,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
      */
     private void enter() {
       this.reached = 0;
+      this.reachedTimestamp = 0;
     }
       
     /**
@@ -5194,6 +5196,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         NameNode.stateChangeLog.info("STATE* Safe mode is OFF"); 
       }
       reached = -1;
+      reachedTimestamp = -1;
       safeMode = null;
       final NetworkTopology nt = blockManager.getDatanodeManager().getNetworkTopology();
       NameNode.stateChangeLog.info("STATE* Network topology has "
@@ -5232,7 +5235,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         return false;
       }
 
-      if (now() - reached < extension) {
+      if (monotonicNow() - reached < extension) {
         reportStatus("STATE* Safe mode ON, in safe mode extension.", false);
         return false;
       }
@@ -5288,7 +5291,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         return;
       }
       // start monitor
-      reached = now();
+      reached = monotonicNow();
+      reachedTimestamp = now();
       if (smmthread == null) {
         smmthread = new Daemon(new SafeModeMonitor());
         smmthread.start();
@@ -5435,8 +5439,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       if (!thresholdsMet) {
         msg += "once the thresholds have been reached.";
-      } else if (reached + extension - now() > 0) {
-        msg += ("in " + (reached + extension - now()) / 1000 + " seconds.");
+      } else if (reached + extension - monotonicNow() > 0) {
+        msg += ("in " + (reached + extension - monotonicNow()) / 1000 + " seconds.");
       } else {
         msg += "soon.";
       }
@@ -5462,7 +5466,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         + ". Target blocks = " + blockThreshold + " for threshold = %" + threshold
         + ". Minimal replication = " + safeReplication + ".";
       if (reached > 0) 
-        resText += " Threshold was reached " + new Date(reached) + ".";
+        resText += " Threshold was reached " + new Date(reachedTimestamp) + ".";
       return resText;
     }
       
@@ -5941,7 +5945,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric
   public long getMillisSinceLastLoadedEdits() {
     if (isInStandbyState() && editLogTailer != null) {
-      return now() - editLogTailer.getLastLoadTimestamp();
+      return monotonicNow() - editLogTailer.getLastLoadTimeMs();
     } else {
       return 0;
     }
@@ -6983,7 +6987,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   private long getLastContact(DatanodeDescriptor alivenode) {
-    return (Time.now() - alivenode.getLastUpdate())/1000;
+    return (monotonicNow() - alivenode.getLastUpdateMonotonic())/1000;
   }
 
   private long getDfsUsed(DatanodeDescriptor alivenode) {

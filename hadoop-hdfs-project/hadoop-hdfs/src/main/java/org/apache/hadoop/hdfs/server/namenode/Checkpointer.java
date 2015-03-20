@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.File;
 import java.io.IOException;
@@ -135,11 +135,11 @@ class Checkpointer extends Daemon {
 
     long lastCheckpointTime = 0;
     if (!backupNode.shouldCheckpointAtStartup()) {
-      lastCheckpointTime = now();
+      lastCheckpointTime = monotonicNow();
     }
     while(shouldRun) {
       try {
-        long now = now();
+        long now = monotonicNow();
         boolean shouldCheckpoint = false;
         if(now >= lastCheckpointTime + periodMSec) {
           shouldCheckpoint = true;
@@ -182,7 +182,7 @@ class Checkpointer extends Daemon {
     BackupImage bnImage = getFSImage();
     NNStorage bnStorage = bnImage.getStorage();
 
-    long startTime = now();
+    long startTime = monotonicNow();
     bnImage.freezeNamespaceAtNextRoll();
     
     NamenodeCommand cmd = 
@@ -276,7 +276,7 @@ class Checkpointer extends Daemon {
     
     long imageSize = bnImage.getStorage().getFsImageName(txid).length();
     LOG.info("Checkpoint completed in "
-        + (now() - startTime)/1000 + " seconds."
+        + (monotonicNow() - startTime)/1000 + " seconds."
         + " New Image Size: " + imageSize);
   }
 

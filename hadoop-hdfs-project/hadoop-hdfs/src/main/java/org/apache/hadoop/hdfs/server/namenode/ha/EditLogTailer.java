@@ -44,7 +44,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -84,7 +84,7 @@ public class EditLogTailer {
    * The last time we successfully loaded a non-zero number of edits from the
    * shared directory.
    */
-  private long lastLoadTimestamp;
+  private long lastLoadTimeMs;
 
   /**
    * How often the Standby should roll edit logs. Since the Standby only reads
@@ -105,7 +105,7 @@ public class EditLogTailer {
     this.namesystem = namesystem;
     this.editLog = namesystem.getEditLog();
     
-    lastLoadTimestamp = now();
+    lastLoadTimeMs = monotonicNow();
 
     logRollPeriodMs = conf.getInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
         DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT) * 1000;
@@ -241,7 +241,7 @@ public class EditLogTailer {
       }
 
       if (editsLoaded > 0) {
-        lastLoadTimestamp = now();
+        lastLoadTimeMs = monotonicNow();
       }
       lastLoadedTxnId = image.getLastAppliedTxId();
     } finally {
@@ -250,10 +250,10 @@ public class EditLogTailer {
   }
 
   /**
-   * @return timestamp (in msec) of when we last loaded a non-zero number of edits.
+   * @return time in msec of when we last loaded a non-zero number of edits.
    */
-  public long getLastLoadTimestamp() {
-    return lastLoadTimestamp;
+  public long getLastLoadTimeMs() {
+    return lastLoadTimeMs;
   }
 
   /**
@@ -261,7 +261,7 @@ public class EditLogTailer {
    */
   private boolean tooLongSinceLastLoad() {
     return logRollPeriodMs >= 0 && 
-      (now() - lastLoadTimestamp) > logRollPeriodMs ;
+      (monotonicNow() - lastLoadTimeMs) > logRollPeriodMs ;
   }
 
   /**

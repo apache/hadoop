@@ -1772,7 +1772,7 @@ public class BlockManager {
       final DatanodeStorage storage,
       final BlockListAsLongs newReport) throws IOException {
     namesystem.writeLock();
-    final long startTime = Time.now(); //after acquiring write lock
+    final long startTime = Time.monotonicNow(); //after acquiring write lock
     final long endTime;
     DatanodeDescriptor node;
     Collection<Block> invalidatedBlocks = null;
@@ -1810,7 +1810,7 @@ public class BlockManager {
       
       storageInfo.receivedBlockReport();
     } finally {
-      endTime = Time.now();
+      endTime = Time.monotonicNow();
       namesystem.writeUnlock();
     }
 
@@ -1840,7 +1840,7 @@ public class BlockManager {
     if (getPostponedMisreplicatedBlocksCount() == 0) {
       return;
     }
-    long startTimeRescanPostponedMisReplicatedBlocks = Time.now();
+    long startTimeRescanPostponedMisReplicatedBlocks = Time.monotonicNow();
     long startPostponedMisReplicatedBlocksCount =
         getPostponedMisreplicatedBlocksCount();
     namesystem.writeLock();
@@ -1900,7 +1900,7 @@ public class BlockManager {
       long endPostponedMisReplicatedBlocksCount =
           getPostponedMisreplicatedBlocksCount();
       LOG.info("Rescan of postponedMisreplicatedBlocks completed in " +
-          (Time.now() - startTimeRescanPostponedMisReplicatedBlocks) +
+          (Time.monotonicNow() - startTimeRescanPostponedMisReplicatedBlocks) +
           " msecs. " + endPostponedMisReplicatedBlocksCount +
           " blocks are left. " + (startPostponedMisReplicatedBlocksCount -
           endPostponedMisReplicatedBlocksCount) + " blocks are removed.");
@@ -2648,7 +2648,7 @@ public class BlockManager {
   private void processMisReplicatesAsync() throws InterruptedException {
     long nrInvalid = 0, nrOverReplicated = 0;
     long nrUnderReplicated = 0, nrPostponed = 0, nrUnderConstruction = 0;
-    long startTimeMisReplicatedScan = Time.now();
+    long startTimeMisReplicatedScan = Time.monotonicNow();
     Iterator<BlockInfoContiguous> blocksItr = blocksMap.getBlocks().iterator();
     long totalBlocks = blocksMap.size();
     replicationQueuesInitProgress = 0;
@@ -2706,7 +2706,8 @@ public class BlockManager {
           NameNode.stateChangeLog
               .info("STATE* Replication Queue initialization "
                   + "scan for invalid, over- and under-replicated blocks "
-                  + "completed in " + (Time.now() - startTimeMisReplicatedScan)
+                  + "completed in "
+                  + (Time.monotonicNow() - startTimeMisReplicatedScan)
                   + " msec");
           break;
         }

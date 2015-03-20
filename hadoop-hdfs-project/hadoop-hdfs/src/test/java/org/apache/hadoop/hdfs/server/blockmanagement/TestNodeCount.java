@@ -137,7 +137,7 @@ public class TestNodeCount {
   
   void initializeTimeout(long timeout) {
     this.timeout = timeout;
-    this.failtime = Time.now()
+    this.failtime = Time.monotonicNow()
         + ((timeout <= 0) ? Long.MAX_VALUE : timeout);
   }
   
@@ -148,7 +148,7 @@ public class TestNodeCount {
   
   /* check for timeout, then wait for cycleTime msec */
   void checkTimeout(String testLabel, long cycleTime) throws TimeoutException {
-    if (Time.now() > failtime) {
+    if (Time.monotonicNow() > failtime) {
       throw new TimeoutException("Timeout: "
           + testLabel + " for block " + lastBlock + " after " + timeout 
           + " msec.  Last counts: live = " + lastNum.liveReplicas()

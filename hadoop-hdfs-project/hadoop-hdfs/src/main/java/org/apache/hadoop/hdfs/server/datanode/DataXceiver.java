@@ -25,7 +25,7 @@ import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.SU
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.USE_RECEIPT_VERIFICATION;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.DO_NOT_USE_RECEIPT_VERIFICATION;
 import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -247,7 +247,7 @@ class DataXceiver extends Receiver implements Runnable {
           peer.setReadTimeout(dnConf.socketTimeout);
         }
 
-        opStartTime = now();
+        opStartTime = monotonicNow();
         processOp(op);
         ++opsProcessed;
       } while ((peer != null) &&
@@ -1202,7 +1202,7 @@ class DataXceiver extends Receiver implements Runnable {
   }
 
   private long elapsed() {
-    return now() - opStartTime;
+    return monotonicNow() - opStartTime;
   }
 
   /**

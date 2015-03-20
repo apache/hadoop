@@ -885,7 +885,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       if (filesBeingWritten.isEmpty()) {
         return;
       }
-      lastLeaseRenewal = Time.now();
+      lastLeaseRenewal = Time.monotonicNow();
     }
   }
 
@@ -902,7 +902,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         return true;
       } catch (IOException e) {
         // Abort if the lease has already expired. 
-        final long elapsed = Time.now() - getLastLeaseRenewal();
+        final long elapsed = Time.monotonicNow() - getLastLeaseRenewal();
         if (elapsed > HdfsConstants.LEASE_HARDLIMIT_PERIOD) {
           LOG.warn("Failed to renew lease for " + clientName + " for "
               + (elapsed/1000) + " seconds (>= hard-limit ="
@@ -1020,7 +1020,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#getServerDefaults()
    */
   public FsServerDefaults getServerDefaults() throws IOException {
-    long now = Time.now();
+    long now = Time.monotonicNow();
     if (now - serverDefaultsLastUpdate > SERVER_DEFAULTS_VALIDITY_PERIOD) {
       serverDefaults = namenode.getServerDefaults();
       serverDefaultsLastUpdate = now;

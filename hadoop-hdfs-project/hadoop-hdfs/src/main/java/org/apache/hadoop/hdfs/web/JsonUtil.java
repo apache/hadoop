@@ -284,6 +284,7 @@ public class JsonUtil {
     m.put("cacheCapacity", datanodeinfo.getCacheCapacity());
     m.put("cacheUsed", datanodeinfo.getCacheUsed());
     m.put("lastUpdate", datanodeinfo.getLastUpdate());
+    m.put("lastUpdateMonotonic", datanodeinfo.getLastUpdateMonotonic());
     m.put("xceiverCount", datanodeinfo.getXceiverCount());
     m.put("networkLocation", datanodeinfo.getNetworkLocation());
     m.put("adminState", datanodeinfo.getAdminState().name());
@@ -379,6 +380,7 @@ public class JsonUtil {
         getLong(m, "cacheCapacity", 0l),
         getLong(m, "cacheUsed", 0l),
         getLong(m, "lastUpdate", 0l),
+        getLong(m, "lastUpdateMonotonic", 0l),
         getInt(m, "xceiverCount", 0),
         getString(m, "networkLocation", ""),
         AdminStates.valueOf(getString(m, "adminState", "NORMAL")));
