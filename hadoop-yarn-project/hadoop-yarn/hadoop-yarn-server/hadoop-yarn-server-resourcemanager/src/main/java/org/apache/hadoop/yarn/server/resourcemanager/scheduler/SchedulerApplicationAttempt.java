@@ -87,13 +87,12 @@ public class SchedulerApplicationAttempt {
 
   private final Multiset<Priority> reReservations = HashMultiset.create();
   
-  protected final Resource currentReservation = Resource.newInstance(0, 0);
   private Resource resourceLimit = Resource.newInstance(0, 0);
-  protected Resource currentConsumption = Resource.newInstance(0, 0);
-  private Resource amResource = Resources.none();
   private boolean unmanagedAM = true;
   private boolean amRunning = false;
   private LogAggregationContext logAggregationContext;
+  
+  protected ResourceUsage attemptResourceUsage = new ResourceUsage();
 
   protected List<RMContainer> newlyAllocatedContainers = 
       new ArrayList<RMContainer>();
@@ -217,11 +216,11 @@ public class SchedulerApplicationAttempt {
   }
   
   public Resource getAMResource() {
-    return amResource;
+    return attemptResourceUsage.getAMUsed();
   }
 
   public void setAMResource(Resource amResource) {
-    this.amResource = amResource;
+    attemptResourceUsage.setAMUsed(amResource);
   }
 
   public boolean isAmRunning() {
@@ -260,7 +259,7 @@ public class SchedulerApplicationAttempt {
   @Stable
   @Private
   public synchronized Resource getCurrentReservation() {
-    return currentReservation;
+    return attemptResourceUsage.getReserved();
   }
   
   public Queue getQueue() {
@@ -311,8 +310,8 @@ public class SchedulerApplicationAttempt {
       rmContainer = 
           new RMContainerImpl(container, getApplicationAttemptId(), 
               node.getNodeID(), appSchedulingInfo.getUser(), rmContext);
-        
-      Resources.addTo(currentReservation, container.getResource());
+      attemptResourceUsage.incReserved(node.getPartition(),
+          container.getResource());
       
       // Reset the re-reservation count
       resetReReservations(priority);
@@ -336,7 +335,7 @@ public class SchedulerApplicationAttempt {
           + " reserved container " + rmContainer + " on node " + node
           + ". This attempt currently has " + reservedContainers.size()
           + " reserved containers at priority " + priority
-          + "; currentReservation " + currentReservation.getMemory());
+          + "; currentReservation " + container.getResource());
     }
 
     return rmContainer;
@@ -402,9 +401,9 @@ public class SchedulerApplicationAttempt {
       for (Priority priority : getPriorities()) {
         Map<String, ResourceRequest> requests = getResourceRequests(priority);
         if (requests != null) {
-          LOG.debug("showRequests:" + " application=" + getApplicationId() + 
-              " headRoom=" + getHeadroom() + 
-              " currentConsumption=" + currentConsumption.getMemory());
+          LOG.debug("showRequests:" + " application=" + getApplicationId()
+              + " headRoom=" + getHeadroom() + " currentConsumption="
+              + attemptResourceUsage.getUsed().getMemory());
           for (ResourceRequest request : requests.values()) {
             LOG.debug("showRequests:" + " application=" + getApplicationId()
                 + " request=" + request);
@@ -415,7 +414,7 @@ public class SchedulerApplicationAttempt {
   }
   
   public Resource getCurrentConsumption() {
-    return currentConsumption;
+    return attemptResourceUsage.getUsed();
   }
 
   public static class ContainersAndNMTokensAllocation {
@@ -548,12 +547,17 @@ public class SchedulerApplicationAttempt {
   }
 
   public synchronized ApplicationResourceUsageReport getResourceUsageReport() {
-    AggregateAppResourceUsage resUsage = getRunningAggregateAppResourceUsage();
+    AggregateAppResourceUsage runningResourceUsage =
+        getRunningAggregateAppResourceUsage();
+    Resource usedResourceClone =
+        Resources.clone(attemptResourceUsage.getUsed());
+    Resource reservedResourceClone =
+        Resources.clone(attemptResourceUsage.getReserved());
     return ApplicationResourceUsageReport.newInstance(liveContainers.size(),
-               reservedContainers.size(), Resources.clone(currentConsumption),
-               Resources.clone(currentReservation),
-               Resources.add(currentConsumption, currentReservation),
-               resUsage.getMemorySeconds(), resUsage.getVcoreSeconds());
+        reservedContainers.size(), usedResourceClone, reservedResourceClone,
+        Resources.add(usedResourceClone, reservedResourceClone),
+        runningResourceUsage.getMemorySeconds(),
+        runningResourceUsage.getVcoreSeconds());
   }
 
   public synchronized Map<ContainerId, RMContainer> getLiveContainersMap() {
@@ -572,7 +576,7 @@ public class SchedulerApplicationAttempt {
       SchedulerApplicationAttempt appAttempt) {
     this.liveContainers = appAttempt.getLiveContainersMap();
     // this.reReservations = appAttempt.reReservations;
-    this.currentConsumption = appAttempt.getCurrentConsumption();
+    this.attemptResourceUsage.copyAllUsed(appAttempt.attemptResourceUsage);
     this.resourceLimit = appAttempt.getResourceLimit();
     // this.currentReservation = appAttempt.currentReservation;
     // this.newlyAllocatedContainers = appAttempt.newlyAllocatedContainers;
@@ -603,7 +607,8 @@ public class SchedulerApplicationAttempt {
     this.queue = newQueue;
   }
 
-  public synchronized void recoverContainer(RMContainer rmContainer) {
+  public synchronized void recoverContainer(SchedulerNode node,
+      RMContainer rmContainer) {
     // recover app scheduling info
     appSchedulingInfo.recoverContainer(rmContainer);
 
@@ -613,8 +618,9 @@ public class SchedulerApplicationAttempt {
     LOG.info("SchedulerAttempt " + getApplicationAttemptId()
       + " is recovering container " + rmContainer.getContainerId());
     liveContainers.put(rmContainer.getContainerId(), rmContainer);
-    Resources.addTo(currentConsumption, rmContainer.getContainer()
-      .getResource());
+    attemptResourceUsage.incUsed(node.getPartition(), rmContainer
+        .getContainer().getResource());
+    
     // resourceLimit: updated when LeafQueue#recoverContainer#allocateResource
     // is called.
     // newlyAllocatedContainers.add(rmContainer);

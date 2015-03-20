@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -75,14 +76,17 @@ public class ResourceUsage {
       };
     }
     
+    public Resource getUsed() {
+      return resArr[ResourceType.USED.idx];
+    }
+
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append("{used=" + resArr[0] + "%, ");
       sb.append("pending=" + resArr[1] + "%, ");
       sb.append("am_used=" + resArr[2] + "%, ");
-      sb.append("reserved=" + resArr[3] + "%, ");
-      sb.append("headroom=" + resArr[4] + "%}");
+      sb.append("reserved=" + resArr[3] + "%}");
       return sb.toString();
     }
   }
@@ -116,6 +120,17 @@ public class ResourceUsage {
 
   public void setUsed(Resource res) {
     setUsed(NL, res);
+  }
+  
+  public void copyAllUsed(ResourceUsage other) {
+    try {
+      writeLock.lock();
+      for (Entry<String, UsageByLabel> entry : other.usages.entrySet()) {
+        setUsed(entry.getKey(), Resources.clone(entry.getValue().getUsed()));
+      }
+    } finally {
+      writeLock.unlock();
+    }
   }
 
   public void setUsed(String label, Resource res) {

@@ -509,4 +509,28 @@ public abstract class AbstractCSQueue implements CSQueue {
     // non-empty
     return false;
   }
+  
+  @Override
+  public void incPendingResource(String nodeLabel, Resource resourceToInc) {
+    if (nodeLabel == null) {
+      nodeLabel = RMNodeLabelsManager.NO_LABEL;
+    }
+    // ResourceUsage has its own lock, no addition lock needs here.
+    queueUsage.incPending(nodeLabel, resourceToInc);
+    if (null != parent) {
+      parent.incPendingResource(nodeLabel, resourceToInc);
+    }
+  }
+  
+  @Override
+  public void decPendingResource(String nodeLabel, Resource resourceToDec) {
+    if (nodeLabel == null) {
+      nodeLabel = RMNodeLabelsManager.NO_LABEL;
+    }
+    // ResourceUsage has its own lock, no addition lock needs here.
+    queueUsage.decPending(nodeLabel, resourceToDec);
+    if (null != parent) {
+      parent.decPendingResource(nodeLabel, resourceToDec);
+    }
+  }
 }

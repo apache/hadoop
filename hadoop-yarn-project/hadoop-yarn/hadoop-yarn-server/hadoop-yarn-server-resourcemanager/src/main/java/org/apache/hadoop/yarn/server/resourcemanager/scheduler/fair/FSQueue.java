@@ -291,4 +291,12 @@ public abstract class FSQueue implements Queue, Schedulable {
     // TODO, add implementation for FS
     return null;
   }
+  
+  @Override
+  public void incPendingResource(String nodeLabel, Resource resourceToInc) {
+  }
+  
+  @Override
+  public void decPendingResource(String nodeLabel, Resource resourceToDec) {
+  }
 }

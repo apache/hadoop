@@ -1058,19 +1058,19 @@ public class TestReservations {
 
     // set limit so subtrace reservations it can continue
     Resource limit = Resources.createResource(12 * GB, 0);
-    boolean res = a.assignToUser(clusterResource, user_0, limit, app_0,
+    boolean res = a.canAssignToUser(clusterResource, user_0, limit, app_0,
         true, null);
     assertTrue(res);
 
     // tell it not to check for reservations and should fail as already over
     // limit
-    res = a.assignToUser(clusterResource, user_0, limit, app_0, false, null);
+    res = a.canAssignToUser(clusterResource, user_0, limit, app_0, false, null);
     assertFalse(res);
 
     refreshQueuesTurnOffReservationsContLook(a, csConf);
 
     // should now return false since feature off
-    res = a.assignToUser(clusterResource, user_0, limit, app_0, true, null);
+    res = a.canAssignToUser(clusterResource, user_0, limit, app_0, true, null);
     assertFalse(res);
   }
 

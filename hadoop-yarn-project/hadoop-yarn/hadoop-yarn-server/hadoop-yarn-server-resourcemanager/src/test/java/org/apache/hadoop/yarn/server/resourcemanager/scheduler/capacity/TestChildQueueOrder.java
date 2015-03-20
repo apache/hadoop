@@ -247,7 +247,8 @@ public class TestChildQueueOrder {
     // Stub an App and its containerCompleted
     FiCaSchedulerApp app_0 = getMockApplication(0,user_0);
     doReturn(true).when(app_0).containerCompleted(any(RMContainer.class),
-        any(ContainerStatus.class),any(RMContainerEventType.class));
+        any(ContainerStatus.class), any(RMContainerEventType.class),
+        any(String.class));
 
     Priority priority = TestUtils.createMockPriority(1); 
     ContainerAllocationExpirer expirer = 
