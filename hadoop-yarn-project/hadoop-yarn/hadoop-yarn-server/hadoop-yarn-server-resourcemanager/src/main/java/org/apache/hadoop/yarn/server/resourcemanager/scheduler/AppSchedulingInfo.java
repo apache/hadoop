@@ -239,7 +239,7 @@ public class AppSchedulingInfo {
 
   public synchronized Resource getResource(Priority priority) {
     ResourceRequest request = getResourceRequest(priority, ResourceRequest.ANY);
-    return request.getCapability();
+    return (request == null) ? null : request.getCapability();
   }
 
   public synchronized boolean isBlacklisted(String resourceName) {
@@ -382,9 +382,11 @@ public class AppSchedulingInfo {
     boolean deactivate = true;
     for (Priority priority : getPriorities()) {
       ResourceRequest request = getResourceRequest(priority, ResourceRequest.ANY);
-      if (request.getNumContainers() > 0) {
-        deactivate = false;
-        break;
+      if (request != null) {
+        if (request.getNumContainers() > 0) {
+          deactivate = false;
+          break;
+        }
       }
     }
     if (deactivate) {
