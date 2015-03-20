@@ -1995,16 +1995,26 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               ", truncate size: " + newLength + ".");
     }
     // Perform INodeFile truncation.
-    boolean onBlockBoundary = dir.truncate(iip, newLength,
-        toRemoveBlocks, mtime);
+    final QuotaCounts delta = new QuotaCounts.Builder().build();
+    boolean onBlockBoundary = dir.truncate(iip, newLength, toRemoveBlocks,
+        mtime, delta);
     Block truncateBlock = null;
-    if(! onBlockBoundary) {
+    if(!onBlockBoundary) {
       // Open file for write, but don't log into edits
       long lastBlockDelta = file.computeFileSize() - newLength;
       assert lastBlockDelta > 0 : "delta is 0 only if on block bounday";
       truncateBlock = prepareFileForTruncate(iip, clientName, clientMachine,
           lastBlockDelta, null);
     }
+
+    // update the quota: use the preferred block size for UC block
+    dir.writeLock();
+    try {
+      dir.updateCountNoQuotaCheck(iip, iip.length() - 1, delta);
+    } finally {
+      dir.writeUnlock();
+    }
+
     getEditLog().logTruncate(src, clientName, clientMachine, newLength, mtime,
         truncateBlock);
     return onBlockBoundary;
@@ -2073,13 +2083,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           + truncatedBlockUC.getTruncateBlock().getNumBytes()
           + " block=" + truncatedBlockUC);
     }
-    if(shouldRecoverNow)
+    if (shouldRecoverNow) {
       truncatedBlockUC.initializeBlockRecovery(newBlock.getGenerationStamp());
+    }
 
-    // update the quota: use the preferred block size for UC block
-    final long diff =
-        file.getPreferredBlockSize() - truncatedBlockUC.getNumBytes();
-    dir.updateSpaceConsumed(iip, 0, diff, file.getBlockReplication());
     return newBlock;
   }
 

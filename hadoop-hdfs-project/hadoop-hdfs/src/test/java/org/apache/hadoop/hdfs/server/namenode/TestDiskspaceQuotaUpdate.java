@@ -216,8 +216,7 @@ public class TestDiskspaceQuotaUpdate {
     INodeFile inode = fsdir.getINode(file.toString()).asFile();
     Assert.assertNotNull(inode);
     Assert.assertFalse("should not be UC", inode.isUnderConstruction());
-    Assert.assertNull("should not have a lease", cluster.getNamesystem()
-        .getLeaseManager().getLeaseByPath(file.toString()));
+    Assert.assertNull("should not have a lease", cluster.getNamesystem().getLeaseManager().getLeaseByPath(file.toString()));
     // make sure the quota usage is unchanged
     final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getStorageSpace();
@@ -253,6 +252,46 @@ public class TestDiskspaceQuotaUpdate {
       Assert.fail("append didn't fail");
     } catch (RemoteException e) {
       assertTrue(e.getClassName().contains("QuotaByStorageTypeExceededException"));
+    }
+
+    // check that the file exists, isn't UC, and has no dangling lease
+    INodeFile inode = fsdir.getINode(file.toString()).asFile();
+    Assert.assertNotNull(inode);
+    Assert.assertFalse("should not be UC", inode.isUnderConstruction());
+    Assert.assertNull("should not have a lease", cluster.getNamesystem()
+        .getLeaseManager().getLeaseByPath(file.toString()));
+    // make sure the quota usage is unchanged
+    final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
+        .getSpaceConsumed().getStorageSpace();
+    assertEquals(spaceUsed, newSpaceUsed);
+    // make sure edits aren't corrupted
+    dfs.recoverLease(file);
+    cluster.restartNameNodes();
+  }
+
+  /**
+   * Test truncate over quota does not mark file as UC or create a lease
+   */
+  @Test (timeout=60000)
+  public void testTruncateOverQuota() throws Exception {
+    final Path dir = new Path("/TestTruncateOverquota");
+    final Path file = new Path(dir, "file");
+
+    // create partial block file
+    dfs.mkdirs(dir);
+    DFSTestUtil.createFile(dfs, file, BLOCKSIZE/2, REPLICATION, seed);
+
+    // lower quota to cause exception when appending to partial block
+    dfs.setQuota(dir, Long.MAX_VALUE - 1, 1);
+    final INodeDirectory dirNode = fsdir.getINode4Write(dir.toString())
+        .asDirectory();
+    final long spaceUsed = dirNode.getDirectoryWithQuotaFeature()
+        .getSpaceConsumed().getStorageSpace();
+    try {
+      dfs.truncate(file, BLOCKSIZE / 2 - 1);
+      Assert.fail("truncate didn't fail");
+    } catch (RemoteException e) {
+      assertTrue(e.getClassName().contains("DSQuotaExceededException"));
     }
 
     // check that the file exists, isn't UC, and has no dangling lease
