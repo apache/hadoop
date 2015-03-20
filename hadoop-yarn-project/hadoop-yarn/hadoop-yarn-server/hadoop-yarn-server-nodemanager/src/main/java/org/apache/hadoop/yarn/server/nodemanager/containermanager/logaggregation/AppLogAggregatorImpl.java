@@ -304,7 +304,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         userUgi.doAs(new PrivilegedExceptionAction<Object>() {
           @Override
           public Object run() throws Exception {
-            FileSystem remoteFS = FileSystem.get(conf);
+            FileSystem remoteFS = remoteNodeLogFileForApp.getFileSystem(conf);
             if (remoteFS.exists(remoteNodeTmpLogFileForApp)) {
               if (rename) {
                 remoteFS.rename(remoteNodeTmpLogFileForApp, renamedPath);

@@ -67,6 +67,9 @@ Release 2.7.4 - UNRELEASED
     YARN-4355. NPE while processing localizer heartbeat. Contributed by
     Varun Saxena & Jonathan Hung
 
+    YARN-3269. Yarn.nodemanager.remote-app-log-dir could not be configured to
+    fully qualified path. (Xuan Gong via junping_du)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES

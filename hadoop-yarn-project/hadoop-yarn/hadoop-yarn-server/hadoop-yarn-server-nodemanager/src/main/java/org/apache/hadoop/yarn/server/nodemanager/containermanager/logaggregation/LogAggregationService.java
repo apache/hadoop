@@ -176,7 +176,7 @@ public class LogAggregationService extends AbstractService implements
   }
 
   protected FileSystem getFileSystem(Configuration conf) throws IOException {
-    return FileSystem.get(conf);
+    return this.remoteRootLogDir.getFileSystem(conf);
   }
 
   void verifyAndCreateRemoteLogDir(Configuration conf) {
