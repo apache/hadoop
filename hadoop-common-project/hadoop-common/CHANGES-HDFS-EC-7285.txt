@@ -24,4 +24,5 @@
     HADOOP-11706. Refine a little bit erasure coder API. Contributed by Kai Zheng
     ( Kai Zheng )
 
-
+    HADOOP-11707. Add factory to create raw erasure coder. Contributed by Kai Zheng
+    ( Kai Zheng )
