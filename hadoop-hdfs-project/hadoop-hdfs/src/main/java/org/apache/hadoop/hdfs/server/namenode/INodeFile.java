@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -802,6 +803,43 @@ public class INodeFile extends INodeWithAdditionalFields
       }
     }
     return size;
+  }
+
+  /**
+   * compute the quota usage change for a truncate op
+   * @param newLength the length for truncation
+   * @return the quota usage delta (not considering replication factor)
+   */
+  long computeQuotaDeltaForTruncate(final long newLength) {
+    final BlockInfoContiguous[] blocks = getBlocks();
+    if (blocks == null || blocks.length == 0) {
+      return 0;
+    }
+
+    int n = 0;
+    long size = 0;
+    for (; n < blocks.length && newLength > size; n++) {
+      size += blocks[n].getNumBytes();
+    }
+    final boolean onBoundary = size == newLength;
+
+    long truncateSize = 0;
+    for (int i = (onBoundary ? n : n - 1); i < blocks.length; i++) {
+      truncateSize += blocks[i].getNumBytes();
+    }
+
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if (sf != null) {
+      FileDiff diff = sf.getDiffs().getLast();
+      BlockInfoContiguous[] sblocks = diff != null ? diff.getBlocks() : null;
+      if (sblocks != null) {
+        for (int i = (onBoundary ? n : n-1); i < blocks.length
+            && i < sblocks.length && blocks[i].equals(sblocks[i]); i++) {
+          truncateSize -= blocks[i].getNumBytes();
+        }
+      }
+    }
+    return onBoundary ? -truncateSize : (getPreferredBlockSize() - truncateSize);
   }
 
   void truncateBlocksTo(int n) {
