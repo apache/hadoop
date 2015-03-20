@@ -239,8 +239,7 @@ public class TimelineCollectorManager extends CompositeService {
               + GenericExceptionHandler.class.getPackage().getName() + ";"
               + YarnJacksonJaxbJsonProvider.class.getPackage().getName(),
           "/*");
-      timelineRestServer.setAttribute(COLLECTOR_MANAGER_ATTR_KEY,
-          TimelineCollectorManager.getInstance());
+      timelineRestServer.setAttribute(COLLECTOR_MANAGER_ATTR_KEY, this);
       timelineRestServer.start();
     } catch (Exception e) {
       String msg = "The per-node collector webapp failed to start.";
