@@ -796,6 +796,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3349. Treat all exceptions as failure in
     TestFSRMStateStore#testFSRMStateStoreClientRetry. (Zhihai Xu via ozawa)
 
+    YARN-3379. Fixed missing data in localityTable and ResourceRequests table
+    in RM WebUI. (Xuan Gong via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
