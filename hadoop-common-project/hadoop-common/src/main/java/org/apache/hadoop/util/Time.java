@@ -28,6 +28,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class Time {
 
   /**
+   * number of nano seconds in 1 millisecond
+   */
+  private static final long NANOSECONDS_PER_MILLISECOND = 1000000;
+
+  /**
    * Current system time.  Do not use this to calculate a duration or interval
    * to sleep, because it will be broken by settimeofday.  Instead, use
    * monotonicNow.
@@ -45,8 +50,6 @@ public final class Time {
    * @return a monotonic clock that counts in milliseconds.
    */
   public static long monotonicNow() {
-    final long NANOSECONDS_PER_MILLISECOND = 1000000;
-
     return System.nanoTime() / NANOSECONDS_PER_MILLISECOND;
   }
 }
