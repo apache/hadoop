@@ -660,12 +660,12 @@ public abstract class BlockReportTestBase {
     final DataNode dn1 = cluster.getDataNodes().get(DN_N1);
     String bpid = cluster.getNamesystem().getBlockPoolId();
     Replica r = DataNodeTestUtils.fetchReplicaInfo(dn1, bpid, bl.getBlockId());
-    long start = Time.now();
+    long start = Time.monotonicNow();
     int count = 0;
     while (r == null) {
       waitTil(5);
       r = DataNodeTestUtils.fetchReplicaInfo(dn1, bpid, bl.getBlockId());
-      long waiting_period = Time.now() - start;
+      long waiting_period = Time.monotonicNow() - start;
       if (count++ % 100 == 0)
         if(LOG.isDebugEnabled()) {
           LOG.debug("Has been waiting for " + waiting_period + " ms.");
@@ -679,7 +679,7 @@ public abstract class BlockReportTestBase {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Replica state before the loop " + state.getValue());
     }
-    start = Time.now();
+    start = Time.monotonicNow();
     while (state != HdfsServerConstants.ReplicaState.TEMPORARY) {
       waitTil(5);
       state = r.getState();
@@ -687,7 +687,7 @@ public abstract class BlockReportTestBase {
         LOG.debug("Keep waiting for " + bl.getBlockName() +
             " is in state " + state.getValue());
       }
-      if (Time.now() - start > TIMEOUT)
+      if (Time.monotonicNow() - start > TIMEOUT)
         assertTrue("Was waiting too long for a replica to become TEMPORARY",
           tooLongWait);
     }

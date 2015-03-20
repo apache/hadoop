@@ -333,7 +333,7 @@ public class TestParallelReadUtil {
     }
 
     // Start the workers and wait
-    long starttime = Time.now();
+    long starttime = Time.monotonicNow();
     for (ReadWorker worker : workers) {
       worker.start();
     }
@@ -343,7 +343,7 @@ public class TestParallelReadUtil {
         worker.join();
       } catch (InterruptedException ignored) { }
     }
-    long endtime = Time.now();
+    long endtime = Time.monotonicNow();
 
     // Cleanup
     for (TestFileInfo testInfo : testInfoArr) {

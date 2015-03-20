@@ -2050,7 +2050,7 @@ public class MiniDFSCluster {
   public void setDataNodeDead(DatanodeID dnId) throws IOException {
     DatanodeDescriptor dnd =
         NameNodeAdapter.getDatanode(getNamesystem(), dnId);
-    dnd.setLastUpdate(0L);
+    DFSTestUtil.setDatanodeDead(dnd);
     BlockManagerTestUtil.checkHeartbeat(getNamesystem().getBlockManager());
   }
 

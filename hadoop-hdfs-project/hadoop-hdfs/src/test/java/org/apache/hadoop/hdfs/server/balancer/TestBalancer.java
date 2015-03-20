@@ -262,7 +262,7 @@ public class TestBalancer {
   throws IOException, TimeoutException {
     long timeout = TIMEOUT;
     long failtime = (timeout <= 0L) ? Long.MAX_VALUE
-             : Time.now() + timeout;
+             : Time.monotonicNow() + timeout;
     
     while (true) {
       long[] status = client.getStats();
@@ -274,7 +274,7 @@ public class TestBalancer {
           && usedSpaceVariance < CAPACITY_ALLOWED_VARIANCE)
         break; //done
 
-      if (Time.now() > failtime) {
+      if (Time.monotonicNow() > failtime) {
         throw new TimeoutException("Cluster failed to reached expected values of "
             + "totalSpace (current: " + status[0] 
             + ", expected: " + expectedTotalSpace 
@@ -369,7 +369,7 @@ public class TestBalancer {
       int expectedExcludedNodes) throws IOException, TimeoutException {
     long timeout = TIMEOUT;
     long failtime = (timeout <= 0L) ? Long.MAX_VALUE
-        : Time.now() + timeout;
+        : Time.monotonicNow() + timeout;
     if (!p.nodesToBeIncluded.isEmpty()) {
       totalCapacity = p.nodesToBeIncluded.size() * CAPACITY;
     }
@@ -399,7 +399,7 @@ public class TestBalancer {
         }
         if (Math.abs(avgUtilization - nodeUtilization) > BALANCE_ALLOWED_VARIANCE) {
           balanced = false;
-          if (Time.now() > failtime) {
+          if (Time.monotonicNow() > failtime) {
             throw new TimeoutException(
                 "Rebalancing expected avg utilization to become "
                 + avgUtilization + ", but on datanode " + datanode

@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager.StatefulBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -562,7 +563,7 @@ public class TestReplicationPolicy {
   @Test
   public void testChooseTargetWithStaleNodes() throws Exception {
     // Set dataNodes[0] as stale
-    dataNodes[0].setLastUpdate(Time.now() - staleInterval - 1);
+    DFSTestUtil.resetLastUpdatesWithOffset(dataNodes[0], -(staleInterval + 1));
     namenode.getNamesystem().getBlockManager()
       .getDatanodeManager().getHeartbeatManager().heartbeatCheck();
     assertTrue(namenode.getNamesystem().getBlockManager()
@@ -582,7 +583,7 @@ public class TestReplicationPolicy {
     assertFalse(isOnSameRack(targets[0], dataNodes[0]));
     
     // reset
-    dataNodes[0].setLastUpdate(Time.now());
+    DFSTestUtil.resetLastUpdatesWithOffset(dataNodes[0], 0);
     namenode.getNamesystem().getBlockManager()
       .getDatanodeManager().getHeartbeatManager().heartbeatCheck();
   }
@@ -599,7 +600,8 @@ public class TestReplicationPolicy {
   public void testChooseTargetWithHalfStaleNodes() throws Exception {
     // Set dataNodes[0], dataNodes[1], and dataNodes[2] as stale
     for (int i = 0; i < 3; i++) {
-      dataNodes[i].setLastUpdate(Time.now() - staleInterval - 1);
+      DFSTestUtil
+          .resetLastUpdatesWithOffset(dataNodes[i], -(staleInterval + 1));
     }
     namenode.getNamesystem().getBlockManager()
       .getDatanodeManager().getHeartbeatManager().heartbeatCheck();
@@ -631,7 +633,7 @@ public class TestReplicationPolicy {
     assertTrue(containsWithinRange(dataNodes[5], targets, 0, 3));
 
     for (int i = 0; i < dataNodes.length; i++) {
-      dataNodes[i].setLastUpdate(Time.now());
+      DFSTestUtil.resetLastUpdatesWithOffset(dataNodes[i], 0);
     }
     namenode.getNamesystem().getBlockManager()
       .getDatanodeManager().getHeartbeatManager().heartbeatCheck();
@@ -657,9 +659,10 @@ public class TestReplicationPolicy {
       for (int i = 0; i < 2; i++) {
         DataNode dn = miniCluster.getDataNodes().get(i);
         DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
-        miniCluster.getNameNode().getNamesystem().getBlockManager()
-            .getDatanodeManager().getDatanode(dn.getDatanodeId())
-            .setLastUpdate(Time.now() - staleInterval - 1);
+        DatanodeDescriptor dnDes = miniCluster.getNameNode().getNamesystem()
+            .getBlockManager().getDatanodeManager()
+            .getDatanode(dn.getDatanodeId());
+        DFSTestUtil.resetLastUpdatesWithOffset(dnDes, -(staleInterval + 1));
       }
       // Instead of waiting, explicitly call heartbeatCheck to 
       // let heartbeat manager to detect stale nodes
@@ -687,9 +690,9 @@ public class TestReplicationPolicy {
       for (int i = 0; i < 4; i++) {
         DataNode dn = miniCluster.getDataNodes().get(i);
         DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
-        miniCluster.getNameNode().getNamesystem().getBlockManager()
-            .getDatanodeManager().getDatanode(dn.getDatanodeId())
-            .setLastUpdate(Time.now() - staleInterval - 1);
+        DatanodeDescriptor dnDesc = miniCluster.getNameNode().getNamesystem().getBlockManager()
+            .getDatanodeManager().getDatanode(dn.getDatanodeId());
+        DFSTestUtil.resetLastUpdatesWithOffset(dnDesc, -(staleInterval + 1));
       }
       // Explicitly call heartbeatCheck
       miniCluster.getNameNode().getNamesystem().getBlockManager()
@@ -708,14 +711,15 @@ public class TestReplicationPolicy {
       assertEquals(targets.length, 3);
       assertTrue(isOnSameRack(targets[0], staleNodeInfo));
       
-      // Step 3. Set 2 stale datanodes back to healthy nodes, 
+      // Step 3. Set 2 stale datanodes back to healthy nodes,
       // still have 2 stale nodes
       for (int i = 2; i < 4; i++) {
         DataNode dn = miniCluster.getDataNodes().get(i);
         DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
-        miniCluster.getNameNode().getNamesystem().getBlockManager()
-            .getDatanodeManager().getDatanode(dn.getDatanodeId())
-            .setLastUpdate(Time.now());
+        DatanodeDescriptor dnDesc = miniCluster.getNameNode().getNamesystem()
+            .getBlockManager().getDatanodeManager()
+            .getDatanode(dn.getDatanodeId());
+        DFSTestUtil.resetLastUpdatesWithOffset(dnDesc, 0);
       }
       // Explicitly call heartbeatCheck
       miniCluster.getNameNode().getNamesystem().getBlockManager()
@@ -971,7 +975,7 @@ public class TestReplicationPolicy {
     
     // Refresh the last update time for all the datanodes
     for (int i = 0; i < dataNodes.length; i++) {
-      dataNodes[i].setLastUpdate(Time.now());
+      DFSTestUtil.resetLastUpdatesWithOffset(dataNodes[i], 0);
     }
     
     List<DatanodeStorageInfo> first = new ArrayList<DatanodeStorageInfo>();

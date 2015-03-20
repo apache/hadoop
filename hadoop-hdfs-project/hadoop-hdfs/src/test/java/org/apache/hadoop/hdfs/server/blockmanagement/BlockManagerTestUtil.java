@@ -186,7 +186,7 @@ public class BlockManagerTestUtil {
       Assert.assertNotNull("Could not find DN with name: " + dnName, theDND);
       
       synchronized (hbm) {
-        theDND.setLastUpdate(0);
+        DFSTestUtil.setDatanodeDead(theDND);
         hbm.heartbeatCheck();
       }
     } finally {
