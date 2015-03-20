@@ -452,6 +452,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11659. o.a.h.fs.FileSystem.Cache#remove should use a single hash map
     lookup. (Brahma Reddy Battula via aajisaka)
 
+    HADOOP-11709. Time.NANOSECONDS_PER_MILLISECOND - use class-level final
+    constant instead of method variable (Ajith S via ozawa)
+
   OPTIMIZATIONS
 
   BUG FIXES
