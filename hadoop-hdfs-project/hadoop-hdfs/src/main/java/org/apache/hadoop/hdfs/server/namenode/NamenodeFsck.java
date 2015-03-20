@@ -287,7 +287,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    * Check files on DFS, starting from the indicated path.
    */
   public void fsck() {
-    final long startTime = Time.now();
+    final long startTime = Time.monotonicNow();
     try {
       if(blockIds != null) {
 
@@ -355,7 +355,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         }
 
         out.println("FSCK ended at " + new Date() + " in "
-            + (Time.now() - startTime + " milliseconds"));
+            + (Time.monotonicNow() - startTime + " milliseconds"));
 
         // If there were internal errors during the fsck operation, we want to
         // return FAILURE_STATUS, even if those errors were not immediately
@@ -381,7 +381,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       String errMsg = "Fsck on path '" + path + "' " + FAILURE_STATUS;
       LOG.warn(errMsg, e);
       out.println("FSCK ended at " + new Date() + " in "
-          + (Time.now() - startTime + " milliseconds"));
+          + (Time.monotonicNow() - startTime + " milliseconds"));
       out.println(e.getMessage());
       out.print("\n\n" + errMsg);
     } finally {

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -89,6 +90,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Level;
@@ -1031,7 +1033,7 @@ public class DFSTestUtil {
         DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT,
-        1l, 2l, 3l, 4l, 0l, 0l, 5, 6, "local", adminState);
+        1l, 2l, 3l, 4l, 0l, 0l, 0l, 5, 6, "local", adminState);
   }
 
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
@@ -1583,9 +1585,11 @@ public class DFSTestUtil {
     // the one to be in charge of the synchronization / recovery protocol.
     final DatanodeStorageInfo[] storages = ucBlock.getExpectedStorageLocations();
     DatanodeStorageInfo expectedPrimary = storages[0];
-    long mostRecentLastUpdate = expectedPrimary.getDatanodeDescriptor().getLastUpdate();
+    long mostRecentLastUpdate = expectedPrimary.getDatanodeDescriptor()
+        .getLastUpdateMonotonic();
     for (int i = 1; i < storages.length; i++) {
-      final long lastUpdate = storages[i].getDatanodeDescriptor().getLastUpdate();
+      final long lastUpdate = storages[i].getDatanodeDescriptor()
+          .getLastUpdateMonotonic();
       if (lastUpdate > mostRecentLastUpdate) {
         expectedPrimary = storages[i];
         mostRecentLastUpdate = lastUpdate;
@@ -1721,5 +1725,21 @@ public class DFSTestUtil {
     }
     LOG.info("failed to change length of block " + blk);
     return false;
+  }
+
+  /**
+   * Set the datanode dead
+   */
+  public static void setDatanodeDead(DatanodeInfo dn) {
+    dn.setLastUpdate(0);
+    dn.setLastUpdateMonotonic(0);
+  }
+
+  /**
+   * Update lastUpdate and lastUpdateMonotonic with some offset.
+   */
+  public static void resetLastUpdatesWithOffset(DatanodeInfo dn, long offset) {
+    dn.setLastUpdate(Time.now() + offset);
+    dn.setLastUpdateMonotonic(Time.monotonicNow() + offset);
   }
 }

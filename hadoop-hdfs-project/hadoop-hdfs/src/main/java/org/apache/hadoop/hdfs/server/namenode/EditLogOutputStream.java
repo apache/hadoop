@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.io.Closeable;
 
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -109,9 +109,9 @@ public abstract class EditLogOutputStream implements Closeable {
   
   public void flush(boolean durable) throws IOException {
     numSync++;
-    long start = now();
+    long start = monotonicNow();
     flushAndSync(durable);
-    long end = now();
+    long end = monotonicNow();
     totalTimeSync += (end - start);
   }
 

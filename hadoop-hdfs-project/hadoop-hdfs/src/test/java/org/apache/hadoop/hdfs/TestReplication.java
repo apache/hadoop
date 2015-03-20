@@ -281,7 +281,7 @@ public class TestReplication {
                                        ClientProtocol namenode,
                                        int expected, long maxWaitSec) 
                                        throws IOException {
-    long start = Time.now();
+    long start = Time.monotonicNow();
     
     //wait for all the blocks to be replicated;
     LOG.info("Checking for block replication for " + filename);
@@ -307,7 +307,7 @@ public class TestReplication {
       }
       
       if (maxWaitSec > 0 && 
-          (Time.now() - start) > (maxWaitSec * 1000)) {
+          (Time.monotonicNow() - start) > (maxWaitSec * 1000)) {
         throw new IOException("Timedout while waiting for all blocks to " +
                               " be replicated for " + filename);
       }

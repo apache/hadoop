@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -142,7 +143,7 @@ public class TestHostFileManager {
             .DatanodeReportType.DEAD).size());
     DatanodeDescriptor spam = new DatanodeDescriptor(new DatanodeID("127.0.0" +
             ".3", "127.0.0.3", "uuid-spam", 12345, 1020, 1021, 1022));
-    spam.setLastUpdate(0);
+    DFSTestUtil.setDatanodeDead(spam);
     includedNodes.add(entry("127.0.0.3:12345"));
     dnMap.put("uuid-spam", spam);
     Assert.assertEquals(1, dm.getDatanodeListForReport(HdfsConstants

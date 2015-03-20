@@ -134,7 +134,8 @@ public class TestGetBlocks {
       staleNodeInfo = cluster.getNameNode().getNamesystem().getBlockManager()
           .getDatanodeManager()
           .getDatanode(staleNode.getDatanodeId());
-      staleNodeInfo.setLastUpdate(Time.now() - staleInterval - 1);
+      DFSTestUtil.resetLastUpdatesWithOffset(staleNodeInfo,
+          -(staleInterval + 1));
 
       LocatedBlocks blocksAfterStale = client.getNamenode().getBlockLocations(
           fileName.toString(), 0, blockSize);
@@ -145,8 +146,7 @@ public class TestGetBlocks {
       // restart the staleNode's heartbeat
       DataNodeTestUtils.setHeartbeatsDisabledForTests(staleNode, false);
       // reset the first node as non-stale, so as to avoid two stale nodes
-      staleNodeInfo.setLastUpdate(Time.now());
-
+      DFSTestUtil.resetLastUpdatesWithOffset(staleNodeInfo, 0);
       LocatedBlock lastBlock = client.getLocatedBlocks(fileName.toString(), 0,
           Long.MAX_VALUE).getLastLocatedBlock();
       nodes = lastBlock.getLocations();
@@ -155,10 +155,10 @@ public class TestGetBlocks {
       staleNode = this.stopDataNodeHeartbeat(cluster, nodes[0].getHostName());
       assertNotNull(staleNode);
       // set the node as stale
-      cluster.getNameNode().getNamesystem().getBlockManager()
-          .getDatanodeManager()
-          .getDatanode(staleNode.getDatanodeId())
-          .setLastUpdate(Time.now() - staleInterval - 1);
+      DatanodeDescriptor dnDesc = cluster.getNameNode().getNamesystem()
+          .getBlockManager().getDatanodeManager()
+          .getDatanode(staleNode.getDatanodeId());
+      DFSTestUtil.resetLastUpdatesWithOffset(dnDesc, -(staleInterval + 1));
 
       LocatedBlock lastBlockAfterStale = client.getLocatedBlocks(
           fileName.toString(), 0, Long.MAX_VALUE).getLastLocatedBlock();

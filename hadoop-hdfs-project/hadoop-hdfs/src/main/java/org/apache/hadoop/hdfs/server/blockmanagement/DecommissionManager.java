@@ -45,7 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 /**
  * Manages datanode decommissioning. A background monitor thread 
@@ -208,7 +208,7 @@ public class DecommissionManager {
         }
         // Update DN stats maintained by HeartbeatManager
         hbManager.startDecommission(node);
-        node.decommissioningStatus.setStartTime(now());
+        node.decommissioningStatus.setStartTime(monotonicNow());
         pendingNodes.add(node);
       }
     } else {
