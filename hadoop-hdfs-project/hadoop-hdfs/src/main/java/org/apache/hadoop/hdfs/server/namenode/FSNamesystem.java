@@ -3292,7 +3292,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final DatanodeStorageInfo[] targets = blockManager.chooseTarget4AdditionalDatanode(
         src, numAdditionalNodes, clientnode, chosen, 
         excludes, preferredblocksize, storagePolicyID);
-    final LocatedBlock lb = new LocatedBlock(blk, targets);
+    final LocatedBlock lb = new LocatedBlock(blk, targets, -1, false);
     blockManager.setBlockToken(lb, AccessMode.COPY);
     return lb;
   }

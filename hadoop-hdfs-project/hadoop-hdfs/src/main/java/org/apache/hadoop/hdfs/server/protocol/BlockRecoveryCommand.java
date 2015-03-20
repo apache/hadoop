@@ -61,7 +61,7 @@ public class BlockRecoveryCommand extends DatanodeCommand {
      * Create RecoveringBlock.
      */
     public RecoveringBlock(ExtendedBlock b, DatanodeInfo[] locs, long newGS) {
-      super(b, locs, -1, false); // startOffset is unknown
+      super(b, locs); // startOffset is unknown
       this.newGenerationStamp = newGS;
       this.recoveryBlock = null;
     }
@@ -71,7 +71,7 @@ public class BlockRecoveryCommand extends DatanodeCommand {
      */
     public RecoveringBlock(ExtendedBlock b, DatanodeInfo[] locs,
         Block recoveryBlock) {
-      super(b, locs, -1, false); // startOffset is unknown
+      super(b, locs); // startOffset is unknown
       this.newGenerationStamp = recoveryBlock.getGenerationStamp();
       this.recoveryBlock = recoveryBlock;
     }

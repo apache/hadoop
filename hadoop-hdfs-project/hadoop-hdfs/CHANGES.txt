@@ -13,6 +13,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-7835. make initial sleeptime in locateFollowingBlock configurable for
     DFSClient. (Zhihai Xu via Yongjun Zhang)
 
+    HDFS-7829. Code clean up for LocatedBlock. (Takanobu Asanuma via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
