@@ -44,9 +44,9 @@ public class LocatedBlock {
   private long offset;  // offset of the first byte of the block in the file
   private final DatanodeInfoWithStorage[] locs;
   /** Cached storage ID for each replica */
-  private String[] storageIDs;
+  private final String[] storageIDs;
   /** Cached storage type for each replica, if reported. */
-  private StorageType[] storageTypes;
+  private final StorageType[] storageTypes;
   // corrupt flag is true if all of the replicas of a block are corrupt.
   // else false. If block has few corrupt replicas, they are filtered and 
   // their locations are not part of this object
@@ -62,16 +62,8 @@ public class LocatedBlock {
       new DatanodeInfoWithStorage[0];
 
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs) {
-    this(b, locs, -1, false); // startOffset is unknown
-  }
-
-  public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, long startOffset, 
-                      boolean corrupt) {
-    this(b, locs, null, null, startOffset, corrupt, EMPTY_LOCS);
-  }
-
-  public LocatedBlock(ExtendedBlock b, DatanodeStorageInfo[] storages) {
-    this(b, storages, -1, false); // startOffset is unknown
+    // By default, startOffset is unknown(-1) and corrupt is false.
+    this(b, locs, null, null, -1, false, EMPTY_LOCS);
   }
 
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs,
@@ -170,11 +162,11 @@ public class LocatedBlock {
     return b.getNumBytes();
   }
 
-  void setStartOffset(long value) {
+  public void setStartOffset(long value) {
     this.offset = value;
   }
 
-  void setCorrupt(boolean corrupt) {
+  public void setCorrupt(boolean corrupt) {
     this.corrupt = corrupt;
   }
   

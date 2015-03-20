@@ -99,11 +99,15 @@ public class TestDFSUtil {
 
     // ok
     ExtendedBlock b1 = new ExtendedBlock("bpid", 1, 1, 1);
-    LocatedBlock l1 = new LocatedBlock(b1, ds, 0, false);
+    LocatedBlock l1 = new LocatedBlock(b1, ds);
+    l1.setStartOffset(0);
+    l1.setCorrupt(false);
 
     // corrupt
     ExtendedBlock b2 = new ExtendedBlock("bpid", 2, 1, 1);
-    LocatedBlock l2 = new LocatedBlock(b2, ds, 0, true);
+    LocatedBlock l2 = new LocatedBlock(b2, ds);
+    l2.setStartOffset(0);
+    l2.setCorrupt(true);
 
     List<LocatedBlock> ls = Arrays.asList(l1, l2);
     LocatedBlocks lbs = new LocatedBlocks(10, false, ls, l2, true, null);

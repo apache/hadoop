@@ -489,9 +489,8 @@ public class TestDFSClientRetries {
         goodLocatedBlock.getBlock(),
         new DatanodeInfo[] {
           DFSTestUtil.getDatanodeInfo("1.2.3.4", "bogus", 1234)
-        },
-        goodLocatedBlock.getStartOffset(),
-        false);
+        });
+      badLocatedBlock.setStartOffset(goodLocatedBlock.getStartOffset());
 
 
       List<LocatedBlock> badBlocks = new ArrayList<LocatedBlock>();
