@@ -137,6 +137,19 @@ public class SampleStat {
     return minmax.max();
   }
 
+  @Override
+  public String toString() {
+    try {
+      return "Samples = " + numSamples() +
+          "  Min = " + min() +
+          "  Mean = " + mean() +
+          "  Std Dev = " + stddev() +
+          "  Max = " + max();
+    } catch (Throwable t) {
+      return super.toString();
+    }
+  }
+
   /**
    * Helper to keep running min/max
    */
