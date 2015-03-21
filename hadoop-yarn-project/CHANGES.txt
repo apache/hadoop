@@ -68,6 +68,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3356. Capacity Scheduler FiCaSchedulerApp should use ResourceUsage to
     track used-resources-by-label. (Wangda Tan via jianhe)
 
+    YARN-3350. YARN RackResolver spams logs with messages at info level. 
+    (Wilfred Spiegelenburg via junping_du)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
