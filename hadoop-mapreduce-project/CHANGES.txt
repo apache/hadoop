@@ -256,6 +256,10 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-6239. Consolidate TestJobConf classes in
+    hadoop-mapreduce-client-jobclient and hadoop-mapreduce-client-core
+    (Varun Saxena via harsh)
+
     MAPREDUCE-5807. Print usage by TeraSort job. (Rohith via harsh)
 
     MAPREDUCE-4653. TestRandomAlgorithm has an unused "import" statement.
