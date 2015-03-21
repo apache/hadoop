@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
-import org.apache.hadoop.yarn.nodelabels.NodeLabel;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelTestBase;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
@@ -476,8 +476,8 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     
   }
   
-  private void checkNodeLabelInfo(List<NodeLabel> infos, String labelName, int activeNMs, int memory) {
-    for (NodeLabel info : infos) {
+  private void checkNodeLabelInfo(List<RMNodeLabel> infos, String labelName, int activeNMs, int memory) {
+    for (RMNodeLabel info : infos) {
       if (info.getLabelName().equals(labelName)) {
         Assert.assertEquals(activeNMs, info.getNumActiveNMs());
         Assert.assertEquals(memory, info.getResource().getMemory());
@@ -499,7 +499,7 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
         toNodeId("n2"), toSet("x"), toNodeId("n3"), toSet("y")));
     
     // x, y, z and ""
-    List<NodeLabel> infos = mgr.pullRMNodeLabelsInfo();
+    List<RMNodeLabel> infos = mgr.pullRMNodeLabelsInfo();
     Assert.assertEquals(4, infos.size());
     checkNodeLabelInfo(infos, RMNodeLabelsManager.NO_LABEL, 2, 20);
     checkNodeLabelInfo(infos, "x", 2, 20);

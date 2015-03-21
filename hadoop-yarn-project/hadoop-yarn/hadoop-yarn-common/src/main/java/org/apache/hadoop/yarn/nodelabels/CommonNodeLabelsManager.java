@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -40,16 +41,19 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.event.NodeLabelsStoreEvent;
 import org.apache.hadoop.yarn.nodelabels.event.NodeLabelsStoreEventType;
 import org.apache.hadoop.yarn.nodelabels.event.RemoveClusterNodeLabels;
 import org.apache.hadoop.yarn.nodelabels.event.StoreNewClusterNodeLabels;
+import org.apache.hadoop.yarn.nodelabels.event.StoreUpdateNodeLabelsEvent;
 import org.apache.hadoop.yarn.nodelabels.event.UpdateNodeToLabelsMappingsEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -83,8 +87,8 @@ public class CommonNodeLabelsManager extends AbstractService {
 
   protected Dispatcher dispatcher;
 
-  protected ConcurrentMap<String, NodeLabel> labelCollections =
-      new ConcurrentHashMap<String, NodeLabel>();
+  protected ConcurrentMap<String, RMNodeLabel> labelCollections =
+      new ConcurrentHashMap<String, RMNodeLabel>();
   protected ConcurrentMap<String, Host> nodeCollections =
       new ConcurrentHashMap<String, Host>();
 
@@ -181,6 +185,13 @@ public class CommonNodeLabelsManager extends AbstractService {
         store.updateNodeToLabelsMappings(updateNodeToLabelsMappingsEvent
             .getNodeToLabels());
         break;
+      case UPDATE_NODE_LABELS:
+        StoreUpdateNodeLabelsEvent
+          storeSetNodeLabelsEventEvent =
+            (StoreUpdateNodeLabelsEvent) event;
+        store.updateNodeLabels(storeSetNodeLabelsEventEvent
+            .getUpdatedNodeLabels());
+        break;
       }
     } catch (IOException e) {
       LOG.error("Failed to store label modification to storage");
@@ -214,7 +225,7 @@ public class CommonNodeLabelsManager extends AbstractService {
       initNodeLabelStore(conf);
     }
     
-    labelCollections.put(NO_LABEL, new NodeLabel(NO_LABEL));
+    labelCollections.put(NO_LABEL, new RMNodeLabel(NO_LABEL));
   }
 
   protected void initNodeLabelStore(Configuration conf) throws Exception {
@@ -288,7 +299,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     for (String label : labels) {
       // shouldn't overwrite it to avoid changing the Label.resource
       if (this.labelCollections.get(label) == null) {
-        this.labelCollections.put(label, new NodeLabel(label));
+        this.labelCollections.put(label, new RMNodeLabel(label));
         newLabels.add(label);
       }
     }
@@ -746,7 +757,7 @@ public class CommonNodeLabelsManager extends AbstractService {
         if(label.equals(NO_LABEL)) {
           continue;
         }
-        NodeLabel nodeLabelInfo = labelCollections.get(label);
+        RMNodeLabel nodeLabelInfo = labelCollections.get(label);
         if(nodeLabelInfo != null) {
           Set<NodeId> nodeIds = nodeLabelInfo.getAssociatedNodeIds();
           if (!nodeIds.isEmpty()) {
@@ -777,6 +788,60 @@ public class CommonNodeLabelsManager extends AbstractService {
       readLock.unlock();
     }
   }
+  
+  private void checkUpdateNodeLabels(
+      List<NodeLabel> updatedNodeLabels) throws YarnException {
+    // pre-check
+    for (NodeLabel label : updatedNodeLabels) {
+      if (!labelCollections.containsKey(label.getNodeLabel())) {
+        String message =
+          String.format(
+            "Trying to update a non-existing node-label=%s",
+            label.getNodeLabel());
+        LOG.error(message);
+        throw new YarnException(message);
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public void updateNodeLabels(
+      List<NodeLabel> updatedNodeLabels) throws YarnException {
+    try {
+      writeLock.lock();
+      checkUpdateNodeLabels(updatedNodeLabels);
+
+      for (NodeLabel label : updatedNodeLabels) {
+        RMNodeLabel rmLabel = labelCollections.get(label.getNodeLabel());
+        rmLabel.setIsExclusive(label.getIsExclusive());
+      }
+
+      if (null != dispatcher && !updatedNodeLabels.isEmpty()) {
+        dispatcher.getEventHandler().handle(
+          new StoreUpdateNodeLabelsEvent(updatedNodeLabels));
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public boolean isExclusiveNodeLabel(String nodeLabel) throws IOException {
+    try {
+      readLock.lock();
+      RMNodeLabel label = labelCollections.get(nodeLabel);
+      if (label == null) {
+        String message =
+          "Getting is-exclusive-node-label, node-label = " + nodeLabel
+            + ", is not existed.";
+        LOG.error(message);
+        throw new IOException(message);
+      }
+      return label.getIsExclusive();
+    } finally {
+      readLock.unlock();
+    }
+  }
+  
 
   private void checkAndThrowLabelName(String label) throws IOException {
     if (label == null || label.isEmpty() || label.length() > MAX_LABEL_LENGTH) {

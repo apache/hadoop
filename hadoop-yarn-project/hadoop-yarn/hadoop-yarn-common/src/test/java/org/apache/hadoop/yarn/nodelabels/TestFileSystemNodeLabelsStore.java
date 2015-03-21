@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.junit.After;
@@ -188,7 +189,7 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
   }
   
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  @Test//(timeout = 10000)
+  @Test (timeout = 10000)
   public void testSerilizationAfterRecovery() throws Exception {
     mgr.addToCluserNodeLabels(toSet("p1", "p2", "p3"));
     mgr.addToCluserNodeLabels(toSet("p4"));
@@ -218,6 +219,14 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
      * p4: n4 
      * p6: n6, n7
      */
+
+    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("p2", false)));
+    mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance("p6", false)));
+
+    /*
+     * Set p2/p6 to be exclusive
+     */
+
     // shutdown mgr and start a new mgr
     mgr.stop();
 
@@ -238,6 +247,10 @@ public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {
         "p6", toSet(toNodeId("n6"), toNodeId("n7")),
         "p4", toSet(toNodeId("n4")),
         "p2", toSet(toNodeId("n2"))));
+
+    Assert.assertFalse(mgr.isExclusiveNodeLabel("p2"));
+    Assert.assertTrue(mgr.isExclusiveNodeLabel("p4"));
+    Assert.assertFalse(mgr.isExclusiveNodeLabel("p6"));
 
     /*
      * Add label p7,p8 then shutdown

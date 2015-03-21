@@ -29,7 +29,9 @@ import java.util.Set;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -535,5 +537,31 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     }
     Assert.assertTrue("Should failed when #labels > 1 on a host after add",
         failed);
+  }
+
+  @Test (timeout = 5000)
+  public void testUpdateNodeLabels() throws Exception {
+    boolean failed = false;
+
+    // should fail: label isn't exist
+    try {
+      mgr.updateNodeLabels(Arrays.asList(NodeLabel.newInstance(
+        "p1", false)));
+    } catch (YarnException e) {
+      failed = true;
+    }
+    Assert.assertTrue("Should fail since the node label doesn't exist", failed);
+
+    mgr.addToCluserNodeLabels(toSet("p1", "p2", "p3"));
+
+    mgr.updateNodeLabels(Arrays.asList(
+        NodeLabel.newInstance("p1", false), NodeLabel.newInstance("p2", true)));
+    Assert.assertEquals("p1", mgr.lastUpdatedNodeLabels.get(0).getNodeLabel());
+    Assert.assertFalse(mgr.lastUpdatedNodeLabels.get(0).getIsExclusive());
+    Assert.assertTrue(mgr.lastUpdatedNodeLabels.get(1).getIsExclusive());
+
+    // Check exclusive for p1/p2
+    Assert.assertFalse(mgr.isExclusiveNodeLabel("p1"));
+    Assert.assertTrue(mgr.isExclusiveNodeLabel("p2"));
   }
 }
