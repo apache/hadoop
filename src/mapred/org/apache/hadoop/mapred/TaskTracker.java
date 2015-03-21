@@ -2936,8 +2936,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
      */
     public synchronized void reportProgress(TaskStatus taskStatus) 
     {
-      LOG.info(task.getTaskID() + " " + taskStatus.getProgress() + 
-          "% " + taskStatus.getStateString());
+      LOG.info(task.getTaskID() + " " + StringUtils.formatPercent(
+          taskStatus.getProgress(), 0) + " " + taskStatus.getStateString());
       // task will report its state as
       // COMMIT_PENDING when it is waiting for commit response and 
       // when it is committing.
