@@ -54,6 +54,8 @@ Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
 
+    YARN-3345. Add non-exclusive node label API. (Wangda Tan via jianhe)
+
   IMPROVEMENTS
 
     YARN-3243. CapacityScheduler should pass headroom from parent to children

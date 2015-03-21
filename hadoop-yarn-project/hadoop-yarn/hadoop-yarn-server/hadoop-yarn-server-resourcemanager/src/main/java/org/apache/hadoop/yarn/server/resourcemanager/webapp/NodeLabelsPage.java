@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 
-import org.apache.hadoop.yarn.nodelabels.NodeLabel;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.webapp.SubView;
@@ -55,7 +55,7 @@ public class NodeLabelsPage extends RmView {
           tbody();
   
       RMNodeLabelsManager nlm = rm.getRMContext().getNodeLabelManager();
-      for (NodeLabel info : nlm.pullRMNodeLabelsInfo()) {
+      for (RMNodeLabel info : nlm.pullRMNodeLabelsInfo()) {
         TR<TBODY<TABLE<Hamlet>>> row =
             tbody.tr().td(
                 info.getLabelName().isEmpty() ? "<NO_LABEL>" : info

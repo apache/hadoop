@@ -18,9 +18,19 @@
 
 package org.apache.hadoop.yarn.nodelabels.event;
 
-public enum NodeLabelsStoreEventType {
-  REMOVE_LABELS,
-  ADD_LABELS,
-  STORE_NODE_TO_LABELS,
-  UPDATE_NODE_LABELS
+import java.util.List;
+
+import org.apache.hadoop.yarn.api.records.NodeLabel;
+
+public class StoreUpdateNodeLabelsEvent extends NodeLabelsStoreEvent {
+  private List<NodeLabel> updatedNodeLabels;
+
+  public StoreUpdateNodeLabelsEvent(List<NodeLabel> updateNodeLabels) {
+    super(NodeLabelsStoreEventType.UPDATE_NODE_LABELS);
+    this.updatedNodeLabels = updateNodeLabels;
+  }
+
+  public List<NodeLabel> getUpdatedNodeLabels() {
+    return updatedNodeLabels;
+  }
 }

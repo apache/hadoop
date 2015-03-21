@@ -42,4 +42,5 @@ service ResourceManagerAdministrationProtocolService {
   rpc addToClusterNodeLabels(AddToClusterNodeLabelsRequestProto) returns (AddToClusterNodeLabelsResponseProto);
   rpc removeFromClusterNodeLabels(RemoveFromClusterNodeLabelsRequestProto) returns (RemoveFromClusterNodeLabelsResponseProto);
   rpc replaceLabelsOnNodes(ReplaceLabelsOnNodeRequestProto) returns (ReplaceLabelsOnNodeResponseProto);
+  rpc updateNodeLabels(UpdateNodeLabelsRequestProto) returns (UpdateNodeLabelsResponseProto);
 }
