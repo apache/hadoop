@@ -286,6 +286,9 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6213. NullPointerException caused by job history server addr not
+    resolvable. (Peng Zhang via harsh)
+
     MAPREDUCE-6281. Fix javadoc in Terasort. (Albert Chu via ozawa)
 
 Release 2.7.0 - UNRELEASED

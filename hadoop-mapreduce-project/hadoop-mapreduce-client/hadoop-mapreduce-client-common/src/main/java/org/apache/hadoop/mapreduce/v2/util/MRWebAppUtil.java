@@ -137,8 +137,9 @@ public class MRWebAppUtil {
       hsAddress, getDefaultJHSWebappPort(),
       getDefaultJHSWebappURLWithoutScheme());
     StringBuffer sb = new StringBuffer();
-    if (address.getAddress().isAnyLocalAddress() || 
-        address.getAddress().isLoopbackAddress()) {
+    if (address.getAddress() != null &&
+        (address.getAddress().isAnyLocalAddress() ||
+         address.getAddress().isLoopbackAddress())) {
       sb.append(InetAddress.getLocalHost().getCanonicalHostName());
     } else {
       sb.append(address.getHostName());
