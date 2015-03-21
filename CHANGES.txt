@@ -66,6 +66,10 @@ Release 1.3.0 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-5660. Log info about possible thrashing (when using
+    memory-based scheduling in Capacity Scheduler) is not printed
+    (Adam Kawa via harsh)
+
     MAPREDUCE-5556. mapred docs have incorrect classpath (harsh)
 
     MAPREDUCE-5272. Minor error in javadoc of TestMRWithDistributedCache

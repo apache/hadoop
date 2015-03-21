@@ -4460,11 +4460,13 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         }
       }
     }
-    if (totalMemoryAllottedForTasks > totalPhysicalMemoryOnTT) {
-      LOG.info("totalMemoryAllottedForTasks > totalPhysicalMemoryOnTT."
+
+    long totalMemoryAllottedForTasksInBytes = totalMemoryAllottedForTasks * 1024 * 1024;
+    if (totalMemoryAllottedForTasksInBytes > totalPhysicalMemoryOnTT) {
+      LOG.info("totalMemoryAllottedForTasksInBytes > totalPhysicalMemoryOnTT."
           + " Thrashing might happen.");
-    } else if (totalMemoryAllottedForTasks > totalVirtualMemoryOnTT) {
-      LOG.info("totalMemoryAllottedForTasks > totalVirtualMemoryOnTT."
+    } else if (totalMemoryAllottedForTasksInBytes > totalVirtualMemoryOnTT) {
+      LOG.info("totalMemoryAllottedForTasksInBytes > totalVirtualMemoryOnTT."
           + " Thrashing might happen.");
     }
 
