@@ -93,7 +93,7 @@ public class HistoryViewer {
       final Configuration jobConf = new Configuration(conf);
       try {
         jobConf.addResource(fs.open(jobConfPath), jobConfPath.toString());
-        Limits.reset(conf);
+        Limits.reset(jobConf);
       } catch (FileNotFoundException fnf) {
         if (LOG.isWarnEnabled()) {
           LOG.warn("Missing job conf in history", fnf);
