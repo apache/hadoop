@@ -286,6 +286,10 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6286. A typo in HistoryViewer makes some code useless, which
+    causes counter limits are not reset correctly.
+    (Zhihai Xu via harsh)
+
     MAPREDUCE-6213. NullPointerException caused by job history server addr not
     resolvable. (Peng Zhang via harsh)
 
