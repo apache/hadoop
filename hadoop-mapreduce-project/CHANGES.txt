@@ -256,6 +256,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5190. Unnecessary condition test in RandomSampler.
+    (Jingguo Yao via harsh)
+
     MAPREDUCE-6239. Consolidate TestJobConf classes in
     hadoop-mapreduce-client-jobclient and hadoop-mapreduce-client-core
     (Varun Saxena via harsh)
