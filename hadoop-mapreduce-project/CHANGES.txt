@@ -292,10 +292,6 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5448. MapFileOutputFormat#getReaders bug with hidden
     files/folders. (Maysam Yabandeh via harsh)
 
-    MAPREDUCE-6286. A typo in HistoryViewer makes some code useless, which
-    causes counter limits are not reset correctly.
-    (Zhihai Xu via harsh)
-
     MAPREDUCE-6213. NullPointerException caused by job history server addr not
     resolvable. (Peng Zhang via harsh)
 
@@ -397,6 +393,10 @@ Release 2.7.0 - UNRELEASED
     files. (Siqi Li via gera)
 
   BUG FIXES
+
+    MAPREDUCE-6286. A typo in HistoryViewer makes some code useless, which
+    causes counter limits are not reset correctly.
+    (Zhihai Xu via harsh)
 
     MAPREDUCE-6210. Use getApplicationAttemptId() instead of getApplicationId()
     for logging AttemptId in RMContainerAllocator.java (Leitao Guo via aajisaka)
