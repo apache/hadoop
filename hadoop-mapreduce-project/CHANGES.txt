@@ -286,6 +286,9 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-5448. MapFileOutputFormat#getReaders bug with hidden
+    files/folders. (Maysam Yabandeh via harsh)
+
     MAPREDUCE-6286. A typo in HistoryViewer makes some code useless, which
     causes counter limits are not reset correctly.
     (Zhihai Xu via harsh)

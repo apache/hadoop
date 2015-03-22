@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import junit.framework.Assert;
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
@@ -308,6 +309,15 @@ public class TestFileOutputCommitter extends TestCase {
     // do commit
     committer.commitTask(tContext);
     committer.commitJob(jContext);
+
+    // Ensure getReaders call works and also ignores
+    // hidden filenames (_ or . prefixes)
+    try {
+      MapFileOutputFormat.getReaders(outDir, conf);
+    } catch (Exception e) {
+      Assert.fail("Fail to read from MapFileOutputFormat: " + e);
+      e.printStackTrace();
+    }
 
     // validate output
     validateMapFileOutputContent(FileSystem.get(job.getConfiguration()), outDir);

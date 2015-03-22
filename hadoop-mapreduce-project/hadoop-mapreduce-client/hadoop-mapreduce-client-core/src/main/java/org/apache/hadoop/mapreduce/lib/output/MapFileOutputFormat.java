@@ -24,6 +24,7 @@ import java.util.Arrays;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.PathFilter;
 
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.WritableComparable;
@@ -88,7 +89,16 @@ public class MapFileOutputFormat
   public static MapFile.Reader[] getReaders(Path dir,
       Configuration conf) throws IOException {
     FileSystem fs = dir.getFileSystem(conf);
-    Path[] names = FileUtil.stat2Paths(fs.listStatus(dir));
+    PathFilter filter = new PathFilter() {
+      @Override
+      public boolean accept(Path path) {
+        String name = path.getName();
+        if (name.startsWith("_") || name.startsWith("."))
+          return false;
+        return true;
+      }
+    };
+    Path[] names = FileUtil.stat2Paths(fs.listStatus(dir, filter));
 
     // sort names, so that hash partitioning works
     Arrays.sort(names);
