@@ -687,8 +687,10 @@ public class BlockManager {
     // a "forced" completion when a file is getting closed by an
     // OP_CLOSE edit on the standby).
     namesystem.adjustSafeModeBlockTotals(0, 1);
+    final int minStorage = curBlock.isStriped() ?
+        ((BlockInfoStriped) curBlock).getDataBlockNum() : minReplication;
     namesystem.incrementSafeBlockCount(
-        Math.min(numNodes, minReplication));
+        Math.min(numNodes, minStorage), curBlock);
     
     // replace block in the blocksMap
     return blocksMap.replaceBlock(completeBlock);
@@ -2234,7 +2236,7 @@ public class BlockManager {
         // refer HDFS-5283
         if (namesystem.isInSnapshot(storedBlock.getBlockCollection())) {
           int numOfReplicas = BlockInfo.getNumExpectedLocations(storedBlock);
-          namesystem.incrementSafeBlockCount(numOfReplicas);
+          namesystem.incrementSafeBlockCount(numOfReplicas, storedBlock);
         }
         //and fall through to next clause
       }      
@@ -2622,14 +2624,14 @@ public class BlockManager {
       // only complete blocks are counted towards that.
       // In the case that the block just became complete above, completeBlock()
       // handles the safe block count maintenance.
-      namesystem.incrementSafeBlockCount(numCurrentReplica);
+      namesystem.incrementSafeBlockCount(numCurrentReplica, storedBlock);
     }
   }
 
   /**
    * Modify (block-->datanode) map. Remove block from set of
    * needed replications if this takes care of the problem.
-   * @return the block that is stored in blockMap.
+   * @return the block that is stored in blocksMap.
    */
   private Block addStoredBlock(final BlockInfo block,
                                final Block reportedBlock,
@@ -2698,7 +2700,7 @@ public class BlockManager {
       // Is no-op if not in safe mode.
       // In the case that the block just became complete above, completeBlock()
       // handles the safe block count maintenance.
-      namesystem.incrementSafeBlockCount(numCurrentReplica);
+      namesystem.incrementSafeBlockCount(numCurrentReplica, storedBlock);
     }
     
     // if file is under construction, then done for now

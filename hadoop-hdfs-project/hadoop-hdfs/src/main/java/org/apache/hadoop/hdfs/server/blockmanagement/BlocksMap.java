@@ -140,7 +140,7 @@ class BlocksMap {
     }
   }
   
-  /** Returns the block object it it exists in the map. */
+  /** Returns the block object if it exists in the map. */
   BlockInfo getStoredBlock(Block b) {
     return blocks.get(b);
   }
