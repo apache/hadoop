@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
@@ -93,6 +94,8 @@ public class SchedulerApplicationAttempt {
   private LogAggregationContext logAggregationContext;
   
   protected ResourceUsage attemptResourceUsage = new ResourceUsage();
+  private AtomicLong firstAllocationRequestSentTime = new AtomicLong(0);
+  private AtomicLong firstContainerAllocatedTime = new AtomicLong(0);
 
   protected List<RMContainer> newlyAllocatedContainers = 
       new ArrayList<RMContainer>();
@@ -646,6 +649,20 @@ public class SchedulerApplicationAttempt {
     if (attempt != null) {
       attempt.getRMAppAttemptMetrics().setApplicationAttemptHeadRoom(
           Resources.clone(headroom));
+    }
+  }
+
+  public void recordContainerRequestTime(long value) {
+    firstAllocationRequestSentTime.compareAndSet(0, value);
+  }
+
+  public void recordContainerAllocationTime(long value) {
+    if (firstContainerAllocatedTime.compareAndSet(0, value)) {
+      long timediff = firstContainerAllocatedTime.longValue() -
+          firstAllocationRequestSentTime.longValue();
+      if (timediff > 0) {
+        queue.getMetrics().addAppAttemptFirstContainerAllocationDelay(timediff);
+      }
     }
   }
 }

@@ -38,6 +38,7 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -74,6 +75,7 @@ public class QueueMetrics implements MetricsSource {
   @Metric("# of reserved containers") MutableGaugeInt reservedContainers;
   @Metric("# of active users") MutableGaugeInt activeUsers;
   @Metric("# of active applications") MutableGaugeInt activeApplications;
+  @Metric("App Attempt First Container Allocation Delay") MutableRate appAttemptFirstContainerAllocationDelay;
   private final MutableGaugeInt[] runningTime;
   private TimeBucketMetrics<ApplicationId> runBuckets;
 
@@ -462,7 +464,11 @@ public class QueueMetrics implements MetricsSource {
       parent.deactivateApp(user);
     }
   }
-  
+
+  public void addAppAttemptFirstContainerAllocationDelay(long latency) {
+    appAttemptFirstContainerAllocationDelay.add(latency);
+  }
+
   public int getAppsSubmitted() {
     return appsSubmitted.value();
   }
