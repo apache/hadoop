@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * Subclass of {@link BlockInfo}, presenting a block group in erasure coding.
@@ -206,6 +208,13 @@ public class BlockInfoStriped extends BlockInfo {
     return num;
   }
 
+  @Override
+  public void write(DataOutput out) throws IOException {
+    out.writeShort(dataBlockNum);
+    out.writeShort(parityBlockNum);
+    super.write(out);
+  }
+
   /**
    * Convert a complete block to an under construction block.
    * @return BlockInfoUnderConstruction -  an under construction block.
@@ -215,7 +224,7 @@ public class BlockInfoStriped extends BlockInfo {
     final BlockInfoStripedUnderConstruction ucBlock;
     if(isComplete()) {
       ucBlock = new BlockInfoStripedUnderConstruction(this, getDataBlockNum(),
-              getParityBlockNum(),  s, targets);
+              getParityBlockNum(), s, targets);
       ucBlock.setBlockCollection(getBlockCollection());
     } else {
       // the block is already under construction

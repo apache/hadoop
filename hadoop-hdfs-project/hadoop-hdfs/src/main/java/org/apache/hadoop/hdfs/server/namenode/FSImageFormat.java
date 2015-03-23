@@ -48,13 +48,16 @@ import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -755,16 +758,31 @@ public class FSImageFormat {
       atime = in.readLong();
     }
     final long blockSize = in.readLong();
+    final boolean isStriped = NameNodeLayoutVersion.supports(
+            NameNodeLayoutVersion.Feature.ERASURE_CODING, imgVersion)
+            && (in.readBoolean());
     final int numBlocks = in.readInt();
 
     if (numBlocks >= 0) {
       // file
       
       // read blocks
-      BlockInfoContiguous[] blocks = new BlockInfoContiguous[numBlocks];
-      for (int j = 0; j < numBlocks; j++) {
-        blocks[j] = new BlockInfoContiguous(replication);
-        blocks[j].readFields(in);
+      Block[] blocks;
+      if (isStriped) {
+        blocks = new Block[numBlocks];
+        for (int j = 0; j < numBlocks; j++) {
+          short dataBlockNum = in.readShort();
+          short parityBlockNum = in.readShort();
+          blocks[j] = new BlockInfoStriped(new Block(),
+                  dataBlockNum, parityBlockNum);
+          blocks[j].readFields(in);
+        }
+      } else {
+        blocks = new BlockInfoContiguous[numBlocks];
+        for (int j = 0; j < numBlocks; j++) {
+          blocks[j] = new BlockInfoContiguous(replication);
+          blocks[j].readFields(in);
+        }
       }
 
       String clientName = "";
@@ -783,9 +801,18 @@ public class FSImageFormat {
             clientMachine = FSImageSerialization.readString(in);
             // convert the last block to BlockUC
             if (blocks.length > 0) {
-              BlockInfoContiguous lastBlk = blocks[blocks.length - 1];
-              blocks[blocks.length - 1] = new BlockInfoContiguousUnderConstruction(
-                  lastBlk, replication);
+              Block lastBlk = blocks[blocks.length - 1];
+              if (isStriped){
+                BlockInfoStriped lastStripedBlk = (BlockInfoStriped) lastBlk;
+                blocks[blocks.length - 1]
+                        = new BlockInfoStripedUnderConstruction(lastBlk,
+                                lastStripedBlk.getDataBlockNum(),
+                                lastStripedBlk.getParityBlockNum());
+              } else {
+                blocks[blocks.length - 1]
+                        = new BlockInfoContiguousUnderConstruction(lastBlk,
+                                replication);
+              }
             }
           }
         }
@@ -798,14 +825,25 @@ public class FSImageFormat {
         counter.increment();
       }
 
-      final INodeFile file = new INodeFile(inodeId, localName, permissions,
-          modificationTime, atime, blocks, replication, blockSize);
+      INodeFile file;
+      if (isStriped) {
+        file = new INodeFile(inodeId, localName, permissions, modificationTime,
+            atime, new BlockInfoContiguous[0], (short) 0, blockSize);
+        file.addStripedBlocksFeature();
+        for (Block block : blocks) {
+          file.getStripedBlocksFeature().addBlock((BlockInfoStriped) block);
+        }
+      } else {
+        file = new INodeFile(inodeId, localName, permissions,
+            modificationTime, atime, (BlockInfoContiguous[]) blocks,
+            replication, blockSize);
+      }
       if (underConstruction) {
         file.toUnderConstruction(clientName, clientMachine);
       }
-        return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
-      } else if (numBlocks == -1) {
-        //directory
+      return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
+    } else if (numBlocks == -1) {
+      //directory
       
       //read quotas
       final long nsQuota = in.readLong();

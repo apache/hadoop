@@ -17,18 +17,28 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.junit.Assert;
 
+import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,8 +52,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -113,6 +123,140 @@ public class TestFSImage {
       // check lease manager
       Lease lease = fsn.leaseManager.getLease(file2Node);
       Assert.assertNotNull(lease);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  private void testSaveAndLoadINodeFile(FSNamesystem fsn, Configuration conf,
+      boolean isUC) throws IOException{
+    // contruct a INode with StripedBlock for saving and loading
+    long id = 123456789;
+    byte[] name = "testSaveAndLoadInodeFile_testfile".getBytes();
+    PermissionStatus permissionStatus = new PermissionStatus("testuser_a",
+            "testuser_groups", new FsPermission((short)0x755));
+    long mtime = 1426222916-3600;
+    long atime = 1426222916;
+    BlockInfoContiguous[] blks = new BlockInfoContiguous[0];
+    short replication = 3;
+    long preferredBlockSize = 128*1024*1024;
+    byte storagePolicyID = HdfsConstants.EC_STORAGE_POLICY_ID;
+    INodeFile file = new INodeFile(id, name, permissionStatus, mtime, atime,
+        blks, replication, preferredBlockSize, storagePolicyID);
+    ByteArrayOutputStream bs = new ByteArrayOutputStream();
+    file.addStripedBlocksFeature();
+
+    //construct StripedBlocks for the INode
+    BlockInfoStriped[] stripedBlks = new BlockInfoStriped[3];
+    long stripedBlkId = 10000001;
+    long timestamp = mtime+3600;
+    for (int i = 0; i < stripedBlks.length; i++) {
+      stripedBlks[i] = new BlockInfoStriped(
+              new Block(stripedBlkId + i, preferredBlockSize, timestamp),
+              (short) 6, (short) 3);
+      file.getStripedBlocksFeature().addBlock(stripedBlks[i]);
+    }
+
+    final String client = "testClient";
+    final String clientMachine = "testClientMachine";
+    final String path = "testUnderConstructionPath";
+
+    //save the INode to byte array
+    DataOutput out = new DataOutputStream(bs);
+    if (isUC) {
+      file.toUnderConstruction(client, clientMachine);
+      FSImageSerialization.writeINodeUnderConstruction((DataOutputStream) out,
+          file, path);
+    } else {
+      FSImageSerialization.writeINodeFile(file, out, false);
+    }
+    DataInput in = new DataInputStream(
+            new ByteArrayInputStream(bs.toByteArray()));
+
+    // load the INode from the byte array
+    INodeFile fileByLoaded;
+    if (isUC) {
+      fileByLoaded = FSImageSerialization.readINodeUnderConstruction(in,
+              fsn, fsn.getFSImage().getLayoutVersion());
+    } else {
+      fileByLoaded = (INodeFile) new FSImageFormat.Loader(conf, fsn)
+              .loadINodeWithLocalName(false, in, false);
+    }
+
+    assertEquals(id, fileByLoaded.getId() );
+    assertArrayEquals(isUC ? path.getBytes() : name,
+        fileByLoaded.getLocalName().getBytes());
+    assertEquals(permissionStatus.getUserName(),
+        fileByLoaded.getPermissionStatus().getUserName());
+    assertEquals(permissionStatus.getGroupName(),
+        fileByLoaded.getPermissionStatus().getGroupName());
+    assertEquals(permissionStatus.getPermission(),
+        fileByLoaded.getPermissionStatus().getPermission());
+    assertEquals(mtime, fileByLoaded.getModificationTime());
+    assertEquals(isUC ? mtime : atime, fileByLoaded.getAccessTime());
+    assertEquals(0, fileByLoaded.getContiguousBlocks().length);
+    assertEquals(0, fileByLoaded.getBlockReplication());
+    assertEquals(preferredBlockSize, fileByLoaded.getPreferredBlockSize());
+
+    //check the BlockInfoStriped
+    BlockInfoStriped[] stripedBlksByLoaded =
+        fileByLoaded.getStripedBlocksFeature().getBlocks();
+    assertEquals(3, stripedBlksByLoaded.length);
+    for (int i = 0; i < 3; i++) {
+      assertEquals(stripedBlks[i].getBlockId(),
+          stripedBlksByLoaded[i].getBlockId());
+      assertEquals(stripedBlks[i].getNumBytes(),
+          stripedBlksByLoaded[i].getNumBytes());
+      assertEquals(stripedBlks[i].getGenerationStamp(),
+          stripedBlksByLoaded[i].getGenerationStamp());
+      assertEquals(stripedBlks[i].getDataBlockNum(),
+          stripedBlksByLoaded[i].getDataBlockNum());
+      assertEquals(stripedBlks[i].getParityBlockNum(),
+          stripedBlksByLoaded[i].getParityBlockNum());
+    }
+
+    if (isUC) {
+      assertEquals(client,
+          fileByLoaded.getFileUnderConstructionFeature().getClientName());
+      assertEquals(clientMachine,
+          fileByLoaded.getFileUnderConstructionFeature().getClientMachine());
+    }
+  }
+
+  /**
+   * Test if a INodeFile with BlockInfoStriped can be saved by
+   * FSImageSerialization and loaded by FSImageFormat#Loader.
+   */
+  @Test
+  public void testSaveAndLoadInodeFile() throws IOException{
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      testSaveAndLoadINodeFile(cluster.getNamesystem(), conf, false);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test if a INodeFileUnderConstruction with BlockInfoStriped can be
+   * saved and loaded by FSImageSerialization
+   */
+  @Test
+  public void testSaveAndLoadInodeFileUC() throws IOException{
+    // construct a INode with StripedBlock for saving and loading
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      testSaveAndLoadINodeFile(cluster.getNamesystem(), conf, true);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

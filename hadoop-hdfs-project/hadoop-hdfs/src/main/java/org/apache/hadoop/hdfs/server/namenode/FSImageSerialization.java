@@ -35,6 +35,8 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguousUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStripedUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
@@ -124,21 +126,48 @@ public class FSImageSerialization {
     short blockReplication = in.readShort();
     long modificationTime = in.readLong();
     long preferredBlockSize = in.readLong();
+    final boolean isStriped = NameNodeLayoutVersion.supports(
+        NameNodeLayoutVersion.Feature.ERASURE_CODING, imgVersion)
+        && (in.readBoolean());
   
     int numBlocks = in.readInt();
-    BlockInfoContiguous[] blocks = new BlockInfoContiguous[numBlocks];
-    Block blk = new Block();
-    int i = 0;
-    for (; i < numBlocks-1; i++) {
-      blk.readFields(in);
-      blocks[i] = new BlockInfoContiguous(blk, blockReplication);
+
+    final BlockInfoContiguous[] blocksContiguous;
+    BlockInfoStriped[] blocksStriped = null;
+    if (isStriped) {
+      blocksContiguous = new BlockInfoContiguous[0];
+      blocksStriped = new BlockInfoStriped[numBlocks];
+      int i = 0;
+      for (; i < numBlocks - 1; i++) {
+        short dataBlockNum = in.readShort();
+        short parityBlockNum = in.readShort();
+        blocksStriped[i] = new BlockInfoStriped(new Block(), dataBlockNum,
+            parityBlockNum);
+        blocksStriped[i].readFields(in);
+      }
+      if (numBlocks > 0) {
+        short dataBlockNum = in.readShort();
+        short parityBlockNum = in.readShort();
+        blocksStriped[i] = new BlockInfoStripedUnderConstruction(new Block(),
+            dataBlockNum, parityBlockNum, BlockUCState.UNDER_CONSTRUCTION, null);
+        blocksStriped[i].readFields(in);
+      }
+    } else {
+      blocksContiguous = new BlockInfoContiguous[numBlocks];
+      Block blk = new Block();
+      int i = 0;
+      for (; i < numBlocks-1; i++) {
+        blk.readFields(in);
+        blocksContiguous[i] = new BlockInfoContiguous(blk, blockReplication);
+      }
+      // last block is UNDER_CONSTRUCTION
+      if(numBlocks > 0) {
+        blk.readFields(in);
+        blocksContiguous[i] = new BlockInfoContiguousUnderConstruction(
+                blk, blockReplication, BlockUCState.UNDER_CONSTRUCTION, null);
+      }
     }
-    // last block is UNDER_CONSTRUCTION
-    if(numBlocks > 0) {
-      blk.readFields(in);
-      blocks[i] = new BlockInfoContiguousUnderConstruction(
-        blk, blockReplication, BlockUCState.UNDER_CONSTRUCTION, null);
-    }
+
     PermissionStatus perm = PermissionStatus.read(in);
     String clientName = readString(in);
     String clientMachine = readString(in);
@@ -150,8 +179,19 @@ public class FSImageSerialization {
 
     // Images in the pre-protobuf format will not have the lazyPersist flag,
     // so it is safe to pass false always.
-    INodeFile file = new INodeFile(inodeId, name, perm, modificationTime,
-        modificationTime, blocks, blockReplication, preferredBlockSize);
+    INodeFile file;
+    if (isStriped) {
+      file = new INodeFile(inodeId, name, perm, modificationTime,
+          modificationTime, blocksContiguous, (short) 0, preferredBlockSize);
+      file.addStripedBlocksFeature();
+      for (int i = 0; i < numBlocks; i++) {
+        file.getStripedBlocksFeature().addBlock(blocksStriped[i]);
+      }
+    } else {
+      file = new INodeFile(inodeId, name, perm, modificationTime,
+          modificationTime, blocksContiguous, blockReplication,
+          preferredBlockSize);
+    }
     file.toUnderConstruction(clientName, clientMachine);
     return file;
   }
@@ -166,7 +206,8 @@ public class FSImageSerialization {
     out.writeShort(cons.getFileReplication());
     out.writeLong(cons.getModificationTime());
     out.writeLong(cons.getPreferredBlockSize());
-
+    // whether the file has striped blocks
+    out.writeBoolean(cons.isWithStripedBlocks());
     writeBlocks(cons.getBlocks(), out);
     cons.getPermissionStatus().write(out);
 
@@ -179,9 +220,9 @@ public class FSImageSerialization {
 
   /**
    * Serialize a {@link INodeFile} node
-   * @param node The node to write
+   * @param file The node to write
    * @param out The {@link DataOutputStream} where the fields are written
-   * @param writeBlock Whether to write block information
+   * @param writeUnderConstruction Whether to write block information
    */
   public static void writeINodeFile(INodeFile file, DataOutput out,
       boolean writeUnderConstruction) throws IOException {
@@ -191,7 +232,8 @@ public class FSImageSerialization {
     out.writeLong(file.getModificationTime());
     out.writeLong(file.getAccessTime());
     out.writeLong(file.getPreferredBlockSize());
-
+    // whether the file has striped blocks
+    out.writeBoolean(file.isWithStripedBlocks());
     writeBlocks(file.getBlocks(), out);
     SnapshotFSImageFormat.saveFileDiffList(file, out);
 

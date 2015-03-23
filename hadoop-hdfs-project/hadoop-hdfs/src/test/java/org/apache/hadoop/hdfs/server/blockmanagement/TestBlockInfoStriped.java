@@ -25,8 +25,16 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
 
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.NUM_DATA_BLOCKS;
 import static org.apache.hadoop.hdfs.protocol.HdfsConstants.NUM_PARITY_BLOCKS;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * Test {@link BlockInfoStriped}
@@ -216,4 +224,30 @@ public class TestBlockInfoStriped {
       Assert.assertNull(newBlockInfo.getNext());
     }
   }
+
+  @Test
+  public void testWrite() {
+    long blkID = 1;
+    long numBytes = 1;
+    long generationStamp = 1;
+    short dataBlockNum = 6;
+    short parityBlockNum = 3;
+    ByteBuffer byteBuffer = ByteBuffer.allocate(Long.SIZE/Byte.SIZE*3
+            + Short.SIZE/Byte.SIZE*2);
+    byteBuffer.putShort(dataBlockNum).putShort(parityBlockNum)
+            .putLong(blkID).putLong(numBytes).putLong(generationStamp);
+
+    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    DataOutput out = new DataOutputStream(byteStream);
+    BlockInfoStriped blk = new BlockInfoStriped(new Block(1,1,1),
+            (short)6,(short)3);
+    try {
+      blk.write(out);
+    } catch(Exception ex) {
+      fail("testWrite error:" + ex.getMessage());
+    }
+    assertEquals(byteBuffer.array().length, byteStream.toByteArray().length);
+    assertArrayEquals(byteBuffer.array(), byteStream.toByteArray());
+  }
+
 }
