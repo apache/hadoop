@@ -23,8 +23,8 @@ import org.junit.Test;
 
 public class TestNfsExports {
 
-  private final String address1 = "192.168.0.1";
-  private final String address2 = "10.0.0.1";
+  private final String address1 = "192.168.0.12";
+  private final String address2 = "10.0.0.12";
   private final String hostname1 = "a.b.com";
   private final String hostname2 = "a.b.org";
   
@@ -162,6 +162,24 @@ public class TestNfsExports {
     // address1 will hit the cache
     Assert.assertEquals(AccessPrivilege.READ_ONLY,
         matcher.getAccessPrivilege(address1, hostname2));
+  }
+  
+  @Test
+  public void testRegexGrouping() {
+    NfsExports matcher = new NfsExports(CacheSize, ExpirationPeriod,
+        "192.168.0.(12|34)");
+    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+        matcher.getAccessPrivilege(address1, hostname1));
+    // address1 will hit the cache
+    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+        matcher.getAccessPrivilege(address1, hostname2));
+
+    matcher = new NfsExports(CacheSize, ExpirationPeriod, "\\w*.a.b.com");
+    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+        matcher.getAccessPrivilege("1.2.3.4", "web.a.b.com"));
+    // address "1.2.3.4" will hit the cache
+    Assert.assertEquals(AccessPrivilege.READ_ONLY,
+        matcher.getAccessPrivilege("1.2.3.4", "email.a.b.org"));
   }
   
   @Test
