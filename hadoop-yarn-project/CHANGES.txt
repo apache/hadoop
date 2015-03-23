@@ -816,6 +816,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3369. Missing NullPointer check in AppSchedulingInfo causes RM to die.
     (Brahma Reddy Battula via wangda)
 
+    YARN-3384. TestLogAggregationService.verifyContainerLogs fails after
+    YARN-2777. (Naganarasimha G R via ozawa)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
