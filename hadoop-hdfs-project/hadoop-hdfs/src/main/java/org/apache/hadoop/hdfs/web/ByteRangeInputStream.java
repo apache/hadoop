@@ -28,6 +28,7 @@ import java.util.StringTokenizer;
 
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.http.HttpStatus;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.HttpHeaders;
@@ -127,12 +128,7 @@ public abstract class ByteRangeInputStream extends FSInputStream {
       fileLength = null;
     } else {
       // for non-chunked transfer-encoding, get content-length
-      final String cl = connection.getHeaderField(HttpHeaders.CONTENT_LENGTH);
-      if (cl == null) {
-        throw new IOException(HttpHeaders.CONTENT_LENGTH + " is missing: "
-            + headers);
-      }
-      final long streamlength = Long.parseLong(cl);
+      long streamlength = getStreamLength(connection, headers);
       fileLength = startPos + streamlength;
 
       // Java has a bug with >2GB request streams.  It won't bounds check
@@ -141,6 +137,36 @@ public abstract class ByteRangeInputStream extends FSInputStream {
     }
 
     return in;
+  }
+
+  private static long getStreamLength(HttpURLConnection connection,
+      Map<String, List<String>> headers) throws IOException {
+    String cl = connection.getHeaderField(HttpHeaders.CONTENT_LENGTH);
+    if (cl == null) {
+      // Try to get the content length by parsing the content range
+      // because HftpFileSystem does not return the content length
+      // if the content is partial.
+      if (connection.getResponseCode() == HttpStatus.SC_PARTIAL_CONTENT) {
+        cl = connection.getHeaderField(HttpHeaders.CONTENT_RANGE);
+        return getLengthFromRange(cl);
+      } else {
+        throw new IOException(HttpHeaders.CONTENT_LENGTH + " is missing: "
+            + headers);
+      }
+    }
+    return Long.parseLong(cl);
+  }
+
+  private static long getLengthFromRange(String cl) throws IOException {
+    try {
+
+      String[] str = cl.substring(6).split("[-/]");
+      return Long.parseLong(str[1]) - Long.parseLong(str[0]) + 1;
+    } catch (Exception e) {
+      throw new IOException(
+          "failed to get content length by parsing the content range: " + cl
+              + " " + e.getMessage());
+    }
   }
 
   private static boolean isChunkedTransferEncoding(
