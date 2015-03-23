@@ -144,10 +144,12 @@ It's strongly recommended for the users to update a few configuration properties
 *   By default, the export can be mounted by any client. To better control the access,
     users can update the following property. The value string contains machine name and
     access privilege, separated by whitespace
-    characters. The machine name format can be a single host, a Java regular expression, or an IPv4 address. The access
+    characters. The machine name format can be a single host, a "*", a Java regular expression, or an IPv4 address. The access
     privilege uses rw or ro to specify read/write or read-only access of the machines to exports. If the access privilege is not provided, the default is read-only. Entries are separated by ";".
-    For example: "192.168.0.0/22 rw ; host.\*\\.example\\.com ; host1.test.org ro;". Only the NFS gateway needs to restart after
-    this property is updated.
+    For example: "192.168.0.0/22 rw ; \\\\w\*\\\\.example\\\\.com ; host1.test.org ro;". Only the NFS gateway needs to restart after
+    this property is updated. Note that, here Java regular expression is differnt with the regrulation expression used in 
+    Linux NFS export table, such as, using "\\\\w\*\\\\.example\\\\.com" instead of "\*.example.com", "192\\\\.168\\\\.0\\\\.(11|22)"
+    instead of "192.168.0.[11|22]" and so on.  
 
         <property>
           <name>nfs.exports.allowed.hosts</name>
