@@ -1232,6 +1232,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-6841. Use Time.monotonicNow() wherever applicable instead of Time.now()
     (Vinayakumar B via kihwal)
 
+    HDFS-7942. NFS: support regexp grouping in nfs.exports.allowed.hosts (brandonli)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
