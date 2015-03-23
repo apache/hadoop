@@ -804,7 +804,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         Map<String, String> thisContainerMap = logMap.remove(containerStr);
         Assert.assertEquals(numOfContainerLogs, thisContainerMap.size());
         for (String fileType : logFiles) {
-          String expectedValue = containerStr + " Hello " + fileType + "!";
+          String expectedValue =
+              containerStr + " Hello " + fileType + "!End of LogType:"
+                  + fileType;
           LOG.info("Expected log-content : " + new String(expectedValue));
           String foundValue = thisContainerMap.remove(fileType);
           Assert.assertNotNull(cId + " " + fileType
