@@ -458,6 +458,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11447. Add a more meaningful toString method to SampleStat and 
     MutableStat. (kasha)
 
+    HADOOP-11737. mockito's version in hadoop-nfs’ pom.xml shouldn't be
+    specified. (Kengo Seki via ozawa)
+
   OPTIMIZATIONS
 
   BUG FIXES
