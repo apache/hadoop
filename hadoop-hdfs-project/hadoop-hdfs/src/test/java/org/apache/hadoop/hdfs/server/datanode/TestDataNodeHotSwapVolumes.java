@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockMissingException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -682,26 +681,18 @@ public class TestDataNodeHotSwapVolumes {
         failedVolume != null);
     long used = failedVolume.getDfsUsed();
 
-    try {
-      assertTrue("Couldn't chmod local vol: " + dirToFail,
-          FileUtil.setExecutable(dirToFail, false));
-      // Call and wait DataNode to detect disk failure.
-      long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
-      dn.checkDiskErrorAsync();
-      while (dn.getLastDiskErrorCheck() == lastDiskErrorCheck) {
-        Thread.sleep(100);
-      }
-
-      createFile(new Path("/test1"), 32, (short)2);
-      assertEquals(used, failedVolume.getDfsUsed());
-    } finally {
-      // Need to restore the mode on dirToFail. Otherwise, if an Exception
-      // is thrown above, the following tests can not delete this data directory
-      // and thus fail to start MiniDFSCluster.
-      assertTrue("Couldn't restore executable for: " + dirToFail,
-          FileUtil.setExecutable(dirToFail, true));
+    DataNodeTestUtils.injectDataDirFailure(dirToFail);
+    // Call and wait DataNode to detect disk failure.
+    long lastDiskErrorCheck = dn.getLastDiskErrorCheck();
+    dn.checkDiskErrorAsync();
+    while (dn.getLastDiskErrorCheck() == lastDiskErrorCheck) {
+      Thread.sleep(100);
     }
 
+    createFile(new Path("/test1"), 32, (short)2);
+    assertEquals(used, failedVolume.getDfsUsed());
+
+    DataNodeTestUtils.restoreDataDirFromFailure(dirToFail);
     dn.reconfigurePropertyImpl(DFS_DATANODE_DATA_DIR_KEY, oldDataDir);
 
     createFile(new Path("/test2"), 32, (short)2);
