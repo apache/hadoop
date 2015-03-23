@@ -4444,4 +4444,82 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     assertEquals("Incorrect number of perf metrics", 1,
         collector.getRecords().size());
   }
+
+  @Test
+  public void testQueueNameWithTrailingSpace() throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    // only default queue
+    assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
+
+    // submit app with queue name "A"
+    ApplicationAttemptId appAttemptId1 = createAppAttemptId(1, 1);
+    AppAddedSchedulerEvent appAddedEvent1 = new AppAddedSchedulerEvent(
+        appAttemptId1.getApplicationId(), "A", "user1");
+    scheduler.handle(appAddedEvent1);
+    // submission accepted
+    assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
+    assertNotNull(scheduler.getSchedulerApplications().get(appAttemptId1.
+        getApplicationId()));
+
+    AppAttemptAddedSchedulerEvent attempAddedEvent =
+        new AppAttemptAddedSchedulerEvent(appAttemptId1, false);
+    scheduler.handle(attempAddedEvent);
+    // That queue should have one app
+    assertEquals(1, scheduler.getQueueManager().getLeafQueue("A", true)
+        .getNumRunnableApps());
+    assertNotNull(scheduler.getSchedulerApp(appAttemptId1));
+
+    // submit app with queue name "A "
+    ApplicationAttemptId appAttemptId2 = createAppAttemptId(2, 1);
+    AppAddedSchedulerEvent appAddedEvent2 = new AppAddedSchedulerEvent(
+        appAttemptId2.getApplicationId(), "A ", "user1");
+    scheduler.handle(appAddedEvent2);
+    // submission rejected
+    assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
+    assertNull(scheduler.getSchedulerApplications().get(appAttemptId2.
+        getApplicationId()));
+    assertNull(scheduler.getSchedulerApp(appAttemptId2));
+
+    // submit app with queue name "B.C"
+    ApplicationAttemptId appAttemptId3 = createAppAttemptId(3, 1);
+    AppAddedSchedulerEvent appAddedEvent3 = new AppAddedSchedulerEvent(
+        appAttemptId3.getApplicationId(), "B.C", "user1");
+    scheduler.handle(appAddedEvent3);
+    // submission accepted
+    assertEquals(3, scheduler.getQueueManager().getLeafQueues().size());
+    assertNotNull(scheduler.getSchedulerApplications().get(appAttemptId3.
+        getApplicationId()));
+
+    attempAddedEvent =
+        new AppAttemptAddedSchedulerEvent(appAttemptId3, false);
+    scheduler.handle(attempAddedEvent);
+    // That queue should have one app
+    assertEquals(1, scheduler.getQueueManager().getLeafQueue("B.C", true)
+        .getNumRunnableApps());
+    assertNotNull(scheduler.getSchedulerApp(appAttemptId3));
+  }
+
+  @Test
+  public void testEmptyQueueNameInConfigFile() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    // set empty queue name
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"\">");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+    try {
+      scheduler.init(conf);
+      Assert.fail("scheduler init should fail because" +
+          " empty queue name.");
+    } catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "Failed to initialize FairScheduler"));
+    }
+  }
 }

@@ -701,6 +701,8 @@ public class FairScheduler extends
           appRejectMsg = queueName + " is not a leaf queue";
         }
       }
+    } catch (InvalidQueueNameException qne) {
+      appRejectMsg = qne.getMessage();
     } catch (IOException ioe) {
       appRejectMsg = "Error assigning app to queue " + queueName;
     }
