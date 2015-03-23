@@ -300,6 +300,9 @@ Release 2.8.0 - UNRELEASED
 
     MAPREDUCE-6281. Fix javadoc in Terasort. (Albert Chu via ozawa)
 
+    MAPREDUCE-6242. Progress report log is incredibly excessive in 
+    application master. (Varun Saxena via devaraj)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

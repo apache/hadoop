@@ -229,6 +229,11 @@ abstract public class Task implements Writable, Configurable {
     gcUpdater = new GcTimeUpdater();
   }
 
+  @VisibleForTesting
+  void setTaskDone() {
+    taskDone.set(true);
+  }
+
   ////////////////////////////////////////////
   // Accessors
   ////////////////////////////////////////////
@@ -536,9 +541,6 @@ abstract public class Task implements Writable, Configurable {
   public abstract void run(JobConf job, TaskUmbilicalProtocol umbilical)
     throws IOException, ClassNotFoundException, InterruptedException;
 
-  /** The number of milliseconds between progress reports. */
-  public static final int PROGRESS_INTERVAL = 3000;
-
   private transient Progress taskProgress = new Progress();
 
   // Current counters
@@ -714,6 +716,9 @@ abstract public class Task implements Writable, Configurable {
       int remainingRetries = MAX_RETRIES;
       // get current flag value and reset it as well
       boolean sendProgress = resetProgressFlag();
+      long taskProgressInterval =
+          conf.getLong(MRJobConfig.TASK_PROGRESS_REPORT_INTERVAL,
+                       MRJobConfig.DEFAULT_TASK_PROGRESS_REPORT_INTERVAL);
       while (!taskDone.get()) {
         synchronized (lock) {
           done = false;
@@ -726,7 +731,7 @@ abstract public class Task implements Writable, Configurable {
             if (taskDone.get()) {
               break;
             }
-            lock.wait(PROGRESS_INTERVAL);
+            lock.wait(taskProgressInterval);
           }
           if (taskDone.get()) {
             break;
