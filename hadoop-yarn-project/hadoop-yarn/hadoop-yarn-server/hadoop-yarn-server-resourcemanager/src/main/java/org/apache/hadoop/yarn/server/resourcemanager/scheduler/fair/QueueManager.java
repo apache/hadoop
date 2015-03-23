@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.xml.sax.SAXException;
 
+import com.google.common.annotations.VisibleForTesting;
 /**
  * Maintains a list of queues as well as scheduling parameters for each queue,
  * such as guaranteed share allocations, from the fair scheduler config file.
@@ -155,7 +156,13 @@ public class QueueManager {
 
     // Move up the queue tree until we reach one that exists.
     while (sepIndex != -1) {
+      int prevSepIndex = sepIndex;
       sepIndex = name.lastIndexOf('.', sepIndex-1);
+      String node = name.substring(sepIndex+1, prevSepIndex);
+      if (!isQueueNameValid(node)) {
+        throw new InvalidQueueNameException("Illegal node name at offset " +
+            (sepIndex+1) + " for queue name " + name);
+      }
       FSQueue queue;
       String curName = null;
       curName = name.substring(0, sepIndex);
@@ -400,5 +407,14 @@ public class QueueManager {
     // Update the fair share preemption timeouts and preemption for all queues
     // recursively
     rootQueue.updatePreemptionVariables();
+  }
+
+  /**
+   * Check whether queue name is valid,
+   * return true if it is valid, otherwise return false.
+   */
+  @VisibleForTesting
+  boolean isQueueNameValid(String node) {
+    return !node.isEmpty() && node.equals(node.trim());
   }
 }
