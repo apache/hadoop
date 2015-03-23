@@ -982,7 +982,7 @@ public class INodeFile extends INodeWithAdditionalFields
   void computeQuotaDeltaForTruncate(
       long newLength, BlockStoragePolicy bsps,
       QuotaCounts delta) {
-    final BlockInfoContiguous[] blocks = getBlocks();
+    final BlockInfo[] blocks = getBlocks();
     if (blocks == null || blocks.length == 0) {
       return;
     }
@@ -1001,7 +1001,7 @@ public class INodeFile extends INodeWithAdditionalFields
 
     for (int i = blocks.length - 1; i >= 0 && size > newLength;
          size -= blocks[i].getNumBytes(), --i) {
-      BlockInfoContiguous bi = blocks[i];
+      BlockInfo bi = blocks[i];
       long truncatedBytes;
       if (size - newLength < bi.getNumBytes()) {
         // Record a full block as the last block will be copied during
