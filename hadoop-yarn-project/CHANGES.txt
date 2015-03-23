@@ -819,6 +819,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3384. TestLogAggregationService.verifyContainerLogs fails after
     YARN-2777. (Naganarasimha G R via ozawa)
 
+    YARN-3336. FileSystem memory leak in DelegationTokenRenewer.
+    (Zhihai Xu via cnauroth)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
