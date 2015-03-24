@@ -75,6 +75,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
   @BeforeClass
   public static void prepareStore() throws Exception {
     store = createStore(SCALE);
+    TimelineEntities entities = new TimelineEntities();
+    entities.addEntity(createApplicationTimelineEntity(
+        ApplicationId.newInstance(0, SCALE + 1), true, false));
+    store.put(entities);
   }
 
   public static TimelineStore createStore(int scale) throws Exception {
@@ -128,9 +132,9 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       TimelineEntities entities = new TimelineEntities();
       ApplicationId appId = ApplicationId.newInstance(0, i);
       if (i == 2) {
-        entities.addEntity(createApplicationTimelineEntity(appId, true));
+        entities.addEntity(createApplicationTimelineEntity(appId, true, true));
       } else {
-        entities.addEntity(createApplicationTimelineEntity(appId, false));
+        entities.addEntity(createApplicationTimelineEntity(appId, false, true));
       }
       store.put(entities);
       for (int j = 1; j <= scale; ++j) {
@@ -206,6 +210,27 @@ public class TestApplicationHistoryManagerOnTimelineStore {
       Assert.assertEquals(YarnApplicationState.FINISHED,
           app.getYarnApplicationState());
     }
+  }
+
+  @Test
+  public void testGetApplicationReportWithNotAttempt() throws Exception {
+    final ApplicationId appId = ApplicationId.newInstance(0, SCALE + 1);
+    ApplicationReport app;
+    if (callerUGI == null) {
+      app = historyManager.getApplication(appId);
+    } else {
+      app =
+          callerUGI.doAs(new PrivilegedExceptionAction<ApplicationReport> () {
+            @Override
+            public ApplicationReport run() throws Exception {
+              return historyManager.getApplication(appId);
+            }
+          });
+    }
+    Assert.assertNotNull(app);
+    Assert.assertEquals(appId, app.getApplicationId());
+    Assert.assertEquals(ApplicationAttemptId.newInstance(appId, -1),
+        app.getCurrentApplicationAttemptId());
   }
 
   @Test
@@ -301,7 +326,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
     Collection<ApplicationReport> apps =
         historyManager.getAllApplications().values();
     Assert.assertNotNull(apps);
-    Assert.assertEquals(SCALE, apps.size());
+    Assert.assertEquals(SCALE + 1, apps.size());
   }
 
   @Test
@@ -401,7 +426,7 @@ public class TestApplicationHistoryManagerOnTimelineStore {
   }
 
   private static TimelineEntity createApplicationTimelineEntity(
-      ApplicationId appId, boolean emptyACLs) {
+      ApplicationId appId, boolean emptyACLs, boolean noAttempt) {
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType(ApplicationMetricsConstants.ENTITY_TYPE);
     entity.setEntityId(appId.toString());
@@ -438,8 +463,10 @@ public class TestApplicationHistoryManagerOnTimelineStore {
         FinalApplicationStatus.UNDEFINED.toString());
     eventInfo.put(ApplicationMetricsConstants.STATE_EVENT_INFO,
         YarnApplicationState.FINISHED.toString());
-    eventInfo.put(ApplicationMetricsConstants.LATEST_APP_ATTEMPT_EVENT_INFO,
-        ApplicationAttemptId.newInstance(appId, 1));
+    if (noAttempt) {
+      eventInfo.put(ApplicationMetricsConstants.LATEST_APP_ATTEMPT_EVENT_INFO,
+          ApplicationAttemptId.newInstance(appId, 1));
+    }
     tEvent.setEventInfo(eventInfo);
     entity.addEvent(tEvent);
     return entity;
