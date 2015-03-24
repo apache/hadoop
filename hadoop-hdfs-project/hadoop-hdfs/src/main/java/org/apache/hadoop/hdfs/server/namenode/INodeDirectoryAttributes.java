@@ -52,6 +52,10 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
           storageSpace(-1).typeSpaces(-1).build();
     }
 
+    public boolean isDirectory() {
+      return true;
+    }
+
     @Override
     public boolean metadataEquals(INodeDirectoryAttributes other) {
       return other != null

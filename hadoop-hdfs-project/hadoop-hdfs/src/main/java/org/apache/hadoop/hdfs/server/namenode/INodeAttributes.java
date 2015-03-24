@@ -28,6 +28,9 @@ import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
  */
 @InterfaceAudience.Private
 public interface INodeAttributes {
+
+  public boolean isDirectory();
+
   /**
    * @return null if the local name is null;
    *         otherwise, return the local name byte array.
