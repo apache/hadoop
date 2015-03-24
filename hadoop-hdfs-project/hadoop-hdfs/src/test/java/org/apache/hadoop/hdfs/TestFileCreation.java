@@ -43,6 +43,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -603,7 +605,8 @@ public class TestFileCreation {
    * Test that file leases are persisted across namenode restarts.
    */
   @Test
-  public void testFileCreationNamenodeRestart() throws IOException {
+  public void testFileCreationNamenodeRestart()
+      throws IOException, NoSuchFieldException, IllegalAccessException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
@@ -702,11 +705,18 @@ public class TestFileCreation {
       // new blocks for files that were renamed.
       DFSOutputStream dfstream = (DFSOutputStream)
                                                  (stm.getWrappedStream());
-      dfstream.setTestFilename(file1.toString());
+
+      Field f = DFSOutputStream.class.getDeclaredField("src");
+      Field modifiersField = Field.class.getDeclaredField("modifiers");
+      modifiersField.setAccessible(true);
+      modifiersField.setInt(f, f.getModifiers() & ~Modifier.FINAL);
+      f.setAccessible(true);
+
+      f.set(dfstream, file1.toString());
       dfstream = (DFSOutputStream) (stm3.getWrappedStream());
-      dfstream.setTestFilename(file3new.toString());
+      f.set(dfstream, file3new.toString());
       dfstream = (DFSOutputStream) (stm4.getWrappedStream());
-      dfstream.setTestFilename(file4new.toString());
+      f.set(dfstream, file4new.toString());
 
       // write 1 byte to file.  This should succeed because the 
       // namenode should have persisted leases.

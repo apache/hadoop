@@ -51,8 +51,11 @@ public class TestDFSOutputStream {
     DFSOutputStream dos = (DFSOutputStream) Whitebox.getInternalState(os,
         "wrappedStream");
     @SuppressWarnings("unchecked")
+    DataStreamer streamer = (DataStreamer) Whitebox
+        .getInternalState(dos, "streamer");
+    @SuppressWarnings("unchecked")
     AtomicReference<IOException> ex = (AtomicReference<IOException>) Whitebox
-        .getInternalState(dos, "lastException");
+        .getInternalState(streamer, "lastException");
     Assert.assertEquals(null, ex.get());
 
     dos.close();
