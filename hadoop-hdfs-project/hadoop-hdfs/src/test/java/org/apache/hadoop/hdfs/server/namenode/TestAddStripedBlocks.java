@@ -269,7 +269,7 @@ public class TestAddStripedBlocks {
       StorageBlockReport[] reports = {new StorageBlockReport(storage,
           bll)};
       cluster.getNameNodeRpc().blockReport(dn.getDNRegistrationForBP(bpId),
-          bpId, reports);
+          bpId, reports, null);
     }
 
     BlockInfoStripedUnderConstruction ucBlock =

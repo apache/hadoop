@@ -1996,10 +1996,10 @@ public class BlockManager {
              "longer exists on the DataNode.",
               Long.toHexString(context.getReportId()), zombie.getStorageID());
     assert(namesystem.hasWriteLock());
-    Iterator<BlockInfoContiguous> iter = zombie.getBlockIterator();
+    Iterator<BlockInfo> iter = zombie.getBlockIterator();
     int prevBlocks = zombie.numBlocks();
     while (iter.hasNext()) {
-      BlockInfoContiguous block = iter.next();
+      BlockInfo block = iter.next();
       // We assume that a block can be on only one storage in a DataNode.
       // That's why we pass in the DatanodeDescriptor rather than the
       // DatanodeStorageInfo.
