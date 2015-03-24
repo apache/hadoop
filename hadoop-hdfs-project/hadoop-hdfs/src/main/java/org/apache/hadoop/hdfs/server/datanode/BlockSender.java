@@ -246,6 +246,13 @@ class BlockSender implements java.io.Closeable {
       if (replica.getGenerationStamp() < block.getGenerationStamp()) {
         throw new IOException("Replica gen stamp < block genstamp, block="
             + block + ", replica=" + replica);
+      } else if (replica.getGenerationStamp() > block.getGenerationStamp()) {
+        if (DataNode.LOG.isDebugEnabled()) {
+          DataNode.LOG.debug("Bumping up the client provided"
+              + " block's genstamp to latest " + replica.getGenerationStamp()
+              + " for block " + block);
+        }
+        block.setGenerationStamp(replica.getGenerationStamp());
       }
       if (replicaVisibleLength < 0) {
         throw new IOException("Replica is not readable, block="

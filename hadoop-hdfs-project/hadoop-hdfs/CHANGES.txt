@@ -1237,6 +1237,10 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7942. NFS: support regexp grouping in nfs.exports.allowed.hosts (brandonli)
 
+    HDFS-7884. Fix NullPointerException in BlockSender when the generation stamp
+    provided by the client is larger than the one stored in the datanode.
+    (Brahma Reddy Battula via szetszwo)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
