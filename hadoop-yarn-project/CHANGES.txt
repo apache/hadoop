@@ -58,6 +58,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-1880. Cleanup TestApplicationClientProtocolOnHA
+    (ozawa via harsh)
+
     YARN-3243. CapacityScheduler should pass headroom from parent to children
     to make sure ParentQueue obey its capacity limits. (Wangda Tan via jianhe)
 
