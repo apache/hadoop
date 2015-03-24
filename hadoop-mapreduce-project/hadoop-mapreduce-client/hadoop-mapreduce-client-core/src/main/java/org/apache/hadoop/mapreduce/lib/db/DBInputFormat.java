@@ -234,7 +234,7 @@ public class DBInputFormat<T extends DBWritable>
             tableName);
       }
     } catch (SQLException ex) {
-      throw new IOException(ex.getMessage());
+      throw new IOException(ex);
     }
   }
 
