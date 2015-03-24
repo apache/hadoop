@@ -19,6 +19,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-7829. Code clean up for LocatedBlock. (Takanobu Asanuma via jing9)
 
+    HDFS-7854. Separate class DataStreamer out of DFSOutputStream. (Li Bo via
+    jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES

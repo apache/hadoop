@@ -77,7 +77,7 @@
       ResponseProccessor is thread that is designed to catch RuntimeException.
      -->
      <Match>
-       <Class name="org.apache.hadoop.hdfs.DFSOutputStream$DataStreamer$ResponseProcessor" />
+       <Class name="org.apache.hadoop.hdfs.DataStreamer$ResponseProcessor" />
        <Method name="run" />
        <Bug pattern="REC_CATCH_EXCEPTION" />
      </Match>
