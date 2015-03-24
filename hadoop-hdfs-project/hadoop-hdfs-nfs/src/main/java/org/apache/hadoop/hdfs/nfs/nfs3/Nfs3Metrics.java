@@ -90,9 +90,9 @@ public class Nfs3Metrics {
       readNanosQuantiles[i] = registry.newQuantiles("readProcessNanos"
           + interval + "s", "Read process in ns", "ops", "latency", interval);
       writeNanosQuantiles[i] = registry.newQuantiles("writeProcessNanos"
-          + interval + "s", " process in ns", "ops", "latency", interval);
+          + interval + "s", "Write process in ns", "ops", "latency", interval);
       commitNanosQuantiles[i] = registry.newQuantiles("commitProcessNanos"
-          + interval + "s", "Read process in ns", "ops", "latency", interval);
+          + interval + "s", "Commit process in ns", "ops", "latency", interval);
     }
   }
 
@@ -101,10 +101,9 @@ public class Nfs3Metrics {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     JvmMetrics jm = JvmMetrics.create(gatewayName, sessionId, ms);
 
-    // Percentile measurement is [,,,] by default 
-    int[] intervals = conf.getInts(conf.get(
-        NfsConfigKeys.NFS_METRICS_PERCENTILES_INTERVALS_KEY,
-        NfsConfigKeys.NFS_METRICS_PERCENTILES_INTERVALS_DEFAULT));
+    // Percentile measurement is [50th,75th,90th,95th,99th] currently 
+    int[] intervals = conf
+        .getInts(NfsConfigKeys.NFS_METRICS_PERCENTILES_INTERVALS_KEY);
     return ms.register(new Nfs3Metrics(gatewayName, sessionId, intervals, jm));
   }
   
