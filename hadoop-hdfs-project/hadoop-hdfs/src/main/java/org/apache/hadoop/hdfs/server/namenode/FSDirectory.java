@@ -167,6 +167,12 @@ public class FSDirectory implements Closeable {
 
   private final FSEditLog editLog;
 
+  private INodeAttributeProvider attributeProvider;
+
+  public void setINodeAttributeProvider(INodeAttributeProvider provider) {
+    attributeProvider = provider;
+  }
+
   // utility methods to acquire and release read lock and write lock
   void readLock() {
     this.dirLock.readLock().lock();
@@ -1623,11 +1629,21 @@ public class FSDirectory implements Closeable {
   FSPermissionChecker getPermissionChecker()
     throws AccessControlException {
     try {
-      return new FSPermissionChecker(fsOwnerShortUserName, supergroup,
+      return getPermissionChecker(fsOwnerShortUserName, supergroup,
           NameNode.getRemoteUser());
-    } catch (IOException ioe) {
-      throw new AccessControlException(ioe);
+    } catch (IOException e) {
+      throw new AccessControlException(e);
     }
+  }
+
+  @VisibleForTesting
+  FSPermissionChecker getPermissionChecker(String fsOwner, String superGroup,
+      UserGroupInformation ugi) throws AccessControlException {
+    return new FSPermissionChecker(
+        fsOwner, superGroup, ugi,
+        attributeProvider == null ?
+            DefaultINodeAttributesProvider.DEFAULT_PROVIDER
+            : attributeProvider);
   }
 
   void checkOwner(FSPermissionChecker pc, INodesInPath iip)
@@ -1690,7 +1706,8 @@ public class FSDirectory implements Closeable {
   HdfsFileStatus getAuditFileInfo(INodesInPath iip)
       throws IOException {
     return (namesystem.isAuditEnabled() && namesystem.isExternalInvocation())
-        ? FSDirStatAndListingOp.getFileInfo(this, iip, false, false) : null;
+        ? FSDirStatAndListingOp.getFileInfo(this, iip.getPath(), iip, false,
+            false) : null;
   }
 
   /**
@@ -1736,4 +1753,20 @@ public class FSDirectory implements Closeable {
   void resetLastInodeIdWithoutChecking(long newValue) {
     inodeId.setCurrentValue(newValue);
   }
+
+  INodeAttributes getAttributes(String fullPath, byte[] path,
+      INode node, int snapshot) {
+    INodeAttributes nodeAttrs = node;
+    if (attributeProvider != null) {
+      nodeAttrs = node.getSnapshotINode(snapshot);
+      fullPath = fullPath + (fullPath.endsWith(Path.SEPARATOR) ? ""
+                                                               : Path.SEPARATOR)
+          + DFSUtil.bytes2String(path);
+      nodeAttrs = attributeProvider.getAttributes(fullPath, nodeAttrs);
+    } else {
+      nodeAttrs = node.getSnapshotINode(snapshot);
+    }
+    return nodeAttrs;
+  }
+
 }

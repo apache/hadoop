@@ -181,7 +181,7 @@ class FSDirStatAndListingOp {
 
       if (!targetNode.isDirectory()) {
         return new DirectoryListing(
-            new HdfsFileStatus[]{createFileStatus(fsd,
+            new HdfsFileStatus[]{createFileStatus(fsd, src,
                 HdfsFileStatus.EMPTY_NAME, targetNode, needLocation,
                 parentStoragePolicy, snapshot, isRawPath, iip)}, 0);
       }
@@ -200,7 +200,7 @@ class FSDirStatAndListingOp {
         byte curPolicy = isSuperUser && !cur.isSymlink()?
             cur.getLocalStoragePolicyID():
             BlockStoragePolicySuite.ID_UNSPECIFIED;
-        listing[i] = createFileStatus(fsd, cur.getLocalNameBytes(), cur,
+        listing[i] = createFileStatus(fsd, src, cur.getLocalNameBytes(), cur,
             needLocation, getStoragePolicyID(curPolicy,
                 parentStoragePolicy), snapshot, isRawPath, iip);
         listingCnt++;
@@ -253,7 +253,7 @@ class FSDirStatAndListingOp {
     final HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
     for (int i = 0; i < numOfListing; i++) {
       Snapshot.Root sRoot = snapshots.get(i + skipSize).getRoot();
-      listing[i] = createFileStatus(fsd, sRoot.getLocalNameBytes(), sRoot,
+      listing[i] = createFileStatus(fsd, src, sRoot.getLocalNameBytes(), sRoot,
           BlockStoragePolicySuite.ID_UNSPECIFIED, Snapshot.CURRENT_STATE_ID,
           false, INodesInPath.fromINode(sRoot));
     }
@@ -270,7 +270,7 @@ class FSDirStatAndListingOp {
    *         or null if file not found
    */
   static HdfsFileStatus getFileInfo(
-      FSDirectory fsd, INodesInPath src, boolean isRawPath,
+      FSDirectory fsd, String path, INodesInPath src, boolean isRawPath,
       boolean includeStoragePolicy)
       throws IOException {
     fsd.readLock();
@@ -279,7 +279,7 @@ class FSDirStatAndListingOp {
       byte policyId = includeStoragePolicy && i != null && !i.isSymlink() ?
           i.getStoragePolicyID() : BlockStoragePolicySuite.ID_UNSPECIFIED;
       return i == null ? null : createFileStatus(
-          fsd, HdfsFileStatus.EMPTY_NAME, i, policyId,
+          fsd, path, HdfsFileStatus.EMPTY_NAME, i, policyId,
           src.getPathSnapshotId(), isRawPath, src);
     } finally {
       fsd.readUnlock();
@@ -303,7 +303,7 @@ class FSDirStatAndListingOp {
     fsd.readLock();
     try {
       final INodesInPath iip = fsd.getINodesInPath(srcs, resolveLink);
-      return getFileInfo(fsd, iip, isRawPath, includeStoragePolicy);
+      return getFileInfo(fsd, src, iip, isRawPath, includeStoragePolicy);
     } finally {
       fsd.readUnlock();
     }
@@ -340,14 +340,15 @@ class FSDirStatAndListingOp {
    * @throws java.io.IOException if any error occurs
    */
   static HdfsFileStatus createFileStatus(
-      FSDirectory fsd, byte[] path, INode node, boolean needLocation,
-      byte storagePolicy, int snapshot, boolean isRawPath, INodesInPath iip)
+      FSDirectory fsd, String fullPath, byte[] path, INode node,
+      boolean needLocation, byte storagePolicy, int snapshot, boolean isRawPath,
+      INodesInPath iip)
       throws IOException {
     if (needLocation) {
-      return createLocatedFileStatus(fsd, path, node, storagePolicy,
+      return createLocatedFileStatus(fsd, fullPath, path, node, storagePolicy,
           snapshot, isRawPath, iip);
     } else {
-      return createFileStatus(fsd, path, node, storagePolicy, snapshot,
+      return createFileStatus(fsd, fullPath, path, node, storagePolicy, snapshot,
           isRawPath, iip);
     }
   }
@@ -356,8 +357,9 @@ class FSDirStatAndListingOp {
    * Create FileStatus by file INode
    */
   static HdfsFileStatus createFileStatus(
-      FSDirectory fsd, byte[] path, INode node, byte storagePolicy,
-      int snapshot, boolean isRawPath, INodesInPath iip) throws IOException {
+      FSDirectory fsd, String fullPath, byte[] path, INode node,
+      byte storagePolicy, int snapshot, boolean isRawPath,
+      INodesInPath iip) throws IOException {
      long size = 0;     // length is zero for directories
      short replication = 0;
      long blocksize = 0;
@@ -380,6 +382,8 @@ class FSDirStatAndListingOp {
      int childrenNum = node.isDirectory() ?
          node.asDirectory().getChildrenNum(snapshot) : 0;
 
+     INodeAttributes nodeAttrs =
+         fsd.getAttributes(fullPath, path, node, snapshot);
      return new HdfsFileStatus(
         size,
         node.isDirectory(),
@@ -387,9 +391,9 @@ class FSDirStatAndListingOp {
         blocksize,
         node.getModificationTime(snapshot),
         node.getAccessTime(snapshot),
-        getPermissionForFileStatus(node, snapshot, isEncrypted),
-        node.getUserName(snapshot),
-        node.getGroupName(snapshot),
+        getPermissionForFileStatus(nodeAttrs, isEncrypted),
+        nodeAttrs.getUserName(),
+        nodeAttrs.getGroupName(),
         node.isSymlink() ? node.asSymlink().getSymlink() : null,
         path,
         node.getId(),
@@ -402,8 +406,9 @@ class FSDirStatAndListingOp {
    * Create FileStatus with location info by file INode
    */
   private static HdfsLocatedFileStatus createLocatedFileStatus(
-      FSDirectory fsd, byte[] path, INode node, byte storagePolicy,
-      int snapshot, boolean isRawPath, INodesInPath iip) throws IOException {
+      FSDirectory fsd, String fullPath, byte[] path, INode node,
+      byte storagePolicy, int snapshot, boolean isRawPath,
+      INodesInPath iip) throws IOException {
     assert fsd.hasReadLock();
     long size = 0; // length is zero for directories
     short replication = 0;
@@ -437,12 +442,14 @@ class FSDirStatAndListingOp {
     int childrenNum = node.isDirectory() ?
         node.asDirectory().getChildrenNum(snapshot) : 0;
 
+    INodeAttributes nodeAttrs =
+        fsd.getAttributes(fullPath, path, node, snapshot);
     HdfsLocatedFileStatus status =
         new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
           blocksize, node.getModificationTime(snapshot),
           node.getAccessTime(snapshot),
-          getPermissionForFileStatus(node, snapshot, isEncrypted),
-          node.getUserName(snapshot), node.getGroupName(snapshot),
+          getPermissionForFileStatus(nodeAttrs, isEncrypted),
+          nodeAttrs.getUserName(), nodeAttrs.getGroupName(),
           node.isSymlink() ? node.asSymlink().getSymlink() : null, path,
           node.getId(), loc, childrenNum, feInfo, storagePolicy);
     // Set caching information for the located blocks.
@@ -467,9 +474,9 @@ class FSDirStatAndListingOp {
    * and encrypted bit on if it represents an encrypted file/dir.
    */
   private static FsPermission getPermissionForFileStatus(
-      INode node, int snapshot, boolean isEncrypted) {
-    FsPermission perm = node.getFsPermission(snapshot);
-    boolean hasAcl = node.getAclFeature(snapshot) != null;
+      INodeAttributes node, boolean isEncrypted) {
+    FsPermission perm = node.getFsPermission();
+    boolean hasAcl = node.getAclFeature() != null;
     if (hasAcl || isEncrypted) {
       perm = new FsPermissionExtension(perm, hasAcl, isEncrypted);
     }
