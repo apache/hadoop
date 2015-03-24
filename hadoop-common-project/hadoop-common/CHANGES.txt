@@ -415,8 +415,6 @@ Trunk (Unreleased)
     HADOOP-10774. Update KerberosTestUtils for hadoop-auth tests when using
     IBM Java (sangamesh via aw)
 
-    HADOOP-11602. Fix toUpperCase/toLowerCase to use Locale.ENGLISH. (ozawa)
-
     HADOOP-11653. shellprofiles should require .sh extension
     (Brahma Reddy Battula via aw)
 
@@ -1104,6 +1102,8 @@ Release 2.7.0 - UNRELEASED
     should be non static. (Sean Busbey via yliu)
 
     HADOOP-11670. Regression: s3a auth setup broken. (Adam Budde via stevel)
+
+    HADOOP-11602. Fix toUpperCase/toLowerCase to use Locale.ENGLISH. (ozawa)
 
     HADOOP-11686. MiniKDC cannot change ORG_NAME or ORG_DOMAIN.
     (Duo Zhang via wheat9)
