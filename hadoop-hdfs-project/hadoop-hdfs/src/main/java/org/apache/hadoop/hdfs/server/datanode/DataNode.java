@@ -634,6 +634,10 @@ public class DataNode extends ReconfigurableBase
       conf.set(DFS_DATANODE_DATA_DIR_KEY,
           Joiner.on(",").join(effectiveVolumes));
       dataDirs = getStorageLocations(conf);
+
+      // Send a full block report to let NN acknowledge the volume changes.
+      triggerBlockReport(new BlockReportOptions.Factory()
+          .setIncremental(false).build());
     }
   }
 
