@@ -777,6 +777,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7917. Use file to replace data dirs in test to simulate a disk failure.
     (Lei (Eddy) Xu via cnauroth)
 
+    HDFS-7956. Improve logging for DatanodeRegistration.
+    (Plamen Jeliazkov via shv)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
