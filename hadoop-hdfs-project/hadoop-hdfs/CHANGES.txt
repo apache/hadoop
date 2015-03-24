@@ -784,6 +784,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7956. Improve logging for DatanodeRegistration.
     (Plamen Jeliazkov via shv)
 
+    HDFS-7976. Update NFS user guide for mount option "sync" to minimize or
+    avoid reordered writes. (brandonli)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

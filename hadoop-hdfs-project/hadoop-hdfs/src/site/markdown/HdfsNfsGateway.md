@@ -126,7 +126,8 @@ It's strongly recommended for the users to update a few configuration properties
         </property>
 
 *   Users are expected to update the file dump directory. NFS client often
-    reorders writes. Sequential writes can arrive at the NFS gateway at random
+    reorders writes, especially when the export is not mounted with "sync" option.
+    Sequential writes can arrive at the NFS gateway at random
     order. This directory is used to temporarily save out-of-order writes
     before writing to HDFS. For each file, the out-of-order writes are dumped after
     they are accumulated to exceed certain threshold (e.g., 1MB) in memory.
@@ -254,13 +255,16 @@ Verify validity of NFS related services
 Mount the export "/"
 --------------------
 
-Currently NFS v3 only uses TCP as the transportation protocol. NLM is not supported so mount option "nolock" is needed. It's recommended to use hard mount. This is because, even after the client sends all data to NFS gateway, it may take NFS gateway some extra time to transfer data to HDFS when writes were reorderd by NFS client Kernel.
+Currently NFS v3 only uses TCP as the transportation protocol. NLM is not supported so mount option "nolock" is needed. 
+Mount option "sync" is strongly recommended since it can minimize or avoid reordered writes, which results in more predictable throughput.
+ Not specifying the sync option may cause unreliable behavior when uploading large files.
+ It's recommended to use hard mount. This is because, even after the client sends all data to NFS gateway, it may take NFS gateway some extra time to transfer data to HDFS when writes were reorderd by NFS client Kernel.
 
 If soft mount has to be used, the user should give it a relatively long timeout (at least no less than the default timeout on the host) .
 
 The users can mount the HDFS namespace as shown below:
 
-     [root]>mount -t nfs -o vers=3,proto=tcp,nolock,noacl $server:/  $mount_point
+     [root]>mount -t nfs -o vers=3,proto=tcp,nolock,noacl,sync $server:/  $mount_point
 
 Then the users can access HDFS as part of the local file system except that, hard link and random write are not supported yet. To optimize the performance of large file I/O, one can increase the NFS transfer size(rsize and wsize) during mount. By default, NFS gateway supports 1MB as the maximum transfer size. For larger data transfer size, one needs to update "nfs.rtmax" and "nfs.rtmax" in hdfs-site.xml.
 
