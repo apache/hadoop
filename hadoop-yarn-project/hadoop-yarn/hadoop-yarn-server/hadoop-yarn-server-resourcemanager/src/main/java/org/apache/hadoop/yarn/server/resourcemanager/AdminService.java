@@ -699,7 +699,7 @@ public class AdminService extends CompositeService implements
 
   private YarnException logAndWrapException(Exception exception, String user,
       String argName, String msg) throws YarnException {
-    LOG.info("Exception " + msg, exception);
+    LOG.warn("Exception " + msg, exception);
     RMAuditLogger.logFailure(user, argName, "", 
         "AdminService", "Exception " + msg);
     return RPCUtil.getRemoteException(exception);
