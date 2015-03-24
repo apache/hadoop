@@ -100,7 +100,7 @@ public class DatanodeRegistration extends DatanodeID
   @Override
   public String toString() {
     return getClass().getSimpleName()
-      + "(" + getIpAddr()
+      + "(" + super.toString()
       + ", datanodeUuid=" + getDatanodeUuid()
       + ", infoPort=" + getInfoPort()
       + ", infoSecurePort=" + getInfoSecurePort()
