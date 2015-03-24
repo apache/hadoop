@@ -5417,7 +5417,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         msg += String.format(
           "The reported blocks %d needs additional %d"
           + " blocks to reach the threshold %.4f of total blocks %d.%n",
-          blockSafe, (blockThreshold - blockSafe) + 1, threshold, blockTotal);
+                blockSafe, (blockThreshold - blockSafe), threshold, blockTotal);
         thresholdsMet = false;
       } else {
         msg += String.format("The reported blocks %d has reached the threshold"
