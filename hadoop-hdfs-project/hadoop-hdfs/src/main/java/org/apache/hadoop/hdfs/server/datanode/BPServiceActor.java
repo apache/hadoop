@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -449,6 +450,17 @@ class BPServiceActor implements Runnable {
     return sendImmediateIBR;
   }
 
+  private long prevBlockReportId = 0;
+
+  private long generateUniqueBlockReportId() {
+    long id = System.nanoTime();
+    if (id <= prevBlockReportId) {
+      id = prevBlockReportId + 1;
+    }
+    prevBlockReportId = id;
+    return id;
+  }
+
   /**
    * Report the list blocks to the Namenode
    * @return DatanodeCommands returned by the NN. May be null.
@@ -492,11 +504,13 @@ class BPServiceActor implements Runnable {
     int numRPCs = 0;
     boolean success = false;
     long brSendStartTime = now();
+    long reportId = generateUniqueBlockReportId();
     try {
       if (totalBlockCount < dnConf.blockReportSplitThreshold) {
         // Below split threshold, send all reports in a single message.
         DatanodeCommand cmd = bpNamenode.blockReport(
-            bpRegistration, bpos.getBlockPoolId(), reports);
+            bpRegistration, bpos.getBlockPoolId(), reports,
+              new BlockReportContext(1, 0, reportId));
         numRPCs = 1;
         numReportsSent = reports.length;
         if (cmd != null) {
@@ -504,10 +518,11 @@ class BPServiceActor implements Runnable {
         }
       } else {
         // Send one block report per message.
-        for (StorageBlockReport report : reports) {
-          StorageBlockReport singleReport[] = { report };
+        for (int r = 0; r < reports.length; r++) {
+          StorageBlockReport singleReport[] = { reports[r] };
           DatanodeCommand cmd = bpNamenode.blockReport(
-              bpRegistration, bpos.getBlockPoolId(), singleReport);
+              bpRegistration, bpos.getBlockPoolId(), singleReport,
+              new BlockReportContext(reports.length, r, reportId));
           numReportsSent++;
           numRPCs++;
           if (cmd != null) {
@@ -523,11 +538,12 @@ class BPServiceActor implements Runnable {
       dn.getMetrics().addBlockReport(brSendCost);
       final int nCmds = cmds.size();
       LOG.info((success ? "S" : "Uns") +
-          "uccessfully sent " + numReportsSent +
-          " of " + reports.length +
-          " blockreports for " + totalBlockCount +
-          " total blocks using " + numRPCs +
-          " RPCs. This took " + brCreateCost +
+          "uccessfully sent block report 0x" +
+          Long.toHexString(reportId) + ",  containing " + reports.length +
+          " storage report(s), of which we sent " + numReportsSent + "." +
+          " The reports had " + totalBlockCount +
+          " total blocks and used " + numRPCs +
+          " RPC(s). This took " + brCreateCost +
           " msec to generate and " + brSendCost +
           " msecs for RPC and NN processing." +
           " Got back " +

@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -132,7 +133,8 @@ public class TestDeadDatanode {
         new DatanodeStorage(reg.getDatanodeUuid()),
         new long[] { 0L, 0L, 0L }) };
     try {
-      dnp.blockReport(reg, poolId, report);
+      dnp.blockReport(reg, poolId, report,
+          new BlockReportContext(1, 0, System.nanoTime()));
       fail("Expected IOException is not thrown");
     } catch (IOException ex) {
       // Expected

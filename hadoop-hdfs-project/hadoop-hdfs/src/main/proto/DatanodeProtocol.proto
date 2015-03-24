@@ -212,11 +212,25 @@ message HeartbeatResponseProto {
  *                second long represents length
  *                third long represents gen stamp
  *                fourth long (if under construction) represents replica state
+ * context      - An optional field containing information about the context
+ *                of this block report.
  */
 message BlockReportRequestProto {
   required DatanodeRegistrationProto registration = 1;
   required string blockPoolId = 2;
   repeated StorageBlockReportProto reports = 3;
+  optional BlockReportContextProto context = 4;
+}
+
+message BlockReportContextProto  {
+  // The total number of RPCs this block report is broken into.
+  required int32 totalRpcs = 1;
+
+  // The index of the current RPC (zero-based)
+  required int32 curRpc = 2;
+
+  // The unique 64-bit ID of this block report
+  required int64 id = 3;
 }
 
 /**

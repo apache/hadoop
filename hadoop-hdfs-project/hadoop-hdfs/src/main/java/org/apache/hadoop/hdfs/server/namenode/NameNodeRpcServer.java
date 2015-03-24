@@ -118,6 +118,7 @@ import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -1142,7 +1143,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // DatanodeProtocol
   public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
-      String poolId, StorageBlockReport[] reports) throws IOException {
+        String poolId, StorageBlockReport[] reports,
+        BlockReportContext context) throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     if(blockStateChangeLog.isDebugEnabled()) {
@@ -1151,14 +1153,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
     final BlockManager bm = namesystem.getBlockManager(); 
     boolean noStaleStorages = false;
-    for(StorageBlockReport r : reports) {
-      final BlockListAsLongs blocks = new BlockListAsLongs(r.getBlocks());
+    for (int r = 0; r < reports.length; r++) {
+      final BlockListAsLongs blocks =
+          new BlockListAsLongs(reports[r].getBlocks());
       //
       // BlockManager.processReport accumulates information of prior calls
       // for the same node and storage, so the value returned by the last
       // call of this loop is the final updated value for noStaleStorage.
       //
-      noStaleStorages = bm.processReport(nodeReg, r.getStorage(), blocks);
+      noStaleStorages = bm.processReport(nodeReg, reports[r].getStorage(),
+          blocks, context, (r == reports.length - 1));
       metrics.incrStorageBlockReportOps();
     }
 

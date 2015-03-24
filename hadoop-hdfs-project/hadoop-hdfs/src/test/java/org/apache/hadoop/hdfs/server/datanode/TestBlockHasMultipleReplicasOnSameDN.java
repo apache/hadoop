@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
@@ -121,7 +122,8 @@ public class TestBlockHasMultipleReplicasOnSameDN {
     }
 
     // Should not assert!
-    cluster.getNameNodeRpc().blockReport(dnReg, bpid, reports);
+    cluster.getNameNodeRpc().blockReport(dnReg, bpid, reports,
+        new BlockReportContext(1, 0, System.nanoTime()));
 
     // Get the block locations once again.
     locatedBlocks = client.getLocatedBlocks(filename, 0, BLOCK_SIZE * NUM_BLOCKS);
