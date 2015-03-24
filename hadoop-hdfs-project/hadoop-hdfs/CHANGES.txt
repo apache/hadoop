@@ -102,6 +102,10 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-7930. commitBlockSynchronization() does not remove locations. (yliu)
 
+    HDFS-7884. Fix NullPointerException in BlockSender when the generation stamp
+    provided by the client is larger than the one stored in the datanode.
+    (Brahma Reddy Battula via szetszwo)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
