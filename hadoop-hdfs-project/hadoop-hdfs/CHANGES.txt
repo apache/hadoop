@@ -22,6 +22,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-7854. Separate class DataStreamer out of DFSOutputStream. (Li Bo via
     jing9)
 
+    HDFS-7713. Implement mkdirs in the HDFS Web UI. (Ravi Prakash via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
