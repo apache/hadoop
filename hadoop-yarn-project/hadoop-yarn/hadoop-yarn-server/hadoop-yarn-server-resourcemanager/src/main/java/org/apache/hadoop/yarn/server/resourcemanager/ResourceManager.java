@@ -18,7 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.curator.framework.AuthInfo;
@@ -95,6 +104,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollector;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilter;
@@ -119,6 +129,7 @@ import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -449,6 +460,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new RMApplicationHistoryWriter();
   }
 
+  private RMTimelineCollector createRMTimelineCollector() {
+    return new RMTimelineCollector();
+  }
+
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
     return new SystemMetricsPublisher(); 
   }
@@ -564,6 +579,20 @@ public class ResourceManager extends CompositeService implements Recoverable {
         delegationTokenRenewer = createDelegationTokenRenewer();
         rmContext.setDelegationTokenRenewer(delegationTokenRenewer);
       }
+
+      RMApplicationHistoryWriter rmApplicationHistoryWriter =
+          createRMApplicationHistoryWriter();
+      addService(rmApplicationHistoryWriter);
+      rmContext.setRMApplicationHistoryWriter(rmApplicationHistoryWriter);
+
+      SystemMetricsPublisher systemMetricsPublisher = createSystemMetricsPublisher();
+      addService(systemMetricsPublisher);
+      rmContext.setSystemMetricsPublisher(systemMetricsPublisher);
+
+      RMTimelineCollector timelineCollector =
+          createRMTimelineCollector();
+      addService(timelineCollector);
+      rmContext.setRMTimelineCollector(timelineCollector);
 
       // Register event handler for NodesListManager
       nodesListManager = new NodesListManager(rmContext);
