@@ -276,8 +276,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     this.validVolsRequired = volsConfigured - volFailuresTolerated;
 
     if (volFailuresTolerated < 0 || volFailuresTolerated >= volsConfigured) {
-      throw new DiskErrorException("Invalid volume failure "
-          + " config value: " + volFailuresTolerated);
+      throw new DiskErrorException("Invalid value configured for "
+          + "dfs.datanode.failed.volumes.tolerated - " + volFailuresTolerated
+          + ". Value configured is either less than 0 or >= "
+          + "to the number of configured volumes (" + volsConfigured + ").");
     }
     if (volsFailed > volFailuresTolerated) {
       throw new DiskErrorException("Too many failed volumes - "
