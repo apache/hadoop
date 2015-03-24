@@ -496,6 +496,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6275. Race condition in FileOutputCommitter v2 for
     user-specified task output subdirs (Gera Shegalov and Siqi Li via jlowe)
 
+    MAPREDUCE-6285. ClientServiceDelegate should not retry upon
+    AuthenticationException. (Jonathan Eagles via ozawa)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

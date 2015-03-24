@@ -64,6 +64,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -328,6 +329,11 @@ public class ClientServiceDelegate {
         // Force reconnection by setting the proxy to null.
         realProxy = null;
         // HS/AMS shut down
+
+        if (e.getCause() instanceof AuthorizationException) {
+          throw new IOException(e.getTargetException());
+        }
+
         // if it's AM shut down, do not decrement maxClientRetry as we wait for
         // AM to be restarted.
         if (!usingAMProxy.get()) {
