@@ -100,14 +100,14 @@ extends OutputFormat<K,V> {
         catch (SQLException ex) {
           LOG.warn(StringUtils.stringifyException(ex));
         }
-        throw new IOException(e.getMessage());
+        throw new IOException(e);
       } finally {
         try {
           statement.close();
           connection.close();
         }
         catch (SQLException ex) {
-          throw new IOException(ex.getMessage());
+          throw new IOException(ex);
         }
       }
     }
@@ -182,7 +182,7 @@ extends OutputFormat<K,V> {
                     constructQuery(tableName, fieldNames));
       return new DBRecordWriter(connection, statement);
     } catch (Exception ex) {
-      throw new IOException(ex.getMessage());
+      throw new IOException(ex);
     }
   }
 
