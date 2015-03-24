@@ -22,8 +22,8 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollector;
 import org.apache.hadoop.yarn.util.Clock;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -369,6 +370,17 @@ public class RMContextImpl implements RMContext {
     return this.rmApplicationHistoryWriter;
   }
 
+  @Override
+  public void setRMTimelineCollector(
+      RMTimelineCollector timelineCollector) {
+    activeServiceContext.setRMTimelineCollector(timelineCollector);
+  }
+
+  @Override
+  public RMTimelineCollector getRMTimelineCollector() {
+    return activeServiceContext.getRMTimelineCollector();
+  }
+  
   @Override
   public void setSystemMetricsPublisher(
       SystemMetricsPublisher systemMetricsPublisher) {

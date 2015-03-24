@@ -58,7 +58,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * The class that helps RM publish metrics to the timeline server. RM will
+ * The class that helps RM publish metrics to the timeline server V1. RM will
  * always invoke the methods of this class regardless the service is enabled or
  * not. If it is disabled, publishing requests will be ignored silently.
  */
@@ -71,7 +71,7 @@ public class SystemMetricsPublisher extends CompositeService {
 
   private Dispatcher dispatcher;
   private TimelineClient client;
-  private boolean publishSystemMetrics;
+  private boolean publishSystemMetricsToATSv1;
 
   public SystemMetricsPublisher() {
     super(SystemMetricsPublisher.class.getName());
@@ -79,13 +79,14 @@ public class SystemMetricsPublisher extends CompositeService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    publishSystemMetrics =
+    publishSystemMetricsToATSv1 =
         conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
-            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED) &&
-        conf.getBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
-            YarnConfiguration.DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_ENABLED);
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)
+            && conf.getBoolean(
+                YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED,
+                YarnConfiguration.DEFAULT_SYSTEM_METRICS_PUBLISHER_ENABLED);
 
-    if (publishSystemMetrics) {
+    if (publishSystemMetricsToATSv1) {
       client = TimelineClient.createTimelineClient();
       addIfService(client);
 
@@ -102,7 +103,7 @@ public class SystemMetricsPublisher extends CompositeService {
 
   @SuppressWarnings("unchecked")
   public void appCreated(RMApp app, long createdTime) {
-    if (publishSystemMetrics) {
+    if (publishSystemMetricsToATSv1) {
       ApplicationSubmissionContext appSubmissionContext =
           app.getApplicationSubmissionContext();
       dispatcher.getEventHandler().handle(
@@ -124,7 +125,7 @@ public class SystemMetricsPublisher extends CompositeService {
 
   @SuppressWarnings("unchecked")
   public void appUpdated(RMApp app, long updatedTime) {
-    if (publishSystemMetrics) {
+    if (publishSystemMetricsToATSv1) {
       dispatcher.getEventHandler()
           .handle(new ApplicationUpdatedEvent(app.getApplicationId(),
               app.getQueue(), updatedTime,
@@ -134,7 +135,7 @@ public class SystemMetricsPublisher extends CompositeService {
 
   @SuppressWarnings("unchecked")
   public void appFinished(RMApp app, RMAppState state, long finishedTime) {
-    if (publishSystemMetrics) {
+    if (publishSystemMetricsToATSv1) {
       dispatcher.getEventHandler().handle(
           new ApplicationFinishedEvent(
               app.getApplicationId(),
@@ -151,7 +152,7 @@ public class SystemMetricsPublisher extends CompositeService {
   @SuppressWarnings("unchecked")
   public void appACLsUpdated(RMApp app, String appViewACLs,
       long updatedTime) {
-    if (publishSystemMetrics) {
+    if (publishSystemMetricsToATSv1) {
       dispatcher.getEventHandler().handle(
           new ApplicationACLsUpdatedEvent(
               app.getApplicationId(),
@@ -175,7 +176,7 @@ public class SystemMetricsPublisher extends CompositeService {
   @SuppressWarnings("unchecked")
   public void appAttemptRegistered(RMAppAttempt appAttempt,
       long registeredTime) {
-    if (publishSystemMetrics) {
+    if (publishSystemMetricsToATSv1) {
       ContainerId container = (appAttempt.getMasterContainer() == null) ? null
           : appAttempt.getMasterContainer().getId();
       dispatcher.getEventHandler().handle(
@@ -193,7 +194,7 @@ public class SystemMetricsPublisher extends CompositeService {
   @SuppressWarnings("unchecked")
   public void appAttemptFinished(RMAppAttempt appAttempt,
       RMAppAttemptState appAttemtpState, RMApp app, long finishedTime) {
-    if (publishSystemMetrics) {
+    if (publishSystemMetricsToATSv1) {
       ContainerId container = (appAttempt.getMasterContainer() == null) ? null
           : appAttempt.getMasterContainer().getId();
       dispatcher.getEventHandler().handle(
@@ -213,7 +214,7 @@ public class SystemMetricsPublisher extends CompositeService {
 
   @SuppressWarnings("unchecked")
   public void containerCreated(RMContainer container, long createdTime) {
-    if (publishSystemMetrics) {
+    if (publishSystemMetricsToATSv1) {
       dispatcher.getEventHandler().handle(
           new ContainerCreatedEvent(
               container.getContainerId(),
@@ -226,7 +227,7 @@ public class SystemMetricsPublisher extends CompositeService {
 
   @SuppressWarnings("unchecked")
   public void containerFinished(RMContainer container, long finishedTime) {
-    if (publishSystemMetrics) {
+    if (publishSystemMetricsToATSv1) {
       dispatcher.getEventHandler().handle(
           new ContainerFinishedEvent(
               container.getContainerId(),
