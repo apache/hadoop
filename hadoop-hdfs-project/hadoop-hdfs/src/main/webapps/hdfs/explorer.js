@@ -193,5 +193,27 @@
     }
   }
 
+  $('#btn-create-directory').on('show.bs.modal', function(event) {
+    var modal = $(this)
+    $('#new_directory_pwd').html(current_directory);
+  });
+
+  $('#btn-create-directory-send').click(function () {
+    $(this).prop('disabled', true);
+    $(this).button('complete');
+
+    var url = '/webhdfs/v1' + encode_path(append_path(current_directory,
+      $('#new_directory').val())) + '?op=MKDIRS';
+
+    $.ajax(url, { type: 'PUT' }
+    ).done(function(data) {
+      browse_directory(current_directory);
+    }).error(network_error_handler(url)
+     ).complete(function() {
+       $('#btn-create-directory').modal('hide');
+       $('#btn-create-directory-send').button('reset');
+    });
+  })
+
   init();
 })();
