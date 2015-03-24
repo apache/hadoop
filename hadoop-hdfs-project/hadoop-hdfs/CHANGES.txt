@@ -8,6 +8,10 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-7875. Improve log message when wrong value configured for
+    dfs.datanode.failed.volumes.tolerated.
+    (nijel via harsh)
+
     HDFS-2360. Ugly stacktrace when quota exceeds. (harsh)
 
     HDFS-7835. make initial sleeptime in locateFollowingBlock configurable for
