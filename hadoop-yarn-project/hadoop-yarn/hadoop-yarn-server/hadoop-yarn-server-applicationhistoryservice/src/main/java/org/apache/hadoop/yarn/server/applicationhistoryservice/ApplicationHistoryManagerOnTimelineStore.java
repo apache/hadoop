@@ -517,15 +517,14 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       if (app.appReport.getCurrentApplicationAttemptId() != null) {
         ApplicationAttemptReport appAttempt =
             getApplicationAttempt(app.appReport.getCurrentApplicationAttemptId());
-        if (appAttempt != null) {
-          app.appReport.setHost(appAttempt.getHost());
-          app.appReport.setRpcPort(appAttempt.getRpcPort());
-          app.appReport.setTrackingUrl(appAttempt.getTrackingUrl());
-          app.appReport.setOriginalTrackingUrl(appAttempt.getOriginalTrackingUrl());
-        }
+        app.appReport.setHost(appAttempt.getHost());
+        app.appReport.setRpcPort(appAttempt.getRpcPort());
+        app.appReport.setTrackingUrl(appAttempt.getTrackingUrl());
+        app.appReport.setOriginalTrackingUrl(appAttempt.getOriginalTrackingUrl());
       }
-    } catch (AuthorizationException e) {
+    } catch (AuthorizationException | ApplicationAttemptNotFoundException e) {
       // AuthorizationException is thrown because the user doesn't have access
+      // It's possible that the app is finished before the first attempt is created.
       app.appReport.setDiagnostics(null);
       app.appReport.setCurrentApplicationAttemptId(null);
     }
