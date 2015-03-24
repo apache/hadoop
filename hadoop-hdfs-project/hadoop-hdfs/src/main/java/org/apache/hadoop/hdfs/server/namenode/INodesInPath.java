@@ -376,6 +376,12 @@ public class INodesInPath {
     return Collections.unmodifiableList(Arrays.asList(inodes));
   }
 
+  public INode[] getINodesArray() {
+    INode[] retArr = new INode[inodes.length];
+    System.arraycopy(inodes, 0, retArr, 0, inodes.length);
+    return retArr;
+  }
+
   /**
    * @param length number of ancestral INodes in the returned INodesInPath
    *               instance

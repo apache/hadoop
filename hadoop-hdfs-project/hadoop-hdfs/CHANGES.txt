@@ -390,6 +390,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7838. Expose truncate API for libhdfs. (yliu)
 
+    HDFS-6826. Plugin interface to enable delegation of HDFS authorization 
+    assertions. (Arun Suresh via jitendra)
+
   IMPROVEMENTS
 
     HDFS-7752. Improve description for

@@ -60,6 +60,11 @@ public interface INodeFileAttributes extends INodeAttributes {
     }
 
     @Override
+    public boolean isDirectory() {
+      return false;
+    }
+
+    @Override
     public short getFileReplication() {
       return HeaderFormat.getReplication(header);
     }
