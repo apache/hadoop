@@ -485,11 +485,19 @@ public class YarnConfiguration extends Configuration {
 
   /**
    *  The setting that controls whether yarn system metrics is published on the
-   *  timeline server or not by RM.
+   *  timeline server or not by RM. This configuration setting is for ATS V1
    */
-  public static final String RM_SYSTEM_METRICS_PUBLISHER_ENABLED =
-      RM_PREFIX + "system-metrics-publisher.enabled";
+  public static final String RM_SYSTEM_METRICS_PUBLISHER_ENABLED = RM_PREFIX
+      + "system-metrics-publisher.enabled";
   public static final boolean DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_ENABLED = false;
+
+  /**
+   *  The setting that controls whether yarn system metrics is published on the
+   *  timeline server or not by RM and NM. This configuration setting is for ATS V2
+   */
+  public static final String SYSTEM_METRICS_PUBLISHER_ENABLED = YARN_PREFIX
+      + "system-metrics-publisher.enabled";
+  public static final boolean DEFAULT_SYSTEM_METRICS_PUBLISHER_ENABLED = false;
 
   public static final String RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE =
       RM_PREFIX + "system-metrics-publisher.dispatcher.pool-size";
