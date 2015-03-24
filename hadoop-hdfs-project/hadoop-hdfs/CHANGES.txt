@@ -1260,6 +1260,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7961. Trigger full block report after hot swapping disk. (Eddy Xu via wang)
 
+    HDFS-7977. NFS couldn't take percentile intervals (brandonli)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode

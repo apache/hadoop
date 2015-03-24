@@ -72,7 +72,6 @@ public class NfsConfigKeys {
   public static final String NFS_HTTPS_ADDRESS_DEFAULT = "0.0.0.0:" + NFS_HTTPS_PORT_DEFAULT;
   
   public static final String  NFS_METRICS_PERCENTILES_INTERVALS_KEY = "nfs.metrics.percentiles.intervals";
-  public static final String  NFS_METRICS_PERCENTILES_INTERVALS_DEFAULT = "";
   
   /*
    * HDFS super-user is the user with the same identity as NameNode process

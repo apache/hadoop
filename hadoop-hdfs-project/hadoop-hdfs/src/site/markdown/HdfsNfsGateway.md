@@ -170,6 +170,18 @@ It's strongly recommended for the users to update a few configuration properties
           <value>the_name_of_hdfs_superuser</value>
         </property>
 
+*   Metrics. Like other HDFS daemons, the gateway exposes runtime metrics. It is available at `http://gateway-ip:50079/jmx` as a JSON document.
+    The NFS handler related metrics is exposed under the name "Nfs3Metrics". The latency histograms can be enabled by adding the following
+    property to hdfs-site.xml file.
+
+        <property>
+          <name>nfs.metrics.percentiles.intervals</name>
+          <value>100</value>
+          <description>Enable the latency histograms for read, write and
+             commit requests. The time unit is 100 seconds in this example.
+          </description>
+        </property>
+
 *   JVM and log settings. You can export JVM settings (e.g., heap size and GC log) in
     HADOOP\_NFS3\_OPTS. More NFS related settings can be found in hadoop-env.sh.
     To get NFS debug trace, you can edit the log4j.property file
