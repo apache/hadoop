@@ -29,7 +29,7 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev
 * ProtocolBuffer 2.5.0
-  $ wget https://protobuf.googlecode.com/svn/rc/protobuf-2.5.0.tar.gz
+  $ wget https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz
   $ tar -zxvf protobuf-2.5.0.tar.gz
   $ cd protobuf-2.5.0.tar.gz
   $ ./configure
