@@ -460,15 +460,19 @@
 		<section>
 			<title> setrep </title>
 			<p>
-				<code>Usage: hdfs dfs -setrep [-R] &lt;path&gt;</code>
+				<code>Usage: hdfs dfs -setrep [-R] [-w] &lt;rep&gt; &lt;path/file&gt;</code>
 			</p>
 			<p>
-	   Changes the replication factor of a file. -R option is for recursively increasing the replication factor of files within a directory.
-	  </p>
+			Changes the replication factor of a file.
+			-R option is for recursively increasing the replication factor
+			of files within a directory. -w option requests that the command
+			wait for the replication to complete. This can potentially
+			take a long time.
+			</p>
 			<p>Example:</p>
 			<ul>
 				<li>
-					<code> hdfs dfs -setrep -w 3 -R /user/hadoop/dir1 </code>
+					<code> hdfs dfs -setrep -R -w 3 /user/hadoop/dir1 </code>
 				</li>
 			</ul>
 			<p>Exit Code:</p>

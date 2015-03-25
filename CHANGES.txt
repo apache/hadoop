@@ -280,6 +280,8 @@ Release 1.3.0 - unreleased
     HDFS-7312. Update DistCp v1 to optionally not use tmp location.
     (Joseph Prosser via yzhangal)
 
+    HDFS-6649. Documentation for setrep is wrong. (aajisaka)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES
