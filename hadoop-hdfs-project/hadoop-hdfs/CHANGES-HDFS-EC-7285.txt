@@ -2,3 +2,7 @@
 
     HDFS-7347. Configurable erasure coding policy for individual files and
     directories ( Zhe Zhang via vinayakumarb )
+
+    HDFS-7716. Add a test for BlockGroup support in FSImage.
+    (Takuya Fukudome via szetszwo)
+
