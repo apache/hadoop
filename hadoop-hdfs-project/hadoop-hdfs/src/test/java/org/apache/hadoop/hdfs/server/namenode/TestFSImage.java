@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -31,7 +32,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.EnumSet;
 
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.junit.Assert;
 
@@ -46,6 +52,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSOutputStream;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -376,6 +383,52 @@ public class TestFSImage {
       cluster.shutdown();
       //Clean up
       FileUtil.fullyDelete(dfsDir);
+    }
+  }
+
+  /**
+   * Ensure that FSImage supports BlockGroup.
+   */
+  @Test
+  public void testSupportBlockGroup() throws IOException {
+    final short GROUP_SIZE = HdfsConstants.NUM_DATA_BLOCKS +
+        HdfsConstants.NUM_PARITY_BLOCKS;
+    final int BLOCK_SIZE = 8 * 1024 * 1024;
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(GROUP_SIZE)
+          .build();
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      fs.setStoragePolicy(new Path("/"), HdfsConstants.EC_STORAGE_POLICY_NAME);
+      Path file = new Path("/striped");
+      FSDataOutputStream out = fs.create(file);
+      byte[] bytes = DFSTestUtil.generateSequentialBytes(0, BLOCK_SIZE);
+      out.write(bytes);
+      out.close();
+
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      cluster.restartNameNodes();
+      fs = cluster.getFileSystem();
+      assertTrue(fs.exists(file));
+
+      // check the information of striped blocks
+      FSNamesystem fsn = cluster.getNamesystem();
+      INodeFile inode = fsn.dir.getINode(file.toString()).asFile();
+      FileWithStripedBlocksFeature sb = inode.getStripedBlocksFeature();
+      assertNotNull(sb);
+      BlockInfoStriped[] blks = sb.getBlocks();
+      assertEquals(1, blks.length);
+      assertTrue(blks[0].isStriped());
+      assertEquals(HdfsConstants.NUM_DATA_BLOCKS, blks[0].getDataBlockNum());
+      assertEquals(HdfsConstants.NUM_PARITY_BLOCKS, blks[0].getParityBlockNum());
+    } finally {
+      cluster.shutdown();
     }
   }
 }
