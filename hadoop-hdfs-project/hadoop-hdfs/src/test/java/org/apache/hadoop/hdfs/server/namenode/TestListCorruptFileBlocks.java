@@ -41,6 +41,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -482,6 +484,10 @@ public class TestListCorruptFileBlocks {
           }
         }
       }
+
+      // Run the direcrtoryScanner to update the Datanodes volumeMap
+      DataNode dn = cluster.getDataNodes().get(0);
+      DataNodeTestUtils.runDirectoryScanner(dn);
 
       // Occasionally the BlockPoolSliceScanner can run before we have removed
       // the blocks. Restart the Datanode to trigger the scanner into running

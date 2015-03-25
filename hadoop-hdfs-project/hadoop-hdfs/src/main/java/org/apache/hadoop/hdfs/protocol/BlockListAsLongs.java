@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,6 +35,7 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
+import com.google.protobuf.WireFormat;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -108,6 +111,40 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
     return builder.build();
   }
 
+  public static BlockListAsLongs readFrom(InputStream is) throws IOException {
+    CodedInputStream cis = CodedInputStream.newInstance(is);
+    int numBlocks = -1;
+    ByteString blocksBuf = null;
+    while (!cis.isAtEnd()) {
+      int tag = cis.readTag();
+      int field = WireFormat.getTagFieldNumber(tag);
+      switch(field) {
+        case 0:
+          break;
+        case 1:
+          numBlocks = (int)cis.readInt32();
+          break;
+        case 2:
+          blocksBuf = cis.readBytes();
+          break;
+        default:
+          cis.skipField(tag);
+          break;
+      }
+    }
+    if (numBlocks != -1 && blocksBuf != null) {
+      return decodeBuffer(numBlocks, blocksBuf);
+    }
+    return null;
+  }
+
+  public void writeTo(OutputStream os) throws IOException {
+    CodedOutputStream cos = CodedOutputStream.newInstance(os);
+    cos.writeInt32(1, getNumberOfBlocks());
+    cos.writeBytes(2, getBlocksBuffer());
+    cos.flush();
+  }
+  
   public static Builder builder() {
     return new BlockListAsLongs.Builder();
   }

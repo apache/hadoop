@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.util.ThreadUtil;
 import org.junit.Test;
 
@@ -69,6 +70,8 @@ public class TestPendingCorruptDnMessages {
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
       assertTrue(cluster.changeGenStampOfBlock(0, block, 900));
       
+      // Run directory dsscanner to update Datanode's volumeMap
+      DataNodeTestUtils.runDirectoryScanner(cluster.getDataNodes().get(0));
       // Stop the DN so the replica with the changed gen stamp will be reported
       // when this DN starts up.
       DataNodeProperties dnProps = cluster.stopDataNode(0);
