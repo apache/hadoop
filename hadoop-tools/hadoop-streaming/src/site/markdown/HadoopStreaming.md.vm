@@ -546,6 +546,13 @@ You can use the record reader StreamXmlRecordReader to process XML documents.
 
 Anything found between BEGIN\_STRING and END\_STRING would be treated as one record for map tasks.
 
+The name-value properties that StreamXmlRecordReader understands are:
+
+*   (strings) 'begin' - Characters marking beginning of record, and 'end' - Characters marking end of record.
+*   (boolean) 'slowmatch' - Toggle to look for begin and end characters, but within CDATA instead of regular tags. Defaults to false.
+*   (integer) 'lookahead' - Maximum lookahead bytes to sync CDATA when using 'slowmatch', should be larger than 'maxrec'. Defaults to 2*'maxrec'.
+*   (integer) 'maxrec' - Maximum record size to read between each match during 'slowmatch'. Defaults to 50000 bytes.
+
 $H3 How do I update counters in streaming applications?
 
 A streaming process can use the stderr to emit counter information. `reporter:counter:<group>,<counter>,<amount>` should be sent to stderr to update the counter.

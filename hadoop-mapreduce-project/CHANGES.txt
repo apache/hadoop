@@ -256,6 +256,8 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-579. Streaming "slowmatch" documentation. (harsh)
+
     MAPREDUCE-6287. Deprecated methods in org.apache.hadoop.examples.Sort
     (Chao Zhang via harsh)
 
