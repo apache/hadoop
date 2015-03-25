@@ -389,6 +389,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6265. Make ContainerLauncherImpl.INITIAL_POOL_SIZE configurable 
     to better control to launch/kill containers. (Zhihai Xu via ozawa)
 
+    MAPREDUCE-6292. Use org.junit package instead of junit.framework in
+    TestCombineFileInputFormat. (aajisaka)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
