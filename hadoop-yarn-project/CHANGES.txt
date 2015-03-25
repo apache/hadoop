@@ -837,6 +837,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3393. Getting application(s) goes wrong when app finishes before
     starting the attempt. (Zhijie Shen via xgong)
 
+    YARN-2213. Change proxy-user cookie log in AmIpFilter to DEBUG.
+    (Varun Saxena via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
