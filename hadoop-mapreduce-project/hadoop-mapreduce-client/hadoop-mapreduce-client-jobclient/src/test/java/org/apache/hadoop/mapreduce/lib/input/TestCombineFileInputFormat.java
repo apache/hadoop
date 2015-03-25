@@ -29,9 +29,6 @@ import java.util.TreeMap;
 import java.util.concurrent.TimeoutException;
 import java.util.zip.GZIPOutputStream;
 
-import org.junit.Assert;
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -60,7 +57,11 @@ import org.junit.Test;
 
 import com.google.common.collect.HashMultiset;
 
-public class TestCombineFileInputFormat extends TestCase {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class TestCombineFileInputFormat {
 
   private static final String rack1[] = new String[] {
     "/r1"
@@ -221,6 +222,7 @@ public class TestCombineFileInputFormat extends TestCase {
     }
   }
 
+  @Test
   public void testRecordReaderInit() throws InterruptedException, IOException {
     // Test that we properly initialize the child recordreader when
     // CombineFileInputFormat and CombineFileRecordReader are used.
@@ -258,6 +260,7 @@ public class TestCombineFileInputFormat extends TestCase {
       rr.getCurrentKey().toString());
   }
 
+  @Test
   public void testReinit() throws Exception {
     // Test that a split containing multiple files works correctly,
     // with the child RecordReader getting its initialize() method
@@ -296,6 +299,7 @@ public class TestCombineFileInputFormat extends TestCase {
     assertFalse(rr.nextKeyValue());
   }
 
+  @Test
   public void testSplitPlacement() throws Exception {
     MiniDFSCluster dfs = null;
     FileSystem fileSys = null;
@@ -725,6 +729,7 @@ public class TestCombineFileInputFormat extends TestCase {
     DFSTestUtil.waitReplication(fileSys, name, replication);
   }
 
+  @Test
   public void testNodeDistribution() throws IOException, InterruptedException {
     DummyInputFormat inFormat = new DummyInputFormat();
     int numBlocks = 60;
@@ -774,20 +779,21 @@ public class TestCombineFileInputFormat extends TestCase {
         maxSplitSize, minSizeNode, minSizeRack, splits);
 
     int expectedSplitCount = (int) (totLength / maxSplitSize);
-    Assert.assertEquals(expectedSplitCount, splits.size());
+    assertEquals(expectedSplitCount, splits.size());
 
     // Ensure 90+% of the splits have node local blocks.
     // 100% locality may not always be achieved.
     int numLocalSplits = 0;
     for (InputSplit inputSplit : splits) {
-      Assert.assertEquals(maxSplitSize, inputSplit.getLength());
+      assertEquals(maxSplitSize, inputSplit.getLength());
       if (inputSplit.getLocations().length == 1) {
         numLocalSplits++;
       }
     }
-    Assert.assertTrue(numLocalSplits >= 0.9 * splits.size());
+    assertTrue(numLocalSplits >= 0.9 * splits.size());
   }
-  
+
+  @Test
   public void testNodeInputSplit() throws IOException, InterruptedException {
     // Regression test for MAPREDUCE-4892. There are 2 nodes with all blocks on 
     // both nodes. The grouping ensures that both nodes get splits instead of 
@@ -826,18 +832,19 @@ public class TestCombineFileInputFormat extends TestCase {
                           maxSize, minSizeNode, minSizeRack, splits);
     
     int expectedSplitCount = (int)(totLength/maxSize);
-    Assert.assertEquals(expectedSplitCount, splits.size());
+    assertEquals(expectedSplitCount, splits.size());
     HashMultiset<String> nodeSplits = HashMultiset.create();
     for(int i=0; i<expectedSplitCount; ++i) {
       InputSplit inSplit = splits.get(i);
-      Assert.assertEquals(maxSize, inSplit.getLength());
-      Assert.assertEquals(1, inSplit.getLocations().length);
+      assertEquals(maxSize, inSplit.getLength());
+      assertEquals(1, inSplit.getLocations().length);
       nodeSplits.add(inSplit.getLocations()[0]);
     }
-    Assert.assertEquals(3, nodeSplits.count(locations[0]));
-    Assert.assertEquals(3, nodeSplits.count(locations[1]));
+    assertEquals(3, nodeSplits.count(locations[0]));
+    assertEquals(3, nodeSplits.count(locations[1]));
   }
-  
+
+  @Test
   public void testSplitPlacementForCompressedFiles() throws Exception {
     MiniDFSCluster dfs = null;
     FileSystem fileSys = null;
@@ -1190,6 +1197,7 @@ public class TestCombineFileInputFormat extends TestCase {
   /**
    * Test that CFIF can handle missing blocks.
    */
+  @Test
   public void testMissingBlocks() throws Exception {
     String namenode = null;
     MiniDFSCluster dfs = null;
