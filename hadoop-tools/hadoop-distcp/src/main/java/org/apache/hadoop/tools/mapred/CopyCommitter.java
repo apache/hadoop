@@ -133,6 +133,9 @@ public class CopyCommitter extends FileOutputCommitter {
   private void deleteAttemptTempFiles(Path targetWorkPath,
                                       FileSystem targetFS,
                                       String jobId) throws IOException {
+    if (targetWorkPath == null) {
+      return;
+    }
 
     FileStatus[] tempFiles = targetFS.globStatus(
         new Path(targetWorkPath, ".distcp.tmp." + jobId.replaceAll("job","attempt") + "*"));
