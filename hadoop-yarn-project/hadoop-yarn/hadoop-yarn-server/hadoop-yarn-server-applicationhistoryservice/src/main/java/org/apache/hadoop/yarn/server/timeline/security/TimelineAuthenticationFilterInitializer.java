@@ -18,20 +18,11 @@
 
 package org.apache.hadoop.yarn.server.timeline.security;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
@@ -42,7 +33,9 @@ import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAu
 import org.apache.hadoop.security.token.delegation.web.PseudoDelegationTokenAuthenticationHandler;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Initializes {@link TimelineAuthenticationFilter} which provides support for
@@ -61,9 +54,6 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
    * The configuration prefix of timeline HTTP authentication
    */
   public static final String PREFIX = "yarn.timeline-service.http-authentication.";
-
-  private static final String SIGNATURE_SECRET_FILE =
-      TimelineAuthenticationFilter.SIGNATURE_SECRET + ".file";
 
   @VisibleForTesting
   Map<String, String> filterConfig;
@@ -103,31 +93,6 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
         String value = conf.get(name);
         name = name.substring(PREFIX.length());
         filterConfig.put(name, value);
-      }
-    }
-
-    String signatureSecretFile = filterConfig.get(SIGNATURE_SECRET_FILE);
-    if (signatureSecretFile != null) {
-      Reader reader = null;
-      try {
-        StringBuilder secret = new StringBuilder();
-        reader = new InputStreamReader(new FileInputStream(new File(signatureSecretFile)),
-                                      Charset.forName("UTF-8"));
-
-        int c = reader.read();
-        while (c > -1) {
-          secret.append((char) c);
-          c = reader.read();
-        }
-        filterConfig
-            .put(TimelineAuthenticationFilter.SIGNATURE_SECRET,
-                secret.toString());
-      } catch (IOException ex) {
-        throw new RuntimeException(
-            "Could not read HTTP signature secret file: "
-                + signatureSecretFile);
-      } finally {
-        IOUtils.closeStream(reader);
       }
     }
 
