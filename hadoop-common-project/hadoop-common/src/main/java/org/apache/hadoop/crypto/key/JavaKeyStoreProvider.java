@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -303,9 +304,11 @@ public class JavaKeyStoreProvider extends KeyProvider {
 
   private FsPermission loadFromPath(Path p, char[] password)
       throws IOException, NoSuchAlgorithmException, CertificateException {
-    FileStatus s = fs.getFileStatus(p);
-    keyStore.load(fs.open(p), password);
-    return s.getPermission();
+    try (FSDataInputStream in = fs.open(p)) {
+      FileStatus s = fs.getFileStatus(p);
+      keyStore.load(in, password);
+      return s.getPermission();
+    }
   }
 
   private Path constructNewPath(Path path) {
@@ -599,9 +602,8 @@ public class JavaKeyStoreProvider extends KeyProvider {
   }
 
   protected void writeToNew(Path newPath) throws IOException {
-    FSDataOutputStream out =
-        FileSystem.create(fs, newPath, permissions);
-    try {
+    try (FSDataOutputStream out =
+        FileSystem.create(fs, newPath, permissions);) {
       keyStore.store(out, password);
     } catch (KeyStoreException e) {
       throw new IOException("Can't store keystore " + this, e);
@@ -612,7 +614,6 @@ public class JavaKeyStoreProvider extends KeyProvider {
       throw new IOException(
           "Certificate exception storing keystore " + this, e);
     }
-    out.close();
   }
 
   protected boolean backupToOld(Path oldPath)
