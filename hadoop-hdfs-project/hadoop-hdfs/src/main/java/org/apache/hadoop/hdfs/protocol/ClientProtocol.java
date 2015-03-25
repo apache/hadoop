@@ -798,12 +798,17 @@ public interface ClientProtocol {
    * <p>
    * Saves current namespace into storage directories and reset edits log.
    * Requires superuser privilege and safe mode.
-   * 
-   * @throws AccessControlException if the superuser privilege is violated.
+   *
+   * @param timeWindow NameNode does a checkpoint if the latest checkpoint was
+   *                   done beyond the given time period (in seconds).
+   * @param txGap NameNode does a checkpoint if the gap between the latest
+   *              checkpoint and the latest transaction id is greater this gap.
+   * @return whether an extra checkpoint has been done
+   *
    * @throws IOException if image creation failed.
    */
   @AtMostOnce
-  public void saveNamespace() throws AccessControlException, IOException;
+  public boolean saveNamespace(long timeWindow, long txGap) throws IOException;
 
   
   /**

@@ -339,6 +339,8 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-7713. Implement mkdirs in the HDFS Web UI. (Ravi Prakash via wheat9)
 
+    HDFS-6353. Check and make checkpoint before stopping the NameNode. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES

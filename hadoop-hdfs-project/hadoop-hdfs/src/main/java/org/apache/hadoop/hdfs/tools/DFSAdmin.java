@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
@@ -393,7 +392,7 @@ public class DFSAdmin extends FsShell {
   private static final String commonUsageSummary =
     "\t[-report [-live] [-dead] [-decommissioning]]\n" +
     "\t[-safemode <enter | leave | get | wait>]\n" +
-    "\t[-saveNamespace]\n" +
+    "\t[-saveNamespace [-beforeShutdown]]\n" +
     "\t[-rollEdits]\n" +
     "\t[-restoreFailedStorage true|false|check]\n" +
     "\t[-refreshNodes]\n" +
@@ -694,34 +693,57 @@ public class DFSAdmin extends FsShell {
   /**
    * Command to ask the namenode to save the namespace.
    * Usage: hdfs dfsadmin -saveNamespace
-   * @exception IOException 
-   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#saveNamespace()
+   * @see ClientProtocol#saveNamespace(long, long)
    */
-  public int saveNamespace() throws IOException {
-    int exitCode = -1;
+  public int saveNamespace(String[] argv) throws IOException {
+    final DistributedFileSystem dfs = getDFS();
+    final Configuration dfsConf = dfs.getConf();
 
-    DistributedFileSystem dfs = getDFS();
-    Configuration dfsConf = dfs.getConf();
+    long timeWindow = 0;
+    long txGap = 0;
+    if (argv.length > 1 && "-beforeShutdown".equals(argv[1])) {
+      final long checkpointPeriod = dfsConf.getLong(
+          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY,
+          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
+      final long checkpointTxnCount = dfsConf.getLong(
+          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
+          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
+      final int toleratePeriodNum = dfsConf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_MISSING_CHECKPOINT_PERIODS_BEFORE_SHUTDOWN_KEY,
+          DFSConfigKeys.DFS_NAMENODE_MISSING_CHECKPOINT_PERIODS_BEFORE_SHUTDONW_DEFAULT);
+      timeWindow = checkpointPeriod * toleratePeriodNum;
+      txGap = checkpointTxnCount * toleratePeriodNum;
+      System.out.println("Do checkpoint if necessary before stopping " +
+          "namenode. The time window is " + timeWindow + " seconds, and the " +
+          "transaction gap is " + txGap);
+    }
+
     URI dfsUri = dfs.getUri();
     boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
-
     if (isHaEnabled) {
       String nsId = dfsUri.getHost();
       List<ProxyAndInfo<ClientProtocol>> proxies =
           HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf,
           nsId, ClientProtocol.class);
       for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
-        proxy.getProxy().saveNamespace();
-        System.out.println("Save namespace successful for " +
-            proxy.getAddress());
+        boolean saved = proxy.getProxy().saveNamespace(timeWindow, txGap);
+        if (saved) {
+          System.out.println("Save namespace successful for " +
+              proxy.getAddress());
+        } else {
+          System.out.println("No extra checkpoint has been made for "
+              + proxy.getAddress());
+        }
       }
     } else {
-      dfs.saveNamespace();
-      System.out.println("Save namespace successful");
+      boolean saved = dfs.saveNamespace(timeWindow, txGap);
+      if (saved) {
+        System.out.println("Save namespace successful");
+      } else {
+        System.out.println("No extra checkpoint has been made");
+      }
     }
-    exitCode = 0;
-   
-    return exitCode;
+    return 0;
   }
 
   public int rollEdits() throws IOException {
@@ -902,9 +924,14 @@ public class DFSAdmin extends FsShell {
       "\t\tcondition.  Safe mode can also be entered manually, but then\n" +
       "\t\tit can only be turned off manually as well.\n";
 
-    String saveNamespace = "-saveNamespace:\t" +
-    "Save current namespace into storage directories and reset edits log.\n" +
-    "\t\tRequires safe mode.\n";
+    String saveNamespace = "-saveNamespace [-beforeShutdown]:\t" +
+        "Save current namespace into storage directories and reset edits \n" +
+        "\t\t log. Requires safe mode.\n" +
+        "\t\tIf the \"beforeShutdown\" option is given, the NameNode does a \n" +
+        "\t\tcheckpoint if and only if there is no checkpoint done during \n" +
+        "\t\ta time window (a configurable number of checkpoint periods).\n" +
+        "\t\tThis is usually used before shutting down the NameNode to \n" +
+        "\t\tprevent potential fsimage/editlog corruption.\n";
 
     String rollEdits = "-rollEdits:\t" +
     "Rolls the edit log.\n";
@@ -1546,10 +1573,9 @@ public class DFSAdmin extends FsShell {
           + " [-disallowSnapshot <snapshotDir>]");
     } else if ("-saveNamespace".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-                         + " [-saveNamespace]");
+          + " [-saveNamespace [-beforeShutdown]]");
     } else if ("-rollEdits".equals(cmd)) {
-      System.err.println("Usage: hdfs dfsadmin"
-                         + " [-rollEdits]");
+      System.err.println("Usage: hdfs dfsadmin [-rollEdits]");
     } else if ("-restoreFailedStorage".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-restoreFailedStorage true|false|check ]");
@@ -1668,7 +1694,7 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-saveNamespace".equals(cmd)) {
-      if (argv.length != 1) {
+      if (argv.length != 1 && argv.length != 2) {
         printUsage(cmd);
         return exitCode;
       }
@@ -1788,7 +1814,7 @@ public class DFSAdmin extends FsShell {
       } else if ("-disallowSnapshot".equalsIgnoreCase(cmd)) {
         disallowSnapshot(argv);
       } else if ("-saveNamespace".equals(cmd)) {
-        exitCode = saveNamespace();
+        exitCode = saveNamespace(argv);
       } else if ("-rollEdits".equals(cmd)) {
         exitCode = rollEdits();
       } else if ("-restoreFailedStorage".equals(cmd)) {

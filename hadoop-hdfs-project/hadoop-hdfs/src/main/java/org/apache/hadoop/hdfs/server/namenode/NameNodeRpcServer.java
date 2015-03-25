@@ -1070,19 +1070,20 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public void saveNamespace() throws IOException {
+  public boolean saveNamespace(long timeWindow, long txGap) throws IOException {
     checkNNStartup();
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return; // Return previous response
+      return true; // Return previous response
     }
     boolean success = false;
     try {
-      namesystem.saveNamespace();
+      namesystem.saveNamespace(timeWindow, txGap);
       success = true;
     } finally {
       RetryCache.setState(cacheEntry, success);
     }
+    return true;
   }
   
   @Override // ClientProtocol

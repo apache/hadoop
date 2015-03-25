@@ -4947,14 +4947,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Save namespace image.
    * This will save current namespace into fsimage file and empty edits file.
    * Requires superuser privilege and safe mode.
-   * 
-   * @throws AccessControlException if superuser privilege is violated.
-   * @throws IOException if 
    */
-  void saveNamespace() throws AccessControlException, IOException {
+  boolean saveNamespace(final long timeWindow, final long txGap)
+      throws IOException {
     checkOperation(OperationCategory.UNCHECKED);
     checkSuperuserPrivilege();
 
+    boolean saved = false;
     cpLock();  // Block if a checkpointing is in progress on standby.
     readLock();
     try {
@@ -4964,12 +4963,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         throw new IOException("Safe mode should be turned ON "
             + "in order to create namespace image.");
       }
-      getFSImage().saveNamespace(this);
+      saved = getFSImage().saveNamespace(timeWindow, txGap, this);
     } finally {
       readUnlock();
       cpUnlock();
     }
-    LOG.info("New namespace image has been created");
+    if (saved) {
+      LOG.info("New namespace image has been created");
+    }
+    return saved;
   }
   
   /**

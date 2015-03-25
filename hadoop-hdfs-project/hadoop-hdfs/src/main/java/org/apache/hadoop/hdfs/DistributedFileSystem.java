@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
@@ -1181,13 +1182,24 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Save namespace image.
-   * 
-   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#saveNamespace()
+   *
+   * @param timeWindow NameNode can ignore this command if the latest
+   *                   checkpoint was done within the given time period (in
+   *                   seconds).
+   * @return true if a new checkpoint has been made
+   * @see ClientProtocol#saveNamespace(long, long)
    */
-  public void saveNamespace() throws AccessControlException, IOException {
-    dfs.saveNamespace();
+  public boolean saveNamespace(long timeWindow, long txGap) throws IOException {
+    return dfs.saveNamespace(timeWindow, txGap);
   }
-  
+
+  /**
+   * Save namespace image. NameNode always does the checkpoint.
+   */
+  public void saveNamespace() throws IOException {
+    saveNamespace(0, 0);
+  }
+
   /**
    * Rolls the edit log on the active NameNode.
    * Requires super-user privileges.

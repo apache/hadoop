@@ -670,9 +670,11 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void saveNamespace() throws AccessControlException, IOException {
+  public boolean saveNamespace(long timeWindow, long txGap) throws IOException {
     try {
-      rpcProxy.saveNamespace(null, VOID_SAVE_NAMESPACE_REQUEST);
+      SaveNamespaceRequestProto req = SaveNamespaceRequestProto.newBuilder()
+          .setTimeWindow(timeWindow).setTxGap(txGap).build();
+      return rpcProxy.saveNamespace(null, req).getSaved();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

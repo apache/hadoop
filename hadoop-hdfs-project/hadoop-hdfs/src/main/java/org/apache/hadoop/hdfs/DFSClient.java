@@ -2840,12 +2840,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   /**
    * Save namespace image.
    * 
-   * @see ClientProtocol#saveNamespace()
+   * @see ClientProtocol#saveNamespace(long, long)
    */
-  void saveNamespace() throws AccessControlException, IOException {
+  boolean saveNamespace(long timeWindow, long txGap) throws IOException {
     TraceScope scope = Trace.startSpan("saveNamespace", traceSampler);
     try {
-      namenode.saveNamespace();
+      return namenode.saveNamespace(timeWindow, txGap);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class);
     } finally {

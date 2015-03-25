@@ -1560,7 +1560,7 @@ public abstract class FSAclBaseTest {
       //restart by loading fsimage
       cluster.getNameNodeRpc()
           .setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
-      cluster.getNameNodeRpc().saveNamespace();
+      cluster.getNameNodeRpc().saveNamespace(0, 0);
       cluster.getNameNodeRpc()
           .setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
       cluster.restartNameNode(true);

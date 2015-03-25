@@ -83,7 +83,7 @@ public class NameNodeAdapter {
   
   public static void saveNamespace(NameNode namenode)
       throws AccessControlException, IOException {
-    namenode.getNamesystem().saveNamespace();
+    namenode.getNamesystem().saveNamespace(0, 0);
   }
   
   public static void enterSafeMode(NameNode namenode, boolean resourcesLow)

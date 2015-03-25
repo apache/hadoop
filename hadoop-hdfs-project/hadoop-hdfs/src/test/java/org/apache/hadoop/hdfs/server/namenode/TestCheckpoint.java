@@ -1607,7 +1607,7 @@ public class TestCheckpoint {
       // Make sure the on-disk fsimage on the NN has txid > 0.
       FSNamesystem fsns = cluster.getNamesystem();
       fsns.enterSafeMode(false);
-      fsns.saveNamespace();
+      fsns.saveNamespace(0, 0);
       fsns.leaveSafeMode();
       
       secondary = startSecondaryNameNode(conf);
@@ -2239,7 +2239,7 @@ public class TestCheckpoint {
       NamenodeProtocols nn = cluster.getNameNodeRpc();
       nn.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
       for (int i = 0; i < 3; i++) {
-        nn.saveNamespace();
+        nn.saveNamespace(0, 0);
       }
       nn.setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
       
@@ -2324,7 +2324,7 @@ public class TestCheckpoint {
       // therefore needs to download a new fsimage the next time it performs a
       // checkpoint.
       cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
-      cluster.getNameNodeRpc().saveNamespace();
+      cluster.getNameNodeRpc().saveNamespace(0, 0);
       cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
       
       // Ensure that the 2NN can still perform a checkpoint.
@@ -2369,7 +2369,7 @@ public class TestCheckpoint {
       // therefore needs to download a new fsimage the next time it performs a
       // checkpoint.
       cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
-      cluster.getNameNodeRpc().saveNamespace();
+      cluster.getNameNodeRpc().saveNamespace(0, 0);
       cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
       
       // Ensure that the 2NN can still perform a checkpoint.

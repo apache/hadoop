@@ -111,7 +111,7 @@ public class TestBootstrapStandbyWithBKJM {
     cluster.shutdownNameNode(1);
     deleteEditLogIfExists(confNN1);
     cluster.getNameNodeRpc(0).setSafeMode(SafeModeAction.SAFEMODE_ENTER, true);
-    cluster.getNameNodeRpc(0).saveNamespace();
+    cluster.getNameNodeRpc(0).saveNamespace(0, 0);
     cluster.getNameNodeRpc(0).setSafeMode(SafeModeAction.SAFEMODE_LEAVE, true);
 
     // check without -skipSharedEditsCheck, Bootstrap should fail for BKJM

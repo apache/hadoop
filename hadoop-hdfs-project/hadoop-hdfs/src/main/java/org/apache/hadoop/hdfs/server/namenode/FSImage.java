@@ -793,7 +793,7 @@ public class FSImage implements Closeable {
         DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 
         DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
     final long checkpointTxnCount = conf.getLong(
-        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
         DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
     long checkpointAge = Time.now() - imageFile.lastModified();
 
@@ -1062,11 +1062,35 @@ public class FSImage implements Closeable {
   }
 
   /**
+   * @param timeWindow a checkpoint is done if the latest checkpoint
+   *                   was done more than this number of seconds ago.
+   * @param txGap a checkpoint is done also if the gap between the latest tx id
+   *              and the latest checkpoint is greater than this number.
+   * @return true if a checkpoint has been made
    * @see #saveNamespace(FSNamesystem, NameNodeFile, Canceler)
    */
-  public synchronized void saveNamespace(FSNamesystem source)
-      throws IOException {
+  public synchronized boolean saveNamespace(long timeWindow, long txGap,
+      FSNamesystem source) throws IOException {
+    if (timeWindow > 0 || txGap > 0) {
+      final FSImageStorageInspector inspector = storage.readAndInspectDirs(
+          EnumSet.of(NameNodeFile.IMAGE, NameNodeFile.IMAGE_ROLLBACK),
+          StartupOption.REGULAR);
+      FSImageFile image = inspector.getLatestImages().get(0);
+      File imageFile = image.getFile();
+
+      final long checkpointTxId = image.getCheckpointTxId();
+      final long checkpointAge = Time.now() - imageFile.lastModified();
+      if (checkpointAge <= timeWindow * 1000 &&
+          checkpointTxId >= this.getLastAppliedOrWrittenTxId() - txGap) {
+        return false;
+      }
+    }
     saveNamespace(source, NameNodeFile.IMAGE, null);
+    return true;
+  }
+
+  public void saveNamespace(FSNamesystem source) throws IOException {
+    saveNamespace(0, 0, source);
   }
   
   /**
