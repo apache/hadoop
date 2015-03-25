@@ -218,4 +218,11 @@ public class DataNodeTestUtils {
       }
     }
   }
+  
+  public static void runDirectoryScanner(DataNode dn) throws IOException {
+    DirectoryScanner directoryScanner = dn.getDirectoryScanner();
+    if (directoryScanner != null) {
+      dn.getDirectoryScanner().reconcile();
+    }
+  }
 }

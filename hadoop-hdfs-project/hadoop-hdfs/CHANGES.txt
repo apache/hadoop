@@ -24,6 +24,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-7713. Implement mkdirs in the HDFS Web UI. (Ravi Prakash via wheat9)
 
+    HDFS-7928. Scanning blocks from disk during rolling upgrade startup takes
+    a lot of time if disks are busy (Rushabh S Shah via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
