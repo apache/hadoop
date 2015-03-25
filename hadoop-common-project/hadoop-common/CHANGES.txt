@@ -469,6 +469,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-10027. *Compressor_deflateBytesDirect passes instance instead of
     jclass to GetStaticObjectField. (Hui Zheng via cnauroth)
 
+    HADOOP-11724. DistCp throws NPE when the target directory is root.
+    (Lei Eddy Xu via Yongjun Zhang) 
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
