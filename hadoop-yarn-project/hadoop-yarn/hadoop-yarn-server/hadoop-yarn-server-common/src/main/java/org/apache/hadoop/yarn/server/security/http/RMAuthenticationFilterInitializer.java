@@ -43,14 +43,11 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 public class RMAuthenticationFilterInitializer extends FilterInitializer {
 
   String configPrefix;
-  String signatureSecretFileProperty;
   String kerberosPrincipalProperty;
   String cookiePath;
 
   public RMAuthenticationFilterInitializer() {
     this.configPrefix = "hadoop.http.authentication.";
-    this.signatureSecretFileProperty =
-        AuthenticationFilter.SIGNATURE_SECRET + ".file";
     this.kerberosPrincipalProperty = KerberosAuthenticationHandler.PRINCIPAL;
     this.cookiePath = "/";
   }
@@ -74,34 +71,6 @@ public class RMAuthenticationFilterInitializer extends FilterInitializer {
         String value = conf.get(propName);
         String name = propName.substring("hadoop.".length());
         filterConfig.put(name, value);
-      }
-    }
-
-    String signatureSecretFile = filterConfig.get(signatureSecretFileProperty);
-    if (signatureSecretFile != null) {
-      Reader reader = null;
-      try {
-        StringBuilder secret = new StringBuilder();
-        reader =
-            new InputStreamReader(new FileInputStream(signatureSecretFile),
-              "UTF-8");
-        int c = reader.read();
-        while (c > -1) {
-          secret.append((char) c);
-          c = reader.read();
-        }
-        filterConfig.put(AuthenticationFilter.SIGNATURE_SECRET,
-          secret.toString());
-      } catch (IOException ex) {
-        // if running in non-secure mode, this filter only gets added
-        // because the user has not setup his own filter so just generate
-        // a random secret. in secure mode, the user needs to setup security
-        if (UserGroupInformation.isSecurityEnabled()) {
-          throw new RuntimeException(
-            "Could not read HTTP signature secret file: " + signatureSecretFile);
-        }
-      } finally {
-        IOUtils.closeQuietly(reader);
       }
     }
 

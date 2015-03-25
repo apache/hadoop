@@ -13,7 +13,10 @@
  */
 package org.apache.hadoop.security.authentication.server;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.net.HttpCookie;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -197,7 +200,7 @@ public class TestAuthenticationFilter {
       filter.destroy();
     }
 
-    // custom secret
+    // custom secret as inline
     filter = new AuthenticationFilter();
     try {
       FilterConfig config = Mockito.mock(FilterConfig.class);
@@ -227,6 +230,39 @@ public class TestAuthenticationFilter {
       filter.init(config);
       Assert.assertFalse(filter.isRandomSecret());
       Assert.assertTrue(filter.isCustomSignerSecretProvider());
+    } finally {
+      filter.destroy();
+    }
+
+    // custom secret by file
+    File testDir = new File(System.getProperty("test.build.data",
+        "target/test-dir"));
+    testDir.mkdirs();
+    String secretValue = "hadoop";
+    File secretFile = new File(testDir, "http-secret.txt");
+    Writer writer = new FileWriter(secretFile);
+    writer.write(secretValue);
+    writer.close();
+
+    filter = new AuthenticationFilter();
+    try {
+      FilterConfig config = Mockito.mock(FilterConfig.class);
+      Mockito.when(config.getInitParameter(
+          AuthenticationFilter.AUTH_TYPE)).thenReturn("simple");
+      Mockito.when(config.getInitParameter(
+          AuthenticationFilter.SIGNATURE_SECRET_FILE))
+          .thenReturn(secretFile.getAbsolutePath());
+      Mockito.when(config.getInitParameterNames()).thenReturn(
+          new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+              AuthenticationFilter.SIGNATURE_SECRET_FILE)).elements());
+      ServletContext context = Mockito.mock(ServletContext.class);
+      Mockito.when(context.getAttribute(
+          AuthenticationFilter.SIGNER_SECRET_PROVIDER_ATTRIBUTE))
+          .thenReturn(null);
+      Mockito.when(config.getServletContext()).thenReturn(context);
+      filter.init(config);
+      Assert.assertFalse(filter.isRandomSecret());
+      Assert.assertFalse(filter.isCustomSignerSecretProvider());
     } finally {
       filter.destroy();
     }
