@@ -332,18 +332,6 @@ public class TestWebHDFS {
       }
     }
   }
-  
-  /**
-   * WebHdfs should be enabled by default after HDFS-5532
-   * 
-   * @throws Exception
-   */
-  @Test
-  public void testWebHdfsEnabledByDefault() throws Exception {
-    Configuration conf = new HdfsConfiguration();
-    Assert.assertTrue(conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
-        false));
-  }
 
   /**
    * Test snapshot creation through WebHdfs

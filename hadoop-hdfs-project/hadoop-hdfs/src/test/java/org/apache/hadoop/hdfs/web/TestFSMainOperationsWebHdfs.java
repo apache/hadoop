@@ -71,7 +71,6 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
   @BeforeClass
   public static void setupCluster() {
     final Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();

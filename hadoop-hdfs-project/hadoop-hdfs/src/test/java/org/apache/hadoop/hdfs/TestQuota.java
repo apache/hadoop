@@ -851,8 +851,7 @@ public class TestQuota {
     Configuration conf = new HdfsConfiguration();
     final int BLOCK_SIZE = 6 * 1024;
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
-    MiniDFSCluster cluster = 
+    MiniDFSCluster cluster =
       new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
@@ -913,7 +912,6 @@ public class TestQuota {
     Configuration conf = new HdfsConfiguration();
     final int BLOCK_SIZE = 6 * 1024;
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     // Make it relinquish locks. When run serially, the result should
     // be identical.
     conf.setInt(DFSConfigKeys.DFS_CONTENT_SUMMARY_LIMIT_KEY, 2);

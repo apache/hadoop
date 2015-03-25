@@ -85,7 +85,6 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
   @BeforeClass
   public static void beforeClassSetup() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     conf.set(FsPermission.UMASK_LABEL, "000");
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY, 0);
     cluster = new MiniDFSCluster.Builder(conf).build();

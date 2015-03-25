@@ -18,6 +18,8 @@ Trunk (Unreleased)
     option since it may incorrectly finalize an ongoing rolling upgrade.
     (Kai Sasaki via szetszwo)
 
+    HDFS-7985. WebHDFS should be always enabled. (Li Lu via wheat9)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
