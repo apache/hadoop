@@ -876,9 +876,12 @@ public class RPC {
 
      getProtocolImplMap(rpcKind).put(new ProtoNameVer(protocolName, version),
          new ProtoClassProtoImpl(protocolClass, protocolImpl)); 
-     LOG.debug("RpcKind = " + rpcKind + " Protocol Name = " + protocolName +  " version=" + version +
-         " ProtocolImpl=" + protocolImpl.getClass().getName() + 
-         " protocolClass=" + protocolClass.getName());
+     if (LOG.isDebugEnabled()) {
+       LOG.debug("RpcKind = " + rpcKind + " Protocol Name = " + protocolName +
+           " version=" + version +
+           " ProtocolImpl=" + protocolImpl.getClass().getName() +
+           " protocolClass=" + protocolClass.getName());
+     }
    }
    
    static class VerProtocolImpl {

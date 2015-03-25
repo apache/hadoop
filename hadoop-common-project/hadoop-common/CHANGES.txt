@@ -459,6 +459,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11737. mockito's version in hadoop-nfs’ pom.xml shouldn't be
     specified. (Kengo Seki via ozawa)
 
+    HADOOP-11741. Add LOG.isDebugEnabled() guard for some LOG.debug().
+    (Walter Su via ozawa)
+
   OPTIMIZATIONS
 
   BUG FIXES

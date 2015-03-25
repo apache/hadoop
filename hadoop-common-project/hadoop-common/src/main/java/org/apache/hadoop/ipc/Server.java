@@ -234,9 +234,11 @@ public abstract class Server {
       throw new IllegalArgumentException("ReRegistration of rpcKind: " +
           rpcKind);      
     }
-    LOG.debug("rpcKind=" + rpcKind + 
-        ", rpcRequestWrapperClass=" + rpcRequestWrapperClass + 
-        ", rpcInvoker=" + rpcInvoker);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("rpcKind=" + rpcKind +
+          ", rpcRequestWrapperClass=" + rpcRequestWrapperClass +
+          ", rpcInvoker=" + rpcInvoker);
+    }
   }
   
   public Class<? extends Writable> getRpcRequestWrapper(
