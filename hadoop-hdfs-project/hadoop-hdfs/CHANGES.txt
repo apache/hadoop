@@ -24,8 +24,6 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-3689. Add support for variable length block. (jing9)
-
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -148,6 +146,8 @@ Trunk (Unreleased)
     Iwasaki via aw)
 
     HDFS-7460. Rewrite httpfs to use new shell framework (John Smith via aw)
+
+    HDFS-6353. Check and make checkpoint before stopping the NameNode. (jing9)
 
   OPTIMIZATIONS
 
@@ -339,8 +339,6 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-7713. Implement mkdirs in the HDFS Web UI. (Ravi Prakash via wheat9)
 
-    HDFS-6353. Check and make checkpoint before stopping the NameNode. (jing9)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -384,6 +382,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-6133. Add a feature for replica pinning so that a pinned replica
     will not be moved by Balancer/Mover.  (zhaoyunjiong via szetszwo)
+
+    HDFS-3689. Add support for variable length block. (jing9)
 
     HDFS-7584. Enable Quota Support for Storage Types (See breakdown of
     tasks below)
