@@ -164,7 +164,9 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       // configuration property for key password.
       keystoreKeyPassword = getPassword(
           conf, keyPasswordProperty, keystorePassword);
-      LOG.debug(mode.toString() + " KeyStore: " + keystoreLocation);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(mode.toString() + " KeyStore: " + keystoreLocation);
+      }
 
       InputStream is = new FileInputStream(keystoreLocation);
       try {
@@ -172,7 +174,9 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       } finally {
         is.close();
       }
-      LOG.debug(mode.toString() + " Loaded KeyStore: " + keystoreLocation);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(mode.toString() + " Loaded KeyStore: " + keystoreLocation);
+      }
     } else {
       keystore.load(null, null);
     }
@@ -204,18 +208,24 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
               resolvePropertyName(mode, SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY),
               DEFAULT_SSL_TRUSTSTORE_RELOAD_INTERVAL);
 
-      LOG.debug(mode.toString() + " TrustStore: " + truststoreLocation);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(mode.toString() + " TrustStore: " + truststoreLocation);
+      }
 
       trustManager = new ReloadingX509TrustManager(truststoreType,
           truststoreLocation,
           truststorePassword,
           truststoreReloadInterval);
       trustManager.init();
-      LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
+      }
       trustManagers = new TrustManager[]{trustManager};
     } else {
-      LOG.debug("The property '" + locationProperty + "' has not been set, " +
-          "no TrustStore will be loaded");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("The property '" + locationProperty + "' has not been set, " +
+            "no TrustStore will be loaded");
+      }
       trustManagers = null;
     }
   }
