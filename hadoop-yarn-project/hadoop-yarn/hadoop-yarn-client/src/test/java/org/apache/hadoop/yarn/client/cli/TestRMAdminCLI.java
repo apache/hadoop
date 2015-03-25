@@ -364,16 +364,15 @@ public class TestRMAdminCLI {
       assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
       oldOutPrintStream.println(dataOut);
       String expectedHelpMsg = 
-          "yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper" +
-              "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
-              "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
-              " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]" +
-              " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode " +
-              "[node1[:port]=label1,label2 node2[:port]=label1] [-directlyAccessNodeLabelStore]] " +
-              "[-transitionToActive [--forceactive] <serviceId>] " + 
-              "[-transitionToStandby <serviceId>] [-failover" +
-              " [--forcefence] [--forceactive] <serviceId> <serviceId>] " +
-              "[-getServiceState <serviceId>] [-checkHealth <serviceId>] [-help [cmd]]";
+          "yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper"
+              + "UserGroupsConfiguration] [-refreshUserToGroupsMappings] "
+              + "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup"
+              + " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]"
+              + " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode "
+              + "[node1[:port]=label1,label2 node2[:port]=label1] [-directlyAccessNodeLabelStore]] "
+              + "[-transitionToActive [--forceactive] <serviceId>] "
+              + "[-transitionToStandby <serviceId>] "
+              + "[-getServiceState <serviceId>] [-checkHealth <serviceId>] [-help [cmd]]";
       String actualHelpMsg = dataOut.toString();
       assertTrue(String.format("Help messages: %n " + actualHelpMsg + " %n doesn't include expected " +
           "messages: %n" + expectedHelpMsg), actualHelpMsg.contains(expectedHelpMsg

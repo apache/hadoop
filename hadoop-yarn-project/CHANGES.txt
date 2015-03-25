@@ -79,6 +79,8 @@ Release 2.8.0 - UNRELEASED
     YARN-2868. FairScheduler: Metric for latency to allocate first container 
     for an application. (Ray Chiang via kasha)
 
+    YARN-3397. yarn rmadmin should skip -failover. (J.Andreina via kasha)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
