@@ -1221,7 +1221,7 @@ public class TestReplicationPolicy {
     when(mbc.isUnderConstruction()).thenReturn(true);
     ContentSummary cs = mock(ContentSummary.class);
     when(cs.getLength()).thenReturn((long)1);
-    when(mbc.computeContentSummary()).thenReturn(cs);
+    when(mbc.computeContentSummary(bm.getStoragePolicySuite())).thenReturn(cs);
     info.setBlockCollection(mbc);
     bm.addBlockCollection(info, mbc);
 

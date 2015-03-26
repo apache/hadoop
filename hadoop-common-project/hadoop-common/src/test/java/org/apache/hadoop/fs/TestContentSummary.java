@@ -32,13 +32,13 @@ public class TestContentSummary {
   // check the empty constructor correctly initialises the object
   @Test
   public void testConstructorEmpty() {
-    ContentSummary contentSummary = new ContentSummary();
+    ContentSummary contentSummary = new ContentSummary.Builder().build();
     assertEquals("getLength", 0, contentSummary.getLength());
     assertEquals("getFileCount", 0, contentSummary.getFileCount());
     assertEquals("getDirectoryCount", 0, contentSummary.getDirectoryCount());
-    assertEquals("getQuota", 0, contentSummary.getQuota());
+    assertEquals("getQuota", -1, contentSummary.getQuota());
     assertEquals("getSpaceConsumed", 0, contentSummary.getSpaceConsumed());
-    assertEquals("getSpaceQuota", 0, contentSummary.getSpaceQuota());
+    assertEquals("getSpaceQuota", -1, contentSummary.getSpaceQuota());
   }
 
   // check the full constructor with quota information
@@ -51,8 +51,9 @@ public class TestContentSummary {
     long spaceConsumed = 55555;
     long spaceQuota = 66666;
 
-    ContentSummary contentSummary = new ContentSummary(length, fileCount,
-        directoryCount, quota, spaceConsumed, spaceQuota);
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
+        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
     assertEquals("getLength", length, contentSummary.getLength());
     assertEquals("getFileCount", fileCount, contentSummary.getFileCount());
     assertEquals("getDirectoryCount", directoryCount,
@@ -70,8 +71,9 @@ public class TestContentSummary {
     long fileCount = 22222;
     long directoryCount = 33333;
 
-    ContentSummary contentSummary = new ContentSummary(length, fileCount,
-        directoryCount);
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).
+        spaceConsumed(length).build();
     assertEquals("getLength", length, contentSummary.getLength());
     assertEquals("getFileCount", fileCount, contentSummary.getFileCount());
     assertEquals("getDirectoryCount", directoryCount,
@@ -91,8 +93,9 @@ public class TestContentSummary {
     long spaceConsumed = 55555;
     long spaceQuota = 66666;
 
-    ContentSummary contentSummary = new ContentSummary(length, fileCount,
-        directoryCount, quota, spaceConsumed, spaceQuota);
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
+        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
 
     DataOutput out = mock(DataOutput.class);
     InOrder inOrder = inOrder(out);
@@ -116,7 +119,7 @@ public class TestContentSummary {
     long spaceConsumed = 55555;
     long spaceQuota = 66666;
 
-    ContentSummary contentSummary = new ContentSummary();
+    ContentSummary contentSummary = new ContentSummary.Builder().build();
 
     DataInput in = mock(DataInput.class);
     when(in.readLong()).thenReturn(length).thenReturn(fileCount)
@@ -159,8 +162,9 @@ public class TestContentSummary {
     long spaceConsumed = 55555;
     long spaceQuota = 66665;
 
-    ContentSummary contentSummary = new ContentSummary(length, fileCount,
-        directoryCount, quota, spaceConsumed, spaceQuota);
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
+        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
     String expected = "       44444          -11111           66665           11110"
         + "        33333        22222              11111 ";
     assertEquals(expected, contentSummary.toString(true));
@@ -173,8 +177,8 @@ public class TestContentSummary {
     long fileCount = 22222;
     long directoryCount = 33333;
 
-    ContentSummary contentSummary = new ContentSummary(length, fileCount,
-        directoryCount);
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).build();
     String expected = "        none             inf            none"
         + "             inf        33333        22222              11111 ";
     assertEquals(expected, contentSummary.toString(true));
@@ -190,8 +194,9 @@ public class TestContentSummary {
     long spaceConsumed = 55555;
     long spaceQuota = 66665;
 
-    ContentSummary contentSummary = new ContentSummary(length, fileCount,
-        directoryCount, quota, spaceConsumed, spaceQuota);
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
+        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
     String expected = "       33333        22222              11111 ";
     assertEquals(expected, contentSummary.toString(false));
   }
@@ -206,8 +211,9 @@ public class TestContentSummary {
     long spaceConsumed = 55555;
     long spaceQuota = 66665;
 
-    ContentSummary contentSummary = new ContentSummary(length, fileCount,
-        directoryCount, quota, spaceConsumed, spaceQuota);
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
+        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
     String expected = "       44444          -11111           66665"
         + "           11110        33333        22222              11111 ";
     assertEquals(expected, contentSummary.toString());
@@ -223,8 +229,9 @@ public class TestContentSummary {
     long spaceConsumed = 1073741825;
     long spaceQuota = 1;
 
-    ContentSummary contentSummary = new ContentSummary(length, fileCount,
-        directoryCount, quota, spaceConsumed, spaceQuota);
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
+        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
     String expected = "     212.0 M            1023               1 "
         + "           -1 G       32.6 K      211.9 M              8.0 E ";
     assertEquals(expected, contentSummary.toString(true, true));
@@ -240,8 +247,9 @@ public class TestContentSummary {
     long spaceConsumed = 55555;
     long spaceQuota = Long.MAX_VALUE;
 
-    ContentSummary contentSummary = new ContentSummary(length, fileCount,
-        directoryCount, quota, spaceConsumed, spaceQuota);
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
+        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).build();
     String expected = "      32.6 K      211.9 M              8.0 E ";
     assertEquals(expected, contentSummary.toString(false, true));
   }

@@ -553,8 +553,9 @@ public class JsonUtil {
     final long spaceConsumed = ((Number) m.get("spaceConsumed")).longValue();
     final long spaceQuota = ((Number) m.get("spaceQuota")).longValue();
 
-    return new ContentSummary(length, fileCount, directoryCount,
-        quota, spaceConsumed, spaceQuota);
+    return new ContentSummary.Builder().length(length).fileCount(fileCount).
+        directoryCount(directoryCount).quota(quota).spaceConsumed(spaceConsumed).
+        spaceQuota(spaceQuota).build();
   }
 
   /** Convert a MD5MD5CRC32FileChecksum to a Json string. */
