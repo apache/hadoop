@@ -30,13 +30,17 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoResponse;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 
 public class NMCollectorService extends CompositeService implements
     CollectorNodemanagerProtocol {
@@ -93,7 +97,7 @@ public class NMCollectorService extends CompositeService implements
 
   @Override
   public ReportNewCollectorInfoResponse reportNewCollectorInfo(
-      ReportNewCollectorInfoRequest request) throws IOException {
+      ReportNewCollectorInfoRequest request) throws YarnException, IOException {
     List<AppCollectorsMap> newCollectorsList = request.getAppCollectorsList();
     if (newCollectorsList != null && !newCollectorsList.isEmpty()) {
       Map<ApplicationId, String> newCollectorsMap =
@@ -107,4 +111,16 @@ public class NMCollectorService extends CompositeService implements
     return ReportNewCollectorInfoResponse.newInstance();
   }
 
+  @Override
+  public GetTimelineCollectorContextResponse getTimelineCollectorContext(
+      GetTimelineCollectorContextRequest request)
+      throws YarnException, IOException {
+    Application app = context.getApplications().get(request.getApplicationId());
+    if (app == null) {
+      throw new YarnException("Application " + request.getApplicationId() +
+          " doesn't exist on NM.");
+    }
+    return GetTimelineCollectorContextResponse.newInstance(
+        app.getUser(), app.getFlowId(), app.getFlowRunId());
+  }
 }

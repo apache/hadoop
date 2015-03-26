@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
+
 /**
  * Service that handles writes to the timeline service and writes them to the
  * backing storage.
@@ -83,21 +84,24 @@ public abstract class TimelineCollector extends CompositeService {
    *
    * This method should be reserved for selected critical entities and events.
    * For normal voluminous writes one should use the async method
-   * {@link #postEntitiesAsync(TimelineEntities, UserGroupInformation)}.
+   * {@link #putEntitiesAsync(TimelineEntities, UserGroupInformation)}.
    *
    * @param entities entities to post
    * @param callerUgi the caller UGI
    * @return the response that contains the result of the post.
    */
-  public TimelineWriteResponse postEntities(TimelineEntities entities,
+  public TimelineWriteResponse putEntities(TimelineEntities entities,
       UserGroupInformation callerUgi) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("SUCCESS - TIMELINE V2 PROTOTYPE");
-      LOG.debug("postEntities(entities=" + entities + ", callerUgi="
+      LOG.debug("putEntities(entities=" + entities + ", callerUgi="
           + callerUgi + ")");
     }
 
-    return writer.write(entities);
+    TimelineCollectorContext context = getTimelineEntityContext();
+    return writer.write(context.getClusterId(), context.getUserId(),
+        context.getFlowId(), context.getFlowRunId(), context.getAppId(),
+        entities);
   }
 
   /**
@@ -111,12 +115,15 @@ public abstract class TimelineCollector extends CompositeService {
    * @param entities entities to post
    * @param callerUgi the caller UGI
    */
-  public void postEntitiesAsync(TimelineEntities entities,
+  public void putEntitiesAsync(TimelineEntities entities,
       UserGroupInformation callerUgi) {
     // TODO implement
     if (LOG.isDebugEnabled()) {
-      LOG.debug("postEntitiesAsync(entities=" + entities + ", callerUgi=" +
+      LOG.debug("putEntitiesAsync(entities=" + entities + ", callerUgi=" +
           callerUgi + ")");
     }
   }
+
+  protected abstract TimelineCollectorContext getTimelineEntityContext();
+
 }

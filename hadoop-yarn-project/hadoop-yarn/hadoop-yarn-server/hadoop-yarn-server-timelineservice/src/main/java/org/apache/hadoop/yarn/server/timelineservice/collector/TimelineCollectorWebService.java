@@ -138,7 +138,7 @@ public class TimelineCollectorWebService {
         LOG.error("Application not found");
         throw new NotFoundException(); // different exception?
       }
-      collector.postEntities(entities, callerUgi);
+      collector.putEntities(entities, callerUgi);
       return Response.ok().build();
     } catch (Exception e) {
       LOG.error("Error putting entities", e);
