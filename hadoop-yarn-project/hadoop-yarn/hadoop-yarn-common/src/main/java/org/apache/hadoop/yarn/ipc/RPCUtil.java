@@ -70,6 +70,21 @@ public class RPCUtil {
     }
   }
 
+  private static <T extends YarnException> T instantiateYarnException(
+      Class<? extends T> cls, RemoteException re) throws RemoteException {
+    return instantiateException(cls, re);
+  }
+
+  private static <T extends IOException> T instantiateIOException(
+      Class<? extends T> cls, RemoteException re) throws RemoteException {
+    return instantiateException(cls, re);
+  }
+
+  private static <T extends RuntimeException> T instantiateRuntimeException(
+      Class<? extends T> cls, RemoteException re) throws RemoteException {
+    return instantiateException(cls, re);
+  }
+
   /**
    * Utility method that unwraps and returns appropriate exceptions.
    * 
@@ -94,17 +109,17 @@ public class RPCUtil {
           // Assume this to be a new exception type added to YARN. This isn't
           // absolutely correct since the RPC layer could add an exception as
           // well.
-          throw instantiateException(YarnException.class, re);
+          throw instantiateYarnException(YarnException.class, re);
         }
 
         if (YarnException.class.isAssignableFrom(realClass)) {
-          throw instantiateException(
+          throw instantiateYarnException(
               realClass.asSubclass(YarnException.class), re);
         } else if (IOException.class.isAssignableFrom(realClass)) {
-          throw instantiateException(realClass.asSubclass(IOException.class),
+          throw instantiateIOException(realClass.asSubclass(IOException.class),
               re);
         } else if (RuntimeException.class.isAssignableFrom(realClass)) {
-          throw instantiateException(
+          throw instantiateRuntimeException(
               realClass.asSubclass(RuntimeException.class), re);
         } else {
           throw re;
