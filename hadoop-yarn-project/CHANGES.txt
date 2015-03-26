@@ -108,6 +108,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3383. AdminService should use "warn" instead of "info" to log exception 
     when operation fails. (Li Lu via wangda)
 
+    YARN-3400. [JDK 8] Build Failure due to unreported exceptions in
+    RPCUtil (rkanter)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
