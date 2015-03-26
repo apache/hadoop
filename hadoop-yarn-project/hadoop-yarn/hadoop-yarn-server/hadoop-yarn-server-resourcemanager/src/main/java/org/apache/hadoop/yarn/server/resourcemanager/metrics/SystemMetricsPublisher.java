@@ -164,7 +164,7 @@ public class SystemMetricsPublisher extends CompositeService {
   @SuppressWarnings("unchecked")
   public void appStateUpdated(RMApp app, YarnApplicationState appState,
       long updatedTime) {
-    if (publishSystemMetrics) {
+    if (publishSystemMetricsToATSv1) {
       dispatcher.getEventHandler().handle(
           new ApplicaitonStateUpdatedEvent(
               app.getApplicationId(),

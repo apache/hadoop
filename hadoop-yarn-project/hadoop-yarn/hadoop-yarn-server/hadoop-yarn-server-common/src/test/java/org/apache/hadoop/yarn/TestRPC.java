@@ -64,6 +64,8 @@ import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoResponse;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorsMap;
@@ -170,6 +172,31 @@ public class TestRPC {
       Assert.assertTrue(e.getMessage().contains(ILLEGAL_NUMBER_MESSAGE));
     }
 
+    // Verify request with a valid app ID
+    try {
+      GetTimelineCollectorContextRequest request =
+          GetTimelineCollectorContextRequest.newInstance(
+              ApplicationId.newInstance(0, 1));
+      GetTimelineCollectorContextResponse response =
+          proxy.getTimelineCollectorContext(request);
+      Assert.assertEquals("test_user_id", response.getUserId());
+      Assert.assertEquals("test_flow_id", response.getFlowId());
+      Assert.assertEquals("test_flow_run_id", response.getFlowRunId());
+    } catch (YarnException | IOException e) {
+      Assert.fail("RPC call failured is not expected here.");
+    }
+
+    // Verify request with an invalid app ID
+    try {
+      GetTimelineCollectorContextRequest request =
+          GetTimelineCollectorContextRequest.newInstance(
+              ApplicationId.newInstance(0, 2));
+      proxy.getTimelineCollectorContext(request);
+      Assert.fail("RPC call failured is expected here.");
+    } catch (YarnException | IOException e) {
+      Assert.assertTrue(e instanceof  YarnException);
+      Assert.assertTrue(e.getMessage().contains("The application is not found."));
+    }
     server.stop();
   }
 
@@ -357,6 +384,18 @@ public class TestRPC {
       ReportNewCollectorInfoResponse response =
           recordFactory.newRecordInstance(ReportNewCollectorInfoResponse.class);
       return response;
+    }
+
+    @Override
+    public GetTimelineCollectorContextResponse getTimelineCollectorContext(
+        GetTimelineCollectorContextRequest request)
+        throws  YarnException, IOException {
+      if (request.getApplicationId().getId() == 1) {
+         return GetTimelineCollectorContextResponse.newInstance(
+                "test_user_id", "test_flow_id", "test_flow_run_id");
+      } else {
+        throw new YarnException("The application is not found.");
+      }
     }
   }
 

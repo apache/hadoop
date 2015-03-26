@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -42,6 +43,9 @@ import org.codehaus.jackson.map.ObjectMapper;
 @Public
 @Evolving
 public class TimelineUtils {
+
+  public static final String FLOW_ID_TAG_PREFIX = "TIMELINE_FLOW_ID_TAG";
+  public static final String FLOW_RUN_ID_TAG_PREFIX = "TIMELINE_FLOW_RUN_ID_TAG";
 
   private static ObjectMapper mapper;
 
@@ -153,5 +157,17 @@ public class TimelineUtils {
     InetSocketAddress timelineServiceAddr =
         getTimelineTokenServiceAddress(conf);
     return SecurityUtil.buildTokenService(timelineServiceAddr);
+  }
+
+  public static String generateDefaultFlowIdBasedOnAppId(ApplicationId appId) {
+    return "flow_" + appId.getClusterTimestamp() + "_" + appId.getId();
+  }
+
+  public static String generateFlowIdTag(String flowId) {
+    return FLOW_ID_TAG_PREFIX + ":" + flowId;
+  }
+
+  public static String generateFlowRunIdTag(String flowRunId) {
+    return FLOW_RUN_ID_TAG_PREFIX + ":" + flowRunId;
   }
 }

@@ -146,10 +146,11 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
-
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class ContainerManagerImpl extends CompositeService implements
@@ -331,8 +332,10 @@ public class ContainerManagerImpl extends CompositeService implements
     }
 
     LOG.info("Recovering application " + appId);
-    ApplicationImpl app = new ApplicationImpl(dispatcher, p.getUser(), appId,
-        creds, context, p.getAppLogAggregationInitedTime());
+    //TODO: Recover flow and flow run ID
+    ApplicationImpl app = new ApplicationImpl(
+        dispatcher, p.getUser(), null, null, appId, creds, context, p.getAppLogAggregationInitedTime());
+
     context.getApplications().put(appId, app);
     app.handle(new ApplicationInitEvent(appId, acls, logAggregationContext));
   }
@@ -951,8 +954,12 @@ public class ContainerManagerImpl extends CompositeService implements
     try {
       if (!isServiceStopped()) {
         // Create the application
-        Application application = new ApplicationImpl(dispatcher, user,
-            applicationID, credentials, context);
+        String flowId = launchContext.getEnvironment().get(
+            TimelineUtils.FLOW_ID_TAG_PREFIX);
+        String flowRunId = launchContext.getEnvironment().get(
+            TimelineUtils.FLOW_RUN_ID_TAG_PREFIX);
+        Application application = new ApplicationImpl(
+            dispatcher, user, flowId, flowRunId, applicationID, credentials, context);
         if (null == context.getApplications().putIfAbsent(applicationID,
           application)) {
           LOG.info("Creating a new application reference for app "
