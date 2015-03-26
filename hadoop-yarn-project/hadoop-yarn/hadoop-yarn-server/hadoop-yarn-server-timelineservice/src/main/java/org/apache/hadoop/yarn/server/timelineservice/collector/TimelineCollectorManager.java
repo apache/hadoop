@@ -43,6 +43,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
@@ -102,6 +104,7 @@ public class TimelineCollectorManager extends CompositeService {
 
   @Override
   protected void serviceStart() throws Exception {
+    nmCollectorService = getNMCollectorService();
     startWebApp();
     super.serviceStart();
   }
@@ -151,11 +154,11 @@ public class TimelineCollectorManager extends CompositeService {
     // Report to NM if a new collector is added.
     if (collectorIsNew) {
       try {
+        updateTimelineCollectorContext(appId, collector);
         reportNewCollectorToNM(appId);
       } catch (Exception e) {
-        // throw exception here as it cannot be used if failed report to NM
-        LOG.error("Failed to report a new collector for application: " + appId +
-            " to the NM Collector Service.");
+        // throw exception here as it cannot be used if failed communicate with NM
+        LOG.error("Failed to communicate with NM Collector Service for " + appId);
         throw new YarnRuntimeException(e);
       }
     }
@@ -250,13 +253,34 @@ public class TimelineCollectorManager extends CompositeService {
 
   private void reportNewCollectorToNM(ApplicationId appId)
       throws YarnException, IOException {
-    this.nmCollectorService = getNMCollectorService();
     ReportNewCollectorInfoRequest request =
         ReportNewCollectorInfoRequest.newInstance(appId,
             this.timelineRestServerBindAddress);
     LOG.info("Report a new collector for application: " + appId +
         " to the NM Collector Service.");
     nmCollectorService.reportNewCollectorInfo(request);
+  }
+
+  private void updateTimelineCollectorContext(
+      ApplicationId appId, TimelineCollector collector)
+      throws YarnException, IOException {
+    GetTimelineCollectorContextRequest request =
+        GetTimelineCollectorContextRequest.newInstance(appId);
+    LOG.info("Get timeline collector context for " + appId);
+    GetTimelineCollectorContextResponse response =
+        nmCollectorService.getTimelineCollectorContext(request);
+    String userId = response.getUserId();
+    if (userId != null && !userId.isEmpty()) {
+      collector.getTimelineEntityContext().setUserId(userId);
+    }
+    String flowId = response.getFlowId();
+    if (flowId != null && !flowId.isEmpty()) {
+      collector.getTimelineEntityContext().setFlowId(flowId);
+    }
+    String flowRunId = response.getFlowRunId();
+    if (flowRunId != null && !flowRunId.isEmpty()) {
+      collector.getTimelineEntityContext().setFlowRunId(flowRunId);
+    }
   }
 
   @VisibleForTesting

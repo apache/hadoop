@@ -20,10 +20,14 @@ package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -33,15 +37,34 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestTimelineCollectorManager {
+  private TimelineCollectorManager collectorManager;
+
+  @Before
+  public void setup() throws Exception {
+    collectorManager = createCollectorManager();
+    collectorManager.init(new YarnConfiguration());
+    collectorManager.start();
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    if (collectorManager != null) {
+      collectorManager.stop();
+    }
+  }
 
   @Test(timeout=60000)
   public void testMultithreadedAdd() throws Exception {
-    final TimelineCollectorManager collectorManager = createCollectorManager();
-
     final int NUM_APPS = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
     for (int i = 0; i < NUM_APPS; i++) {
@@ -49,7 +72,7 @@ public class TestTimelineCollectorManager {
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
           AppLevelTimelineCollector collector =
-              new AppLevelTimelineCollector(appId.toString());
+              new AppLevelTimelineCollector(appId);
           return (collectorManager.putIfAbsent(appId, collector) == collector);
         }
       };
@@ -73,8 +96,6 @@ public class TestTimelineCollectorManager {
 
   @Test
   public void testMultithreadedAddAndRemove() throws Exception {
-    final TimelineCollectorManager collectorManager = createCollectorManager();
-
     final int NUM_APPS = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
     for (int i = 0; i < NUM_APPS; i++) {
@@ -82,7 +103,7 @@ public class TestTimelineCollectorManager {
       Callable<Boolean> task = new Callable<Boolean>() {
         public Boolean call() {
           AppLevelTimelineCollector collector =
-              new AppLevelTimelineCollector(appId.toString());
+              new AppLevelTimelineCollector(appId);
           boolean successPut =
               (collectorManager.putIfAbsent(appId, collector) == collector);
           return successPut && collectorManager.remove(appId.toString());
@@ -112,6 +133,14 @@ public class TestTimelineCollectorManager {
     doReturn(new Configuration()).when(collectorManager).getConfig();
     CollectorNodemanagerProtocol nmCollectorService =
         mock(CollectorNodemanagerProtocol.class);
+    GetTimelineCollectorContextResponse response =
+        GetTimelineCollectorContextResponse.newInstance(null, null, null);
+    try {
+      when(nmCollectorService.getTimelineCollectorContext(any(
+          GetTimelineCollectorContextRequest.class))).thenReturn(response);
+    } catch (YarnException | IOException e) {
+      fail();
+    }
     doReturn(nmCollectorService).when(collectorManager).getNMCollectorService();
     return collectorManager;
   }

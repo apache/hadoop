@@ -20,19 +20,26 @@ package org.apache.hadoop.yarn.server.timelineservice;
 
 
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class TestTimelineServiceClientIntegration {
   private static TimelineCollectorManager collectorManager;
@@ -86,7 +93,17 @@ public class TestTimelineServiceClientIntegration {
 
     @Override
     protected CollectorNodemanagerProtocol getNMCollectorService() {
-      return mock(CollectorNodemanagerProtocol.class);
+      CollectorNodemanagerProtocol protocol =
+          mock(CollectorNodemanagerProtocol.class);
+      try {
+        GetTimelineCollectorContextResponse response =
+            GetTimelineCollectorContextResponse.newInstance(null, null, null);
+        when(protocol.getTimelineCollectorContext(any(
+            GetTimelineCollectorContextRequest.class))).thenReturn(response);
+      } catch (YarnException | IOException e) {
+        fail();
+      }
+      return protocol;
     }
   }
 }

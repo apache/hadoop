@@ -71,6 +71,8 @@ public class ApplicationImpl implements Application {
 
   final Dispatcher dispatcher;
   final String user;
+  final String flowId;
+  final String flowRunId;
   final ApplicationId appId;
   final Credentials credentials;
   Map<ApplicationAccessType, String> applicationACLs;
@@ -95,11 +97,14 @@ public class ApplicationImpl implements Application {
   private long applicationLogInitedTimestamp = -1;
   private final NMStateStoreService appStateStore;
 
-  public ApplicationImpl(Dispatcher dispatcher, String user,
-      ApplicationId appId, Credentials credentials,
-      Context context, long recoveredLogInitedTime) {
+  public ApplicationImpl(Dispatcher dispatcher, String user, String flowId,
+      String flowRunId, ApplicationId appId, Credentials credentials,
+      Context context, long recoveredLogInitedTime)  {
+
     this.dispatcher = dispatcher;
     this.user = user;
+    this.flowId = flowId;
+    this.flowRunId = flowRunId;
     this.appId = appId;
     this.credentials = credentials;
     this.aclsManager = context.getApplicationACLsManager();
@@ -112,9 +117,11 @@ public class ApplicationImpl implements Application {
     setAppLogInitedTimestamp(recoveredLogInitedTime);
   }
 
-  public ApplicationImpl(Dispatcher dispatcher, String user,
-      ApplicationId appId, Credentials credentials, Context context) {
-    this(dispatcher, user, appId, credentials, context, -1);
+  public ApplicationImpl(Dispatcher dispatcher, String user, String flowId,
+      String flowRunId, ApplicationId appId, Credentials credentials,
+      Context context) {
+    this(dispatcher, user, flowId, flowRunId, appId, credentials,
+      context, -1);
   }
 
   @Override
@@ -558,5 +565,13 @@ public class ApplicationImpl implements Application {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  public String getFlowId() {
+    return flowId;
+  }
+
+  public String getFlowRunId() {
+    return flowRunId;
   }
 }

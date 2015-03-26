@@ -28,9 +28,9 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.Test;
 
@@ -52,13 +52,16 @@ public class TestFileSystemTimelineWriterImpl {
     entity.setModifiedTime(1425016502000L);
     te.addEntity(entity);
 
-    try (FileSystemTimelineWriterImpl fsi =
-        new FileSystemTimelineWriterImpl()) {
-      fsi.serviceInit(new Configuration());
-      fsi.write(te);
+    FileSystemTimelineWriterImpl fsi = null;
+    try {
+      fsi = new FileSystemTimelineWriterImpl();
+      fsi.init(new YarnConfiguration());
+      fsi.start();
+      fsi.write("cluster_id", "user_id", "flow_id", "flow_run_id", "app_id", te);
 
-      String fileName = fsi.getOutputRoot() + "/" + type + "/" + id
-          + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+      String fileName = fsi.getOutputRoot() +
+          "/entities/cluster_id/user_id/flow_id/flow_run_id/app_id/" + type +
+          "/" + id + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path = Paths.get(fileName);
       File f = new File(fileName);
       assertTrue(f.exists() && !f.isDirectory());
@@ -73,6 +76,11 @@ public class TestFileSystemTimelineWriterImpl {
       File outputDir = new File(fsi.getOutputRoot());
       FileUtils.deleteDirectory(outputDir);
       assertTrue(!(f.exists()));
+    } finally {
+      if (fsi != null) {
+        fsi.stop();
+        FileUtils.deleteDirectory(new File(fsi.getOutputRoot()));
+      }
     }
   }
 }

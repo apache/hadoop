@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -81,6 +82,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -263,6 +265,21 @@ public class TestDistributedShell {
   }
 
   public void testDSShell(boolean haveDomain) throws Exception {
+    testDSShell(haveDomain, true);
+  }
+
+  @Test(timeout=90000)
+  public void testDSShellWithoutDomainV2DefaultFlow() throws Exception {
+    testDSShell(false, true);
+  }
+
+  @Test(timeout=90000)
+  public void testDSShellWithoutDomainV2CustomizedFlow() throws Exception {
+    testDSShell(false, false);
+  }
+
+  public void testDSShell(boolean haveDomain, boolean defaultFlow)
+      throws Exception {
     String[] args = {
         "--jar",
         APPMASTER_JAR,
@@ -299,6 +316,15 @@ public class TestDistributedShell {
       };
       isTestingTimelineV2 = true;
       args = mergeArgs(args, timelineArgs);
+      if (!defaultFlow) {
+        String[] flowArgs = {
+            "--flow",
+            "test_flow_id",
+            "--flow_run",
+            "12345678"
+        };
+        args = mergeArgs(args, flowArgs);
+      }
       LOG.info("Setup: Using timeline v2!");
     }
 
@@ -377,7 +403,7 @@ public class TestDistributedShell {
     if (!isTestingTimelineV2) {
       checkTimelineV1(haveDomain);
     } else {
-      checkTimelineV2(haveDomain, appId);
+      checkTimelineV2(haveDomain, appId, defaultFlow);
     }
   }
 
@@ -433,53 +459,58 @@ public class TestDistributedShell {
     }
   }
 
-  private void checkTimelineV2(boolean haveDomain, ApplicationId appId) {
-    // For PoC check in /tmp/ YARN-3264
-    String tmpRoot = FileSystemTimelineWriterImpl.DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT;
+  private void checkTimelineV2(
+      boolean haveDomain, ApplicationId appId, boolean defaultFlow)
+      throws Exception {
+    // For PoC check in /tmp/timeline_service_data YARN-3264
+    String tmpRoot =
+        FileSystemTimelineWriterImpl.DEFAULT_TIMELINE_SERVICE_STORAGE_DIR_ROOT
+            + "/entities/";
 
     File tmpRootFolder = new File(tmpRoot);
-    Assert.assertTrue(tmpRootFolder.isDirectory());
+    try {
+      Assert.assertTrue(tmpRootFolder.isDirectory());
 
-    // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs
-    String outputDirApp = tmpRoot + "/DS_APP_ATTEMPT/";
+      // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs
+      String outputDirApp = tmpRoot +
+          YarnConfiguration.DEFAULT_RM_CLUSTER_ID + "/" +
+          UserGroupInformation.getCurrentUser().getShortUserName() +
+          (defaultFlow ? "/" +
+              TimelineUtils.generateDefaultFlowIdBasedOnAppId(appId) +
+              "/0/" : "/test_flow_id/12345678/") +
+          appId.toString() + "/DS_APP_ATTEMPT/";
 
-    File entityFolder = new File(outputDirApp);
-    Assert.assertTrue(entityFolder.isDirectory());
+      File entityFolder = new File(outputDirApp);
+      Assert.assertTrue(entityFolder.isDirectory());
 
-    // there will be at least one attempt, look for that file
-    String appTimestampFileName = "appattempt_" + appId.getClusterTimestamp()
-        + "_000" + appId.getId() + "_000001"
-        + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
-    String appAttemptFileName = outputDirApp + appTimestampFileName;
-    File appAttemptFile = new File(appAttemptFileName);
-    Assert.assertTrue(appAttemptFile.exists());
+      // there will be at least one attempt, look for that file
+      String appTimestampFileName = "appattempt_" + appId.getClusterTimestamp()
+          + "_000" + appId.getId() + "_000001"
+          + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+      String appAttemptFileName = outputDirApp + appTimestampFileName;
+      File appAttemptFile = new File(appAttemptFileName);
+      Assert.assertTrue(appAttemptFile.exists());
 
-    String outputDirContainer = tmpRoot + "/DS_CONTAINER/";
-    File containerFolder = new File(outputDirContainer);
-    Assert.assertTrue(containerFolder.isDirectory());
+      String outputDirContainer = tmpRoot +
+          YarnConfiguration.DEFAULT_RM_CLUSTER_ID + "/" +
+          UserGroupInformation.getCurrentUser().getShortUserName() +
+          (defaultFlow ? "/" +
+              TimelineUtils.generateDefaultFlowIdBasedOnAppId(appId) +
+              "/0/" : "/test_flow_id/12345678/") +
+          appId.toString() + "/DS_CONTAINER/";
+      File containerFolder = new File(outputDirContainer);
+      Assert.assertTrue(containerFolder.isDirectory());
 
-    String containerTimestampFileName = "container_"
-        + appId.getClusterTimestamp() + "_000" + appId.getId()
-        + "_01_000002.thist";
-    String containerFileName = outputDirContainer + containerTimestampFileName;
-    File containerFile = new File(containerFileName);
-    Assert.assertTrue(containerFile.exists());
-    String appTimeStamp = appId.getClusterTimestamp() + "_" + appId.getId()
-        + "_";
-    deleteAppFiles(new File(outputDirApp), appTimeStamp);
-    deleteAppFiles(new File(outputDirContainer), appTimeStamp);
-    tmpRootFolder.delete();
-  }
-
-  private void deleteAppFiles(File rootDir, String appTimeStamp) {
-    boolean deleted = false;
-    File[] listOfFiles = rootDir.listFiles();
-    for (File f1 : listOfFiles) {
-      // list all attempts for this app and delete them
-      if (f1.getName().contains(appTimeStamp)){
-        deleted = f1.delete();
-        Assert.assertTrue(deleted);
-      }
+      String containerTimestampFileName = "container_"
+          + appId.getClusterTimestamp() + "_000" + appId.getId()
+          + "_01_000002.thist";
+      String containerFileName = outputDirContainer + containerTimestampFileName;
+      File containerFile = new File(containerFileName);
+      Assert.assertTrue(containerFile.exists());
+      String appTimeStamp = appId.getClusterTimestamp() + "_" + appId.getId()
+          + "_";
+    } finally {
+      FileUtils.deleteDirectory(tmpRootFolder.getParentFile());
     }
   }
 
