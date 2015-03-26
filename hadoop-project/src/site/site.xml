@@ -68,6 +68,7 @@
       <item name="HTTP Authentication" href="hadoop-project-dist/hadoop-common/HttpAuthentication.html"/>
       <item name="Hadoop KMS" href="hadoop-kms/index.html"/>
       <item name="Tracing" href="hadoop-project-dist/hadoop-common/Tracing.html"/>
+      <item name="Unix Shell Guide" href="hadoop-project-dist/hadoop-common/UnixShellGuide.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
@@ -159,7 +160,8 @@
 
     <menu name="Reference" inherit="top">
       <item name="Release Notes" href="hadoop-project-dist/hadoop-common/releasenotes.html"/>
-      <item name="API docs" href="api/index.html"/>
+      <item name="Java API docs" href="api/index.html"/>
+      <item name="Unix Shell API" href="hadoop-project-dist/hadoop-common/UnixShellAPI.html"/>
       <item name="Common CHANGES.txt" href="hadoop-project-dist/hadoop-common/CHANGES.txt"/>
       <item name="HDFS CHANGES.txt" href="hadoop-project-dist/hadoop-hdfs/CHANGES.txt"/>
       <item name="MapReduce CHANGES.txt" href="hadoop-project-dist/hadoop-mapreduce/CHANGES.txt"/>
