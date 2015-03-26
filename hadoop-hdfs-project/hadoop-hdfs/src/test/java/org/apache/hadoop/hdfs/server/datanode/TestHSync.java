@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Random;
 
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AppendTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.RandomDatum;
@@ -51,15 +53,30 @@ public class TestHSync {
   /** Test basic hsync cases */
   @Test
   public void testHSync() throws Exception {
+    testHSyncOperation(false);
+  }
+
+  @Test
+  public void testHSyncWithAppend() throws Exception {
+    testHSyncOperation(true);
+  }
+
+  private void testHSyncOperation(boolean testWithAppend) throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    final FileSystem fs = cluster.getFileSystem();
+    final DistributedFileSystem fs = cluster.getFileSystem();
 
     final Path p = new Path("/testHSync/foo");
     final int len = 1 << 16;
     FSDataOutputStream out = fs.create(p, FsPermission.getDefault(),
         EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE, CreateFlag.SYNC_BLOCK),
         4096, (short) 1, len, null);
+    if (testWithAppend) {
+      // re-open the file with append call
+      out.close();
+      out = fs.append(p, EnumSet.of(CreateFlag.APPEND, CreateFlag.SYNC_BLOCK),
+          4096, null);
+    }
     out.hflush();
     // hflush does not sync
     checkSyncMetric(cluster, 0);
