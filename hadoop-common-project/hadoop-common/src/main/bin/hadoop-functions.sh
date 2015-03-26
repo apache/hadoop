@@ -1305,8 +1305,8 @@ function hadoop_verify_user
 
 function hadoop_do_classpath_subcommand
 {
-  if [[ "$#" -gt 0 ]]; then
-    CLASS=org.apache.hadoop.util.Classpath
+  if [[ "$#" -gt 1 ]]; then
+    eval "$1"=org.apache.hadoop.util.Classpath
   else
     hadoop_finalize
     echo "${CLASSPATH}"

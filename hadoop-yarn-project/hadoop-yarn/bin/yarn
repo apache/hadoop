@@ -82,7 +82,7 @@ case "${COMMAND}" in
     set -- "${COMMAND}" "$@"
   ;;
   classpath)
-    hadoop_do_classpath_subcommand "$@"
+    hadoop_do_classpath_subcommand CLASS "$@"
   ;;
   cluster)
     CLASS=org.apache.hadoop.yarn.client.cli.ClusterCLI
