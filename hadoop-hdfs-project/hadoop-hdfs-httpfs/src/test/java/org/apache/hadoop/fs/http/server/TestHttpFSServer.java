@@ -18,6 +18,8 @@
 package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.StringSignerSecretProviderCreator;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
 import org.json.simple.JSONArray;
@@ -68,7 +70,6 @@ import org.mortbay.jetty.webapp.WebAppContext;
 import com.google.common.collect.Maps;
 import java.util.Properties;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
-import org.apache.hadoop.security.authentication.util.StringSignerSecretProvider;
 
 public class TestHttpFSServer extends HFSTestCase {
 
@@ -687,7 +688,8 @@ public class TestHttpFSServer extends HFSTestCase {
       new AuthenticationToken("u", "p",
           new KerberosDelegationTokenAuthenticationHandler().getType());
     token.setExpires(System.currentTimeMillis() + 100000000);
-    StringSignerSecretProvider secretProvider = new StringSignerSecretProvider();
+    SignerSecretProvider secretProvider =
+        StringSignerSecretProviderCreator.newStringSignerSecretProvider();
     Properties secretProviderProps = new Properties();
     secretProviderProps.setProperty(AuthenticationFilter.SIGNATURE_SECRET, "secret");
     secretProvider.init(secretProviderProps, null, -1);

@@ -1163,6 +1163,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11738. Fix a link of Protocol Buffers 2.5 for download in BUILDING.txt.
     (ozawa)
 
+    HADOOP-11748. The secrets of auth cookies should not be specified in
+    configuration in clear text. (Li Lu and Haohui Mai via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

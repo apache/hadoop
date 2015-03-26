@@ -279,14 +279,11 @@ public class AuthenticationFilter implements Filter {
             = config.getProperty(SIGNER_SECRET_PROVIDER, null);
     // fallback to old behavior
     if (signerSecretProviderName == null) {
-      String signatureSecret = config.getProperty(SIGNATURE_SECRET, null);
       String signatureSecretFile = config.getProperty(
           SIGNATURE_SECRET_FILE, null);
-      // The precedence from high to low : file, inline string, random
+      // The precedence from high to low : file, random
       if (signatureSecretFile != null) {
         providerClassName = FileSignerSecretProvider.class.getName();
-      } else if (signatureSecret != null) {
-        providerClassName = StringSignerSecretProvider.class.getName();
       } else {
         providerClassName = RandomSignerSecretProvider.class.getName();
         randomSecret = true;
@@ -295,8 +292,6 @@ public class AuthenticationFilter implements Filter {
       if ("random".equals(signerSecretProviderName)) {
         providerClassName = RandomSignerSecretProvider.class.getName();
         randomSecret = true;
-      } else if ("string".equals(signerSecretProviderName)) {
-        providerClassName = StringSignerSecretProvider.class.getName();
       } else if ("file".equals(signerSecretProviderName)) {
         providerClassName = FileSignerSecretProvider.class.getName();
       } else if ("zookeeper".equals(signerSecretProviderName)) {

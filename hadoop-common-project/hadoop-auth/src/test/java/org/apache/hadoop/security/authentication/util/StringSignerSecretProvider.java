@@ -16,6 +16,8 @@ package org.apache.hadoop.security.authentication.util;
 import java.nio.charset.Charset;
 import java.util.Properties;
 import javax.servlet.ServletContext;
+
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -24,8 +26,8 @@ import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
  * A SignerSecretProvider that simply creates a secret based on a given String.
  */
 @InterfaceStability.Unstable
-@InterfaceAudience.Private
-public class StringSignerSecretProvider extends SignerSecretProvider {
+@VisibleForTesting
+class StringSignerSecretProvider extends SignerSecretProvider {
 
   private byte[] secret;
   private byte[][] secrets;
