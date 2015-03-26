@@ -447,6 +447,10 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-11719. [Fsshell] Remove bin/hadoop reference from
+    GenericOptionsParser default help text.
+    (Brahma Reddy Battula via harsh)
+
     HADOOP-11692. Improve authentication failure WARN message to avoid user
     confusion. (Yongjun Zhang)
 
