@@ -513,7 +513,7 @@ public class GenericOptionsParser {
                 "specify comma separated archives to be unarchived" +
                 " on the compute machines.\n");
     out.println("The general command line syntax is");
-    out.println("bin/hadoop command [genericOptions] [commandOptions]\n");
+    out.println("command [genericOptions] [commandOptions]\n");
   }
   
 }
