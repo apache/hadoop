@@ -88,7 +88,10 @@ public class TestTracing {
       "ClientNamenodeProtocol#fsync",
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.complete",
       "ClientNamenodeProtocol#complete",
-      "DFSOutputStream",
+      "newStreamForCreate",
+      "DFSOutputStream#writeChunk",
+      "DFSOutputStream#close",
+      "dataStreamer",
       "OpWriteBlockProto",
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.addBlock",
       "ClientNamenodeProtocol#addBlock"
@@ -102,10 +105,25 @@ public class TestTracing {
     long spanStart = s.getStartTimeMillis();
     long spanEnd = s.getStopTimeMillis();
 
-    // There should only be one trace id as it should all be homed in the
-    // top trace.
-    for (Span span : SetSpanReceiver.SetHolder.spans.values()) {
-      Assert.assertEquals(ts.getSpan().getTraceId(), span.getTraceId());
+    // Spans homed in the top trace shoud have same trace id.
+    // Spans having multiple parents (e.g. "dataStreamer" added by HDFS-7054)
+    // and children of them are exception.
+    String[] spansInTopTrace = {
+      "testWriteTraceHooks",
+      "org.apache.hadoop.hdfs.protocol.ClientProtocol.create",
+      "ClientNamenodeProtocol#create",
+      "org.apache.hadoop.hdfs.protocol.ClientProtocol.fsync",
+      "ClientNamenodeProtocol#fsync",
+      "org.apache.hadoop.hdfs.protocol.ClientProtocol.complete",
+      "ClientNamenodeProtocol#complete",
+      "newStreamForCreate",
+      "DFSOutputStream#writeChunk",
+      "DFSOutputStream#close",
+    };
+    for (String desc : spansInTopTrace) {
+      for (Span span : map.get(desc)) {
+        Assert.assertEquals(ts.getSpan().getTraceId(), span.getTraceId());
+      }
     }
   }
 
