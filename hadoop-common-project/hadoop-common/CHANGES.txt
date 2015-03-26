@@ -19,7 +19,7 @@ Trunk (Unreleased)
     HADOOP-11657. Align the output of `hadoop fs -du` to be more Unix-like.
     (aajisaka)
 
-    HADOOP-11553. Foramlize the shell API (aw)
+    HADOOP-11553. Formalize the shell API (aw)
 
   NEW FEATURES
 
