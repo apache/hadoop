@@ -95,7 +95,7 @@ public class PerNodeTimelineCollectorsAuxService extends AuxiliaryService {
    */
   public boolean addApplication(ApplicationId appId) {
     AppLevelTimelineCollector collector =
-        new AppLevelTimelineCollector(appId.toString());
+        new AppLevelTimelineCollector(appId);
     return (collectorManager.putIfAbsent(appId, collector)
         == collector);
   }

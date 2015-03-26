@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsEventType;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 
 /**
  * This class is responsible for posting application and appattempt lifecycle
@@ -86,6 +87,12 @@ public class RMTimelineCollector extends TimelineCollector {
     default:
       LOG.error("Unknown SystemMetricsEvent type: " + event.getType());
     }
+  }
+  
+  @Override
+  protected TimelineCollectorContext getTimelineEntityContext() {
+    // TODO address in YARN-3390.
+    return null;
   }
 
   /**

@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 
 import org.apache.commons.cli.CommandLine;
@@ -187,6 +189,9 @@ public class Client {
   // Timeline domain writer access control
   private String modifyACLs = null;
 
+  private String flowId = null;
+  private String flowRunId = null;
+
   // Command line options
   private Options opts;
 
@@ -260,7 +265,8 @@ public class Client {
     opts.addOption("shell_args", true, "Command line args for the shell script." +
         "Multiple args can be separated by empty space.");
     opts.getOption("shell_args").setArgs(Option.UNLIMITED_VALUES);
-    opts.addOption("shell_env", true, "Environment for shell script. Specified as env_key=env_val pairs");
+    opts.addOption("shell_env", true,
+        "Environment for shell script. Specified as env_key=env_val pairs");
     opts.addOption("shell_cmd_priority", true, "Priority for the shell command containers");
     opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run the shell command");
     opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run the shell command");
@@ -287,6 +293,10 @@ public class Client {
         + "modify the timeline entities in the given domain");
     opts.addOption("create", false, "Flag to indicate whether to create the "
         + "domain specified with -domain.");
+    opts.addOption("flow", true, "ID of the flow which the distributed shell "
+        + "app belongs to");
+    opts.addOption("flow_run", true, "ID of the flowrun which the distributed "
+        + "shell app belongs to");
     opts.addOption("help", false, "Print usage");
     opts.addOption("node_label_expression", true,
         "Node label expression to determine the nodes"
@@ -476,6 +486,12 @@ public class Client {
           + cliParser.getOptionValue("container_retry_interval"));
     }
 
+    if (cliParser.hasOption("flow")) {
+      flowId = cliParser.getOptionValue("flow");
+    }
+    if (cliParser.hasOption("flow_run")) {
+      flowRunId = cliParser.getOptionValue("flow_run");
+    }
     return true;
   }
 
@@ -566,6 +582,15 @@ public class Client {
       appContext
         .setAttemptFailuresValidityInterval(attemptFailuresValidityInterval);
     }
+
+    Set<String> tags = new HashSet<String>();
+    if (flowId != null) {
+      tags.add(TimelineUtils.generateFlowIdTag(flowId));
+    }
+    if (flowRunId != null) {
+      tags.add(TimelineUtils.generateFlowRunIdTag(flowRunId));
+    }
+    appContext.setApplicationTags(tags);
 
     // set local resources for the application master
     // local files or archives as needed

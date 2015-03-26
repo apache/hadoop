@@ -140,6 +140,15 @@ message ReportNewCollectorInfoRequestProto {
 message ReportNewCollectorInfoResponseProto {
 }
 
+message GetTimelineCollectorContextRequestProto {
+  optional ApplicationIdProto appId = 1;
+}
+
+message GetTimelineCollectorContextResponseProto {
+  optional string user_id = 1;
+  optional string flow_id = 2;
+  optional string flow_run_id = 3;
+}
 
 message NMContainerStatusProto {
   optional ContainerIdProto container_id = 1;
