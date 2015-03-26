@@ -39,12 +39,19 @@ public interface TimelineWriter extends Service {
    * timeline store. Any errors occurring for individual write request objects
    * will be reported in the response.
    *
+   * @param clusterId context cluster ID
+   * @param userId context user ID
+   * @param flowId context flow ID
+   * @param flowRunId context flow run ID
+   * @param appId context app ID
    * @param data
    *          a {@link TimelineEntities} object.
    * @return a {@link TimelineWriteResponse} object.
    * @throws IOException
    */
-  TimelineWriteResponse write(TimelineEntities data) throws IOException;
+  TimelineWriteResponse write(String clusterId, String userId,
+      String flowId, String flowRunId, String appId,
+      TimelineEntities data) throws IOException;
 
   /**
    * Aggregates the entity information to the timeline store based on which

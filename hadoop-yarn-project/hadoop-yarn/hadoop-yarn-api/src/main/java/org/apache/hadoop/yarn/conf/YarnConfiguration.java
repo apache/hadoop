@@ -133,6 +133,7 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_PREFIX = "yarn.resourcemanager.";
 
   public static final String RM_CLUSTER_ID = RM_PREFIX + "cluster-id";
+  public static final String DEFAULT_RM_CLUSTER_ID = "yarn_cluster";
 
   public static final String RM_HOSTNAME = RM_PREFIX + "hostname";
 
