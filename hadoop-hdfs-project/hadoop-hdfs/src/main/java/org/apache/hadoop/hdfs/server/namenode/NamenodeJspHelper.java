@@ -17,33 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NodeBase;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-
-import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 
 class NamenodeJspHelper {
 
-  static String getDelegationToken(final NamenodeProtocols nn,
-      HttpServletRequest request, Configuration conf,
-      final UserGroupInformation ugi) throws IOException, InterruptedException {
-    Token<DelegationTokenIdentifier> token = ugi
-        .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
-          @Override
-          public Token<DelegationTokenIdentifier> run() throws IOException {
-            return nn.getDelegationToken(new Text(ugi.getUserName()));
-          }
-        });
-    return token == null ? null : token.encodeToUrlString();
-  }
 
   /** @return a randomly chosen datanode. */
   static DatanodeDescriptor getRandomDatanode(final NameNode namenode) {
