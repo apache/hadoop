@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang.ArrayUtils;
 
 /**
  * Counters for an enum type.
@@ -62,6 +63,11 @@ public class EnumCounters<E extends Enum<E>> {
   /** @return the value of counter e. */
   public final long get(final E e) {
     return counters[e.ordinal()];
+  }
+
+  /** @return the values of counter as a shadow copy of array*/
+  public long[] asArray() {
+    return ArrayUtils.clone(counters);
   }
 
   /** Negate all counters. */

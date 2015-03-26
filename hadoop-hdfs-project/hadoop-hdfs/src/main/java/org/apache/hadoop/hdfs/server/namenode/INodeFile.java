@@ -599,22 +599,36 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public final ContentSummaryComputationContext computeContentSummary(
       final ContentSummaryComputationContext summary) {
-    final Content.Counts counts = summary.getCounts();
+    final ContentCounts counts = summary.getCounts();
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    long fileLen = 0;
     if (sf == null) {
-      counts.add(Content.LENGTH, computeFileSize());
-      counts.add(Content.FILE, 1);
+      fileLen = computeFileSize();
+      counts.addContent(Content.FILE, 1);
     } else {
       final FileDiffList diffs = sf.getDiffs();
       final int n = diffs.asList().size();
-      counts.add(Content.FILE, n);
+      counts.addContent(Content.FILE, n);
       if (n > 0 && sf.isCurrentFileDeleted()) {
-        counts.add(Content.LENGTH, diffs.getLast().getFileSize());
+        fileLen =  diffs.getLast().getFileSize();
       } else {
-        counts.add(Content.LENGTH, computeFileSize());
+        fileLen = computeFileSize();
       }
     }
-    counts.add(Content.DISKSPACE, storagespaceConsumed());
+    counts.addContent(Content.LENGTH, fileLen);
+    counts.addContent(Content.DISKSPACE, storagespaceConsumed());
+
+    if (getStoragePolicyID() != BlockStoragePolicySuite.ID_UNSPECIFIED){
+      BlockStoragePolicy bsp = summary.getBlockStoragePolicySuite().
+          getPolicy(getStoragePolicyID());
+      List<StorageType> storageTypes = bsp.chooseStorageTypes(getFileReplication());
+      for (StorageType t : storageTypes) {
+        if (!t.supportTypeQuota()) {
+          continue;
+        }
+        counts.addTypeSpace(t, fileLen);
+      }
+    }
     return summary;
   }
 

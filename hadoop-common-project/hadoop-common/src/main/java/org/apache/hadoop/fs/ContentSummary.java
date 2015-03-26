@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
@@ -36,17 +37,106 @@ public class ContentSummary implements Writable{
   private long quota;
   private long spaceConsumed;
   private long spaceQuota;
-  
+  private long typeConsumed[];
+  private long typeQuota[];
 
-  /** Constructor */
+  public static class Builder{
+    public Builder() {
+      this.quota = -1;
+      this.spaceQuota = -1;
+
+      typeConsumed = new long[StorageType.values().length];
+      typeQuota = new long[StorageType.values().length];
+      for (int i = 0; i < typeQuota.length; i++) {
+        typeQuota[i] = -1;
+      }
+    }
+
+    public Builder length(long length) {
+      this.length = length;
+      return this;
+    }
+
+    public Builder fileCount(long fileCount) {
+      this.fileCount = fileCount;
+      return this;
+    }
+
+    public Builder directoryCount(long directoryCount) {
+      this.directoryCount = directoryCount;
+      return this;
+    }
+
+    public Builder quota(long quota){
+      this.quota = quota;
+      return this;
+    }
+
+    public Builder spaceConsumed(long spaceConsumed) {
+      this.spaceConsumed = spaceConsumed;
+      return this;
+    }
+
+    public Builder spaceQuota(long spaceQuota) {
+      this.spaceQuota = spaceQuota;
+      return this;
+    }
+
+    public Builder typeConsumed(long typeConsumed[]) {
+      for (int i = 0; i < typeConsumed.length; i++) {
+        this.typeConsumed[i] = typeConsumed[i];
+      }
+      return this;
+    }
+
+    public Builder typeQuota(StorageType type, long quota) {
+      this.typeQuota[type.ordinal()] = quota;
+      return this;
+    }
+
+    public Builder typeConsumed(StorageType type, long consumed) {
+      this.typeConsumed[type.ordinal()] = consumed;
+      return this;
+    }
+
+    public Builder typeQuota(long typeQuota[]) {
+      for (int i = 0; i < typeQuota.length; i++) {
+        this.typeQuota[i] = typeQuota[i];
+      }
+      return this;
+    }
+
+    public ContentSummary build() {
+      return new ContentSummary(length, fileCount, directoryCount, quota,
+          spaceConsumed, spaceQuota, typeConsumed, typeQuota);
+    }
+
+    private long length;
+    private long fileCount;
+    private long directoryCount;
+    private long quota;
+    private long spaceConsumed;
+    private long spaceQuota;
+    private long typeConsumed[];
+    private long typeQuota[];
+  }
+
+  /** Constructor deprecated by ContentSummary.Builder*/
+  @Deprecated
   public ContentSummary() {}
   
-  /** Constructor */
+  /** Constructor, deprecated by ContentSummary.Builder
+   *  This constructor implicitly set spaceConsumed the same as length.
+   *  spaceConsumed and length must be set explicitly with
+   *  ContentSummary.Builder
+   * */
+  @Deprecated
   public ContentSummary(long length, long fileCount, long directoryCount) {
     this(length, fileCount, directoryCount, -1L, length, -1L);
   }
 
-  /** Constructor */
+  /** Constructor, deprecated by ContentSummary.Builder */
+  @Deprecated
   public ContentSummary(
       long length, long fileCount, long directoryCount, long quota,
       long spaceConsumed, long spaceQuota) {
@@ -56,6 +146,21 @@ public class ContentSummary implements Writable{
     this.quota = quota;
     this.spaceConsumed = spaceConsumed;
     this.spaceQuota = spaceQuota;
+  }
+
+  /** Constructor for ContentSummary.Builder*/
+  private ContentSummary(
+      long length, long fileCount, long directoryCount, long quota,
+      long spaceConsumed, long spaceQuota, long typeConsumed[],
+      long typeQuota[]) {
+    this.length = length;
+    this.fileCount = fileCount;
+    this.directoryCount = directoryCount;
+    this.quota = quota;
+    this.spaceConsumed = spaceConsumed;
+    this.spaceQuota = spaceQuota;
+    this.typeConsumed = typeConsumed;
+    this.typeQuota = typeQuota;
   }
 
   /** @return the length */
@@ -70,12 +175,48 @@ public class ContentSummary implements Writable{
   /** Return the directory quota */
   public long getQuota() {return quota;}
   
-  /** Retuns (disk) space consumed */ 
+  /** Retuns storage space consumed */
   public long getSpaceConsumed() {return spaceConsumed;}
 
-  /** Returns (disk) space quota */
+  /** Returns storage space quota */
   public long getSpaceQuota() {return spaceQuota;}
-  
+
+  /** Returns storage type quota */
+  public long getTypeQuota(StorageType type) {
+    return (typeQuota != null) ? typeQuota[type.ordinal()] : -1;
+  }
+
+  /** Returns storage type consumed*/
+  public long getTypeConsumed(StorageType type) {
+    return (typeConsumed != null) ? typeConsumed[type.ordinal()] : 0;
+  }
+
+  /** Returns true if any storage type quota has been set*/
+  public boolean isTypeQuotaSet() {
+    if (typeQuota == null) {
+      return false;
+    }
+    for (StorageType t : StorageType.getTypesSupportingQuota()) {
+      if (typeQuota[t.ordinal()] > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Returns true if any storage type consumption information is available*/
+  public boolean isTypeConsumedAvailable() {
+    if (typeConsumed == null) {
+      return false;
+    }
+    for (StorageType t : StorageType.getTypesSupportingQuota()) {
+      if (typeConsumed[t.ordinal()] > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @Override
   @InterfaceAudience.Private
   public void write(DataOutput out) throws IOException {
