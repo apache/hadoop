@@ -1014,13 +1014,13 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) ((JSONObject)
       HttpFSUtils.jsonParse(conn)).get(CONTENT_SUMMARY_JSON);
-    return new ContentSummary((Long) json.get(CONTENT_SUMMARY_LENGTH_JSON),
-                              (Long) json.get(CONTENT_SUMMARY_FILE_COUNT_JSON),
-                              (Long) json.get(CONTENT_SUMMARY_DIRECTORY_COUNT_JSON),
-                              (Long) json.get(CONTENT_SUMMARY_QUOTA_JSON),
-                              (Long) json.get(CONTENT_SUMMARY_SPACE_CONSUMED_JSON),
-                              (Long) json.get(CONTENT_SUMMARY_SPACE_QUOTA_JSON)
-    );
+    return new ContentSummary.Builder().
+        length((Long) json.get(CONTENT_SUMMARY_LENGTH_JSON)).
+        fileCount((Long) json.get(CONTENT_SUMMARY_FILE_COUNT_JSON)).
+        directoryCount((Long) json.get(CONTENT_SUMMARY_DIRECTORY_COUNT_JSON)).
+        quota((Long) json.get(CONTENT_SUMMARY_QUOTA_JSON)).
+        spaceConsumed((Long) json.get(CONTENT_SUMMARY_SPACE_CONSUMED_JSON)).
+        spaceQuota((Long) json.get(CONTENT_SUMMARY_SPACE_QUOTA_JSON)).build();
   }
 
   @Override

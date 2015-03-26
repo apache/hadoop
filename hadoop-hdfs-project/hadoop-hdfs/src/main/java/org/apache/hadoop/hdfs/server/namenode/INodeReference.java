@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -512,7 +513,8 @@ public abstract class INodeReference extends INode {
       //only count storagespace for WithName
       final QuotaCounts q = new QuotaCounts.Builder().build();
       computeQuotaUsage(summary.getBlockStoragePolicySuite(), q, false, lastSnapshotId);
-      summary.getCounts().add(Content.DISKSPACE, q.getStorageSpace());
+      summary.getCounts().addContent(Content.DISKSPACE, q.getStorageSpace());
+      summary.getCounts().addTypeSpaces(q.getTypeSpaces());
       return summary;
     }
 

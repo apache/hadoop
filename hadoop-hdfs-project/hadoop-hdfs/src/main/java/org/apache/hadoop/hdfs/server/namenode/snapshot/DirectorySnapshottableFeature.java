@@ -237,8 +237,8 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       final INodeDirectory snapshotRoot,
       final ContentSummaryComputationContext summary) {
     snapshotRoot.computeContentSummary(summary);
-    summary.getCounts().add(Content.SNAPSHOT, snapshotsByNames.size());
-    summary.getCounts().add(Content.SNAPSHOTTABLE_DIRECTORY, 1);
+    summary.getCounts().addContent(Content.SNAPSHOT, snapshotsByNames.size());
+    summary.getCounts().addContent(Content.SNAPSHOTTABLE_DIRECTORY, 1);
     return summary;
   }
 

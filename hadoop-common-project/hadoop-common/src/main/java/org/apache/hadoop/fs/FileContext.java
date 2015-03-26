@@ -1658,20 +1658,27 @@ public class FileContext {
         UnsupportedFileSystemException, IOException {
       FileStatus status = FileContext.this.getFileStatus(f);
       if (status.isFile()) {
-        return new ContentSummary(status.getLen(), 1, 0);
+        long length = status.getLen();
+        return new ContentSummary.Builder().length(length).
+            fileCount(1).directoryCount(0).spaceConsumed(length).
+            build();
       }
       long[] summary = {0, 0, 1};
-      RemoteIterator<FileStatus> statusIterator = 
+      RemoteIterator<FileStatus> statusIterator =
         FileContext.this.listStatus(f);
       while(statusIterator.hasNext()) {
         FileStatus s = statusIterator.next();
+        long length = s.getLen();
         ContentSummary c = s.isDirectory() ? getContentSummary(s.getPath()) :
-                                       new ContentSummary(s.getLen(), 1, 0);
+            new ContentSummary.Builder().length(length).fileCount(1).
+            directoryCount(0).spaceConsumed(length).build();
         summary[0] += c.getLength();
         summary[1] += c.getFileCount();
         summary[2] += c.getDirectoryCount();
       }
-      return new ContentSummary(summary[0], summary[1], summary[2]);
+      return new ContentSummary.Builder().length(summary[0]).
+          fileCount(summary[1]).directoryCount(summary[2]).
+          spaceConsumed(summary[0]).build();
     }
     
     /**

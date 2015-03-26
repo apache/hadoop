@@ -218,8 +218,10 @@ public class TestCount {
 
   // mock content system
   static class MockContentSummary extends ContentSummary {
-    
-    public MockContentSummary() {}
+    @SuppressWarnings("deprecation")
+    // suppress warning on the usage of deprecated ContentSummary constructor
+    public MockContentSummary() {
+    }
 
     @Override
     public String toString(boolean qOption, boolean hOption) {
