@@ -41,6 +41,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3034. Implement RM starting its timeline collector. (Naganarasimha G R
     via junping_du)
 
+    YARN-3040. Make putEntities operation be aware of the app's context. (Zhijie Shen 
+    via junping_du)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

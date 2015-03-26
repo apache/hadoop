@@ -15,16 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "CollectorNodemanagerProtocol";
-option java_generic_services = true;
-option java_generate_equals_and_hash = true;
-package hadoop.yarn;
 
-import "yarn_server_common_service_protos.proto";
+import org.apache.hadoop.yarn.util.Records;
 
-service CollectorNodemanagerProtocolService {
-  rpc reportNewCollectorInfo (ReportNewCollectorInfoRequestProto) returns (ReportNewCollectorInfoResponseProto);
-  rpc getTimelineCollectorContext (GetTimelineCollectorContextRequestProto) returns (GetTimelineCollectorContextResponseProto);
+public abstract class GetTimelineCollectorContextResponse {
+
+  public static GetTimelineCollectorContextResponse newInstance(
+      String userId, String flowId, String flowRunId) {
+    GetTimelineCollectorContextResponse response =
+        Records.newRecord(GetTimelineCollectorContextResponse.class);
+    response.setUserId(userId);
+    response.setFlowId(flowId);
+    response.setFlowRunId(flowRunId);
+    return response;
+  }
+
+  public abstract String getUserId();
+
+  public abstract void setUserId(String userId);
+
+  public abstract String getFlowId();
+
+  public abstract void setFlowId(String flowId);
+
+  public abstract String getFlowRunId();
+
+  public abstract void setFlowRunId(String flowRunId);
 }

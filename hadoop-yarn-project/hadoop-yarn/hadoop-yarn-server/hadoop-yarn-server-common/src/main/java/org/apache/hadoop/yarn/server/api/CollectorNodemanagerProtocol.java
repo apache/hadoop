@@ -21,6 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReportNewCollectorInfoResponse;
 
@@ -54,4 +56,18 @@ public interface CollectorNodemanagerProtocol {
       ReportNewCollectorInfoRequest request)
       throws YarnException, IOException;
 
+  /**
+   * <p>
+   * The collector needs to get the context information including user, flow
+   * and flow run ID to associate with every incoming put-entity requests.
+   * </p>
+   * @param request the request of getting the aggregator context information of
+   *                the given application
+   * @return
+   * @throws YarnException
+   * @throws IOException
+   */
+  GetTimelineCollectorContextResponse getTimelineCollectorContext(
+      GetTimelineCollectorContextRequest request)
+      throws YarnException, IOException;
 }

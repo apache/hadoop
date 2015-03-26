@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -29,16 +30,25 @@ import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
+import org.junit.After;
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class TestPerNodeTimelineCollectorsAuxService {
   private ApplicationAttemptId appAttemptId;
+  private PerNodeTimelineCollectorsAuxService auxService;
 
   public TestPerNodeTimelineCollectorsAuxService() {
     ApplicationId appId =
@@ -46,10 +56,16 @@ public class TestPerNodeTimelineCollectorsAuxService {
     appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
   }
 
+  @After
+  public void tearDown() throws Shell.ExitCodeException {
+    if (auxService != null) {
+      auxService.stop();
+    }
+  }
+
   @Test
   public void testAddApplication() throws Exception {
-    PerNodeTimelineCollectorsAuxService auxService =
-        createCollectorAndAddApplication();
+    auxService = createCollectorAndAddApplication();
     // auxService should have a single app
     assertTrue(auxService.hasApplication(
         appAttemptId.getApplicationId().toString()));
@@ -58,7 +74,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
 
   @Test
   public void testAddApplicationNonAMContainer() throws Exception {
-    PerNodeTimelineCollectorsAuxService auxService = createCollector();
+    auxService = createCollector();
 
     ContainerId containerId = getContainerId(2L); // not an AM
     ContainerInitializationContext context =
@@ -72,8 +88,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
 
   @Test
   public void testRemoveApplication() throws Exception {
-    PerNodeTimelineCollectorsAuxService auxService =
-        createCollectorAndAddApplication();
+    auxService = createCollectorAndAddApplication();
     // auxService should have a single app
     String appIdStr = appAttemptId.getApplicationId().toString();
     assertTrue(auxService.hasApplication(appIdStr));
@@ -90,8 +105,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
 
   @Test
   public void testRemoveApplicationNonAMContainer() throws Exception {
-    PerNodeTimelineCollectorsAuxService auxService =
-        createCollectorAndAddApplication();
+    auxService = createCollectorAndAddApplication();
     // auxService should have a single app
     String appIdStr = appAttemptId.getApplicationId().toString();
     assertTrue(auxService.hasApplication(appIdStr));
@@ -109,7 +123,6 @@ public class TestPerNodeTimelineCollectorsAuxService {
   @Test(timeout = 60000)
   public void testLaunch() throws Exception {
     ExitUtil.disableSystemExit();
-    PerNodeTimelineCollectorsAuxService auxService = null;
     try {
       auxService =
           PerNodeTimelineCollectorsAuxService.launchServer(new String[0],
@@ -118,10 +131,6 @@ public class TestPerNodeTimelineCollectorsAuxService {
       assertEquals(0, e.status);
       ExitUtil.resetFirstExitException();
       fail();
-    } finally {
-      if (auxService != null) {
-        auxService.stop();
-      }
     }
   }
 
@@ -141,6 +150,8 @@ public class TestPerNodeTimelineCollectorsAuxService {
     TimelineCollectorManager collectorManager = createCollectorManager();
     PerNodeTimelineCollectorsAuxService auxService =
         spy(new PerNodeTimelineCollectorsAuxService(collectorManager));
+    auxService.init(new YarnConfiguration());
+    auxService.start();
     return auxService;
   }
 
@@ -150,6 +161,14 @@ public class TestPerNodeTimelineCollectorsAuxService {
     doReturn(new Configuration()).when(collectorManager).getConfig();
     CollectorNodemanagerProtocol nmCollectorService =
         mock(CollectorNodemanagerProtocol.class);
+    GetTimelineCollectorContextResponse response =
+        GetTimelineCollectorContextResponse.newInstance(null, null, null);
+    try {
+      when(nmCollectorService.getTimelineCollectorContext(any(
+          GetTimelineCollectorContextRequest.class))).thenReturn(response);
+    } catch (YarnException | IOException e) {
+      fail();
+    }
     doReturn(nmCollectorService).when(collectorManager).getNMCollectorService();
     return collectorManager;
   }

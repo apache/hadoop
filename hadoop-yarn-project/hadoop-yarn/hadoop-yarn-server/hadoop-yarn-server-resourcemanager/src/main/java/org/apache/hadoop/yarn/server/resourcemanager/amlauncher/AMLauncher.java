@@ -35,8 +35,8 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -218,6 +219,26 @@ public class AMLauncher implements Runnable {
             .get(applicationId)
             .getSubmitTime()));
 
+    // Set flow context info
+    for (String tag :
+        rmContext.getRMApps().get(applicationId).getApplicationTags()) {
+      if (tag.startsWith(TimelineUtils.FLOW_ID_TAG_PREFIX  + ":") ||
+          tag.startsWith(TimelineUtils.FLOW_ID_TAG_PREFIX.toLowerCase() + ":")) {
+        String value = tag.substring(
+            TimelineUtils.FLOW_ID_TAG_PREFIX.length() + 1);
+        if (!value.isEmpty()) {
+          environment.put(TimelineUtils.FLOW_ID_TAG_PREFIX, value);
+        }
+      }
+      if (tag.startsWith(TimelineUtils.FLOW_RUN_ID_TAG_PREFIX  + ":") ||
+          tag.startsWith(TimelineUtils.FLOW_RUN_ID_TAG_PREFIX.toLowerCase() + ":")) {
+        String value = tag.substring(
+            TimelineUtils.FLOW_RUN_ID_TAG_PREFIX.length() + 1);
+        if (!value.isEmpty()) {
+          environment.put(TimelineUtils.FLOW_RUN_ID_TAG_PREFIX, value);
+        }
+      }
+    }
     Credentials credentials = new Credentials();
     DataInputByteBuffer dibb = new DataInputByteBuffer();
     ByteBuffer tokens = container.getTokens();

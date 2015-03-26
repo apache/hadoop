@@ -39,6 +39,9 @@ public class MockApp implements Application {
   Map<ContainerId, Container> containers = new HashMap<ContainerId, Container>();
   ApplicationState appState;
   Application app;
+  String flowId;
+  String flowRunId;
+
 
   public MockApp(int uniqId) {
     this("mockUser", 1234, uniqId);
@@ -77,4 +80,11 @@ public class MockApp implements Application {
 
   public void handle(ApplicationEvent event) {}
 
+  public String getFlowId() {
+    return flowId;
+  }
+
+  public String getFlowRunId() {
+    return flowRunId;
+  }
 }
