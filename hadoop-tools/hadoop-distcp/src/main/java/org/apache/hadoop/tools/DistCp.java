@@ -401,7 +401,7 @@ public class DistCp extends Configured implements Tool {
    * job staging directory
    *
    * @return Returns the working folder information
-   * @throws Exception - EXception if any
+   * @throws Exception - Exception if any
    */
   private Path createMetaFolderPath() throws Exception {
     Configuration configuration = getConf();

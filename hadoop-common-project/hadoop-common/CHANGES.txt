@@ -481,6 +481,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11724. DistCp throws NPE when the target directory is root.
     (Lei Eddy Xu via Yongjun Zhang) 
 
+    HADOOP-11760. Fix typo of javadoc in DistCp. (Brahma Reddy Battula via
+    ozawa).
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
