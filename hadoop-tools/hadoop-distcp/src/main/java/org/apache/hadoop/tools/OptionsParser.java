@@ -23,15 +23,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
-import java.util.*;
 
 /**
  * The OptionsParser parses out the command-line options passed to DistCp,
  * and interprets those specific to DistCp, to create an Options object.
  */
 public class OptionsParser {
-
   private static final Log LOG = LogFactory.getLog(OptionsParser.class);
 
   private static final Options cliOptions = new Options();
@@ -65,8 +66,7 @@ public class OptionsParser {
    * @return The Options object, corresponding to the specified command-line.
    * @throws IllegalArgumentException: Thrown if the parse fails.
    */
-  public static DistCpOptions parse(String args[]) throws IllegalArgumentException {
-
+  public static DistCpOptions parse(String[] args) throws IllegalArgumentException {
     CommandLineParser parser = new CustomParser();
 
     CommandLine command;
@@ -81,16 +81,16 @@ public class OptionsParser {
     Path targetPath;
     List<Path> sourcePaths = new ArrayList<Path>();
 
-    String leftOverArgs[] = command.getArgs();
-    if (leftOverArgs == null || leftOverArgs.length < 1) {
+    String[] leftOverArgs = command.getArgs();
+    if ((leftOverArgs == null) || (leftOverArgs.length < 1)) {
       throw new IllegalArgumentException("Target path not specified");
     }
 
     //Last Argument is the target path
-    targetPath = new Path(leftOverArgs[leftOverArgs.length -1].trim());
+    targetPath = new Path(leftOverArgs[leftOverArgs.length - 1].trim());
 
     //Copy any source paths in the arguments to the list
-    for (int index = 0; index < leftOverArgs.length - 1; index++) {
+    for (int index = 0; index < (leftOverArgs.length - 1); index++) {
       sourcePaths.add(new Path(leftOverArgs[index].trim()));
     }
 
@@ -100,8 +100,8 @@ public class OptionsParser {
       if (!sourcePaths.isEmpty()) {
         throw new IllegalArgumentException("Both source file listing and source paths present");
       }
-      option = new DistCpOptions(new Path(getVal(command, DistCpOptionSwitch.
-              SOURCE_FILE_LISTING.getSwitch())), targetPath);
+      option = new DistCpOptions(new Path(getVal(command, DistCpOptionSwitch.SOURCE_FILE_LISTING.getSwitch())),
+        targetPath);
     } else {
       if (sourcePaths.isEmpty()) {
         throw new IllegalArgumentException("Neither source file listing nor source paths present");
@@ -121,7 +121,7 @@ public class OptionsParser {
     if (command.hasOption(DistCpOptionSwitch.WORK_PATH.getSwitch()) &&
         option.shouldAtomicCommit()) {
       String workPath = getVal(command, DistCpOptionSwitch.WORK_PATH.getSwitch());
-      if (workPath != null && !workPath.isEmpty()) {
+      if ((workPath != null) && !workPath.isEmpty()) {
         option.setAtomicWorkPath(new Path(workPath));
       }
     } else if (command.hasOption(DistCpOptionSwitch.WORK_PATH.getSwitch())) {
@@ -148,6 +148,10 @@ public class OptionsParser {
       option.setDeleteMissing(true);
     }
 
+    if (command.hasOption(DistCpOptionSwitch.LIST_MISSING.getSwitch())) {
+      option.setListMissing(true);
+    }
+
     if (command.hasOption(DistCpOptionSwitch.SKIP_CRC.getSwitch())) {
       option.setSkipCRC(true);
     }
@@ -159,80 +163,75 @@ public class OptionsParser {
     if (command.hasOption(DistCpOptionSwitch.BANDWIDTH.getSwitch())) {
       try {
         Integer mapBandwidth = Integer.parseInt(
-            getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()).trim());
+          getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()).trim());
         if (mapBandwidth.intValue() <= 0) {
           throw new IllegalArgumentException("Bandwidth specified is not positive: " +
-              mapBandwidth);
+            mapBandwidth);
         }
         option.setMapBandwidth(mapBandwidth);
       } catch (NumberFormatException e) {
         throw new IllegalArgumentException("Bandwidth specified is invalid: " +
-            getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()), e);
+          getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()), e);
       }
     }
 
     if (command.hasOption(DistCpOptionSwitch.SSL_CONF.getSwitch())) {
-      option.setSslConfigurationFile(command.
-          getOptionValue(DistCpOptionSwitch.SSL_CONF.getSwitch()));
+      option.setSslConfigurationFile(command.getOptionValue(DistCpOptionSwitch.SSL_CONF.getSwitch()));
     }
 
     if (command.hasOption(DistCpOptionSwitch.MAX_MAPS.getSwitch())) {
       try {
         Integer maps = Integer.parseInt(
-            getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()).trim());
+          getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()).trim());
         option.setMaxMaps(maps);
       } catch (NumberFormatException e) {
         throw new IllegalArgumentException("Number of maps is invalid: " +
-            getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()), e);
+          getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()), e);
       }
     }
 
     if (command.hasOption(DistCpOptionSwitch.COPY_STRATEGY.getSwitch())) {
       option.setCopyStrategy(
-            getVal(command, DistCpOptionSwitch.COPY_STRATEGY.getSwitch()));
+        getVal(command, DistCpOptionSwitch.COPY_STRATEGY.getSwitch()));
     }
 
     if (command.hasOption(DistCpOptionSwitch.PRESERVE_STATUS.getSwitch())) {
-      String attributes =
-          getVal(command, DistCpOptionSwitch.PRESERVE_STATUS.getSwitch());
-      if (attributes == null || attributes.isEmpty()) {
+      String attributes = getVal(command, DistCpOptionSwitch.PRESERVE_STATUS.getSwitch());
+      if ((attributes == null) || attributes.isEmpty()) {
         for (FileAttribute attribute : FileAttribute.values()) {
           option.preserve(attribute);
         }
       } else {
         for (int index = 0; index < attributes.length(); index++) {
-          option.preserve(FileAttribute.
-              getAttribute(attributes.charAt(index)));
+          option.preserve(FileAttribute.getAttribute(attributes.charAt(index)));
         }
       }
     }
 
     if (command.hasOption(DistCpOptionSwitch.FILE_LIMIT.getSwitch())) {
       String fileLimitString = getVal(command,
-                              DistCpOptionSwitch.FILE_LIMIT.getSwitch().trim());
+        DistCpOptionSwitch.FILE_LIMIT.getSwitch().trim());
       try {
         Integer.parseInt(fileLimitString);
-      }
-      catch (NumberFormatException e) {
-        throw new IllegalArgumentException("File-limit is invalid: "
-                                            + fileLimitString, e);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("File-limit is invalid: " +
+          fileLimitString, e);
       }
       LOG.warn(DistCpOptionSwitch.FILE_LIMIT.getSwitch() + " is a deprecated" +
-              " option. Ignoring.");
+        " option. Ignoring.");
     }
 
     if (command.hasOption(DistCpOptionSwitch.SIZE_LIMIT.getSwitch())) {
       String sizeLimitString = getVal(command,
-                              DistCpOptionSwitch.SIZE_LIMIT.getSwitch().trim());
+        DistCpOptionSwitch.SIZE_LIMIT.getSwitch().trim());
       try {
         Long.parseLong(sizeLimitString);
-      }
-      catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Size-limit is invalid: "
-                                            + sizeLimitString, e);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("Size-limit is invalid: " +
+          sizeLimitString, e);
       }
       LOG.warn(DistCpOptionSwitch.SIZE_LIMIT.getSwitch() + " is a deprecated" +
-              " option. Ignoring.");
+        " option. Ignoring.");
     }
 
     return option;
