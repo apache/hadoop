@@ -27,6 +27,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-7928. Scanning blocks from disk during rolling upgrade startup takes
     a lot of time if disks are busy (Rushabh S Shah via kihwal)
 
+    HDFS-7990. IBR delete ack should not be delayed. (daryn via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

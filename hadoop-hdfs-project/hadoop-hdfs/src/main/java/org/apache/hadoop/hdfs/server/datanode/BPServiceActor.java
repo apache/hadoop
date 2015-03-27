@@ -82,12 +82,11 @@ class BPServiceActor implements Runnable {
 
   final BPOfferService bpos;
   
-  // lastBlockReport, lastDeletedReport and lastHeartbeat may be assigned/read
+  // lastBlockReport and lastHeartbeat may be assigned/read
   // by testing threads (through BPServiceActor#triggerXXX), while also 
   // assigned/read by the actor thread. Thus they should be declared as volatile
   // to make sure the "happens-before" consistency.
   volatile long lastBlockReport = 0;
-  volatile long lastDeletedReport = 0;
 
   boolean resetBlockReportTime = true;
 
@@ -417,10 +416,10 @@ class BPServiceActor implements Runnable {
   @VisibleForTesting
   void triggerDeletionReportForTests() {
     synchronized (pendingIncrementalBRperStorage) {
-      lastDeletedReport = 0;
+      sendImmediateIBR = true;
       pendingIncrementalBRperStorage.notifyAll();
 
-      while (lastDeletedReport == 0) {
+      while (sendImmediateIBR) {
         try {
           pendingIncrementalBRperStorage.wait(100);
         } catch (InterruptedException e) {
@@ -465,7 +464,6 @@ class BPServiceActor implements Runnable {
     // or we will report an RBW replica after the BlockReport already reports
     // a FINALIZED one.
     reportReceivedDeletedBlocks();
-    lastDeletedReport = startTime;
 
     long brCreateStartTime = monotonicNow();
     Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
@@ -674,7 +672,6 @@ class BPServiceActor implements Runnable {
    */
   private void offerService() throws Exception {
     LOG.info("For namenode " + nnAddr + " using"
-        + " DELETEREPORT_INTERVAL of " + dnConf.deleteReportInterval + " msec "
         + " BLOCKREPORT_INTERVAL of " + dnConf.blockReportInterval + "msec"
         + " CACHEREPORT_INTERVAL of " + dnConf.cacheReportInterval + "msec"
         + " Initial delay: " + dnConf.initialBlockReportDelay + "msec"
@@ -690,7 +687,9 @@ class BPServiceActor implements Runnable {
         //
         // Every so often, send heartbeat or block-report
         //
-        if (startTime - lastHeartbeat >= dnConf.heartBeatInterval) {
+        boolean sendHeartbeat =
+            startTime - lastHeartbeat >= dnConf.heartBeatInterval;
+        if (sendHeartbeat) {
           //
           // All heartbeat messages include following info:
           // -- Datanode name
@@ -729,10 +728,8 @@ class BPServiceActor implements Runnable {
             }
           }
         }
-        if (sendImmediateIBR ||
-            (startTime - lastDeletedReport > dnConf.deleteReportInterval)) {
+        if (sendImmediateIBR || sendHeartbeat) {
           reportReceivedDeletedBlocks();
-          lastDeletedReport = startTime;
         }
 
         List<DatanodeCommand> cmds = blockReport();
