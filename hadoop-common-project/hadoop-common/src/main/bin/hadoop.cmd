@@ -162,9 +162,9 @@ call :updatepath %HADOOP_BIN_PATH%
 
 :jar
   if defined YARN_OPTS (
-    @echo WARNING: Use "yarn jar" to launch YARN applications.
+    @echo WARNING: Use "yarn jar" to launch YARN applications. 1>&2
   ) else if defined YARN_CLIENT_OPTS (
-    @echo WARNING: Use "yarn jar" to launch YARN applications.
+    @echo WARNING: Use "yarn jar" to launch YARN applications. 1>&2
   )
   set CLASS=org.apache.hadoop.util.RunJar
   goto :eof
