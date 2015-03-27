@@ -32,16 +32,6 @@
     </property>
 
     <property>
-        <name>mapred.job.map.memory.mb</name>
-        <value>1024</value>
-    </property>
-
-    <property>
-        <name>mapred.job.reduce.memory.mb</name>
-        <value>1024</value>
-    </property>
-
-    <property>
         <name>mapred.reducer.new-api</name>
         <value>true</value>
     </property>
