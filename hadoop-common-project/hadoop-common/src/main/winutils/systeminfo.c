@@ -19,6 +19,9 @@
 #include <psapi.h>
 #include <PowrProf.h>
 
+#ifdef PSAPI_VERSION
+#undef PSAPI_VERSION
+#endif
 #define PSAPI_VERSION 1
 #pragma comment(lib, "psapi.lib")
 #pragma comment(lib, "Powrprof.lib")

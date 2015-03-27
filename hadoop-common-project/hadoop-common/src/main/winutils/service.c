@@ -206,7 +206,7 @@ DWORD ValidateConfigurationFile() {
   BOOL daclPresent = FALSE;
   BOOL daclDefaulted = FALSE;
   PACL pDacl = NULL;
-  unsigned int crt = 0, crtSid = 0;
+  DWORD crt = 0;
   WELL_KNOWN_SID_TYPE allowedSidTypes[] = {
     WinLocalSystemSid,
     WinBuiltinAdministratorsSid};
@@ -214,7 +214,6 @@ DWORD ValidateConfigurationFile() {
   DWORD cbSid = SECURITY_MAX_SID_SIZE;
   PSID* allowedSids = NULL; 
   int cAllowedSids = 0;
-  BOOL isSidDefaulted;
   PSID sidOwner = NULL;
   PSID sidGroup = NULL;
 
@@ -324,7 +323,7 @@ DWORD InitJobName() {
   int       crt = 0;
 
   // Services can be restarted
-  if (gJobName) LocalFree(gJobName);
+  if (gJobName) LocalFree((HLOCAL)gJobName);
   gJobName = NULL;
     
   dwError = GetConfigValue(
@@ -382,7 +381,7 @@ DWORD InitLocalDirs() {
   }
 
 done:
-  if (value) LocalFree(value);
+  if (value) LocalFree((HLOCAL)value);
   
   return dwError;
 }
@@ -437,7 +436,7 @@ DWORD ValidateLocalPath(LPCWSTR lpszPath) {
       gLocalDirs[crt], gCchLocalDir[crt],
       NULL, // lpVersionInformation
       NULL, // lpReserved
-      NULL); // lParam
+      (LPARAM) NULL); // lParam
     
     if (0 == compareResult) {
       dwError = GetLastError();
@@ -500,7 +499,7 @@ done:
 // Description:
 //  Service main entry point.
 //
-VOID WINAPI SvcMain() {
+VOID WINAPI SvcMain(DWORD dwArg, LPTSTR* lpszArgv) {
   DWORD dwError = ERROR_SUCCESS;
 
   gSvcStatusHandle = RegisterServiceCtrlHandler( 
@@ -693,15 +692,15 @@ done:
 //
 DWORD AuthInit() {
   DWORD       dwError = ERROR_SUCCESS;
-  int         count = 0;
-  int         crt  = 0;
+  size_t      count = 0;
+  size_t      crt  = 0;
   size_t      len = 0;
   LPCWSTR     value = NULL;
   WCHAR**     tokens = NULL;
   LPWSTR      lpszSD = NULL;
   ULONG       cchSD = 0;
   DWORD       dwBufferSize = 0;
-  int         allowedCount = 0;
+  size_t      allowedCount = 0;
   PSID*       allowedSids = NULL;
   
 
@@ -737,7 +736,7 @@ DWORD AuthInit() {
   
 done:
   if (lpszSD) LocalFree(lpszSD);
-  if (value) LocalFree(value);
+  if (value) LocalFree((HLOCAL)value);
   if (tokens) LocalFree(tokens);
   return dwError;
 }
@@ -1167,11 +1166,12 @@ error_status_t WinutilsCreateProcessAsUser(
   // Note that there are no more API calls, only assignments. A failure could occur only if
   // foced (process kill) or hardware error (faulty memory, processort bit flip etc).
 
-  (*response)->hProcess = hDuplicateProcess;
-  (*response)->hThread = hDuplicateThread;
-  (*response)->hStdIn = hDuplicateStdIn;
-  (*response)->hStdOut = hDuplicateStdOut;
-  (*response)->hStdErr = hDuplicateStdErr;
+  // as MIDL has no 'HANDLE' type, the (LONG_PTR) is used instead
+  (*response)->hProcess = (LONG_PTR)hDuplicateProcess;
+  (*response)->hThread = (LONG_PTR)hDuplicateThread;
+  (*response)->hStdIn = (LONG_PTR)hDuplicateStdIn;
+  (*response)->hStdOut = (LONG_PTR)hDuplicateStdOut;
+  (*response)->hStdErr = (LONG_PTR)hDuplicateStdErr;
 
   fMustCleanupProcess = FALSE;
   
@@ -1276,7 +1276,8 @@ error_status_t WinutilsCreateFile(
     goto done;
   }
 
-  (*response)->hFile = hDuplicateFile;
+  // As MIDL has no 'HANDLE' type, (LONG_PTR) is used instead
+  (*response)->hFile = (LONG_PTR)hDuplicateFile;
   hDuplicateFile = INVALID_HANDLE_VALUE;
 
 done:
@@ -1302,7 +1303,6 @@ error_status_t WinutilsKillTask(
     /* [in] */ handle_t IDL_handle,
     /* [in] */ KILLTASK_REQUEST *request) {
   DWORD dwError = ERROR_SUCCESS;
-  HRESULT hr;
   WCHAR bufferName[MAX_PATH];
 
   dwError = GetSecureJobObjectName(request->taskName, MAX_PATH, bufferName);

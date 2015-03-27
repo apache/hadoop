@@ -248,8 +248,8 @@ DWORD BuildServiceSecurityDescriptor(
   __out PSECURITY_DESCRIPTOR*         pSD);
 
 DWORD AddNodeManagerAndUserACEsToObject(
-  __in HANDLE hObject,
-  __in LPWSTR user,
+  __in HANDLE hProcess,
+  __in LPCWSTR user,
   __in ACCESS_MASK accessMask);
 
 
@@ -283,14 +283,28 @@ DWORD RpcCall_WinutilsCreateFile(
   __out HANDLE* hFile);
 
 DWORD RpcCall_WinutilsMoveFile(
-  __in LPCWSTR    sourcePath, 
-  __in LPCWSTR    destinationPath,
-  __in BOOL       replaceExisting);
+  __in int operation,
+  __in LPCWSTR sourcePath, 
+  __in LPCWSTR destinationPath,
+  __in BOOL replaceExisting);
+
 
 DWORD RpcCall_WinutilsDeletePath(
   __in LPCWSTR    path,
   __in BOOL       isDir,
   __out BOOL*     pDeleted);
+
+DWORD RpcCall_WinutilsChown(
+  __in LPCWSTR filePath, 
+  __in_opt LPCWSTR ownerName, 
+  __in_opt LPCWSTR groupName);
+
+DWORD RpcCall_WinutilsMkDir(
+  __in LPCWSTR filePath);
+
+DWORD RpcCall_WinutilsChmod(
+  __in LPCWSTR filePath, 
+  __in int mode);
 
 #ifdef __cplusplus
 }

@@ -1172,6 +1172,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11691. X86 build of libwinutils is broken.
     (Kiran Kumar M R via cnauroth)
 
+    HADOOP-11639. Clean up Windows native code compilation warnings related to
+    Windows Secure Container Executor. (Remus Rusanu via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
