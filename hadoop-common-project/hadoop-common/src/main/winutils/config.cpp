@@ -18,7 +18,7 @@
 #include "winutils.h"
 #include <string.h>
 #include <stdlib.h>
-#import "msxml6.dll"
+#import "msxml6.dll" exclude("ISequentialStream", "_FILETIME")
 
 #define ERROR_CHECK_HRESULT_DONE(hr, message)                               \
   if (FAILED(hr))  {                                                        \
