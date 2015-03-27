@@ -42,6 +42,9 @@ Release 2.8.0 - UNRELEASED
     CompletedJob#loadFullHistoryData for code optimization.
     (zxu via rkanter)
 
+    MAPREDUCE-5762. Port MAPREDUCE-3223 (Remove MRv1 config from
+    mapred-default.xml) to branch-2. (aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
