@@ -21,11 +21,11 @@ package org.apache.hadoop.tools;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.util.DistCpUtils;
-
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+
 
 /**
  * The Options class encapsulates all DistCp options.
@@ -33,7 +33,6 @@ import java.util.NoSuchElementException;
  * or may be set manually.
  */
 public class DistCpOptions {
-
   private boolean atomicCommit = false;
   private boolean syncFolder = false;
   private boolean deleteMissing = false;
@@ -45,6 +44,8 @@ public class DistCpOptions {
 
   private int maxMaps = DistCpConstants.DEFAULT_MAPS;
   private int mapBandwidth = DistCpConstants.DEFAULT_BANDWIDTH_MB;
+
+  private String listMissingFile;
 
   private String sslConfigurationFile;
 
@@ -61,12 +62,19 @@ public class DistCpOptions {
 
   private Path targetPath;
 
-  // targetPathExist is a derived field, it's initialized in the 
+  // targetPathExist is a derived field, it's initialized in the
   // beginning of distcp.
   private boolean targetPathExists = true;
-  
-  public static enum FileAttribute{
-    REPLICATION, BLOCKSIZE, USER, GROUP, PERMISSION, CHECKSUMTYPE, ACL, XATTR;
+
+  public static enum FileAttribute {
+    REPLICATION,
+    BLOCKSIZE,
+    USER,
+    GROUP,
+    PERMISSION,
+    CHECKSUMTYPE,
+    ACL,
+    XATTR;
 
     public static FileAttribute getAttribute(char symbol) {
       for (FileAttribute attribute : values()) {
@@ -85,7 +93,7 @@ public class DistCpOptions {
    * @param targetPath Destination path for the dist-copy.
    */
   public DistCpOptions(List<Path> sourcePaths, Path targetPath) {
-    assert sourcePaths != null && !sourcePaths.isEmpty() : "Invalid source paths";
+    assert (sourcePaths != null) && !sourcePaths.isEmpty() : "Invalid source paths";
     assert targetPath != null : "Invalid Target path";
 
     this.sourcePaths = sourcePaths;
@@ -110,7 +118,7 @@ public class DistCpOptions {
    * @param that DistCpOptions being copied from.
    */
   public DistCpOptions(DistCpOptions that) {
-    if (this != that && that != null) {
+    if ((this != that) && (that != null)) {
       this.atomicCommit = that.atomicCommit;
       this.syncFolder = that.syncFolder;
       this.deleteMissing = that.deleteMissing;
@@ -129,6 +137,7 @@ public class DistCpOptions {
       this.sourcePaths = that.getSourcePaths();
       this.targetPath = that.getTargetPath();
       this.targetPathExists = that.getTargetPathExists();
+      this.listMissingFile = that.getListMissingFile();
     }
   }
 
@@ -189,11 +198,19 @@ public class DistCpOptions {
     this.deleteMissing = deleteMissing;
   }
 
+  public String getListMissingFile() {
+    return listMissingFile;
+  }
+
+  public void setListMissingFile(String listMissingFile) {
+    this.listMissingFile = listMissingFile;
+  }
+
   /**
-   * Should failures be logged and ignored during copy?
-   *
-   * @return true if failures are to be logged and ignored. false otherwise
-   */
+  * Should failures be logged and ignored during copy?
+  *
+  * @return true if failures are to be logged and ignored. false otherwise
+  */
   public boolean shouldIgnoreFailures() {
     return ignoreFailures;
   }
@@ -449,7 +466,7 @@ public class DistCpOptions {
    * @param sourcePaths The new list of source-paths.
    */
   public void setSourcePaths(List<Path> sourcePaths) {
-    assert sourcePaths != null && sourcePaths.size() != 0;
+    assert (sourcePaths != null) && (sourcePaths.size() != 0);
     this.sourcePaths = sourcePaths;
   }
 
@@ -468,7 +485,7 @@ public class DistCpOptions {
   public boolean getTargetPathExists() {
     return targetPathExists;
   }
-  
+
   /**
    * Set targetPathExists.
    * @param targetPathExists Whether the target path of distcp exists.
@@ -478,32 +495,26 @@ public class DistCpOptions {
   }
 
   public void validate(DistCpOptionSwitch option, boolean value) {
-
-    boolean syncFolder = (option == DistCpOptionSwitch.SYNC_FOLDERS ?
-        value : this.syncFolder);
-    boolean overwrite = (option == DistCpOptionSwitch.OVERWRITE ?
-        value : this.overwrite);
-    boolean deleteMissing = (option == DistCpOptionSwitch.DELETE_MISSING ?
-        value : this.deleteMissing);
-    boolean atomicCommit = (option == DistCpOptionSwitch.ATOMIC_COMMIT ?
-        value : this.atomicCommit);
-    boolean skipCRC = (option == DistCpOptionSwitch.SKIP_CRC ?
-        value : this.skipCRC);
-    boolean append = (option == DistCpOptionSwitch.APPEND ? value : this.append);
+    boolean syncFolder = ((option == DistCpOptionSwitch.SYNC_FOLDERS) ? value : this.syncFolder);
+    boolean overwrite = ((option == DistCpOptionSwitch.OVERWRITE) ? value : this.overwrite);
+    boolean deleteMissing = ((option == DistCpOptionSwitch.DELETE_MISSING) ? value : this.deleteMissing);
+    boolean atomicCommit = ((option == DistCpOptionSwitch.ATOMIC_COMMIT) ? value : this.atomicCommit);
+    boolean skipCRC = ((option == DistCpOptionSwitch.SKIP_CRC) ? value : this.skipCRC);
+    boolean append = ((option == DistCpOptionSwitch.APPEND) ? value : this.append);
 
     if (syncFolder && atomicCommit) {
       throw new IllegalArgumentException("Atomic commit can't be used with " +
-          "sync folder or overwrite options");
+        "sync folder or overwrite options");
     }
 
     if (deleteMissing && !(overwrite || syncFolder)) {
       throw new IllegalArgumentException("Delete missing is applicable " +
-          "only with update or overwrite options");
+        "only with update or overwrite options");
     }
 
     if (overwrite && syncFolder) {
       throw new IllegalArgumentException("Overwrite and update options are " +
-          "mutually exclusive");
+        "mutually exclusive");
     }
 
     if (!syncFolder && skipCRC) {
@@ -512,11 +523,11 @@ public class DistCpOptions {
 
     if (!syncFolder && append) {
       throw new IllegalArgumentException(
-          "Append is valid only with update options");
+        "Append is valid only with update options");
     }
     if (skipCRC && append) {
       throw new IllegalArgumentException(
-          "Append is disallowed when skipping CRC");
+        "Append is disallowed when skipping CRC");
     }
   }
 
@@ -527,23 +538,25 @@ public class DistCpOptions {
    */
   public void appendToConf(Configuration conf) {
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.ATOMIC_COMMIT,
-        String.valueOf(atomicCommit));
+      String.valueOf(atomicCommit));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.IGNORE_FAILURES,
-        String.valueOf(ignoreFailures));
+      String.valueOf(ignoreFailures));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.SYNC_FOLDERS,
-        String.valueOf(syncFolder));
+      String.valueOf(syncFolder));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.DELETE_MISSING,
-        String.valueOf(deleteMissing));
+      String.valueOf(deleteMissing));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.OVERWRITE,
-        String.valueOf(overwrite));
+      String.valueOf(overwrite));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.APPEND,
-        String.valueOf(append));
+      String.valueOf(append));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.SKIP_CRC,
-        String.valueOf(skipCRC));
+      String.valueOf(skipCRC));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BANDWIDTH,
-        String.valueOf(mapBandwidth));
+      String.valueOf(mapBandwidth));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.PRESERVE_STATUS,
-        DistCpUtils.packAttributes(preserveStatus));
+      DistCpUtils.packAttributes(preserveStatus));
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.LIST_MISSING_FILE,
+      String.valueOf(listMissingFile));
   }
 
   /**
@@ -554,18 +567,19 @@ public class DistCpOptions {
   @Override
   public String toString() {
     return "DistCpOptions{" +
-        "atomicCommit=" + atomicCommit +
-        ", syncFolder=" + syncFolder +
-        ", deleteMissing=" + deleteMissing +
-        ", ignoreFailures=" + ignoreFailures +
-        ", maxMaps=" + maxMaps +
-        ", sslConfigurationFile='" + sslConfigurationFile + '\'' +
-        ", copyStrategy='" + copyStrategy + '\'' +
-        ", sourceFileListing=" + sourceFileListing +
-        ", sourcePaths=" + sourcePaths +
-        ", targetPath=" + targetPath +
-        ", targetPathExists=" + targetPathExists +
-        '}';
+      "atomicCommit=" + atomicCommit +
+      ", syncFolder=" + syncFolder +
+      ", deleteMissing=" + deleteMissing +
+      ", ignoreFailures=" + ignoreFailures +
+      ", maxMaps=" + maxMaps +
+      ", sslConfigurationFile='" + sslConfigurationFile + '\'' +
+      ", copyStrategy='" + copyStrategy + '\'' +
+      ", sourceFileListing=" + sourceFileListing +
+      ", sourcePaths=" + sourcePaths +
+      ", targetPath=" + targetPath +
+      ", targetPathExists=" + targetPathExists +
+      ", listMissingFile=" + listMissingFile +
+      '}';
   }
 
   @Override

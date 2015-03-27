@@ -22,7 +22,6 @@ package org.apache.hadoop.tools;
  * Utility class to hold commonly used constants.
  */
 public class DistCpConstants {
-
   /* Default number of maps to use for DistCp */
   public static final int DEFAULT_MAPS = 20;
 
@@ -44,6 +43,7 @@ public class DistCpConstants {
   public static final String CONF_LABEL_PRESERVE_STATUS = "distcp.preserve.status";
   public static final String CONF_LABEL_SYNC_FOLDERS = "distcp.sync.folders";
   public static final String CONF_LABEL_DELETE_MISSING = "distcp.delete.missing.source";
+  public static final String CONF_LABEL_LIST_MISSING_FILE = "distcp.list.missing.source";
   public static final String CONF_LABEL_SSL_CONF = "distcp.keystore.resource";
   public static final String CONF_LABEL_MAX_MAPS = "distcp.max.maps";
   public static final String CONF_LABEL_SOURCE_LISTING = "distcp.source.listing";
@@ -52,16 +52,12 @@ public class DistCpConstants {
   public static final String CONF_LABEL_OVERWRITE = "distcp.copy.overwrite";
   public static final String CONF_LABEL_APPEND = "distcp.copy.append";
   public static final String CONF_LABEL_BANDWIDTH_MB = "distcp.map.bandwidth.mb";
-  
-  public static final String CONF_LABEL_MAX_CHUNKS_TOLERABLE =
-      "distcp.dynamic.max.chunks.tolerable";
-  public static final String CONF_LABEL_MAX_CHUNKS_IDEAL =
-      "distcp.dynamic.max.chunks.ideal";
-  public static final String CONF_LABEL_MIN_RECORDS_PER_CHUNK =
-      "distcp.dynamic.min.records_per_chunk";
-  public static final String CONF_LABEL_SPLIT_RATIO =
-      "distcp.dynamic.split.ratio";
-  
+
+  public static final String CONF_LABEL_MAX_CHUNKS_TOLERABLE = "distcp.dynamic.max.chunks.tolerable";
+  public static final String CONF_LABEL_MAX_CHUNKS_IDEAL = "distcp.dynamic.max.chunks.ideal";
+  public static final String CONF_LABEL_MIN_RECORDS_PER_CHUNK = "distcp.dynamic.min.records_per_chunk";
+  public static final String CONF_LABEL_SPLIT_RATIO = "distcp.dynamic.split.ratio";
+
   /* Total bytes to be copied. Updated by copylisting. Unfiltered count */
   public static final String CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED = "mapred.total.bytes.expected";
 
@@ -86,9 +82,9 @@ public class DistCpConstants {
 
   /* Boolean to indicate whether the target of distcp exists. */
   public static final String CONF_LABEL_TARGET_PATH_EXISTS = "distcp.target.path.exists";
-  
+
   /**
-   * DistCp job id for consumers of the Disctp 
+   * DistCp job id for consumers of the Disctp
    */
   public static final String CONF_LABEL_DISTCP_JOB_ID = "distcp.job.id";
 
@@ -101,14 +97,12 @@ public class DistCpConstants {
   /**
    * Conf label for SSL Trust-store location.
    */
-  public static final String CONF_LABEL_SSL_TRUST_STORE_LOCATION
-      = "ssl.client.truststore.location";
+  public static final String CONF_LABEL_SSL_TRUST_STORE_LOCATION = "ssl.client.truststore.location";
 
   /**
    * Conf label for SSL Key-store location.
    */
-  public static final String CONF_LABEL_SSL_KEY_STORE_LOCATION
-      = "ssl.client.keystore.location";
+  public static final String CONF_LABEL_SSL_KEY_STORE_LOCATION = "ssl.client.keystore.location";
 
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
@@ -119,13 +113,13 @@ public class DistCpConstants {
   public static final int ACLS_NOT_SUPPORTED = -3;
   public static final int XATTRS_NOT_SUPPORTED = -4;
   public static final int UNKNOWN_ERROR = -999;
-  
+
   /**
    * Constants for DistCp default values of configurable values
    */
   public static final int MAX_CHUNKS_TOLERABLE_DEFAULT = 400;
-  public static final int MAX_CHUNKS_IDEAL_DEFAULT     = 100;
+  public static final int MAX_CHUNKS_IDEAL_DEFAULT = 100;
   public static final int MIN_RECORDS_PER_CHUNK_DEFAULT = 5;
-  public static final int SPLIT_RATIO_DEFAULT  = 2;
+  public static final int SPLIT_RATIO_DEFAULT = 2;
 
 }
