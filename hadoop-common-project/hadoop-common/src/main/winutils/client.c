@@ -28,8 +28,6 @@ static ACCESS_MASK CLIENT_MASK = 1;
 VOID ReportClientError(LPWSTR lpszLocation, DWORD dwError) {
   LPWSTR      debugMsg = NULL;
   int         len;
-  WCHAR       hexError[32];
-  HRESULT     hr;
 
   if (IsDebuggerPresent()) {
     len = FormatMessageW(
@@ -49,7 +47,6 @@ DWORD PrepareRpcBindingHandle(
   DWORD       dwError = EXIT_FAILURE;
   RPC_STATUS  status;
   LPWSTR      lpszStringBinding    = NULL;
-  ULONG       ulCode;
   RPC_SECURITY_QOS_V3 qos;
   SID_IDENTIFIER_AUTHORITY authNT = SECURITY_NT_AUTHORITY;
   BOOL rpcBindingInit = FALSE;
@@ -104,7 +101,7 @@ DWORD PrepareRpcBindingHandle(
                   RPC_C_AUTHN_WINNT,              // AuthnSvc
                   NULL,                           // AuthnIdentity (self)
                   RPC_C_AUTHZ_NONE,               // AuthzSvc
-                  &qos);
+                  (RPC_SECURITY_QOS*) &qos);
   if (RPC_S_OK != status) {
     ReportClientError(L"RpcBindingSetAuthInfoEx", status);
     dwError = status;
@@ -375,7 +372,7 @@ DWORD RpcCall_WinutilsCreateFile(
   RpcEndExcept;
 
   if (ERROR_SUCCESS == dwError) {
-    *hFile = response->hFile;
+    *hFile = (HANDLE) response->hFile;
   }
 
 done:
@@ -479,11 +476,11 @@ DWORD RpcCall_TaskCreateAsUser(
     RpcEndExcept;
 
     if (ERROR_SUCCESS == dwError) {
-      *phProcess = response->hProcess;
-      *phThread = response->hThread;
-      *phStdIn = response->hStdIn;
-      *phStdOut = response->hStdOut;
-      *phStdErr = response->hStdErr;
+      *phProcess = (HANDLE) response->hProcess;
+      *phThread = (HANDLE) response->hThread;
+      *phStdIn = (HANDLE) response->hStdIn;
+      *phStdOut = (HANDLE) response->hStdOut;
+      *phStdErr = (HANDLE) response->hStdErr;
     }
 
 done:

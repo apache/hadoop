@@ -2596,7 +2596,7 @@ LPCWSTR GetSystemTimeString() {
   QueryPerformanceFrequency(&frequency);
 
   qpc = (double) counter.QuadPart / (double) frequency.QuadPart;
-  subSec = ((qpc - (long)qpc) * 1000000);
+  subSec = (int)((qpc - (long)qpc) * 1000000);
 
   hr = StringCbPrintf(buffer, sizeof(buffer), L"%02d:%02d:%02d.%06d", 
     (int)systime.wHour, (int)systime.wMinute, (int)systime.wSecond, (int)subSec);
@@ -2619,7 +2619,7 @@ done:
 //  Native debugger: windbg, ntsd, cdb, visual studio
 //
 VOID LogDebugMessage(LPCWSTR format, ...) {
-  LPWSTR buffer[8192];
+  wchar_t buffer[8192];
   va_list args;
   HRESULT hr;
 
@@ -2657,8 +2657,8 @@ DWORD SplitStringIgnoreSpaceW(
   size_t tokenCount = 0;
   size_t crtSource;
   size_t crtToken = 0;
-  WCHAR* lpwszTokenStart = NULL;
-  WCHAR* lpwszTokenEnd = NULL;
+  const WCHAR* lpwszTokenStart = NULL;
+  const WCHAR* lpwszTokenEnd = NULL;
   WCHAR* lpwszBuffer = NULL;
   size_t tokenLength = 0;
   size_t cchBufferLength = 0;
@@ -2849,7 +2849,7 @@ DWORD BuildServiceSecurityDescriptor(
     }
   }
 
-  pTokenGroup = (PTOKEN_USER) LocalAlloc(LPTR, dwBufferSize);
+  pTokenGroup = (PTOKEN_PRIMARY_GROUP) LocalAlloc(LPTR, dwBufferSize);
   if (NULL == pTokenGroup) {
     dwError = GetLastError();
     LogDebugMessage(L"LocalAlloc:pTokenGroup: %d\n", dwError);
@@ -2870,11 +2870,11 @@ DWORD BuildServiceSecurityDescriptor(
 
   owner.TrusteeForm = TRUSTEE_IS_SID;
   owner.TrusteeType = TRUSTEE_IS_UNKNOWN;
-  owner.ptstrName = (LPCWSTR) pOwner;
+  owner.ptstrName = (LPWSTR) pOwner;
 
   group.TrusteeForm = TRUSTEE_IS_SID;
   group.TrusteeType = TRUSTEE_IS_UNKNOWN;
-  group.ptstrName = (LPCWSTR) pTokenGroup->PrimaryGroup;
+  group.ptstrName = (LPWSTR) pTokenGroup->PrimaryGroup;
 
   eas = (EXPLICIT_ACCESS*) LocalAlloc(LPTR, sizeof(EXPLICIT_ACCESS) * (grantSidCount + denySidCount));
   if (NULL == eas) {
@@ -2890,7 +2890,7 @@ DWORD BuildServiceSecurityDescriptor(
     eas[crt].grfInheritance = NO_INHERITANCE;
     eas[crt].Trustee.TrusteeForm = TRUSTEE_IS_SID;
     eas[crt].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN;
-    eas[crt].Trustee.ptstrName = (LPCWSTR) pGrantSids[crt];
+    eas[crt].Trustee.ptstrName = (LPWSTR) pGrantSids[crt];
     eas[crt].Trustee.pMultipleTrustee = NULL;
     eas[crt].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
   }
@@ -2902,7 +2902,7 @@ DWORD BuildServiceSecurityDescriptor(
     eas[crt].grfInheritance = NO_INHERITANCE;
     eas[crt].Trustee.TrusteeForm = TRUSTEE_IS_SID;
     eas[crt].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN;
-    eas[crt].Trustee.ptstrName = (LPCWSTR) pDenySids[crt - grantSidCount];
+    eas[crt].Trustee.ptstrName = (LPWSTR) pDenySids[crt - grantSidCount];
     eas[crt].Trustee.pMultipleTrustee = NULL;
     eas[crt].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
   }
