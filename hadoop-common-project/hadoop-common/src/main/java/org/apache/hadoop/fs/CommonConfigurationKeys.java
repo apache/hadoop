@@ -143,6 +143,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Supported erasure codec classes */
   public static final String IO_ERASURECODE_CODECS_KEY = "io.erasurecode.codecs";
 
+  public static final String IO_ERASURECODE_SCHEMA_FILE_KEY =
+      "io.erasurecode.schema.file";
+  public static final String IO_ERASURECODE_SCHEMA_FILE_DEFAULT =
+      "ecschema-def.xml";
+
   /** Use XOR raw coder when possible for the RS codec */
   public static final String IO_ERASURECODE_CODEC_RS_USEXOR_KEY =
       "io.erasurecode.codec.rs.usexor";
