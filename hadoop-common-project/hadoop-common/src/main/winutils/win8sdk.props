@@ -19,10 +19,29 @@
  <ImportGroup Label="PropertySheets" />
  <PropertyGroup Label="UserMacros" />
  <PropertyGroup>
-   <ExecutablePath>$(VCInstallDir)bin\x86_amd64;$(VCInstallDir)bin;$(WindowsSdkDir)bin\NETFX 4.0 Tools;$(MSBuildProgramFiles32)\Windows Kits\8.1\bin\x86;$(VSInstallDir)Common7\Tools\bin;$(VSInstallDir)Common7\tools;$(VSInstallDir)Common7\ide;$(MSBuildProgramFiles32)\HTML Help Workshop;$(FrameworkSDKDir)\bin;$(MSBuildToolsPath32);$(VSInstallDir);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH)</ExecutablePath>
-   <IncludePath>$(MSBuildProgramFiles32)\Windows Kits\8.1\Include\um;$(MSBuildProgramFiles32)\Windows Kits\8.1\Include\shared;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(FrameworkSDKDir)\include;</IncludePath>
-   <LibraryPath>$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(MSBuildProgramFiles32)\Windows Kits\8.1\lib\win8\um\x64;$(MSBuildProgramFiles32)\Windows Kits\8.1\Lib\winv6.3\um\x64;$(FrameworkSDKDir)\lib\x64</LibraryPath>
-   <ExcludePath>$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(MSBuildProgramFiles32)\Windows Kits\8.1\Include\um;$(MSBuildProgramFiles32)\Windows Kits\8.1\Include\shared;$(FrameworkSDKDir)\include;$(MSBuildToolsPath32);$(VCInstallDir)atlmfc\lib;$(VCInstallDir)lib;</ExcludePath>
- </PropertyGroup>
+     <Windows8SdkDir>$(MSBuildProgramFiles32)\Windows Kits\8.1\</Windows8SdkDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Windows8SDK_IncludePath>$(Windows8SdkDir)Include\um;$(Windows8SdkDir)Include\shared;</Windows8SDK_IncludePath>
+    <Windows8SDK_ExecutablePath_x86>$(Windows8SdkDir)bin\x86;</Windows8SDK_ExecutablePath_x86>
+    <Windows8SDK_ExecutablePath_x64>$(Windows8SdkDir)bin\x64;</Windows8SDK_ExecutablePath_x64>
+    <Windows8SDK_LibraryPath_x86>$(Windows8SdkDir)lib\winv6.3\um\x86;</Windows8SDK_LibraryPath_x86>
+    <Windows8SDK_LibraryPath_x64>$(Windows8SdkDir)lib\winv6.3\um\x64;</Windows8SDK_LibraryPath_x64>
+  </PropertyGroup>
+
+ <PropertyGroup Condition="'$(Platform)' == 'Win32'">
+   <ExecutablePath>$(ExecutablePath);$(Windows8SDK_ExecutablePath_x86);</ExecutablePath>
+   <IncludePath>$(Windows8SDK_IncludePath);$(IncludePath);</IncludePath>
+   <LibraryPath>$(LibraryPath);$(Windows8SDK_LibraryPath_x86);</LibraryPath>
+   <ExcludePath>$(ExcludePath);$(Windows8SDK_IncludePath);$(Windows8SDK_LibraryPath_x86);</ExcludePath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Platform)' == 'x64'">
+   <ExecutablePath>$(ExecutablePath);$(Windows8SDK_ExecutablePath_x64);</ExecutablePath>
+   <IncludePath>$(Windows8SDK_IncludePath);$(IncludePath);</IncludePath>
+   <LibraryPath>$(LibraryPath);$(Windows8SDK_LibraryPath_x64);</LibraryPath>
+   <ExcludePath>$(ExcludePath);$(Windows8SDK_IncludePath);$(Windows8SDK_LibraryPath_x64);</ExcludePath>
+  </PropertyGroup>
 <ItemDefinitionGroup />
 </Project>
