@@ -105,7 +105,6 @@ public class TokenCache {
    * get delegation token for a specific FS
    * @param fs
    * @param credentials
-   * @param p
    * @param conf
    * @throws IOException
    */
