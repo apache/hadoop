@@ -1166,6 +1166,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11748. The secrets of auth cookies should not be specified in
     configuration in clear text. (Li Lu and Haohui Mai via wheat9)
 
+    HADOOP-11691. X86 build of libwinutils is broken.
+    (Kiran Kumar M R via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
