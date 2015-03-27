@@ -110,7 +110,7 @@ case $COMMAND in
     elif [ "$COMMAND" = "jar" ] ; then
       CLASS=org.apache.hadoop.util.RunJar
       if [[ -n "${YARN_OPTS}" ]] || [[ -n "${YARN_CLIENT_OPTS}" ]]; then
-        echo "WARNING: Use \"yarn jar\" to launch YARN applications."
+        echo "WARNING: Use \"yarn jar\" to launch YARN applications." 1>&2
       fi
     elif [ "$COMMAND" = "key" ] ; then
       CLASS=org.apache.hadoop.crypto.key.KeyShell
