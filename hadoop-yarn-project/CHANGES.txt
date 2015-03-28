@@ -81,6 +81,8 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3397. yarn rmadmin should skip -failover. (J.Andreina via kasha)
 
+    YARN-3288. Document and fix indentation in the DockerContainerExecutor code
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

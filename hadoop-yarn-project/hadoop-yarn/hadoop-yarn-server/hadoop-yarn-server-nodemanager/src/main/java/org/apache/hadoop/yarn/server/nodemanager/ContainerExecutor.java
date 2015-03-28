@@ -210,8 +210,22 @@ public abstract class ContainerExecutor implements Configurable {
     }
   }
 
-  public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException{
-    ContainerLaunch.ShellScriptBuilder sb = ContainerLaunch.ShellScriptBuilder.create();
+  /**
+   * This method writes out the launch environment of a container. This can be
+   * overridden by extending ContainerExecutors to provide different behaviors
+   * @param out the output stream to which the environment is written (usually
+   * a script file which will be executed by the Launcher)
+   * @param environment The environment variables and their values
+   * @param resources The resources which have been localized for this container
+   * Symlinks will be created to these localized resources
+   * @param command The command that will be run.
+   * @throws IOException if any errors happened writing to the OutputStream,
+   * while creating symlinks
+   */
+  public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
+    Map<Path, List<String>> resources, List<String> command) throws IOException{
+    ContainerLaunch.ShellScriptBuilder sb =
+      ContainerLaunch.ShellScriptBuilder.create();
     if (environment != null) {
       for (Map.Entry<String,String> env : environment.entrySet()) {
         sb.env(env.getKey().toString(), env.getValue().toString());
