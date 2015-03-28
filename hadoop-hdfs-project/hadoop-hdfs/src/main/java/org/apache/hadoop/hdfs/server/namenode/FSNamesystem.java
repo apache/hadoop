@@ -7957,7 +7957,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         throw new IOException("Key " + keyName + " doesn't exist.");
       }
       // If the provider supports pool for EDEKs, this will fill in the pool
-      generateEncryptedDataEncryptionKey(keyName);
+      provider.warmUpEncryptedKeys(keyName);
       createEncryptionZoneInt(src, metadata.getCipher(),
           keyName, logRetryCache);
     } catch (AccessControlException e) {

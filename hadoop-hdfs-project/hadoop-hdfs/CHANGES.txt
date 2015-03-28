@@ -344,6 +344,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-7990. IBR delete ack should not be delayed. (daryn via kihwal)
 
+    HDFS-8004. Use KeyProviderCryptoExtension#warmUpEncryptedKeys when creating
+    an encryption zone. (awang via asuresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
