@@ -101,7 +101,7 @@ public class HadoopArchives implements Tool {
   /** the desired replication degree; default is 10 **/
   short repl = 10;
 
-  private static final String usage = "archive"
+  private static final String usage = "Usage: archive"
   + " -archiveName <NAME>.har -p <parent path> [-r <replication factor>]" +
       "<src>* <dest>" +
   "\n";

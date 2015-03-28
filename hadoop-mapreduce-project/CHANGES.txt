@@ -256,6 +256,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-6291. Correct mapred queue usage command.
+    (Brahma Reddu Battula via harsh)
+
     MAPREDUCE-579. Streaming "slowmatch" documentation. (harsh)
 
     MAPREDUCE-6287. Deprecated methods in org.apache.hadoop.examples.Sort

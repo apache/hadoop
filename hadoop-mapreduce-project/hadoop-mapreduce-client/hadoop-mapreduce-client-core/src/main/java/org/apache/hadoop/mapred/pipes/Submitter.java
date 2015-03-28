@@ -363,7 +363,7 @@ public class Submitter extends Configured implements Tool {
     void printUsage() {
       // The CLI package should do this for us, but I can't figure out how
       // to make it print something reasonable.
-      System.out.println("bin/hadoop pipes");
+      System.out.println("Usage: pipes ");
       System.out.println("  [-input <path>] // Input directory");
       System.out.println("  [-output <path>] // Output directory");
       System.out.println("  [-jar <jar file> // jar filename");
