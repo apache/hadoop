@@ -307,8 +307,8 @@ Usage:
               [-refreshNodes]
               [-setQuota <quota> <dirname>...<dirname>]
               [-clrQuota <dirname>...<dirname>]
-              [-setSpaceQuota <quota> <dirname>...<dirname>]
-              [-clrSpaceQuota <dirname>...<dirname>]
+              [-setSpaceQuota <quota> [-storageType <storagetype>] <dirname>...<dirname>]
+              [-clrSpaceQuota [-storageType <storagetype>] <dirname>...<dirname>]
               [-setStoragePolicy <path> <policyName>]
               [-getStoragePolicy <path>]
               [-finalizeUpgrade]
@@ -342,8 +342,8 @@ Usage:
 | `-refreshNodes` | Re-read the hosts and exclude files to update the set of Datanodes that are allowed to connect to the Namenode and those that should be decommissioned or recommissioned. |
 | `-setQuota` \<quota\> \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
 | `-clrQuota` \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
-| `-setSpaceQuota` \<quota\> \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
-| `-clrSpaceQuota` \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
+| `-setSpaceQuota` \<quota\> `[-storageType <storagetype>]` \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
+| `-clrSpaceQuota` `[-storageType <storagetype>]` \<dirname\>...\<dirname\> | See [HDFS Quotas Guide](../hadoop-hdfs/HdfsQuotaAdminGuide.html#Administrative_Commands) for the detail. |
 | `-setStoragePolicy` \<path\> \<policyName\> | Set a storage policy to a file or a directory. |
 | `-getStoragePolicy` \<path\> | Get the storage policy of a file or a directory. |
 | `-finalizeUpgrade` | Finalize upgrade of HDFS. Datanodes delete their previous version working directories, followed by Namenode doing the same. This completes the upgrade process. |
