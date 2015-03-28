@@ -22,12 +22,16 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Random;
+import com.google.common.collect.ImmutableList;
+import com.google.common.io.Files;
 
+import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -47,7 +52,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
@@ -69,6 +76,7 @@ public class TestNameNodeMetrics {
     new Path("/testNameNodeMetrics");
   private static final String NN_METRICS = "NameNodeActivity";
   private static final String NS_METRICS = "FSNamesystem";
+  public static final Log LOG = LogFactory.getLog(TestNameNodeMetrics.class);
   
   // Number of datanodes in the cluster
   private static final int DATANODE_COUNT = 3; 
@@ -399,6 +407,82 @@ public class TestNameNodeMetrics {
     assertCounter("GetBlockLocations", 3L, getMetrics(NN_METRICS));
   }
   
+  /**
+   * Testing TransactionsSinceLastCheckpoint. Need a new cluster as
+   * the other tests in here don't use HA. See HDFS-7501.
+   */
+  @Test(timeout = 300000)
+  public void testTransactionSinceLastCheckpointMetrics() throws Exception {
+    Random random = new Random();
+    int retryCount = 0;
+    while (retryCount < 5) {
+      try {
+        int basePort = 10060 + random.nextInt(100) * 2;
+        MiniDFSNNTopology topology = new MiniDFSNNTopology()
+            .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
+            .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(basePort))
+            .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(basePort + 1)));
+
+        HdfsConfiguration conf2 = new HdfsConfiguration();
+        // Lower the checkpoint condition for purpose of testing.
+        conf2.setInt(
+            DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
+            100);
+        // Check for checkpoint condition very often, for purpose of testing.
+        conf2.setInt(
+            DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY,
+            1);
+        // Poll and follow ANN txns very often, for purpose of testing.
+        conf2.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+        MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf2)
+            .nnTopology(topology).numDataNodes(1).build();
+        cluster2.waitActive();
+        DistributedFileSystem fs2 = cluster2.getFileSystem(0);
+        NameNode nn0 = cluster2.getNameNode(0);
+        NameNode nn1 = cluster2.getNameNode(1);
+        cluster2.transitionToActive(0);
+        fs2.mkdirs(new Path("/tmp-t1"));
+        fs2.mkdirs(new Path("/tmp-t2"));
+        HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+        // Test to ensure tracking works before the first-ever
+        // checkpoint.
+        assertEquals("SBN failed to track 2 transactions pre-checkpoint.",
+            4L, // 2 txns added further when catch-up is called.
+            cluster2.getNameNode(1).getNamesystem()
+              .getTransactionsSinceLastCheckpoint());
+        // Complete up to the boundary required for
+        // an auto-checkpoint. Using 94 to expect fsimage
+        // rounded at 100, as 4 + 94 + 2 (catch-up call) = 100.
+        for (int i = 1; i <= 94; i++) {
+          fs2.mkdirs(new Path("/tmp-" + i));
+        }
+        HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+        // Assert 100 transactions in checkpoint.
+        HATestUtil.waitForCheckpoint(cluster2, 1, ImmutableList.of(100));
+        // Test to ensure number tracks the right state of
+        // uncheckpointed edits, and does not go negative
+        // (as fixed in HDFS-7501).
+        assertEquals("Should be zero right after the checkpoint.",
+            0L,
+            cluster2.getNameNode(1).getNamesystem()
+              .getTransactionsSinceLastCheckpoint());
+        fs2.mkdirs(new Path("/tmp-t3"));
+        fs2.mkdirs(new Path("/tmp-t4"));
+        HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+        // Test to ensure we track the right numbers after
+        // the checkpoint resets it to zero again.
+        assertEquals("SBN failed to track 2 added txns after the ckpt.",
+            4L,
+            cluster2.getNameNode(1).getNamesystem()
+              .getTransactionsSinceLastCheckpoint());
+        cluster2.shutdown();
+        break;
+      } catch (Exception e) {
+        LOG.warn("Unable to set up HA cluster, exception thrown: " + e);
+        retryCount++;
+      }
+    }
+  }
   /**
    * Test NN checkpoint and transaction-related metrics.
    */
