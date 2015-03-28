@@ -421,7 +421,7 @@ public class CLI extends Configured implements Tool {
    * Display usage of the command-line tool and terminate execution.
    */
   private void displayUsage(String cmd) {
-    String prefix = "Usage: CLI ";
+    String prefix = "Usage: job ";
     String jobPriorityValues = getJobPriorityNames();
     String taskStates = "running, completed";
 
