@@ -4784,7 +4784,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"TransactionsSinceLastCheckpoint",
       "Number of transactions since last checkpoint"})
   public long getTransactionsSinceLastCheckpoint() {
-    return getEditLog().getLastWrittenTxId() -
+    return getFSImage().getLastAppliedOrWrittenTxId() -
         getFSImage().getStorage().getMostRecentCheckpointTxId();
   }
   
