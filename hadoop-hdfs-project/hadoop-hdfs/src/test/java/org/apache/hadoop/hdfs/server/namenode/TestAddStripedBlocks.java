@@ -224,7 +224,7 @@ public class TestAddStripedBlocks {
       int i = 0;
       for (DataNode dn : cluster.getDataNodes()) {
         final Block block = new Block(lastBlock.getBlockId() + i++,
-            lastBlock.getGenerationStamp(), 0);
+            0, lastBlock.getGenerationStamp());
         DatanodeStorage storage = new DatanodeStorage(UUID.randomUUID().toString());
         storageIDs.add(storage.getStorageID());
         StorageReceivedDeletedBlocks[] reports = DFSTestUtil
