@@ -39,7 +39,10 @@ import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.GlobbedCopyListing;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.tools.util.DistCpUtils;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -95,11 +98,13 @@ public class CopyCommitter extends FileOutputCommitter {
     }
 
     try {
-      if (StringUtils.isNotBlank(conf.get(DistCpConstants.CONF_LABEL_LIST_MISSING_FILE))) {
-        listMissing(conf);
+      boolean deleteMissing = conf.getBoolean(DistCpConstants.CONF_LABEL_DELETE_MISSING, false);
+      String listMissingFile = conf.get(DistCpConstants.CONF_LABEL_LIST_MISSING_FILE, "");
+      if (listMissingFile.equals("null")) {
+        listMissingFile = "";
       }
-      if (conf.getBoolean(DistCpConstants.CONF_LABEL_DELETE_MISSING, false)) {
-        deleteMissing(conf);
+      if (deleteMissing || StringUtils.isNotBlank(listMissingFile)) {
+        deleteAndOrListMissing(conf, deleteMissing, listMissingFile);
       } else if (conf.getBoolean(DistCpConstants.CONF_LABEL_ATOMIC_COPY, false)) {
         commitData(conf);
       }
@@ -220,19 +225,14 @@ public class CopyCommitter extends FileOutputCommitter {
     LOG.info("Preserved status on " + preservedEntries + " dir entries on target");
   }
 
-  // This method creates a file containing the names of all  "extra" files
-  // from the target, if they're not available at the source
-  private void listMissing(Configuration conf) {
-    LOG.info(
-      "-listMissingFile option is enabled. Creating a list of all entries from " +
-      "target that are missing in source in file " + conf.get(DistCpConstants.CONF_LABEL_LIST_MISSING_FILE));
-  }
-
-  // This method deletes "extra" files from the target, if they're not
+  // This method deletes and/or lists "extra" files from the target, if they're not
   // available at the source.
-  private void deleteMissing(Configuration conf) throws IOException {
-    LOG.info("-delete option is enabled. About to remove entries from " +
-      "target that are missing in source");
+  private void deleteAndOrListMissing(Configuration conf, boolean deleteMissing, String listMissingFile)
+                               throws IOException {
+    if (deleteMissing) {
+      LOG.info("-delete option is enabled. About to remove entries from " +
+        "target that are missing in source");
+    }
 
     // Sort the source-file listing alphabetically.
     Path sourceListing = new Path(conf.get(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH));
@@ -248,6 +248,16 @@ public class CopyCommitter extends FileOutputCommitter {
     targets.add(targetFinalPath);
 
     DistCpOptions options = new DistCpOptions(targets, new Path("/NONE"));
+
+    // set up the missings file
+    PrintWriter missings = null;
+    if (StringUtils.isNotBlank(listMissingFile)) {
+      LOG.info(
+        "-listMissingFile option is enabled. Creating a list of all entries from " +
+        "target that are missing in source in file " + conf.get(DistCpConstants.CONF_LABEL_LIST_MISSING_FILE));
+      missings = new PrintWriter(
+        new BufferedWriter(new OutputStreamWriter(clusterFS.create(new Path(listMissingFile), true))));
+    }
 
     //
     // Set up options to be the same from the CopyListing.buildListing's perspective,
@@ -289,13 +299,18 @@ public class CopyCommitter extends FileOutputCommitter {
         }
 
         // Target doesn't exist at source. Delete.
-        boolean result = (!targetFS.exists(trgtFileStatus.getPath()) ||
-          targetFS.delete(trgtFileStatus.getPath(), true));
-        if (result) {
-          LOG.info("Deleted " + trgtFileStatus.getPath() + " - Missing at source");
-          deletedEntries++;
-        } else {
-          throw new IOException("Unable to delete " + trgtFileStatus.getPath());
+        if (deleteMissing) {
+          boolean result = (!targetFS.exists(trgtFileStatus.getPath()) ||
+            targetFS.delete(trgtFileStatus.getPath(), true));
+          if (result) {
+            LOG.info("Deleted " + trgtFileStatus.getPath() + " - Missing at source");
+            deletedEntries++;
+          } else {
+            throw new IOException("Unable to delete " + trgtFileStatus.getPath());
+          }
+        }
+        if (missings != null) {
+          missings.println(trgtFileStatus.getPath());
         }
         taskAttemptContext.progress();
         taskAttemptContext.setStatus(
@@ -305,6 +320,9 @@ public class CopyCommitter extends FileOutputCommitter {
     } finally {
       IOUtils.closeStream(sourceReader);
       IOUtils.closeStream(targetReader);
+      if (missings != null) {
+        IOUtils.closeStream(missings);
+      }
     }
     LOG.info("Deleted " + deletedEntries + " from target: " + targets.get(0));
   }
