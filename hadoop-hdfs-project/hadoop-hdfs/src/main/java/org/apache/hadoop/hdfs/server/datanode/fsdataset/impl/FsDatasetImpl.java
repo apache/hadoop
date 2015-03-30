@@ -2619,8 +2619,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override
-  public void restoreTrash(String bpid) {
-    dataStorage.restoreTrash(bpid);
+  public void clearTrash(String bpid) {
+    dataStorage.clearTrash(bpid);
   }
 
   @Override

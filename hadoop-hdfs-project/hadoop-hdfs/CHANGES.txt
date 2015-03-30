@@ -359,6 +359,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7890. Improve information on Top users for metrics in
     RollingWindowsManager and lower log level (J.Andreina via vinayakumarb)
 
+    HDFS-7645. Rolling upgrade is restoring blocks from trash multiple times.
+    (Vinayakumar B and Keisuke Ogiwara via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
