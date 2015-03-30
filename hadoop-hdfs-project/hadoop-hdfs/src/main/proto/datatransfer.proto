@@ -243,8 +243,9 @@ enum ShortCircuitFdResponse {
 
 message PipelineAckProto {
   required sint64 seqno = 1;
-  repeated uint32 reply = 2;
+  repeated Status reply = 2;
   optional uint64 downstreamAckTimeNanos = 3 [default = 0];
+  repeated uint32 flag = 4 [packed=true];
 }
 
 /**
