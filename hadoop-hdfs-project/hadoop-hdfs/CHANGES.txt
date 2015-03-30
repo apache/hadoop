@@ -353,6 +353,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-6408. Remove redundant definitions in log4j.properties.
     (Abhiraj Butala via aajisaka)
 
+    HDFS-7890. Improve information on Top users for metrics in
+    RollingWindowsManager and lower log level (J.Andreina via vinayakumarb)
+
   OPTIMIZATIONS
 
   BUG FIXES
