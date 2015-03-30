@@ -33,7 +33,6 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -534,17 +533,17 @@ public class TestDataTransferProtocol {
                                            Status.CHECKSUM_OK))
         .build();
 
-    ByteOutputStream oldAckBytes = new ByteOutputStream();
+    ByteArrayOutputStream oldAckBytes = new ByteArrayOutputStream();
     proto.writeDelimitedTo(oldAckBytes);
     PipelineAck oldAck = new PipelineAck();
-    oldAck.readFields(new ByteArrayInputStream(oldAckBytes.getBytes()));
+    oldAck.readFields(new ByteArrayInputStream(oldAckBytes.toByteArray()));
     assertEquals(PipelineAck.combineHeader(PipelineAck.ECN.DISABLED, Status
         .CHECKSUM_OK), oldAck.getHeaderFlag(0));
 
     PipelineAck newAck = new PipelineAck();
-    ByteOutputStream newAckBytes = new ByteOutputStream();
+    ByteArrayOutputStream newAckBytes = new ByteArrayOutputStream();
     newProto.writeDelimitedTo(newAckBytes);
-    newAck.readFields(new ByteArrayInputStream(newAckBytes.getBytes()));
+    newAck.readFields(new ByteArrayInputStream(newAckBytes.toByteArray()));
     assertEquals(PipelineAck.combineHeader(PipelineAck.ECN.SUPPORTED, Status
         .CHECKSUM_OK), newAck.getHeaderFlag(0));
   }
