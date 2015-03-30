@@ -109,6 +109,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7960. The full block report should prune zombie storages even if
     they're not empty. (cmccabe and Eddy Xu via wang)
 
+    HDFS-7742. Favoring decommissioning node for replication can cause a block
+    to stay underreplicated for long periods (Nathan Roberts via kihwal)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
