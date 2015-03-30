@@ -79,6 +79,9 @@
   <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
 
   {#RollingUpgradeStatus}
+   {@if cond="{finalizeTime} > 0"}
+      <p>Rolling upgrade finalized at {#helper_date_tostring value="{finalizeTime}"/}. </p>
+   {:else}
     <p>Rolling upgrade started at {#helper_date_tostring value="{startTime}"/}. </br>
     {#createdRollbackImages}
       Rollback image has been created. Proceed to upgrade daemons.
@@ -86,6 +89,7 @@
       Rollback image has not been created.
     {/createdRollbackImages}
     </p>
+   {/if}
   {/RollingUpgradeStatus}
 
   {@if cond="{DistinctVersionCount} > 1"}
