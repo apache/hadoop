@@ -379,6 +379,10 @@ Release 2.8.0 - UNRELEASED
     HDFS-8002. Website refers to /trash directory. (Brahma Reddy Battula via
     aajisaka)
 
+    HDFS-7261. storageMap is accessed without synchronization in
+    DatanodeDescriptor#updateHeartbeatState() (Brahma Reddy Battula via Colin
+    P. McCabe)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
