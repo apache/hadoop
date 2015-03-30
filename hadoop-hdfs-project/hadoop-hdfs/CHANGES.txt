@@ -347,6 +347,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8004. Use KeyProviderCryptoExtension#warmUpEncryptedKeys when creating
     an encryption zone. (awang via asuresh)
 
+    HDFS-6263. Remove DRFA.MaxBackupIndex config from log4j.properties.
+    (Abhiraj Butala via aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
