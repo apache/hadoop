@@ -510,6 +510,10 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6285. ClientServiceDelegate should not retry upon
     AuthenticationException. (Jonathan Eagles via ozawa)
 
+    MAPREDUCE-6288. Changed permissions on JobHistory server's done directory
+    so that user's client can load the conf files directly. (Robert Kanter via
+    vinodkv)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

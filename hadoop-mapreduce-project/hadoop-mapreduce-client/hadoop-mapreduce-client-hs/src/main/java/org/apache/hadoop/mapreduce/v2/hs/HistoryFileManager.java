@@ -571,8 +571,10 @@ public class HistoryFileManager extends AbstractService {
           new Path(doneDirPrefix));
       doneDirFc = FileContext.getFileContext(doneDirPrefixPath.toUri(), conf);
       doneDirFc.setUMask(JobHistoryUtils.HISTORY_DONE_DIR_UMASK);
-      mkdir(doneDirFc, doneDirPrefixPath, new FsPermission(
-          JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION));
+      FsPermission doneDirPerm = new FsPermission(
+          JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION);
+      mkdir(doneDirFc, doneDirPrefixPath, doneDirPerm);
+      checkHistoryDirsPermissions(doneDirFc, doneDirPrefixPath, doneDirPerm);
     } catch (ConnectException ex) {
       if (logWait) {
         LOG.info("Waiting for FileSystem at " +
@@ -655,6 +657,31 @@ public class HistoryFileManager extends AbstractService {
         }
       } catch (FileAlreadyExistsException e) {
         LOG.info("Directory: [" + path + "] already exists.");
+      }
+    }
+  }
+
+  private void checkHistoryDirsPermissions(FileContext fc, Path donePath,
+      FsPermission fsp) throws IOException {
+    FileStatus fsStatus = fc.getFileStatus(donePath);
+    if (fsStatus.getPermission().toShort() != fsp.toShort()) {
+      fc.setPermission(donePath, fsp);
+    }
+    List<FileStatus> dirs = findTimestampedDirectories();
+    for (FileStatus dir : dirs) {
+      setPermission(fc, donePath, fsp, dir);
+    }
+  }
+
+  private void setPermission(FileContext fc, Path donePath, FsPermission fsp,
+       FileStatus dir) throws IOException {
+    FsPermission fsPerm = dir.getPermission();
+    if (fsPerm.toShort() != fsp.toShort()) {
+      fc.setPermission(dir.getPath(), fsp);
+      Path parentPath = dir.getPath().getParent();
+      if (!parentPath.equals(donePath)) {
+        FileStatus parentDir = fc.getFileStatus(parentPath);
+        setPermission(fc, donePath, fsp, parentDir);
       }
     }
   }
