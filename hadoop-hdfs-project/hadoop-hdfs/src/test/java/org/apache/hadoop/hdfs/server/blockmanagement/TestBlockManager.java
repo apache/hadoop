@@ -557,11 +557,11 @@ public class TestBlockManager {
     assertNotNull("Chooses decommissioning source node for a normal replication"
         + " if all available source nodes have reached their replication"
         + " limits below the hard limit.",
-        bm.chooseSourceDatanode(
-            aBlock,
+        bm.chooseSourceDatanodes(
+            bm.getStoredBlock(aBlock),
             cntNodes,
             liveNodes,
-            new NumberReplicas(),
+            new NumberReplicas(), new LinkedList<Short>(), 1,
             UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED));
 
 
@@ -571,11 +571,11 @@ public class TestBlockManager {
 
     assertNull("Does not choose a source decommissioning node for a normal"
         + " replication when all available nodes exceed the hard limit.",
-        bm.chooseSourceDatanode(
-            aBlock,
+        bm.chooseSourceDatanodes(
+            bm.getStoredBlock(aBlock),
             cntNodes,
             liveNodes,
-            new NumberReplicas(),
+            new NumberReplicas(), new LinkedList<Short>(), 1,
             UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED));
   }
 
