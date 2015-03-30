@@ -41,11 +41,11 @@ public class TestResourceCalculatorProcessTree {
       return "Empty tree for testing";
     }
 
-    public long getCumulativeRssmem(int age) {
+    public long getRssMemorySize(int age) {
       return 0;
     }
 
-    public long getCumulativeVmem(int age) {
+    public long getVirtualMemorySize(int age) {
       return 0;
     }
 

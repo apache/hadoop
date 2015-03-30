@@ -26,7 +26,8 @@ import java.math.BigInteger;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class CpuTimeTracker {
-  public static final int UNAVAILABLE = -1;
+  public static final int UNAVAILABLE =
+      ResourceCalculatorProcessTree.UNAVAILABLE;
   final long MINIMUM_UPDATE_INTERVAL;
 
   // CPU used time since system is on (ms)
