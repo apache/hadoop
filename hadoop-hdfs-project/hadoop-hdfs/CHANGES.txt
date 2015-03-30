@@ -323,6 +323,9 @@ Release 2.8.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-4396. Add START_MSG/SHUTDOWN_MSG for ZKFC
+    (Liang Xie via harsh)
+
     HDFS-7875. Improve log message when wrong value configured for
     dfs.datanode.failed.volumes.tolerated.
     (nijel via harsh)
