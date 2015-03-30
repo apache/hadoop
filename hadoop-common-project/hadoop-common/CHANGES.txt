@@ -1175,6 +1175,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11639. Clean up Windows native code compilation warnings related to
     Windows Secure Container Executor. (Remus Rusanu via cnauroth)
 
+    HADOOP-11761. Fix findbugs warnings in org.apache.hadoop.security
+    .authentication. (Li Lu via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
