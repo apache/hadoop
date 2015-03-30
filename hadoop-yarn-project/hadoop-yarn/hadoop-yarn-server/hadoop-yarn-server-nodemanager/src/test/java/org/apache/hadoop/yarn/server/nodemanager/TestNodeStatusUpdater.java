@@ -1182,7 +1182,7 @@ public class TestNodeStatusUpdater {
       }
     };
     verifyNodeStartFailure(
-          "Recieved SHUTDOWN signal from Resourcemanager ,"
+          "Recieved SHUTDOWN signal from Resourcemanager, "
         + "Registration of NodeManager failed, "
         + "Message from ResourceManager: RM Shutting Down Node");
   }

@@ -216,4 +216,17 @@ public class RegisterNodeManagerResponsePBImpl extends ProtoBase<RegisterNodeMan
   private MasterKeyProto convertToProtoFormat(MasterKey t) {
     return ((MasterKeyPBImpl)t).getProto();
   }
+
+  @Override
+  public boolean getAreNodeLabelsAcceptedByRM() {
+    RegisterNodeManagerResponseProtoOrBuilder p =
+        this.viaProto ? this.proto : this.builder;
+    return p.getAreNodeLabelsAcceptedByRM();
+  }
+
+  @Override
+  public void setAreNodeLabelsAcceptedByRM(boolean areNodeLabelsAcceptedByRM) {
+    maybeInitBuilder();
+    this.builder.setAreNodeLabelsAcceptedByRM(areNodeLabelsAcceptedByRM);
+  }
 }  

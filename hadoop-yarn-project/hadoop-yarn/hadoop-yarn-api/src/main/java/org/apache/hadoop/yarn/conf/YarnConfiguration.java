@@ -1719,6 +1719,18 @@ public class YarnConfiguration extends Configuration {
   public static final String NODE_LABELS_ENABLED = NODE_LABELS_PREFIX
       + "enabled";
   public static final boolean DEFAULT_NODE_LABELS_ENABLED = false;
+  
+  public static final String NODELABEL_CONFIGURATION_TYPE =
+      NODE_LABELS_PREFIX + "configuration-type";
+  
+  public static final String CENTALIZED_NODELABEL_CONFIGURATION_TYPE =
+      "centralized";
+  
+  public static final String DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE =
+      "distributed";
+  
+  public static final String DEFAULT_NODELABEL_CONFIGURATION_TYPE =
+      CENTALIZED_NODELABEL_CONFIGURATION_TYPE;
 
   public YarnConfiguration() {
     super();

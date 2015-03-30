@@ -67,4 +67,7 @@ public interface NodeHeartbeatResponse {
 
   void setSystemCredentialsForApps(
       Map<ApplicationId, ByteBuffer> systemCredentials);
+  
+  boolean getAreNodeLabelsAcceptedByRM();
+  void setAreNodeLabelsAcceptedByRM(boolean areNodeLabelsAcceptedByRM);
 }

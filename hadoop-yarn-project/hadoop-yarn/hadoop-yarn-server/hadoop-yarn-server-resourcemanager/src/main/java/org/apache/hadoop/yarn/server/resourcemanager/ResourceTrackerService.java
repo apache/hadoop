@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
@@ -31,6 +34,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -100,6 +104,8 @@ public class ResourceTrackerService extends AbstractService implements
   private int minAllocMb;
   private int minAllocVcores;
 
+  private boolean isDistributesNodeLabelsConf;
+
   static {
     resync.setNodeAction(NodeAction.RESYNC);
 
@@ -148,6 +154,14 @@ public class ResourceTrackerService extends AbstractService implements
     minimumNodeManagerVersion = conf.get(
         YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION);
+
+    String nodeLabelConfigurationType =
+        conf.get(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
+            YarnConfiguration.DEFAULT_NODELABEL_CONFIGURATION_TYPE);
+
+    isDistributesNodeLabelsConf =
+        YarnConfiguration.DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE
+            .equals(nodeLabelConfigurationType);
 
     super.serviceInit(conf);
   }
@@ -336,11 +350,31 @@ public class ResourceTrackerService extends AbstractService implements
       }
     }
 
-    String message =
-        "NodeManager from node " + host + "(cmPort: " + cmPort + " httpPort: "
-            + httpPort + ") " + "registered with capability: " + capability
-            + ", assigned nodeId " + nodeId;
-    LOG.info(message);
+    // Update node's labels to RM's NodeLabelManager.
+    Set<String> nodeLabels = request.getNodeLabels();
+    if (isDistributesNodeLabelsConf && nodeLabels != null) {
+      try {
+        updateNodeLabelsFromNMReport(nodeLabels, nodeId);
+        response.setAreNodeLabelsAcceptedByRM(true);
+      } catch (IOException ex) {
+        // Ensure the exception is captured in the response
+        response.setDiagnosticsMessage(ex.getMessage());
+        response.setAreNodeLabelsAcceptedByRM(false);
+      }
+    }
+
+    StringBuilder message = new StringBuilder();
+    message.append("NodeManager from node ").append(host).append("(cmPort: ")
+        .append(cmPort).append(" httpPort: ");
+    message.append(httpPort).append(") ")
+        .append("registered with capability: ").append(capability);
+    message.append(", assigned nodeId ").append(nodeId);
+    if (response.getAreNodeLabelsAcceptedByRM()) {
+      message.append(", node labels { ").append(
+          StringUtils.join(",", nodeLabels) + " } ");
+    }
+
+    LOG.info(message.toString());
     response.setNodeAction(NodeAction.NORMAL);
     response.setRMIdentifier(ResourceManager.getClusterTimeStamp());
     response.setRMVersion(YarnVersionInfo.getVersion());
@@ -359,6 +393,7 @@ public class ResourceTrackerService extends AbstractService implements
      * 2. Check if it's a registered node
      * 3. Check if it's a 'fresh' heartbeat i.e. not duplicate heartbeat
      * 4. Send healthStatus to RMNode
+     * 5. Update node's labels if distributed Node Labels configuration is enabled
      */
 
     NodeId nodeId = remoteNodeStatus.getNodeId();
@@ -428,7 +463,42 @@ public class ResourceTrackerService extends AbstractService implements
             remoteNodeStatus.getContainersStatuses(), 
             remoteNodeStatus.getKeepAliveApplications(), nodeHeartBeatResponse));
 
+    // 5. Update node's labels to RM's NodeLabelManager.
+    if (isDistributesNodeLabelsConf && request.getNodeLabels() != null) {
+      try {
+        updateNodeLabelsFromNMReport(request.getNodeLabels(), nodeId);
+        nodeHeartBeatResponse.setAreNodeLabelsAcceptedByRM(true);
+      } catch (IOException ex) {
+        //ensure the error message is captured and sent across in response
+        nodeHeartBeatResponse.setDiagnosticsMessage(ex.getMessage());
+        nodeHeartBeatResponse.setAreNodeLabelsAcceptedByRM(false);
+      }
+    }
+
     return nodeHeartBeatResponse;
+  }
+
+  private void updateNodeLabelsFromNMReport(Set<String> nodeLabels,
+      NodeId nodeId) throws IOException {
+    try {
+      Map<NodeId, Set<String>> labelsUpdate =
+          new HashMap<NodeId, Set<String>>();
+      labelsUpdate.put(nodeId, nodeLabels);
+      this.rmContext.getNodeLabelManager().replaceLabelsOnNode(labelsUpdate);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Node Labels {" + StringUtils.join(",", nodeLabels)
+            + "} from Node " + nodeId + " were Accepted from RM");
+      }
+    } catch (IOException ex) {
+      StringBuilder errorMessage = new StringBuilder();
+      errorMessage.append("Node Labels {")
+          .append(StringUtils.join(",", nodeLabels))
+          .append("} reported from NM with ID ").append(nodeId)
+          .append(" was rejected from RM with exception message as : ")
+          .append(ex.getMessage());
+      LOG.error(errorMessage, ex);
+      throw new IOException(errorMessage.toString(), ex);
+    }
   }
 
   private void populateKeys(NodeHeartbeatRequest request,
