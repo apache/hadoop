@@ -741,7 +741,7 @@ public class TestOptionsParser {
 
     options = OptionsParser.parse(
       new String[] {
-        "-listMissing",
+        "-listMissingFile",
         "hdfs://localhost:8020/tmp/missingInSource.txt",
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"

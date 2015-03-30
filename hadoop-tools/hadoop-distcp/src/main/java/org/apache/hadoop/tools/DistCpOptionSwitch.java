@@ -77,7 +77,7 @@ public enum DistCpOptionSwitch {
    * exist in the target.
    */
   LIST_MISSING_FILE(DistCpConstants.CONF_LABEL_LIST_MISSING_FILE,
-    new Option("listMissing", true, "Create a list of files that " +
+    new Option("listMissingFile", true, "Create a list of files that " +
       "are missing in source and exist in target")),
 
   /**
