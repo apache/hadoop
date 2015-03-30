@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools;
 
 import static org.junit.Assert.fail;
+import org.apache.commons.lang.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.apache.hadoop.fs.Path;
@@ -435,7 +436,7 @@ public class TestOptionsParser {
     DistCpOptions option = new DistCpOptions(new Path("abc"), new Path("xyz"));
     String val = "DistCpOptions{atomicCommit=false, syncFolder=false, deleteMissing=false, " +
       "ignoreFailures=false, maxMaps=20, sslConfigurationFile='null', copyStrategy='uniformsize', " +
-      "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, targetPathExists=true, listMissing=false}";
+      "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, targetPathExists=true, listMissingFile=null}";
     Assert.assertEquals(val, option.toString());
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
       DistCpOptionSwitch.ATOMIC_COMMIT.name());
@@ -678,9 +679,11 @@ public class TestOptionsParser {
   public void testAppendOption() {
     Configuration conf = new Configuration();
     Assert.assertFalse(conf.getBoolean(
-        DistCpOptionSwitch.APPEND.getConfigLabel(), false));
+        DistCpOptionSwitch.APPEND.getConfigLabel(),
+        false));
     Assert.assertFalse(conf.getBoolean(
-        DistCpOptionSwitch.SYNC_FOLDERS.getConfigLabel(), false));
+        DistCpOptionSwitch.SYNC_FOLDERS.getConfigLabel(),
+        false));
 
     DistCpOptions options = OptionsParser.parse(
       new String[] {
@@ -690,9 +693,11 @@ public class TestOptionsParser {
       });
     options.appendToConf(conf);
     Assert.assertTrue(conf.getBoolean(
-        DistCpOptionSwitch.APPEND.getConfigLabel(), false));
+        DistCpOptionSwitch.APPEND.getConfigLabel(),
+        false));
     Assert.assertTrue(conf.getBoolean(
-        DistCpOptionSwitch.SYNC_FOLDERS.getConfigLabel(), false));
+        DistCpOptionSwitch.SYNC_FOLDERS.getConfigLabel(),
+        false));
 
     // make sure -append is only valid when -update is specified
     try {
@@ -705,7 +710,8 @@ public class TestOptionsParser {
       fail("Append should fail if update option is not specified");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
-        "Append is valid only with update options", e);
+        "Append is valid only with update options",
+        e);
     }
 
     // make sure -append is invalid when skipCrc is specified
@@ -719,7 +725,8 @@ public class TestOptionsParser {
       fail("Append should fail if skipCrc option is specified");
     } catch (IllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains(
-        "Append is disallowed when skipping CRC", e);
+        "Append is disallowed when skipping CRC",
+        e);
     }
   }
 
@@ -730,16 +737,15 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"
       });
-    Assert.assertFalse(options.shouldListMissing());
+    Assert.assertTrue(StringUtils.isBlank(options.getListMissingFile()));
 
     options = OptionsParser.parse(
       new String[] {
         "-listMissing",
+        "hdfs://localhost:8020/tmp/missingInSource.txt",
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"
       });
-    Assert.assertTrue(options.shouldListMissing());
-
-
+    Assert.assertTrue(StringUtils.isNotBlank(options.getListMissingFile()));
   }
 }

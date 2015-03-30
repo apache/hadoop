@@ -43,7 +43,7 @@ public class DistCpConstants {
   public static final String CONF_LABEL_PRESERVE_STATUS = "distcp.preserve.status";
   public static final String CONF_LABEL_SYNC_FOLDERS = "distcp.sync.folders";
   public static final String CONF_LABEL_DELETE_MISSING = "distcp.delete.missing.source";
-  public static final String CONF_LABEL_LIST_MISSING = "distcp.list.missing.source";
+  public static final String CONF_LABEL_LIST_MISSING_FILE = "distcp.list.missing.source";
   public static final String CONF_LABEL_SSL_CONF = "distcp.keystore.resource";
   public static final String CONF_LABEL_MAX_MAPS = "distcp.max.maps";
   public static final String CONF_LABEL_SOURCE_LISTING = "distcp.source.listing";

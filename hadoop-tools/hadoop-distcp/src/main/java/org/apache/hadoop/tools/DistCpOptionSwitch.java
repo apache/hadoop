@@ -44,7 +44,8 @@ public enum DistCpOptionSwitch {
    *
    */
   PRESERVE_STATUS(DistCpConstants.CONF_LABEL_PRESERVE_STATUS,
-    new Option("p", true,
+    new Option("p",
+      true,
       "preserve status (rbugpcax)(replication, " +
       "block-size, user, group, permission, checksum-type, ACL, XATTR).  " +
       "If -p is specified with no <arg>, then preserves replication, " +
@@ -75,8 +76,8 @@ public enum DistCpOptionSwitch {
    * Create a list of files that are missing in the source and
    * exist in the target.
    */
-  LIST_MISSING(DistCpConstants.CONF_LABEL_LIST_MISSING,
-    new Option("listMissing", false, "Create a list of files that " +
+  LIST_MISSING_FILE(DistCpConstants.CONF_LABEL_LIST_MISSING_FILE,
+    new Option("listMissing", true, "Create a list of files that " +
       "are missing in source and exist in target")),
 
   /**

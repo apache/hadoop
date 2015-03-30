@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.tools.mapred;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -94,7 +95,7 @@ public class CopyCommitter extends FileOutputCommitter {
     }
 
     try {
-      if (conf.getBoolean(DistCpConstants.CONF_LABEL_LIST_MISSING, false)) {
+      if (StringUtils.isNotBlank(conf.get(DistCpConstants.CONF_LABEL_LIST_MISSING_FILE))) {
         listMissing(conf);
       }
       if (conf.getBoolean(DistCpConstants.CONF_LABEL_DELETE_MISSING, false)) {
@@ -209,7 +210,8 @@ public class CopyCommitter extends FileOutputCommitter {
         DistCpUtils.preserve(targetFS, targetFile, srcFileStatus, attributes);
 
         taskAttemptContext.progress();
-        taskAttemptContext.setStatus("Preserving status on directory entries. [" +
+        taskAttemptContext.setStatus(
+          "Preserving status on directory entries. [" +
           (sourceReader.getPosition() * 100 / totalLen) + "%]");
       }
     } finally {
@@ -221,8 +223,9 @@ public class CopyCommitter extends FileOutputCommitter {
   // This method creates a file containing the names of all  "extra" files
   // from the target, if they're not available at the source
   private void listMissing(Configuration conf) {
-    LOG.info("-listMissing option is enabled. Creating a list of all entries from " +
-      "target that are missing in source");
+    LOG.info(
+      "-listMissingFile option is enabled. Creating a list of all entries from " +
+      "target that are missing in source in file " + conf.get(DistCpConstants.CONF_LABEL_LIST_MISSING_FILE));
   }
 
   // This method deletes "extra" files from the target, if they're not
@@ -295,7 +298,8 @@ public class CopyCommitter extends FileOutputCommitter {
           throw new IOException("Unable to delete " + trgtFileStatus.getPath());
         }
         taskAttemptContext.progress();
-        taskAttemptContext.setStatus("Deleting missing files from target. [" +
+        taskAttemptContext.setStatus(
+          "Deleting missing files from target. [" +
           (targetReader.getPosition() * 100 / totalLen) + "%]");
       }
     } finally {
@@ -313,7 +317,8 @@ public class CopyCommitter extends FileOutputCommitter {
     LOG.info("Atomic commit enabled. Moving " + workDir + " to " + finalDir);
     if (targetFS.exists(finalDir) && targetFS.exists(workDir)) {
       LOG.error("Pre-existing final-path found at: " + finalDir);
-      throw new IOException("Target-path can't be committed to because it " +
+      throw new IOException(
+        "Target-path can't be committed to because it " +
         "exists at " + finalDir + ". Copied data is in temp-dir: " + workDir + ". ");
     }
 

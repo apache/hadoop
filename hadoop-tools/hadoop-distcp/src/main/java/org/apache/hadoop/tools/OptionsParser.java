@@ -148,8 +148,8 @@ public class OptionsParser {
       option.setDeleteMissing(true);
     }
 
-    if (command.hasOption(DistCpOptionSwitch.LIST_MISSING.getSwitch())) {
-      option.setListMissing(true);
+    if (command.hasOption(DistCpOptionSwitch.LIST_MISSING_FILE.getSwitch())) {
+      option.setListMissingFile(command.getOptionValue(DistCpOptionSwitch.LIST_MISSING_FILE.getSwitch()));
     }
 
     if (command.hasOption(DistCpOptionSwitch.SKIP_CRC.getSwitch())) {
@@ -170,8 +170,10 @@ public class OptionsParser {
         }
         option.setMapBandwidth(mapBandwidth);
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Bandwidth specified is invalid: " +
-          getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()), e);
+        throw new IllegalArgumentException(
+          "Bandwidth specified is invalid: " +
+          getVal(command, DistCpOptionSwitch.BANDWIDTH.getSwitch()),
+          e);
       }
     }
 
@@ -185,8 +187,10 @@ public class OptionsParser {
           getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()).trim());
         option.setMaxMaps(maps);
       } catch (NumberFormatException e) {
-        throw new IllegalArgumentException("Number of maps is invalid: " +
-          getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()), e);
+        throw new IllegalArgumentException(
+          "Number of maps is invalid: " +
+          getVal(command, DistCpOptionSwitch.MAX_MAPS.getSwitch()),
+          e);
       }
     }
 
