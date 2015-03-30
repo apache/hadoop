@@ -18,7 +18,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.HttpCookie;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
@@ -151,8 +153,7 @@ public class TestAuthenticationFilter {
   }
 
   @Test
-  public void testInit() throws Exception {
-
+  public void testFallbackToRandomSecretProvider() throws Exception {
     // minimal configuration & simple auth handler (Pseudo)
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
@@ -162,8 +163,8 @@ public class TestAuthenticationFilter {
           AuthenticationFilter.AUTH_TOKEN_VALIDITY)).thenReturn(
           (new Long(TOKEN_VALIDITY_SEC)).toString());
       Mockito.when(config.getInitParameterNames()).thenReturn(
-          new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
-                                           AuthenticationFilter.AUTH_TOKEN_VALIDITY)).elements());
+          new Vector<>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+                                     AuthenticationFilter.AUTH_TOKEN_VALIDITY)).elements());
       ServletContext context = Mockito.mock(ServletContext.class);
       Mockito.when(context.getAttribute(AuthenticationFilter.SIGNER_SECRET_PROVIDER_ATTRIBUTE))
           .thenReturn(null);
@@ -178,16 +179,17 @@ public class TestAuthenticationFilter {
     } finally {
       filter.destroy();
     }
-
+  }
+  @Test
+  public void testInit() throws Exception {
     // custom secret as inline
-    filter = new AuthenticationFilter();
+    AuthenticationFilter filter = new AuthenticationFilter();
     try {
       FilterConfig config = Mockito.mock(FilterConfig.class);
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn("simple");
-      Mockito.when(config.getInitParameter(AuthenticationFilter.SIGNATURE_SECRET)).thenReturn("secret");
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
-                                 AuthenticationFilter.SIGNATURE_SECRET)).elements());
+          new Vector<>(Arrays.asList(AuthenticationFilter.AUTH_TYPE))
+              .elements());
       ServletContext context = Mockito.mock(ServletContext.class);
       Mockito.when(context.getAttribute(
           AuthenticationFilter.SIGNER_SECRET_PROVIDER_ATTRIBUTE)).thenReturn(
