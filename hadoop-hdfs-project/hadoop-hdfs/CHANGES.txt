@@ -376,6 +376,9 @@ Release 2.8.0 - UNRELEASED
     greater or equal to 1 there is mismatch in the UI report
     (J.Andreina via vinayakumarb)
 
+    HDFS-8002. Website refers to /trash directory. (Brahma Reddy Battula via
+    aajisaka)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
