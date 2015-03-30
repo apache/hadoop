@@ -27,8 +27,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
@@ -49,11 +51,16 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.nodelabels.NodeLabelTestBase;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -66,7 +73,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TestResourceTrackerService {
+public class TestResourceTrackerService extends NodeLabelTestBase {
 
   private final static File TEMP_DIR = new File(System.getProperty(
       "test.build.data", "/tmp"), "decommision");
@@ -305,8 +312,425 @@ public class TestResourceTrackerService {
     req.setHttpPort(1234);
     req.setNMVersion(YarnVersionInfo.getVersion());
     // trying to register a invalid node.
-    RegisterNodeManagerResponse response = resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(NodeAction.NORMAL,response.getNodeAction());
+    RegisterNodeManagerResponse response =
+        resourceTrackerService.registerNodeManager(req);
+    Assert.assertEquals(NodeAction.NORMAL, response.getNodeAction());
+  }
+
+  @Test
+  public void testNodeRegistrationWithLabels() throws Exception {
+    writeToHostsFile("host2");
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+        hostFile.getAbsolutePath());
+    conf.set(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
+        YarnConfiguration.DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE);
+
+    final RMNodeLabelsManager nodeLabelsMgr = new NullRMNodeLabelsManager();
+
+    rm = new MockRM(conf) {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        return nodeLabelsMgr;
+      }
+    };
+    rm.start();
+
+    try {
+      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+    } catch (IOException e) {
+      Assert.fail("Caught Exception while intializing");
+      e.printStackTrace();
+    }
+
+    ResourceTrackerService resourceTrackerService =
+        rm.getResourceTrackerService();
+    RegisterNodeManagerRequest registerReq =
+        Records.newRecord(RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host2", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    registerReq.setResource(capability);
+    registerReq.setNodeId(nodeId);
+    registerReq.setHttpPort(1234);
+    registerReq.setNMVersion(YarnVersionInfo.getVersion());
+    registerReq.setNodeLabels(toSet("A"));
+    RegisterNodeManagerResponse response =
+        resourceTrackerService.registerNodeManager(registerReq);
+
+    Assert.assertEquals("Action should be normal on valid Node Labels",
+        NodeAction.NORMAL, response.getNodeAction());
+    assertCollectionEquals(nodeLabelsMgr.getNodeLabels().get(nodeId),
+        registerReq.getNodeLabels());
+    Assert.assertTrue("Valid Node Labels were not accepted by RM",
+        response.getAreNodeLabelsAcceptedByRM());
+    rm.stop();
+  }
+
+  @Test
+  public void testNodeRegistrationWithInvalidLabels() throws Exception {
+    writeToHostsFile("host2");
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+        hostFile.getAbsolutePath());
+    conf.set(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
+        YarnConfiguration.DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE);
+
+    final RMNodeLabelsManager nodeLabelsMgr = new NullRMNodeLabelsManager();
+
+    rm = new MockRM(conf) {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        return nodeLabelsMgr;
+      }
+    };
+    rm.start();
+
+    try {
+      nodeLabelsMgr.addToCluserNodeLabels(toSet("X", "Y", "Z"));
+    } catch (IOException e) {
+      Assert.fail("Caught Exception while intializing");
+      e.printStackTrace();
+    }
+
+    ResourceTrackerService resourceTrackerService =
+        rm.getResourceTrackerService();
+    RegisterNodeManagerRequest registerReq =
+        Records.newRecord(RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host2", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    registerReq.setResource(capability);
+    registerReq.setNodeId(nodeId);
+    registerReq.setHttpPort(1234);
+    registerReq.setNMVersion(YarnVersionInfo.getVersion());
+    registerReq.setNodeLabels(toSet("A", "B", "C"));
+    RegisterNodeManagerResponse response =
+        resourceTrackerService.registerNodeManager(registerReq);
+
+    Assert.assertEquals(
+        "On Invalid Node Labels action is expected to be normal",
+        NodeAction.NORMAL, response.getNodeAction());
+    Assert.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
+    Assert.assertNotNull(response.getDiagnosticsMessage());
+    Assert.assertFalse("Node Labels should not accepted by RM If Invalid",
+        response.getAreNodeLabelsAcceptedByRM());
+
+    if (rm != null) {
+      rm.stop();
+    }
+  }
+
+  @Test
+  public void testNodeRegistrationWithInvalidLabelsSyntax() throws Exception {
+    writeToHostsFile("host2");
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+        hostFile.getAbsolutePath());
+    conf.set(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
+        YarnConfiguration.DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE);
+
+    final RMNodeLabelsManager nodeLabelsMgr = new NullRMNodeLabelsManager();
+
+    rm = new MockRM(conf) {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        return nodeLabelsMgr;
+      }
+    };
+    rm.start();
+
+    try {
+      nodeLabelsMgr.addToCluserNodeLabels(toSet("X", "Y", "Z"));
+    } catch (IOException e) {
+      Assert.fail("Caught Exception while intializing");
+      e.printStackTrace();
+    }
+
+    ResourceTrackerService resourceTrackerService =
+        rm.getResourceTrackerService();
+    RegisterNodeManagerRequest req =
+        Records.newRecord(RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host2", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    req.setResource(capability);
+    req.setNodeId(nodeId);
+    req.setHttpPort(1234);
+    req.setNMVersion(YarnVersionInfo.getVersion());
+    req.setNodeLabels(toSet("#Y"));
+    RegisterNodeManagerResponse response =
+        resourceTrackerService.registerNodeManager(req);
+
+    Assert.assertEquals(
+        "On Invalid Node Labels action is expected to be normal",
+        NodeAction.NORMAL, response.getNodeAction());
+    Assert.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
+    Assert.assertNotNull(response.getDiagnosticsMessage());
+    Assert.assertFalse("Node Labels should not accepted by RM If Invalid",
+        response.getAreNodeLabelsAcceptedByRM());
+
+    if (rm != null) {
+      rm.stop();
+    }
+  }
+
+  @Test
+  public void testNodeRegistrationWithCentralLabelConfig() throws Exception {
+    writeToHostsFile("host2");
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+        hostFile.getAbsolutePath());
+    conf.set(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
+        YarnConfiguration.DEFAULT_NODELABEL_CONFIGURATION_TYPE);
+
+    final RMNodeLabelsManager nodeLabelsMgr = new NullRMNodeLabelsManager();
+
+    rm = new MockRM(conf) {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        return nodeLabelsMgr;
+      }
+    };
+    rm.start();
+    try {
+      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+    } catch (IOException e) {
+      Assert.fail("Caught Exception while intializing");
+      e.printStackTrace();
+    }
+    ResourceTrackerService resourceTrackerService =
+        rm.getResourceTrackerService();
+    RegisterNodeManagerRequest req =
+        Records.newRecord(RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host2", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    req.setResource(capability);
+    req.setNodeId(nodeId);
+    req.setHttpPort(1234);
+    req.setNMVersion(YarnVersionInfo.getVersion());
+    req.setNodeLabels(toSet("A"));
+    RegisterNodeManagerResponse response =
+        resourceTrackerService.registerNodeManager(req);
+    // registered to RM with central label config
+    Assert.assertEquals(NodeAction.NORMAL, response.getNodeAction());
+    Assert.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
+    Assert
+        .assertFalse(
+            "Node Labels should not accepted by RM If its configured with Central configuration",
+            response.getAreNodeLabelsAcceptedByRM());
+    if (rm != null) {
+      rm.stop();
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private NodeStatus getNodeStatusObject(NodeId nodeId) {
+    NodeStatus status = Records.newRecord(NodeStatus.class);
+    status.setNodeId(nodeId);
+    status.setResponseId(0);
+    status.setContainersStatuses(Collections.EMPTY_LIST);
+    status.setKeepAliveApplications(Collections.EMPTY_LIST);
+    return status;
+  }
+
+  @Test
+  public void testNodeHeartBeatWithLabels() throws Exception {
+    writeToHostsFile("host2");
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+        hostFile.getAbsolutePath());
+    conf.set(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
+        YarnConfiguration.DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE);
+
+    final RMNodeLabelsManager nodeLabelsMgr = new NullRMNodeLabelsManager();
+
+    rm = new MockRM(conf) {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        return nodeLabelsMgr;
+      }
+    };
+    rm.start();
+    // adding valid labels
+    try {
+      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+    } catch (IOException e) {
+      Assert.fail("Caught Exception while intializing");
+      e.printStackTrace();
+    }
+
+    // Registering of labels and other required info to RM
+    ResourceTrackerService resourceTrackerService =
+        rm.getResourceTrackerService();
+    RegisterNodeManagerRequest registerReq =
+        Records.newRecord(RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host2", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    registerReq.setResource(capability);
+    registerReq.setNodeId(nodeId);
+    registerReq.setHttpPort(1234);
+    registerReq.setNMVersion(YarnVersionInfo.getVersion());
+    registerReq.setNodeLabels(toSet("A")); // Node register label
+    RegisterNodeManagerResponse registerResponse =
+        resourceTrackerService.registerNodeManager(registerReq);
+
+    // modification of labels during heartbeat
+    NodeHeartbeatRequest heartbeatReq =
+        Records.newRecord(NodeHeartbeatRequest.class);
+    heartbeatReq.setNodeLabels(toSet("B")); // Node heartbeat label update
+    NodeStatus nodeStatusObject = getNodeStatusObject(nodeId);
+    heartbeatReq.setNodeStatus(nodeStatusObject);
+    heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
+        .getNMTokenMasterKey());
+    heartbeatReq.setLastKnownContainerTokenMasterKey(registerResponse
+        .getContainerTokenMasterKey());
+    NodeHeartbeatResponse nodeHeartbeatResponse =
+        resourceTrackerService.nodeHeartbeat(heartbeatReq);
+
+    Assert.assertEquals("InValid Node Labels were not accepted by RM",
+        NodeAction.NORMAL, nodeHeartbeatResponse.getNodeAction());
+    assertCollectionEquals(nodeLabelsMgr.getNodeLabels().get(nodeId),
+        heartbeatReq.getNodeLabels());
+    Assert.assertTrue("Valid Node Labels were not accepted by RM",
+        nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
+    
+    // After modification of labels next heartbeat sends null informing no update
+    Set<String> oldLabels = nodeLabelsMgr.getNodeLabels().get(nodeId);
+    int responseId = nodeStatusObject.getResponseId();
+    heartbeatReq =
+        Records.newRecord(NodeHeartbeatRequest.class);
+    heartbeatReq.setNodeLabels(null); // Node heartbeat label update
+    nodeStatusObject = getNodeStatusObject(nodeId);
+    nodeStatusObject.setResponseId(responseId+2);
+    heartbeatReq.setNodeStatus(nodeStatusObject);
+    heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
+        .getNMTokenMasterKey());
+    heartbeatReq.setLastKnownContainerTokenMasterKey(registerResponse
+        .getContainerTokenMasterKey());
+    nodeHeartbeatResponse = resourceTrackerService.nodeHeartbeat(heartbeatReq);
+
+    Assert.assertEquals("InValid Node Labels were not accepted by RM",
+        NodeAction.NORMAL, nodeHeartbeatResponse.getNodeAction());
+    assertCollectionEquals(nodeLabelsMgr.getNodeLabels().get(nodeId),
+        oldLabels);
+    Assert.assertFalse("Node Labels should not accepted by RM",
+        nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
+    rm.stop();
+  }
+
+  @Test
+  public void testNodeHeartBeatWithInvalidLabels() throws Exception {
+    writeToHostsFile("host2");
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+        hostFile.getAbsolutePath());
+    conf.set(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
+        YarnConfiguration.DISTRIBUTED_NODELABEL_CONFIGURATION_TYPE);
+
+    final RMNodeLabelsManager nodeLabelsMgr = new NullRMNodeLabelsManager();
+
+    rm = new MockRM(conf) {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        return nodeLabelsMgr;
+      }
+    };
+    rm.start();
+
+    try {
+      nodeLabelsMgr.addToCluserNodeLabels(toSet("A", "B", "C"));
+    } catch (IOException e) {
+      Assert.fail("Caught Exception while intializing");
+      e.printStackTrace();
+    }
+
+    ResourceTrackerService resourceTrackerService =
+        rm.getResourceTrackerService();
+    RegisterNodeManagerRequest registerReq =
+        Records.newRecord(RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host2", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    registerReq.setResource(capability);
+    registerReq.setNodeId(nodeId);
+    registerReq.setHttpPort(1234);
+    registerReq.setNMVersion(YarnVersionInfo.getVersion());
+    registerReq.setNodeLabels(toSet("A"));
+    RegisterNodeManagerResponse registerResponse =
+        resourceTrackerService.registerNodeManager(registerReq);
+
+    NodeHeartbeatRequest heartbeatReq =
+        Records.newRecord(NodeHeartbeatRequest.class);
+    heartbeatReq.setNodeLabels(toSet("B", "#C")); // Invalid heart beat labels
+    heartbeatReq.setNodeStatus(getNodeStatusObject(nodeId));
+    heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
+        .getNMTokenMasterKey());
+    heartbeatReq.setLastKnownContainerTokenMasterKey(registerResponse
+        .getContainerTokenMasterKey());
+    NodeHeartbeatResponse nodeHeartbeatResponse =
+        resourceTrackerService.nodeHeartbeat(heartbeatReq);
+
+    // response should be NORMAL when RM heartbeat labels are rejected
+    Assert.assertEquals("Response should be NORMAL when RM heartbeat labels"
+        + " are rejected", NodeAction.NORMAL,
+        nodeHeartbeatResponse.getNodeAction());
+    Assert.assertFalse(nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
+    Assert.assertNotNull(nodeHeartbeatResponse.getDiagnosticsMessage());
+    rm.stop();
+  }
+
+  @Test
+  public void testNodeHeartbeatWithCentralLabelConfig() throws Exception {
+    writeToHostsFile("host2");
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+        hostFile.getAbsolutePath());
+    conf.set(YarnConfiguration.NODELABEL_CONFIGURATION_TYPE,
+        YarnConfiguration.DEFAULT_NODELABEL_CONFIGURATION_TYPE);
+
+    final RMNodeLabelsManager nodeLabelsMgr = new NullRMNodeLabelsManager();
+
+    rm = new MockRM(conf) {
+      @Override
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        return nodeLabelsMgr;
+      }
+    };
+    rm.start();
+
+    ResourceTrackerService resourceTrackerService =
+        rm.getResourceTrackerService();
+    RegisterNodeManagerRequest req =
+        Records.newRecord(RegisterNodeManagerRequest.class);
+    NodeId nodeId = NodeId.newInstance("host2", 1234);
+    Resource capability = BuilderUtils.newResource(1024, 1);
+    req.setResource(capability);
+    req.setNodeId(nodeId);
+    req.setHttpPort(1234);
+    req.setNMVersion(YarnVersionInfo.getVersion());
+    req.setNodeLabels(toSet("A", "B", "C"));
+    RegisterNodeManagerResponse registerResponse =
+        resourceTrackerService.registerNodeManager(req);
+
+    NodeHeartbeatRequest heartbeatReq =
+        Records.newRecord(NodeHeartbeatRequest.class);
+    heartbeatReq.setNodeLabels(toSet("B")); // Valid heart beat labels
+    heartbeatReq.setNodeStatus(getNodeStatusObject(nodeId));
+    heartbeatReq.setLastKnownNMTokenMasterKey(registerResponse
+        .getNMTokenMasterKey());
+    heartbeatReq.setLastKnownContainerTokenMasterKey(registerResponse
+        .getContainerTokenMasterKey());
+    NodeHeartbeatResponse nodeHeartbeatResponse =
+        resourceTrackerService.nodeHeartbeat(heartbeatReq);
+
+    // response should be ok but the RMacceptNodeLabelsUpdate should be false
+    Assert.assertEquals(NodeAction.NORMAL,
+        nodeHeartbeatResponse.getNodeAction());
+    // no change in the labels,
+    Assert.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
+    // heartbeat labels rejected
+    Assert.assertFalse("Invalid Node Labels should not accepted by RM",
+        nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
+    if (rm != null) {
+      rm.stop();
+    }
   }
 
   @Test

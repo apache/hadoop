@@ -32,6 +32,7 @@ message RegisterNodeManagerRequestProto {
   optional string nm_version = 5;
   repeated NMContainerStatusProto container_statuses = 6;
   repeated ApplicationIdProto runningApplications = 7;
+  optional StringArrayProto nodeLabels = 8;
 }
 
 message RegisterNodeManagerResponseProto {
@@ -41,12 +42,14 @@ message RegisterNodeManagerResponseProto {
   optional int64 rm_identifier = 4;
   optional string diagnostics_message = 5;
   optional string rm_version = 6;
+  optional bool areNodeLabelsAcceptedByRM = 7 [default = false];
 }
 
 message NodeHeartbeatRequestProto {
   optional NodeStatusProto node_status = 1;
   optional MasterKeyProto last_known_container_token_master_key = 2;
   optional MasterKeyProto last_known_nm_token_master_key = 3;
+  optional StringArrayProto nodeLabels = 4;
 }
 
 message NodeHeartbeatResponseProto {
@@ -60,6 +63,7 @@ message NodeHeartbeatResponseProto {
   optional string diagnostics_message = 8;
   repeated ContainerIdProto containers_to_be_removed_from_nm = 9;
   repeated SystemCredentialsForAppsProto system_credentials_for_apps = 10;
+  optional bool areNodeLabelsAcceptedByRM = 11 [default = false];
 }
 
 message SystemCredentialsForAppsProto {

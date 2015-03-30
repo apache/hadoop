@@ -83,6 +83,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3288. Document and fix indentation in the DockerContainerExecutor code
 
+    YARN-2495. Allow admin specify labels from each NM (Distributed 
+    configuration for node label). (Naganarasimha G R via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
