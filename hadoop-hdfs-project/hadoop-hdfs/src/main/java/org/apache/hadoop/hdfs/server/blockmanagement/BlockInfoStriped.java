@@ -18,10 +18,12 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+
 import java.io.DataOutput;
 import java.io.IOException;
+
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.BLOCK_STRIPED_CHUNK_SIZE;
 
 /**
  * Subclass of {@link BlockInfo}, presenting a block group in erasure coding.
@@ -37,7 +39,6 @@ import java.io.IOException;
  * array to record the block index for each triplet.
  */
 public class BlockInfoStriped extends BlockInfo {
-  private final int   chunkSize = HdfsConstants.BLOCK_STRIPED_CHUNK_SIZE;
   private final short dataBlockNum;
   private final short parityBlockNum;
   /**
@@ -132,6 +133,22 @@ public class BlockInfoStriped extends BlockInfo {
     return i == -1 ? -1 : indices[i];
   }
 
+  /**
+   * Identify the block stored in the given datanode storage. Note that
+   * the returned block has the same block Id with the one seen/reported by the
+   * DataNode.
+   */
+  Block getBlockOnStorage(DatanodeStorageInfo storage) {
+    int index = getStorageBlockIndex(storage);
+    if (index < 0) {
+      return null;
+    } else {
+      Block block = new Block(this);
+      block.setBlockId(this.getBlockId() + index);
+      return block;
+    }
+  }
+
   @Override
   boolean removeStorage(DatanodeStorageInfo storage) {
     int dnIndex = findStorageInfoFromEnd(storage);
@@ -186,8 +203,8 @@ public class BlockInfoStriped extends BlockInfo {
     // In case striped blocks, total usage by this striped blocks should
     // be the total of data blocks and parity blocks because
     // `getNumBytes` is the total of actual data block size.
-    return ((getNumBytes() - 1) / (dataBlockNum * chunkSize) + 1)
-        * chunkSize * parityBlockNum + getNumBytes();
+    return ((getNumBytes() - 1) / (dataBlockNum * BLOCK_STRIPED_CHUNK_SIZE) + 1)
+        * BLOCK_STRIPED_CHUNK_SIZE * parityBlockNum + getNumBytes();
   }
 
   @Override
