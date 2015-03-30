@@ -350,6 +350,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-6263. Remove DRFA.MaxBackupIndex config from log4j.properties.
     (Abhiraj Butala via aajisaka)
 
+    HDFS-6408. Remove redundant definitions in log4j.properties.
+    (Abhiraj Butala via aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
