@@ -333,10 +333,10 @@ public class ContainersMonitorImpl extends AbstractService implements
   // method provided just for easy testing purposes
   boolean isProcessTreeOverLimit(ResourceCalculatorProcessTree pTree,
       String containerId, long limit) {
-    long currentMemUsage = pTree.getCumulativeVmem();
+    long currentMemUsage = pTree.getVirtualMemorySize();
     // as processes begin with an age 1, we want to see if there are processes
     // more than 1 iteration old.
-    long curMemUsageOfAgedProcesses = pTree.getCumulativeVmem(1);
+    long curMemUsageOfAgedProcesses = pTree.getVirtualMemorySize(1);
     return isProcessTreeOverLimit(containerId, currentMemUsage,
                                   curMemUsageOfAgedProcesses, limit);
   }
@@ -437,8 +437,8 @@ public class ContainersMonitorImpl extends AbstractService implements
                 + " ContainerId = " + containerId);
             ResourceCalculatorProcessTree pTree = ptInfo.getProcessTree();
             pTree.updateProcessTree();    // update process-tree
-            long currentVmemUsage = pTree.getCumulativeVmem();
-            long currentPmemUsage = pTree.getCumulativeRssmem();
+            long currentVmemUsage = pTree.getVirtualMemorySize();
+            long currentPmemUsage = pTree.getRssMemorySize();
             // if machine has 6 cores and 3 are used,
             // cpuUsagePercentPerCore should be 300% and
             // cpuUsageTotalCoresPercentage should be 50%
@@ -451,8 +451,8 @@ public class ContainersMonitorImpl extends AbstractService implements
                 * maxVCoresAllottedForContainers /nodeCpuPercentageForYARN);
             // as processes begin with an age 1, we want to see if there
             // are processes more than 1 iteration old.
-            long curMemUsageOfAgedProcesses = pTree.getCumulativeVmem(1);
-            long curRssMemUsageOfAgedProcesses = pTree.getCumulativeRssmem(1);
+            long curMemUsageOfAgedProcesses = pTree.getVirtualMemorySize(1);
+            long curRssMemUsageOfAgedProcesses = pTree.getRssMemorySize(1);
             long vmemLimit = ptInfo.getVmemLimit();
             long pmemLimit = ptInfo.getPmemLimit();
             LOG.info(String.format(

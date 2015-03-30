@@ -171,7 +171,7 @@ abstract public class Task implements Writable, Configurable {
     skipRanges.skipRangeIterator();
 
   private ResourceCalculatorProcessTree pTree;
-  private long initCpuCumulativeTime = 0;
+  private long initCpuCumulativeTime = ResourceCalculatorProcessTree.UNAVAILABLE;
 
   protected JobConf conf;
   protected MapOutputFile mapOutputFile;
@@ -866,13 +866,25 @@ abstract public class Task implements Writable, Configurable {
     }
     pTree.updateProcessTree();
     long cpuTime = pTree.getCumulativeCpuTime();
-    long pMem = pTree.getCumulativeRssmem();
-    long vMem = pTree.getCumulativeVmem();
+    long pMem = pTree.getRssMemorySize();
+    long vMem = pTree.getVirtualMemorySize();
     // Remove the CPU time consumed previously by JVM reuse
-    cpuTime -= initCpuCumulativeTime;
-    counters.findCounter(TaskCounter.CPU_MILLISECONDS).setValue(cpuTime);
-    counters.findCounter(TaskCounter.PHYSICAL_MEMORY_BYTES).setValue(pMem);
-    counters.findCounter(TaskCounter.VIRTUAL_MEMORY_BYTES).setValue(vMem);
+    if (cpuTime != ResourceCalculatorProcessTree.UNAVAILABLE &&
+        initCpuCumulativeTime != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      cpuTime -= initCpuCumulativeTime;
+    }
+    
+    if (cpuTime != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      counters.findCounter(TaskCounter.CPU_MILLISECONDS).setValue(cpuTime);
+    }
+    
+    if (pMem != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      counters.findCounter(TaskCounter.PHYSICAL_MEMORY_BYTES).setValue(pMem);
+    }
+
+    if (vMem != ResourceCalculatorProcessTree.UNAVAILABLE) {
+      counters.findCounter(TaskCounter.VIRTUAL_MEMORY_BYTES).setValue(vMem);
+    }
   }
 
   /**

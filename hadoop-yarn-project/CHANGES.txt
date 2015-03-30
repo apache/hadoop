@@ -847,6 +847,10 @@ Release 2.7.0 - UNRELEASED
     YARN-2213. Change proxy-user cookie log in AmIpFilter to DEBUG.
     (Varun Saxena via xgong)
 
+    YARN-3304. Cleaning up ResourceCalculatorProcessTree APIs for public use and
+    removing inconsistencies in the default values. (Junping Du and Karthik
+    Kambatla via vinodkv)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

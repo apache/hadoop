@@ -188,13 +188,19 @@ public class ContainerMetrics implements MetricsSource {
   }
 
   public void recordMemoryUsage(int memoryMBs) {
-    this.pMemMBsStat.add(memoryMBs);
+    if (memoryMBs >= 0) {
+      this.pMemMBsStat.add(memoryMBs);
+    }
   }
 
   public void recordCpuUsage(
       int totalPhysicalCpuPercent, int milliVcoresUsed) {
-    this.cpuCoreUsagePercent.add(totalPhysicalCpuPercent);
-    this.milliVcoresUsed.add(milliVcoresUsed);
+    if (totalPhysicalCpuPercent >=0) {
+      this.cpuCoreUsagePercent.add(totalPhysicalCpuPercent);
+    }
+    if (milliVcoresUsed >= 0) {
+      this.milliVcoresUsed.add(milliVcoresUsed);
+    }
   }
 
   public void recordProcessId(String processId) {

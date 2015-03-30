@@ -45,8 +45,8 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
   
   private String taskProcessId = null;
-  private long cpuTimeMs = 0;
-  private Map<String, ProcessInfo> processTree = 
+  private long cpuTimeMs = UNAVAILABLE;
+  private Map<String, ProcessInfo> processTree =
       new HashMap<String, ProcessInfo>();
     
   public static boolean isAvailable() {
@@ -173,10 +173,13 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
 
   @Override
-  public long getCumulativeVmem(int olderThanAge) {
-    long total = 0;
+  public long getVirtualMemorySize(int olderThanAge) {
+    long total = UNAVAILABLE;
     for (ProcessInfo p : processTree.values()) {
       if ((p != null) && (p.age > olderThanAge)) {
+        if (total == UNAVAILABLE) {
+          total = 0;
+        }
         total += p.vmem;
       }
     }
@@ -184,10 +187,13 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
 
   @Override
-  public long getCumulativeRssmem(int olderThanAge) {
-    long total = 0;
+  public long getRssMemorySize(int olderThanAge) {
+    long total = UNAVAILABLE;
     for (ProcessInfo p : processTree.values()) {
       if ((p != null) && (p.age > olderThanAge)) {
+        if (total == UNAVAILABLE) {
+          total = 0;
+        }
         total += p.workingSet;
       }
     }
@@ -197,6 +203,9 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   @Override
   public long getCumulativeCpuTime() {
     for (ProcessInfo p : processTree.values()) {
+      if (cpuTimeMs == UNAVAILABLE) {
+        cpuTimeMs = 0;
+      }
       cpuTimeMs += p.cpuTimeMsDelta;
     }
     return cpuTimeMs;
