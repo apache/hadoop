@@ -1372,7 +1372,7 @@ class BlockReceiver implements Closeable {
         replies = new int[ackLen + 1];
         replies[0] = myHeader;
         for (int i = 0; i < ackLen; ++i) {
-          replies[i + 1] = ack.getReply(i);
+          replies[i + 1] = ack.getHeaderFlag(i);
         }
         // If the mirror has reported that it received a corrupt packet,
         // do self-destruct to mark myself bad, instead of making the
