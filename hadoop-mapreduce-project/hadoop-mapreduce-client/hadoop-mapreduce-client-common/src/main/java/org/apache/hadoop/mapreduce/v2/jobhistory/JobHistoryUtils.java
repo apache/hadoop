@@ -72,7 +72,7 @@ public class JobHistoryUtils {
    * Permissions for the history done dir and derivatives.
    */
   public static final FsPermission HISTORY_DONE_DIR_PERMISSION =
-    FsPermission.createImmutable((short) 0770); 
+    FsPermission.createImmutable((short) 0771);
 
   public static final FsPermission HISTORY_DONE_FILE_PERMISSION =
     FsPermission.createImmutable((short) 0770); // rwx------
@@ -81,7 +81,7 @@ public class JobHistoryUtils {
    * Umask for the done dir and derivatives.
    */
   public static final FsPermission HISTORY_DONE_DIR_UMASK = FsPermission
-      .createImmutable((short) (0770 ^ 0777));
+      .createImmutable((short) (0771 ^ 0777));
 
   
   /**
