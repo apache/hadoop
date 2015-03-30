@@ -97,6 +97,22 @@ public class TestNativeCrc32 {
   }
 
   @Test
+  public void testVerifyChunkedSumsSuccessOddSize() throws ChecksumException {
+    // Test checksum with an odd number of bytes. This is a corner case that
+    // is often broken in checksum calculation, because there is an loop which
+    // handles an even multiple or 4 or 8 bytes and then some additional code
+    // to finish the few odd bytes at the end. This code can often be broken
+    // but is never tested because we are always calling it with an even value
+    // such as 512.
+    bytesPerChecksum--;
+    allocateDirectByteBuffers();
+    fillDataAndValidChecksums();
+    NativeCrc32.verifyChunkedSums(bytesPerChecksum, checksumType.id,
+      checksums, data, fileName, BASE_POSITION);
+    bytesPerChecksum++;
+  }
+
+  @Test
   public void testVerifyChunkedSumsByteArraySuccess() throws ChecksumException {
     allocateArrayByteBuffers();
     fillDataAndValidChecksums();
