@@ -535,6 +535,48 @@ public class TestBlockManager {
   }
 
   @Test
+  public void testFavorDecomUntilHardLimit() throws Exception {
+    bm.maxReplicationStreams = 0;
+    bm.replicationStreamsHardLimit = 1;
+
+    long blockId = 42;         // arbitrary
+    Block aBlock = new Block(blockId, 0, 0);
+    List<DatanodeDescriptor> origNodes = getNodes(0, 1);
+    // Add the block to the first node.
+    addBlockOnNodes(blockId,origNodes.subList(0,1));
+    origNodes.get(0).startDecommission();
+
+    List<DatanodeDescriptor> cntNodes = new LinkedList<DatanodeDescriptor>();
+    List<DatanodeStorageInfo> liveNodes = new LinkedList<DatanodeStorageInfo>();
+
+    assertNotNull("Chooses decommissioning source node for a normal replication"
+        + " if all available source nodes have reached their replication"
+        + " limits below the hard limit.",
+        bm.chooseSourceDatanode(
+            aBlock,
+            cntNodes,
+            liveNodes,
+            new NumberReplicas(),
+            UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED));
+
+
+    // Increase the replication count to test replication count > hard limit
+    DatanodeStorageInfo targets[] = { origNodes.get(1).getStorageInfos()[0] };
+    origNodes.get(0).addBlockToBeReplicated(aBlock, targets);
+
+    assertNull("Does not choose a source decommissioning node for a normal"
+        + " replication when all available nodes exceed the hard limit.",
+        bm.chooseSourceDatanode(
+            aBlock,
+            cntNodes,
+            liveNodes,
+            new NumberReplicas(),
+            UnderReplicatedBlocks.QUEUE_UNDER_REPLICATED));
+  }
+
+
+
+  @Test
   public void testSafeModeIBR() throws Exception {
     DatanodeDescriptor node = spy(nodes.get(0));
     DatanodeStorageInfo ds = node.getStorageInfos()[0];
