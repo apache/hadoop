@@ -1178,6 +1178,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11761. Fix findbugs warnings in org.apache.hadoop.security
     .authentication. (Li Lu via wheat9)
 
+    HADOOP-11754. RM fails to start in non-secure mode due to authentication
+    filter failure. (wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

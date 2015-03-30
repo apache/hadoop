@@ -31,6 +31,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -53,6 +54,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
+import org.apache.hadoop.security.authentication.util.FileSignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.RandomSignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.ZKSignerSecretProvider;
 import org.apache.hadoop.security.ssl.SslSocketConnectorSecure;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
@@ -91,6 +97,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
+import static org.apache.hadoop.security.authentication.server
+    .AuthenticationFilter.*;
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal is
  * to serve up status information for the server. There are three contexts:
@@ -160,6 +168,8 @@ public final class HttpServer2 implements FilterContainer {
     private boolean findPort;
 
     private String hostName;
+    private boolean disallowFallbackToRandomSignerSecretProvider;
+    private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
 
     public Builder setName(String name){
       this.name = name;
@@ -254,6 +264,16 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
+    public Builder disallowFallbackToRandomSingerSecretProvider(boolean value) {
+      this.disallowFallbackToRandomSignerSecretProvider = value;
+      return this;
+    }
+
+    public Builder authFilterConfigurationPrefix(String value) {
+      this.authFilterConfigurationPrefix = value;
+      return this;
+    }
+
     public HttpServer2 build() throws IOException {
       Preconditions.checkNotNull(name, "name is not set");
       Preconditions.checkState(!endpoints.isEmpty(), "No endpoints specified");
@@ -314,6 +334,18 @@ public final class HttpServer2 implements FilterContainer {
     this.webServer = new Server();
     this.adminsAcl = b.adminsAcl;
     this.webAppContext = createWebAppContext(b.name, b.conf, adminsAcl, appDir);
+    try {
+      SignerSecretProvider secretProvider =
+          constructSecretProvider(b, webAppContext.getServletContext());
+      this.webAppContext.getServletContext().setAttribute
+          (AuthenticationFilter.SIGNER_SECRET_PROVIDER_ATTRIBUTE,
+           secretProvider);
+    } catch(IOException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+
     this.findPort = b.findPort;
     initializeWebServer(b.name, b.hostName, b.conf, b.pathSpecs);
   }
@@ -405,9 +437,28 @@ public final class HttpServer2 implements FilterContainer {
     return ctx;
   }
 
+  private static SignerSecretProvider constructSecretProvider(final Builder b,
+      ServletContext ctx)
+      throws Exception {
+    final Configuration conf = b.conf;
+    Properties config = getFilterProperties(conf,
+                                            b.authFilterConfigurationPrefix);
+    return AuthenticationFilter.constructSecretProvider(
+        ctx, config, b.disallowFallbackToRandomSignerSecretProvider);
+  }
+
+  private static Properties getFilterProperties(Configuration conf, String
+      prefix) {
+    Properties prop = new Properties();
+    Map<String, String> filterConfig = AuthenticationFilterInitializer
+        .getFilterConfigMap(conf, prefix);
+    prop.putAll(filterConfig);
+    return prop;
+  }
+
   private static void addNoCacheFilter(WebAppContext ctxt) {
     defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(),
-        Collections.<String, String> emptyMap(), new String[] { "/*" });
+                 Collections.<String, String> emptyMap(), new String[] { "/*" });
   }
 
   @InterfaceAudience.Private

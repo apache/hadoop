@@ -56,6 +56,15 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
    */
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {
+    Map<String, String> filterConfig = getFilterConfigMap(conf, PREFIX);
+
+    container.addFilter("authentication",
+                        AuthenticationFilter.class.getName(),
+                        filterConfig);
+  }
+
+  public static Map<String, String> getFilterConfigMap(Configuration conf,
+      String prefix) {
     Map<String, String> filterConfig = new HashMap<String, String>();
 
     //setting the cookie path to root '/' so it is used for all resources.
@@ -63,9 +72,9 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
 
     for (Map.Entry<String, String> entry : conf) {
       String name = entry.getKey();
-      if (name.startsWith(PREFIX)) {
+      if (name.startsWith(prefix)) {
         String value = conf.get(name);
-        name = name.substring(PREFIX.length());
+        name = name.substring(prefix.length());
         filterConfig.put(name, value);
       }
     }
@@ -82,10 +91,7 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
       }
       filterConfig.put(KerberosAuthenticationHandler.PRINCIPAL, principal);
     }
-
-    container.addFilter("authentication",
-                        AuthenticationFilter.class.getName(),
-                        filterConfig);
+    return filterConfig;
   }
 
 }
