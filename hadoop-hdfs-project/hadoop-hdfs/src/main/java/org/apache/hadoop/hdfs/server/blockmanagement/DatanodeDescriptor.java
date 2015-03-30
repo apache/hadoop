@@ -106,14 +106,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
     public final ExtendedBlock block;
     public final DatanodeDescriptor[] sources;
     public final DatanodeStorageInfo[] targets;
-    public final short[] missingBlockIndices;
+    public final short[] liveBlockIndices;
 
     BlockECRecoveryInfo(ExtendedBlock block, DatanodeDescriptor[] sources,
-        DatanodeStorageInfo[] targets, short[] missingBlockIndices) {
+        DatanodeStorageInfo[] targets, short[] liveBlockIndices) {
       this.block = block;
       this.sources = sources;
       this.targets = targets;
-      this.missingBlockIndices = missingBlockIndices;
+      this.liveBlockIndices = liveBlockIndices;
     }
 
     @Override
@@ -122,6 +122,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
           append("Recovering ").append(block).
           append(" From: ").append(Arrays.asList(sources)).
           append(" To: ").append(Arrays.asList(targets)).append(")\n").
+          append(" Block Indices: ").append(Arrays.asList(liveBlockIndices)).
           toString();
     }
   }
@@ -635,10 +636,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Store block erasure coding work.
    */
   void addBlockToBeErasureCoded(ExtendedBlock block, DatanodeDescriptor[] sources,
-      DatanodeStorageInfo[] targets, short[] missingBlockIndicies) {
+      DatanodeStorageInfo[] targets, short[] liveBlockIndices) {
     assert(block != null && sources != null && sources.length > 0);
     BlockECRecoveryInfo task = new BlockECRecoveryInfo(block, sources, targets,
-        missingBlockIndicies);
+        liveBlockIndices);
     erasurecodeBlocks.offer(task);
     BlockManager.LOG.debug("Adding block recovery task " + task +
         "to " + getName() + ", current queue size is " +
@@ -679,7 +680,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * The number of work items that are pending to be replicated
    */
-  int getNumberOfBlocksToBeErasureCoded() {
+  @VisibleForTesting
+  public int getNumberOfBlocksToBeErasureCoded() {
     return erasurecodeBlocks.size();
   }
 

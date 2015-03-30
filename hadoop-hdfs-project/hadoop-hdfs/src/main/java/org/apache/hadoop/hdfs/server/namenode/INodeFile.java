@@ -404,6 +404,7 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /** The same as getFileReplication(null). */
   @Override // INodeFileAttributes
+  // TODO striped
   public final short getFileReplication() {
     return getFileReplication(CURRENT_STATE_ID);
   }
