@@ -23,6 +23,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -106,6 +109,76 @@ public class TestHistoryFileManager {
         HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
     Assert.assertFalse(dfsCluster.getFileSystem().isInSafeMode());
     testTryCreateHistoryDirs(dfsCluster.getConfiguration(0), true);
+  }
+
+  @Test
+  public void testUpdateDirPermissions() throws Exception {
+    DistributedFileSystem fs = dfsCluster.getFileSystem();
+    fs.setSafeMode( HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    Assert.assertFalse(dfsCluster.getFileSystem().isInSafeMode());
+    Configuration conf = dfsCluster.getConfiguration(0);
+    conf.set(JHAdminConfig.MR_HISTORY_DONE_DIR, getDoneDirNameForTest());
+    conf.set(JHAdminConfig.MR_HISTORY_INTERMEDIATE_DONE_DIR, getIntermediateDoneDirNameForTest());
+    Path p1a = new Path(getDoneDirNameForTest(), "2013");
+    Path p1b = new Path(p1a, "02");
+    Path p1c = new Path(p1b, "15");
+    Path p1d = new Path(p1c, "000000");
+    Path p2a = new Path(getDoneDirNameForTest(), "2013");
+    Path p2b = new Path(p2a, "03");
+    Path p2c = new Path(p2b, "14");
+    Path p2d = new Path(p2c, "000001");
+    FsPermission oldPerms = new FsPermission((short) 0770);
+    fs.mkdirs(p1d);
+    fs.mkdirs(p2d);
+    fs.setPermission(p1a, oldPerms);
+    fs.setPermission(p1b, oldPerms);
+    fs.setPermission(p1c, oldPerms);
+    fs.setPermission(p1d, oldPerms);
+    fs.setPermission(p2a, oldPerms);
+    fs.setPermission(p2b, oldPerms);
+    fs.setPermission(p2c, oldPerms);
+    fs.setPermission(p2d, oldPerms);
+    Path p1File = new Path(p1d, "foo.jhist");
+    Assert.assertTrue(fs.createNewFile(p1File));
+    fs.setPermission(p1File, JobHistoryUtils.HISTORY_DONE_FILE_PERMISSION);
+    Path p2File = new Path(p2d, "bar.jhist");
+    Assert.assertTrue(fs.createNewFile(p2File));
+    fs.setPermission(p2File, JobHistoryUtils.HISTORY_DONE_FILE_PERMISSION);
+    Assert.assertEquals(oldPerms, fs.getFileStatus(p1a).getPermission());
+    Assert.assertEquals(oldPerms, fs.getFileStatus(p1b).getPermission());
+    Assert.assertEquals(oldPerms, fs.getFileStatus(p1c).getPermission());
+    Assert.assertEquals(oldPerms, fs.getFileStatus(p1d).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_FILE_PERMISSION,
+        fs.getFileStatus(p1File).getPermission());
+    Assert.assertEquals(oldPerms, fs.getFileStatus(p2a).getPermission());
+    Assert.assertEquals(oldPerms, fs.getFileStatus(p2b).getPermission());
+    Assert.assertEquals(oldPerms, fs.getFileStatus(p2c).getPermission());
+    Assert.assertEquals(oldPerms, fs.getFileStatus(p2d).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_FILE_PERMISSION,
+        fs.getFileStatus(p2File).getPermission());
+    HistoryFileManager hfm = new HistoryFileManager();
+    hfm.conf = conf;
+    Assert.assertEquals(true, hfm.tryCreatingHistoryDirs(false));
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION,
+        fs.getFileStatus(p1a).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION,
+        fs.getFileStatus(p1b).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION,
+        fs.getFileStatus(p1c).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION,
+        fs.getFileStatus(p1d).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_FILE_PERMISSION,
+        fs.getFileStatus(p2File).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION,
+        fs.getFileStatus(p2a).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION,
+        fs.getFileStatus(p2b).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION,
+        fs.getFileStatus(p2c).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION,
+        fs.getFileStatus(p2d).getPermission());
+    Assert.assertEquals(JobHistoryUtils.HISTORY_DONE_FILE_PERMISSION,
+        fs.getFileStatus(p2File).getPermission());
   }
 
   @Test
