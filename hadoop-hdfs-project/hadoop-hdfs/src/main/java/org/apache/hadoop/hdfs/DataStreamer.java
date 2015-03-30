@@ -817,7 +817,7 @@ class DataStreamer extends Daemon {
           // processes response status from datanodes.
           for (int i = ack.getNumOfReplies()-1; i >=0  && dfsClient.clientRunning; i--) {
             final Status reply = PipelineAck.getStatusFromHeader(ack
-                .getReply(i));
+                .getHeaderFlag(i));
             // Restart will not be treated differently unless it is
             // the local node or the only one in the pipeline.
             if (PipelineAck.isRestartOOBStatus(reply) &&
