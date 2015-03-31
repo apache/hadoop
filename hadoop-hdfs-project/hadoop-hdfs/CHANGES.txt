@@ -368,6 +368,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7944. Minor cleanup of BlockPoolManager#getAllNamenodeThreads.
     (Arpit Agarwal)
 
+    HDFS-7671. hdfs user guide should point to the common rack awareness doc.
+    (Kai Sasaki via aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
