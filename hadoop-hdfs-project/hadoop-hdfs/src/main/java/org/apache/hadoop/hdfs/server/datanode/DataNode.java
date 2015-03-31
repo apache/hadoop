@@ -1352,12 +1352,12 @@ public class DataNode extends ReconfigurableBase
     blockScanner.enableBlockPoolId(bpos.getBlockPoolId());
   }
 
-  BPOfferService[] getAllBpOs() {
+  List<BPOfferService> getAllBpOs() {
     return blockPoolManager.getAllNamenodeThreads();
   }
   
   int getBpOsCount() {
-    return blockPoolManager.getAllNamenodeThreads().length;
+    return blockPoolManager.getAllNamenodeThreads().size();
   }
   
   /**
@@ -1654,11 +1654,8 @@ public class DataNode extends ReconfigurableBase
       }
     }
     
-    // We need to make a copy of the original blockPoolManager#offerServices to
-    // make sure blockPoolManager#shutDownAll() can still access all the 
-    // BPOfferServices, since after setting DataNode#shouldRun to false the 
-    // offerServices may be modified.
-    BPOfferService[] bposArray = this.blockPoolManager == null ? null
+    List<BPOfferService> bposArray = (this.blockPoolManager == null)
+        ? new ArrayList<BPOfferService>()
         : this.blockPoolManager.getAllNamenodeThreads();
     // If shutdown is not for restart, set shouldRun to false early. 
     if (!shutdownForUpgrade) {
@@ -2338,8 +2335,7 @@ public class DataNode extends ReconfigurableBase
     while (shouldRun) {
       try {
         blockPoolManager.joinAll();
-        if (blockPoolManager.getAllNamenodeThreads() != null
-            && blockPoolManager.getAllNamenodeThreads().length == 0) {
+        if (blockPoolManager.getAllNamenodeThreads().size() == 0) {
           shouldRun = false;
         }
         // Terminate if shutdown is complete or 2 seconds after all BPs

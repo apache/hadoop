@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -64,11 +65,11 @@ public class TestDataNodeExit {
   
   private void stopBPServiceThreads(int numStopThreads, DataNode dn)
       throws Exception {
-    BPOfferService[] bpoList = dn.getAllBpOs();
+    List<BPOfferService> bpoList = dn.getAllBpOs();
     int expected = dn.getBpOsCount() - numStopThreads;
     int index = numStopThreads - 1;
     while (index >= 0) {
-      bpoList[index--].stop();
+      bpoList.get(index--).stop();
     }
     int iterations = 3000; // Total 30 seconds MAX wait time
     while(dn.getBpOsCount() != expected && iterations > 0) {

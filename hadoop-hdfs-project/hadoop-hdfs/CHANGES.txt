@@ -365,6 +365,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7645. Rolling upgrade is restoring blocks from trash multiple times.
     (Vinayakumar B and Keisuke Ogiwara via Arpit Agarwal)
 
+    HDFS-7944. Minor cleanup of BlockPoolManager#getAllNamenodeThreads.
+    (Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

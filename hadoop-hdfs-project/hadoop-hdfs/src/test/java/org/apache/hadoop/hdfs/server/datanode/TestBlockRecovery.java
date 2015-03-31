@@ -177,7 +177,7 @@ public class TestBlockRecovery {
       }
     };
     // Trigger a heartbeat so that it acknowledges the NN as active.
-    dn.getAllBpOs()[0].triggerHeartbeatForTests();
+    dn.getAllBpOs().get(0).triggerHeartbeatForTests();
   }
 
   /**
