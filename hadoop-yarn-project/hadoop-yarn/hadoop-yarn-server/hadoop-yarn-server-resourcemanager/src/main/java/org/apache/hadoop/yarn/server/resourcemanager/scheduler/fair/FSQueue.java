@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -41,6 +43,9 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Private
 @Unstable
 public abstract class FSQueue implements Queue, Schedulable {
+  private static final Log LOG = LogFactory.getLog(
+      FSQueue.class.getName());
+
   private Resource fairShare = Resources.createResource(0, 0);
   private Resource steadyFairShare = Resources.createResource(0, 0);
   private final String name;
@@ -164,6 +169,9 @@ public abstract class FSQueue implements Queue, Schedulable {
   public void setFairShare(Resource fairShare) {
     this.fairShare = fairShare;
     metrics.setFairShare(fairShare);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("The updated fairShare for " + getName() + " is " + fairShare);
+    }
   }
 
   /** Get the steady fair share assigned to this Schedulable. */
