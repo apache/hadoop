@@ -264,7 +264,7 @@ For command usage, see [balancer](./HDFSCommands.html#balancer).
 Rack Awareness
 --------------
 
-Typically large Hadoop clusters are arranged in racks and network traffic between different nodes with in the same rack is much more desirable than network traffic across the racks. In addition NameNode tries to place replicas of block on multiple racks for improved fault tolerance. Hadoop lets the cluster administrators decide which rack a node belongs to through configuration variable `net.topology.script.file.name`. When this script is configured, each node runs the script to determine its rack id. A default installation assumes all the nodes belong to the same rack. This feature and configuration is further described in PDF attached to [HADOOP-692](https://issues.apache.org/jira/browse/HADOOP-692).
+A HDFS cluster can recognize the topology of racks where each nodes are put. It is important to configure this topology in order to optimize the data capacity and usage. For more detail, please check the [rack awareness](../hadoop-common/RackAwareness.html) in common document.
 
 Safemode
 --------
