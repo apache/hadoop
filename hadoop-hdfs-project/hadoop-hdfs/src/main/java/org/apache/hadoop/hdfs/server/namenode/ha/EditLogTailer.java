@@ -42,6 +42,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.SecurityUtil;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -273,6 +275,15 @@ public class EditLogTailer {
       getActiveNodeProxy().rollEditLog();
       lastRollTriggerTxId = lastLoadedTxnId;
     } catch (IOException ioe) {
+      if (ioe instanceof RemoteException) {
+        ioe = ((RemoteException)ioe).unwrapRemoteException();
+        if (ioe instanceof StandbyException) {
+          LOG.info("Skipping log roll. Remote node is not in Active state: " +
+              ioe.getMessage().split("\n")[0]);
+          return;
+        }
+      }
+
       LOG.warn("Unable to trigger a roll of the active NN", ioe);
     }
   }
