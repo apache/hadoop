@@ -119,6 +119,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3400. [JDK 8] Build Failure due to unreported exceptions in
     RPCUtil (rkanter)
 
+    YARN-3412. RM tests should use MockRM where possible. (kasha)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -116,11 +116,10 @@ public class TestFifoScheduler {
   
   @Before
   public void setUp() throws Exception {
-    resourceManager = new ResourceManager();
     conf = new Configuration();
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, 
+    conf.setClass(YarnConfiguration.RM_SCHEDULER,
         FifoScheduler.class, ResourceScheduler.class);
-    resourceManager.init(conf);
+    resourceManager = new MockRM(conf);
   }
 
   @After
