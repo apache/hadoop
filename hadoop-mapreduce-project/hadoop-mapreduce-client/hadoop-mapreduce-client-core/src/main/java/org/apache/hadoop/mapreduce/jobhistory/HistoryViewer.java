@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.Format;
@@ -30,8 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -44,7 +41,6 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.util.HostUtil;
@@ -58,8 +54,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class HistoryViewer {
-  private static final Log LOG = LogFactory.getLog(HistoryViewer.class);
-  private static final SimpleDateFormat dateFormat =
+  private static SimpleDateFormat dateFormat = 
     new SimpleDateFormat("d-MMM-yyyy HH:mm:ss");
   private FileSystem fs;
   private JobInfo job;
@@ -87,17 +82,6 @@ public class HistoryViewer {
         // NOT a valid name
         System.err.println("Ignore unrecognized file: " + jobFile.getName());
         throw new IOException(errorMsg);
-      }
-      final Path jobConfPath = new Path(jobFile.getParent(),  jobDetails[0]
-          + "_" + jobDetails[1] + "_" + jobDetails[2] + "_conf.xml");
-      final Configuration jobConf = new Configuration(conf);
-      try {
-        jobConf.addResource(fs.open(jobConfPath), jobConfPath.toString());
-        Limits.reset(conf);
-      } catch (FileNotFoundException fnf) {
-        if (LOG.isWarnEnabled()) {
-          LOG.warn("Missing job conf in history", fnf);
-        }
       }
       JobHistoryParser parser = new JobHistoryParser(fs, jobFile);
       job = parser.parse();

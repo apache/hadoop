@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.v2.hs;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -35,7 +34,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
@@ -43,7 +41,6 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
@@ -344,21 +341,9 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     if (historyFileAbsolute != null) {
       JobHistoryParser parser = null;
       try {
-        final FileSystem fs = historyFileAbsolute.getFileSystem(conf);
         parser =
             new JobHistoryParser(historyFileAbsolute.getFileSystem(conf),
                 historyFileAbsolute);
-        final Path jobConfPath = new Path(historyFileAbsolute.getParent(),
-            JobHistoryUtils.getIntermediateConfFileName(jobId));
-        final Configuration conf = new Configuration();
-        try {
-          conf.addResource(fs.open(jobConfPath), jobConfPath.toString());
-          Limits.reset(conf);
-        } catch (FileNotFoundException fnf) {
-          if (LOG.isWarnEnabled()) {
-            LOG.warn("Missing job conf in history", fnf);
-          }
-        }
         this.jobInfo = parser.parse();
       } catch (IOException e) {
         throw new YarnRuntimeException("Could not load history file "
