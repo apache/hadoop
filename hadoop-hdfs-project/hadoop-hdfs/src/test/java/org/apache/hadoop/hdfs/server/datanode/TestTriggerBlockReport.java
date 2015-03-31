@@ -91,7 +91,7 @@ public final class TestTriggerBlockReport {
         new Block(5678, 512, 1000),  BlockStatus.DELETED_BLOCK, null);
     DataNode datanode = cluster.getDataNodes().get(0);
     BPServiceActor actor =
-        datanode.getAllBpOs()[0].getBPServiceActors().get(0);
+        datanode.getAllBpOs().get(0).getBPServiceActors().get(0);
     String storageUuid =
         datanode.getFSDataset().getVolumes().get(0).getStorageID();
     actor.notifyNamenodeDeletedBlock(rdbi, storageUuid);

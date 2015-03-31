@@ -59,13 +59,13 @@ public class TestRefreshNamenodes {
         .build();
 
       DataNode dn = cluster.getDataNodes().get(0);
-      assertEquals(1, dn.getAllBpOs().length);
+      assertEquals(1, dn.getAllBpOs().size());
 
       cluster.addNameNode(conf, nnPort2);
-      assertEquals(2, dn.getAllBpOs().length);
+      assertEquals(2, dn.getAllBpOs().size());
 
       cluster.addNameNode(conf, nnPort3);
-      assertEquals(3, dn.getAllBpOs().length);
+      assertEquals(3, dn.getAllBpOs().size());
 
       cluster.addNameNode(conf, nnPort4);
 

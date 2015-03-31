@@ -83,7 +83,7 @@ public class TestDeleteBlockPool {
       Configuration nn1Conf = cluster.getConfiguration(1);
       nn1Conf.set(DFSConfigKeys.DFS_NAMESERVICES, "namesServerId2");
       dn1.refreshNamenodes(nn1Conf);
-      assertEquals(1, dn1.getAllBpOs().length);
+      assertEquals(1, dn1.getAllBpOs().size());
 
       try {
         dn1.deleteBlockPool(bpid1, false);
@@ -123,7 +123,7 @@ public class TestDeleteBlockPool {
       }
       
       dn2.refreshNamenodes(nn1Conf);
-      assertEquals(1, dn2.getAllBpOs().length);
+      assertEquals(1, dn2.getAllBpOs().size());
       
       verifyBlockPoolDirectories(true, dn2StorageDir1, bpid1);
       verifyBlockPoolDirectories(true, dn2StorageDir2, bpid1);
@@ -184,7 +184,7 @@ public class TestDeleteBlockPool {
       Configuration nn1Conf = cluster.getConfiguration(0);
       nn1Conf.set(DFSConfigKeys.DFS_NAMESERVICES, "namesServerId1");
       dn1.refreshNamenodes(nn1Conf);
-      assertEquals(1, dn1.getAllBpOs().length);
+      assertEquals(1, dn1.getAllBpOs().size());
       
       DFSAdmin admin = new DFSAdmin(nn1Conf);
       String dn1Address = dn1.getDatanodeId().getIpAddr() + ":" + dn1.getIpcPort();

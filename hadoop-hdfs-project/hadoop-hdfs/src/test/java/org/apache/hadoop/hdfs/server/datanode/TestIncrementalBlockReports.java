@@ -69,7 +69,7 @@ public class TestIncrementalBlockReports {
     fs = cluster.getFileSystem();
     singletonNn = cluster.getNameNode();
     singletonDn = cluster.getDataNodes().get(0);
-    bpos = singletonDn.getAllBpOs()[0];
+    bpos = singletonDn.getAllBpOs().get(0);
     actor = bpos.getBPServiceActors().get(0);
     storageUuid = singletonDn.getFSDataset().getVolumes().get(0).getStorageID();
   }
