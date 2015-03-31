@@ -311,6 +311,16 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6294. Remove an extra parameter described in Javadoc of
     TockenCache. (Brahma Reddy Battula via ozawa)
 
+    MAPREDUCE-5875. Make Counter limits consistent across JobClient, 
+    MRAppMaster, and YarnChild. (Gera Shegalov via kasha)
+
+    MAPREDUCE-6199. AbstractCounters are not reset completely on
+    deserialization (adhoot via rkanter)
+
+    MAPREDUCE-6286. A typo in HistoryViewer makes some code useless, which
+    causes counter limits are not reset correctly.
+    (Zhihai Xu via harsh)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -411,10 +421,6 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
-    MAPREDUCE-6286. A typo in HistoryViewer makes some code useless, which
-    causes counter limits are not reset correctly.
-    (Zhihai Xu via harsh)
-
     MAPREDUCE-6210. Use getApplicationAttemptId() instead of getApplicationId()
     for logging AttemptId in RMContainerAllocator.java (Leitao Guo via aajisaka)
 
@@ -447,9 +453,6 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6045. need close the DataInputStream after open it in
     TestMapReduce.java (zxu via rkanter)
-
-    MAPREDUCE-6199. AbstractCounters are not reset completely on
-    deserialization (adhoot via rkanter)
 
     MAPREDUCE-6206. TestAggregatedTransferRate fails on non-US systems (Jens
     Rabe via jlowe)
@@ -720,9 +723,6 @@ Release 2.6.0 - 2014-11-18
 
     MAPREDUCE-6123. TestCombineFileInputFormat incorrectly starts 2
     MiniDFSCluster instances. (cnauroth)
-
-    MAPREDUCE-5875. Make Counter limits consistent across JobClient, 
-    MRAppMaster, and YarnChild. (Gera Shegalov via kasha)
 
     MAPREDUCE-6125. TestContainerLauncherImpl sometimes fails (Mit Desai via
     jlowe)
