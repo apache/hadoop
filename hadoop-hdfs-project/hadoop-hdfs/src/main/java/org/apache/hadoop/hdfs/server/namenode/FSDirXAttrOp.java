@@ -108,7 +108,8 @@ class FSDirXAttrOp {
       return filteredAll;
     }
     if (filteredAll == null || filteredAll.isEmpty()) {
-      return null;
+      throw new IOException(
+          "At least one of the attributes provided was not found.");
     }
     List<XAttr> toGet = Lists.newArrayListWithCapacity(xAttrs.size());
     for (XAttr xAttr : xAttrs) {

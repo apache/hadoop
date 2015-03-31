@@ -392,6 +392,9 @@ Release 2.8.0 - UNRELEASED
     DatanodeDescriptor#updateHeartbeatState() (Brahma Reddy Battula via Colin
     P. McCabe)
 
+    HDFS-7997. The first non-existing xattr should also throw IOException.
+    (zhouyingchao via yliu)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
