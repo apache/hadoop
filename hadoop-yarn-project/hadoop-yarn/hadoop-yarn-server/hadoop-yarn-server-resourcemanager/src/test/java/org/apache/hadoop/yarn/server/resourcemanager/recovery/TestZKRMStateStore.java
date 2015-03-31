@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -224,8 +225,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
     Configuration conf1 = createHARMConf("rm1,rm2", "rm1", 1234);
     conf1.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
-    ResourceManager rm1 = new ResourceManager();
-    rm1.init(conf1);
+    ResourceManager rm1 = new MockRM(conf1);
     rm1.start();
     rm1.getRMContext().getRMAdminService().transitionToActive(req);
     assertEquals("RM with ZKStore didn't start",
@@ -236,8 +236,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
     Configuration conf2 = createHARMConf("rm1,rm2", "rm2", 5678);
     conf2.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
-    ResourceManager rm2 = new ResourceManager();
-    rm2.init(conf2);
+    ResourceManager rm2 = new MockRM(conf2);
     rm2.start();
     rm2.getRMContext().getRMAdminService().transitionToActive(req);
     assertEquals("RM with ZKStore didn't start",
