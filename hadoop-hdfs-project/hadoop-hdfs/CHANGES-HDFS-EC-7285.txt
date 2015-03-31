@@ -3,6 +3,44 @@
     HDFS-7347. Configurable erasure coding policy for individual files and
     directories ( Zhe Zhang via vinayakumarb )
 
-    HDFS-7716. Add a test for BlockGroup support in FSImage.
+    HDFS-7339. Representing striped block groups in NameNode with hierarchical
+    naming protocol ( Zhe Zhang )
+
+    HDFS-7652. Process block reports for erasure coded blocks (Zhe Zhang)
+
+    HDFS-7716. Erasure Coding: extend BlockInfo to handle EC info (Jing Zhao)
+
+    HDFS-7749. Erasure Coding: Add striped block support in INodeFile (Jing Zhao)
+
+    HDFS-7837. Erasure Coding: allocate and persist striped blocks in NameNode
+    (Jing Zhao via Zhe Zhang)
+
+    HDFS-7872. Erasure Coding: INodeFile.dumpTreeRecursively() supports to print
+    striped blocks (Takuya Fukudome via jing9)
+
+    HDFS-7853. Erasure coding: extend LocatedBlocks to support reading from
+    striped files (Jing Zhao)
+
+    HDFS-7826. Erasure Coding: Update INodeFile quota computation for striped
+    blocks ( Kai Sasaki via jing9 )
+
+    HDFS-7912. Erasure Coding: track BlockInfo instead of Block in
+    UnderReplicatedBlocks and PendingReplicationBlocks (Jing Zhao)
+
+    HDFS-7369. Erasure coding: distribute recovery work for striped blocks to
+    DataNode (Zhe Zhang)
+
+    HDFS-7864. Erasure Coding: Update safemode calculation for striped blocks
+    (GAO Rui via jing9)
+
+    HDFS-7827. Erasure Coding: support striped blocks in non-protobuf fsimage
+    ( Hui Zheng via jing9 )
+
+    HDFS-7616. Add a test for BlockGroup support in FSImage.
     (Takuya Fukudome via szetszwo)
 
+    HDFS-7907. Erasure Coding: track invalid, corrupt, and under-recovery striped
+    blocks in NameNode (Jing Zhao)
+
+    HDFS-8005. Erasure Coding: simplify striped block recovery work computation
+    and add tests (Jing Zhao)
