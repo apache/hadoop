@@ -230,7 +230,7 @@ class CapacitySchedulerPage extends RmView {
       ul._()._().
       script().$type("text/javascript").
           _("$('#cs').hide();")._()._().
-      _(AppsBlock.class);
+      _(RMAppsBlock.class);
     }
   }
 

@@ -20,13 +20,29 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
 
+import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
+import java.util.Set;
+
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.webapp.AppBlock;
+import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
@@ -36,7 +52,9 @@ import com.google.inject.Inject;
 
 public class RMAppBlock extends AppBlock{
 
+  private static final Log LOG = LogFactory.getLog(RMAppBlock.class);
   private final ResourceManager rm;
+
 
   @Inject
   RMAppBlock(ViewContext ctx, Configuration conf, ResourceManager rm) {
@@ -90,5 +108,97 @@ public class RMAppBlock extends AppBlock{
               appMetrics == null ? "N/A" : appMetrics.getMemorySeconds(),
               appMetrics == null ? "N/A" : appMetrics.getVcoreSeconds()));
     pdiv._();
+  }
+
+  @Override
+  protected void generateApplicationTable(Block html,
+      UserGroupInformation callerUGI,
+      Collection<ApplicationAttemptReport> attempts) {
+    // Application Attempt Table
+    Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody =
+        html.table("#attempts").thead().tr().th(".id", "Attempt ID")
+            .th(".started", "Started").th(".node", "Node").th(".logs", "Logs")
+            .th(".blacklistednodes", "Blacklisted Nodes")._()._().tbody();
+
+    StringBuilder attemptsTableData = new StringBuilder("[\n");
+    for (final ApplicationAttemptReport appAttemptReport : attempts) {
+      AppAttemptInfo appAttempt = new AppAttemptInfo(appAttemptReport);
+      ContainerReport containerReport = null;
+      try {
+        // AM container is always the first container of the attempt
+        final GetContainerReportRequest request =
+            GetContainerReportRequest.newInstance(ContainerId.newContainerId(
+                appAttemptReport.getApplicationAttemptId(), 1));
+        if (callerUGI == null) {
+          containerReport =
+              appBaseProt.getContainerReport(request).getContainerReport();
+        } else {
+          containerReport = callerUGI.doAs(
+              new PrivilegedExceptionAction<ContainerReport>() {
+                @Override
+                public ContainerReport run() throws Exception {
+                  ContainerReport report = null;
+                  try {
+                    report = appBaseProt.getContainerReport(request)
+                        .getContainerReport();
+                  } catch (ContainerNotFoundException ex) {
+                    LOG.warn(ex.getMessage());
+                  }
+                  return report;
+                }
+              });
+        }
+      } catch (Exception e) {
+        String message =
+            "Failed to read the AM container of the application attempt "
+                + appAttemptReport.getApplicationAttemptId() + ".";
+        LOG.error(message, e);
+        html.p()._(message)._();
+        return;
+      }
+      long startTime = 0L;
+      String logsLink = null;
+      String nodeLink = null;
+      if (containerReport != null) {
+        ContainerInfo container = new ContainerInfo(containerReport);
+        startTime = container.getStartedTime();
+        logsLink = containerReport.getLogUrl();
+        nodeLink = containerReport.getNodeHttpAddress();
+      }
+      String blacklistedNodesCount = "N/A";
+      Set<String> nodes = RMAppAttemptBlock.getBlacklistedNodes(rm,
+          ConverterUtils.toApplicationAttemptId(appAttempt.getAppAttemptId()));
+      if(nodes != null) {
+        blacklistedNodesCount = String.valueOf(nodes.size());
+      }
+
+      // AppAttemptID numerical value parsed by parseHadoopID in
+      // yarn.dt.plugins.js
+      attemptsTableData
+          .append("[\"<a href='")
+          .append(url("appattempt", appAttempt.getAppAttemptId()))
+          .append("'>")
+          .append(appAttempt.getAppAttemptId())
+          .append("</a>\",\"")
+          .append(startTime)
+          .append("\",\"<a ")
+          .append(nodeLink == null ? "#" : "href='" + nodeLink)
+          .append("'>")
+          .append(nodeLink == null ? "N/A" : StringEscapeUtils
+              .escapeJavaScript(StringEscapeUtils.escapeHtml(nodeLink)))
+          .append("</a>\",\"<a ")
+          .append(logsLink == null ? "#" : "href='" + logsLink).append("'>")
+          .append(logsLink == null ? "N/A" : "Logs").append("</a>\",").append(
+          "\"").append(blacklistedNodesCount).append("\"],\n");
+    }
+    if (attemptsTableData.charAt(attemptsTableData.length() - 2) == ',') {
+      attemptsTableData.delete(attemptsTableData.length() - 2,
+          attemptsTableData.length() - 1);
+    }
+    attemptsTableData.append("]");
+    html.script().$type("text/javascript")
+        ._("var attemptsTableData=" + attemptsTableData)._();
+
+    tbody._()._();
   }
 }

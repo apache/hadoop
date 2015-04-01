@@ -615,4 +615,8 @@ public class SchedulerApplicationAttempt {
     // schedulingOpportunities
     // lastScheduledContainer
   }
+
+  public Set<String> getBlacklistedNodes() {
+    return this.appSchedulingInfo.getBlackListCopy();
+  }
 }
