@@ -203,7 +203,7 @@ public class TestShortCircuitCache {
     cache.close();
   }
 
-  @Test(timeout=60000)
+  @Test(timeout=100000)
   public void testExpiry() throws Exception {
     final ShortCircuitCache cache =
         new ShortCircuitCache(2, 1, 1, 10000000, 1, 10000000, 0);
