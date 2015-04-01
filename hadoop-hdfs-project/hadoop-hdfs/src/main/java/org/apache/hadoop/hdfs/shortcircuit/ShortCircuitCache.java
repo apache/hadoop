@@ -446,7 +446,9 @@ public class ShortCircuitCache implements Closeable {
           purgeReason = "purging replica because it is stale.";
         }
         if (purgeReason != null) {
-          LOG.debug(this + ": " + purgeReason);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(this + ": " + purgeReason);
+          }
           purge(replica);
         }
       }

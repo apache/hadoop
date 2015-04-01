@@ -319,9 +319,11 @@ public class FsDatasetCache {
       mappableBlockMap.put(key,
           new Value(prevValue.mappableBlock, State.UNCACHING));
       if (deferred) {
-        LOG.debug("{} is anchored, and can't be uncached now.  Scheduling it " +
-            "for uncaching in {} ",
-            key, DurationFormatUtils.formatDurationHMS(revocationPollingMs));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("{} is anchored, and can't be uncached now.  Scheduling it " +
+                  "for uncaching in {} ",
+              key, DurationFormatUtils.formatDurationHMS(revocationPollingMs));
+        }
         deferredUncachingExecutor.schedule(
             new UncachingTask(key, revocationMs),
             revocationPollingMs, TimeUnit.MILLISECONDS);

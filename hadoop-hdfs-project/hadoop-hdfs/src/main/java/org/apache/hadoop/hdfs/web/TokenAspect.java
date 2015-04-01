@@ -142,7 +142,9 @@ final class TokenAspect<T extends FileSystem & Renewable> {
       if (token != null) {
         fs.setDelegationToken(token);
         addRenewAction(fs);
-        LOG.debug("Created new DT for " + token.getService());
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Created new DT for " + token.getService());
+        }
       }
       hasInitedToken = true;
     }
@@ -155,7 +157,9 @@ final class TokenAspect<T extends FileSystem & Renewable> {
   synchronized void initDelegationToken(UserGroupInformation ugi) {
     Token<?> token = selectDelegationToken(ugi);
     if (token != null) {
-      LOG.debug("Found existing DT for " + token.getService());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Found existing DT for " + token.getService());
+      }
       fs.setDelegationToken(token);
       hasInitedToken = true;
     }
