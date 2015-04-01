@@ -372,21 +372,14 @@ public class DFSOutputStream extends FSOutputSummer
     }
   }
 
+  protected TraceScope createWriteTraceScope() {
+    return dfsClient.getPathTraceScope("DFSOutputStream#write", src);
+  }
+
   // @see FSOutputSummer#writeChunk()
   @Override
   protected synchronized void writeChunk(byte[] b, int offset, int len,
       byte[] checksum, int ckoff, int cklen) throws IOException {
-    TraceScope scope =
-        dfsClient.getPathTraceScope("DFSOutputStream#writeChunk", src);
-    try {
-      writeChunkImpl(b, offset, len, checksum, ckoff, cklen);
-    } finally {
-      scope.close();
-    }
-  }
-
-  private synchronized void writeChunkImpl(byte[] b, int offset, int len,
-          byte[] checksum, int ckoff, int cklen) throws IOException {
     dfsClient.checkOpen();
     checkClosed();
 

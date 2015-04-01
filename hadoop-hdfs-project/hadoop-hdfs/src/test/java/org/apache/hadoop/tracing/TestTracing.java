@@ -89,7 +89,7 @@ public class TestTracing {
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.complete",
       "ClientNamenodeProtocol#complete",
       "newStreamForCreate",
-      "DFSOutputStream#writeChunk",
+      "DFSOutputStream#write",
       "DFSOutputStream#close",
       "dataStreamer",
       "OpWriteBlockProto",
@@ -117,7 +117,7 @@ public class TestTracing {
       "org.apache.hadoop.hdfs.protocol.ClientProtocol.complete",
       "ClientNamenodeProtocol#complete",
       "newStreamForCreate",
-      "DFSOutputStream#writeChunk",
+      "DFSOutputStream#write",
       "DFSOutputStream#close",
     };
     for (String desc : spansInTopTrace) {

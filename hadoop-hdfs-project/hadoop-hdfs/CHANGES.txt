@@ -378,6 +378,9 @@ Release 2.8.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
+    DFSOutputStream#writeChunk (cmccabe)
+
   BUG FIXES
 
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
