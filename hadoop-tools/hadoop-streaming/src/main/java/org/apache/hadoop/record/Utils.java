@@ -28,9 +28,9 @@ import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
- * Various utility functions for Hadooop record I/O runtime.
+ * Various utility functions for Hadoop record I/O runtime.
  * 
- * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
+ * @deprecated Replaced by <a href="http://avro.apache.org/">Avro</a>.
  */
 @Deprecated
 @InterfaceAudience.Public
@@ -462,8 +462,8 @@ public class Utils {
   
   /**
    * Serializes a long to a binary stream with zero-compressed encoding.
-   * For -112 <= i <= 127, only one byte is used with the actual value.
-   * For other values of i, the first byte value indicates whether the
+   * For {@literal -112 <= i <= 127}, only one byte is used with the actual
+   * value. For other values of i, the first byte value indicates whether the
    * long is positive or negative, and the number of bytes that follow.
    * If the first byte value v is between -113 and -120, the following long
    * is positive, with number of bytes that follow are -(v+112).

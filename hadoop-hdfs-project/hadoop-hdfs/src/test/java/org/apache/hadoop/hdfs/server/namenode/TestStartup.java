@@ -425,7 +425,7 @@ public class TestStartup {
     NamenodeProtocols nnRpc = namenode.getRpcServer();
     assertTrue(nnRpc.getFileInfo("/test").isDir());
     nnRpc.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
-    nnRpc.saveNamespace();
+    nnRpc.saveNamespace(0, 0);
     namenode.stop();
     namenode.join();
 
@@ -455,7 +455,7 @@ public class TestStartup {
     NamenodeProtocols nnRpc = namenode.getRpcServer();
     assertTrue(nnRpc.getFileInfo("/test").isDir());
     nnRpc.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
-    nnRpc.saveNamespace();
+    nnRpc.saveNamespace(0, 0);
     namenode.stop();
     namenode.join();
   }

@@ -32,7 +32,7 @@ import org.apache.hadoop.mapred.Reporter;
 
 
 /** 
- * A {@link Mapper} that maps text values into <token,freq> pairs.  Uses
+ * A {@link Mapper} that maps text values into &lt;token,freq&gt; pairs.  Uses
  * {@link StringTokenizer} to break text into tokens. 
  */
 @InterfaceAudience.Public

@@ -24,36 +24,36 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>A {@link PreemptionMessage} is part of the RM-AM protocol, and it is used by
+ * A {@link PreemptionMessage} is part of the RM-AM protocol, and it is used by
  * the RM to specify resources that the RM wants to reclaim from this
- * <code>ApplicationMaster</code> (AM). The AM receives a {@link
+ * {@code ApplicationMaster} (AM). The AM receives a {@link
  * StrictPreemptionContract} message encoding which containers the platform may
  * forcibly kill, granting it an opportunity to checkpoint state or adjust its
  * execution plan. The message may also include a {@link PreemptionContract}
  * granting the AM more latitude in selecting which resources to return to the
- * cluster.<p>
- *
- * <p>The AM should decode both parts of the message. The {@link
+ * cluster.
+ * <p>
+ * The AM should decode both parts of the message. The {@link
  * StrictPreemptionContract} specifies particular allocations that the RM
  * requires back. The AM can checkpoint containers' state, adjust its execution
  * plan to move the computation, or take no action and hope that conditions that
- * caused the RM to ask for the container will change.<p>
- *
- * <p>In contrast, the {@link PreemptionContract} also includes a description of
+ * caused the RM to ask for the container will change.
+ * <p>
+ * In contrast, the {@link PreemptionContract} also includes a description of
  * resources with a set of containers. If the AM releases containers matching
  * that profile, then the containers enumerated in {@link
- * PreemptionContract#getContainers()} may not be killed.<p>
- *
- * <p>Each preemption message reflects the RM's current understanding of the
- * cluster state, so a request to return <emph>N</emph> containers may not
+ * PreemptionContract#getContainers()} may not be killed.
+ * <p>
+ * Each preemption message reflects the RM's current understanding of the
+ * cluster state, so a request to return <em>N</em> containers may not
  * reflect containers the AM is releasing, recently exited containers the RM has
  * yet to learn about, or new containers allocated before the message was
  * generated. Conversely, an RM may request a different profile of containers in
- * subsequent requests.<p>
- *
- * <p>The policy enforced by the RM is part of the scheduler. Generally, only
+ * subsequent requests.
+ * <p>
+ * The policy enforced by the RM is part of the scheduler. Generally, only
  * containers that have been requested consistently should be killed, but the
- * details are not specified.<p>
+ * details are not specified.
  */
 @Public
 @Evolving

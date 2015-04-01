@@ -9,6 +9,9 @@ Trunk (Unreleased)
     MAPREDUCE-5653. DistCp does not honour config-overrides for
     mapreduce.[map,reduce].memory.mb (Ratandeep Ratti via aw)
 
+    MAPREDUCE-4424. 'mapred job -list' command should show the job name
+    as well. (Avinash Kujur via aajisaka)
+
   NEW FEATURES
 
     MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
@@ -245,6 +248,79 @@ Trunk (Unreleased)
 
     MAPREDUCE-6078. native-task: fix gtest build on macosx (Binglin Chang)
 
+Release 2.8.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    MAPREDUCE-6291. Correct mapred queue usage command.
+    (Brahma Reddu Battula via harsh)
+
+    MAPREDUCE-579. Streaming "slowmatch" documentation. (harsh)
+
+    MAPREDUCE-6287. Deprecated methods in org.apache.hadoop.examples.Sort
+    (Chao Zhang via harsh)
+
+    MAPREDUCE-5190. Unnecessary condition test in RandomSampler.
+    (Jingguo Yao via harsh)
+
+    MAPREDUCE-6239. Consolidate TestJobConf classes in
+    hadoop-mapreduce-client-jobclient and hadoop-mapreduce-client-core
+    (Varun Saxena via harsh)
+
+    MAPREDUCE-5807. Print usage by TeraSort job. (Rohith via harsh)
+
+    MAPREDUCE-4653. TestRandomAlgorithm has an unused "import" statement.
+    (Amir Sanjar via harsh)
+
+    MAPREDUCE-6100. replace "mapreduce.job.credentials.binary" with
+    MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY for better readability.
+    (Zhihai Xu via harsh)
+
+    MAPREDUCE-6105. Inconsistent configuration in property
+    mapreduce.reduce.shuffle.merge.percent. (Ray Chiang via harsh)
+
+    MAPREDUCE-4414. Add main methods to JobConf and YarnConfiguration,
+    for debug purposes. (Plamen Jeliazkov via harsh)
+
+    MAPREDUCE-5755. MapTask.MapOutputBuffer#compare/swap should have
+    @Override annotation. (ozawa)
+
+    MAPREDUCE-6282. Reuse historyFileAbsolute.getFileSystem in
+    CompletedJob#loadFullHistoryData for code optimization.
+    (zxu via rkanter)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-5448. MapFileOutputFormat#getReaders bug with hidden
+    files/folders. (Maysam Yabandeh via harsh)
+
+    MAPREDUCE-6213. NullPointerException caused by job history server addr not
+    resolvable. (Peng Zhang via harsh)
+
+    MAPREDUCE-6281. Fix javadoc in Terasort. (Albert Chu via ozawa)
+
+    MAPREDUCE-6242. Progress report log is incredibly excessive in 
+    application master. (Varun Saxena via devaraj)
+
+    MAPREDUCE-6294. Remove an extra parameter described in Javadoc of
+    TockenCache. (Brahma Reddy Battula via ozawa)
+
+    MAPREDUCE-5875. Make Counter limits consistent across JobClient, 
+    MRAppMaster, and YarnChild. (Gera Shegalov via kasha)
+
+    MAPREDUCE-6199. AbstractCounters are not reset completely on
+    deserialization (adhoot via rkanter)
+
+    MAPREDUCE-6286. A typo in HistoryViewer makes some code useless, which
+    causes counter limits are not reset correctly.
+    (Zhihai Xu via harsh)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -254,6 +330,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6227. DFSIO for truncate. (shv via yliu)
 
     MAPREDUCE-6228. Add truncate operation to SLive. (Plamen Jeliazkov via shv)
+
+    MAPREDUCE-5583. Ability to limit running map and reduce tasks. 
+    (Jason Lowe via junping_du)
 
   IMPROVEMENTS
 
@@ -314,6 +393,21 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-5612. Add javadoc for TaskCompletionEvent.Status.
     (Chris Palmer via aajisaka)
 
+    MAPREDUCE-6248. Exposed the internal MapReduce job's information as a public
+    API in DistCp. (Jing Zhao via vinodkv)
+
+    MAPREDUCE-6267. Refactor JobSubmitter#copyAndConfigureFiles into it's own 
+    class. (Chris Trezzo via kasha)
+
+    MAPREDUCE-6263. Configurable timeout between YARNRunner terminate the 
+    application and forcefully kill. (Eric Payne via junping_du)
+
+    MAPREDUCE-6265. Make ContainerLauncherImpl.INITIAL_POOL_SIZE configurable 
+    to better control to launch/kill containers. (Zhihai Xu via ozawa)
+
+    MAPREDUCE-6292. Use org.junit package instead of junit.framework in
+    TestCombineFileInputFormat. (aajisaka)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
@@ -321,6 +415,9 @@ Release 2.7.0 - UNRELEASED
     (Zhihai Xu via kasha)
 
     MAPREDUCE-6059. Speed up history server startup time (Siqi Li via aw)
+
+    MAPREDUCE-4815. Speed up FileOutputCommitter#commitJob for many output
+    files. (Siqi Li via gera)
 
   BUG FIXES
 
@@ -356,9 +453,6 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6045. need close the DataInputStream after open it in
     TestMapReduce.java (zxu via rkanter)
-
-    MAPREDUCE-6199. AbstractCounters are not reset completely on
-    deserialization (adhoot via rkanter)
 
     MAPREDUCE-6206. TestAggregatedTransferRate fails on non-US systems (Jens
     Rabe via jlowe)
@@ -398,6 +492,26 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6223. TestJobConf#testNegativeValueForTaskVmem failures. 
     (Varun Saxena via kasha)
+
+    MAPREDUCE-6268. Fix typo in Task Attempt API's URL. (Ryu Kobayashi
+    via ozawa)
+
+    MAPREDUCE-6136. MRAppMaster doesn't shutdown file systems. (Brahma 
+    Reddy Battula via ozawa)
+
+    MAPREDUCE-5657. Fix Javadoc errors caused by incorrect or illegal tags in doc
+    comments. (Akira AJISAKA and Andrew Purtell via ozawa)
+
+    MAPREDUCE-4742. Fix typo in nnbench#displayUsage. (Liang Xie via ozawa)
+
+    MAPREDUCE-6277. Job can post multiple history files if attempt loses
+    connection to the RM (Chang Li via jlowe)
+
+    MAPREDUCE-6275. Race condition in FileOutputCommitter v2 for
+    user-specified task output subdirs (Gera Shegalov and Siqi Li via jlowe)
+
+    MAPREDUCE-6285. ClientServiceDelegate should not retry upon
+    AuthenticationException. (Jonathan Eagles via ozawa)
 
 Release 2.6.1 - UNRELEASED
 
@@ -609,9 +723,6 @@ Release 2.6.0 - 2014-11-18
 
     MAPREDUCE-6123. TestCombineFileInputFormat incorrectly starts 2
     MiniDFSCluster instances. (cnauroth)
-
-    MAPREDUCE-5875. Make Counter limits consistent across JobClient, 
-    MRAppMaster, and YarnChild. (Gera Shegalov via kasha)
 
     MAPREDUCE-6125. TestContainerLauncherImpl sometimes fails (Mit Desai via
     jlowe)

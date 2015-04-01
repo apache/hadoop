@@ -103,8 +103,8 @@ public class TestDataNodeMultipleRegistrations {
         LOG.info("BP: " + bpos);
       }
 
-      BPOfferService bpos1 = dn.getAllBpOs()[0];
-      BPOfferService bpos2 = dn.getAllBpOs()[1];
+      BPOfferService bpos1 = dn.getAllBpOs().get(0);
+      BPOfferService bpos2 = dn.getAllBpOs().get(1);
 
       // The order of bpos is not guaranteed, so fix the order
       if (getNNSocketAddress(bpos1).equals(nn2.getNameNodeAddress())) {
@@ -173,7 +173,7 @@ public class TestDataNodeMultipleRegistrations {
       }
 
       // try block report
-      BPOfferService bpos1 = dn.getAllBpOs()[0];
+      BPOfferService bpos1 = dn.getAllBpOs().get(0);
       bpos1.triggerBlockReportForTests();
 
       assertEquals("wrong nn address",
@@ -184,7 +184,7 @@ public class TestDataNodeMultipleRegistrations {
       cluster.shutdown();
       
       // Ensure all the BPOfferService threads are shutdown
-      assertEquals(0, dn.getAllBpOs().length);
+      assertEquals(0, dn.getAllBpOs().size());
       cluster = null;
     } finally {
       if (cluster != null) {
@@ -202,16 +202,16 @@ public class TestDataNodeMultipleRegistrations {
       cluster.waitActive();
 
       DataNode dn = cluster.getDataNodes().get(0);
-      BPOfferService [] bposs = dn.getAllBpOs(); 
-      LOG.info("dn bpos len (should be 2):" + bposs.length);
-      Assert.assertEquals("should've registered with two namenodes", bposs.length,2);
+      List<BPOfferService> bposs = dn.getAllBpOs();
+      LOG.info("dn bpos len (should be 2):" + bposs.size());
+      Assert.assertEquals("should've registered with two namenodes", bposs.size(),2);
       
       // add another namenode
       cluster.addNameNode(conf, 9938);
       Thread.sleep(500);// lets wait for the registration to happen
       bposs = dn.getAllBpOs(); 
-      LOG.info("dn bpos len (should be 3):" + bposs.length);
-      Assert.assertEquals("should've registered with three namenodes", bposs.length,3);
+      LOG.info("dn bpos len (should be 3):" + bposs.size());
+      Assert.assertEquals("should've registered with three namenodes", bposs.size(),3);
       
       // change cluster id and another Namenode
       StartupOption.FORMAT.setClusterId("DifferentCID");
@@ -221,8 +221,8 @@ public class TestDataNodeMultipleRegistrations {
 
       Thread.sleep(500);// lets wait for the registration to happen
       bposs = dn.getAllBpOs(); 
-      LOG.info("dn bpos len (still should be 3):" + bposs.length);
-      Assert.assertEquals("should've registered with three namenodes", 3, bposs.length);
+      LOG.info("dn bpos len (still should be 3):" + bposs.size());
+      Assert.assertEquals("should've registered with three namenodes", 3, bposs.size());
     } finally {
         cluster.shutdown();
     }
@@ -250,7 +250,7 @@ public class TestDataNodeMultipleRegistrations {
       DataNode dn = cluster.getDataNodes().get(0);
       assertTrue("Datanode should be running", dn.isDatanodeUp());
       assertEquals("Only one BPOfferService should be running", 1,
-          dn.getAllBpOs().length);
+          dn.getAllBpOs().size());
     } finally {
       cluster.shutdown();
     }
@@ -274,7 +274,7 @@ public class TestDataNodeMultipleRegistrations {
       DataNode dn = cluster.getDataNodes().get(0);
       assertTrue("Datanode should be running", dn.isDatanodeUp());
       assertEquals("BPOfferService should be running", 1,
-          dn.getAllBpOs().length);
+          dn.getAllBpOs().size());
       DataNodeProperties dnProp = cluster.stopDataNode(0);
 
       cluster.getNameNode(0).stop();

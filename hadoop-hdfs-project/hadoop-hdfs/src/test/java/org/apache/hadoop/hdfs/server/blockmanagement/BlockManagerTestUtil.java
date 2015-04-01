@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -185,7 +186,7 @@ public class BlockManagerTestUtil {
       Assert.assertNotNull("Could not find DN with name: " + dnName, theDND);
       
       synchronized (hbm) {
-        theDND.setLastUpdate(0);
+        DFSTestUtil.setDatanodeDead(theDND);
         hbm.heartbeatCheck();
       }
     } finally {
@@ -300,9 +301,8 @@ public class BlockManagerTestUtil {
    * Have DatanodeManager check decommission state.
    * @param dm the DatanodeManager to manipulate
    */
-  public static void checkDecommissionState(DatanodeManager dm,
-      DatanodeDescriptor node) {
-    dm.checkDecommissionState(node);
+  public static void recheckDecommissionState(DatanodeManager dm)
+      throws ExecutionException, InterruptedException {
+    dm.getDecomManager().runMonitor();
   }
-
 }

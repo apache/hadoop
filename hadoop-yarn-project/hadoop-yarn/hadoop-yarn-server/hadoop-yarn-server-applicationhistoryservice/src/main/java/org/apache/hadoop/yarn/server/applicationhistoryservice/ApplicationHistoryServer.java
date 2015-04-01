@@ -272,7 +272,7 @@ public class ApplicationHistoryServer extends CompositeService {
             .$for("applicationhistory", ApplicationHistoryClientService.class,
                 ahsClientService, "ws")
             .with(conf).at(bindAddress).start(
-                new AHSWebApp(timelineDataManager, historyManager));
+                new AHSWebApp(timelineDataManager, ahsClientService));
     } catch (Exception e) {
       String msg = "AHSWebApp failed to start.";
       LOG.error(msg, e);

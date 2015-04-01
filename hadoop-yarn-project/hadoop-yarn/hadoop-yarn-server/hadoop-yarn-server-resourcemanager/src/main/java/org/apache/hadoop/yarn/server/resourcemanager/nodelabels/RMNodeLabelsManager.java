@@ -36,7 +36,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
-import org.apache.hadoop.yarn.nodelabels.NodeLabel;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsUpdateSchedulerEvent;
@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import com.google.common.collect.ImmutableSet;
 
 public class RMNodeLabelsManager extends CommonNodeLabelsManager {
-  
   protected static class Queue {
     protected Set<String> acccessibleNodeLabels;
     protected Resource resource;
@@ -156,7 +155,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       throws IOException {
     try {
       writeLock.lock();
-      
+
       // get nodesCollection before edition
       Map<String, Host> before = cloneNodeMap(replaceLabelsToNode.keySet());
 
@@ -171,7 +170,6 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       writeLock.unlock();
     }
   }
-  
 
   /*
    * Following methods are used for setting if a node is up and running, and it
@@ -201,7 +199,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       Set<String> labelsForNode = getLabelsByNode(nodeId);
       if (labelsForNode != null) {
         for (String label : labelsForNode) {
-          NodeLabel labelInfo = labelCollections.get(label);
+          RMNodeLabel labelInfo = labelCollections.get(label);
           if(labelInfo != null) {
             labelInfo.addNodeId(nodeId);
           }
@@ -383,7 +381,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         // no label in the past
         if (oldLabels.isEmpty()) {
           // update labels
-          NodeLabel label = labelCollections.get(NO_LABEL);
+          RMNodeLabel label = labelCollections.get(NO_LABEL);
           label.removeNode(oldNM.resource);
 
           // update queues, all queue can access this node
@@ -393,7 +391,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         } else {
           // update labels
           for (String labelName : oldLabels) {
-            NodeLabel label = labelCollections.get(labelName);
+            RMNodeLabel label = labelCollections.get(labelName);
             if (null == label) {
               continue;
             }
@@ -418,7 +416,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         // no label in the past
         if (newLabels.isEmpty()) {
           // update labels
-          NodeLabel label = labelCollections.get(NO_LABEL);
+          RMNodeLabel label = labelCollections.get(NO_LABEL);
           label.addNode(newNM.resource);
 
           // update queues, all queue can access this node
@@ -428,7 +426,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
         } else {
           // update labels
           for (String labelName : newLabels) {
-            NodeLabel label = labelCollections.get(labelName);
+            RMNodeLabel label = labelCollections.get(labelName);
             label.addNode(newNM.resource);
           }
 
@@ -499,13 +497,13 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
     this.rmContext = rmContext;
   }
 
-  public List<NodeLabel> pullRMNodeLabelsInfo() {
+  public List<RMNodeLabel> pullRMNodeLabelsInfo() {
     try {
       readLock.lock();
-      List<NodeLabel> infos = new ArrayList<NodeLabel>();
+      List<RMNodeLabel> infos = new ArrayList<RMNodeLabel>();
 
-      for (Entry<String, NodeLabel> entry : labelCollections.entrySet()) {
-        NodeLabel label = entry.getValue();
+      for (Entry<String, RMNodeLabel> entry : labelCollections.entrySet()) {
+        RMNodeLabel label = entry.getValue();
         infos.add(label.getCopy());
       }
 

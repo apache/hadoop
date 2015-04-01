@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.output;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -25,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -57,10 +59,14 @@ public class FileOutputCommitter extends OutputCommitter {
   @Deprecated
   protected static final String TEMP_DIR_NAME = PENDING_DIR_NAME;
   public static final String SUCCEEDED_FILE_NAME = "_SUCCESS";
-  public static final String SUCCESSFUL_JOB_OUTPUT_DIR_MARKER = 
-    "mapreduce.fileoutputcommitter.marksuccessfuljobs";
+  public static final String SUCCESSFUL_JOB_OUTPUT_DIR_MARKER =
+      "mapreduce.fileoutputcommitter.marksuccessfuljobs";
+  public static final String FILEOUTPUTCOMMITTER_ALGORITHM_VERSION =
+      "mapreduce.fileoutputcommitter.algorithm.version";
+  public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT = 1;
   private Path outputPath = null;
   private Path workPath = null;
+  private final int algorithmVersion;
 
   /**
    * Create a file output committer
@@ -87,6 +93,14 @@ public class FileOutputCommitter extends OutputCommitter {
   @Private
   public FileOutputCommitter(Path outputPath, 
                              JobContext context) throws IOException {
+    Configuration conf = context.getConfiguration();
+    algorithmVersion =
+        conf.getInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
+                    FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT);
+    LOG.info("File Output Committer Algorithm version is " + algorithmVersion);
+    if (algorithmVersion != 1 && algorithmVersion != 2) {
+      throw new IOException("Only 1 or 2 algorithm version is supported");
+    }
     if (outputPath != null) {
       FileSystem fs = outputPath.getFileSystem(context.getConfiguration());
       this.outputPath = fs.makeQualified(outputPath);
@@ -248,14 +262,14 @@ public class FileOutputCommitter extends OutputCommitter {
     return new Path(getJobAttemptPath(appAttemptId, out),
         String.valueOf(context.getTaskAttemptID().getTaskID()));
   }
-  
+
   private static class CommittedTaskFilter implements PathFilter {
     @Override
     public boolean accept(Path path) {
       return !PENDING_DIR_NAME.equals(path.getName());
     }
   }
-  
+
   /**
    * Get a list of all paths where output from committed tasks are stored.
    * @param context the context of the current job
@@ -268,7 +282,7 @@ public class FileOutputCommitter extends OutputCommitter {
     FileSystem fs = jobAttemptPath.getFileSystem(context.getConfiguration());
     return fs.listStatus(jobAttemptPath, new CommittedTaskFilter());
   }
-  
+
   /**
    * Get the directory that the task should write results into.
    * @return the work directory
@@ -295,7 +309,7 @@ public class FileOutputCommitter extends OutputCommitter {
       LOG.warn("Output Path is null in setupJob()");
     }
   }
-  
+
   /**
    * The job has completed so move all committed tasks to the final output dir.
    * Delete the temporary directory, including all of the work directories.
@@ -306,8 +320,11 @@ public class FileOutputCommitter extends OutputCommitter {
     if (hasOutputPath()) {
       Path finalOutput = getOutputPath();
       FileSystem fs = finalOutput.getFileSystem(context.getConfiguration());
-      for(FileStatus stat: getAllCommittedTaskPaths(context)) {
-        mergePaths(fs, stat, finalOutput);
+
+      if (algorithmVersion == 1) {
+        for (FileStatus stat: getAllCommittedTaskPaths(context)) {
+          mergePaths(fs, stat, finalOutput);
+        }
       }
 
       // delete the _temporary folder and create a _done file in the o/p folder
@@ -331,44 +348,61 @@ public class FileOutputCommitter extends OutputCommitter {
    * @param to the path data is going to.
    * @throws IOException on any error
    */
-  private static void mergePaths(FileSystem fs, final FileStatus from,
-      final Path to)
-    throws IOException {
-     LOG.debug("Merging data from "+from+" to "+to);
-     if(from.isFile()) {
-       if(fs.exists(to)) {
-         if(!fs.delete(to, true)) {
-           throw new IOException("Failed to delete "+to);
-         }
-       }
+  private void mergePaths(FileSystem fs, final FileStatus from,
+      final Path to) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Merging data from " + from + " to " + to);
+    }
+    FileStatus toStat;
+    try {
+      toStat = fs.getFileStatus(to);
+    } catch (FileNotFoundException fnfe) {
+      toStat = null;
+    }
 
-       if(!fs.rename(from.getPath(), to)) {
-         throw new IOException("Failed to rename "+from+" to "+to);
-       }
-     } else if(from.isDirectory()) {
-       if(fs.exists(to)) {
-         FileStatus toStat = fs.getFileStatus(to);
-         if(!toStat.isDirectory()) {
-           if(!fs.delete(to, true)) {
-             throw new IOException("Failed to delete "+to);
-           }
-           if(!fs.rename(from.getPath(), to)) {
-             throw new IOException("Failed to rename "+from+" to "+to);
-           }
-         } else {
-           //It is a directory so merge everything in the directories
-           for(FileStatus subFrom: fs.listStatus(from.getPath())) {
-             Path subTo = new Path(to, subFrom.getPath().getName());
-             mergePaths(fs, subFrom, subTo);
-           }
-         }
-       } else {
-         //it does not exist just rename
-         if(!fs.rename(from.getPath(), to)) {
-           throw new IOException("Failed to rename "+from+" to "+to);
-         }
-       }
-     }
+    if (from.isFile()) {
+      if (toStat != null) {
+        if (!fs.delete(to, true)) {
+          throw new IOException("Failed to delete " + to);
+        }
+      }
+
+      if (!fs.rename(from.getPath(), to)) {
+        throw new IOException("Failed to rename " + from + " to " + to);
+      }
+    } else if (from.isDirectory()) {
+      if (toStat != null) {
+        if (!toStat.isDirectory()) {
+          if (!fs.delete(to, true)) {
+            throw new IOException("Failed to delete " + to);
+          }
+          renameOrMerge(fs, from, to);
+        } else {
+          //It is a directory so merge everything in the directories
+          for (FileStatus subFrom : fs.listStatus(from.getPath())) {
+            Path subTo = new Path(to, subFrom.getPath().getName());
+            mergePaths(fs, subFrom, subTo);
+          }
+        }
+      } else {
+        renameOrMerge(fs, from, to);
+      }
+    }
+  }
+
+  private void renameOrMerge(FileSystem fs, FileStatus from, Path to)
+      throws IOException {
+    if (algorithmVersion == 1) {
+      if (!fs.rename(from.getPath(), to)) {
+        throw new IOException("Failed to rename " + from + " to " + to);
+      }
+    } else {
+      fs.mkdirs(to);
+      for (FileStatus subFrom : fs.listStatus(from.getPath())) {
+        Path subTo = new Path(to, subFrom.getPath().getName());
+        mergePaths(fs, subFrom, subTo);
+      }
+    }
   }
 
   @Override
@@ -417,27 +451,42 @@ public class FileOutputCommitter extends OutputCommitter {
 
   @Private
   public void commitTask(TaskAttemptContext context, Path taskAttemptPath) 
-  throws IOException {
+      throws IOException {
+
     TaskAttemptID attemptId = context.getTaskAttemptID();
     if (hasOutputPath()) {
       context.progress();
       if(taskAttemptPath == null) {
         taskAttemptPath = getTaskAttemptPath(context);
       }
-      Path committedTaskPath = getCommittedTaskPath(context);
       FileSystem fs = taskAttemptPath.getFileSystem(context.getConfiguration());
-      if (fs.exists(taskAttemptPath)) {
-        if(fs.exists(committedTaskPath)) {
-          if(!fs.delete(committedTaskPath, true)) {
-            throw new IOException("Could not delete " + committedTaskPath);
+      FileStatus taskAttemptDirStatus;
+      try {
+        taskAttemptDirStatus = fs.getFileStatus(taskAttemptPath);
+      } catch (FileNotFoundException e) {
+        taskAttemptDirStatus = null;
+      }
+
+      if (taskAttemptDirStatus != null) {
+        if (algorithmVersion == 1) {
+          Path committedTaskPath = getCommittedTaskPath(context);
+          if (fs.exists(committedTaskPath)) {
+             if (!fs.delete(committedTaskPath, true)) {
+               throw new IOException("Could not delete " + committedTaskPath);
+             }
           }
+          if (!fs.rename(taskAttemptPath, committedTaskPath)) {
+            throw new IOException("Could not rename " + taskAttemptPath + " to "
+                + committedTaskPath);
+          }
+          LOG.info("Saved output of task '" + attemptId + "' to " +
+              committedTaskPath);
+        } else {
+          // directly merge everything from taskAttemptPath to output directory
+          mergePaths(fs, taskAttemptDirStatus, outputPath);
+          LOG.info("Saved output of task '" + attemptId + "' to " +
+              outputPath);
         }
-        if(!fs.rename(taskAttemptPath, committedTaskPath)) {
-          throw new IOException("Could not rename " + taskAttemptPath + " to "
-              + committedTaskPath);
-        }
-        LOG.info("Saved output of task '" + attemptId + "' to " + 
-            committedTaskPath);
       } else {
         LOG.warn("No Output found for " + attemptId);
       }
@@ -511,29 +560,41 @@ public class FileOutputCommitter extends OutputCommitter {
         throw new IOException ("Cannot recover task output for first attempt...");
       }
 
-      Path committedTaskPath = getCommittedTaskPath(context);
       Path previousCommittedTaskPath = getCommittedTaskPath(
           previousAttempt, context);
-      FileSystem fs = committedTaskPath.getFileSystem(context.getConfiguration());
-
-      LOG.debug("Trying to recover task from " + previousCommittedTaskPath 
-          + " into " + committedTaskPath);
-      if (fs.exists(previousCommittedTaskPath)) {
-        if(fs.exists(committedTaskPath)) {
-          if(!fs.delete(committedTaskPath, true)) {
-            throw new IOException("Could not delete "+committedTaskPath);
+      FileSystem fs = previousCommittedTaskPath.getFileSystem(context.getConfiguration());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Trying to recover task from " + previousCommittedTaskPath);
+      }
+      if (algorithmVersion == 1) {
+        if (fs.exists(previousCommittedTaskPath)) {
+          Path committedTaskPath = getCommittedTaskPath(context);
+          if (fs.exists(committedTaskPath)) {
+            if (!fs.delete(committedTaskPath, true)) {
+              throw new IOException("Could not delete "+committedTaskPath);
+            }
           }
+          //Rename can fail if the parent directory does not yet exist.
+          Path committedParent = committedTaskPath.getParent();
+          fs.mkdirs(committedParent);
+          if (!fs.rename(previousCommittedTaskPath, committedTaskPath)) {
+            throw new IOException("Could not rename " + previousCommittedTaskPath +
+                " to " + committedTaskPath);
+          }
+        } else {
+            LOG.warn(attemptId+" had no output to recover.");
         }
-        //Rename can fail if the parent directory does not yet exist.
-        Path committedParent = committedTaskPath.getParent();
-        fs.mkdirs(committedParent);
-        if(!fs.rename(previousCommittedTaskPath, committedTaskPath)) {
-          throw new IOException("Could not rename " + previousCommittedTaskPath +
-              " to " + committedTaskPath);
-        }
-        LOG.info("Saved output of " + attemptId + " to " + committedTaskPath);
       } else {
-        LOG.warn(attemptId+" had no output to recover.");
+        // essentially a no-op, but for backwards compatibility
+        // after upgrade to the new fileOutputCommitter,
+        // check if there are any output left in committedTaskPath
+        if (fs.exists(previousCommittedTaskPath)) {
+          LOG.info("Recovering task for upgrading scenario, moving files from "
+              + previousCommittedTaskPath + " to " + outputPath);
+          FileStatus from = fs.getFileStatus(previousCommittedTaskPath);
+          mergePaths(fs, from, outputPath);
+        }
+        LOG.info("Done recovering task " + attemptId);
       }
     } else {
       LOG.warn("Output Path is null in recoverTask()");

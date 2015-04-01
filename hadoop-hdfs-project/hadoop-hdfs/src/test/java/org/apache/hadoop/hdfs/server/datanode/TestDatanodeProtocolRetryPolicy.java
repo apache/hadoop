@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
@@ -136,7 +137,8 @@ public class TestDatanodeProtocolRetryPolicy {
           Mockito.verify(mockNN).blockReport(
               Mockito.eq(datanodeRegistration),
               Mockito.eq(POOL_ID),
-              Mockito.<StorageBlockReport[]>anyObject());
+              Mockito.<StorageBlockReport[]>anyObject(),
+              Mockito.<BlockReportContext>anyObject());
           return true;
         } catch (Throwable t) {
           LOG.info("waiting on block report: " + t.getMessage());
@@ -173,7 +175,8 @@ public class TestDatanodeProtocolRetryPolicy {
         } else {
           DatanodeRegistration dr =
               (DatanodeRegistration) invocation.getArguments()[0];
-          datanodeRegistration.setDatanodeUuidForTesting(dr.getDatanodeUuid());
+          datanodeRegistration =
+              new DatanodeRegistration(dr.getDatanodeUuid(), dr);
           LOG.info("mockito succeeded " + datanodeRegistration);
           return datanodeRegistration;
         }
@@ -226,7 +229,7 @@ public class TestDatanodeProtocolRetryPolicy {
     };
 
     // Trigger a heartbeat so that it acknowledges the NN as active.
-    dn.getAllBpOs()[0].triggerHeartbeatForTests();
+    dn.getAllBpOs().get(0).triggerHeartbeatForTests();
 
     waitForBlockReport(namenode);
   }

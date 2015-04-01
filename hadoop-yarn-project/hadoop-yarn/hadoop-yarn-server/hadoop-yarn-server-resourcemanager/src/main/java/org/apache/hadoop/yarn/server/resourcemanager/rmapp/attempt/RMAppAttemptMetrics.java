@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class RMAppAttemptMetrics {
@@ -40,6 +41,8 @@ public class RMAppAttemptMetrics {
   private ApplicationAttemptId attemptId = null;
   // preemption info
   private Resource resourcePreempted = Resource.newInstance(0, 0);
+  // application headroom
+  private volatile Resource applicationHeadroom = Resource.newInstance(0, 0);
   private AtomicInteger numNonAMContainersPreempted = new AtomicInteger(0);
   private AtomicBoolean isPreempted = new AtomicBoolean(false);
   
@@ -49,6 +52,10 @@ public class RMAppAttemptMetrics {
   private AtomicLong finishedVcoreSeconds = new AtomicLong(0);
   private RMContext rmContext;
 
+  private int[][] localityStatistics =
+      new int[NodeType.values().length][NodeType.values().length];
+  private volatile int totalAllocatedContainers;
+
   public RMAppAttemptMetrics(ApplicationAttemptId attemptId,
       RMContext rmContext) {
     this.attemptId = attemptId;
@@ -57,7 +64,7 @@ public class RMAppAttemptMetrics {
     this.writeLock = lock.writeLock();
     this.rmContext = rmContext;
   }
-  
+
   public void updatePreemptionInfo(Resource resource, RMContainer container) {
     try {
       writeLock.lock();
@@ -125,5 +132,27 @@ public class RMAppAttemptMetrics {
                                         long finishedVcoreSeconds) {
     this.finishedMemorySeconds.addAndGet(finishedMemorySeconds);
     this.finishedVcoreSeconds.addAndGet(finishedVcoreSeconds);
+  }
+
+  public void incNumAllocatedContainers(NodeType containerType,
+      NodeType requestType) {
+    localityStatistics[containerType.index][requestType.index]++;
+    totalAllocatedContainers++;
+  }
+
+  public int[][] getLocalityStatistics() {
+    return this.localityStatistics;
+  }
+
+  public int getTotalAllocatedContainers() {
+    return this.totalAllocatedContainers;
+  }
+
+  public Resource getApplicationAttemptHeadroom() {
+    return applicationHeadroom;
+  }
+
+  public void setApplicationAttemptHeadRoom(Resource headRoom) {
+    this.applicationHeadroom = headRoom;
   }
 }

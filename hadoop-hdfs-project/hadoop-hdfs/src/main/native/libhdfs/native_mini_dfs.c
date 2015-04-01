@@ -128,22 +128,6 @@ struct NativeMiniDfsCluster* nmdCreate(struct NativeMiniDfsConf *conf)
             "nmdCreate: new Configuration");
         goto error;
     }
-    if (conf->webhdfsEnabled) {
-        jthr = newJavaStr(env, DFS_WEBHDFS_ENABLED_KEY, &jconfStr);
-        if (jthr) {
-            printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                                  "nmdCreate: new String");
-            goto error;
-        }
-        jthr = invokeMethod(env, NULL, INSTANCE, cobj, HADOOP_CONF,
-                            "setBoolean", "(Ljava/lang/String;Z)V",
-                            jconfStr, conf->webhdfsEnabled);
-        if (jthr) {
-            printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                                  "nmdCreate: Configuration::setBoolean");
-            goto error;
-        }
-    }
     if (jthr) {
         printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                               "nmdCreate: Configuration::setBoolean");

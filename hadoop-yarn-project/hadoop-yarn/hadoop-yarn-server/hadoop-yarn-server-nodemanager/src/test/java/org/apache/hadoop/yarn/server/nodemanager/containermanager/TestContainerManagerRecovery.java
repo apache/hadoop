@@ -130,8 +130,10 @@ public class TestContainerManagerRecovery {
         containerTokens, acls);
     // create the logAggregationContext
     LogAggregationContext logAggregationContext =
-        LogAggregationContext.newInstance("includePattern", "excludePattern");
-    StartContainersResponse startResponse = startContainer(context, cm, cid,
+        LogAggregationContext.newInstance("includePattern", "excludePattern",
+          "includePatternInRollingAggregation",
+          "excludePatternInRollingAggregation");
+   StartContainersResponse startResponse = startContainer(context, cm, cid,
         clc, logAggregationContext);
     assertTrue(startResponse.getFailedRequests().isEmpty());
     assertEquals(1, context.getApplications().size());
@@ -171,6 +173,10 @@ public class TestContainerManagerRecovery {
       recovered.getIncludePattern());
     assertEquals(logAggregationContext.getExcludePattern(),
       recovered.getExcludePattern());
+    assertEquals(logAggregationContext.getRolledLogsIncludePattern(),
+      recovered.getRolledLogsIncludePattern());
+    assertEquals(logAggregationContext.getRolledLogsExcludePattern(),
+      recovered.getRolledLogsExcludePattern());
 
     waitForAppState(app, ApplicationState.INITING);
     assertTrue(context.getApplicationACLsManager().checkAccess(

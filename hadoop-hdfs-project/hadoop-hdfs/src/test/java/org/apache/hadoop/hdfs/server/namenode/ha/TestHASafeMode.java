@@ -498,7 +498,7 @@ public class TestHASafeMode {
             + nodeThresh + ". In safe mode extension. "
             + "Safe mode will be turned off automatically"));
     } else {
-      int additional = total - safe;
+      int additional = (int) (total * 0.9990) - safe;
       assertTrue("Bad safemode status: '" + status + "'",
           status.startsWith(
               "Safe mode is ON. " +

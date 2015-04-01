@@ -37,17 +37,6 @@ public class TestAuthenticationFilter extends TestCase {
   public void testConfiguration() throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.http.authentication.foo", "bar");
-    
-    File testDir = new File(System.getProperty("test.build.data", 
-                                               "target/test-dir"));
-    testDir.mkdirs();
-    File secretFile = new File(testDir, "http-secret.txt");
-    Writer writer = new FileWriter(new File(testDir, "http-secret.txt"));
-    writer.write("hadoop");
-    writer.close();
-    conf.set(AuthenticationFilterInitializer.PREFIX + 
-             AuthenticationFilterInitializer.SIGNATURE_SECRET_FILE, 
-             secretFile.getAbsolutePath());
 
     conf.set(HttpServer2.BIND_ADDRESS, "barhost");
     
@@ -68,7 +57,6 @@ public class TestAuthenticationFilter extends TestCase {
 
           assertEquals("simple", conf.get("type"));
           assertEquals("36000", conf.get("token.validity"));
-          assertEquals("hadoop", conf.get("signature.secret"));
           assertNull(conf.get("cookie.domain"));
           assertEquals("true", conf.get("simple.anonymous.allowed"));
           assertEquals("HTTP/barhost@LOCALHOST",

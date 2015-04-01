@@ -26,22 +26,19 @@ import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>
  * The response sent by the <code>ResourceManager</code> to a
  * <code>ApplicationMaster</code> on it's completion.
- * </p>
- * 
  * <p>
  * The response, includes:
  * <ul>
  * <li>A flag which indicates that the application has successfully unregistered
  * with the RM and the application can safely stop.</li>
  * </ul>
- * </p>
+ * <p>
  * Note: The flag indicates whether the application has successfully
  * unregistered and is safe to stop. The application may stop after the flag is
  * true. If the application stops before the flag is true then the RM may retry
- * the application .
+ * the application.
  * 
  * @see ApplicationMasterProtocol#finishApplicationMaster(FinishApplicationMasterRequest)
  */

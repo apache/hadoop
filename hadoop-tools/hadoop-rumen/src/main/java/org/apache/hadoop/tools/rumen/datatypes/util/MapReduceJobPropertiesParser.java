@@ -67,8 +67,9 @@ import org.apache.log4j.Logger;
  * ignoring user-specific and hard-to-parse keys but also provides a consistent
  * view for all possible inputs. So if users invoke the 
  * {@link #parseJobProperty(String, String)} API with either
- * <"mapreduce.job.user.name", "bob"> or <"user.name", "bob">, then the result 
- * would be a {@link UserName} {@link DataType} wrapping the user-name "bob".
+ * &lt;"mapreduce.job.user.name", "bob"&gt; or &lt;"user.name", "bob"&gt;,
+ * then the result would be a {@link UserName} {@link DataType} wrapping
+ * the user-name "bob".
  */
 @SuppressWarnings("deprecation")
 public class MapReduceJobPropertiesParser implements JobPropertyParser {

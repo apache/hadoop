@@ -74,7 +74,7 @@ public class SecondarySort {
     }
     /**
      * Read the two integers. 
-     * Encoded as: MIN_VALUE -> 0, 0 -> -MIN_VALUE, MAX_VALUE-> -1
+     * Encoded as: MIN_VALUE -&gt; 0, 0 -&gt; -MIN_VALUE, MAX_VALUE-&gt; -1
      */
     @Override
     public void readFields(DataInput in) throws IOException {

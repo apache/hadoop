@@ -45,7 +45,8 @@ public class ValueAggregatorReducer<K1 extends WritableComparable,
    *          driven computing is achieved. It is assumed that each aggregator's
    *          getReport method emits appropriate output for the aggregator. This
    *          may be further customiized.
-   * @value the values to be aggregated
+   * @param values
+   *          the values to be aggregated
    */
   public void reduce(Text key, Iterator<Text> values,
                      OutputCollector<Text, Text> output, Reporter reporter) throws IOException {

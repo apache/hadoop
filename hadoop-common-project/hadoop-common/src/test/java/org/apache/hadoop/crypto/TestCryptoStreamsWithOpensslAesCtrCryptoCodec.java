@@ -18,6 +18,8 @@
 package org.apache.hadoop.crypto;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 
 public class TestCryptoStreamsWithOpensslAesCtrCryptoCodec 
@@ -26,6 +28,11 @@ public class TestCryptoStreamsWithOpensslAesCtrCryptoCodec
   @BeforeClass
   public static void init() throws Exception {
     Configuration conf = new Configuration();
+    conf.set(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_KEY,
+        OpensslAesCtrCryptoCodec.class.getName());
     codec = CryptoCodec.getInstance(conf);
+    Assert.assertEquals(OpensslAesCtrCryptoCodec.class.getCanonicalName(), 
+        codec.getClass().getCanonicalName());
   }
 }

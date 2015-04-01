@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.internal.util.reflection.Whitebox;
@@ -119,10 +118,17 @@ public class TestComputeInvalidateWork {
   public void testDatanodeReformat() throws Exception {
     namesystem.writeLock();
     try {
+      // Change the datanode UUID to emulate a reformat
+      String poolId = cluster.getNamesystem().getBlockPoolId();
+      DatanodeRegistration dnr = cluster.getDataNode(nodes[0].getIpcPort())
+                                        .getDNRegistrationForBP(poolId);
+      dnr = new DatanodeRegistration(UUID.randomUUID().toString(), dnr);
+      cluster.stopDataNode(nodes[0].getXferAddr());
+
       Block block = new Block(0, 0, GenerationStamp.LAST_RESERVED_STAMP);
       bm.addToInvalidates(block, nodes[0]);
-      // Change the datanode UUID to emulate a reformation
-      nodes[0].setDatanodeUuidForTesting("fortesting");
+      bm.getDatanodeManager().registerDatanode(dnr);
+
       // Since UUID has changed, the invalidation work should be skipped
       assertEquals(0, bm.computeInvalidateWork(1));
       assertEquals(0, bm.getPendingDeletionBlocksCount());
@@ -158,8 +164,8 @@ public class TestComputeInvalidateWork {
     // Re-register each DN and see that it wipes the invalidation work
     for (DataNode dn : cluster.getDataNodes()) {
       DatanodeID did = dn.getDatanodeId();
-      did.setDatanodeUuidForTesting(UUID.randomUUID().toString());
-      DatanodeRegistration reg = new DatanodeRegistration(did,
+      DatanodeRegistration reg = new DatanodeRegistration(
+          new DatanodeID(UUID.randomUUID().toString(), did),
           new StorageInfo(HdfsServerConstants.NodeType.DATA_NODE),
           new ExportedBlockKeys(),
           VersionInfo.getVersion());

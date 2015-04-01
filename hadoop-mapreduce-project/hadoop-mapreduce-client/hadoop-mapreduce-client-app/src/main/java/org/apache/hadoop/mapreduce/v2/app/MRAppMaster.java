@@ -1451,10 +1451,6 @@ public class MRAppMaster extends CompositeService {
       String jobUserName = System
           .getenv(ApplicationConstants.Environment.USER.name());
       conf.set(MRJobConfig.USER_NAME, jobUserName);
-      // Do not automatically close FileSystem objects so that in case of
-      // SIGTERM I have a chance to write out the job history. I'll be closing
-      // the objects myself.
-      conf.setBoolean("fs.automatic.close", false);
       initAndStartAppMaster(appMaster, conf, jobUserName);
     } catch (Throwable t) {
       LOG.fatal("Error starting MRAppMaster", t);

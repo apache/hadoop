@@ -374,7 +374,6 @@ public class JobContextImpl implements JobContext {
    * Get the timestamps of the archives.  Used by internal
    * DistributedCache and MapReduce code.
    * @return a string array of timestamps 
-   * @throws IOException
    */
   public String[] getArchiveTimestamps() {
     return toTimestampStrs(DistributedCache.getArchiveTimestamps(conf));
@@ -384,7 +383,6 @@ public class JobContextImpl implements JobContext {
    * Get the timestamps of the files.  Used by internal
    * DistributedCache and MapReduce code.
    * @return a string array of timestamps 
-   * @throws IOException
    */
   public String[] getFileTimestamps() {
     return toTimestampStrs(DistributedCache.getFileTimestamps(conf));

@@ -167,17 +167,18 @@ public class AggregatedLogFormat {
     private Set<File> uploadedFiles = new HashSet<File>();
     private final Set<String> alreadyUploadedLogFiles;
     private Set<String> allExistingFileMeta = new HashSet<String>();
+    private final boolean appFinished;
     // TODO Maybe add a version string here. Instead of changing the version of
     // the entire k-v format
 
     public LogValue(List<String> rootLogDirs, ContainerId containerId,
         String user) {
-      this(rootLogDirs, containerId, user, null, new HashSet<String>());
+      this(rootLogDirs, containerId, user, null, new HashSet<String>(), true);
     }
 
     public LogValue(List<String> rootLogDirs, ContainerId containerId,
         String user, LogAggregationContext logAggregationContext,
-        Set<String> alreadyUploadedLogFiles) {
+        Set<String> alreadyUploadedLogFiles, boolean appFinished) {
       this.rootLogDirs = new ArrayList<String>(rootLogDirs);
       this.containerId = containerId;
       this.user = user;
@@ -186,6 +187,7 @@ public class AggregatedLogFormat {
       Collections.sort(this.rootLogDirs);
       this.logAggregationContext = logAggregationContext;
       this.alreadyUploadedLogFiles = alreadyUploadedLogFiles;
+      this.appFinished = appFinished;
     }
 
     private Set<File> getPendingLogFilesToUploadForThisContainer() {
@@ -296,17 +298,15 @@ public class AggregatedLogFormat {
       }
 
       if (this.logAggregationContext != null && candidates.size() > 0) {
-        if (this.logAggregationContext.getIncludePattern() != null
-            && !this.logAggregationContext.getIncludePattern().isEmpty()) {
-          filterFiles(this.logAggregationContext.getIncludePattern(),
-              candidates, false);
-        }
+        filterFiles(
+          this.appFinished ? this.logAggregationContext.getIncludePattern()
+              : this.logAggregationContext.getRolledLogsIncludePattern(),
+          candidates, false);
 
-        if (this.logAggregationContext.getExcludePattern() != null
-            && !this.logAggregationContext.getExcludePattern().isEmpty()) {
-          filterFiles(this.logAggregationContext.getExcludePattern(),
-              candidates, true);
-        }
+        filterFiles(
+          this.appFinished ? this.logAggregationContext.getExcludePattern()
+              : this.logAggregationContext.getRolledLogsExcludePattern(),
+          candidates, true);
 
         Iterable<File> mask =
             Iterables.filter(candidates, new Predicate<File>() {
@@ -323,14 +323,15 @@ public class AggregatedLogFormat {
 
     private void filterFiles(String pattern, Set<File> candidates,
         boolean exclusion) {
-      Pattern filterPattern =
-          Pattern.compile(pattern);
-      for (Iterator<File> candidatesItr = candidates.iterator(); candidatesItr
+      if (pattern != null && !pattern.isEmpty()) {
+        Pattern filterPattern = Pattern.compile(pattern);
+        for (Iterator<File> candidatesItr = candidates.iterator(); candidatesItr
           .hasNext();) {
-        File candidate = candidatesItr.next();
-        boolean match = filterPattern.matcher(candidate.getName()).find();
-        if ((!match && !exclusion) || (match && exclusion)) {
-          candidatesItr.remove();
+          File candidate = candidatesItr.next();
+          boolean match = filterPattern.matcher(candidate.getName()).find();
+          if ((!match && !exclusion) || (match && exclusion)) {
+            candidatesItr.remove();
+          }
         }
       }
     }
@@ -378,7 +379,7 @@ public class AggregatedLogFormat {
             userUgi.doAs(new PrivilegedExceptionAction<FSDataOutputStream>() {
               @Override
               public FSDataOutputStream run() throws Exception {
-                fc = FileContext.getFileContext(conf);
+                fc = FileContext.getFileContext(remoteAppLogFile.toUri(), conf);
                 fc.setUMask(APP_LOG_FILE_UMASK);
                 return fc.create(
                     remoteAppLogFile,
@@ -470,7 +471,8 @@ public class AggregatedLogFormat {
 
     public LogReader(Configuration conf, Path remoteAppLogFile)
         throws IOException {
-      FileContext fileContext = FileContext.getFileContext(conf);
+      FileContext fileContext =
+          FileContext.getFileContext(remoteAppLogFile.toUri(), conf);
       this.fsDataIStream = fileContext.open(remoteAppLogFile);
       reader =
           new TFile.Reader(this.fsDataIStream, fileContext.getFileStatus(
@@ -710,6 +712,7 @@ public class AggregatedLogFormat {
                   pendingRead > buf.length ? buf.length : (int) pendingRead;
         len = valueStream.read(buf, 0, toRead);
       }
+      out.println("End of LogType:" + fileType);
       out.println("");
     }
 

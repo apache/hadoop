@@ -73,7 +73,7 @@ import org.apache.hadoop.io.Writable;
  *     timestamp = resultSet.getLong(2);
  *   } 
  * }
- * </pre></p>
+ * </pre>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

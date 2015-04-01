@@ -64,7 +64,7 @@ import org.apache.hadoop.mapreduce.Partitioner;
  *   <li>{@link #setOffsets}</li>
  *   <li>{@link #setLeftOffset}</li>
  *   <li>{@link #setRightOffset}</li>
- * </ul></p>
+ * </ul>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

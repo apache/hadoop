@@ -25,17 +25,18 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-public class NodeLabel implements Comparable<NodeLabel> {
+public class RMNodeLabel implements Comparable<RMNodeLabel> {
   private Resource resource;
   private int numActiveNMs;
   private String labelName;
   private Set<NodeId> nodeIds;
+  private boolean exclusive = true;
 
-  public NodeLabel(String labelName) {
+  public RMNodeLabel(String labelName) {
     this(labelName, Resource.newInstance(0, 0), 0);
   }
   
-  protected NodeLabel(String labelName, Resource res, int activeNMs) {
+  protected RMNodeLabel(String labelName, Resource res, int activeNMs) {
     this.labelName = labelName;
     this.resource = res;
     this.numActiveNMs = activeNMs;
@@ -76,12 +77,20 @@ public class NodeLabel implements Comparable<NodeLabel> {
     return labelName;
   }
   
-  public NodeLabel getCopy() {
-    return new NodeLabel(labelName, resource, numActiveNMs);
+  public void setIsExclusive(boolean exclusive) {
+    this.exclusive = exclusive;
+  }
+  
+  public boolean getIsExclusive() {
+    return this.exclusive;
+  }
+  
+  public RMNodeLabel getCopy() {
+    return new RMNodeLabel(labelName, resource, numActiveNMs);
   }
   
   @Override
-  public int compareTo(NodeLabel o) {
+  public int compareTo(RMNodeLabel o) {
     // We should always put empty label entry first after sorting
     if (labelName.isEmpty() != o.getLabelName().isEmpty()) {
       if (labelName.isEmpty()) {
@@ -95,8 +104,8 @@ public class NodeLabel implements Comparable<NodeLabel> {
   
   @Override
   public boolean equals(Object obj) {
-    if (obj instanceof NodeLabel) {
-      NodeLabel other = (NodeLabel) obj;
+    if (obj instanceof RMNodeLabel) {
+      RMNodeLabel other = (RMNodeLabel) obj;
       return Resources.equals(resource, other.getResource())
           && StringUtils.equals(labelName, other.getLabelName())
           && (other.getNumActiveNMs() == numActiveNMs); 

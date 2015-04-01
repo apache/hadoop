@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.util.PerformanceAdvisory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
@@ -105,7 +106,14 @@ public abstract class CryptoCodec implements Configurable {
     List<Class<? extends CryptoCodec>> result = Lists.newArrayList();
     String configName = HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX + 
         cipherSuite.getConfigSuffix();
-    String codecString = conf.get(configName);
+    String codecString;
+    if (configName.equals(CommonConfigurationKeysPublic
+        .HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_KEY)) {
+      codecString = conf.get(configName, CommonConfigurationKeysPublic
+          .HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_DEFAULT);
+    } else {
+      codecString = conf.get(configName);
+    }
     if (codecString == null) {
       PerformanceAdvisory.LOG.debug(
           "No crypto codec classes with cipher suite configured.");

@@ -1889,7 +1889,7 @@ A Task Attempt resource contains information about a particular task attempt wit
 
 Use the following URI to obtain an Task Attempt Object, from a task identified by the attemptid value.
 
-      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempt/{attemptid}
+      * http://<history server http address:port>/ws/v1/history/mapreduce/jobs/{jobid}/tasks/{taskid}/attempts/{attemptid}
 
 #### HTTP Operations Supported
 

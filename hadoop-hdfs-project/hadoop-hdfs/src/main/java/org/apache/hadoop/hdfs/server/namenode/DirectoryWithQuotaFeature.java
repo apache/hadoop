@@ -126,12 +126,12 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
 
   ContentSummaryComputationContext computeContentSummary(final INodeDirectory dir,
       final ContentSummaryComputationContext summary) {
-    final long original = summary.getCounts().get(Content.DISKSPACE);
+    final long original = summary.getCounts().getStoragespace();
     long oldYieldCount = summary.getYieldCount();
     dir.computeDirectoryContentSummary(summary, Snapshot.CURRENT_STATE_ID);
     // Check only when the content has not changed in the middle.
     if (oldYieldCount == summary.getYieldCount()) {
-      checkStoragespace(dir, summary.getCounts().get(Content.DISKSPACE) - original);
+      checkStoragespace(dir, summary.getCounts().getStoragespace() - original);
     }
     return summary;
   }

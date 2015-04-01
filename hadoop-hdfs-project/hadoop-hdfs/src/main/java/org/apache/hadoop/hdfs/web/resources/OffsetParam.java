@@ -46,4 +46,9 @@ public class OffsetParam extends LongParam {
   public String getName() {
     return NAME;
   }
+
+  public Long getOffset() {
+    Long offset = getValue();
+    return (offset == null) ? Long.valueOf(0) : offset;
+  }
 }

@@ -144,7 +144,7 @@ public class TupleWritable implements Writable, Iterable<Writable> {
 
   /**
    * Convert Tuple to String as in the following.
-   * <tt>[<child1>,<child2>,...,<childn>]</tt>
+   * <tt>[&lt;child1&gt;,&lt;child2&gt;,...,&lt;childn&gt;]</tt>
    */
   public String toString() {
     StringBuffer buf = new StringBuffer("[");

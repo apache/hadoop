@@ -13,8 +13,13 @@ Trunk (Unreleased)
 
     HADOOP-10950. rework heap management vars (John Smith via aw)
 
+    HADOOP-6857. FsShell should report raw disk usage including replication
+    factor. (Byron Wong via shv)
+
     HADOOP-11657. Align the output of `hadoop fs -du` to be more Unix-like.
     (aajisaka)
+
+    HADOOP-11553. Formalize the shell API (aw)
 
   NEW FEATURES
 
@@ -64,9 +69,6 @@ Trunk (Unreleased)
 
     HADOOP-7659. fs -getmerge isn't guaranteed to work well over non-HDFS
     filesystems (harsh)
-
-    HADOOP-8059. Add javadoc to InterfaceAudience and InterfaceStability.
-    (Brandon Li via suresh)
 
     HADOOP-8434. Add tests for Configuration setter methods.
     (Madhukara Phatak via suresh)
@@ -180,6 +182,15 @@ Trunk (Unreleased)
 
     HADOOP-11593. Convert site documentation from apt to markdown (stragglers)
     (Masatake Iwasaki via aw)
+
+    HADOOP-11673. Skip using JUnit Assume in TestCodec. (Brahma Reddy Battula
+    via cdouglas)
+
+    HADOOP-10115. Exclude duplicate jars in hadoop package under different
+    component's lib (Vinayakumar B via aw)
+
+    HADOOP-11524. hadoop_do_classpath_subcommand throws a shellcheck warning.
+    (cnauroth)
 
   BUG FIXES
 
@@ -409,13 +420,72 @@ Trunk (Unreleased)
     HADOOP-10774. Update KerberosTestUtils for hadoop-auth tests when using
     IBM Java (sangamesh via aw)
 
-    HADOOP-11602. Fix toUpperCase/toLowerCase to use Locale.ENGLISH. (ozawa)
+    HADOOP-11653. shellprofiles should require .sh extension
+    (Brahma Reddy Battula via aw)
+
+    HADOOP-11668. hadoop-daemons.sh bw compat broke with --slaves change
+    (Vinayakumar B via aw)
+
+    HADOOP-11703. git should ignore .DS_Store files on Mac OS X (Abin Shahab
+    via aw)
 
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
+
+Release 2.8.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    HADOOP-11226. Add a configuration to set ipc.Client's traffic class with
+    IPTOS_LOWDELAY|IPTOS_RELIABILITY. (Gopal V via ozawa)
+
+    HADOOP-9477. Add posixGroups support for LDAP groups mapping service.
+    (Dapeng Sun via Yongjun Zhang)
+
+  IMPROVEMENTS
+
+    HADOOP-11719. [Fsshell] Remove bin/hadoop reference from
+    GenericOptionsParser default help text.
+    (Brahma Reddy Battula via harsh)
+
+    HADOOP-11692. Improve authentication failure WARN message to avoid user
+    confusion. (Yongjun Zhang)
+
+    HADOOP-11659. o.a.h.fs.FileSystem.Cache#remove should use a single hash map
+    lookup. (Brahma Reddy Battula via aajisaka)
+
+    HADOOP-11709. Time.NANOSECONDS_PER_MILLISECOND - use class-level final
+    constant instead of method variable (Ajith S via ozawa)
+
+    HADOOP-11447. Add a more meaningful toString method to SampleStat and 
+    MutableStat. (kasha)
+
+    HADOOP-11737. mockito's version in hadoop-nfs’ pom.xml shouldn't be
+    specified. (Kengo Seki via ozawa)
+
+    HADOOP-11741. Add LOG.isDebugEnabled() guard for some LOG.debug().
+    (Walter Su via ozawa)
+
+    HADOOP-11660. Add support for hardware crc of HDFS checksums on ARM aarch64
+    architecture (Edward Nevill via Colin P. McCabe)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-10027. *Compressor_deflateBytesDirect passes instance instead of
+    jclass to GetStaticObjectField. (Hui Zheng via cnauroth)
+
+    HADOOP-11724. DistCp throws NPE when the target directory is root.
+    (Lei Eddy Xu via Yongjun Zhang) 
+
+    HADOOP-11760. Fix typo of javadoc in DistCp. (Brahma Reddy Battula via
+    ozawa).
 
 Release 2.7.0 - UNRELEASED
 
@@ -464,9 +534,6 @@ Release 2.7.0 - UNRELEASED
     (Yongjun Zhang via wang)
 
     HADOOP-10748. HttpServer2 should not load JspServlet. (wheat9)
-
-    HADOOP-6857. FsShell should report raw disk usage including replication
-    factor. (Byron Wong via shv)
 
     HADOOP-10847. Remove the usage of sun.security.x509.* in testing code.
     (Pascal Oliva via wheat9)
@@ -647,6 +714,23 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11658. Externalize io.compression.codecs property.
     (Kai Zheng via aajisaka)
 
+    HADOOP-11648. Set DomainSocketWatcher thread name explicitly.
+    (Liang Xie via ozawa)
+
+    HADOOP-11642. Upgrade azure sdk version from 0.6.0 to 2.0.0.
+    (Shashank Khandelwal and Ivan Mitic via cnauroth)
+
+    HADOOP-11714. Add more trace log4j messages to SpanReceiverHost (cmccabe)
+
+    HADOOP-8059. Add javadoc to InterfaceAudience and InterfaceStability.
+    (Brandon Li via suresh)
+
+    HADOOP-9329. document native build dependencies in BUILDING.txt (Vijay Bhat
+    via Colin P. McCabe)
+
+    HADOOP-10670. Allow AuthenticationFilters to load secret from signature
+    secret files. (Kai Zheng via wheat9)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
@@ -666,6 +750,8 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11620. Add support for load balancing across a group of KMS for HA.
     (Arun Suresh via wang)
+
+    HADOOP-11183. Memory-based S3AOutputstream. (Thomas Demoor via stevel)
 
   BUG FIXES
 
@@ -1035,6 +1121,68 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11605. FilterFileSystem#create with ChecksumOpt should propagate it
     to wrapped FS. (gera)
+
+    HADOOP-11674. oneByteBuf in CryptoInputStream and CryptoOutputStream
+    should be non static. (Sean Busbey via yliu)
+
+    HADOOP-11670. Regression: s3a auth setup broken. (Adam Budde via stevel)
+
+    HADOOP-11602. Fix toUpperCase/toLowerCase to use Locale.ENGLISH. (ozawa)
+
+    HADOOP-11686. MiniKDC cannot change ORG_NAME or ORG_DOMAIN.
+    (Duo Zhang via wheat9)
+
+    HADOOP-11618. DelegateToFileSystem erroneously uses default FS's port in
+    constructor. (Brahma Reddy Battula via gera)
+
+    HADOOP-11693. Azure Storage FileSystem rename operations are throttled too
+    aggressively to complete HBase WAL archiving. (Duo Xu via cnauroth)
+
+    HADOOP-11710. Make CryptoOutputStream behave like DFSOutputStream wrt
+    synchronization. (Sean Busbey via yliu)
+
+    HADOOP-11558. Fix dead links to doc of hadoop-tools. (Jean-Pierre 
+    Matsumoto via ozawa)
+
+    HADOOP-11638. OpensslSecureRandom.c pthreads_thread_id should support FreeBSD
+    and Solaris in addition to Linux. (Kiran Kumar M R via cnauroth)
+
+    HADOOP-11720. [JDK8] Fix javadoc errors caused by incorrect or illegal
+    tags in hadoop-tools. (Akira AJISAKA via ozawa)
+
+    HADOOP-11722. Some Instances of Services using
+    ZKDelegationTokenSecretManager go down when old token cannot be deleted.
+    (Arun Suresh via atm)
+
+    HADOOP-10703. HttpServer2 creates multiple authentication filters.
+    (Benoy Antony via wheat9)
+
+    HADOOP-11729. Fix link to cgroups doc in site.xml. (Masatake Iwasaki via
+    ozawa)
+
+    HADOOP-11609. Correct credential commands info in
+    CommandsManual.html#credential. (Varun Saxena via ozawa)
+
+    HADOOP-11014. Potential resource leak in JavaKeyStoreProvider due to
+    unclosed stream. (ozawa)
+
+    HADOOP-11738. Fix a link of Protocol Buffers 2.5 for download in BUILDING.txt.
+    (ozawa)
+
+    HADOOP-11748. The secrets of auth cookies should not be specified in
+    configuration in clear text. (Li Lu and Haohui Mai via wheat9)
+
+    HADOOP-11691. X86 build of libwinutils is broken.
+    (Kiran Kumar M R via cnauroth)
+
+    HADOOP-11639. Clean up Windows native code compilation warnings related to
+    Windows Secure Container Executor. (Remus Rusanu via cnauroth)
+
+    HADOOP-11761. Fix findbugs warnings in org.apache.hadoop.security
+    .authentication. (Li Lu via wheat9)
+
+    HADOOP-11754. RM fails to start in non-secure mode due to authentication
+    filter failure. (wheat9)
 
 Release 2.6.1 - UNRELEASED
 

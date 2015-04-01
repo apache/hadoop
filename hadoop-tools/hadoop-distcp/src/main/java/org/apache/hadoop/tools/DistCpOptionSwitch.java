@@ -41,8 +41,6 @@ public enum DistCpOptionSwitch {
    * target file. Note that when preserving checksum type, block size is also 
    * preserved.
    *
-   * @see PRESERVE_STATUS_DEFAULT
-   *
    * If any of the optional switches are present among rbugpcaxt, then
    * only the corresponding file attribute is preserved.
    */
@@ -105,7 +103,7 @@ public enum DistCpOptionSwitch {
    * Copy all the source files and commit them atomically to the target
    * This is typically useful in cases where there is a process
    * polling for availability of a file/dir. This option is incompatible
-   * with SYNC_FOLDERS & DELETE_MISSING
+   * with SYNC_FOLDERS and DELETE_MISSING
    */
   ATOMIC_COMMIT(DistCpConstants.CONF_LABEL_ATOMIC_COPY,
       new Option("atomic", false, "Commit all changes or none")),
@@ -149,6 +147,11 @@ public enum DistCpOptionSwitch {
       new Option("append", false,
           "Reuse existing data in target files and append new data to them if possible")),
 
+  DIFF(DistCpConstants.CONF_LABEL_DIFF,
+      new Option("diff", false,
+      "Use snapshot diff report to identify the difference between source and target"),
+      2),
+
   /**
    * Should DisctpExecution be blocking
    */
@@ -176,6 +179,11 @@ public enum DistCpOptionSwitch {
   DistCpOptionSwitch(String confLabel, Option option) {
     this.confLabel = confLabel;
     this.option = option;
+  }
+
+  DistCpOptionSwitch(String confLabel, Option option, int argNum) {
+    this(confLabel, option);
+    this.option.setArgs(argNum);
   }
 
   /**

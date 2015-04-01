@@ -26,19 +26,17 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p><code>NodeHealthStatus</code> is a summary of the health status of the
- * node.</p>
- *
- * <p>It includes information such as:
- *   <ul>
- *     <li>
- *       An indicator of whether the node is healthy, as determined by the 
- *       health-check script.
- *     </li>
- *     <li>The previous time at which the health status was reported.</li>
- *     <li>A diagnostic report on the health status.</li>
- *   </ul>
- * </p>
+ * {@code NodeHealthStatus} is a summary of the health status of the node.
+ * <p>
+ * It includes information such as:
+ * <ul>
+ *   <li>
+ *     An indicator of whether the node is healthy, as determined by the
+ *     health-check script.
+ *   </li>
+ *   <li>The previous time at which the health status was reported.</li>
+ *   <li>A diagnostic report on the health status.</li>
+ * </ul>
  * 
  * @see NodeReport
  * @see ApplicationClientProtocol#getClusterNodes(org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest)

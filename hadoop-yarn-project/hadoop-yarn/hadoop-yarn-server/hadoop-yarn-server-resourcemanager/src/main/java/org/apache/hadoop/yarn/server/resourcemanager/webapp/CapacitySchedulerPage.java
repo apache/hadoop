@@ -31,11 +31,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerLeafQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.webapp.AppsBlock;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.LI;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.UL;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
@@ -66,41 +69,8 @@ class CapacitySchedulerPage extends RmView {
       lqinfo = (CapacitySchedulerLeafQueueInfo) info.qinfo;
     }
 
-    //Return a string describing one resource as a percentage of another
-    private String getPercentage(ResourceInfo numerator, ResourceInfo denominator) {
-      StringBuilder percentString = new StringBuilder("Memory: ");
-      if (numerator != null) {
-        percentString.append(numerator.getMemory());
-      }
-      if (denominator.getMemory() != 0) {
-        percentString.append(" (<span title='of used resources in this queue'>")
-          .append(StringUtils.format("%.2f", numerator.getMemory() * 100.0 /
-            denominator.getMemory()) + "%</span>)");
-      }
-      percentString.append(", vCores: ");
-      if (numerator != null) {
-        percentString.append(numerator.getvCores());
-      }
-      if (denominator.getvCores() != 0) {
-        percentString.append(" (<span title='of used resources in this queue'>")
-          .append(StringUtils.format("%.2f", numerator.getvCores() * 100.0 /
-          denominator.getvCores()) + "%</span>)");
-      }
-      return percentString.toString();
-    }
-
     @Override
     protected void render(Block html) {
-      StringBuilder activeUserList = new StringBuilder("");
-      ResourceInfo usedResources = lqinfo.getResourcesUsed();
-      ArrayList<UserInfo> users = lqinfo.getUsers().getUsersList();
-      for (UserInfo entry: users) {
-        activeUserList.append(entry.getUsername()).append(" &lt;")
-          .append(getPercentage(entry.getResourcesUsed(), usedResources))
-          .append(", Schedulable Apps: " + entry.getNumActiveApplications())
-          .append(", Non-Schedulable Apps: " + entry.getNumPendingApplications())
-          .append("&gt;<br style='display:block'>"); //Force line break
-      }
 
       ResponseInfo ri = info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status").
           _("Queue State:", lqinfo.getQueueState()).
@@ -115,12 +85,12 @@ class CapacitySchedulerPage extends RmView {
           _("Max Applications:", Integer.toString(lqinfo.getMaxApplications())).
           _("Max Applications Per User:", Integer.toString(lqinfo.getMaxApplicationsPerUser())).
           _("Max Application Master Resources:", lqinfo.getAMResourceLimit().toString()).
+          _("Used Application Master Resources:", lqinfo.getUsedAMResource().toString()).
           _("Max Application Master Resources Per User:", lqinfo.getUserAMResourceLimit().toString()).
           _("Configured Capacity:", percent(lqinfo.getCapacity() / 100)).
           _("Configured Max Capacity:", percent(lqinfo.getMaxCapacity() / 100)).
           _("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
           _("Configured User Limit Factor:", String.format("%.1f", lqinfo.getUserLimitFactor())).
-          _r("Active Users: ", activeUserList.toString()).
           _("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
           _("Preemption:", lqinfo.getPreemptionDisabled() ? "disabled" : "enabled");
 
@@ -128,6 +98,44 @@ class CapacitySchedulerPage extends RmView {
 
       // clear the info contents so this queue's info doesn't accumulate into another queue's info
       ri.clear();
+    }
+  }
+
+  static class QueueUsersInfoBlock extends HtmlBlock {
+    final CapacitySchedulerLeafQueueInfo lqinfo;
+
+    @Inject
+    QueueUsersInfoBlock(ViewContext ctx, CSQInfo info) {
+      super(ctx);
+      lqinfo = (CapacitySchedulerLeafQueueInfo) info.qinfo;
+    }
+
+    @Override
+    protected void render(Block html) {
+      TBODY<TABLE<Hamlet>> tbody =
+          html.table("#userinfo").thead().$class("ui-widget-header").tr().th()
+              .$class("ui-state-default")._("User Name")._().th()
+              .$class("ui-state-default")._("Max Resource")._().th()
+              .$class("ui-state-default")._("Used Resource")._().th()
+              .$class("ui-state-default")._("Max AM Resource")._().th()
+              .$class("ui-state-default")._("Used AM Resource")._().th()
+              .$class("ui-state-default")._("Schedulable Apps")._().th()
+              .$class("ui-state-default")._("Non-Schedulable Apps")._()._()._()
+              .tbody();
+
+      ArrayList<UserInfo> users = lqinfo.getUsers().getUsersList();
+      for (UserInfo userInfo : users) {
+        tbody.tr().td(userInfo.getUsername())
+            .td(userInfo.getUserResourceLimit().toString())
+            .td(userInfo.getResourcesUsed().toString())
+            .td(lqinfo.getUserAMResourceLimit().toString())
+            .td(userInfo.getAMResourcesUsed().toString())
+            .td(Integer.toString(userInfo.getNumActiveApplications()))
+            .td(Integer.toString(userInfo.getNumPendingApplications()))._();
+      }
+
+      html.div().$class("usersinfo").h5("Active Users Info")._();
+      tbody._()._();
     }
   }
 
@@ -165,6 +173,7 @@ class CapacitySchedulerPage extends RmView {
         csqinfo.qinfo = info;
         if (info.getQueues() == null) {
           li.ul("#lq").li()._(LeafQueueInfoBlock.class)._()._();
+          li.ul("#lq").li()._(QueueUsersInfoBlock.class)._()._();
         } else {
           li._(QueueBlock.class);
         }

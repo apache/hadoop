@@ -128,8 +128,8 @@ Usage: `hadoop credential <subcommand> [options]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| create *alias* [-v *value*][-provider *provider-path*] | Prompts the user for a credential to be stored as the given alias when a value is not provided via `-v`. The *hadoop.security.credential.provider.path* within the core-site.xml file will be used unless a `-provider` is indicated. |
-| delete *alias* [-i][-provider *provider-path*] | Deletes the credential with the provided alias and optionally warns the user when `--interactive` is used. The *hadoop.security.credential.provider.path* within the core-site.xml file will be used unless a `-provider` is indicated. |
+| create *alias* [-provider *provider-path*] | Prompts the user for a credential to be stored as the given alias. The *hadoop.security.credential.provider.path* within the core-site.xml file will be used unless a `-provider` is indicated. |
+| delete *alias* [-provider *provider-path*] [-f] | Deletes the credential with the provided alias. The *hadoop.security.credential.provider.path* within the core-site.xml file will be used unless a `-provider` is indicated. The command asks for confirmation unless `-f` is specified |
 | list [-provider *provider-path*] | Lists all of the credential aliases The *hadoop.security.credential.provider.path* within the core-site.xml file will be used unless a `-provider` is indicated. |
 
 Command to manage credentials, passwords and secrets within credential providers.

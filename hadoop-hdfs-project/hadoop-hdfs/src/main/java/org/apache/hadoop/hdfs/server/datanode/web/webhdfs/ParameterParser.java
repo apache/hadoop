@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
+import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
 import org.apache.hadoop.hdfs.web.resources.OffsetParam;
 import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
@@ -38,6 +40,7 @@ import org.apache.hadoop.security.token.Token;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 
@@ -50,7 +53,8 @@ class ParameterParser {
   private final Map<String, List<String>> params;
 
   ParameterParser(QueryStringDecoder decoder, Configuration conf) {
-    this.path = QueryStringDecoder.decodeComponent(decoder.path().substring(WEBHDFS_PREFIX_LENGTH));
+    this.path = decodeComponent(decoder.path().substring
+        (WEBHDFS_PREFIX_LENGTH), Charsets.UTF_8);
     this.params = decoder.parameters();
     this.conf = conf;
   }
@@ -62,7 +66,11 @@ class ParameterParser {
   }
 
   long offset() {
-    return new OffsetParam(param(OffsetParam.NAME)).getValue();
+    return new OffsetParam(param(OffsetParam.NAME)).getOffset();
+  }
+
+  long length() {
+    return new LengthParam(param(LengthParam.NAME)).getLength();
   }
 
   String namenodeId() {
@@ -121,5 +129,79 @@ class ParameterParser {
   private String param(String key) {
     List<String> p = params.get(key);
     return p == null ? null : p.get(0);
+  }
+
+  /**
+   * The following function behaves exactly the same as netty's
+   * <code>QueryStringDecoder#decodeComponent</code> except that it
+   * does not decode the '+' character as space. WebHDFS takes this scheme
+   * to maintain the backward-compatibility for pre-2.7 releases.
+   */
+  private static String decodeComponent(final String s, final Charset charset) {
+    if (s == null) {
+      return "";
+    }
+    final int size = s.length();
+    boolean modified = false;
+    for (int i = 0; i < size; i++) {
+      final char c = s.charAt(i);
+      if (c == '%' || c == '+') {
+        modified = true;
+        break;
+      }
+    }
+    if (!modified) {
+      return s;
+    }
+    final byte[] buf = new byte[size];
+    int pos = 0;  // position in `buf'.
+    for (int i = 0; i < size; i++) {
+      char c = s.charAt(i);
+      if (c == '%') {
+        if (i == size - 1) {
+          throw new IllegalArgumentException("unterminated escape sequence at" +
+                                                 " end of string: " + s);
+        }
+        c = s.charAt(++i);
+        if (c == '%') {
+          buf[pos++] = '%';  // "%%" -> "%"
+          break;
+        }
+        if (i == size - 1) {
+          throw new IllegalArgumentException("partial escape sequence at end " +
+                                                 "of string: " + s);
+        }
+        c = decodeHexNibble(c);
+        final char c2 = decodeHexNibble(s.charAt(++i));
+        if (c == Character.MAX_VALUE || c2 == Character.MAX_VALUE) {
+          throw new IllegalArgumentException(
+              "invalid escape sequence `%" + s.charAt(i - 1) + s.charAt(
+                  i) + "' at index " + (i - 2) + " of: " + s);
+        }
+        c = (char) (c * 16 + c2);
+        // Fall through.
+      }
+      buf[pos++] = (byte) c;
+    }
+    return new String(buf, 0, pos, charset);
+  }
+
+  /**
+   * Helper to decode half of a hexadecimal number from a string.
+   * @param c The ASCII character of the hexadecimal number to decode.
+   * Must be in the range {@code [0-9a-fA-F]}.
+   * @return The hexadecimal value represented in the ASCII character
+   * given, or {@link Character#MAX_VALUE} if the character is invalid.
+   */
+  private static char decodeHexNibble(final char c) {
+    if ('0' <= c && c <= '9') {
+      return (char) (c - '0');
+    } else if ('a' <= c && c <= 'f') {
+      return (char) (c - 'a' + 10);
+    } else if ('A' <= c && c <= 'F') {
+      return (char) (c - 'A' + 10);
+    } else {
+      return Character.MAX_VALUE;
+    }
   }
 }

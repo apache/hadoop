@@ -471,10 +471,10 @@
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <copy file="src/main/resources/core-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
-              </tasks>
+              </target>
             </configuration>
           </execution>
         </executions>
@@ -507,6 +507,53 @@
             <exclude>src/test/resources/test.har/part-0</exclude>
             <exclude>src/test/resources/javakeystoreprovider.password</exclude>
           </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+            <execution>
+                <id>shelldocs</id>
+                <phase>pre-site</phase>
+                <goals>
+                    <goal>exec</goal>
+                </goals>
+                <configuration>
+                    <executable>python</executable>
+                    <workingDirectory>src/site/markdown</workingDirectory>
+                    <arguments>
+                        <argument>${basedir}/../../dev-support/shelldocs.py</argument>
+                        <argument>--skipprnorep</argument>
+                        <argument>--output</argument>
+                        <argument>${basedir}/src/site/markdown/UnixShellAPI.md</argument>
+                        <argument>--input</argument>
+                        <argument>${basedir}/src/main/bin/hadoop-functions.sh</argument>
+                    </arguments>
+                </configuration>
+            </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>src/site/markdown</directory>
+                <includes>
+                  <include>UnixShellAPI.md</include>
+                </includes>
+              <followSymlinks>false</followSymlinks>
+            </fileset>
+            <fileset>
+              <directory>src/site/resources</directory>
+                <includes>
+                  <include>configuration.xsl</include>
+                  <include>core-default.xml</include>
+                </includes>
+              <followSymlinks>false</followSymlinks>
+            </fileset>
+          </filesets>
         </configuration>
       </plugin>
     </plugins>
@@ -550,7 +597,7 @@
                       <family>unix</family>
                       <message>native build only supported on Mac or Unix</message>
                     </requireOS>
-                  </rules>  
+                  </rules>
                   <fail>true</fail>
                 </configuration>
               </execution>
@@ -670,7 +717,7 @@
                       <family>windows</family>
                       <message>native-win build only supported on Windows</message>
                     </requireOS>
-                  </rules>  
+                  </rules>
                   <fail>true</fail>
                 </configuration>
               </execution>
@@ -786,7 +833,7 @@
                       <family>mac</family>
                       <family>unix</family>
                     </requireOS>
-                  </rules>  
+                  </rules>
                   <fail>true</fail>
                 </configuration>
               </execution>

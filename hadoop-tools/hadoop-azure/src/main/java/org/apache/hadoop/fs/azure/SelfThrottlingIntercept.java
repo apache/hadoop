@@ -25,11 +25,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.RequestResult;
-import com.microsoft.windowsazure.storage.ResponseReceivedEvent;
-import com.microsoft.windowsazure.storage.SendingRequestEvent;
-import com.microsoft.windowsazure.storage.StorageEvent;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.RequestResult;
+import com.microsoft.azure.storage.ResponseReceivedEvent;
+import com.microsoft.azure.storage.SendingRequestEvent;
+import com.microsoft.azure.storage.StorageEvent;
 
 /*
  * Self throttling is implemented by hooking into send & response callbacks 

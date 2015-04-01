@@ -69,7 +69,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
  *
  *     // Submit the job, then poll for progress until the job is complete
  *     job.waitForCompletion(true);
- * </pre></blockquote></p>
+ * </pre></blockquote>
  * 
  * 
  */
@@ -98,6 +98,7 @@ public class Job extends JobContextImpl implements JobContext {
     "mapreduce.client.genericoptionsparser.used";
   public static final String SUBMIT_REPLICATION = 
     "mapreduce.client.submit.file.replication";
+  public static final int DEFAULT_SUBMIT_REPLICATION = 10;
 
   @InterfaceStability.Evolving
   public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }

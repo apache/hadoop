@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.PrintWriter;
 import java.sql.Time;
@@ -177,7 +177,7 @@ class PendingReplicationBlocks {
     private final List<DatanodeDescriptor> targets;
 
     PendingBlockInfo(DatanodeDescriptor[] targets) {
-      this.timeStamp = now();
+      this.timeStamp = monotonicNow();
       this.targets = targets == null ? new ArrayList<DatanodeDescriptor>()
           : new ArrayList<DatanodeDescriptor>(Arrays.asList(targets));
     }
@@ -187,7 +187,7 @@ class PendingReplicationBlocks {
     }
 
     void setTimeStamp() {
-      timeStamp = now();
+      timeStamp = monotonicNow();
     }
 
     void incrementReplicas(DatanodeDescriptor... newTargets) {
@@ -234,7 +234,7 @@ class PendingReplicationBlocks {
       synchronized (pendingReplications) {
         Iterator<Map.Entry<Block, PendingBlockInfo>> iter =
                                     pendingReplications.entrySet().iterator();
-        long now = now();
+        long now = monotonicNow();
         if(LOG.isDebugEnabled()) {
           LOG.debug("PendingReplicationMonitor checking Q");
         }

@@ -34,7 +34,7 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
 
   static final Log LOG = LogFactory
       .getLog(WindowsBasedProcessTree.class);
-  
+
   static class ProcessInfo {
     String pid; // process pid
     long vmem; // virtual memory
@@ -45,8 +45,8 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
   
   private String taskProcessId = null;
-  private long cpuTimeMs = 0;
-  private Map<String, ProcessInfo> processTree = 
+  private long cpuTimeMs = UNAVAILABLE;
+  private Map<String, ProcessInfo> processTree =
       new HashMap<String, ProcessInfo>();
     
   public static boolean isAvailable() {
@@ -173,33 +173,63 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   }
 
   @Override
-  public long getCumulativeVmem(int olderThanAge) {
-    long total = 0;
+  public long getVirtualMemorySize(int olderThanAge) {
+    long total = UNAVAILABLE;
     for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.age > olderThanAge)) {
-        total += p.vmem;
+      if (p != null) {
+        if (total == UNAVAILABLE) {
+          total = 0;
+        }
+        if (p.age > olderThanAge) {
+          total += p.vmem;
+        }
       }
     }
     return total;
   }
+  
+  @Override
+  @SuppressWarnings("deprecation")
+  public long getCumulativeVmem(int olderThanAge) {
+    return getVirtualMemorySize(olderThanAge);
+  }
 
   @Override
-  public long getCumulativeRssmem(int olderThanAge) {
-    long total = 0;
+  public long getRssMemorySize(int olderThanAge) {
+    long total = UNAVAILABLE;
     for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.age > olderThanAge)) {
-        total += p.workingSet;
+      if (p != null) {
+        if (total == UNAVAILABLE) {
+          total = 0;
+        }
+        if (p.age > olderThanAge) {
+          total += p.workingSet;
+        }
       }
     }
     return total;
+  }
+  
+  @Override
+  @SuppressWarnings("deprecation")
+  public long getCumulativeRssmem(int olderThanAge) {
+    return getRssMemorySize(olderThanAge);
   }
 
   @Override
   public long getCumulativeCpuTime() {
     for (ProcessInfo p : processTree.values()) {
+      if (cpuTimeMs == UNAVAILABLE) {
+        cpuTimeMs = 0;
+      }
       cpuTimeMs += p.cpuTimeMsDelta;
     }
     return cpuTimeMs;
+  }
+
+  @Override
+  public float getCpuUsagePercent() {
+    return CpuTimeTracker.UNAVAILABLE;
   }
 
 }

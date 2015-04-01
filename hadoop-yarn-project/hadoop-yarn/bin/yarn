@@ -25,6 +25,7 @@ function hadoop_usage
   echo "  applicationattempt                    prints applicationattempt(s) report"
   echo "  classpath                             prints the class path needed to get the"
   echo "                                        Hadoop jar and the required libraries"
+  echo "  cluster                               prints cluster information"
   echo "  container                             prints container(s) report"
   echo "  daemonlog                             get/set the log level for each daemon"
   echo "  jar <jar>                             run a jar file"
@@ -81,7 +82,12 @@ case "${COMMAND}" in
     set -- "${COMMAND}" "$@"
   ;;
   classpath)
-    hadoop_do_classpath_subcommand "$@"
+    hadoop_do_classpath_subcommand CLASS "$@"
+  ;;
+  cluster)
+    CLASS=org.apache.hadoop.yarn.client.cli.ClusterCLI
+    hadoop_debug "Append YARN_CLIENT_OPTS onto YARN_OPTS"
+    YARN_OPTS="${YARN_OPTS} ${YARN_CLIENT_OPTS}"
   ;;
   daemonlog)
     CLASS=org.apache.hadoop.log.LogLevel

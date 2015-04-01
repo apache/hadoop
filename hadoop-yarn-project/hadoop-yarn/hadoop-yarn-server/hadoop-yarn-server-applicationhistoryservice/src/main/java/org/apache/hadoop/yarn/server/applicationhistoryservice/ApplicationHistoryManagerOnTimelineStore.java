@@ -415,6 +415,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     String diagnosticsInfo = null;
     int exitStatus = ContainerExitStatus.INVALID;
     ContainerState state = null;
+    String nodeHttpAddress = null;
     Map<String, Object> entityInfo = entity.getOtherInfo();
     if (entityInfo != null) {
       if (entityInfo
@@ -443,6 +444,12 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           .containsKey(ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO)) {
         allocatedPriority = (Integer) entityInfo.get(
                 ContainerMetricsConstants.ALLOCATED_PRIORITY_ENTITY_INFO);
+      }
+      if (entityInfo.containsKey(
+          ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO)) {
+        nodeHttpAddress =
+            (String) entityInfo
+              .get(ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO);
       }
     }
     List<TimelineEvent> events = entity.getEvents();
@@ -493,7 +500,8 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         Resource.newInstance(allocatedMem, allocatedVcore),
         NodeId.newInstance(allocatedHost, allocatedPort),
         Priority.newInstance(allocatedPriority),
-        createdTime, finishedTime, diagnosticsInfo, logUrl, exitStatus, state);
+        createdTime, finishedTime, diagnosticsInfo, logUrl, exitStatus, state,
+        nodeHttpAddress);
   }
 
   private ApplicationReportExt generateApplicationReport(TimelineEntity entity,
@@ -509,15 +517,14 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       if (app.appReport.getCurrentApplicationAttemptId() != null) {
         ApplicationAttemptReport appAttempt =
             getApplicationAttempt(app.appReport.getCurrentApplicationAttemptId());
-        if (appAttempt != null) {
-          app.appReport.setHost(appAttempt.getHost());
-          app.appReport.setRpcPort(appAttempt.getRpcPort());
-          app.appReport.setTrackingUrl(appAttempt.getTrackingUrl());
-          app.appReport.setOriginalTrackingUrl(appAttempt.getOriginalTrackingUrl());
-        }
+        app.appReport.setHost(appAttempt.getHost());
+        app.appReport.setRpcPort(appAttempt.getRpcPort());
+        app.appReport.setTrackingUrl(appAttempt.getTrackingUrl());
+        app.appReport.setOriginalTrackingUrl(appAttempt.getOriginalTrackingUrl());
       }
-    } catch (AuthorizationException e) {
+    } catch (AuthorizationException | ApplicationAttemptNotFoundException e) {
       // AuthorizationException is thrown because the user doesn't have access
+      // It's possible that the app is finished before the first attempt is created.
       app.appReport.setDiagnostics(null);
       app.appReport.setCurrentApplicationAttemptId(null);
     }

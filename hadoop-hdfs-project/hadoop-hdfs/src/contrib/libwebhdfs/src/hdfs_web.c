@@ -1124,6 +1124,12 @@ done:
     return file;
 }
 
+int hdfsTruncateFile(hdfsFS fs, const char* path, tOffset newlength)
+{
+    errno = ENOTSUP;
+    return -1;
+}
+
 tSize hdfsWrite(hdfsFS fs, hdfsFile file, const void* buffer, tSize length)
 {
     if (length == 0) {

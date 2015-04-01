@@ -36,6 +36,7 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Lz4Codec;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.lz4.Lz4Decompressor;
+import org.apache.hadoop.test.MultithreadedTestUtil;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assume.*;
@@ -312,5 +313,21 @@ public class TestLz4CompressorDecompressor {
     for (int i = 0; i < size; i++)
       array[i] = (byte)rnd.nextInt(16);
     return array;
+  }
+
+  @Test
+  public void testLz4CompressDecompressInMultiThreads() throws Exception {
+    MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext();
+    for(int i=0;i<10;i++) {
+      ctx.addThread( new MultithreadedTestUtil.TestingThread(ctx) {
+        @Override
+        public void doWork() throws Exception {
+          testCompressDecompress();
+        }
+      });
+    }
+    ctx.startThreads();
+
+    ctx.waitFor(60000);
   }
 }

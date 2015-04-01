@@ -42,7 +42,6 @@ public class WebHdfsTestUtil {
 
   public static Configuration createConf() {
     final Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     return conf;
   }
 

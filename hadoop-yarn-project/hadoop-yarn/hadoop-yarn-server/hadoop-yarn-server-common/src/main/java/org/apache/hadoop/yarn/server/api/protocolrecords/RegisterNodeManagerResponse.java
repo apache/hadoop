@@ -45,4 +45,7 @@ public interface RegisterNodeManagerResponse {
   void setRMVersion(String version);
 
   String getRMVersion();
+  
+  boolean getAreNodeLabelsAcceptedByRM();
+  void setAreNodeLabelsAcceptedByRM(boolean areNodeLabelsAcceptedByRM);
 }

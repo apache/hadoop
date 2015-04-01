@@ -44,9 +44,6 @@ public class Bzip2Compressor implements Compressor {
 
   private static final Log LOG = LogFactory.getLog(Bzip2Compressor.class);
 
-  // HACK - Use this as a global lock in the JNI layer.
-  private static Class<Bzip2Compressor> clazz = Bzip2Compressor.class;
-
   private long stream;
   private int blockSize;
   private int workFactor;

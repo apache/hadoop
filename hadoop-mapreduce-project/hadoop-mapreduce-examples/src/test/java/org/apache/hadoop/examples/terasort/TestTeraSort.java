@@ -104,4 +104,9 @@ public class TestTeraSort extends HadoopTestCase {
       TERA_OUTPUT_PATH);
   }
 
+  public void testTeraSortWithLessThanTwoArgs() throws Exception {
+    String[] args = new String[1];
+    assertEquals(new TeraSort().run(args), 2);
+  }
+
 }

@@ -39,16 +39,16 @@ import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.TestHookOperationCo
 import org.junit.After;
 import org.junit.Test;
 
-import com.microsoft.windowsazure.storage.Constants;
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.ResponseReceivedEvent;
-import com.microsoft.windowsazure.storage.StorageErrorCodeStrings;
-import com.microsoft.windowsazure.storage.StorageEvent;
-import com.microsoft.windowsazure.storage.StorageException;
-import com.microsoft.windowsazure.storage.blob.BlockEntry;
-import com.microsoft.windowsazure.storage.blob.BlockSearchMode;
-import com.microsoft.windowsazure.storage.blob.CloudBlockBlob;
-import com.microsoft.windowsazure.storage.core.Base64;
+import com.microsoft.azure.storage.Constants;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.ResponseReceivedEvent;
+import com.microsoft.azure.storage.StorageErrorCodeStrings;
+import com.microsoft.azure.storage.StorageEvent;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.BlockEntry;
+import com.microsoft.azure.storage.blob.BlockSearchMode;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
+import com.microsoft.azure.storage.core.Base64;
 
 /**
  * Test that we do proper data integrity validation with MD5 checks as

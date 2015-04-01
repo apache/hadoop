@@ -65,7 +65,7 @@ public class OfflineImageViewerPB {
       + "    -step defines the granularity of the distribution. (2MB by default)\n"
       + "  * Web: Run a viewer to expose read-only WebHDFS API.\n"
       + "    -addr specifies the address to listen. (localhost:5978 by default)\n"
-      + "  * Delimited: Generate a text file with all of the elements common\n"
+      + "  * Delimited (experimental): Generate a text file with all of the elements common\n"
       + "    to both inodes and inodes-under-construction, separated by a\n"
       + "    delimiter. The default delimiter is \\t, though this may be\n"
       + "    changed via the -delimiter argument.\n"
@@ -80,10 +80,10 @@ public class OfflineImageViewerPB {
       + "-p,--processor <arg>   Select which type of processor to apply\n"
       + "                       against image file. (XML|FileDistribution|Web|Delimited)\n"
       + "                       (Web by default)\n"
-      + "-delimiter <arg>       Delimiting string to use with Delimited processor\n"
+      + "-delimiter <arg>       Delimiting string to use with Delimited processor.  \n"
       + "-t,--temp <arg>        Use temporary dir to cache intermediate result to generate\n"
       + "                       Delimited outputs. If not set, Delimited processor constructs\n"
-      + "                       the namespace in memory before outputting text."
+      + "                       the namespace in memory before outputting text.\n"
       + "-h,--help              Display usage information and exit\n";
 
   /**

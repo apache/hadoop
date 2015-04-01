@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -114,7 +115,7 @@ public abstract class SchedulerNode {
 
   /**
    * Get the name of the node for scheduling matching decisions.
-   * <p/>
+   * <p>
    * Typically this is the 'hostname' reported by the node, but it could be
    * configured to be 'hostname:port' reported by the node via the
    * {@link YarnConfiguration#RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME} constant.
@@ -293,5 +294,18 @@ public abstract class SchedulerNode {
   
   public void updateLabels(Set<String> labels) {
     this.labels = labels;
+  }
+  
+  /**
+   * Get partition of which the node belongs to, if node-labels of this node is
+   * empty or null, it belongs to NO_LABEL partition. And since we only support
+   * one partition for each node (YARN-2694), first label will be its partition.
+   */
+  public String getPartition() {
+    if (this.labels == null || this.labels.isEmpty()) {
+      return RMNodeLabelsManager.NO_LABEL; 
+    } else {
+      return this.labels.iterator().next();
+    }
   }
 }

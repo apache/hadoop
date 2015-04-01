@@ -391,7 +391,7 @@ public class NfsExports {
       return new CIDRMatch(privilege,
           new SubnetUtils(pair[0], pair[1]).getInfo());
     } else if (host.contains("*") || host.contains("?") || host.contains("[")
-        || host.contains("]")) {
+        || host.contains("]") || host.contains("(") || host.contains(")")) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Using Regex match for '" + host + "' and " + privilege);
       }

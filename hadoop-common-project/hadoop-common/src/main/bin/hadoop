@@ -125,7 +125,7 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.util.NativeLibraryChecker
   ;;
   classpath)
-    hadoop_do_classpath_subcommand "$@"
+    hadoop_do_classpath_subcommand CLASS "$@"
   ;;
   credential)
     CLASS=org.apache.hadoop.security.alias.CredentialShell

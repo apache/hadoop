@@ -201,6 +201,32 @@ public class TestYARNRunner extends TestCase {
     verify(clientDelegate).killJob(jobId);
   }
 
+  @Test(timeout=60000)
+  public void testJobKillTimeout() throws Exception {
+    long timeToWaitBeforeHardKill =
+        10000 + MRJobConfig.DEFAULT_MR_AM_HARD_KILL_TIMEOUT_MS;
+    conf.setLong(MRJobConfig.MR_AM_HARD_KILL_TIMEOUT_MS,
+        timeToWaitBeforeHardKill);
+    clientDelegate = mock(ClientServiceDelegate.class);
+    doAnswer(
+        new Answer<ClientServiceDelegate>() {
+          @Override
+          public ClientServiceDelegate answer(InvocationOnMock invocation)
+              throws Throwable {
+            return clientDelegate;
+          }
+        }
+      ).when(clientCache).getClient(any(JobID.class));
+    when(clientDelegate.getJobStatus(any(JobID.class))).thenReturn(new
+        org.apache.hadoop.mapreduce.JobStatus(jobId, 0f, 0f, 0f, 0f,
+            State.RUNNING, JobPriority.HIGH, "tmp", "tmp", "tmp", "tmp"));
+    long startTimeMillis = System.currentTimeMillis();
+    yarnRunner.killJob(jobId);
+    assertTrue("killJob should have waited at least " + timeToWaitBeforeHardKill
+        + " ms.", System.currentTimeMillis() - startTimeMillis
+                  >= timeToWaitBeforeHardKill);
+  }
+
   @Test(timeout=20000)
   public void testJobSubmissionFailure() throws Exception {
     when(resourceMgrDelegate.submitApplication(any(ApplicationSubmissionContext.class))).

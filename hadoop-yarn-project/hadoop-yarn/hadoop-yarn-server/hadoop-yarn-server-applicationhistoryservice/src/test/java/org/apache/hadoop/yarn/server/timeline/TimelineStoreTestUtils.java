@@ -353,6 +353,19 @@ public class TimelineStoreTestUtils {
     domain3.setReaders("reader_user_4 reader_group_4");
     domain3.setWriters("writer_user_4 writer_group_4");
     store.put(domain3);
+
+    TimelineEntities entities = new TimelineEntities();
+    if (store instanceof LeveldbTimelineStore) {
+      LeveldbTimelineStore leveldb = (LeveldbTimelineStore) store;
+      entities.setEntities(Collections.singletonList(createEntity(
+              "ACL_ENTITY_ID_11", "ACL_ENTITY_TYPE_1", 63l, null, null, null, null,
+              "domain_id_4")));
+      leveldb.put(entities);
+      entities.setEntities(Collections.singletonList(createEntity(
+              "ACL_ENTITY_ID_22", "ACL_ENTITY_TYPE_1", 64l, null, null, null, null,
+              "domain_id_2")));
+      leveldb.put(entities);
+    }
   }
 
   public void testGetSingleEntity() throws IOException {
@@ -419,66 +432,66 @@ public class TimelineStoreTestUtils {
   protected List<TimelineEntity> getEntities(String entityType)
       throws IOException {
     return store.getEntities(entityType, null, null, null, null, null,
-        null, null, null).getEntities();
+        null, null, null, null).getEntities();
   }
 
   protected List<TimelineEntity> getEntitiesWithPrimaryFilter(
       String entityType, NameValuePair primaryFilter) throws IOException {
     return store.getEntities(entityType, null, null, null, null, null,
-        primaryFilter, null, null).getEntities();
+        primaryFilter, null, null, null).getEntities();
   }
 
   protected List<TimelineEntity> getEntitiesFromId(String entityType,
       String fromId) throws IOException {
     return store.getEntities(entityType, null, null, null, fromId, null,
-        null, null, null).getEntities();
+        null, null, null, null).getEntities();
   }
 
   protected List<TimelineEntity> getEntitiesFromTs(String entityType,
       long fromTs) throws IOException {
     return store.getEntities(entityType, null, null, null, null, fromTs,
-        null, null, null).getEntities();
+        null, null, null, null).getEntities();
   }
 
   protected List<TimelineEntity> getEntitiesFromIdWithPrimaryFilter(
       String entityType, NameValuePair primaryFilter, String fromId)
       throws IOException {
     return store.getEntities(entityType, null, null, null, fromId, null,
-        primaryFilter, null, null).getEntities();
+        primaryFilter, null, null, null).getEntities();
   }
 
   protected List<TimelineEntity> getEntitiesFromTsWithPrimaryFilter(
       String entityType, NameValuePair primaryFilter, long fromTs)
       throws IOException {
     return store.getEntities(entityType, null, null, null, null, fromTs,
-        primaryFilter, null, null).getEntities();
+        primaryFilter, null, null, null).getEntities();
   }
 
   protected List<TimelineEntity> getEntitiesFromIdWithWindow(String entityType,
       Long windowEnd, String fromId) throws IOException {
     return store.getEntities(entityType, null, null, windowEnd, fromId, null,
-        null, null, null).getEntities();
+        null, null, null, null).getEntities();
   }
 
   protected List<TimelineEntity> getEntitiesFromIdWithPrimaryFilterAndWindow(
       String entityType, Long windowEnd, String fromId,
       NameValuePair primaryFilter) throws IOException {
     return store.getEntities(entityType, null, null, windowEnd, fromId, null,
-        primaryFilter, null, null).getEntities();
+        primaryFilter, null, null, null).getEntities();
   }
 
   protected List<TimelineEntity> getEntitiesWithFilters(String entityType,
       NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters)
       throws IOException {
     return store.getEntities(entityType, null, null, null, null, null,
-        primaryFilter, secondaryFilters, null).getEntities();
+        primaryFilter, secondaryFilters, null, null).getEntities();
   }
 
   protected List<TimelineEntity> getEntities(String entityType, Long limit,
       Long windowStart, Long windowEnd, NameValuePair primaryFilter,
       EnumSet<Field> fields) throws IOException {
     return store.getEntities(entityType, limit, windowStart, windowEnd, null,
-        null, primaryFilter, null, fields).getEntities();
+        null, primaryFilter, null, fields, null).getEntities();
   }
 
   public void testGetEntities() throws IOException {

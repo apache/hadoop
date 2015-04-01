@@ -315,7 +315,8 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
         continue;
       }
       final ReplicaUnderConstruction ruc = replicas.get(i);
-      final long lastUpdate = ruc.getExpectedStorageLocation().getDatanodeDescriptor().getLastUpdate(); 
+      final long lastUpdate = ruc.getExpectedStorageLocation()
+          .getDatanodeDescriptor().getLastUpdateMonotonic();
       if (lastUpdate > mostRecentLastUpdate) {
         primaryNodeIndex = i;
         primary = ruc;
@@ -383,6 +384,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
 
   private void appendUCParts(StringBuilder sb) {
     sb.append("{UCState=").append(blockUCState)
+      .append(", truncateBlock=" + truncateBlock)
       .append(", primaryNodeIndex=").append(primaryNodeIndex)
       .append(", replicas=[");
     if (replicas != null) {

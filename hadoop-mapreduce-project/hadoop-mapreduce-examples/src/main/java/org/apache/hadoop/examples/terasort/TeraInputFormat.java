@@ -50,10 +50,6 @@ import org.apache.hadoop.util.StringUtils;
 public class TeraInputFormat extends FileInputFormat<Text,Text> {
 
   static final String PARTITION_FILENAME = "_partition.lst";
-  private static final String NUM_PARTITIONS = 
-    "mapreduce.terasort.num.partitions";
-  private static final String SAMPLE_SIZE = 
-    "mapreduce.terasort.partitions.sample";
   static final int KEY_LENGTH = 10;
   static final int VALUE_LENGTH = 90;
   static final int RECORD_LENGTH = KEY_LENGTH + VALUE_LENGTH;
@@ -123,11 +119,16 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
     final TeraInputFormat inFormat = new TeraInputFormat();
     final TextSampler sampler = new TextSampler();
     int partitions = job.getNumReduceTasks();
-    long sampleSize = conf.getLong(SAMPLE_SIZE, 100000);
+    long sampleSize =
+        conf.getLong(TeraSortConfigKeys.SAMPLE_SIZE.key(),
+            TeraSortConfigKeys.DEFAULT_SAMPLE_SIZE);
     final List<InputSplit> splits = inFormat.getSplits(job);
     long t2 = System.currentTimeMillis();
     System.out.println("Computing input splits took " + (t2 - t1) + "ms");
-    int samples = Math.min(conf.getInt(NUM_PARTITIONS, 10), splits.size());
+    int samples =
+        Math.min(conf.getInt(TeraSortConfigKeys.NUM_PARTITIONS.key(),
+                             TeraSortConfigKeys.DEFAULT_NUM_PARTITIONS),
+            splits.size());
     System.out.println("Sampling " + samples + " splits of " + splits.size());
     final long recordsPerSample = sampleSize / samples;
     final int sampleStep = splits.size() / samples;
@@ -294,7 +295,8 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
     lastResult = super.getSplits(job);
     t2 = System.currentTimeMillis();
     System.out.println("Spent " + (t2 - t1) + "ms computing base-splits.");
-    if (job.getConfiguration().getBoolean(TeraScheduler.USE, true)) {
+    if (job.getConfiguration().getBoolean(TeraSortConfigKeys.USE_TERA_SCHEDULER.key(),
+                                          TeraSortConfigKeys.DEFAULT_USE_TERA_SCHEDULER)) {
       TeraScheduler scheduler = new TeraScheduler(
         lastResult.toArray(new FileSplit[0]), job.getConfiguration());
       lastResult = scheduler.getNewFileSplits();

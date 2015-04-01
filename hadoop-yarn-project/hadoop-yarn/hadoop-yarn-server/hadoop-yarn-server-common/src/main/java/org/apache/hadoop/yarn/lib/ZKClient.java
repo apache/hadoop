@@ -40,7 +40,7 @@ public class ZKClient {
    * the zookeeper client library to 
    * talk to zookeeper 
    * @param string the host
-   * @throws throws IOException
+   * @throws IOException
    */
   public ZKClient(String string) throws IOException {
     zkClient = new ZooKeeper(string, 30000, new ZKWatcher());

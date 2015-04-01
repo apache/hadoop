@@ -474,7 +474,7 @@ public class TestINodeFile {
 
       // Apply editlogs to fsimage, ensure inodeUnderConstruction is handled
       fsn.enterSafeMode(false);
-      fsn.saveNamespace();
+      fsn.saveNamespace(0, 0);
       fsn.leaveSafeMode();
 
       outStream.close();

@@ -24,21 +24,37 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p><code>LogAggregationContext</code> represents all of the
- * information needed by the <code>NodeManager</code> to handle
- * the logs for an application.</p>
- *
- * <p>It includes details such as:
- *   <ul>
- *     <li>includePattern. It uses Java Regex to filter the log files
+ * {@code LogAggregationContext} represents all of the
+ * information needed by the {@code NodeManager} to handle
+ * the logs for an application.
+ * <p>
+ * It includes details such as:
+ * <ul>
+ *   <li>
+ *     includePattern. It uses Java Regex to filter the log files
  *     which match the defined include pattern and those log files
- *     will be uploaded. </li>
- *     <li>excludePattern. It uses Java Regex to filter the log files
+ *     will be uploaded when the application finishes.
+ *   </li>
+ *   <li>
+ *     excludePattern. It uses Java Regex to filter the log files
  *     which match the defined exclude pattern and those log files
- *     will not be uploaded. If the log file name matches both the
- *     include and the exclude pattern, this file will be excluded eventually</li>
- *   </ul>
- * </p>
+ *     will not be uploaded when application finishes. If the log file
+ *     name matches both the include and the exclude pattern, this file
+ *     will be excluded eventually.
+ *   </li>
+ *   <li>
+ *     rolledLogsIncludePattern. It uses Java Regex to filter the log files
+ *     which match the defined include pattern and those log files
+ *     will be aggregated in a rolling fashion.
+ *   </li>
+ *   <li>
+ *     rolledLogsExcludePattern. It uses Java Regex to filter the log files
+ *     which match the defined exclude pattern and those log files
+ *     will not be aggregated in a rolling fashion. If the log file
+ *     name matches both the include and the exclude pattern, this file
+ *     will be excluded eventually.
+ *   </li>
+ * </ul>
  *
  * @see ApplicationSubmissionContext
  */
@@ -57,8 +73,23 @@ public abstract class LogAggregationContext {
     return context;
   }
 
+  @Public
+  @Unstable
+  public static LogAggregationContext newInstance(String includePattern,
+      String excludePattern, String rolledLogsIncludePattern,
+      String rolledLogsExcludePattern) {
+    LogAggregationContext context =
+        Records.newRecord(LogAggregationContext.class);
+    context.setIncludePattern(includePattern);
+    context.setExcludePattern(excludePattern);
+    context.setRolledLogsIncludePattern(rolledLogsIncludePattern);
+    context.setRolledLogsExcludePattern(rolledLogsExcludePattern);
+    return context;
+  }
+
   /**
-   * Get include pattern
+   * Get include pattern. This includePattern only takes affect
+   * on logs that exist at the time of application finish.
    *
    * @return include pattern
    */
@@ -67,7 +98,8 @@ public abstract class LogAggregationContext {
   public abstract String getIncludePattern();
 
   /**
-   * Set include pattern
+   * Set include pattern. This includePattern only takes affect
+   * on logs that exist at the time of application finish.
    *
    * @param includePattern
    */
@@ -76,7 +108,8 @@ public abstract class LogAggregationContext {
   public abstract void setIncludePattern(String includePattern);
 
   /**
-   * Get exclude pattern
+   * Get exclude pattern. This excludePattern only takes affect
+   * on logs that exist at the time of application finish.
    *
    * @return exclude pattern
    */
@@ -85,11 +118,50 @@ public abstract class LogAggregationContext {
   public abstract String getExcludePattern();
 
   /**
-   * Set exclude pattern
+   * Set exclude pattern. This excludePattern only takes affect
+   * on logs that exist at the time of application finish.
    *
    * @param excludePattern
    */
   @Public
   @Unstable
   public abstract void setExcludePattern(String excludePattern);
+
+  /**
+   * Get include pattern in a rolling fashion.
+   * 
+   * @return include pattern
+   */
+  @Public
+  @Unstable
+  public abstract String getRolledLogsIncludePattern();
+
+  /**
+   * Set include pattern in a rolling fashion.
+   * 
+   * @param rolledLogsIncludePattern
+   */
+  @Public
+  @Unstable
+  public abstract void setRolledLogsIncludePattern(
+      String rolledLogsIncludePattern);
+
+  /**
+   * Get exclude pattern for aggregation in a rolling fashion.
+   * 
+   * @return exclude pattern
+   */
+  @Public
+  @Unstable
+  public abstract String getRolledLogsExcludePattern();
+
+  /**
+   * Set exclude pattern for in a rolling fashion.
+   * 
+   * @param rolledLogsExcludePattern
+   */
+  @Public
+  @Unstable
+  public abstract void setRolledLogsExcludePattern(
+      String rolledLogsExcludePattern);
 }

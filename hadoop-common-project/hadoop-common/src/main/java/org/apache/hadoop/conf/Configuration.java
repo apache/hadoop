@@ -2479,7 +2479,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private Document parse(DocumentBuilder builder, URL url)
       throws IOException, SAXException {
     if (!quietmode) {
-      LOG.debug("parsing URL " + url);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("parsing URL " + url);
+      }
     }
     if (url == null) {
       return null;

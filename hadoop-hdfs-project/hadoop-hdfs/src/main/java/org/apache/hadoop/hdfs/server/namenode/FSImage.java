@@ -406,7 +406,7 @@ public class FSImage implements Closeable {
     for (Iterator<StorageDirectory> it = storage.dirIterator(false); it.hasNext();) {
       StorageDirectory sd = it.next();
       try {
-        NNUpgradeUtil.doPreUpgrade(sd);
+        NNUpgradeUtil.doPreUpgrade(conf, sd);
       } catch (Exception e) {
         LOG.error("Failed to move aside pre-upgrade storage " +
             "in image directory " + sd.getRoot(), e);
@@ -793,7 +793,7 @@ public class FSImage implements Closeable {
         DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 
         DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
     final long checkpointTxnCount = conf.getLong(
-        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
         DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
     long checkpointAge = Time.now() - imageFile.lastModified();
 
@@ -883,7 +883,7 @@ public class FSImage implements Closeable {
       final long namespace = counts.getNameSpace() - parentNamespace;
       final long nsQuota = q.getNameSpace();
       if (Quota.isViolated(nsQuota, namespace)) {
-        LOG.error("BUG: Namespace quota violation in image for "
+        LOG.warn("Namespace quota violation in image for "
             + dir.getFullPathName()
             + " quota = " + nsQuota + " < consumed = " + namespace);
       }
@@ -891,7 +891,7 @@ public class FSImage implements Closeable {
       final long ssConsumed = counts.getStorageSpace() - parentStoragespace;
       final long ssQuota = q.getStorageSpace();
       if (Quota.isViolated(ssQuota, ssConsumed)) {
-        LOG.error("BUG: Storagespace quota violation in image for "
+        LOG.warn("Storagespace quota violation in image for "
             + dir.getFullPathName()
             + " quota = " + ssQuota + " < consumed = " + ssConsumed);
       }
@@ -903,7 +903,7 @@ public class FSImage implements Closeable {
             parentTypeSpaces.get(t);
         final long typeQuota = q.getTypeSpaces().get(t);
         if (Quota.isViolated(typeQuota, typeSpace)) {
-          LOG.error("BUG: Storage type quota violation in image for "
+          LOG.warn("Storage type quota violation in image for "
               + dir.getFullPathName()
               + " type = " + t.toString() + " quota = "
               + typeQuota + " < consumed " + typeSpace);
@@ -1062,11 +1062,35 @@ public class FSImage implements Closeable {
   }
 
   /**
+   * @param timeWindow a checkpoint is done if the latest checkpoint
+   *                   was done more than this number of seconds ago.
+   * @param txGap a checkpoint is done also if the gap between the latest tx id
+   *              and the latest checkpoint is greater than this number.
+   * @return true if a checkpoint has been made
    * @see #saveNamespace(FSNamesystem, NameNodeFile, Canceler)
    */
-  public synchronized void saveNamespace(FSNamesystem source)
-      throws IOException {
+  public synchronized boolean saveNamespace(long timeWindow, long txGap,
+      FSNamesystem source) throws IOException {
+    if (timeWindow > 0 || txGap > 0) {
+      final FSImageStorageInspector inspector = storage.readAndInspectDirs(
+          EnumSet.of(NameNodeFile.IMAGE, NameNodeFile.IMAGE_ROLLBACK),
+          StartupOption.REGULAR);
+      FSImageFile image = inspector.getLatestImages().get(0);
+      File imageFile = image.getFile();
+
+      final long checkpointTxId = image.getCheckpointTxId();
+      final long checkpointAge = Time.now() - imageFile.lastModified();
+      if (checkpointAge <= timeWindow * 1000 &&
+          checkpointTxId >= this.getLastAppliedOrWrittenTxId() - txGap) {
+        return false;
+      }
+    }
     saveNamespace(source, NameNodeFile.IMAGE, null);
+    return true;
+  }
+
+  public void saveNamespace(FSNamesystem source) throws IOException {
+    saveNamespace(0, 0, source);
   }
   
   /**

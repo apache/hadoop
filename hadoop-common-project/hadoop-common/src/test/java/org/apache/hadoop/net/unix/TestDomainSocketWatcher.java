@@ -195,7 +195,7 @@ public class TestDomainSocketWatcher {
   private DomainSocketWatcher newDomainSocketWatcher(int interruptCheckPeriodMs)
       throws Exception {
     DomainSocketWatcher watcher = new DomainSocketWatcher(
-        interruptCheckPeriodMs);
+        interruptCheckPeriodMs, getClass().getSimpleName());
     watcher.watcherThread.setUncaughtExceptionHandler(
         new Thread.UncaughtExceptionHandler() {
           @Override

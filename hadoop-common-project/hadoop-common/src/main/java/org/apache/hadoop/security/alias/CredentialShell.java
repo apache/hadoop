@@ -81,7 +81,7 @@ public class CredentialShell extends Configured implements Tool {
    * <pre>
    * % hadoop credential create alias [-provider providerPath]
    * % hadoop credential list [-provider providerPath]
-   * % hadoop credential delete alias [-provider providerPath] [-i]
+   * % hadoop credential delete alias [-provider providerPath] [-f]
    * </pre>
    * @param args
    * @return 0 if the argument(s) were recognized, 1 otherwise

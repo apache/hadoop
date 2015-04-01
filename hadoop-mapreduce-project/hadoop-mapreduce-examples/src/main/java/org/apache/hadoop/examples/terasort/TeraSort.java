@@ -48,8 +48,6 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class TeraSort extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(TeraSort.class);
-  static String SIMPLE_PARTITIONER = "mapreduce.terasort.simplepartitioner";
-  static String OUTPUT_REPLICATION = "mapreduce.terasort.output.replication";
 
   /**
    * A partitioner that splits text keys into roughly equal partitions
@@ -147,7 +145,7 @@ public class TeraSort extends Configured implements Tool {
      * Read the cut points from the given sequence file.
      * @param fs the file system
      * @param p the path to read
-     * @param job the job config
+     * @param conf the job config
      * @return the strings to split the partitions on
      * @throws IOException
      */
@@ -262,22 +260,40 @@ public class TeraSort extends Configured implements Tool {
   }
 
   public static boolean getUseSimplePartitioner(JobContext job) {
-    return job.getConfiguration().getBoolean(SIMPLE_PARTITIONER, false);
+    return job.getConfiguration().getBoolean(
+        TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
+        TeraSortConfigKeys.DEFAULT_USE_SIMPLE_PARTITIONER);
   }
 
   public static void setUseSimplePartitioner(Job job, boolean value) {
-    job.getConfiguration().setBoolean(SIMPLE_PARTITIONER, value);
+    job.getConfiguration().setBoolean(
+        TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(), value);
   }
 
   public static int getOutputReplication(JobContext job) {
-    return job.getConfiguration().getInt(OUTPUT_REPLICATION, 1);
+    return job.getConfiguration().getInt(
+        TeraSortConfigKeys.OUTPUT_REPLICATION.key(),
+        TeraSortConfigKeys.DEFAULT_OUTPUT_REPLICATION);
   }
 
   public static void setOutputReplication(Job job, int value) {
-    job.getConfiguration().setInt(OUTPUT_REPLICATION, value);
+    job.getConfiguration().setInt(TeraSortConfigKeys.OUTPUT_REPLICATION.key(),
+        value);
+  }
+
+  private static void usage() throws IOException {
+    System.err.println("Usage: terasort [-Dproperty=value] <in> <out>");
+    System.err.println("TeraSort configurations are:");
+    for (TeraSortConfigKeys teraSortConfigKeys : TeraSortConfigKeys.values()) {
+      System.err.println(teraSortConfigKeys.toString());
+    }
   }
 
   public int run(String[] args) throws Exception {
+    if (args.length != 2) {
+      usage();
+      return 2;
+    }
     LOG.info("starting");
     Job job = Job.getInstance(getConf());
     Path inputDir = new Path(args[0]);

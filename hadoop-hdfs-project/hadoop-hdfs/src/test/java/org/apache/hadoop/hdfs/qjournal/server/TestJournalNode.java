@@ -270,6 +270,7 @@ public class TestJournalNode {
   public void testFailToStartWithBadConfig() throws Exception {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY, "non-absolute-path");
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     assertJNFailsToStart(conf, "should be an absolute path");
     
     // Existing file which is not a directory 

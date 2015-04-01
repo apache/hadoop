@@ -80,14 +80,33 @@ The above are the only required configuration for the NFS gateway in non-secure 
 
 The rest of the NFS gateway configurations are optional for both secure and non-secure mode.
 
-The AIX NFS client has a [few known issues](https://issues.apache.org/jira/browse/HDFS-6549) that prevent it from working correctly by default with the HDFS NFS Gateway. If you want to be able to access the HDFS NFS Gateway from AIX, you should set the following configuration setting to enable work-arounds for these issues:
+*   The AIX NFS client has a [few known issues](https://issues.apache.org/jira/browse/HDFS-6549)
+    that prevent it from working correctly by default with the HDFS NFS Gateway. If you want to
+    be able to access the HDFS NFS Gateway from AIX, you should set the following configuration
+    setting to enable work-arounds for these issues:
 
-    <property>
-      <name>nfs.aix.compatibility.mode.enabled</name>
-      <value>true</value>
-    </property>
+        <property>
+          <name>nfs.aix.compatibility.mode.enabled</name>
+          <value>true</value>
+        </property>
 
-Note that regular, non-AIX clients should NOT enable AIX compatibility mode. The work-arounds implemented by AIX compatibility mode effectively disable safeguards to ensure that listing of directory contents via NFS returns consistent results, and that all data sent to the NFS server can be assured to have been committed.
+    Note that regular, non-AIX clients should NOT enable AIX compatibility mode. The work-arounds
+    implemented by AIX compatibility mode effectively disable safeguards to ensure that listing
+    of directory contents via NFS returns consistent results, and that all data sent to the NFS
+    server can be assured to have been committed.
+
+*   HDFS super-user is the user with the same identity as NameNode process itself and
+    the super-user can do anything in that permissions checks never fail for the super-user. 
+    If the following property is configured, the superuser on NFS client can access any file
+    on HDFS. By default, the super user is not configured in the gateway.
+    Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect. 
+    For example, the superuser will not have write access to HDFS files through the gateway if
+    the NFS client host is not allowed to have write access in "nfs.exports.allowed.hosts".
+
+        <property>
+          <name>nfs.superuser</name>
+          <value>the_name_of_hdfs_superuser</value>
+        </property>
 
 It's strongly recommended for the users to update a few configuration properties based on their use cases. All the following configuration properties can be added or updated in hdfs-site.xml.
 
@@ -107,7 +126,8 @@ It's strongly recommended for the users to update a few configuration properties
         </property>
 
 *   Users are expected to update the file dump directory. NFS client often
-    reorders writes. Sequential writes can arrive at the NFS gateway at random
+    reorders writes, especially when the export is not mounted with "sync" option.
+    Sequential writes can arrive at the NFS gateway at random
     order. This directory is used to temporarily save out-of-order writes
     before writing to HDFS. For each file, the out-of-order writes are dumped after
     they are accumulated to exceed certain threshold (e.g., 1MB) in memory.
@@ -125,14 +145,41 @@ It's strongly recommended for the users to update a few configuration properties
 *   By default, the export can be mounted by any client. To better control the access,
     users can update the following property. The value string contains machine name and
     access privilege, separated by whitespace
-    characters. The machine name format can be a single host, a Java regular expression, or an IPv4 address. The access
+    characters. The machine name format can be a single host, a "*", a Java regular expression, or an IPv4 address. The access
     privilege uses rw or ro to specify read/write or read-only access of the machines to exports. If the access privilege is not provided, the default is read-only. Entries are separated by ";".
-    For example: "192.168.0.0/22 rw ; host.\*\\.example\\.com ; host1.test.org ro;". Only the NFS gateway needs to restart after
-    this property is updated.
+    For example: "192.168.0.0/22 rw ; \\\\w\*\\\\.example\\\\.com ; host1.test.org ro;". Only the NFS gateway needs to restart after
+    this property is updated. Note that, here Java regular expression is differnt with the regrulation expression used in 
+    Linux NFS export table, such as, using "\\\\w\*\\\\.example\\\\.com" instead of "\*.example.com", "192\\\\.168\\\\.0\\\\.(11|22)"
+    instead of "192.168.0.[11|22]" and so on.  
 
         <property>
           <name>nfs.exports.allowed.hosts</name>
           <value>* rw</value>
+        </property>
+
+*   HDFS super-user is the user with the same identity as NameNode process itself and
+    the super-user can do anything in that permissions checks never fail for the super-user. 
+    If the following property is configured, the superuser on NFS client can access any file
+    on HDFS. By default, the super user is not configured in the gateway.
+    Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect. 
+    For example, the superuser will not have write access to HDFS files through the gateway if
+    the NFS client host is not allowed to have write access in "nfs.exports.allowed.hosts".
+
+        <property>
+          <name>nfs.superuser</name>
+          <value>the_name_of_hdfs_superuser</value>
+        </property>
+
+*   Metrics. Like other HDFS daemons, the gateway exposes runtime metrics. It is available at `http://gateway-ip:50079/jmx` as a JSON document.
+    The NFS handler related metrics is exposed under the name "Nfs3Metrics". The latency histograms can be enabled by adding the following
+    property to hdfs-site.xml file.
+
+        <property>
+          <name>nfs.metrics.percentiles.intervals</name>
+          <value>100</value>
+          <description>Enable the latency histograms for read, write and
+             commit requests. The time unit is 100 seconds in this example.
+          </description>
         </property>
 
 *   JVM and log settings. You can export JVM settings (e.g., heap size and GC log) in
@@ -220,13 +267,16 @@ Verify validity of NFS related services
 Mount the export "/"
 --------------------
 
-Currently NFS v3 only uses TCP as the transportation protocol. NLM is not supported so mount option "nolock" is needed. It's recommended to use hard mount. This is because, even after the client sends all data to NFS gateway, it may take NFS gateway some extra time to transfer data to HDFS when writes were reorderd by NFS client Kernel.
+Currently NFS v3 only uses TCP as the transportation protocol. NLM is not supported so mount option "nolock" is needed. 
+Mount option "sync" is strongly recommended since it can minimize or avoid reordered writes, which results in more predictable throughput.
+ Not specifying the sync option may cause unreliable behavior when uploading large files.
+ It's recommended to use hard mount. This is because, even after the client sends all data to NFS gateway, it may take NFS gateway some extra time to transfer data to HDFS when writes were reorderd by NFS client Kernel.
 
 If soft mount has to be used, the user should give it a relatively long timeout (at least no less than the default timeout on the host) .
 
 The users can mount the HDFS namespace as shown below:
 
-     [root]>mount -t nfs -o vers=3,proto=tcp,nolock,noacl $server:/  $mount_point
+     [root]>mount -t nfs -o vers=3,proto=tcp,nolock,noacl,sync $server:/  $mount_point
 
 Then the users can access HDFS as part of the local file system except that, hard link and random write are not supported yet. To optimize the performance of large file I/O, one can increase the NFS transfer size(rsize and wsize) during mount. By default, NFS gateway supports 1MB as the maximum transfer size. For larger data transfer size, one needs to update "nfs.rtmax" and "nfs.rtmax" in hdfs-site.xml.
 

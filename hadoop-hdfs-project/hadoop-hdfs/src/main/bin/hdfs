@@ -94,7 +94,7 @@ case ${COMMAND} in
     CLASS=org.apache.hadoop.hdfs.tools.CacheAdmin
   ;;
   classpath)
-    hadoop_do_classpath_subcommand "$@"
+    hadoop_do_classpath_subcommand CLASS "$@"
   ;;
   crypto)
     CLASS=org.apache.hadoop.hdfs.tools.CryptoAdmin
@@ -281,6 +281,14 @@ fi
 hadoop_finalize
 
 if [[ -n "${supportdaemonization}" ]]; then
+  if [[ "${COMMAND}" == "namenode" ]] &&
+     [[ "${HADOOP_DAEMON_MODE}" == "stop" ]]; then
+    hadoop_debug "Do checkpoint if necessary before stopping NameNode"
+    export CLASSPATH
+    "${JAVA}" "-Dproc_dfsadmin" ${HADOOP_OPTS} "org.apache.hadoop.hdfs.tools.DFSAdmin" "-safemode" "enter"
+    "${JAVA}" "-Dproc_dfsadmin" ${HADOOP_OPTS} "org.apache.hadoop.hdfs.tools.DFSAdmin" "-saveNamespace" "-beforeShutdown"
+    "${JAVA}" "-Dproc_dfsadmin" ${HADOOP_OPTS} "org.apache.hadoop.hdfs.tools.DFSAdmin" "-safemode" "leave"
+  fi
   if [[ -n "${secure_service}" ]]; then
     hadoop_secure_daemon_handler \
     "${HADOOP_DAEMON_MODE}" "${COMMAND}" "${CLASS}"\

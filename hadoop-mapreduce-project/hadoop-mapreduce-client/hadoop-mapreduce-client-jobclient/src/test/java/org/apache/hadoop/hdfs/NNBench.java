@@ -182,8 +182,8 @@ public class NNBench {
       "\t-reduces <number of reduces. default is 1. This is not mandatory>\n" +
       "\t-startTime <time to start, given in seconds from the epoch. " +
       "Make sure this is far enough into the future, so all maps " +
-      "(operations) will start at the same time>. " +
-      "default is launch time + 2 mins. This is not mandatory \n" +
+      "(operations) will start at the same time. " +
+      "default is launch time + 2 mins. This is not mandatory>\n" +
       "\t-blockSize <Block size in bytes. default is 1. " + 
       "This is not mandatory>\n" +
       "\t-bytesToWrite <Bytes to write. default is 0. " + 

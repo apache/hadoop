@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.USE_RECEIPT_VERIFICATION;
+
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -69,11 +71,22 @@ import com.google.common.base.Preconditions;
 public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   static final Log LOG = LogFactory.getLog(BlockReaderFactory.class);
 
+  public static class FailureInjector {
+    public void injectRequestFileDescriptorsFailure() throws IOException {
+      // do nothing
+    }
+  }
+
   @VisibleForTesting
   static ShortCircuitReplicaCreator
       createShortCircuitReplicaInfoCallback = null;
 
   private final DFSClient.Conf conf;
+
+  /**
+   * Injects failures into specific operations during unit tests.
+   */
+  private final FailureInjector failureInjector;
 
   /**
    * The file name, for logging and debugging purposes.
@@ -169,6 +182,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
 
   public BlockReaderFactory(DFSClient.Conf conf) {
     this.conf = conf;
+    this.failureInjector = conf.brfFailureInjector;
     this.remainingCacheTries = conf.nCachedConnRetry;
   }
 
@@ -518,11 +532,12 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     final DataOutputStream out =
         new DataOutputStream(new BufferedOutputStream(peer.getOutputStream()));
     SlotId slotId = slot == null ? null : slot.getSlotId();
-    new Sender(out).requestShortCircuitFds(block, token, slotId, 1);
+    new Sender(out).requestShortCircuitFds(block, token, slotId, 1, true);
     DataInputStream in = new DataInputStream(peer.getInputStream());
     BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
         PBHelper.vintPrefixed(in));
     DomainSocket sock = peer.getDomainSocket();
+    failureInjector.injectRequestFileDescriptorsFailure();
     switch (resp.getStatus()) {
     case SUCCESS:
       byte buf[] = new byte[1];
@@ -532,8 +547,13 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       try {
         ExtendedBlockId key =
             new ExtendedBlockId(block.getBlockId(), block.getBlockPoolId());
+        if (buf[0] == USE_RECEIPT_VERIFICATION.getNumber()) {
+          LOG.trace("Sending receipt verification byte for slot " + slot);
+          sock.getOutputStream().write(0);
+        }
         replica = new ShortCircuitReplica(key, fis[0], fis[1], cache,
             Time.monotonicNow(), slot);
+        return new ShortCircuitReplicaInfo(replica);
       } catch (IOException e) {
         // This indicates an error reading from disk, or a format error.  Since
         // it's not a socket communication problem, we return null rather than
@@ -545,7 +565,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
           IOUtils.cleanup(DFSClient.LOG, fis[0], fis[1]);
         }
       }
-      return new ShortCircuitReplicaInfo(replica);
     case ERROR_UNSUPPORTED:
       if (!resp.hasShortCircuitAccessVersion()) {
         LOG.warn("short-circuit read access is disabled for " +

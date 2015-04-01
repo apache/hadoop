@@ -42,9 +42,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.util.Time;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mortbay.util.ajax.JSON;
 
 import com.google.common.collect.Lists;
 
@@ -58,7 +59,7 @@ public class TestJsonUtil {
   }
 
   @Test
-  public void testHdfsFileStatus() {
+  public void testHdfsFileStatus() throws IOException {
     final long now = Time.now();
     final String parent = "/dir";
     final HdfsFileStatus status = new HdfsFileStatus(1001L, false, 3, 1L << 26,
@@ -70,7 +71,9 @@ public class TestJsonUtil {
     System.out.println("fstatus = " + fstatus);
     final String json = JsonUtil.toJsonString(status, true);
     System.out.println("json    = " + json.replace(",", ",\n  "));
-    final HdfsFileStatus s2 = JsonUtil.toFileStatus((Map<?, ?>)JSON.parse(json), true);
+    ObjectReader reader = new ObjectMapper().reader(Map.class);
+    final HdfsFileStatus s2 =
+        JsonUtil.toFileStatus((Map<?, ?>) reader.readValue(json), true);
     final FileStatus fs2 = toFileStatus(s2, parent);
     System.out.println("s2      = " + s2);
     System.out.println("fs2     = " + fs2);
@@ -153,10 +156,11 @@ public class TestJsonUtil {
   }
   
   @Test
-  public void testToAclStatus() {
+  public void testToAclStatus() throws IOException {
     String jsonString =
         "{\"AclStatus\":{\"entries\":[\"user::rwx\",\"user:user1:rw-\",\"group::rw-\",\"other::r-x\"],\"group\":\"supergroup\",\"owner\":\"testuser\",\"stickyBit\":false}}";
-    Map<?, ?> json = (Map<?, ?>) JSON.parse(jsonString);
+    ObjectReader reader = new ObjectMapper().reader(Map.class);
+    Map<?, ?> json = reader.readValue(jsonString);
 
     List<AclEntry> aclSpec =
         Lists.newArrayList(aclEntry(ACCESS, USER, ALL),
@@ -215,7 +219,8 @@ public class TestJsonUtil {
     String jsonString = 
         "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
         "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
-    Map<?, ?> json = (Map<?, ?>)JSON.parse(jsonString);
+    ObjectReader reader = new ObjectMapper().reader(Map.class);
+    Map<?, ?> json = reader.readValue(jsonString);
     XAttr xAttr1 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
         setName("a1").setValue(XAttrCodec.decodeValue("0x313233")).build();
     XAttr xAttr2 = (new XAttr.Builder()).setNameSpace(XAttr.NameSpace.USER).
@@ -240,8 +245,9 @@ public class TestJsonUtil {
     String jsonString = 
         "{\"XAttrs\":[{\"name\":\"user.a1\",\"value\":\"0x313233\"}," +
         "{\"name\":\"user.a2\",\"value\":\"0x313131\"}]}";
-    Map<?, ?> json = (Map<?, ?>) JSON.parse(jsonString);
-    
+    ObjectReader reader = new ObjectMapper().reader(Map.class);
+    Map<?, ?> json = reader.readValue(jsonString);
+
     // Get xattr: user.a2
     byte[] value = JsonUtil.getXAttr(json, "user.a2");
     Assert.assertArrayEquals(XAttrCodec.decodeValue("0x313131"), value);

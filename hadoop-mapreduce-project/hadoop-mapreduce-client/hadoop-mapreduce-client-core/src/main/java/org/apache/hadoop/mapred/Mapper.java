@@ -117,7 +117,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
  *         output.collect(key, val);
  *       }
  *     }
- * </pre></blockquote></p>
+ * </pre></blockquote>
  *
  * <p>Applications may write a custom {@link MapRunnable} to exert greater
  * control on map processing e.g. multi-threaded <code>Mapper</code>s etc.</p>

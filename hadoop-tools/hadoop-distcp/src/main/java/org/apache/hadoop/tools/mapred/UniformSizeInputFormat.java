@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 /**
- * UniformSizeInputFormat extends the InputFormat<> class, to produce
+ * UniformSizeInputFormat extends the InputFormat class, to produce
  * input-splits for DistCp.
  * It looks at the copy-listing and groups the contents into input-splits such
  * that the total-number of bytes to be copied for each input split is
@@ -55,7 +55,7 @@ public class UniformSizeInputFormat
    * approximately equal.
    * @param context JobContext for the job.
    * @return The list of uniformly-distributed input-splits.
-   * @throws IOException: On failure.
+   * @throws IOException
    * @throws InterruptedException
    */
   @Override

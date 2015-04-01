@@ -97,6 +97,7 @@ message DatanodeInfoProto {
   optional AdminState adminState = 10 [default = NORMAL];
   optional uint64 cacheCapacity = 11 [default = 0];
   optional uint64 cacheUsed = 12 [default = 0];
+  optional uint64 lastUpdateMonotonic = 13 [default = 0];
 }
 
 /**
@@ -133,6 +134,20 @@ message ContentSummaryProto {
   required uint64 quota = 4;
   required uint64 spaceConsumed = 5;
   required uint64 spaceQuota = 6;
+  optional StorageTypeQuotaInfosProto typeQuotaInfos = 7;
+}
+
+/**
+ * Storage type quota and usage information of a file or directory
+ */
+message StorageTypeQuotaInfosProto {
+  repeated StorageTypeQuotaInfoProto typeQuotaInfo = 1;
+}
+
+message StorageTypeQuotaInfoProto {
+  required StorageTypeProto type = 1;
+  required uint64 quota = 2;
+  required uint64 consumed = 3;
 }
 
 /**
@@ -517,6 +532,7 @@ message NamespaceInfoProto {
   required string blockPoolID = 3;          // block pool used by the namespace
   required StorageInfoProto storageInfo = 4;// Node information
   required string softwareVersion = 5;      // Software version number (e.g. 2.0.0)
+  optional uint64 capabilities = 6 [default = 0]; // feature flags
 }
 
 /**
@@ -591,4 +607,5 @@ message SnapshotInfoProto {
  */
 message RollingUpgradeStatusProto {
   required string blockPoolId = 1;
+  optional bool finalized = 2 [default = false];
 }

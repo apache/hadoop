@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.OfflineEditsViewerHelper;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer.Flags;
 import org.apache.hadoop.test.PathUtils;
@@ -140,8 +141,8 @@ public class TestOfflineEditsViewer {
     assertEquals(0, runOev(editsReparsed, editsParsedXml2, "xml", false));
 
     // judgment time
-    assertTrue("Test round trip",
-        filesEqualIgnoreTrailingZeros(editsParsedXml, editsParsedXml2));
+    assertTrue("Test round trip", FileUtils.contentEqualsIgnoreEOL(
+        new File(editsParsedXml), new File(editsParsedXml2), "UTF-8"));
 
     os.close();
   }
@@ -238,6 +239,10 @@ public class TestOfflineEditsViewer {
 
     ByteBuffer small = ByteBuffer.wrap(DFSTestUtil.loadFile(filenameSmall));
     ByteBuffer large = ByteBuffer.wrap(DFSTestUtil.loadFile(filenameLarge));
+    // OEV outputs with the latest layout version, so tweak the old file's
+    // contents to have latest version so checkedin binary files don't
+    // require frequent updates
+    small.put(3, (byte)NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
 
     // now correct if it's otherwise
     if (small.capacity() > large.capacity()) {

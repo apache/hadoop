@@ -338,4 +338,23 @@ public class ContainerReportPBImpl extends ContainerReport {
       ContainerStateProto containerState) {
     return ProtoUtils.convertFromProtoFormat(containerState);
   }
+
+  @Override
+  public String getNodeHttpAddress() {
+    ContainerReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasNodeHttpAddress()) {
+      return null;
+    }
+    return (p.getNodeHttpAddress());
+  }
+
+  @Override
+  public void setNodeHttpAddress(String nodeHttpAddress) {
+    maybeInitBuilder();
+    if (nodeHttpAddress == null) {
+      builder.clearNodeHttpAddress();
+      return;
+    }
+    builder.setNodeHttpAddress(nodeHttpAddress);
+  }
 }

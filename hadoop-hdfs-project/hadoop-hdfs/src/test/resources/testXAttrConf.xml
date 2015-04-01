@@ -420,8 +420,8 @@
       </cleanup-commands>
       <comparators>
       	<comparator>
-          <type>ExactComparator</type>
-          <expected-output># file: /file1#LF#</expected-output>
+          <type>SubstringComparator</type>
+          <expected-output>At least one of the attributes provided was not found</expected-output>
         </comparator>
       </comparators>
     </test>

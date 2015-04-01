@@ -90,4 +90,24 @@ public interface Queue {
    * @return default label expression
    */
   public String getDefaultNodeLabelExpression();
+
+  /**
+   * When new outstanding resource is asked, calling this will increase pending
+   * resource in a queue.
+   * 
+   * @param nodeLabel asked by application
+   * @param resourceToInc new resource asked
+   */
+  public void incPendingResource(String nodeLabel, Resource resourceToInc);
+  
+  /**
+   * When an outstanding resource is fulfilled or canceled, calling this will
+   * decrease pending resource in a queue.
+   * 
+   * @param nodeLabel
+   *          asked by application
+   * @param resourceToDec
+   *          new resource asked
+   */
+  public void decPendingResource(String nodeLabel, Resource resourceToDec);
 }

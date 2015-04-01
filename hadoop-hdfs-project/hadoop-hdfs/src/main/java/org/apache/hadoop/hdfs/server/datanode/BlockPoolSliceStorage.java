@@ -351,7 +351,8 @@ public class BlockPoolSliceStorage extends Storage {
           sd.getPreviousDir() + " and " + getTrashRootDir(sd) + " should not " +
           " both be present.");
       doRollback(sd, nsInfo); // rollback if applicable
-    } else {
+    } else if (startOpt == StartupOption.ROLLBACK &&
+        !sd.getPreviousDir().exists()) {
       // Restore all the files in the trash. The restored files are retained
       // during rolling upgrade rollback. They are deleted during rolling
       // upgrade downgrade.
@@ -377,6 +378,12 @@ public class BlockPoolSliceStorage extends Storage {
     if (this.layoutVersion == HdfsConstants.DATANODE_LAYOUT_VERSION
         && this.cTime == nsInfo.getCTime()) {
       return; // regular startup
+    }
+    if (this.layoutVersion > HdfsConstants.DATANODE_LAYOUT_VERSION) {
+      int restored = restoreBlockFilesFromTrash(getTrashRootDir(sd));
+      LOG.info("Restored " + restored + " block files from trash " +
+        "before the layout upgrade. These blocks will be moved to " +
+        "the previous directory during the upgrade");
     }
     if (this.layoutVersion > HdfsConstants.DATANODE_LAYOUT_VERSION
         || this.cTime < nsInfo.getCTime()) {
@@ -730,16 +737,12 @@ public class BlockPoolSliceStorage extends Storage {
   /**
    * Delete all files and directories in the trash directories.
    */
-  public void restoreTrash() {
+  public void clearTrash() {
     for (StorageDirectory sd : storageDirs) {
       File trashRoot = getTrashRootDir(sd);
-      try {
-        Preconditions.checkState(!(trashRoot.exists() && sd.getPreviousDir().exists()));
-        restoreBlockFilesFromTrash(trashRoot);
-        FileUtil.fullyDelete(getTrashRootDir(sd));
-      } catch (IOException ioe) {
-        LOG.warn("Restoring trash failed for storage directory " + sd);
-      }
+      Preconditions.checkState(!(trashRoot.exists() && sd.getPreviousDir().exists()));
+      FileUtil.fullyDelete(trashRoot);
+      LOG.info("Cleared trash for storage directory " + sd);
     }
   }
 

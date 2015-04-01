@@ -93,7 +93,8 @@ public class TestApplicationClientProtocolOnHA extends ProtocolHATestBase {
   public void testGetApplicationsOnHA() throws Exception {
     List<ApplicationReport> reports =
         client.getApplications();
-    Assert.assertTrue(reports != null && !reports.isEmpty());
+    Assert.assertTrue(reports != null);
+    Assert.assertFalse(reports.isEmpty());
     Assert.assertEquals(cluster.createFakeAppReports(),
         reports);
   }
@@ -101,7 +102,8 @@ public class TestApplicationClientProtocolOnHA extends ProtocolHATestBase {
   @Test(timeout = 15000)
   public void testGetClusterNodesOnHA() throws Exception {
     List<NodeReport> reports = client.getNodeReports(NodeState.RUNNING);
-    Assert.assertTrue(reports != null && !reports.isEmpty());
+    Assert.assertTrue(reports != null);
+    Assert.assertFalse(reports.isEmpty());
     Assert.assertEquals(cluster.createFakeNodeReports(),
         reports);
   }
@@ -117,8 +119,8 @@ public class TestApplicationClientProtocolOnHA extends ProtocolHATestBase {
   @Test(timeout = 15000)
   public void testGetQueueUserAclsOnHA() throws Exception {
     List<QueueUserACLInfo> queueUserAclsList = client.getQueueAclsInfo();
-    Assert.assertTrue(queueUserAclsList != null
-        && !queueUserAclsList.isEmpty());
+    Assert.assertTrue(queueUserAclsList != null);
+    Assert.assertFalse(queueUserAclsList.isEmpty());
     Assert.assertEquals(cluster.createFakeQueueUserACLInfoList(),
         queueUserAclsList);
   }
@@ -136,7 +138,8 @@ public class TestApplicationClientProtocolOnHA extends ProtocolHATestBase {
   public void testGetApplicationAttemptsOnHA() throws Exception {
     List<ApplicationAttemptReport> reports =
         client.getApplicationAttempts(cluster.createFakeAppId());
-    Assert.assertTrue(reports != null && !reports.isEmpty());
+    Assert.assertTrue(reports != null);
+    Assert.assertFalse(reports.isEmpty());
     Assert.assertEquals(cluster.createFakeApplicationAttemptReports(),
         reports);
   }
@@ -153,7 +156,8 @@ public class TestApplicationClientProtocolOnHA extends ProtocolHATestBase {
   public void testGetContainersOnHA() throws Exception {
     List<ContainerReport> reports =
         client.getContainers(cluster.createFakeApplicationAttemptId());
-    Assert.assertTrue(reports != null && !reports.isEmpty());
+    Assert.assertTrue(reports != null);
+    Assert.assertFalse(reports.isEmpty());
     Assert.assertEquals(cluster.createFakeContainerReports(),
         reports);
   }

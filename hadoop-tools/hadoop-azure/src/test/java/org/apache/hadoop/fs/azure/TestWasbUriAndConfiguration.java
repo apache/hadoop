@@ -42,8 +42,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.microsoft.windowsazure.storage.blob.CloudBlobContainer;
-import com.microsoft.windowsazure.storage.blob.CloudBlockBlob;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
 
 public class TestWasbUriAndConfiguration {
 

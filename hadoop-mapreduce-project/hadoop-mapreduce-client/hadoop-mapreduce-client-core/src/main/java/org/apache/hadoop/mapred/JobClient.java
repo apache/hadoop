@@ -79,7 +79,7 @@ import org.apache.hadoop.util.ToolRunner;
  *   Submitting the job to the cluster and optionally monitoring
  *   it's status.
  *   </li>
- * </ol></p>
+ * </ol>
  *  
  * Normally the user creates the application, describes various facets of the
  * job via {@link JobConf} and then uses the <code>JobClient</code> to submit 
@@ -101,9 +101,9 @@ import org.apache.hadoop.util.ToolRunner;
  *
  *     // Submit the job, then poll for progress until the job is complete
  *     JobClient.runJob(job);
- * </pre></blockquote></p>
+ * </pre></blockquote>
  * 
- * <h4 id="JobControl">Job Control</h4>
+ * <b id="JobControl">Job Control</b>
  * 
  * <p>At times clients would chain map-reduce jobs to accomplish complex tasks 
  * which cannot be done via a single map-reduce job. This is fairly easy since 
@@ -127,7 +127,7 @@ import org.apache.hadoop.util.ToolRunner;
  *   {@link JobConf#setJobEndNotificationURI(String)} : setup a notification
  *   on job-completion, thus avoiding polling.
  *   </li>
- * </ol></p>
+ * </ol>
  * 
  * @see JobConf
  * @see ClusterStatus

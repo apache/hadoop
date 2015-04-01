@@ -47,7 +47,18 @@
     These two capabilities make it feasible to upgrade HDFS without incurring HDFS downtime.
     In order to upgrade a HDFS cluster without downtime, the cluster must be setup with HA.
   </p>
-
+  <p>
+    If there is any new feature which is enabled in new software release, may not work with old software release after upgrade.
+    In such cases upgrade should be done by following steps.
+  </p>
+  <ol>
+    <li>Disable new feature.</li>
+    <li>Upgrade the cluster.</li>
+    <li>Enable the new feature.</li>
+  </ol>
+  <p>
+    Note that rolling upgrade is supported only from Hadoop-2.4.0 onwards.
+  </p>
   <subsection name="Upgrade without Downtime" id="UpgradeWithoutDowntime">
   <p>
     In a HA cluster, there are two or more <em>NameNodes (NNs)</em>, many <em>DataNodes (DNs)</em>,

@@ -179,6 +179,12 @@ message OpRequestShortCircuitAccessProto {
    * The shared memory slot to use, if we are using one.
    */
   optional ShortCircuitShmSlotProto slotId = 3;
+
+  /**
+   * True if the client supports verifying that the file descriptor has been
+   * sent successfully.
+   */
+  optional bool supportsReceiptVerification = 4 [default = false];
 }
 
 message ReleaseShortCircuitAccessRequestProto {
@@ -230,10 +236,16 @@ enum Status {
   IN_PROGRESS = 12;
 }
 
+enum ShortCircuitFdResponse {
+  DO_NOT_USE_RECEIPT_VERIFICATION = 0;
+  USE_RECEIPT_VERIFICATION = 1;
+}
+
 message PipelineAckProto {
   required sint64 seqno = 1;
-  repeated uint32 reply = 2;
+  repeated Status reply = 2;
   optional uint64 downstreamAckTimeNanos = 3 [default = 0];
+  repeated uint32 flag = 4 [packed=true];
 }
 
 /**

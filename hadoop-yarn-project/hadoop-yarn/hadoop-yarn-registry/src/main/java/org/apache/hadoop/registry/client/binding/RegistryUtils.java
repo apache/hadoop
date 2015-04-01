@@ -116,10 +116,10 @@ public class RegistryUtils {
   }
 
   /**
-   * Create a path to a service under a user & service class
+   * Create a path to a service under a user and service class
    * @param user username or ""
    * @param serviceClass service name
-   * @param serviceName service name unique for that user & service class
+   * @param serviceName service name unique for that user and service class
    * @return a full path
    */
   public static String servicePath(String user,
@@ -135,7 +135,7 @@ public class RegistryUtils {
    * Create a path for listing components under a service
    * @param user username or ""
    * @param serviceClass service name
-   * @param serviceName service name unique for that user & service class
+   * @param serviceName service name unique for that user and service class
    * @return a full path
    */
   public static String componentListPath(String user,
@@ -149,7 +149,7 @@ public class RegistryUtils {
    * Create the path to a service record for a component
    * @param user username or ""
    * @param serviceClass service name
-   * @param serviceName service name unique for that user & service class
+   * @param serviceName service name unique for that user and service class
    * @param componentName unique name/ID of the component
    * @return a full path
    */

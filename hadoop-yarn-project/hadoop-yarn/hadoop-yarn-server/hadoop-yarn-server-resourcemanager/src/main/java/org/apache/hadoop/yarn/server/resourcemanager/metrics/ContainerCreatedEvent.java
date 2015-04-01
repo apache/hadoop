@@ -29,18 +29,21 @@ public class ContainerCreatedEvent extends SystemMetricsEvent {
   private Resource allocatedResource;
   private NodeId allocatedNode;
   private Priority allocatedPriority;
+  private String nodeHttpAddress;
 
   public ContainerCreatedEvent(
       ContainerId containerId,
       Resource allocatedResource,
       NodeId allocatedNode,
       Priority allocatedPriority,
-      long createdTime) {
+      long createdTime,
+      String nodeHttpAddress) {
     super(SystemMetricsEventType.CONTAINER_CREATED, createdTime);
     this.containerId = containerId;
     this.allocatedResource = allocatedResource;
     this.allocatedNode = allocatedNode;
     this.allocatedPriority = allocatedPriority;
+    this.nodeHttpAddress = nodeHttpAddress;
   }
 
   @Override
@@ -64,4 +67,7 @@ public class ContainerCreatedEvent extends SystemMetricsEvent {
     return allocatedPriority;
   }
 
+  public String getNodeHttpAddress() {
+    return nodeHttpAddress;
+  }
 }

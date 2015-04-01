@@ -24,19 +24,23 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Time;
 
@@ -218,16 +222,15 @@ class FsVolumeList {
   }
 
   /**
-   * Calls {@link FsVolumeImpl#checkDirs()} on each volume, removing any
-   * volumes from the active list that result in a DiskErrorException.
+   * Calls {@link FsVolumeImpl#checkDirs()} on each volume.
    * 
    * Use checkDirsMutext to allow only one instance of checkDirs() call
    *
-   * @return list of all the removed volumes.
+   * @return list of all the failed volumes.
    */
-  List<FsVolumeImpl> checkDirs() {
+  Set<File> checkDirs() {
     synchronized(checkDirsMutex) {
-      ArrayList<FsVolumeImpl> removedVols = null;
+      Set<File> failedVols = null;
       
       // Make a copy of volumes for performing modification 
       final List<FsVolumeImpl> volumeList = getVolumes();
@@ -238,12 +241,12 @@ class FsVolumeList {
           fsv.checkDirs();
         } catch (DiskErrorException e) {
           FsDatasetImpl.LOG.warn("Removing failed volume " + fsv + ": ", e);
-          if (removedVols == null) {
-            removedVols = new ArrayList<>(1);
+          if (failedVols == null) {
+            failedVols = new HashSet<>(1);
           }
-          removedVols.add(fsv);
-          removeVolume(fsv);
+          failedVols.add(new File(fsv.getBasePath()).getAbsoluteFile());
           addVolumeFailureInfo(fsv);
+          removeVolume(fsv);
         } catch (ClosedChannelException e) {
           FsDatasetImpl.LOG.debug("Caught exception when obtaining " +
             "reference count on closed volume", e);
@@ -252,12 +255,12 @@ class FsVolumeList {
         }
       }
       
-      if (removedVols != null && removedVols.size() > 0) {
-        FsDatasetImpl.LOG.warn("Completed checkDirs. Removed " + removedVols.size()
-            + " volumes. Current volumes: " + this);
+      if (failedVols != null && failedVols.size() > 0) {
+        FsDatasetImpl.LOG.warn("Completed checkDirs. Found " + failedVols.size()
+            + " failure volumes.");
       }
 
-      return removedVols;
+      return failedVols;
     }
   }
 
@@ -290,6 +293,9 @@ class FsVolumeList {
     if (blockScanner != null) {
       blockScanner.addVolumeScanner(ref);
     }
+    // If the volume is used to replace a failed volume, it needs to reset the
+    // volume failure info for this volume.
+    removeVolumeFailureInfo(new File(ref.getVolume().getBasePath()));
     FsDatasetImpl.LOG.info("Added new volume: " +
         ref.getVolume().getStorageID());
   }
@@ -337,8 +343,9 @@ class FsVolumeList {
   /**
    * Dynamically remove volume in the list.
    * @param volume the volume to be removed.
+   * @param clearFailure set true to remove failure info for this volume.
    */
-  void removeVolume(File volume) {
+  void removeVolume(File volume, boolean clearFailure) {
     // Make a copy of volumes to remove one volume.
     final FsVolumeImpl[] curVolumes = volumes.get();
     final List<FsVolumeImpl> volumeList = Lists.newArrayList(curVolumes);
@@ -352,7 +359,9 @@ class FsVolumeList {
         removeVolume(fsVolume);
       }
     }
-    removeVolumeFailureInfo(volume);
+    if (clearFailure) {
+      removeVolumeFailureInfo(volume);
+    }
   }
 
   VolumeFailureInfo[] getVolumeFailureInfos() {
@@ -366,7 +375,9 @@ class FsVolumeList {
   }
 
   private void addVolumeFailureInfo(FsVolumeImpl vol) {
-    addVolumeFailureInfo(new VolumeFailureInfo(vol.getBasePath(), Time.now(),
+    addVolumeFailureInfo(new VolumeFailureInfo(
+        new File(vol.getBasePath()).getAbsolutePath(),
+        Time.now(),
         vol.getCapacity()));
   }
 
@@ -419,9 +430,10 @@ class FsVolumeList {
         bpid + ": " + totalTimeTaken + "ms");
   }
   
-  void removeBlockPool(String bpid) {
+  void removeBlockPool(String bpid, Map<DatanodeStorage, BlockListAsLongs>
+      blocksPerVolume) {
     for (FsVolumeImpl v : volumes.get()) {
-      v.shutdownBlockPool(bpid);
+      v.shutdownBlockPool(bpid, blocksPerVolume.get(v.toDatanodeStorage()));
     }
   }
 

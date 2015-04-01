@@ -83,7 +83,6 @@ import java.util.concurrent.Future;
 public class DataStorage extends Storage {
 
   public final static String BLOCK_SUBDIR_PREFIX = "subdir";
-  final static String BLOCK_FILE_PREFIX = "blk_";
   final static String COPY_FILE_PREFIX = "dncp_";
   final static String STORAGE_DIR_DETACHED = "detach";
   public final static String STORAGE_DIR_RBW = "rbw";
@@ -169,11 +168,11 @@ public class DataStorage extends Storage {
     }
   }
 
-  public void restoreTrash(String bpid) {
+  public void clearTrash(String bpid) {
     if (trashEnabledBpids.contains(bpid)) {
-      getBPStorage(bpid).restoreTrash();
+      getBPStorage(bpid).clearTrash();
       trashEnabledBpids.remove(bpid);
-      LOG.info("Restored trash for bpid " + bpid);
+      LOG.info("Cleared trash for bpid " + bpid);
     }
   }
 
@@ -405,28 +404,23 @@ public class DataStorage extends Storage {
   }
 
   /**
-   * Remove volumes from DataStorage. All volumes are removed even when the
+   * Remove storage dirs from DataStorage. All storage dirs are removed even when the
    * IOException is thrown.
    *
-   * @param locations a collection of volumes.
+   * @param dirsToRemove a set of storage directories to be removed.
    * @throws IOException if I/O error when unlocking storage directory.
    */
-  synchronized void removeVolumes(Collection<StorageLocation> locations)
+  synchronized void removeVolumes(final Set<File> dirsToRemove)
       throws IOException {
-    if (locations.isEmpty()) {
+    if (dirsToRemove.isEmpty()) {
       return;
-    }
-
-    Set<File> dataDirs = new HashSet<File>();
-    for (StorageLocation sl : locations) {
-      dataDirs.add(sl.getFile());
     }
 
     StringBuilder errorMsgBuilder = new StringBuilder();
     for (Iterator<StorageDirectory> it = this.storageDirs.iterator();
          it.hasNext(); ) {
       StorageDirectory sd = it.next();
-      if (dataDirs.contains(sd.getRoot())) {
+      if (dirsToRemove.contains(sd.getRoot())) {
         // Remove the block pool level storage first.
         for (Map.Entry<String, BlockPoolSliceStorage> entry :
             this.bpStorageMap.entrySet()) {
@@ -1250,7 +1244,7 @@ public class DataStorage extends Storage {
     String[] blockNames = from.list(new java.io.FilenameFilter() {
       @Override
       public boolean accept(File dir, String name) {
-        return name.startsWith(BLOCK_FILE_PREFIX);
+        return name.startsWith(Block.BLOCK_FILE_PREFIX);
       }
     });
 

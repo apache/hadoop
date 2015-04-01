@@ -60,6 +60,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -77,9 +78,12 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -115,6 +119,7 @@ import org.apache.hadoop.util.ToolRunner;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -520,7 +525,8 @@ public class MiniDFSCluster {
   private boolean federation;
   private boolean checkExitOnShutdown = true;
   protected final int storagesPerDatanode;
-  
+  private Set<FileSystem> fileSystems = Sets.newHashSet();
+
   /**
    * A unique instance identifier for the cluster. This
    * is used to disambiguate HA filesystems in the case where
@@ -1343,7 +1349,6 @@ public class MiniDFSCluster {
     }
 
     int curDatanodesNum = dataNodes.size();
-    final int curDatanodesNumSaved = curDatanodesNum;
     // for mincluster's the default initialDelay for BRs is 0
     if (conf.get(DFS_BLOCKREPORT_INITIAL_DELAY_KEY) == null) {
       conf.setLong(DFS_BLOCKREPORT_INITIAL_DELAY_KEY, 0);
@@ -1703,6 +1708,13 @@ public class MiniDFSCluster {
    * Shutdown all the nodes in the cluster.
    */
   public void shutdown(boolean deleteDfsDir) {
+    shutdown(deleteDfsDir, true);
+  }
+
+  /**
+   * Shutdown all the nodes in the cluster.
+   */
+  public void shutdown(boolean deleteDfsDir, boolean closeFileSystem) {
     LOG.info("Shutting down the Mini HDFS Cluster");
     if (checkExitOnShutdown)  {
       if (ExitUtil.terminateCalled()) {
@@ -1711,6 +1723,16 @@ public class MiniDFSCluster {
         ExitUtil.resetFirstExitException();
         throw new AssertionError("Test resulted in an unexpected exit");
       }
+    }
+    if (closeFileSystem) {
+      for (FileSystem fs : fileSystems) {
+        try {
+          fs.close();
+        } catch (IOException ioe) {
+          LOG.warn("Exception while closing file system", ioe);
+        }
+      }
+      fileSystems.clear();
     }
     shutdownDataNodes();
     for (NameNodeInfo nnInfo : nameNodes) {
@@ -2022,11 +2044,45 @@ public class MiniDFSCluster {
    */
   public synchronized boolean restartDataNode(int i, boolean keepPort)
       throws IOException {
-    DataNodeProperties dnprop = stopDataNode(i);
+    return restartDataNode(i, keepPort, false);
+  }
+
+  /**
+   * Restart a particular DataNode.
+   * @param idn index of the DataNode
+   * @param keepPort true if should restart on the same port
+   * @param expireOnNN true if NameNode should expire the DataNode heartbeat
+   * @return
+   * @throws IOException
+   */
+  public synchronized boolean restartDataNode(
+      int idn, boolean keepPort, boolean expireOnNN) throws IOException {
+    DataNodeProperties dnprop = stopDataNode(idn);
+    if(expireOnNN) {
+      setDataNodeDead(dnprop.datanode.getDatanodeId());
+    }
     if (dnprop == null) {
       return false;
     } else {
       return restartDataNode(dnprop, keepPort);
+    }
+  }
+
+  /**
+   * Expire a DataNode heartbeat on the NameNode
+   * @param dnId
+   * @throws IOException
+   */
+  public void setDataNodeDead(DatanodeID dnId) throws IOException {
+    DatanodeDescriptor dnd =
+        NameNodeAdapter.getDatanode(getNamesystem(), dnId);
+    DFSTestUtil.setDatanodeDead(dnd);
+    BlockManagerTestUtil.checkHeartbeat(getNamesystem().getBlockManager());
+  }
+
+  public void setDataNodesDead() throws IOException {
+    for (DataNodeProperties dnp : dataNodes) {
+      setDataNodeDead(dnp.datanode.getDatanodeId());
     }
   }
 
@@ -2108,8 +2164,10 @@ public class MiniDFSCluster {
    * Get a client handle to the DFS cluster for the namenode at given index.
    */
   public DistributedFileSystem getFileSystem(int nnIndex) throws IOException {
-    return (DistributedFileSystem)FileSystem.get(getURI(nnIndex),
-        nameNodes[nnIndex].conf);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(
+        getURI(nnIndex), nameNodes[nnIndex].conf);
+    fileSystems.add(dfs);
+    return dfs;
   }
 
   /**
@@ -2117,7 +2175,9 @@ public class MiniDFSCluster {
    * This simulating different threads working on different FileSystem instances.
    */
   public FileSystem getNewFileSystemInstance(int nnIndex) throws IOException {
-    return FileSystem.newInstance(getURI(nnIndex), nameNodes[nnIndex].conf);
+    FileSystem dfs = FileSystem.newInstance(getURI(nnIndex), nameNodes[nnIndex].conf);
+    fileSystems.add(dfs);
+    return dfs;
   }
   
   /**
@@ -2255,8 +2315,8 @@ public class MiniDFSCluster {
     // make sure all datanodes have sent first heartbeat to namenode,
     // using (capacity == 0) as proxy.
     for (DatanodeInfo dn : dnInfo) {
-      if (dn.getCapacity() == 0) {
-        LOG.info("dn.getCapacity() == 0");
+      if (dn.getCapacity() == 0 || dn.getLastUpdate() <= 0) {
+        LOG.info("No heartbeat from DataNode: " + dn.toString());
         return true;
       }
     }
@@ -2544,8 +2604,8 @@ public class MiniDFSCluster {
       return null;
     }
     for (File f : files) {
-      if (f.getName().startsWith("blk_") && f.getName().endsWith(
-          Block.METADATA_EXTENSION)) {
+      if (f.getName().startsWith(Block.BLOCK_FILE_PREFIX) &&
+              f.getName().endsWith(Block.METADATA_EXTENSION)) {
         results.add(f);
       } else if (f.isDirectory()) {
         List<File> subdirResults = getAllBlockMetadataFiles(f);

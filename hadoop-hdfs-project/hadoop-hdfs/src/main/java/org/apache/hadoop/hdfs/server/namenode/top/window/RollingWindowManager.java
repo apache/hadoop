@@ -245,7 +245,7 @@ public class RollingWindowManager {
           metricName, userName, windowSum);
       topN.offer(new NameValuePair(userName, windowSum));
     }
-    LOG.info("topN size for command {} is: {}", metricName, topN.size());
+    LOG.debug("topN users size for command {} is: {}", metricName, topN.size());
     return topN;
   }
 

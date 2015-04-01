@@ -65,8 +65,13 @@ hadoop_error "WARNING: Attempting to execute replacement \"hdfs --slaves --daemo
 # we're going to turn this into
 #  hdfs --slaves --daemon (start|stop) (rest of options)
 #
-argv=(${HADOOP_USER_PARAMS[@]/start})
-argv=(${argv[@]/stop})
-argv=(${argv[@]/status})
+for (( i = 0; i < ${#HADOOP_USER_PARAMS[@]}; i++ ))
+do
+  if [[ "${HADOOP_USER_PARAMS[$i]}" =~ ^start$ ]] ||
+     [[ "${HADOOP_USER_PARAMS[$i]}" =~ ^stop$ ]] ||
+     [[ "${HADOOP_USER_PARAMS[$i]}" =~ ^status$ ]]; then
+    unset HADOOP_USER_PARAMS[$i]
+  fi
+done
 
-${hdfsscript} --slaves --daemon "${daemonmode}" "${argv[@]}"
+${hdfsscript} --slaves --daemon "${daemonmode}" "${HADOOP_USER_PARAMS[@]}"

@@ -87,13 +87,56 @@
 	<button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
 	<div class="alert-body" id="alert-panel-body"></div>
       </div>
-      <div class="row">
-	<form onsubmit="return false;">
-	  <div class="input-group"><input type="text" class="form-control" id=
-					  "directory" /> <span class="input-group-btn"><button class="btn btn-default"
-											       type="submit" id="btn-nav-directory"><span class="input-group-btn">Go!</span></button></span></div>
-	</form>
+
+    <div class="modal" id="btn-create-directory" tabindex="-1" role="dialog"
+      aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close"
+              data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">Create Directory</h4>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <div class="input-group">
+                <span class="input-group-addon" id="new_directory_pwd"></span>
+                <input type="text" class="form-control" id="new_directory"
+                  placeholder="New Directory Name" />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-success"
+              id="btn-create-directory-send" data-complete-text="Creating...">
+              Create
+            </button>
+          </div>
+        </div>
       </div>
+    </div>
+
+      <div class="row">
+      <div class="col-xs-11">
+        <form onsubmit="return false;">
+          <div class="input-group">
+            <input type="text" class="form-control" id="directory"/>
+            <span class="input-group-btn">
+              <button class="btn btn-default" type="button" id="btn-nav-directory">Go!</button>
+            </span>
+          </div>
+        </form>
+      </div>
+      <div class="col-xs-1">
+        <button type="button" class="btn btn-default" data-toggle="modal"
+          aria-label="New Directory" data-target="#btn-create-directory"
+          title="Create Directory">
+            <span class="glyphicon glyphicon-folder-open"></span>
+        </button>
+      </div>
+    </div>
+
       <br />
       <div id="panel"></div>
 

@@ -163,6 +163,14 @@ else (SNAPPY_LIBRARY AND SNAPPY_INCLUDE_DIR)
     ENDIF(REQUIRE_SNAPPY)
 endif (SNAPPY_LIBRARY AND SNAPPY_INCLUDE_DIR)
 
+IF (CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")
+  set(BULK_CRC_ARCH_SOURCE_FIlE "${D}/util/bulk_crc32_x86.c")
+ELSEIF (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+  set(BULK_CRC_ARCH_SOURCE_FIlE "${D}/util/bulk_crc32_aarch64.c")
+ELSE()
+  MESSAGE("No HW CRC acceleration for ${CMAKE_SYSTEM_PROCESSOR}, falling back to SW")
+ENDIF()
+
 # Find the no-suffix version of libcrypto.
 # See HADOOP-11216 for details.
 SET(STORED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
@@ -228,6 +236,7 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
 add_executable(test_bulk_crc32
     ${D}/util/bulk_crc32.c
+    ${BULK_CRC_ARCH_SOURCE_FIlE}
     ${T}/util/test_bulk_crc32.c
 )
 
@@ -256,6 +265,7 @@ add_dual_library(hadoop
     ${D}/util/NativeCodeLoader.c
     ${D}/util/NativeCrc32.c
     ${D}/util/bulk_crc32.c
+    ${BULK_CRC_ARCH_SOURCE_FIlE}
 )
 if (NEED_LINK_DL)
    set(LIB_DL dl)

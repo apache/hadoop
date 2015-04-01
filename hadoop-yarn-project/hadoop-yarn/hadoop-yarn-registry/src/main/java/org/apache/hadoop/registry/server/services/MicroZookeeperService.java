@@ -47,16 +47,16 @@ import java.net.UnknownHostException;
 /**
  * This is a small, localhost Zookeeper service instance that is contained
  * in a YARN service...it's been derived from Apache Twill.
- *
+ * <p>
  * It implements {@link RegistryBindingSource} and provides binding information,
- * <i>once started</i>. Until <code>start()</code> is called, the hostname &
+ * <i>once started</i>. Until {@link #start()} is called, the hostname and
  * port may be undefined. Accordingly, the service raises an exception in this
  * condition.
- *
+ * <p>
  * If you wish to chain together a registry service with this one under
- * the same <code>CompositeService</code>, this service must be added
+ * the same {@code CompositeService}, this service must be added
  * as a child first.
- *
+ * <p>
  * It also sets the configuration parameter
  * {@link RegistryConstants#KEY_REGISTRY_ZK_QUORUM}
  * to its connection string. Any code with access to the service configuration

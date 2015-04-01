@@ -22,18 +22,24 @@ import java.lang.reflect.Constructor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 
 /**
  * Interface class to obtain process resource usage
- *
+ * NOTE: This class should not be used by external users, but only by external
+ * developers to extend and include their own process-tree implementation, 
+ * especially for platforms other than Linux and Windows.
  */
-@Private
+@Public
+@Evolving
 public abstract class ResourceCalculatorProcessTree extends Configured {
   static final Log LOG = LogFactory
       .getLog(ResourceCalculatorProcessTree.class);
+  public static final int UNAVAILABLE = -1;
 
   /**
    * Create process-tree instance with specified root process.
@@ -63,57 +69,131 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
   public abstract String getProcessTreeDump();
 
   /**
-   * Get the cumulative virtual memory used by all the processes in the
+   * Get the virtual memory used by all the processes in the
    * process-tree.
    *
-   * @return cumulative virtual memory used by the process-tree in bytes.
+   * @return virtual memory used by the process-tree in bytes,
+   * {@link #UNAVAILABLE} if it cannot be calculated.
    */
+  public long getVirtualMemorySize() {
+    return getVirtualMemorySize(0);
+  }
+  
+  /**
+   * Get the virtual memory used by all the processes in the
+   * process-tree.
+   *
+   * @return virtual memory used by the process-tree in bytes,
+   * {@link #UNAVAILABLE} if it cannot be calculated.
+   */
+  @Deprecated
   public long getCumulativeVmem() {
     return getCumulativeVmem(0);
   }
 
   /**
-   * Get the cumulative resident set size (rss) memory used by all the processes
+   * Get the resident set size (rss) memory used by all the processes
    * in the process-tree.
    *
-   * @return cumulative rss memory used by the process-tree in bytes. return 0
-   *         if it cannot be calculated
+   * @return rss memory used by the process-tree in bytes,
+   * {@link #UNAVAILABLE} if it cannot be calculated.
    */
+  public long getRssMemorySize() {
+    return getRssMemorySize(0);
+  }
+  
+  /**
+   * Get the resident set size (rss) memory used by all the processes
+   * in the process-tree.
+   *
+   * @return rss memory used by the process-tree in bytes,
+   * {@link #UNAVAILABLE} if it cannot be calculated.
+   */
+  @Deprecated
   public long getCumulativeRssmem() {
     return getCumulativeRssmem(0);
   }
 
   /**
-   * Get the cumulative virtual memory used by all the processes in the
+   * Get the virtual memory used by all the processes in the
    * process-tree that are older than the passed in age.
    *
    * @param olderThanAge processes above this age are included in the
-   *                      memory addition
-   * @return cumulative virtual memory used by the process-tree in bytes,
-   *          for processes older than this age.
+   *                     memory addition
+   * @return virtual memory used by the process-tree in bytes for
+   * processes older than the specified age, {@link #UNAVAILABLE} if it
+   * cannot be calculated.
    */
-  public abstract long getCumulativeVmem(int olderThanAge);
+  public long getVirtualMemorySize(int olderThanAge) {
+    return UNAVAILABLE;
+  }
+  
+  /**
+   * Get the virtual memory used by all the processes in the
+   * process-tree that are older than the passed in age.
+   *
+   * @param olderThanAge processes above this age are included in the
+   *                     memory addition
+   * @return virtual memory used by the process-tree in bytes for
+   * processes older than the specified age, {@link #UNAVAILABLE} if it
+   * cannot be calculated.
+   */
+  @Deprecated
+  public long getCumulativeVmem(int olderThanAge) {
+    return UNAVAILABLE;
+  }
 
   /**
-   * Get the cumulative resident set size (rss) memory used by all the processes
+   * Get the resident set size (rss) memory used by all the processes
    * in the process-tree that are older than the passed in age.
    *
    * @param olderThanAge processes above this age are included in the
-   *                      memory addition
-   * @return cumulative rss memory used by the process-tree in bytes,
-   *          for processes older than this age. return 0 if it cannot be
-   *          calculated
+   *                     memory addition
+   * @return rss memory used by the process-tree in bytes for
+   * processes older than specified age, {@link #UNAVAILABLE} if it cannot be
+   * calculated.
    */
-  public abstract long getCumulativeRssmem(int olderThanAge);
+  public long getRssMemorySize(int olderThanAge) {
+    return UNAVAILABLE;
+  }
+  
+  /**
+   * Get the resident set size (rss) memory used by all the processes
+   * in the process-tree that are older than the passed in age.
+   *
+   * @param olderThanAge processes above this age are included in the
+   *                     memory addition
+   * @return rss memory used by the process-tree in bytes for
+   * processes older than specified age, {@link #UNAVAILABLE} if it cannot be
+   * calculated.
+   */
+  @Deprecated
+  public long getCumulativeRssmem(int olderThanAge) {
+    return UNAVAILABLE;
+  }
 
   /**
    * Get the CPU time in millisecond used by all the processes in the
-   * process-tree since the process-tree created
+   * process-tree since the process-tree was created
    *
-   * @return cumulative CPU time in millisecond since the process-tree created
-   *         return 0 if it cannot be calculated
+   * @return cumulative CPU time in millisecond since the process-tree
+   * created, {@link #UNAVAILABLE} if it cannot be calculated.
    */
-  public abstract long getCumulativeCpuTime();
+  public long getCumulativeCpuTime() {
+    return UNAVAILABLE;
+  }
+
+  /**
+   * Get the CPU usage by all the processes in the process-tree based on
+   * average between samples as a ratio of overall CPU cycles similar to top.
+   * Thus, if 2 out of 4 cores are used this should return 200.0.
+   *
+   * @return percentage CPU usage since the process-tree was created,
+   * {@link #UNAVAILABLE} if it cannot be calculated.
+   */
+  public float getCpuUsagePercent() {
+    return UNAVAILABLE;
+  }
 
   /** Verify that the tree process id is same as its process group id.
    * @return true if the process id matches else return false.

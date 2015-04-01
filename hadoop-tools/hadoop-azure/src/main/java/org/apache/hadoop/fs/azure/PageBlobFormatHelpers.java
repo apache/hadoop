@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azure;
 
 import java.nio.ByteBuffer;
 
-import com.microsoft.windowsazure.storage.blob.BlobRequestOptions;
+import com.microsoft.azure.storage.blob.BlobRequestOptions;
 
 /**
  * Constants and helper methods for ASV's custom data format in page blobs.

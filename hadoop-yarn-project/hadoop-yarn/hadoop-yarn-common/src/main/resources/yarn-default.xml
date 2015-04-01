@@ -1075,6 +1075,20 @@
   </property>
 
   <property>
+    <description>This flag determines whether memory limit will be set for the Windows Job
+    Object of the containers launched by the default container executor.</description>
+    <name>yarn.nodemanager.windows-container.memory-limit.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>This flag determines whether CPU limit will be set for the Windows Job
+    Object of the containers launched by the default container executor.</description>
+    <name>yarn.nodemanager.windows-container.cpu-limit.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>T-file compression types used to compress aggregated logs.</description>
     <name>yarn.nodemanager.log-aggregation.compression-type</name>
     <value>none</value>

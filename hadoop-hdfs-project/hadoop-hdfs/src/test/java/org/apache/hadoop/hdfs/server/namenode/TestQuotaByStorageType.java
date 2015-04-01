@@ -24,6 +24,7 @@ package org.apache.hadoop.hdfs.server.namenode;
   import org.apache.commons.logging.Log;
   import org.apache.commons.logging.LogFactory;
   import org.apache.hadoop.conf.Configuration;
+  import org.apache.hadoop.fs.ContentSummary;
   import org.apache.hadoop.fs.Path;
   import org.apache.hadoop.fs.StorageType;
   import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -156,6 +157,11 @@ public class TestQuotaByStorageType {
     ssdConsumed = fnode.asDirectory().getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getTypeSpaces().get(StorageType.SSD);
     assertEquals(file1Len, ssdConsumed);
+
+    ContentSummary cs = dfs.getContentSummary(foo);
+    assertEquals(cs.getSpaceConsumed(), file1Len * REPLICATION);
+    assertEquals(cs.getTypeConsumed(StorageType.SSD), file1Len);
+    assertEquals(cs.getTypeConsumed(StorageType.DISK), file1Len * 2);
   }
 
   @Test(timeout = 60000)
@@ -192,6 +198,11 @@ public class TestQuotaByStorageType {
     fnode.computeQuotaUsage(fsn.getBlockManager().getStoragePolicySuite(), counts, true);
     assertEquals(fnode.dumpTreeRecursively().toString(), 0,
         counts.getTypeSpaces().get(StorageType.SSD));
+
+    ContentSummary cs = dfs.getContentSummary(foo);
+    assertEquals(cs.getSpaceConsumed(), 0);
+    assertEquals(cs.getTypeConsumed(StorageType.SSD), 0);
+    assertEquals(cs.getTypeConsumed(StorageType.DISK), 0);
   }
 
   @Test(timeout = 60000)
@@ -233,6 +244,11 @@ public class TestQuotaByStorageType {
     } catch (Throwable t) {
       LOG.info("Got expected exception ", t);
     }
+
+    ContentSummary cs = dfs.getContentSummary(foo);
+    assertEquals(cs.getSpaceConsumed(), file1Len * REPLICATION);
+    assertEquals(cs.getTypeConsumed(StorageType.SSD), file1Len);
+    assertEquals(cs.getTypeConsumed(StorageType.DISK), file1Len * 2);
   }
 
   /**
@@ -554,6 +570,11 @@ public class TestQuotaByStorageType {
     assertEquals(sub1Node.dumpTreeRecursively().toString(), file1Len,
         counts1.getTypeSpaces().get(StorageType.SSD));
 
+    ContentSummary cs1 = dfs.getContentSummary(sub1);
+    assertEquals(cs1.getSpaceConsumed(), file1Len * REPLICATION);
+    assertEquals(cs1.getTypeConsumed(StorageType.SSD), file1Len);
+    assertEquals(cs1.getTypeConsumed(StorageType.DISK), file1Len * 2);
+
     // Delete the snapshot s1
     dfs.deleteSnapshot(sub1, "s1");
 
@@ -566,6 +587,11 @@ public class TestQuotaByStorageType {
     sub1Node.computeQuotaUsage(fsn.getBlockManager().getStoragePolicySuite(), counts2, true);
     assertEquals(sub1Node.dumpTreeRecursively().toString(), 0,
         counts2.getTypeSpaces().get(StorageType.SSD));
+
+    ContentSummary cs2 = dfs.getContentSummary(sub1);
+    assertEquals(cs2.getSpaceConsumed(), 0);
+    assertEquals(cs2.getTypeConsumed(StorageType.SSD), 0);
+    assertEquals(cs2.getTypeConsumed(StorageType.DISK), 0);
   }
 
   @Test(timeout = 60000)
@@ -601,6 +627,11 @@ public class TestQuotaByStorageType {
     ssdConsumed = fnode.asDirectory().getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getTypeSpaces().get(StorageType.SSD);
     assertEquals(newFile1Len, ssdConsumed);
+
+    ContentSummary cs = dfs.getContentSummary(foo);
+    assertEquals(cs.getSpaceConsumed(), newFile1Len * REPLICATION);
+    assertEquals(cs.getTypeConsumed(StorageType.SSD), newFile1Len);
+    assertEquals(cs.getTypeConsumed(StorageType.DISK), newFile1Len * 2);
   }
 
   @Test
@@ -701,6 +732,55 @@ public class TestQuotaByStorageType {
         .getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getTypeSpaces().get(StorageType.SSD);
     assertEquals(file1Len, ssdConsumedAfterNNRestart);
+  }
 
+  @Test(timeout = 60000)
+  public void testContentSummaryWithoutQuotaByStorageType() throws Exception {
+    final Path foo = new Path(dir, "foo");
+    Path createdFile1 = new Path(foo, "created_file1.data");
+    dfs.mkdirs(foo);
+
+    // set storage policy on directory "foo" to ONESSD
+    dfs.setStoragePolicy(foo, HdfsConstants.ONESSD_STORAGE_POLICY_NAME);
+
+    INode fnode = fsdir.getINode4Write(foo.toString());
+    assertTrue(fnode.isDirectory());
+    assertTrue(!fnode.isQuotaSet());
+
+    // Create file of size 2 * BLOCKSIZE under directory "foo"
+    long file1Len = BLOCKSIZE * 2;
+    int bufLen = BLOCKSIZE / 16;
+    DFSTestUtil.createFile(dfs, createdFile1, bufLen, file1Len, BLOCKSIZE, REPLICATION, seed);
+
+    // Verify getContentSummary without any quota set
+    ContentSummary cs = dfs.getContentSummary(foo);
+    assertEquals(cs.getSpaceConsumed(), file1Len * REPLICATION);
+    assertEquals(cs.getTypeConsumed(StorageType.SSD), file1Len);
+    assertEquals(cs.getTypeConsumed(StorageType.DISK), file1Len * 2);
+  }
+
+  @Test(timeout = 60000)
+  public void testContentSummaryWithoutStoragePolicy() throws Exception {
+    final Path foo = new Path(dir, "foo");
+    Path createdFile1 = new Path(foo, "created_file1.data");
+    dfs.mkdirs(foo);
+
+    INode fnode = fsdir.getINode4Write(foo.toString());
+    assertTrue(fnode.isDirectory());
+    assertTrue(!fnode.isQuotaSet());
+
+    // Create file of size 2 * BLOCKSIZE under directory "foo"
+    long file1Len = BLOCKSIZE * 2;
+    int bufLen = BLOCKSIZE / 16;
+    DFSTestUtil.createFile(dfs, createdFile1, bufLen, file1Len, BLOCKSIZE, REPLICATION, seed);
+
+    // Verify getContentSummary without any quota set
+    // Expect no type quota and usage information available
+    ContentSummary cs = dfs.getContentSummary(foo);
+    assertEquals(cs.getSpaceConsumed(), file1Len * REPLICATION);
+    for (StorageType t : StorageType.values()) {
+      assertEquals(cs.getTypeConsumed(t), 0);
+      assertEquals(cs.getTypeQuota(t), -1);
+    }
   }
 }

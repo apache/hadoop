@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.RMSecretManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.TestFifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -68,7 +67,8 @@ import com.google.common.collect.Sets;
 
 public class TestContainerAllocation {
 
-  private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
+  private static final Log LOG = LogFactory
+      .getLog(TestContainerAllocation.class);
 
   private final int GB = 1024;
 
@@ -230,12 +230,18 @@ public class TestContainerAllocation {
     // create a not-null LogAggregationContext
     LogAggregationContext logAggregationContext =
         LogAggregationContext.newInstance(
-          "includePattern", "excludePattern");
+          "includePattern", "excludePattern",
+          "rolledLogsIncludePattern",
+          "rolledLogsExcludePattern");
     LogAggregationContext returned =
         getLogAggregationContextFromContainerToken(rm1, nm2,
           logAggregationContext);
     Assert.assertEquals("includePattern", returned.getIncludePattern());
     Assert.assertEquals("excludePattern", returned.getExcludePattern());
+    Assert.assertEquals("rolledLogsIncludePattern",
+      returned.getRolledLogsIncludePattern());
+    Assert.assertEquals("rolledLogsExcludePattern",
+      returned.getRolledLogsExcludePattern());
     rm1.stop();
   }
 
@@ -322,19 +328,6 @@ public class TestContainerAllocation {
     MockRM.launchAndRegisterAM(app1, rm1, nm1);
   }
   
-  private Configuration getConfigurationWithDefaultQueueLabels(
-      Configuration config) {
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-    
-    CapacitySchedulerConfiguration conf =
-        (CapacitySchedulerConfiguration) getConfigurationWithQueueLabels(config);
-        new CapacitySchedulerConfiguration(config);
-    conf.setDefaultNodeLabelExpression(A, "x");
-    conf.setDefaultNodeLabelExpression(B, "y");
-    return conf;
-  }
-  
   private Configuration getConfigurationWithQueueLabels(Configuration config) {
     CapacitySchedulerConfiguration conf =
         new CapacitySchedulerConfiguration(config);
@@ -400,57 +393,6 @@ public class TestContainerAllocation {
     return set;
   }
   
-  private Configuration getComplexConfigurationWithQueueLabels(
-      Configuration config) {
-    CapacitySchedulerConfiguration conf =
-        new CapacitySchedulerConfiguration(config);
-    
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "z", 100);
-
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-    conf.setCapacity(A, 10);
-    conf.setMaximumCapacity(A, 10);
-    conf.setAccessibleNodeLabels(A, toSet("x", "y"));
-    conf.setCapacityByLabel(A, "x", 100);
-    conf.setCapacityByLabel(A, "y", 50);
-    
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-    conf.setCapacity(B, 90);
-    conf.setMaximumCapacity(B, 100);
-    conf.setAccessibleNodeLabels(B, toSet("y", "z"));
-    conf.setCapacityByLabel(B, "y", 50);
-    conf.setCapacityByLabel(B, "z", 100);
-    
-    // Define 2nd-level queues
-    final String A1 = A + ".a1";
-    conf.setQueues(A, new String[] {"a1"});
-    conf.setCapacity(A1, 100);
-    conf.setMaximumCapacity(A1, 100);
-    conf.setAccessibleNodeLabels(A1, toSet("x", "y"));
-    conf.setDefaultNodeLabelExpression(A1, "x");
-    conf.setCapacityByLabel(A1, "x", 100);
-    conf.setCapacityByLabel(A1, "y", 100);
-    
-    conf.setQueues(B, new String[] {"b1", "b2"});
-    final String B1 = B + ".b1";
-    conf.setCapacity(B1, 50);
-    conf.setMaximumCapacity(B1, 50);
-    conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
-
-    final String B2 = B + ".b2";
-    conf.setCapacity(B2, 50);
-    conf.setMaximumCapacity(B2, 50);
-    conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
-    conf.setCapacityByLabel(B2, "y", 100);
-    conf.setCapacityByLabel(B2, "z", 100);
-
-    return conf;
-  }
-  
   @Test (timeout = 300000)
   public void testContainerAllocationWithSingleUserLimits() throws Exception {
     final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
@@ -462,7 +404,7 @@ public class TestContainerAllocation {
         NodeId.newInstance("h2", 0), toSet("y")));
 
     // inject node label manager
-    MockRM rm1 = new MockRM(getConfigurationWithDefaultQueueLabels(conf)) {
+    MockRM rm1 = new MockRM(TestUtils.getConfigurationWithDefaultQueueLabels(conf)) {
       @Override
       public RMNodeLabelsManager createNodeLabelManager() {
         return mgr;
@@ -548,7 +490,7 @@ public class TestContainerAllocation {
         RMNodeLabelsManager.EMPTY_STRING_SET));
 
     // inject node label manager
-    MockRM rm1 = new MockRM(getComplexConfigurationWithQueueLabels(conf)) {
+    MockRM rm1 = new MockRM(TestUtils.getComplexConfigurationWithQueueLabels(conf)) {
       @Override
       public RMNodeLabelsManager createNodeLabelManager() {
         return mgr;
@@ -705,7 +647,7 @@ public class TestContainerAllocation {
         NodeId.newInstance("h2", 0), toSet("y")));
 
     // inject node label manager
-    MockRM rm1 = new MockRM(getConfigurationWithDefaultQueueLabels(conf)) {
+    MockRM rm1 = new MockRM(TestUtils.getConfigurationWithDefaultQueueLabels(conf)) {
       @Override
       public RMNodeLabelsManager createNodeLabelManager() {
         return mgr;

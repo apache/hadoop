@@ -364,7 +364,6 @@ public class DelegationTokenRenewer extends AbstractService {
    * @param shouldCancelAtEnd true if tokens should be canceled when the app is
    * done else false. 
    * @param user user
-   * @throws IOException
    */
   public void addApplicationAsync(ApplicationId applicationId, Credentials ts,
       boolean shouldCancelAtEnd, String user) {
@@ -606,6 +605,7 @@ public class DelegationTokenRenewer extends AbstractService {
     rmContext.getSystemCredentialsForApps().put(applicationId, byteBuffer);
   }
 
+  @VisibleForTesting
   protected Token<?>[] obtainSystemTokensForUser(String user,
       final Credentials credentials) throws IOException, InterruptedException {
     // Get new hdfs tokens on behalf of this user
@@ -616,8 +616,16 @@ public class DelegationTokenRenewer extends AbstractService {
         proxyUser.doAs(new PrivilegedExceptionAction<Token<?>[]>() {
           @Override
           public Token<?>[] run() throws Exception {
-            return FileSystem.get(getConfig()).addDelegationTokens(
-              UserGroupInformation.getLoginUser().getUserName(), credentials);
+            FileSystem fs = FileSystem.get(getConfig());
+            try {
+              return fs.addDelegationTokens(
+                  UserGroupInformation.getLoginUser().getUserName(),
+                  credentials);
+            } finally {
+              // Close the FileSystem created by the new proxy user,
+              // So that we don't leave an entry in the FileSystem cache
+              fs.close();
+            }
           }
         });
     return newTokens;
@@ -634,7 +642,6 @@ public class DelegationTokenRenewer extends AbstractService {
   
   /**
    * removing failed DT
-   * @param applicationId
    */
   private void removeFailedDelegationToken(DelegationTokenToRenew t) {
     ApplicationId applicationId = t.applicationId;

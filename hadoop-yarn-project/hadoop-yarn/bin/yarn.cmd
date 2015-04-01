@@ -192,6 +192,11 @@ goto :eof
   set yarn-command-arguments=%yarn-command% %yarn-command-arguments%
   goto :eof
 
+:cluster
+  set CLASS=org.apache.hadoop.yarn.client.cli.ClusterCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  goto :eof
+
 :container
   set CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
   set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
@@ -312,6 +317,7 @@ goto :eof
   @echo   jar ^<jar^>          run a jar file
   @echo   application          prints application(s) report/kill application
   @echo   applicationattempt   prints applicationattempt(s) report
+  @echo   cluster              prints cluster information
   @echo   container            prints container(s) report
   @echo   node                 prints node report(s)
   @echo   queue                prints queue information

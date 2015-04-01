@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.util;
 
 import static org.apache.hadoop.yarn.util.ProcfsBasedProcessTree.KB_TO_BYTES;
+import static org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree.UNAVAILABLE;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
@@ -116,6 +117,7 @@ public class TestProcfsBasedProcessTree {
   }
 
   @Test(timeout = 30000)
+  @SuppressWarnings("deprecation")
   public void testProcessTree() throws Exception {
     try {
       Assert.assertTrue(ProcfsBasedProcessTree.isAvailable());
@@ -225,8 +227,12 @@ public class TestProcfsBasedProcessTree {
     // ProcessTree is gone now. Any further calls should be sane.
     p.updateProcessTree();
     Assert.assertFalse("ProcessTree must have been gone", isAlive(pid));
+    
     Assert.assertTrue(
-      "Cumulative vmem for the gone-process is " + p.getCumulativeVmem()
+      "vmem for the gone-process is " + p.getVirtualMemorySize()
+          + " . It should be zero.", p.getVirtualMemorySize() == 0);
+    Assert.assertTrue(
+      "vmem (old API) for the gone-process is " + p.getCumulativeVmem()
           + " . It should be zero.", p.getCumulativeVmem() == 0);
     Assert.assertTrue(p.toString().equals("[ ]"));
   }
@@ -236,8 +242,8 @@ public class TestProcfsBasedProcessTree {
   }
 
   protected ProcfsBasedProcessTree createProcessTree(String pid,
-      String procfsRootDir) {
-    return new ProcfsBasedProcessTree(pid, procfsRootDir);
+      String procfsRootDir, Clock clock) {
+    return new ProcfsBasedProcessTree(pid, procfsRootDir, clock);
   }
 
   protected void destroyProcessTree(String pid) throws IOException {
@@ -384,10 +390,13 @@ public class TestProcfsBasedProcessTree {
    *           files.
    */
   @Test(timeout = 30000)
+  @SuppressWarnings("deprecation")
   public void testCpuAndMemoryForProcessTree() throws IOException {
 
     // test processes
     String[] pids = { "100", "200", "300", "400" };
+    ControlledClock testClock = new ControlledClock(new SystemClock());
+    testClock.setTime(0);
     // create the fake procfs root directory.
     File procfsRootDir = new File(TEST_ROOT_DIR, "proc");
 
@@ -422,20 +431,24 @@ public class TestProcfsBasedProcessTree {
       // crank up the process tree class.
       Configuration conf = new Configuration();
       ProcfsBasedProcessTree processTree =
-          createProcessTree("100", procfsRootDir.getAbsolutePath());
+          createProcessTree("100", procfsRootDir.getAbsolutePath(), testClock);
       processTree.setConf(conf);
       // build the process tree.
       processTree.updateProcessTree();
 
-      // verify cumulative memory
-      Assert.assertEquals("Cumulative virtual memory does not match", 600000L,
-        processTree.getCumulativeVmem());
+      // verify virtual memory
+      Assert.assertEquals("Virtual memory does not match", 600000L,
+        processTree.getVirtualMemorySize());
 
       // verify rss memory
       long cumuRssMem =
           ProcfsBasedProcessTree.PAGE_SIZE > 0
-              ? 600L * ProcfsBasedProcessTree.PAGE_SIZE : 0L;
-      Assert.assertEquals("Cumulative rss memory does not match", cumuRssMem,
+              ? 600L * ProcfsBasedProcessTree.PAGE_SIZE : 
+                  ResourceCalculatorProcessTree.UNAVAILABLE;
+      Assert.assertEquals("rss memory does not match", cumuRssMem,
+        processTree.getRssMemorySize());
+      // verify old API
+      Assert.assertEquals("rss memory (old API) does not match", cumuRssMem,
         processTree.getCumulativeRssmem());
 
       // verify cumulative cpu time
@@ -444,11 +457,20 @@ public class TestProcfsBasedProcessTree {
               ? 7200L * ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS : 0L;
       Assert.assertEquals("Cumulative cpu time does not match", cumuCpuTime,
         processTree.getCumulativeCpuTime());
+
+      // verify CPU usage
+      Assert.assertEquals("Percent CPU time should be set to -1 initially",
+          -1.0, processTree.getCpuUsagePercent(),
+          0.01);
+
       // Check by enabling smaps
       setSmapsInProceTree(processTree, true);
       // RSS=Min(shared_dirty,PSS)+PrivateClean+PrivateDirty (exclude r-xs,
       // r--s)
-      Assert.assertEquals("Cumulative rss memory does not match",
+      Assert.assertEquals("rss memory does not match",
+        (100 * KB_TO_BYTES * 3), processTree.getRssMemorySize());
+      // verify old API
+      Assert.assertEquals("rss memory (old API) does not match",
         (100 * KB_TO_BYTES * 3), processTree.getCumulativeRssmem());
 
       // test the cpu time again to see if it cumulates
@@ -460,15 +482,31 @@ public class TestProcfsBasedProcessTree {
               "100", "200000", "200", "3000", "500" });
       writeStatFiles(procfsRootDir, pids, procInfos, memInfo);
 
+      long elapsedTimeBetweenUpdatesMsec = 200000;
+      testClock.setTime(elapsedTimeBetweenUpdatesMsec);
       // build the process tree.
       processTree.updateProcessTree();
 
       // verify cumulative cpu time again
+      long prevCumuCpuTime = cumuCpuTime;
       cumuCpuTime =
           ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS > 0
               ? 9400L * ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS : 0L;
       Assert.assertEquals("Cumulative cpu time does not match", cumuCpuTime,
         processTree.getCumulativeCpuTime());
+
+      double expectedCpuUsagePercent =
+          (ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS > 0) ?
+              (cumuCpuTime - prevCumuCpuTime) * 100.0 /
+                  elapsedTimeBetweenUpdatesMsec : 0;
+      // expectedCpuUsagePercent is given by (94000L - 72000) * 100/
+      //    200000;
+      // which in this case is 11. Lets verify that first
+      Assert.assertEquals(11, expectedCpuUsagePercent, 0.001);
+      Assert.assertEquals("Percent CPU time is not correct expected " +
+              expectedCpuUsagePercent, expectedCpuUsagePercent,
+          processTree.getCpuUsagePercent(),
+          0.01);
     } finally {
       FileUtil.fullyDelete(procfsRootDir);
     }
@@ -499,6 +537,7 @@ public class TestProcfsBasedProcessTree {
     testMemForOlderProcesses(true);
   }
 
+  @SuppressWarnings("deprecation")
   private void testMemForOlderProcesses(boolean smapEnabled) throws IOException {
     // initial list of processes
     String[] pids = { "100", "200", "300", "400" };
@@ -535,12 +574,17 @@ public class TestProcfsBasedProcessTree {
 
       // crank up the process tree class.
       ProcfsBasedProcessTree processTree =
-          createProcessTree("100", procfsRootDir.getAbsolutePath());
+          createProcessTree("100", procfsRootDir.getAbsolutePath(),
+              new SystemClock());
       setSmapsInProceTree(processTree, smapEnabled);
 
-      // verify cumulative memory
-      Assert.assertEquals("Cumulative memory does not match", 700000L,
+      // verify virtual memory
+      Assert.assertEquals("Virtual memory does not match", 700000L,
+        processTree.getVirtualMemorySize());
+      
+      Assert.assertEquals("Virtual memory (old API) does not match", 700000L,
         processTree.getCumulativeVmem());
+
       // write one more process as child of 100.
       String[] newPids = { "500" };
       setupPidDirs(procfsRootDir, newPids);
@@ -556,33 +600,59 @@ public class TestProcfsBasedProcessTree {
 
       // check memory includes the new process.
       processTree.updateProcessTree();
-      Assert.assertEquals("Cumulative vmem does not include new process",
+      Assert.assertEquals("vmem does not include new process",
+        1200000L, processTree.getVirtualMemorySize());
+      
+      Assert.assertEquals("vmem (old API) does not include new process",
         1200000L, processTree.getCumulativeVmem());
+      
       if (!smapEnabled) {
         long cumuRssMem =
             ProcfsBasedProcessTree.PAGE_SIZE > 0
-                ? 1200L * ProcfsBasedProcessTree.PAGE_SIZE : 0L;
-        Assert.assertEquals("Cumulative rssmem does not include new process",
+                ? 1200L * ProcfsBasedProcessTree.PAGE_SIZE : 
+                    ResourceCalculatorProcessTree.UNAVAILABLE;
+        Assert.assertEquals("rssmem does not include new process",
+          cumuRssMem, processTree.getRssMemorySize());
+        // verify old API
+        Assert.assertEquals("rssmem (old API) does not include new process",
           cumuRssMem, processTree.getCumulativeRssmem());
       } else {
-        Assert.assertEquals("Cumulative rssmem does not include new process",
+        Assert.assertEquals("rssmem does not include new process",
+          100 * KB_TO_BYTES * 4, processTree.getRssMemorySize());
+        // verify old API
+        Assert.assertEquals("rssmem (old API) does not include new process",
           100 * KB_TO_BYTES * 4, processTree.getCumulativeRssmem());
       }
 
       // however processes older than 1 iteration will retain the older value
       Assert.assertEquals(
-        "Cumulative vmem shouldn't have included new process", 700000L,
-        processTree.getCumulativeVmem(1));
+        "vmem shouldn't have included new process", 700000L,
+        processTree.getVirtualMemorySize(1));
+      // verify old API
+      Assert.assertEquals(
+          "vmem (old API) shouldn't have included new process", 700000L,
+          processTree.getCumulativeVmem(1));
+      
       if (!smapEnabled) {
         long cumuRssMem =
             ProcfsBasedProcessTree.PAGE_SIZE > 0
-                ? 700L * ProcfsBasedProcessTree.PAGE_SIZE : 0L;
+                ? 700L * ProcfsBasedProcessTree.PAGE_SIZE : 
+                    ResourceCalculatorProcessTree.UNAVAILABLE;
         Assert.assertEquals(
-          "Cumulative rssmem shouldn't have included new process", cumuRssMem,
+          "rssmem shouldn't have included new process", cumuRssMem,
+          processTree.getRssMemorySize(1));
+        // Verify old API
+        Assert.assertEquals(
+          "rssmem (old API) shouldn't have included new process", cumuRssMem,
           processTree.getCumulativeRssmem(1));
+        
       } else {
         Assert.assertEquals(
-          "Cumulative rssmem shouldn't have included new process",
+          "rssmem shouldn't have included new process",
+          100 * KB_TO_BYTES * 3, processTree.getRssMemorySize(1));
+        // Verify old API
+        Assert.assertEquals(
+          "rssmem (old API) shouldn't have included new process",
           100 * KB_TO_BYTES * 3, processTree.getCumulativeRssmem(1));
       }
 
@@ -604,49 +674,81 @@ public class TestProcfsBasedProcessTree {
 
       // processes older than 2 iterations should be same as before.
       Assert.assertEquals(
-        "Cumulative vmem shouldn't have included new processes", 700000L,
+        "vmem shouldn't have included new processes", 700000L,
+        processTree.getVirtualMemorySize(2));
+      
+      // verify old API
+      Assert.assertEquals(
+        "vmem (old API) shouldn't have included new processes", 700000L,
         processTree.getCumulativeVmem(2));
+      
       if (!smapEnabled) {
         long cumuRssMem =
             ProcfsBasedProcessTree.PAGE_SIZE > 0
-                ? 700L * ProcfsBasedProcessTree.PAGE_SIZE : 0L;
+                ? 700L * ProcfsBasedProcessTree.PAGE_SIZE : 
+                    ResourceCalculatorProcessTree.UNAVAILABLE;
         Assert.assertEquals(
-          "Cumulative rssmem shouldn't have included new processes",
+          "rssmem shouldn't have included new processes",
+          cumuRssMem, processTree.getRssMemorySize(2));
+        // Verify old API
+        Assert.assertEquals(
+          "rssmem (old API) shouldn't have included new processes",
           cumuRssMem, processTree.getCumulativeRssmem(2));
       } else {
         Assert.assertEquals(
-          "Cumulative rssmem shouldn't have included new processes",
+          "rssmem shouldn't have included new processes",
+          100 * KB_TO_BYTES * 3, processTree.getRssMemorySize(2));
+        // Verify old API
+        Assert.assertEquals(
+          "rssmem (old API) shouldn't have included new processes",
           100 * KB_TO_BYTES * 3, processTree.getCumulativeRssmem(2));
       }
 
       // processes older than 1 iteration should not include new process,
       // but include process 500
       Assert.assertEquals(
-        "Cumulative vmem shouldn't have included new processes", 1200000L,
+        "vmem shouldn't have included new processes", 1200000L,
+        processTree.getVirtualMemorySize(1));
+      // verify old API
+      Assert.assertEquals(
+        "vmem (old API) shouldn't have included new processes", 1200000L,
         processTree.getCumulativeVmem(1));
       if (!smapEnabled) {
         long cumuRssMem =
             ProcfsBasedProcessTree.PAGE_SIZE > 0
-                ? 1200L * ProcfsBasedProcessTree.PAGE_SIZE : 0L;
+                ? 1200L * ProcfsBasedProcessTree.PAGE_SIZE : 
+                    ResourceCalculatorProcessTree.UNAVAILABLE;
         Assert.assertEquals(
-          "Cumulative rssmem shouldn't have included new processes",
+          "rssmem shouldn't have included new processes",
+          cumuRssMem, processTree.getRssMemorySize(1));
+        // verify old API
+        Assert.assertEquals(
+          "rssmem (old API) shouldn't have included new processes",
           cumuRssMem, processTree.getCumulativeRssmem(1));
       } else {
         Assert.assertEquals(
-          "Cumulative rssmem shouldn't have included new processes",
+          "rssmem shouldn't have included new processes",
+          100 * KB_TO_BYTES * 4, processTree.getRssMemorySize(1));
+        Assert.assertEquals(
+          "rssmem (old API) shouldn't have included new processes",
           100 * KB_TO_BYTES * 4, processTree.getCumulativeRssmem(1));
       }
 
-      // no processes older than 3 iterations, this should be 0
+      // no processes older than 3 iterations
       Assert.assertEquals(
-        "Getting non-zero vmem for processes older than 3 iterations", 0L,
-        processTree.getCumulativeVmem(3));
+          "Getting non-zero vmem for processes older than 3 iterations",
+          0, processTree.getVirtualMemorySize(3));
+      // verify old API
       Assert.assertEquals(
-        "Getting non-zero rssmem for processes older than 3 iterations", 0L,
-        processTree.getCumulativeRssmem(3));
+          "Getting non-zero vmem (old API) for processes older than 3 iterations",
+          0, processTree.getCumulativeVmem(3));
       Assert.assertEquals(
-        "Getting non-zero rssmem for processes older than 3 iterations", 0L,
-        processTree.getCumulativeRssmem(3));
+          "Getting non-zero rssmem for processes older than 3 iterations",
+          0, processTree.getRssMemorySize(3));
+      // verify old API
+      Assert.assertEquals(
+          "Getting non-zero rssmem (old API) for processes older than 3 iterations",
+          0, processTree.getCumulativeRssmem(3));
     } finally {
       FileUtil.fullyDelete(procfsRootDir);
     }
@@ -672,7 +774,7 @@ public class TestProcfsBasedProcessTree {
       setupProcfsRootDir(procfsRootDir);
 
       // crank up the process tree class.
-      createProcessTree(pid, procfsRootDir.getAbsolutePath());
+      createProcessTree(pid, procfsRootDir.getAbsolutePath(), new SystemClock());
 
       // Let us not create stat file for pid 100.
       Assert.assertTrue(ProcfsBasedProcessTree.checkPidPgrpidForMatch(pid,
@@ -741,7 +843,8 @@ public class TestProcfsBasedProcessTree {
       writeCmdLineFiles(procfsRootDir, pids, cmdLines);
 
       ProcfsBasedProcessTree processTree =
-          createProcessTree("100", procfsRootDir.getAbsolutePath());
+          createProcessTree("100", procfsRootDir.getAbsolutePath(),
+              new SystemClock());
       // build the process tree.
       processTree.updateProcessTree();
 

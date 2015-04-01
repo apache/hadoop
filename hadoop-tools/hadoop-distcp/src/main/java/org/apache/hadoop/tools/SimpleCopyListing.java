@@ -141,7 +141,7 @@ public class SimpleCopyListing extends CopyListing {
   }
   /**
    * Collect the list of 
-   *   <sourceRelativePath, sourceFileStatus>
+   *   {@literal <sourceRelativePath, sourceFileStatus>}
    * to be copied and write to the sequence file. In essence, any file or
    * directory that need to be copied or sync-ed is written as an entry to the
    * sequence file, with the possible exception of the source root:

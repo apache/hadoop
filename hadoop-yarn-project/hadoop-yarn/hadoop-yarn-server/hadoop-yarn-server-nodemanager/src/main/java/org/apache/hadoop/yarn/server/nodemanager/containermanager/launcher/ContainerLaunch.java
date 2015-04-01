@@ -267,11 +267,11 @@ public class ContainerLaunch implements Callable<Integer> {
         // Sanitize the container's environment
         sanitizeEnv(environment, containerWorkDir, appDirs, containerLogDirs,
           localResources, nmPrivateClasspathJarDir);
-        
+
         // Write out the environment
-        exec.writeLaunchEnv(containerScriptOutStream, environment, localResources,
-            launchContext.getCommands());
-        
+        exec.writeLaunchEnv(containerScriptOutStream, environment,
+          localResources, launchContext.getCommands());
+
         // /////////// End of writing out container-script
 
         // /////////// Write out the container-tokens in the nmPrivate space.

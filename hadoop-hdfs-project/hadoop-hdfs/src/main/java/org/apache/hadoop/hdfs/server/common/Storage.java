@@ -672,7 +672,7 @@ public abstract class Storage extends StorageInfo {
      */
     public void lock() throws IOException {
       if (isShared()) {
-        LOG.info("Locking is disabled");
+        LOG.info("Locking is disabled for " + this.root);
         return;
       }
       FileLock newLock = tryLock();

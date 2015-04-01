@@ -18,11 +18,11 @@ Trunk (Unreleased)
     option since it may incorrectly finalize an ongoing rolling upgrade.
     (Kai Sasaki via szetszwo)
 
+    HDFS-7985. WebHDFS should be always enabled. (Li Lu via wheat9)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
-
-    HDFS-3689. Add support for variable length block. (jing9)
 
   IMPROVEMENTS
 
@@ -146,6 +146,8 @@ Trunk (Unreleased)
     Iwasaki via aw)
 
     HDFS-7460. Rewrite httpfs to use new shell framework (John Smith via aw)
+
+    HDFS-6353. Check and make checkpoint before stopping the NameNode. (jing9)
 
   OPTIMIZATIONS
 
@@ -313,6 +315,92 @@ Trunk (Unreleased)
     HDFS-4681. TestBlocksWithNotEnoughRacks#testCorruptBlockRereplicatedAcrossRacks 
     fails using IBM java (Ayappan via aw)
 
+Release 2.8.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HDFS-3918. EditLogTailer shouldn't log WARN when other node
+    is in standby mode (todd via harsh)
+
+    HDFS-4396. Add START_MSG/SHUTDOWN_MSG for ZKFC
+    (Liang Xie via harsh)
+
+    HDFS-7875. Improve log message when wrong value configured for
+    dfs.datanode.failed.volumes.tolerated.
+    (nijel via harsh)
+
+    HDFS-2360. Ugly stacktrace when quota exceeds. (harsh)
+
+    HDFS-7835. make initial sleeptime in locateFollowingBlock configurable for
+    DFSClient. (Zhihai Xu via Yongjun Zhang)
+
+    HDFS-7829. Code clean up for LocatedBlock. (Takanobu Asanuma via jing9)
+
+    HDFS-7854. Separate class DataStreamer out of DFSOutputStream. (Li Bo via
+    jing9)
+
+    HDFS-7713. Implement mkdirs in the HDFS Web UI. (Ravi Prakash via wheat9)
+
+    HDFS-7928. Scanning blocks from disk during rolling upgrade startup takes
+    a lot of time if disks are busy (Rushabh S Shah via kihwal)
+
+    HDFS-7990. IBR delete ack should not be delayed. (daryn via kihwal)
+
+    HDFS-8004. Use KeyProviderCryptoExtension#warmUpEncryptedKeys when creating
+    an encryption zone. (awang via asuresh)
+
+    HDFS-6263. Remove DRFA.MaxBackupIndex config from log4j.properties.
+    (Abhiraj Butala via aajisaka)
+
+    HDFS-6408. Remove redundant definitions in log4j.properties.
+    (Abhiraj Butala via aajisaka)
+
+    HDFS-7890. Improve information on Top users for metrics in
+    RollingWindowsManager and lower log level (J.Andreina via vinayakumarb)
+
+    HDFS-7645. Rolling upgrade is restoring blocks from trash multiple times.
+    (Vinayakumar B and Keisuke Ogiwara via Arpit Agarwal)
+
+    HDFS-7944. Minor cleanup of BlockPoolManager#getAllNamenodeThreads.
+    (Arpit Agarwal)
+
+    HDFS-7671. hdfs user guide should point to the common rack awareness doc.
+    (Kai Sasaki via aajisaka)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
+    (Gautam Gopalakrishnan via harsh)
+
+    HDFS-5356. MiniDFSCluster should close all open FileSystems when shutdown()
+    (Rakesh R via vinayakumarb)
+
+    HDFS-7867. Update action param from "start" to "prepare" in rolling upgrade
+    javadoc (J.Andreina via vinayakumarb)
+
+    HDFS-3325. When configuring "dfs.namenode.safemode.threshold-pct" to a value
+    greater or equal to 1 there is mismatch in the UI report
+    (J.Andreina via vinayakumarb)
+
+    HDFS-8002. Website refers to /trash directory. (Brahma Reddy Battula via
+    aajisaka)
+
+    HDFS-7261. storageMap is accessed without synchronization in
+    DatanodeDescriptor#updateHeartbeatState() (Brahma Reddy Battula via Colin
+    P. McCabe)
+
+    HDFS-7997. The first non-existing xattr should also throw IOException.
+    (zhouyingchao via yliu)
+
+    HDFS-6945. BlockManager should remove a block from excessReplicateMap and
+    decrement ExcessBlocks metric when the block is removed. (aajisaka)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -343,10 +431,19 @@ Release 2.7.0 - UNRELEASED
     HDFS-6133. Add a feature for replica pinning so that a pinned replica
     will not be moved by Balancer/Mover.  (zhaoyunjiong via szetszwo)
 
+    HDFS-3689. Add support for variable length block. (jing9)
+
     HDFS-7584. Enable Quota Support for Storage Types (See breakdown of
     tasks below)
 
     HDFS-7656. Expose truncate API for HDFS httpfs. (yliu)
+
+    HDFS-6488. Support HDFS superuser in NFS gateway. (brandonli)
+
+    HDFS-7838. Expose truncate API for libhdfs. (yliu)
+
+    HDFS-6826. Plugin interface to enable delegation of HDFS authorization 
+    assertions. (Arun Suresh via jitendra)
 
   IMPROVEMENTS
 
@@ -703,6 +800,62 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7789. DFSck should resolve the path to support cross-FS symlinks.
     (gera)
+
+    HDFS-7535. Utilize Snapshot diff report for distcp. (jing9)
+
+    HDFS-1522. Combine two BLOCK_FILE_PREFIX constants into one.
+    (Dongming Liang via shv)
+
+    HDFS-7746. Add a test randomly mixing append, truncate and snapshot
+    operations. (szetszwo)
+
+    HADOOP-11648. Set DomainSocketWatcher thread name explicitly.
+    (Liang Xie via ozawa)
+
+    HDFS-7855. Separate class Packet from DFSOutputStream. (Li Bo bia jing9)
+
+    HDFS-7411. Change decommission logic to throttle by blocks rather than
+    nodes in each interval. (Andrew Wang via cdouglas)
+
+    HDFS-7898. Change TestAppendSnapshotTruncate to fail-fast.
+    (Tsz Wo Nicholas Sze via jing9)
+
+    HDFS-6806. HDFS Rolling upgrade document should mention the versions
+    available. (J.Andreina via aajisaka)
+
+    HDFS-7491. Add incremental blockreport latency to DN metrics.
+    (Ming Ma via cnauroth)
+
+    HDFS-7435. PB encoding of block reports is very inefficient.
+    (Daryn Sharp via kihwal)
+
+    HDFS-2605. Remove redundant "Release 0.21.1" section from CHANGES.txt.
+    (Allen Wittenauer via shv)
+
+    HDFS-7940. Add tracing to DFSClient#setQuotaByStorageType (Rakesh R via
+    Colin P. McCabe)
+
+    HDFS-7054. Make DFSOutputStream tracing more fine-grained (cmccabe)
+
+    HDFS.7849. Update documentation for enabling a new feature in rolling
+    upgrade ( J.Andreina via vinayakumarb )
+
+    HDFS-7962. Remove duplicated logs in BlockManager. (yliu)
+
+    HDFS-7917. Use file to replace data dirs in test to simulate a disk failure.
+    (Lei (Eddy) Xu via cnauroth)
+
+    HDFS-7956. Improve logging for DatanodeRegistration.
+    (Plamen Jeliazkov via shv)
+
+    HDFS-7976. Update NFS user guide for mount option "sync" to minimize or
+    avoid reordered writes. (brandonli)
+
+    HDFS-7410. Support CreateFlags with append() to support hsync() for
+    appending streams (Vinayakumar B via Colin P. McCabe)
+
+    HDFS-7742. Favoring decommissioning node for replication can cause a block 
+    to stay underreplicated for long periods (Nathan Roberts via kihwal)
 
   OPTIMIZATIONS
 
@@ -1074,6 +1227,113 @@ Release 2.7.0 - UNRELEASED
     HDFS-7871. NameNodeEditLogRoller can keep printing "Swallowing exception"
     message. (jing9)
 
+    HDFS-7757. Misleading error messages in FSImage.java. (Brahma Reddy Battula
+    via Arpit Agarwal)
+
+    HDFS-6565. Use jackson instead jetty json in hdfs-client.
+    (Akira Ajisaka via wheat9)
+
+    HDFS-7682. {{DistributedFileSystem#getFileChecksum}} of a snapshotted file
+    includes non-snapshotted content. (Charles Lamb via atm)
+
+    HDFS-7869. Inconsistency in the return information while performing rolling
+    upgrade ( J.Andreina via vinayakumarb )
+
+    HDFS-7879. hdfs.dll does not export functions of the public libhdfs API.
+    (Chris Nauroth via wheat9)
+
+    HDFS-7434. DatanodeID hashCode should not be mutable. (daryn via kihwal)
+
+    HDFS-7885. Datanode should not trust the generation stamp provided by
+    client. (Tsz Wo Nicholas Sze via jing9)
+
+    HDFS-7818. OffsetParam should return the default value instead of throwing
+    NPE when the value is unspecified. (Eric Payne via wheat9)
+
+    HDFS-7830. DataNode does not release the volume lock when adding a volume
+    fails. (Lei Xu via Colin P. Mccabe)
+
+    HDFS-6833.  DirectoryScanner should not register a deleting block with
+    memory of DataNode.  (Shinichi Yamashita via szetszwo)
+
+    HDFS-7926. NameNode implementation of ClientProtocol.truncate(..) is not 
+    idempotent (Tsz Wo Nicholas Sze via brandonli)
+
+    HDFS-7903. Cannot recover block after truncate and delete snapshot.
+    (Plamen Jeliazkov via shv)
+
+    HDFS-7915. The DataNode can sometimes allocate a ShortCircuitShm slot and
+    fail to tell the DFSClient about it because of a network error (cmccabe)
+
+    HDFS-7886. Fix TestFileTruncate falures. (Plamen Jeliazkov and shv)
+
+    HDFS-7946. TestDataNodeVolumeFailureReporting NPE on Windows. (Xiaoyu Yao
+    via Arpit Agarwal)
+
+    HDFS-7953. NN Web UI fails to navigate to paths that contain #.
+    (kanaka kumar avvaru via wheat9)
+
+    HDFS-7948. TestDataNodeHotSwapVolumes#testAddVolumeFailures failed on
+    Windows. (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7950. Fix TestFsDatasetImpl#testAddVolumes failure on Windows.
+    (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7951. Fix NPE for
+    TestFsDatasetImpl#testAddVolumeFailureReleasesInUseLock on Linux
+    (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7722. DataNode#checkDiskError should also remove Storage when error
+    is found. (Lei Xu via Colin P. McCabe)
+
+    HDFS-7697. Mark the PB OIV tool as experimental. (Lei Xu via wheat9)
+
+    HDFS-7914. TestJournalNode#testFailToStartWithBadConfig fails when the
+    default dfs.journalnode.http-address port 8480 is in use. (Xiaoyu Yao via
+    Arpit Agarwal)
+
+    HDFS-7945. The WebHdfs system on DN does not honor the length parameter.
+    (wheat9)
+
+    HDFS-7943. Append cannot handle the last block with length greater than
+    the preferred block size. (jing9)
+
+    HDFS-7929. inotify unable fetch pre-upgrade edit log segments once upgrade
+    starts (Zhe Zhang via Colin P. McCabe)
+
+    HDFS-7587. Edit log corruption can happen if append fails with a quota
+    violation. (jing9)
+
+    HDFS-7816. Unable to open webhdfs paths with "+". (wheat9 via kihwal)
+
+    HDFS-7932. Speed up the shutdown of datanode during rolling upgrade.(kihwal)
+
+    HDFS-7930. commitBlockSynchronization() does not remove locations. (yliu)
+
+    HDFS-7957. Truncate should verify quota before making changes. (jing9)
+
+    HDFS-6841. Use Time.monotonicNow() wherever applicable instead of Time.now()
+    (Vinayakumar B via kihwal)
+
+    HDFS-7942. NFS: support regexp grouping in nfs.exports.allowed.hosts (brandonli)
+
+    HDFS-7884. Fix NullPointerException in BlockSender when the generation stamp
+    provided by the client is larger than the one stored in the datanode.
+    (Brahma Reddy Battula via szetszwo)
+
+    HDFS-7960. The full block report should prune zombie storages even if
+    they're not empty. (cmccabe and Eddy Xu via wang)
+
+    HDFS-7961. Trigger full block report after hot swapping disk. (Eddy Xu via wang)
+
+    HDFS-7977. NFS couldn't take percentile intervals (brandonli)
+
+    HDFS-7963. Fix expected tracing spans in TestTracing along with HDFS-7054.
+    (Masatake Iwasaki via kihwal)
+
+    HDFS-7748. Separate ECN flags from the Status in the DataTransferPipelineAck.
+    (Anu Engineer and Haohui Mai via wheat9)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
@@ -1093,6 +1353,12 @@ Release 2.7.0 - UNRELEASED
 
       HDFS-7806. Refactor: move StorageType from hadoop-hdfs to
       hadoop-common. (Xiaoyu Yao via Arpit Agarwal)
+
+      HDFS-7824. GetContentSummary API and its namenode implementation for
+      Storage Type Quota/Usage. (Xiaoyu Yao via Arpit Agarwal)
+
+      HDFS-7700. Document quota support for storage types. (Xiaoyu Yao via
+      Arpit Agarwal)
 
 Release 2.6.1 - UNRELEASED
 
@@ -10218,8 +10484,6 @@ Release 0.22.0 - 2011-11-29
     execution order of test methods (Laxman, Uma Maheswara Rao G via shv)
 
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
-
-Release 0.21.1 - Unreleased
 
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
 

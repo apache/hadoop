@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerLeafQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerQueueInfo;
+import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -234,6 +235,11 @@ public class FairSchedulerPage extends RmView {
     return QueuesBlock.class;
   }
 
+  @Override
+  protected String initAppsTable() {
+    return WebPageUtils.appsTableInit(true);
+  }
+
   static String percent(float f) {
     return String.format("%.1f%%", f * 100);
   }
@@ -244,20 +250,5 @@ public class FairSchedulerPage extends RmView {
 
   static String left(float f) {
     return String.format("left:%.1f%%", f * 100);
-  }
-  
-  @Override
-  protected String getAppsTableColumnDefs() {
-    StringBuilder sb = new StringBuilder();
-    return sb
-      .append("[\n")
-      .append("{'sType':'numeric', 'aTargets': [0]")
-      .append(", 'mRender': parseHadoopID }")
-
-      .append("\n, {'sType':'numeric', 'aTargets': [6, 7]")
-      .append(", 'mRender': renderHadoopDate }")
-
-      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [9]")
-      .append(", 'mRender': parseHadoopProgress }]").toString();
   }
 }

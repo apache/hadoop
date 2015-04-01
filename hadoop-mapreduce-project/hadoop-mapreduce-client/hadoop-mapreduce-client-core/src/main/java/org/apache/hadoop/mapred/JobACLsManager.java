@@ -101,7 +101,6 @@ public class JobACLsManager {
    * @param jobOperation
    * @param jobOwner
    * @param jobACL
-   * @throws AccessControlException
    */
   public boolean checkAccess(UserGroupInformation callerUGI,
       JobACL jobOperation, String jobOwner, AccessControlList jobACL) {

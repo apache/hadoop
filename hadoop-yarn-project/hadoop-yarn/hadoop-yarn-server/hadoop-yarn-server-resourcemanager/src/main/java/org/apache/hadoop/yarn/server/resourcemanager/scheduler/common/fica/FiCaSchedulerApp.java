@@ -90,7 +90,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
   }
 
   synchronized public boolean containerCompleted(RMContainer rmContainer,
-      ContainerStatus containerStatus, RMContainerEventType event) {
+      ContainerStatus containerStatus, RMContainerEventType event,
+      String partition) {
 
     // Remove from the list of containers
     if (null == liveContainers.remove(rmContainer.getContainerId())) {
@@ -122,7 +123,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     // Update usage metrics 
     Resource containerResource = rmContainer.getContainer().getResource();
     queue.getMetrics().releaseResources(getUser(), 1, containerResource);
-    Resources.subtractFrom(currentConsumption, containerResource);
+    attemptResourceUsage.decUsed(partition, containerResource);
 
     // Clear resource utilization metrics cache.
     lastMemoryAggregateAllocationUpdateTime = -1;
@@ -156,7 +157,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     // Update consumption and track allocations
     List<ResourceRequest> resourceRequestList = appSchedulingInfo.allocate(
         type, node, priority, request, container);
-    Resources.addTo(currentConsumption, container.getResource());
+    attemptResourceUsage.incUsed(node.getPartition(),
+        container.getResource());
     
     // Update resource requests related to "request" and store in RMContainer 
     ((RMContainerImpl)rmContainer).setResourceRequests(resourceRequestList);
@@ -198,12 +200,13 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         resetReReservations(priority);
 
         Resource resource = reservedContainer.getContainer().getResource();
-        Resources.subtractFrom(currentReservation, resource);
+        this.attemptResourceUsage.decReserved(node.getPartition(), resource);
 
         LOG.info("Application " + getApplicationId() + " unreserved "
-            + " on node " + node + ", currently has " + reservedContainers.size()
-            + " at priority " + priority + "; currentReservation "
-            + currentReservation);
+            + " on node " + node + ", currently has "
+            + reservedContainers.size() + " at priority " + priority
+            + "; currentReservation " + this.attemptResourceUsage.getReserved()
+            + " on node-label=" + node.getPartition());
         return true;
       }
     }
@@ -268,13 +271,16 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         minimumAllocation, numCont);
     ContainersAndNMTokensAllocation allocation =
         pullNewlyAllocatedContainersAndNMTokens();
-    return new Allocation(allocation.getContainerList(), getHeadroom(), null,
+    Resource headroom = getHeadroom();
+    setApplicationHeadroomForMetrics(headroom);
+    return new Allocation(allocation.getContainerList(), headroom, null,
       currentContPreemption, Collections.singletonList(rr),
       allocation.getNMTokenList());
   }
   
   synchronized public NodeId getNodeIdToUnreserve(Priority priority,
-      Resource capability) {
+      Resource resourceNeedUnreserve, ResourceCalculator rc,
+      Resource clusterResource) {
 
     // first go around make this algorithm simple and just grab first
     // reservation that has enough resources
@@ -283,16 +289,19 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
     if ((reservedContainers != null) && (!reservedContainers.isEmpty())) {
       for (Map.Entry<NodeId, RMContainer> entry : reservedContainers.entrySet()) {
+        NodeId nodeId = entry.getKey();
+        Resource containerResource = entry.getValue().getContainer().getResource();
+        
         // make sure we unreserve one with at least the same amount of
         // resources, otherwise could affect capacity limits
-        if (Resources.fitsIn(capability, entry.getValue().getContainer()
-            .getResource())) {
+        if (Resources.lessThanOrEqual(rc, clusterResource,
+            resourceNeedUnreserve, containerResource)) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("unreserving node with reservation size: "
-                + entry.getValue().getContainer().getResource()
-                + " in order to allocate container with size: " + capability);
+                + containerResource
+                + " in order to allocate container with size: " + resourceNeedUnreserve);
           }
-          return entry.getKey();
+          return nodeId;
         }
       }
     }

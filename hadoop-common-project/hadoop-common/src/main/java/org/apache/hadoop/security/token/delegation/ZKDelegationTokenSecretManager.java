@@ -55,6 +55,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
@@ -709,7 +710,15 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     try {
       if (zkClient.checkExists().forPath(nodeRemovePath) != null) {
         while(zkClient.checkExists().forPath(nodeRemovePath) != null){
-          zkClient.delete().guaranteed().forPath(nodeRemovePath);
+          try {
+            zkClient.delete().guaranteed().forPath(nodeRemovePath);
+          } catch (NoNodeException nne) {
+            // It is possible that the node might be deleted between the
+            // check and the actual delete.. which might lead to an
+            // exception that can bring down the daemon running this
+            // SecretManager
+            LOG.debug("Node already deleted by peer " + nodeRemovePath);
+          }
         }
       } else {
         LOG.debug("Attempted to delete a non-existing znode " + nodeRemovePath);
@@ -761,7 +770,15 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     try {
       if (zkClient.checkExists().forPath(nodeRemovePath) != null) {
         while(zkClient.checkExists().forPath(nodeRemovePath) != null){
-          zkClient.delete().guaranteed().forPath(nodeRemovePath);
+          try {
+            zkClient.delete().guaranteed().forPath(nodeRemovePath);
+          } catch (NoNodeException nne) {
+            // It is possible that the node might be deleted between the
+            // check and the actual delete.. which might lead to an
+            // exception that can bring down the daemon running this
+            // SecretManager
+            LOG.debug("Node already deleted by peer " + nodeRemovePath);
+          }
         }
       } else {
         LOG.debug("Attempted to remove a non-existing znode " + nodeRemovePath);

@@ -57,4 +57,6 @@ public class ContainerMetricsConstants {
   public static final String STATE_EVENT_INFO =
       "YARN_CONTAINER_STATE";
 
+  public static final String ALLOCATED_HOST_HTTP_ADDRESS_ENTITY_INFO =
+      "YARN_CONTAINER_ALLOCATED_HOST_HTTP_ADDRESS";
 }

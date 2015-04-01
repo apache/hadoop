@@ -111,8 +111,8 @@ public class TestLeaseRenewer {
     renewer.put(fileId, mockStream, MOCK_DFSCLIENT);
 
     // Wait for lease to get renewed
-    long failTime = Time.now() + 5000;
-    while (Time.now() < failTime &&
+    long failTime = Time.monotonicNow() + 5000;
+    while (Time.monotonicNow() < failTime &&
         leaseRenewalCount.get() == 0) {
       Thread.sleep(50);
     }
@@ -193,11 +193,11 @@ public class TestLeaseRenewer {
     
     // Pretend to close the file
     renewer.closeFile(fileId, MOCK_DFSCLIENT);
-    renewer.setEmptyTime(Time.now());
+    renewer.setEmptyTime(Time.monotonicNow());
     
     // Should stop the renewer running within a few seconds
-    long failTime = Time.now() + 5000;
-    while (renewer.isRunning() && Time.now() < failTime) {
+    long failTime = Time.monotonicNow() + 5000;
+    while (renewer.isRunning() && Time.monotonicNow() < failTime) {
       Thread.sleep(50);
     }
     Assert.assertFalse(renewer.isRunning());

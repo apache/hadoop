@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 
+import com.google.common.base.Preconditions;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -145,17 +147,23 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     
     int index = 0;
     for (StorageBlockReportProto s : request.getReportsList()) {
-      List<Long> blockIds = s.getBlocksList();
-      long[] blocks = new long[blockIds.size()];
-      for (int i = 0; i < blockIds.size(); i++) {
-        blocks[i] = blockIds.get(i);
+      final BlockListAsLongs blocks;
+      if (s.hasNumberOfBlocks()) { // new style buffer based reports
+        int num = (int)s.getNumberOfBlocks();
+        Preconditions.checkState(s.getBlocksCount() == 0,
+            "cannot send both blocks list and buffers");
+        blocks = BlockListAsLongs.decodeBuffers(num, s.getBlocksBuffersList());
+      } else {
+        blocks = BlockListAsLongs.decodeLongs(s.getBlocksList());
       }
       report[index++] = new StorageBlockReport(PBHelper.convert(s.getStorage()),
           blocks);
     }
     try {
       cmd = impl.blockReport(PBHelper.convert(request.getRegistration()),
-          request.getBlockPoolId(), report);
+          request.getBlockPoolId(), report,
+          request.hasContext() ?
+              PBHelper.convert(request.getContext()) : null);
     } catch (IOException e) {
       throw new ServiceException(e);
     }

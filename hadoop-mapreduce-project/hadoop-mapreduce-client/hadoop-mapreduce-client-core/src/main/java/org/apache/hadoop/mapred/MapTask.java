@@ -1255,6 +1255,7 @@ public class MapTask extends Task {
      * Compare by partition, then by key.
      * @see IndexedSortable#compare
      */
+    @Override
     public int compare(final int mi, final int mj) {
       final int kvi = offsetFor(mi % maxRec);
       final int kvj = offsetFor(mj % maxRec);
@@ -1278,6 +1279,7 @@ public class MapTask extends Task {
      * Swap metadata for items i, j
      * @see IndexedSortable#swap
      */
+    @Override
     public void swap(final int mi, final int mj) {
       int iOff = (mi % maxRec) * METASIZE;
       int jOff = (mj % maxRec) * METASIZE;

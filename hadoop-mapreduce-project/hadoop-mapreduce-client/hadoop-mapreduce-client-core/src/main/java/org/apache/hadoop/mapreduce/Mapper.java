@@ -42,9 +42,9 @@ import org.apache.hadoop.mapreduce.task.MapContextImpl;
  * 
  * <p>The framework first calls 
  * {@link #setup(org.apache.hadoop.mapreduce.Mapper.Context)}, followed by
- * {@link #map(Object, Object, Context)} 
+ * {@link #map(Object, Object, org.apache.hadoop.mapreduce.Mapper.Context)}
  * for each key/value pair in the <code>InputSplit</code>. Finally 
- * {@link #cleanup(Context)} is called.</p>
+ * {@link #cleanup(org.apache.hadoop.mapreduce.Mapper.Context)} is called.</p>
  * 
  * <p>All intermediate values associated with a given output key are 
  * subsequently grouped by the framework, and passed to a {@link Reducer} to  
@@ -84,9 +84,10 @@ import org.apache.hadoop.mapreduce.task.MapContextImpl;
  *     }
  *   }
  * }
- * </pre></blockquote></p>
+ * </pre></blockquote>
  *
- * <p>Applications may override the {@link #run(Context)} method to exert 
+ * <p>Applications may override the
+ * {@link #run(org.apache.hadoop.mapreduce.Mapper.Context)} method to exert
  * greater control on map processing e.g. multi-threaded <code>Mapper</code>s 
  * etc.</p>
  * 

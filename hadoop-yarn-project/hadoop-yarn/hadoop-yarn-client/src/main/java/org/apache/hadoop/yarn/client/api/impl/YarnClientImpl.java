@@ -254,13 +254,22 @@ public class YarnClientImpl extends YarnClient {
 
     int pollCount = 0;
     long startTime = System.currentTimeMillis();
-
+    EnumSet<YarnApplicationState> waitingStates = 
+                                 EnumSet.of(YarnApplicationState.NEW,
+                                 YarnApplicationState.NEW_SAVING,
+                                 YarnApplicationState.SUBMITTED);
+    EnumSet<YarnApplicationState> failToSubmitStates = 
+                                  EnumSet.of(YarnApplicationState.FAILED,
+                                  YarnApplicationState.KILLED);		
     while (true) {
       try {
-        YarnApplicationState state =
-            getApplicationReport(applicationId).getYarnApplicationState();
-        if (!state.equals(YarnApplicationState.NEW) &&
-            !state.equals(YarnApplicationState.NEW_SAVING)) {
+        ApplicationReport appReport = getApplicationReport(applicationId);
+        YarnApplicationState state = appReport.getYarnApplicationState();
+        if (!waitingStates.contains(state)) {
+          if(failToSubmitStates.contains(state)) {
+            throw new YarnException("Failed to submit " + applicationId + 
+                " to YARN : " + appReport.getDiagnostics());
+          }
           LOG.info("Submitted application " + applicationId);
           break;
         }

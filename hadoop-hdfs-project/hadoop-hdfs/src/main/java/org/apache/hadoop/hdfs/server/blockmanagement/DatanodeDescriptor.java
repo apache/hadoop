@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,6 +32,7 @@ import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -40,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
@@ -62,7 +65,25 @@ public class DatanodeDescriptor extends DatanodeInfo {
   // Stores status of decommissioning.
   // If node is not decommissioning, do not use this object for anything.
   public final DecommissioningStatus decommissioningStatus = new DecommissioningStatus();
-  
+
+  private long curBlockReportId = 0;
+
+  private BitSet curBlockReportRpcsSeen = null;
+
+  public int updateBlockReportContext(BlockReportContext context) {
+    if (curBlockReportId != context.getReportId()) {
+      curBlockReportId = context.getReportId();
+      curBlockReportRpcsSeen = new BitSet(context.getTotalRpcs());
+    }
+    curBlockReportRpcsSeen.set(context.getCurRpc());
+    return curBlockReportRpcsSeen.cardinality();
+  }
+
+  public void clearBlockReportContext() {
+    curBlockReportId = 0;
+    curBlockReportRpcsSeen = null;
+  }
+
   /** Block and targets pair */
   @InterfaceAudience.Private
   @InterfaceStability.Evolving
@@ -282,6 +303,34 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
+  static final private List<DatanodeStorageInfo> EMPTY_STORAGE_INFO_LIST =
+      ImmutableList.of();
+
+  List<DatanodeStorageInfo> removeZombieStorages() {
+    List<DatanodeStorageInfo> zombies = null;
+    synchronized (storageMap) {
+      Iterator<Map.Entry<String, DatanodeStorageInfo>> iter =
+          storageMap.entrySet().iterator();
+      while (iter.hasNext()) {
+        Map.Entry<String, DatanodeStorageInfo> entry = iter.next();
+        DatanodeStorageInfo storageInfo = entry.getValue();
+        if (storageInfo.getLastBlockReportId() != curBlockReportId) {
+          LOG.info(storageInfo.getStorageID() + " had lastBlockReportId 0x" +
+              Long.toHexString(storageInfo.getLastBlockReportId()) +
+              ", but curBlockReportId = 0x" +
+              Long.toHexString(curBlockReportId));
+          iter.remove();
+          if (zombies == null) {
+            zombies = new LinkedList<DatanodeStorageInfo>();
+          }
+          zombies.add(storageInfo);
+        }
+        storageInfo.setLastBlockReportId(0);
+      }
+    }
+    return zombies == null ? EMPTY_STORAGE_INFO_LIST : zombies;
+  }
+
   /**
    * Remove block from the list of blocks belonging to the data-node. Remove
    * data-node from the block.
@@ -398,14 +447,17 @@ public class DatanodeDescriptor extends DatanodeInfo {
     if (checkFailedStorages) {
       LOG.info("Number of failed storage changes from "
           + this.volumeFailures + " to " + volFailures);
-      failedStorageInfos = new HashSet<DatanodeStorageInfo>(
-          storageMap.values());
+      synchronized (storageMap) {
+        failedStorageInfos =
+            new HashSet<DatanodeStorageInfo>(storageMap.values());
+      }
     }
 
     setCacheCapacity(cacheCapacity);
     setCacheUsed(cacheUsed);
     setXceiverCount(xceiverCount);
-    setLastUpdate(Time.now());    
+    setLastUpdate(Time.now());
+    setLastUpdateMonotonic(Time.monotonicNow());
     this.volumeFailures = volFailures;
     this.volumeFailureSummary = volumeFailureSummary;
     for (StorageReport report : reports) {
@@ -420,7 +472,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
       totalBlockPoolUsed += report.getBlockPoolUsed();
       totalDfsUsed += report.getDfsUsed();
     }
-    rollBlocksScheduled(getLastUpdate());
+    rollBlocksScheduled(getLastUpdateMonotonic());
 
     // Update total metrics for the node.
     setCapacity(totalCapacity);
@@ -430,8 +482,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     if (checkFailedStorages) {
       updateFailedStorage(failedStorageInfos);
     }
-
-    if (storageMap.size() != reports.length) {
+    long storageMapSize;
+    synchronized (storageMap) {
+      storageMapSize = storageMap.size();
+    }
+    if (storageMapSize != reports.length) {
       pruneStorageMap(reports);
     }
   }
@@ -441,14 +496,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * as long as they have associated block replicas.
    */
   private void pruneStorageMap(final StorageReport[] reports) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Number of storages reported in heartbeat=" + reports.length +
-                    "; Number of storages in storageMap=" + storageMap.size());
-    }
-
-    HashMap<String, DatanodeStorageInfo> excessStorages;
-
     synchronized (storageMap) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Number of storages reported in heartbeat=" + reports.length
+            + "; Number of storages in storageMap=" + storageMap.size());
+      }
+
+      HashMap<String, DatanodeStorageInfo> excessStorages;
+
       // Init excessStorages with all known storages.
       excessStorages = new HashMap<String, DatanodeStorageInfo>(storageMap);
 
@@ -465,8 +520,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
           LOG.info("Removed storage " + storageInfo + " from DataNode" + this);
         } else if (LOG.isDebugEnabled()) {
           // This can occur until all block reports are received.
-          LOG.debug("Deferring removal of stale storage " + storageInfo +
-                        " with " + storageInfo.numBlocks() + " blocks");
+          LOG.debug("Deferring removal of stale storage " + storageInfo
+              + " with " + storageInfo.numBlocks() + " blocks");
         }
       }
     }

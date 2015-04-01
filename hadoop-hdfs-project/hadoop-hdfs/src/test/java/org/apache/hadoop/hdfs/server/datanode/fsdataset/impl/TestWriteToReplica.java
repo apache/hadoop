@@ -17,14 +17,25 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import java.io.IOException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaAlreadyExistsException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
@@ -34,6 +45,7 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -499,6 +511,146 @@ public class TestWriteToReplica {
     } catch (ReplicaAlreadyExistsException e) {
       Assert.fail("createRbw() Should have removed the block with the older "
           + "genstamp and replaced it with the newer one: " + blocks[NON_EXISTENT]);
+    }
+  }
+  
+  /**
+   * This is a test to check the replica map before and after the datanode 
+   * quick restart (less than 5 minutes)
+   * @throws Exception
+   */
+  @Test
+  public  void testReplicaMapAfterDatanodeRestart() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
+        .build();
+    try {
+      cluster.waitActive();
+      NameNode nn1 = cluster.getNameNode(0);
+      NameNode nn2 = cluster.getNameNode(1);
+      assertNotNull("cannot create nn1", nn1);
+      assertNotNull("cannot create nn2", nn2);
+      
+      // check number of volumes in fsdataset
+      DataNode dn = cluster.getDataNodes().get(0);
+      FsDatasetImpl dataSet = (FsDatasetImpl)DataNodeTestUtils.
+          getFSDataset(dn);
+      ReplicaMap replicaMap = dataSet.volumeMap;
+      
+      List<FsVolumeImpl> volumes = dataSet.getVolumes();
+      // number of volumes should be 2 - [data1, data2]
+      assertEquals("number of volumes is wrong", 2, volumes.size());
+      ArrayList<String> bpList = new ArrayList<String>(Arrays.asList(
+          cluster.getNamesystem(0).getBlockPoolId(), 
+          cluster.getNamesystem(1).getBlockPoolId()));
+      
+      Assert.assertTrue("Cluster should have 2 block pools", 
+          bpList.size() == 2);
+      
+      createReplicas(bpList, volumes, replicaMap);
+      ReplicaMap oldReplicaMap = new ReplicaMap(this);
+      oldReplicaMap.addAll(replicaMap);
+      
+      cluster.restartDataNode(0);
+      cluster.waitActive();
+      dn = cluster.getDataNodes().get(0);
+      dataSet = (FsDatasetImpl) dn.getFSDataset();
+      testEqualityOfReplicaMap(oldReplicaMap, dataSet.volumeMap, bpList);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Compare the replica map before and after the restart
+   **/
+  private void testEqualityOfReplicaMap(ReplicaMap oldReplicaMap, ReplicaMap 
+      newReplicaMap, List<String> bpidList) {
+    // Traversing through newReplica map and remove the corresponding 
+    // replicaInfo from oldReplicaMap.
+    for (String bpid: bpidList) {
+      for (ReplicaInfo info: newReplicaMap.replicas(bpid)) {
+        assertNotNull("Volume map before restart didn't contain the "
+            + "blockpool: " + bpid, oldReplicaMap.replicas(bpid));
+        
+        ReplicaInfo oldReplicaInfo = oldReplicaMap.get(bpid, 
+            info.getBlockId());
+        // Volume map after restart contains a blockpool id which 
+        assertNotNull("Old Replica Map didnt't contain block with blockId: " +
+            info.getBlockId(), oldReplicaInfo);
+        
+        ReplicaState oldState = oldReplicaInfo.getState();
+        // Since after restart, all the RWR, RBW and RUR blocks gets 
+        // converted to RWR
+        if (info.getState() == ReplicaState.RWR) {
+           if (oldState == ReplicaState.RWR || oldState == ReplicaState.RBW 
+               || oldState == ReplicaState.RUR) {
+             oldReplicaMap.remove(bpid, oldReplicaInfo);
+           }
+        } else if (info.getState() == ReplicaState.FINALIZED && 
+            oldState == ReplicaState.FINALIZED) {
+          oldReplicaMap.remove(bpid, oldReplicaInfo);
+        }
+      }
+    }
+    
+    // We don't persist the ReplicaInPipeline replica
+    // and if the old replica map contains any replica except ReplicaInPipeline
+    // then we didn't persist that replica
+    for (String bpid: bpidList) {
+      for (ReplicaInfo replicaInfo: oldReplicaMap.replicas(bpid)) {
+        if (replicaInfo.getState() != ReplicaState.TEMPORARY) {
+          Assert.fail("After datanode restart we lost the block with blockId: "
+              +  replicaInfo.getBlockId());
+        }
+      }
+    }
+  }
+
+  private void createReplicas(List<String> bpList, List<FsVolumeImpl> volumes,
+      ReplicaMap volumeMap) throws IOException {
+    Assert.assertTrue("Volume map can't be null" , volumeMap != null);
+    
+    // Here we create all different type of replicas and add it
+    // to volume map. 
+    // Created all type of ReplicaInfo, each under Blkpool corresponding volume
+    long id = 1; // This variable is used as both blockId and genStamp
+    for (String bpId: bpList) {
+      for (FsVolumeImpl volume: volumes) {
+        ReplicaInfo finalizedReplica = new FinalizedReplica(id, 1, id, volume,
+            DatanodeUtil.idToBlockDir(volume.getFinalizedDir(bpId), id));
+        volumeMap.add(bpId, finalizedReplica);
+        id++;
+        
+        ReplicaInfo rbwReplica = new ReplicaBeingWritten(id, 1, id, volume, 
+            volume.getRbwDir(bpId), null, 100);
+        volumeMap.add(bpId, rbwReplica);
+        id++;
+
+        ReplicaInfo rwrReplica = new ReplicaWaitingToBeRecovered(id, 1, id, 
+            volume, volume.getRbwDir(bpId));
+        volumeMap.add(bpId, rwrReplica);
+        id++;
+        
+        ReplicaInfo ripReplica = new ReplicaInPipeline(id, id, volume, 
+            volume.getTmpDir(bpId), 0);
+        volumeMap.add(bpId, ripReplica);
+        id++;
+      }
+    }
+    
+    for (String bpId: bpList) {
+      for (ReplicaInfo replicaInfo: volumeMap.replicas(bpId)) {
+        File parentFile = replicaInfo.getBlockFile().getParentFile();
+        if (!parentFile.exists()) {
+          if (!parentFile.mkdirs()) {
+            throw new IOException("Failed to mkdirs " + parentFile);
+          }
+        }
+        replicaInfo.getBlockFile().createNewFile();
+        replicaInfo.getMetaFile().createNewFile();
+      }
     }
   }
 }

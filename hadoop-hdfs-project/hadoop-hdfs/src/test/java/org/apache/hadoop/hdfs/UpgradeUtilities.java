@@ -144,7 +144,7 @@ public class UpgradeUtilities {
       
       // save image
       namenode.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
-      namenode.saveNamespace();
+      namenode.saveNamespace(0, 0);
       namenode.setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
       
       // write more files
@@ -304,10 +304,11 @@ public class UpgradeUtilities {
         continue;
       }
 
-      // skip VERSION and dfsUsed file for DataNodes
+      // skip VERSION and dfsUsed and replicas file for DataNodes
       if (nodeType == DATA_NODE &&
           (list[i].getName().equals("VERSION") ||
-              list[i].getName().equals("dfsUsed"))) {
+              list[i].getName().equals("dfsUsed") ||
+              list[i].getName().equals("replicas"))) {
         continue;
       }
 

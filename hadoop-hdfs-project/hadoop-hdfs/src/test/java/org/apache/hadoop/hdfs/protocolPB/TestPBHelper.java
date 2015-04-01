@@ -478,10 +478,11 @@ public class TestPBHelper {
                                          AdminStates.NORMAL)
     };
     LocatedBlock lb = new LocatedBlock(
-        new ExtendedBlock("bp12", 12345, 10, 53), dnInfos, 5, false);
+        new ExtendedBlock("bp12", 12345, 10, 53), dnInfos);
     lb.setBlockToken(new Token<BlockTokenIdentifier>(
         "identifier".getBytes(), "password".getBytes(), new Text("kind"),
         new Text("service")));
+    lb.setStartOffset(5);
     return lb;
   }
 

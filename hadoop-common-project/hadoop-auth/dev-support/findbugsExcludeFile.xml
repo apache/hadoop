@@ -34,5 +34,15 @@
     <Method name="getCurrentSecret" />
     <Bug pattern="EI_EXPOSE_REP" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.security.authentication.util.FileSignerSecretProvider" />
+    <Method name="getAllSecrets" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.security.authentication.util.FileSignerSecretProvider" />
+    <Method name="getCurrentSecret" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
 
 </FindBugsFilter>

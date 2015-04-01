@@ -74,6 +74,7 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 
 public class TestCodec {
 
@@ -364,10 +365,7 @@ public class TestCodec {
   public void testCodecPoolGzipReuse() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, true);
-    if (!ZlibFactory.isNativeZlibLoaded(conf)) {
-      LOG.warn("testCodecPoolGzipReuse skipped: native libs not loaded");
-      return;
-    }
+    assumeTrue(ZlibFactory.isNativeZlibLoaded(conf));
     GzipCodec gzc = ReflectionUtils.newInstance(GzipCodec.class, conf);
     DefaultCodec dfc = ReflectionUtils.newInstance(DefaultCodec.class, conf);
     Compressor c1 = CodecPool.getCompressor(gzc);
@@ -723,10 +721,7 @@ public class TestCodec {
   public void testNativeGzipConcat() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, true);
-    if (!ZlibFactory.isNativeZlibLoaded(conf)) {
-      LOG.warn("skipped: native libs not loaded");
-      return;
-    }
+    assumeTrue(ZlibFactory.isNativeZlibLoaded(conf));
     GzipConcatTest(conf, GzipCodec.GzipZlibDecompressor.class);
   }
 
@@ -840,10 +835,7 @@ public class TestCodec {
     Configuration conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, useNative);
     if (useNative) {
-      if (!ZlibFactory.isNativeZlibLoaded(conf)) {
-        LOG.warn("testGzipCodecWrite skipped: native libs not loaded");
-        return;
-      }
+      assumeTrue(ZlibFactory.isNativeZlibLoaded(conf));
     } else {
       assertFalse("ZlibFactory is using native libs against request",
           ZlibFactory.isNativeZlibLoaded(conf));

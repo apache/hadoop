@@ -152,8 +152,10 @@ public class AmIpFilter implements Filter {
       }
     }
     if (user == null) {
-      LOG.warn("Could not find " + WebAppProxyServlet.PROXY_USER_COOKIE_NAME
-               + " cookie, so user will not be set");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Could not find " + WebAppProxyServlet.PROXY_USER_COOKIE_NAME
+                 + " cookie, so user will not be set");
+      }
       chain.doFilter(req, resp);
     } else {
       final AmIpPrincipal principal = new AmIpPrincipal(user);

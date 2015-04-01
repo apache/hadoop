@@ -46,12 +46,14 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportReplica;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
@@ -146,22 +148,32 @@ public abstract class BlockReportTestBase {
 
       // Walk the list of blocks until we find one each to corrupt the
       // generation stamp and length, if so requested.
-      for (int i = 0; i < blockList.getNumberOfBlocks(); ++i) {
+      BlockListAsLongs.Builder builder = BlockListAsLongs.builder();
+      for (BlockReportReplica block : blockList) {
         if (corruptOneBlockGs && !corruptedGs) {
-          blockList.corruptBlockGSForTesting(i, rand);
-          LOG.info("Corrupted the GS for block ID " + i);
+          long gsOld = block.getGenerationStamp();
+          long gsNew;
+          do {
+            gsNew = rand.nextInt();
+          } while (gsNew == gsOld);
+          block.setGenerationStamp(gsNew);
+          LOG.info("Corrupted the GS for block ID " + block);
           corruptedGs = true;
         } else if (corruptOneBlockLen && !corruptedLen) {
-          blockList.corruptBlockLengthForTesting(i, rand);
-          LOG.info("Corrupted the length for block ID " + i);
+          long lenOld = block.getNumBytes();
+          long lenNew;
+          do {
+            lenNew = rand.nextInt((int)lenOld - 1);
+          } while (lenNew == lenOld);
+          block.setNumBytes(lenNew);
+          LOG.info("Corrupted the length for block ID " + block);
           corruptedLen = true;
-        } else {
-          break;
         }
+        builder.add(new BlockReportReplica(block));
       }
 
       reports[reportIndex++] =
-          new StorageBlockReport(dnStorage, blockList.getBlockListAsLongs());
+          new StorageBlockReport(dnStorage, builder.build());
     }
 
     return reports;
@@ -602,7 +614,8 @@ public abstract class BlockReportTestBase {
         .when(spy).blockReport(
           Mockito.<DatanodeRegistration>anyObject(),
           Mockito.anyString(),
-          Mockito.<StorageBlockReport[]>anyObject());
+          Mockito.<StorageBlockReport[]>anyObject(),
+          Mockito.<BlockReportContext>anyObject());
 
       // Force a block report to be generated. The block report will have
       // an RBW replica in it. Wait for the RPC to be sent, but block
@@ -649,12 +662,12 @@ public abstract class BlockReportTestBase {
     final DataNode dn1 = cluster.getDataNodes().get(DN_N1);
     String bpid = cluster.getNamesystem().getBlockPoolId();
     Replica r = DataNodeTestUtils.fetchReplicaInfo(dn1, bpid, bl.getBlockId());
-    long start = Time.now();
+    long start = Time.monotonicNow();
     int count = 0;
     while (r == null) {
       waitTil(5);
       r = DataNodeTestUtils.fetchReplicaInfo(dn1, bpid, bl.getBlockId());
-      long waiting_period = Time.now() - start;
+      long waiting_period = Time.monotonicNow() - start;
       if (count++ % 100 == 0)
         if(LOG.isDebugEnabled()) {
           LOG.debug("Has been waiting for " + waiting_period + " ms.");
@@ -668,7 +681,7 @@ public abstract class BlockReportTestBase {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Replica state before the loop " + state.getValue());
     }
-    start = Time.now();
+    start = Time.monotonicNow();
     while (state != HdfsServerConstants.ReplicaState.TEMPORARY) {
       waitTil(5);
       state = r.getState();
@@ -676,7 +689,7 @@ public abstract class BlockReportTestBase {
         LOG.debug("Keep waiting for " + bl.getBlockName() +
             " is in state " + state.getValue());
       }
-      if (Time.now() - start > TIMEOUT)
+      if (Time.monotonicNow() - start > TIMEOUT)
         assertTrue("Was waiting too long for a replica to become TEMPORARY",
           tooLongWait);
     }

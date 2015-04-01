@@ -100,7 +100,7 @@ public class JobSubmissionFiles {
 
   /**
    * Initializes the staging directory and returns the path. It also
-   * keeps track of all necessary ownership & permissions
+   * keeps track of all necessary ownership and permissions
    * @param cluster
    * @param conf
    */

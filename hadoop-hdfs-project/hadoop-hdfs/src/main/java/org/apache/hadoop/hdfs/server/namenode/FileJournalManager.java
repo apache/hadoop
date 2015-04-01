@@ -581,7 +581,7 @@ public class FileJournalManager implements JournalManager {
   public void doPreUpgrade() throws IOException {
     LOG.info("Starting upgrade of edits directory " + sd.getRoot());
     try {
-     NNUpgradeUtil.doPreUpgrade(sd);
+     NNUpgradeUtil.doPreUpgrade(conf, sd);
     } catch (IOException ioe) {
      LOG.error("Failed to move aside pre-upgrade storage " +
          "in image directory " + sd.getRoot(), ioe);

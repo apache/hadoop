@@ -47,15 +47,9 @@ public class TestCryptoStreamsForLocalFS extends CryptoStreamsTestBase {
   
   @BeforeClass
   public static void init() throws Exception {
-    Configuration conf = new Configuration();
-    conf = new Configuration(false);
+    Configuration conf = new Configuration(false);
     conf.set("fs.file.impl", LocalFileSystem.class.getName());
     fileSys = FileSystem.getLocal(conf);
-    conf.set(
-        CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
-            + CipherSuite.AES_CTR_NOPADDING.getConfigSuffix(),
-        OpensslAesCtrCryptoCodec.class.getName() + ","
-            + JceAesCtrCryptoCodec.class.getName());
     codec = CryptoCodec.getInstance(conf);
   }
   

@@ -162,8 +162,8 @@ public class TestBlockScanner {
     boolean testedRewind = false, testedSave = false, testedLoad = false;
     int blocksProcessed = 0, savedBlocksProcessed = 0;
     try {
-      BPOfferService bpos[] = ctx.datanode.getAllBpOs();
-      assertEquals(1, bpos.length);
+      List<BPOfferService> bpos = ctx.datanode.getAllBpOs();
+      assertEquals(1, bpos.size());
       BlockIterator iter = volume.newBlockIterator(ctx.bpids[0], "test");
       assertEquals(ctx.bpids[0], iter.getBlockPoolId());
       iter.setMaxStalenessMs(maxStaleness);

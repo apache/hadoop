@@ -90,7 +90,7 @@ public class TestContainerLauncher {
 
   static final Log LOG = LogFactory.getLog(TestContainerLauncher.class);
 
-  @Test (timeout = 5000)
+  @Test (timeout = 10000)
   public void testPoolSize() throws InterruptedException {
 
     ApplicationId appId = ApplicationId.newInstance(12345, 67);
@@ -108,12 +108,14 @@ public class TestContainerLauncher {
     ThreadPoolExecutor threadPool = containerLauncher.getThreadPool();
 
     // No events yet
+    Assert.assertEquals(containerLauncher.initialPoolSize,
+        MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREADPOOL_INITIAL_SIZE);
     Assert.assertEquals(0, threadPool.getPoolSize());
-    Assert.assertEquals(ContainerLauncherImpl.INITIAL_POOL_SIZE,
+    Assert.assertEquals(containerLauncher.initialPoolSize,
       threadPool.getCorePoolSize());
     Assert.assertNull(containerLauncher.foundErrors);
 
-    containerLauncher.expectedCorePoolSize = ContainerLauncherImpl.INITIAL_POOL_SIZE;
+    containerLauncher.expectedCorePoolSize = containerLauncher.initialPoolSize;
     for (int i = 0; i < 10; i++) {
       ContainerId containerId = ContainerId.newContainerId(appAttemptId, i);
       TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, i);
@@ -152,7 +154,7 @@ public class TestContainerLauncher {
     // Different hosts, there should be an increase in core-thread-pool size to
     // 21(11hosts+10buffer)
     // Core pool size should be 21 but the live pool size should be only 11.
-    containerLauncher.expectedCorePoolSize = 11 + ContainerLauncherImpl.INITIAL_POOL_SIZE;
+    containerLauncher.expectedCorePoolSize = 11 + containerLauncher.initialPoolSize;
     containerLauncher.finishEventHandling = false;
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 21);
     TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, 21);
@@ -164,6 +166,15 @@ public class TestContainerLauncher {
     Assert.assertNull(containerLauncher.foundErrors);
 
     containerLauncher.stop();
+
+    // change configuration MR_AM_CONTAINERLAUNCHER_THREADPOOL_INITIAL_SIZE
+    // and verify initialPoolSize value.
+    Configuration conf = new Configuration();
+    conf.setInt(MRJobConfig.MR_AM_CONTAINERLAUNCHER_THREADPOOL_INITIAL_SIZE,
+        20);
+    containerLauncher = new CustomContainerLauncher(context);
+    containerLauncher.init(conf);
+    Assert.assertEquals(containerLauncher.initialPoolSize, 20);
   }
 
   @Test(timeout = 5000)
@@ -187,7 +198,7 @@ public class TestContainerLauncher {
     ThreadPoolExecutor threadPool = containerLauncher.getThreadPool();
 
     // 10 different hosts
-    containerLauncher.expectedCorePoolSize = ContainerLauncherImpl.INITIAL_POOL_SIZE;
+    containerLauncher.expectedCorePoolSize = containerLauncher.initialPoolSize;
     for (int i = 0; i < 10; i++) {
       containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
         containerId, "host" + i + ":1234", null,

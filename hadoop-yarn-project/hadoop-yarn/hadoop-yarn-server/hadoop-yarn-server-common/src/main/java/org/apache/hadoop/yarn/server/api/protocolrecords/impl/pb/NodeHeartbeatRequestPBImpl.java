@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdToLabelsProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringArrayProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProto;
@@ -36,6 +41,7 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   private NodeStatus nodeStatus = null;
   private MasterKey lastKnownContainerTokenMasterKey = null;
   private MasterKey lastKnownNMTokenMasterKey = null;
+  private Set<String> labels = null;
   
   public NodeHeartbeatRequestPBImpl() {
     builder = NodeHeartbeatRequestProto.newBuilder();
@@ -79,6 +85,11 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
     if (this.lastKnownNMTokenMasterKey != null) {
       builder.setLastKnownNmTokenMasterKey(
           convertToProtoFormat(this.lastKnownNMTokenMasterKey));
+    }
+    if (this.labels != null) {
+      builder.clearNodeLabels();
+      builder.setNodeLabels(StringArrayProto.newBuilder()
+          .addAllElements(this.labels).build());
     }
   }
 
@@ -177,5 +188,31 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
 
   private MasterKeyProto convertToProtoFormat(MasterKey t) {
     return ((MasterKeyPBImpl)t).getProto();
+  }
+
+  @Override
+  public Set<String> getNodeLabels() {
+    initNodeLabels();
+    return this.labels;
+  }
+
+  @Override
+  public void setNodeLabels(Set<String> nodeLabels) {
+    maybeInitBuilder();
+    builder.clearNodeLabels();
+    this.labels = nodeLabels;
+  }
+  
+  private void initNodeLabels() {
+    if (this.labels != null) {
+      return;
+    }
+    NodeHeartbeatRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasNodeLabels()) {
+      labels = null;
+      return;
+    }
+    StringArrayProto nodeLabels = p.getNodeLabels();
+    labels = new HashSet<String>(nodeLabels.getElementsList());
   }
 }  

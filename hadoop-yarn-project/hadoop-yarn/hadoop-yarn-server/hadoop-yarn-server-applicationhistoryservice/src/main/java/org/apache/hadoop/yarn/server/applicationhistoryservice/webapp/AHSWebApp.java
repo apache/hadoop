@@ -19,8 +19,8 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
-import org.apache.hadoop.yarn.server.api.ApplicationContext;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManager;
+import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryClientService;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.webapp.TimelineWebServices;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -30,17 +30,17 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
 public class AHSWebApp extends WebApp implements YarnWebParams {
 
-  private ApplicationHistoryManager applicationHistoryManager;
+  private final ApplicationHistoryClientService historyClientService;
   private TimelineDataManager timelineDataManager;
 
   public AHSWebApp(TimelineDataManager timelineDataManager,
-      ApplicationHistoryManager applicationHistoryManager) {
+      ApplicationHistoryClientService historyClientService) {
     this.timelineDataManager = timelineDataManager;
-    this.applicationHistoryManager = applicationHistoryManager;
+    this.historyClientService = historyClientService;
   }
 
-  public ApplicationHistoryManager getApplicationHistoryManager() {
-    return applicationHistoryManager;
+  public ApplicationHistoryClientService getApplicationHistoryClientService() {
+    return historyClientService;
   }
 
   public TimelineDataManager getTimelineDataManager() {
@@ -53,7 +53,7 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
     bind(AHSWebServices.class);
     bind(TimelineWebServices.class);
     bind(GenericExceptionHandler.class);
-    bind(ApplicationContext.class).toInstance(applicationHistoryManager);
+    bind(ApplicationBaseProtocol.class).toInstance(historyClientService);
     bind(TimelineDataManager.class).toInstance(timelineDataManager);
     route("/", AHSController.class);
     route(pajoin("/apps", APP_STATE), AHSController.class);

@@ -28,7 +28,7 @@ import org.apache.hadoop.util.PureJavaCrc32;
 
 /** 
  * A single process data generator for the terasort data. Based on gensort.c 
- * version 1.1 (3 Mar 2009) from Chris Nyberg <chris.nyberg@ordinal.com>.
+ * version 1.1 (3 Mar 2009) from Chris Nyberg &lt;chris.nyberg@ordinal.com&gt;.
  */
 public class GenSort {
 

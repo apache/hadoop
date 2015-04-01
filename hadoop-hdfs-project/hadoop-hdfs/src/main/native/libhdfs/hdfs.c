@@ -1037,6 +1037,43 @@ done:
     return file;
 }
 
+int hdfsTruncateFile(hdfsFS fs, const char* path, tOffset newlength)
+{
+    jobject jFS = (jobject)fs;
+    jthrowable jthr;
+    jvalue jVal;
+    jobject jPath = NULL;
+
+    JNIEnv *env = getJNIEnv();
+
+    if (!env) {
+        errno = EINTERNAL;
+        return -1;
+    }
+
+    /* Create an object of org.apache.hadoop.fs.Path */
+    jthr = constructNewObjectOfPath(env, path, &jPath);
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsTruncateFile(%s): constructNewObjectOfPath", path);
+        return -1;
+    }
+
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+                        "truncate", JMETHOD2(JPARAM(HADOOP_PATH), "J", "Z"),
+                        jPath, newlength);
+    destroyLocalReference(env, jPath);
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsTruncateFile(%s): FileSystem#truncate", path);
+        return -1;
+    }
+    if (jVal.z == JNI_TRUE) {
+        return 1;
+    }
+    return 0;
+}
+
 int hdfsUnbufferFile(hdfsFile file)
 {
     int ret;

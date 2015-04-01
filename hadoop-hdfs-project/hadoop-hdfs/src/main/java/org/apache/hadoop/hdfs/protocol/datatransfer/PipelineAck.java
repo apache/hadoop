@@ -130,13 +130,16 @@ public class PipelineAck {
    */
   public PipelineAck(long seqno, int[] replies,
                      long downstreamAckTimeNanos) {
-    ArrayList<Integer> replyList = Lists.newArrayList();
+    ArrayList<Status> statusList = Lists.newArrayList();
+    ArrayList<Integer> flagList = Lists.newArrayList();
     for (int r : replies) {
-      replyList.add(r);
+      statusList.add(StatusFormat.getStatus(r));
+      flagList.add(r);
     }
     proto = PipelineAckProto.newBuilder()
       .setSeqno(seqno)
-      .addAllReply(replyList)
+      .addAllReply(statusList)
+      .addAllFlag(flagList)
       .setDownstreamAckTimeNanos(downstreamAckTimeNanos)
       .build();
   }
@@ -158,11 +161,18 @@ public class PipelineAck {
   }
   
   /**
-   * get the ith reply
-   * @return the the ith reply
+   * get the header flag of ith reply
    */
-  public int getReply(int i) {
-    return proto.getReply(i);
+  public int getHeaderFlag(int i) {
+    if (proto.getFlagCount() > 0) {
+      return proto.getFlag(i);
+    } else {
+      return combineHeader(ECN.DISABLED, proto.getReply(i));
+    }
+  }
+
+  public int getFlag(int i) {
+    return proto.getFlag(i);
   }
 
   /**
@@ -178,8 +188,8 @@ public class PipelineAck {
    * @return true if all statuses are SUCCESS
    */
   public boolean isSuccess() {
-    for (int reply : proto.getReplyList()) {
-      if (StatusFormat.getStatus(reply) != Status.SUCCESS) {
+    for (Status s : proto.getReplyList()) {
+      if (s != Status.SUCCESS) {
         return false;
       }
     }
@@ -196,10 +206,9 @@ public class PipelineAck {
     if (getSeqno() != UNKOWN_SEQNO) {
       return null;
     }
-    for (int reply : proto.getReplyList()) {
+    for (Status s : proto.getReplyList()) {
       // The following check is valid because protobuf guarantees to
       // preserve the ordering of enum elements.
-      Status s = StatusFormat.getStatus(reply);
       if (s.getNumber() >= OOB_START && s.getNumber() <= OOB_END) {
         return s;
       }

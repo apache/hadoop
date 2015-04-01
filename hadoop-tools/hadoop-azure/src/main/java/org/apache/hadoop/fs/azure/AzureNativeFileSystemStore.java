@@ -65,23 +65,23 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.microsoft.windowsazure.storage.CloudStorageAccount;
-import com.microsoft.windowsazure.storage.OperationContext;
-import com.microsoft.windowsazure.storage.RetryExponentialRetry;
-import com.microsoft.windowsazure.storage.RetryNoRetry;
-import com.microsoft.windowsazure.storage.StorageCredentials;
-import com.microsoft.windowsazure.storage.StorageCredentialsAccountAndKey;
-import com.microsoft.windowsazure.storage.StorageCredentialsSharedAccessSignature;
-import com.microsoft.windowsazure.storage.StorageErrorCode;
-import com.microsoft.windowsazure.storage.StorageException;
-import com.microsoft.windowsazure.storage.blob.BlobListingDetails;
-import com.microsoft.windowsazure.storage.blob.BlobProperties;
-import com.microsoft.windowsazure.storage.blob.BlobRequestOptions;
-import com.microsoft.windowsazure.storage.blob.CloudBlob;
-import com.microsoft.windowsazure.storage.blob.CopyStatus;
-import com.microsoft.windowsazure.storage.blob.DeleteSnapshotsOption;
-import com.microsoft.windowsazure.storage.blob.ListBlobItem;
-import com.microsoft.windowsazure.storage.core.Utility;
+import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.RetryExponentialRetry;
+import com.microsoft.azure.storage.RetryNoRetry;
+import com.microsoft.azure.storage.StorageCredentials;
+import com.microsoft.azure.storage.StorageCredentialsAccountAndKey;
+import com.microsoft.azure.storage.StorageCredentialsSharedAccessSignature;
+import com.microsoft.azure.storage.StorageErrorCode;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.BlobListingDetails;
+import com.microsoft.azure.storage.blob.BlobProperties;
+import com.microsoft.azure.storage.blob.BlobRequestOptions;
+import com.microsoft.azure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.blob.CopyStatus;
+import com.microsoft.azure.storage.blob.DeleteSnapshotsOption;
+import com.microsoft.azure.storage.blob.ListBlobItem;
+import com.microsoft.azure.storage.core.Utility;
 
 /**
  * Core implementation of Windows Azure Filesystem for Hadoop.
@@ -134,6 +134,15 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private static final String KEY_MAX_BACKOFF_INTERVAL = "fs.azure.io.retry.max.backoff.interval";
   private static final String KEY_BACKOFF_INTERVAL = "fs.azure.io.retry.backoff.interval";
   private static final String KEY_MAX_IO_RETRIES = "fs.azure.io.retry.max.retries";
+  
+  private static final String KEY_COPYBLOB_MIN_BACKOFF_INTERVAL = 
+    "fs.azure.io.copyblob.retry.min.backoff.interval";
+  private static final String KEY_COPYBLOB_MAX_BACKOFF_INTERVAL = 
+    "fs.azure.io.copyblob.retry.max.backoff.interval";
+  private static final String KEY_COPYBLOB_BACKOFF_INTERVAL = 
+    "fs.azure.io.copyblob.retry.backoff.interval";
+  private static final String KEY_COPYBLOB_MAX_IO_RETRIES = 
+    "fs.azure.io.copyblob.retry.max.retries";  
 
   private static final String KEY_SELF_THROTTLE_ENABLE = "fs.azure.selfthrottling.enable";
   private static final String KEY_SELF_THROTTLE_READ_FACTOR = "fs.azure.selfthrottling.read.factor";
@@ -199,6 +208,11 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   private static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30 * 1000; // 30s
   private static final int DEFAULT_BACKOFF_INTERVAL = 1 * 1000; // 1s
   private static final int DEFAULT_MAX_RETRY_ATTEMPTS = 15;
+  
+  private static final int DEFAULT_COPYBLOB_MIN_BACKOFF_INTERVAL = 3  * 1000;
+  private static final int DEFAULT_COPYBLOB_MAX_BACKOFF_INTERVAL = 90 * 1000;
+  private static final int DEFAULT_COPYBLOB_BACKOFF_INTERVAL = 30 * 1000;
+  private static final int DEFAULT_COPYBLOB_MAX_RETRY_ATTEMPTS = 15;  
 
   // Self-throttling defaults. Allowed range = (0,1.0]
   // Value of 1.0 means no self-throttling.
@@ -586,8 +600,6 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * Azure.
    * 
    * @throws AzureException
-   * @throws ConfigurationException
-   * 
    */
   private void configureAzureStorageSession() throws AzureException {
 
@@ -691,7 +703,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    *           raised on errors communicating with Azure storage.
    * @throws IOException
    *           raised on errors performing I/O or setting up the session.
-   * @throws URISyntaxExceptions
+   * @throws URISyntaxException
    *           raised on creating mal-formed URI's.
    */
   private void connectUsingAnonymousCredentials(final URI uri)
@@ -1022,7 +1034,6 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   /**
    * Checks if the given key in Azure Storage should be stored as a page
    * blob instead of block blob.
-   * @throws URISyntaxException
    */
   public boolean isPageBlobKey(String key) {
     return isKeyForDirectorySet(key, pageBlobDirs);
@@ -1741,7 +1752,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * the path and returns a path relative to the root directory of the
    * container.
    * 
-   * @param blob
+   * @param directory
    *          - adjust the key to this directory to a path relative to the root
    *          directory
    * 
@@ -2128,14 +2139,10 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * uses a in-order first traversal of blob directory structures to maintain
    * the sorted order of the blob names.
    * 
-   * @param dir
-   *          -- Azure blob directory
-   * 
-   * @param list
-   *          -- a list of file metadata objects for each non-directory blob.
-   * 
-   * @param maxListingLength
-   *          -- maximum length of the built up list.
+   * @param aCloudBlobDirectory Azure blob directory
+   * @param aFileMetadataList a list of file metadata objects for each
+   *                          non-directory blob.
+   * @param maxListingCount maximum length of the built up list.
    */
   private void buildUpList(CloudBlobDirectoryWrapper aCloudBlobDirectory,
       ArrayList<FileMetadata> aFileMetadataList, final int maxListingCount,
@@ -2306,8 +2313,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * swallow the error since what most probably happened is that
    * the first operation succeeded on the server.
    * @param blob The blob to delete.
-   * @param leaseID A string identifying the lease, or null if no
-   *        lease is to be used.
+   * @param lease Azure blob lease, or null if no lease is to be used.
    * @throws StorageException
    */
   private void safeDelete(CloudBlobWrapper blob, SelfRenewingLease lease) throws StorageException {
@@ -2435,11 +2441,46 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       // Rename the source blob to the destination blob by copying it to
       // the destination blob then deleting it.
       //
-      dstBlob.startCopyFromBlob(srcUri, getInstrumentedContext());
-      waitForCopyToComplete(dstBlob, getInstrumentedContext());
+      // Copy blob operation in Azure storage is very costly. It will be highly
+      // likely throttled during Azure storage gc. Short term fix will be using
+      // a more intensive exponential retry policy when the cluster is getting 
+      // throttled.
+      try {
+        dstBlob.startCopyFromBlob(srcUri, null, getInstrumentedContext());
+      } catch (StorageException se) {
+        if (se.getErrorCode().equals(
+		  StorageErrorCode.SERVER_BUSY.toString())) {
+          int copyBlobMinBackoff = sessionConfiguration.getInt(
+            KEY_COPYBLOB_MIN_BACKOFF_INTERVAL,
+			DEFAULT_COPYBLOB_MIN_BACKOFF_INTERVAL);
 
+          int copyBlobMaxBackoff = sessionConfiguration.getInt(
+            KEY_COPYBLOB_MAX_BACKOFF_INTERVAL,
+			DEFAULT_COPYBLOB_MAX_BACKOFF_INTERVAL);
+
+          int copyBlobDeltaBackoff = sessionConfiguration.getInt(
+            KEY_COPYBLOB_BACKOFF_INTERVAL,
+			DEFAULT_COPYBLOB_BACKOFF_INTERVAL);
+
+          int copyBlobMaxRetries = sessionConfiguration.getInt(
+            KEY_COPYBLOB_MAX_IO_RETRIES,
+			DEFAULT_COPYBLOB_MAX_RETRY_ATTEMPTS);
+	        
+          BlobRequestOptions options = new BlobRequestOptions();
+          options.setRetryPolicyFactory(new RetryExponentialRetry(
+            copyBlobMinBackoff, copyBlobDeltaBackoff, copyBlobMaxBackoff, 
+			copyBlobMaxRetries));
+          dstBlob.startCopyFromBlob(srcUri, options, getInstrumentedContext());
+        } else {
+          throw se;
+        }
+      }
+      waitForCopyToComplete(dstBlob, getInstrumentedContext());
       safeDelete(srcBlob, lease);
-    } catch (Exception e) {
+    } catch (StorageException e) {
+      // Re-throw exception as an Azure storage exception.
+      throw new AzureException(e);
+    } catch (URISyntaxException e) {
       // Re-throw exception as an Azure storage exception.
       throw new AzureException(e);
     }
@@ -2543,7 +2584,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     try {
       checkContainer(ContainerAccessType.ReadThenWrite);
       CloudBlobWrapper blob = getBlobReference(key);
-      blob.getProperties().setLastModified(lastModified);
+      //setLastModified function is not available in 2.0.0 version. blob.uploadProperties automatically updates last modified
+      //timestamp to current time
       blob.uploadProperties(getInstrumentedContext(), folderLease);
     } catch (Exception e) {
 

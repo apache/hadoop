@@ -151,4 +151,8 @@ public class MutableStat extends MutableMetric {
     minMax.reset();
   }
 
+  @Override
+  public String toString() {
+    return lastStat().toString();
+  }
 }

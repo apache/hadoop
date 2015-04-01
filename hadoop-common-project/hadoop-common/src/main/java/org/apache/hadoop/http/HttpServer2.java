@@ -31,6 +31,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -53,6 +54,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
+import org.apache.hadoop.security.authentication.util.FileSignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.RandomSignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.ZKSignerSecretProvider;
 import org.apache.hadoop.security.ssl.SslSocketConnectorSecure;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
@@ -91,6 +97,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
+import static org.apache.hadoop.security.authentication.server
+    .AuthenticationFilter.*;
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal is
  * to serve up status information for the server. There are three contexts:
@@ -160,6 +168,8 @@ public final class HttpServer2 implements FilterContainer {
     private boolean findPort;
 
     private String hostName;
+    private boolean disallowFallbackToRandomSignerSecretProvider;
+    private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
 
     public Builder setName(String name){
       this.name = name;
@@ -254,6 +264,16 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
+    public Builder disallowFallbackToRandomSingerSecretProvider(boolean value) {
+      this.disallowFallbackToRandomSignerSecretProvider = value;
+      return this;
+    }
+
+    public Builder authFilterConfigurationPrefix(String value) {
+      this.authFilterConfigurationPrefix = value;
+      return this;
+    }
+
     public HttpServer2 build() throws IOException {
       Preconditions.checkNotNull(name, "name is not set");
       Preconditions.checkState(!endpoints.isEmpty(), "No endpoints specified");
@@ -314,6 +334,18 @@ public final class HttpServer2 implements FilterContainer {
     this.webServer = new Server();
     this.adminsAcl = b.adminsAcl;
     this.webAppContext = createWebAppContext(b.name, b.conf, adminsAcl, appDir);
+    try {
+      SignerSecretProvider secretProvider =
+          constructSecretProvider(b, webAppContext.getServletContext());
+      this.webAppContext.getServletContext().setAttribute
+          (AuthenticationFilter.SIGNER_SECRET_PROVIDER_ATTRIBUTE,
+           secretProvider);
+    } catch(IOException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+
     this.findPort = b.findPort;
     initializeWebServer(b.name, b.hostName, b.conf, b.pathSpecs);
   }
@@ -405,9 +437,28 @@ public final class HttpServer2 implements FilterContainer {
     return ctx;
   }
 
+  private static SignerSecretProvider constructSecretProvider(final Builder b,
+      ServletContext ctx)
+      throws Exception {
+    final Configuration conf = b.conf;
+    Properties config = getFilterProperties(conf,
+                                            b.authFilterConfigurationPrefix);
+    return AuthenticationFilter.constructSecretProvider(
+        ctx, config, b.disallowFallbackToRandomSignerSecretProvider);
+  }
+
+  private static Properties getFilterProperties(Configuration conf, String
+      prefix) {
+    Properties prop = new Properties();
+    Map<String, String> filterConfig = AuthenticationFilterInitializer
+        .getFilterConfigMap(conf, prefix);
+    prop.putAll(filterConfig);
+    return prop;
+  }
+
   private static void addNoCacheFilter(WebAppContext ctxt) {
     defineFilter(ctxt, NO_CACHE_FILTER, NoCacheFilter.class.getName(),
-        Collections.<String, String> emptyMap(), new String[] { "/*" });
+                 Collections.<String, String> emptyMap(), new String[] { "/*" });
   }
 
   @InterfaceAudience.Private
@@ -594,15 +645,18 @@ public final class HttpServer2 implements FilterContainer {
   public void addFilter(String name, String classname,
       Map<String, String> parameters) {
 
+    FilterHolder filterHolder = getFilterHolder(name, classname, parameters);
     final String[] USER_FACING_URLS = { "*.html", "*.jsp" };
-    defineFilter(webAppContext, name, classname, parameters, USER_FACING_URLS);
+    FilterMapping fmap = getFilterMapping(name, USER_FACING_URLS);
+    defineFilter(webAppContext, filterHolder, fmap);
     LOG.info(
         "Added filter " + name + " (class=" + classname + ") to context " + webAppContext.getDisplayName());
     final String[] ALL_URLS = { "/*" };
+    fmap = getFilterMapping(name, ALL_URLS);
     for (Map.Entry<Context, Boolean> e : defaultContexts.entrySet()) {
       if (e.getValue()) {
         Context ctx = e.getKey();
-        defineFilter(ctx, name, classname, parameters, ALL_URLS);
+        defineFilter(ctx, filterHolder, fmap);
         LOG.info("Added filter " + name + " (class=" + classname
             + ") to context " + ctx.getDisplayName());
       }
@@ -614,9 +668,11 @@ public final class HttpServer2 implements FilterContainer {
   public void addGlobalFilter(String name, String classname,
       Map<String, String> parameters) {
     final String[] ALL_URLS = { "/*" };
-    defineFilter(webAppContext, name, classname, parameters, ALL_URLS);
+    FilterHolder filterHolder = getFilterHolder(name, classname, parameters);
+    FilterMapping fmap = getFilterMapping(name, ALL_URLS);
+    defineFilter(webAppContext, filterHolder, fmap);
     for (Context ctx : defaultContexts.keySet()) {
-      defineFilter(ctx, name, classname, parameters, ALL_URLS);
+      defineFilter(ctx, filterHolder, fmap);
     }
     LOG.info("Added global filter '" + name + "' (class=" + classname + ")");
   }
@@ -626,17 +682,35 @@ public final class HttpServer2 implements FilterContainer {
    */
   public static void defineFilter(Context ctx, String name,
       String classname, Map<String,String> parameters, String[] urls) {
+    FilterHolder filterHolder = getFilterHolder(name, classname, parameters);
+    FilterMapping fmap = getFilterMapping(name, urls);
+    defineFilter(ctx, filterHolder, fmap);
+  }
 
-    FilterHolder holder = new FilterHolder();
-    holder.setName(name);
-    holder.setClassName(classname);
-    holder.setInitParameters(parameters);
+  /**
+   * Define a filter for a context and set up default url mappings.
+   */
+  private static void defineFilter(Context ctx, FilterHolder holder,
+      FilterMapping fmap) {
+    ServletHandler handler = ctx.getServletHandler();
+    handler.addFilter(holder, fmap);
+  }
+
+  private static FilterMapping getFilterMapping(String name, String[] urls) {
     FilterMapping fmap = new FilterMapping();
     fmap.setPathSpecs(urls);
     fmap.setDispatches(Handler.ALL);
     fmap.setFilterName(name);
-    ServletHandler handler = ctx.getServletHandler();
-    handler.addFilter(holder, fmap);
+    return fmap;
+  }
+
+  private static FilterHolder getFilterHolder(String name, String classname,
+      Map<String, String> parameters) {
+    FilterHolder holder = new FilterHolder();
+    holder.setName(name);
+    holder.setClassName(classname);
+    holder.setInitParameters(parameters);
+    return holder;
   }
 
   /**

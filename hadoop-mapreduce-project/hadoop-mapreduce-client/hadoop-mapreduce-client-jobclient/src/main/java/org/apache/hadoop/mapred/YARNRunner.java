@@ -640,7 +640,10 @@ public class YARNRunner implements ClientProtocol {
       clientCache.getClient(arg0).killJob(arg0);
       long currentTimeMillis = System.currentTimeMillis();
       long timeKillIssued = currentTimeMillis;
-      while ((currentTimeMillis < timeKillIssued + 10000L)
+      long killTimeOut =
+          conf.getLong(MRJobConfig.MR_AM_HARD_KILL_TIMEOUT_MS,
+                       MRJobConfig.DEFAULT_MR_AM_HARD_KILL_TIMEOUT_MS);
+      while ((currentTimeMillis < timeKillIssued + killTimeOut)
           && !isJobInTerminalState(status)) {
         try {
           Thread.sleep(1000L);

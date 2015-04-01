@@ -57,7 +57,7 @@ public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
    * RecordReader to read from chunks.
    * @param inputSplit The InputSplit for the map. Ignored entirely.
    * @param taskAttemptContext The AttemptContext.
-   * @throws IOException, on failure.
+   * @throws IOException
    * @throws InterruptedException
    */
   @Override
@@ -88,7 +88,7 @@ public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
    * been completely exhausted, an new chunk is acquired and read,
    * transparently.
    * @return True, if the nextValue() could be traversed to. False, otherwise.
-   * @throws IOException, on failure.
+   * @throws IOException
    * @throws InterruptedException
    */
   @Override
@@ -130,7 +130,7 @@ public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
   /**
    * Implementation of RecordReader::getCurrentKey().
    * @return The key of the current record. (i.e. the source-path.)
-   * @throws IOException, on failure.
+   * @throws IOException
    * @throws InterruptedException
    */
   @Override
@@ -142,7 +142,7 @@ public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
   /**
    * Implementation of RecordReader::getCurrentValue().
    * @return The value of the current record. (i.e. the target-path.)
-   * @throws IOException, on failure.
+   * @throws IOException
    * @throws InterruptedException
    */
   @Override
@@ -154,7 +154,7 @@ public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
   /**
    * Implementation of RecordReader::getProgress().
    * @return A fraction [0.0,1.0] indicating the progress of a DistCp mapper.
-   * @throws IOException, on failure.
+   * @throws IOException
    * @throws InterruptedException
    */
   @Override
@@ -192,7 +192,7 @@ public class DynamicRecordReader<K, V> extends RecordReader<K, V> {
   /**
    * Implementation of RecordReader::close().
    * Closes the RecordReader.
-   * @throws IOException, on failure.
+   * @throws IOException
    */
   @Override
   public void close()

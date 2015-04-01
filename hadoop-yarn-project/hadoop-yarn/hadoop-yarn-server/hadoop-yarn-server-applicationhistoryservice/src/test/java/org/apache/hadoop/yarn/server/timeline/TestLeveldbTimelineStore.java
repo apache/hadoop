@@ -164,13 +164,13 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
   @Test
   public void testGetEntityTypes() throws IOException {
     List<String> entityTypes = ((LeveldbTimelineStore)store).getEntityTypes();
-    assertEquals(6, entityTypes.size());
-    assertEquals("OLD_ENTITY_TYPE_1", entityTypes.get(0));
-    assertEquals(entityType1, entityTypes.get(1));
-    assertEquals(entityType2, entityTypes.get(2));
-    assertEquals(entityType4, entityTypes.get(3));
-    assertEquals(entityType5, entityTypes.get(4));
-    assertEquals(entityType7, entityTypes.get(5));
+    assertEquals(7, entityTypes.size());
+    assertEquals("ACL_ENTITY_TYPE_1", entityTypes.get(0));
+    assertEquals("OLD_ENTITY_TYPE_1", entityTypes.get(1));
+    assertEquals(entityType1, entityTypes.get(2));
+    assertEquals(entityType2, entityTypes.get(3));
+    assertEquals(entityType4, entityTypes.get(4));
+    assertEquals(entityType5, entityTypes.get(5));
   }
 
   @Test
@@ -201,7 +201,7 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
     ((LeveldbTimelineStore)store).discardOldEntities(-123l);
     assertEquals(2, getEntities("type_1").size());
     assertEquals(0, getEntities("type_2").size());
-    assertEquals(5, ((LeveldbTimelineStore)store).getEntityTypes().size());
+    assertEquals(6, ((LeveldbTimelineStore)store).getEntityTypes().size());
 
     ((LeveldbTimelineStore)store).discardOldEntities(123l);
     assertEquals(0, getEntities("type_1").size());

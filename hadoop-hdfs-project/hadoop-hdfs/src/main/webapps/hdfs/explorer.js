@@ -78,6 +78,12 @@
     return data.RemoteException !== undefined ? data.RemoteException.message : "";
   }
 
+  function encode_path(abs_path) {
+    abs_path = encodeURIComponent(abs_path);
+    var re = /%2F/g;
+    return abs_path.replace(re, '/');
+  }
+
   function view_file_details(path, abs_path) {
     function show_block_info(blocks) {
       var menus = $('#file-info-blockinfo-list');
@@ -100,12 +106,6 @@
         menus.append(item);
       }
       menus.change();
-    }
-
-    function encode_path(abs_path) {
-      abs_path = encodeURIComponent(abs_path);
-      var re = /%2F/g;
-      return abs_path.replace(re, '/');
     }
 
     abs_path = encode_path(abs_path);
@@ -149,7 +149,7 @@
         return chunk.write('' + new Date(Number(value)).toLocaleString());
       }
     };
-    var url = '/webhdfs/v1' + dir + '?op=LISTSTATUS';
+    var url = '/webhdfs/v1' + encode_path(dir) + '?op=LISTSTATUS';
     $.get(url, function(data) {
       var d = get_response(data, "FileStatuses");
       if (d === null) {
@@ -192,6 +192,28 @@
       browse_directory(dir);
     }
   }
+
+  $('#btn-create-directory').on('show.bs.modal', function(event) {
+    var modal = $(this)
+    $('#new_directory_pwd').html(current_directory);
+  });
+
+  $('#btn-create-directory-send').click(function () {
+    $(this).prop('disabled', true);
+    $(this).button('complete');
+
+    var url = '/webhdfs/v1' + encode_path(append_path(current_directory,
+      $('#new_directory').val())) + '?op=MKDIRS';
+
+    $.ajax(url, { type: 'PUT' }
+    ).done(function(data) {
+      browse_directory(current_directory);
+    }).error(network_error_handler(url)
+     ).complete(function() {
+       $('#btn-create-directory').modal('hide');
+       $('#btn-create-directory-send').button('reset');
+    });
+  })
 
   init();
 })();

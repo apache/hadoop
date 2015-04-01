@@ -40,6 +40,7 @@ import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.io.compress.snappy.SnappyDecompressor.SnappyDirectDecompressor;
+import org.apache.hadoop.test.MultithreadedTestUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -390,5 +391,21 @@ public class TestSnappyCompressorDecompressor {
         array[i] = CACHE[rnd.nextInt(CACHE.length - 1)];
       return array;
     }
+  }
+
+  @Test
+  public void testSnappyCompressDecompressInMultiThreads() throws Exception {
+    MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext();
+    for(int i=0;i<10;i++) {
+      ctx.addThread( new MultithreadedTestUtil.TestingThread(ctx) {
+        @Override
+        public void doWork() throws Exception {
+          testSnappyCompressDecompress();
+        }
+      });
+    }
+    ctx.startThreads();
+
+    ctx.waitFor(60000);
   }
 }

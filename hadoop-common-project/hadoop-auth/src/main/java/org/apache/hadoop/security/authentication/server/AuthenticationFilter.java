@@ -18,18 +18,14 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
-import org.apache.hadoop.security.authentication.util.Signer;
-import org.apache.hadoop.security.authentication.util.SignerException;
-import org.apache.hadoop.security.authentication.util.RandomSignerSecretProvider;
-import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
-import org.apache.hadoop.security.authentication.util.StringSignerSecretProvider;
-import org.apache.hadoop.security.authentication.util.ZKSignerSecretProvider;
+import org.apache.hadoop.security.authentication.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -147,6 +143,8 @@ public class AuthenticationFilter implements Filter {
    */
   public static final String SIGNATURE_SECRET = "signature.secret";
 
+  public static final String SIGNATURE_SECRET_FILE = SIGNATURE_SECRET + ".file";
+
   /**
    * Constant for the configuration property that indicates the validity of the generated token.
    */
@@ -186,8 +184,6 @@ public class AuthenticationFilter implements Filter {
   private Signer signer;
   private SignerSecretProvider secretProvider;
   private AuthenticationHandler authHandler;
-  private boolean randomSecret;
-  private boolean customSecretProvider;
   private long validity;
   private String cookieDomain;
   private String cookiePath;
@@ -229,7 +225,6 @@ public class AuthenticationFilter implements Filter {
 
     initializeAuthHandler(authHandlerClassName, filterConfig);
 
-
     cookieDomain = config.getProperty(COOKIE_DOMAIN, null);
     cookiePath = config.getProperty(COOKIE_PATH, null);
   }
@@ -240,11 +235,8 @@ public class AuthenticationFilter implements Filter {
       Class<?> klass = Thread.currentThread().getContextClassLoader().loadClass(authHandlerClassName);
       authHandler = (AuthenticationHandler) klass.newInstance();
       authHandler.init(config);
-    } catch (ClassNotFoundException ex) {
-      throw new ServletException(ex);
-    } catch (InstantiationException ex) {
-      throw new ServletException(ex);
-    } catch (IllegalAccessException ex) {
+    } catch (ClassNotFoundException | InstantiationException |
+        IllegalAccessException ex) {
       throw new ServletException(ex);
     }
   }
@@ -254,60 +246,59 @@ public class AuthenticationFilter implements Filter {
     secretProvider = (SignerSecretProvider) filterConfig.getServletContext().
         getAttribute(SIGNER_SECRET_PROVIDER_ATTRIBUTE);
     if (secretProvider == null) {
-      Class<? extends SignerSecretProvider> providerClass
-              = getProviderClass(config);
+      // As tomcat cannot specify the provider object in the configuration.
+      // It'll go into this path
       try {
-        secretProvider = providerClass.newInstance();
-      } catch (InstantiationException ex) {
-        throw new ServletException(ex);
-      } catch (IllegalAccessException ex) {
-        throw new ServletException(ex);
-      }
-      try {
-        secretProvider.init(config, filterConfig.getServletContext(), validity);
+        secretProvider = constructSecretProvider(
+            filterConfig.getServletContext(),
+            config, false);
       } catch (Exception ex) {
         throw new ServletException(ex);
       }
-    } else {
-      customSecretProvider = true;
     }
     signer = new Signer(secretProvider);
   }
 
-  @SuppressWarnings("unchecked")
-  private Class<? extends SignerSecretProvider> getProviderClass(Properties config)
-          throws ServletException {
-    String providerClassName;
-    String signerSecretProviderName
-            = config.getProperty(SIGNER_SECRET_PROVIDER, null);
-    // fallback to old behavior
-    if (signerSecretProviderName == null) {
-      String signatureSecret = config.getProperty(SIGNATURE_SECRET, null);
-      if (signatureSecret != null) {
-        providerClassName = StringSignerSecretProvider.class.getName();
-      } else {
-        providerClassName = RandomSignerSecretProvider.class.getName();
-        randomSecret = true;
+  public static SignerSecretProvider constructSecretProvider(
+      ServletContext ctx, Properties config,
+      boolean disallowFallbackToRandomSecretProvider) throws Exception {
+    String name = config.getProperty(SIGNER_SECRET_PROVIDER, "file");
+    long validity = Long.parseLong(config.getProperty(AUTH_TOKEN_VALIDITY,
+                                                      "36000")) * 1000;
+
+    if (!disallowFallbackToRandomSecretProvider
+        && "file".equals(name)
+        && config.getProperty(SIGNATURE_SECRET_FILE) == null) {
+      name = "random";
+    }
+
+    SignerSecretProvider provider;
+    if ("file".equals(name)) {
+      provider = new FileSignerSecretProvider();
+      try {
+        provider.init(config, ctx, validity);
+      } catch (Exception e) {
+        if (!disallowFallbackToRandomSecretProvider) {
+          LOG.info("Unable to initialize FileSignerSecretProvider, " +
+                       "falling back to use random secrets.");
+          provider = new RandomSignerSecretProvider();
+          provider.init(config, ctx, validity);
+        } else {
+          throw e;
+        }
       }
+    } else if ("random".equals(name)) {
+      provider = new RandomSignerSecretProvider();
+      provider.init(config, ctx, validity);
+    } else if ("zookeeper".equals(name)) {
+      provider = new ZKSignerSecretProvider();
+      provider.init(config, ctx, validity);
     } else {
-      if ("random".equals(signerSecretProviderName)) {
-        providerClassName = RandomSignerSecretProvider.class.getName();
-        randomSecret = true;
-      } else if ("string".equals(signerSecretProviderName)) {
-        providerClassName = StringSignerSecretProvider.class.getName();
-      } else if ("zookeeper".equals(signerSecretProviderName)) {
-        providerClassName = ZKSignerSecretProvider.class.getName();
-      } else {
-        providerClassName = signerSecretProviderName;
-        customSecretProvider = true;
-      }
+      provider = (SignerSecretProvider) Thread.currentThread().
+          getContextClassLoader().loadClass(name).newInstance();
+      provider.init(config, ctx, validity);
     }
-    try {
-      return (Class<? extends SignerSecretProvider>) Thread.currentThread().
-              getContextClassLoader().loadClass(providerClassName);
-    } catch (ClassNotFoundException ex) {
-      throw new ServletException(ex);
-    }
+    return provider;
   }
 
   /**
@@ -336,7 +327,7 @@ public class AuthenticationFilter implements Filter {
    * @return if a random secret is being used.
    */
   protected boolean isRandomSecret() {
-    return randomSecret;
+    return secretProvider.getClass() == RandomSignerSecretProvider.class;
   }
 
   /**
@@ -345,7 +336,10 @@ public class AuthenticationFilter implements Filter {
    * @return if a custom implementation of a SignerSecretProvider is being used.
    */
   protected boolean isCustomSignerSecretProvider() {
-    return customSecretProvider;
+    Class<?> clazz = secretProvider.getClass();
+    return clazz != FileSignerSecretProvider.class && clazz !=
+        RandomSignerSecretProvider.class && clazz != ZKSignerSecretProvider
+        .class;
   }
 
   /**
@@ -385,9 +379,6 @@ public class AuthenticationFilter implements Filter {
     if (authHandler != null) {
       authHandler.destroy();
       authHandler = null;
-    }
-    if (secretProvider != null) {
-      secretProvider.destroy();
     }
   }
 

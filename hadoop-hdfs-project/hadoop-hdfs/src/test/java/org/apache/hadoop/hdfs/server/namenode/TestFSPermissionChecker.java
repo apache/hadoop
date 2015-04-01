@@ -403,7 +403,7 @@ public class TestFSPermissionChecker {
   private void assertPermissionGranted(UserGroupInformation user, String path,
       FsAction access) throws IOException {
     INodesInPath iip = dir.getINodesInPath(path, true);
-    new FSPermissionChecker(SUPERUSER, SUPERGROUP, user).checkPermission(iip,
+    dir.getPermissionChecker(SUPERUSER, SUPERGROUP, user).checkPermission(iip,
       false, null, null, access, null, false);
   }
 
@@ -411,7 +411,7 @@ public class TestFSPermissionChecker {
       FsAction access) throws IOException {
     try {
       INodesInPath iip = dir.getINodesInPath(path, true);
-      new FSPermissionChecker(SUPERUSER, SUPERGROUP, user).checkPermission(iip,
+      dir.getPermissionChecker(SUPERUSER, SUPERGROUP, user).checkPermission(iip,
         false, null, null, access, null, false);
       fail("expected AccessControlException for user + " + user + ", path = " +
         path + ", access = " + access);

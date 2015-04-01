@@ -44,10 +44,9 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.util.Progressable;
 
 /**
- * <p>
  * A block-based {@link FileSystem} backed by
  * <a href="http://aws.amazon.com/s3">Amazon S3</a>.
- * </p>
+ *
  * @see NativeS3FileSystem
  */
 @InterfaceAudience.Public
@@ -70,7 +69,6 @@ public class S3FileSystem extends FileSystem {
 
   /**
    * Return the protocol scheme for the FileSystem.
-   * <p/>
    *
    * @return <code>s3</code>
    */

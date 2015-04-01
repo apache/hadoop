@@ -409,7 +409,7 @@ Java_org_apache_hadoop_yarn_server_nodemanager_WindowsSecureContainerExecutor_00
 
 done:
   if (path)     (*env)->ReleaseStringChars(env, jpath, path);
-  return hFile;
+  return (jlong) hFile;
 #endif
 }
 

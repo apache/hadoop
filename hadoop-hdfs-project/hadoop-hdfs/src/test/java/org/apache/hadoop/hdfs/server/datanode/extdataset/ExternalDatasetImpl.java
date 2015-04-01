@@ -61,8 +61,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public void removeVolumes(Collection<StorageLocation> volumes) {
-
+  public void removeVolumes(Set<File> volumes, boolean clearFailure) {
   }
 
   @Override
@@ -196,7 +195,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
     final Map<DatanodeStorage, BlockListAsLongs> result =
 	new HashMap<DatanodeStorage, BlockListAsLongs>();
 
-    result.put(storage, new BlockListAsLongs(null, null));
+    result.put(storage, BlockListAsLongs.EMPTY);
     return result;
   }
 
@@ -243,8 +242,8 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public void checkDataDir() throws DiskErrorException {
-    throw new DiskChecker.DiskErrorException(null);
+  public Set<File> checkDataDir() {
+    return null;
   }
 
   @Override
@@ -307,7 +306,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public void restoreTrash(String bpid) {
+  public void clearTrash(String bpid) {
 
   }
 
@@ -427,6 +426,11 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
 
   @Override
   public boolean getPinning(ExtendedBlock block) throws IOException {
+    return false;
+  }
+  
+  @Override
+  public boolean isDeletingBlock(String bpid, long blockId) {
     return false;
   }
 }

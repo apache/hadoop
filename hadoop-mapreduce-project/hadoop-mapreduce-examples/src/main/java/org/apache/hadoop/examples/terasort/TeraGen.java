@@ -70,7 +70,6 @@ public class TeraGen extends Configured implements Tool {
 
   public static enum Counters {CHECKSUM}
 
-  public static final String NUM_ROWS = "mapreduce.terasort.num-rows";
   /**
    * An input format that assigns ranges of longs to each mapper.
    */
@@ -189,11 +188,12 @@ public class TeraGen extends Configured implements Tool {
   }
   
   static long getNumberOfRows(JobContext job) {
-    return job.getConfiguration().getLong(NUM_ROWS, 0);
+    return job.getConfiguration().getLong(TeraSortConfigKeys.NUM_ROWS.key(),
+        TeraSortConfigKeys.DEFAULT_NUM_ROWS);
   }
   
   static void setNumberOfRows(Job job, long numRows) {
-    job.getConfiguration().setLong(NUM_ROWS, numRows);
+    job.getConfiguration().setLong(TeraSortConfigKeys.NUM_ROWS.key(), numRows);
   }
 
   /**

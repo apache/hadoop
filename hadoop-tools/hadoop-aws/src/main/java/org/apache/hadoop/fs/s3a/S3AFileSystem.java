@@ -32,8 +32,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.fs.s3.S3Credentials;
-
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
@@ -88,7 +86,8 @@ public class S3AFileSystem extends FileSystem {
   private int maxKeys;
   private long partSize;
   private TransferManager transfers;
-  private int partSizeThreshold;
+  private ThreadPoolExecutor threadPoolExecutor;
+  private int multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private CannedAccessControlList cannedACL;
   private String serverSideEncryptionAlgorithm;
@@ -158,12 +157,22 @@ public class S3AFileSystem extends FileSystem {
         this.getWorkingDirectory());
 
     // Try to get our credentials or just connect anonymously
-    S3Credentials s3Credentials = new S3Credentials();
-    s3Credentials.initialize(name, conf);
+    String accessKey = conf.get(ACCESS_KEY, null);
+    String secretKey = conf.get(SECRET_KEY, null);
+
+    String userInfo = name.getUserInfo();
+    if (userInfo != null) {
+      int index = userInfo.indexOf(':');
+      if (index != -1) {
+        accessKey = userInfo.substring(0, index);
+        secretKey = userInfo.substring(index + 1);
+      } else {
+        accessKey = userInfo;
+      }
+    }
 
     AWSCredentialsProviderChain credentials = new AWSCredentialsProviderChain(
-        new BasicAWSCredentialsProvider(s3Credentials.getAccessKey(),
-                                        s3Credentials.getSecretAccessKey()),
+        new BasicAWSCredentialsProvider(accessKey, secretKey),
         new InstanceProfileCredentialsProvider(),
         new AnonymousAWSCredentialsProvider()
     );
@@ -237,7 +246,7 @@ public class S3AFileSystem extends FileSystem {
 
     maxKeys = conf.getInt(MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS);
     partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-    partSizeThreshold = conf.getInt(MIN_MULTIPART_THRESHOLD, 
+    multiPartThreshold = conf.getInt(MIN_MULTIPART_THRESHOLD,
       DEFAULT_MIN_MULTIPART_THRESHOLD);
 
     if (partSize < 5 * 1024 * 1024) {
@@ -245,9 +254,9 @@ public class S3AFileSystem extends FileSystem {
       partSize = 5 * 1024 * 1024;
     }
 
-    if (partSizeThreshold < 5 * 1024 * 1024) {
+    if (multiPartThreshold < 5 * 1024 * 1024) {
       LOG.error(MIN_MULTIPART_THRESHOLD + " must be at least 5 MB");
-      partSizeThreshold = 5 * 1024 * 1024;
+      multiPartThreshold = 5 * 1024 * 1024;
     }
 
     int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
@@ -262,20 +271,20 @@ public class S3AFileSystem extends FileSystem {
     LinkedBlockingQueue<Runnable> workQueue =
       new LinkedBlockingQueue<>(maxThreads *
         conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS));
-    ThreadPoolExecutor tpe = new ThreadPoolExecutor(
+    threadPoolExecutor = new ThreadPoolExecutor(
         coreThreads,
         maxThreads,
         keepAliveTime,
         TimeUnit.SECONDS,
         workQueue,
         newDaemonThreadFactory("s3a-transfer-shared-"));
-    tpe.allowCoreThreadTimeOut(true);
+    threadPoolExecutor.allowCoreThreadTimeOut(true);
 
     TransferManagerConfiguration transferConfiguration = new TransferManagerConfiguration();
     transferConfiguration.setMinimumUploadPartSize(partSize);
-    transferConfiguration.setMultipartUploadThreshold(partSizeThreshold);
+    transferConfiguration.setMultipartUploadThreshold(multiPartThreshold);
 
-    transfers = new TransferManager(s3, tpe);
+    transfers = new TransferManager(s3, threadPoolExecutor);
     transfers.setConfiguration(transferConfiguration);
 
     String cannedACLName = conf.get(CANNED_ACL, DEFAULT_CANNED_ACL);
@@ -391,7 +400,12 @@ public class S3AFileSystem extends FileSystem {
     if (!overwrite && exists(f)) {
       throw new FileAlreadyExistsException(f + " already exists");
     }
-
+    if (getConf().getBoolean(FAST_UPLOAD, DEFAULT_FAST_UPLOAD)) {
+      return new FSDataOutputStream(new S3AFastOutputStream(s3, this, bucket,
+          key, progress, statistics, cannedACL,
+          serverSideEncryptionAlgorithm, partSize, (long)multiPartThreshold,
+          threadPoolExecutor), statistics);
+    }
     // We pass null to FSDataOutputStream so it won't count writes that are being buffered to a file
     return new FSDataOutputStream(new S3AOutputStream(getConf(), transfers, this,
       bucket, key, progress, cannedACL, statistics, 

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.security;
 
-import com.google.common.base.Charsets;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.conf.Configuration;
@@ -25,11 +24,7 @@ import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 
-import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,8 +45,6 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
 
   static final String PREFIX = "hadoop.http.authentication.";
 
-  static final String SIGNATURE_SECRET_FILE = AuthenticationFilter.SIGNATURE_SECRET + ".file";
-
   /**
    * Initializes hadoop-auth AuthenticationFilter.
    * <p/>
@@ -63,6 +56,15 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
    */
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {
+    Map<String, String> filterConfig = getFilterConfigMap(conf, PREFIX);
+
+    container.addFilter("authentication",
+                        AuthenticationFilter.class.getName(),
+                        filterConfig);
+  }
+
+  public static Map<String, String> getFilterConfigMap(Configuration conf,
+      String prefix) {
     Map<String, String> filterConfig = new HashMap<String, String>();
 
     //setting the cookie path to root '/' so it is used for all resources.
@@ -70,30 +72,11 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
 
     for (Map.Entry<String, String> entry : conf) {
       String name = entry.getKey();
-      if (name.startsWith(PREFIX)) {
+      if (name.startsWith(prefix)) {
         String value = conf.get(name);
-        name = name.substring(PREFIX.length());
+        name = name.substring(prefix.length());
         filterConfig.put(name, value);
       }
-    }
-
-    String signatureSecretFile = filterConfig.get(SIGNATURE_SECRET_FILE);
-    if (signatureSecretFile == null) {
-      throw new RuntimeException("Undefined property: " + SIGNATURE_SECRET_FILE);      
-    }
-
-    StringBuilder secret = new StringBuilder();
-    try (Reader reader = new InputStreamReader(
-        new FileInputStream(signatureSecretFile), Charsets.UTF_8)) {
-      int c = reader.read();
-      while (c > -1) {
-        secret.append((char)c);
-        c = reader.read();
-      }
-      reader.close();
-      filterConfig.put(AuthenticationFilter.SIGNATURE_SECRET, secret.toString());
-    } catch (IOException ex) {
-      throw new RuntimeException("Could not read HTTP signature secret file: " + signatureSecretFile);            
     }
 
     //Resolve _HOST into bind address
@@ -108,10 +91,7 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
       }
       filterConfig.put(KerberosAuthenticationHandler.PRINCIPAL, principal);
     }
-
-    container.addFilter("authentication",
-                        AuthenticationFilter.class.getName(),
-                        filterConfig);
+    return filterConfig;
   }
 
 }

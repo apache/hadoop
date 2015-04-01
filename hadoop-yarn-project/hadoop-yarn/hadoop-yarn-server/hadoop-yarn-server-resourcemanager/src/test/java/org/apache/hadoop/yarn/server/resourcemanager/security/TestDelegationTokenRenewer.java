@@ -287,9 +287,16 @@ public class TestDelegationTokenRenewer {
    * exception
    */
   static class MyFS extends DistributedFileSystem {
-    
-    public MyFS() {}
-    public void close() {}
+    private static AtomicInteger instanceCounter = new AtomicInteger();
+    public MyFS() {
+      instanceCounter.incrementAndGet();
+    }
+    public void close() {
+      instanceCounter.decrementAndGet();
+    }
+    public static int getInstanceCounter() {
+      return instanceCounter.get();
+    }
     @Override
     public void initialize(URI uri, Configuration conf) throws IOException {}
     
@@ -298,6 +305,11 @@ public class TestDelegationTokenRenewer {
       MyToken result = createTokens(new Text(renewer));
       LOG.info("Called MYDFS.getdelegationtoken " + result);
       return result;
+    }
+
+    public Token<?>[] addDelegationTokens(
+        final String renewer, Credentials credentials) throws IOException {
+      return new Token<?>[0];
     }
   }
   
@@ -1021,5 +1033,17 @@ public class TestDelegationTokenRenewer {
     MockRM.finishAMAndVerifyAppState(app1, rm, nm1, am1);
     // app2 completes, app1 is still running, check the token is not cancelled
     Assert.assertFalse(Renewer.cancelled);
+  }
+
+  // Test FileSystem memory leak in obtainSystemTokensForUser.
+  @Test
+  public void testFSLeakInObtainSystemTokensForUser() throws Exception{
+    Credentials credentials = new Credentials();
+    String user = "test";
+    int oldCounter = MyFS.getInstanceCounter();
+    delegationTokenRenewer.obtainSystemTokensForUser(user, credentials);
+    delegationTokenRenewer.obtainSystemTokensForUser(user, credentials);
+    delegationTokenRenewer.obtainSystemTokensForUser(user, credentials);
+    Assert.assertEquals(oldCounter, MyFS.getInstanceCounter());
   }
 }

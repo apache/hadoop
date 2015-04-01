@@ -33,32 +33,34 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p><code>ApplicationSubmissionContext</code> represents all of the
- * information needed by the <code>ResourceManager</code> to launch 
- * the <code>ApplicationMaster</code> for an application.</p>
- * 
- * <p>It includes details such as:
- *   <ul>
- *     <li>{@link ApplicationId} of the application.</li>
- *     <li>Application user.</li>
- *     <li>Application name.</li>
- *     <li>{@link Priority} of the application.</li>
- *     <li>
- *       {@link ContainerLaunchContext} of the container in which the 
- *       <code>ApplicationMaster</code> is executed.
- *     </li>
- *     <li>maxAppAttempts. The maximum number of application attempts.
+ * {@code ApplicationSubmissionContext} represents all of the
+ * information needed by the {@code ResourceManager} to launch
+ * the {@code ApplicationMaster} for an application.
+ * <p>
+ * It includes details such as:
+ * <ul>
+ *   <li>{@link ApplicationId} of the application.</li>
+ *   <li>Application user.</li>
+ *   <li>Application name.</li>
+ *   <li>{@link Priority} of the application.</li>
+ *   <li>
+ *     {@link ContainerLaunchContext} of the container in which the
+ *     <code>ApplicationMaster</code> is executed.
+ *   </li>
+ *   <li>
+ *     maxAppAttempts. The maximum number of application attempts.
  *     It should be no larger than the global number of max attempts in the
- *     Yarn configuration.</li>
- *     <li>attemptFailuresValidityInterval. The default value is -1.
- *     when attemptFailuresValidityInterval in milliseconds is set to > 0,
- *     the failure number will no take failures which happen out of the
- *     validityInterval into failure count. If failure count reaches to
- *     maxAppAttempts, the application will be failed.
- *     </li>
+ *     Yarn configuration.
+ *   </li>
+ *   <li>
+ *     attemptFailuresValidityInterval. The default value is -1.
+ *     when attemptFailuresValidityInterval in milliseconds is set to
+ *     {@literal >} 0, the failure number will no take failures which happen
+ *     out of the validityInterval into failure count. If failure count
+ *     reaches to maxAppAttempts, the application will be failed.
+ *   </li>
  *   <li>Optional, application-specific {@link LogAggregationContext}</li>
- *   </ul>
- * </p>
+ * </ul>
  * 
  * @see ContainerLaunchContext
  * @see ApplicationClientProtocol#submitApplication(org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest)

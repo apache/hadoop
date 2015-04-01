@@ -60,7 +60,6 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   private UserGroupInformation ugi;
 
   static {
-    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       cluster.waitActive();

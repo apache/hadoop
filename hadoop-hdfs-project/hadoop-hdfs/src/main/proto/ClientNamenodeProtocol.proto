@@ -350,10 +350,13 @@ message SetSafeModeResponseProto {
   required bool result = 1;
 }
 
-message SaveNamespaceRequestProto { // no parameters
+message SaveNamespaceRequestProto {
+  optional uint64 timeWindow = 1 [default = 0];
+  optional uint64 txGap = 2 [default = 0];
 }
 
 message SaveNamespaceResponseProto { // void response
+  optional bool saved = 1 [default = true];
 }
 
 message RollEditsRequestProto { // no parameters

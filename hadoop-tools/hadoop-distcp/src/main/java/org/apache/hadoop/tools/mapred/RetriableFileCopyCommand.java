@@ -84,8 +84,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
    * This is the actual copy-implementation.
    * @param arguments Argument-list to the command.
    * @return Number of bytes copied.
-   * @throws Exception: CopyReadException, if there are read-failures. All other
-   *         failures are IOExceptions.
+   * @throws Exception
    */
   @SuppressWarnings("unchecked")
   @Override

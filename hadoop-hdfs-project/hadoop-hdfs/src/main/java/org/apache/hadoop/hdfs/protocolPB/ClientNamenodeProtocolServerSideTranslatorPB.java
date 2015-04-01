@@ -277,10 +277,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   private static final RenewLeaseResponseProto VOID_RENEWLEASE_RESPONSE = 
   RenewLeaseResponseProto.newBuilder().build();
 
-  private static final SaveNamespaceResponseProto VOID_SAVENAMESPACE_RESPONSE = 
-  SaveNamespaceResponseProto.newBuilder().build();
-
-  private static final RefreshNodesResponseProto VOID_REFRESHNODES_RESPONSE = 
+  private static final RefreshNodesResponseProto VOID_REFRESHNODES_RESPONSE =
   RefreshNodesResponseProto.newBuilder().build();
 
   private static final FinalizeUpgradeResponseProto VOID_FINALIZEUPGRADE_RESPONSE = 
@@ -748,14 +745,15 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public SaveNamespaceResponseProto saveNamespace(RpcController controller,
       SaveNamespaceRequestProto req) throws ServiceException {
     try {
-      server.saveNamespace();
-      return VOID_SAVENAMESPACE_RESPONSE;
+      final long timeWindow = req.hasTimeWindow() ? req.getTimeWindow() : 0;
+      final long txGap = req.hasTxGap() ? req.getTxGap() : 0;
+      boolean saved = server.saveNamespace(timeWindow, txGap);
+      return SaveNamespaceResponseProto.newBuilder().setSaved(saved).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-
   }
-  
+
   @Override
   public RollEditsResponseProto rollEdits(RpcController controller,
       RollEditsRequestProto request) throws ServiceException {

@@ -167,6 +167,8 @@ public class DFSZKFailoverController extends ZKFailoverController {
 
   public static void main(String args[])
       throws Exception {
+    StringUtils.startupShutdownMessage(DFSZKFailoverController.class,
+        args, LOG);
     if (DFSUtil.parseHelpArgument(args, 
         ZKFailoverController.USAGE, System.out, true)) {
       System.exit(0);

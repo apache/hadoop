@@ -18,19 +18,20 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,7 +58,12 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -116,10 +122,6 @@ public class TestDataNodeVolumeFailure {
     if(cluster != null) {
       cluster.shutdown();
     }
-    for (int i = 0; i < 3; i++) {
-      FileUtil.setExecutable(new File(dataDir, "data"+(2*i+1)), true);
-      FileUtil.setExecutable(new File(dataDir, "data"+(2*i+2)), true);
-    }
   }
   
   /*
@@ -154,7 +156,7 @@ public class TestDataNodeVolumeFailure {
         !deteteBlocks(failedDir)
         ) {
       throw new IOException("Could not delete hdfs directory '" + failedDir + "'");
-    }    
+    }
     data_fail.setReadOnly();
     failedDir.setReadOnly();
     System.out.println("Deleteing " + failedDir.getPath() + "; exist=" + failedDir.exists());
@@ -181,10 +183,10 @@ public class TestDataNodeVolumeFailure {
         DatanodeStorage dnStorage = kvPair.getKey();
         BlockListAsLongs blockList = kvPair.getValue();
         reports[reportIndex++] =
-            new StorageBlockReport(dnStorage, blockList.getBlockListAsLongs());
+            new StorageBlockReport(dnStorage, blockList);
     }
     
-    cluster.getNameNodeRpc().blockReport(dnR, bpid, reports);
+    cluster.getNameNodeRpc().blockReport(dnR, bpid, reports, null);
 
     // verify number of blocks and files...
     verify(filename, filesize);
@@ -198,6 +200,69 @@ public class TestDataNodeVolumeFailure {
     DFSTestUtil.waitReplication(fs, fileName1, repl);
     System.out.println("file " + fileName1.getName() + 
         " is created and replicated");
+  }
+
+  /**
+   * Test that DataStorage and BlockPoolSliceStorage remove the failed volume
+   * after failure.
+   */
+  @Test(timeout=150000)
+  public void testFailedVolumeBeingRemovedFromDataNode()
+      throws InterruptedException, IOException, TimeoutException {
+    Path file1 = new Path("/test1");
+    DFSTestUtil.createFile(fs, file1, 1024, (short) 2, 1L);
+    DFSTestUtil.waitReplication(fs, file1, (short) 2);
+
+    File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
+    DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
+    DataNode dn0 = cluster.getDataNodes().get(0);
+    long lastDiskErrorCheck = dn0.getLastDiskErrorCheck();
+    dn0.checkDiskErrorAsync();
+    // Wait checkDiskError thread finish to discover volume failure.
+    while (dn0.getLastDiskErrorCheck() == lastDiskErrorCheck) {
+      Thread.sleep(100);
+    }
+
+    // Verify dn0Vol1 has been completely removed from DN0.
+    // 1. dn0Vol1 is removed from DataStorage.
+    DataStorage storage = dn0.getStorage();
+    assertEquals(1, storage.getNumStorageDirs());
+    for (int i = 0; i < storage.getNumStorageDirs(); i++) {
+      Storage.StorageDirectory sd = storage.getStorageDir(i);
+      assertFalse(sd.getRoot().getAbsolutePath().startsWith(
+          dn0Vol1.getAbsolutePath()
+      ));
+    }
+    final String bpid = cluster.getNamesystem().getBlockPoolId();
+    BlockPoolSliceStorage bpsStorage = storage.getBPStorage(bpid);
+    assertEquals(1, bpsStorage.getNumStorageDirs());
+    for (int i = 0; i < bpsStorage.getNumStorageDirs(); i++) {
+      Storage.StorageDirectory sd = bpsStorage.getStorageDir(i);
+      assertFalse(sd.getRoot().getAbsolutePath().startsWith(
+          dn0Vol1.getAbsolutePath()
+      ));
+    }
+
+    // 2. dn0Vol1 is removed from FsDataset
+    FsDatasetSpi<? extends FsVolumeSpi> data = dn0.getFSDataset();
+    for (FsVolumeSpi volume : data.getVolumes()) {
+      assertNotEquals(new File(volume.getBasePath()).getAbsoluteFile(),
+          dn0Vol1.getAbsoluteFile());
+    }
+
+    // 3. all blocks on dn0Vol1 have been removed.
+    for (ReplicaInfo replica : FsDatasetTestUtil.getReplicas(data, bpid)) {
+      assertNotNull(replica.getVolume());
+      assertNotEquals(
+          new File(replica.getVolume().getBasePath()).getAbsoluteFile(),
+          dn0Vol1.getAbsoluteFile());
+    }
+
+    // 4. dn0Vol1 is not in DN0's configuration and dataDirs anymore.
+    String[] dataDirStrs =
+        dn0.getConf().get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY).split(",");
+    assertEquals(1, dataDirStrs.length);
+    assertFalse(dataDirStrs[0].contains(dn0Vol1.getAbsolutePath()));
   }
 
   /**
@@ -223,8 +288,7 @@ public class TestDataNodeVolumeFailure {
     // Fail the first volume on both datanodes
     File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
     File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn1Vol1, false));
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn2Vol1, false));
+    DataNodeTestUtils.injectDataDirFailure(dn1Vol1, dn2Vol1);
 
     Path file2 = new Path("/test2");
     DFSTestUtil.createFile(fs, file2, 1024, (short)3, 1L);
@@ -319,7 +383,7 @@ public class TestDataNodeVolumeFailure {
   private boolean deteteBlocks(File dir) {
     File [] fileList = dir.listFiles();
     for(File f : fileList) {
-      if(f.getName().startsWith("blk_")) {
+      if(f.getName().startsWith(Block.BLOCK_FILE_PREFIX)) {
         if(!f.delete())
           return false;
         

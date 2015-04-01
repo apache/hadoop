@@ -431,6 +431,6 @@ public class TestSnapshotBlocksMap {
     // Now make sure that the NN can still save an fsimage successfully.
     cluster.getNameNode().getRpcServer().setSafeMode(
         SafeModeAction.SAFEMODE_ENTER, false);
-    cluster.getNameNode().getRpcServer().saveNamespace();
+    cluster.getNameNode().getRpcServer().saveNamespace(0, 0);
   }
 }

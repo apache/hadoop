@@ -36,7 +36,7 @@ public interface BlockCollection {
   /** 
    * Get content summary.
    */
-  public ContentSummary computeContentSummary();
+  public ContentSummary computeContentSummary(BlockStoragePolicySuite bsps);
 
   /**
    * @return the number of blocks

@@ -34,10 +34,7 @@ import org.apache.hadoop.util.NativeCodeLoader;
  */
 public class ZlibDecompressor implements Decompressor {
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64*1024;
-  
-  // HACK - Use this as a global lock in the JNI layer
-  private static Class clazz = ZlibDecompressor.class;
-  
+
   private long stream;
   private CompressionHeader header;
   private int directBufferSize;

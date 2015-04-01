@@ -65,7 +65,7 @@ public class DistCpUtils {
    * @param path The path of the file whose size is sought.
    * @param configuration Configuration, to retrieve the appropriate FileSystem.
    * @return The file-size, in number of bytes.
-   * @throws IOException, on failure.
+   * @throws IOException
    */
   public static long getFileSize(Path path, Configuration configuration)
                                             throws IOException {
@@ -270,7 +270,7 @@ public class DistCpUtils {
    *
    * @param fileSystem FileSystem containing the file
    * @param fileStatus FileStatus of file
-   * @return List<AclEntry> containing full logical ACL
+   * @return List containing full logical ACL
    * @throws IOException if there is an I/O error
    */
   public static List<AclEntry> getAcl(FileSystem fileSystem,
@@ -285,7 +285,7 @@ public class DistCpUtils {
    * 
    * @param fileSystem FileSystem containing the file
    * @param path file path
-   * @return Map<String, byte[]> containing all xAttrs
+   * @return Map containing all xAttrs
    * @throws IOException if there is an I/O error
    */
   public static Map<String, byte[]> getXAttrs(FileSystem fileSystem,

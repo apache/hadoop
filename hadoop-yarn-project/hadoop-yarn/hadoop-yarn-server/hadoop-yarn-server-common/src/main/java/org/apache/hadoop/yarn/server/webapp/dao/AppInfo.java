@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.webapp.dao;
 
+import static org.apache.hadoop.yarn.util.StringHelper.CSV_JOINER;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -49,6 +51,7 @@ public class AppInfo {
   protected long startedTime;
   protected long finishedTime;
   protected long elapsedTime;
+  protected String applicationTags;
 
   public AppInfo() {
     // JAXB needs this
@@ -74,7 +77,10 @@ public class AppInfo {
     finishedTime = app.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     finalAppStatus = app.getFinalApplicationStatus();
-    progress = app.getProgress();
+    progress = app.getProgress() * 100; // in percent
+    if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
+      this.applicationTags = CSV_JOINER.join(app.getApplicationTags());
+    }
   }
 
   public String getAppId() {
@@ -149,4 +155,7 @@ public class AppInfo {
     return elapsedTime;
   }
 
+  public String getApplicationTags() {
+    return applicationTags;
+  }
 }

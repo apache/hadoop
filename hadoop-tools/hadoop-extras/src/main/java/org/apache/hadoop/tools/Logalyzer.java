@@ -60,7 +60,9 @@ import org.apache.hadoop.mapreduce.lib.map.RegexMapper;
  *  b) Directory on dfs to archive the logs. 
  *  c) The sort/grep patterns for analyzing the files and separator for boundaries.
  * Usage: 
- * Logalyzer -archive -archiveDir <directory to archive logs> -analysis <directory> -logs <log-list uri> -grep <pattern> -sort <col1, col2> -separator <separator>   
+ * Logalyzer -archive -archiveDir &lt;directory to archive logs&gt; -analysis
+ * &lt;directory&gt; -logs &lt;log-list uri&gt; -grep &lt;pattern&gt; -sort
+ * &lt;col1, col2&gt; -separator &lt;separator&gt;
  * <p>
  */
 
