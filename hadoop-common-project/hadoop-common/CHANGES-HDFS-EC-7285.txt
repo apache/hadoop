@@ -29,3 +29,6 @@
 
     HADOOP-11647. Reed-Solomon ErasureCoder. Contributed by Kai Zheng
     ( Kai Zheng )
+
+    HADOOP-11782 Correct two thrown messages in ECSchema class. Contributed by Xinwei Qin
+    ( Xinwei Qin via Kai Zheng )
