@@ -91,6 +91,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3428. Debug log resources to be localized for a container. (kasha)
 
+    YARN-3424. Change logs for ContainerMonitorImpl's resourse monitoring
+    from info to debug. (Anubhav Dhoot via ozawa)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

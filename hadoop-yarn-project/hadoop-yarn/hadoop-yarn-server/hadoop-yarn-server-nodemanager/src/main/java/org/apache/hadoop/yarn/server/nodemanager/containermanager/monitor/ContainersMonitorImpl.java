@@ -455,11 +455,14 @@ public class ContainersMonitorImpl extends AbstractService implements
             long curRssMemUsageOfAgedProcesses = pTree.getRssMemorySize(1);
             long vmemLimit = ptInfo.getVmemLimit();
             long pmemLimit = ptInfo.getPmemLimit();
-            LOG.info(String.format(
-                "Memory usage of ProcessTree %s for container-id %s: ",
-                     pId, containerId.toString()) +
-                formatUsageString(
-                    currentVmemUsage, vmemLimit, currentPmemUsage, pmemLimit));
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(String.format(
+                  "Memory usage of ProcessTree %s for container-id %s: ",
+                  pId, containerId.toString()) +
+                  formatUsageString(
+                      currentVmemUsage, vmemLimit,
+                      currentPmemUsage, pmemLimit));
+            }
 
             // Add usage to container metrics
             if (containerMetricsEnabled) {
