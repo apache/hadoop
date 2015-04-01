@@ -156,12 +156,10 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
     if (attempt != null) {
       if (!isApplicationInFinalState(YarnApplicationAttemptState
           .valueOf(attempt.getAppAttemptState().toString()))) {
-        RMAppAttemptMetrics metrics = attempt.getRMAppAttemptMetrics();
         DIV<Hamlet> pdiv = html._(InfoBlock.class).div(_INFO_WRAP);
         info("Application Attempt Overview").clear();
         info("Application Attempt Metrics")._(
-          "Application Attempt Headroom : ", metrics == null ? "N/A" :
-            metrics.getApplicationAttemptHeadroom());
+          "Application Attempt Headroom : ", 0);
         pdiv._();
       }
     }
