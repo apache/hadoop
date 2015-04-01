@@ -713,6 +713,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11754. RM fails to start in non-secure mode due to authentication
     filter failure. (wheat9)
 
+    HADOOP-11787. OpensslSecureRandom.c pthread_threadid_np usage signature is
+    wrong on 32-bit Mac. (Kiran Kumar M R via cnauroth)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

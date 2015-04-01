@@ -286,7 +286,9 @@ static unsigned long pthreads_thread_id(void)
 #elif defined(__sun)
   thread_id = (unsigned long)pthread_self();
 #elif defined(__APPLE__)
-  (void)pthread_threadid_np(pthread_self(), &thread_id);
+  __uint64_t tmp_thread_id;
+  (void)pthread_threadid_np(pthread_self(), &tmp_thread_id);
+  thread_id = (unsigned long)tmp_thread_id;
 #else
 #error "Platform not supported"
 #endif
