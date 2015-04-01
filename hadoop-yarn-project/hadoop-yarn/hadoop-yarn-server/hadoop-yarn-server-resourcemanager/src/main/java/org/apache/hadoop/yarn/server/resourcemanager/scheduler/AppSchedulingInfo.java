@@ -462,6 +462,10 @@ public class AppSchedulingInfo {
     return this.blacklist;
   }
 
+  public synchronized Set<String> getBlackListCopy() {
+    return new HashSet<>(this.blacklist);
+  }
+
   public synchronized void transferStateFromPreviousAppSchedulingInfo(
       AppSchedulingInfo appInfo) {
     //    this.priorities = appInfo.getPriorities();
