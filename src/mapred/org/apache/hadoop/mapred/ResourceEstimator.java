@@ -52,8 +52,16 @@ class ResourceEstimator {
     //-1 indicates error, which we don't average in.
     if(tip.isMapTask() &&  ts.getOutputSize() != -1)  {
       completedMapsUpdates++;
-
-      completedMapsInputSize+=(tip.getMapInputSize()+1);
+      long inputSize = tip.getMapInputSize();
+      if (inputSize == 0) {
+        // if map input size is 0, use map output size as input size
+        // to avoid job hung.
+        inputSize = ts.getOutputSize();
+        // map input size is changed, update JobInProgress.inputLength.
+        long length = job.getInputLength() + inputSize;
+        job.setInputLength(length);
+      }
+      completedMapsInputSize+=(inputSize+1);
       completedMapsOutputSize+=ts.getOutputSize();
 
       if(LOG.isDebugEnabled()) {

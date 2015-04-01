@@ -55,12 +55,13 @@ public class TestResourceEstimation {
     //unfortunately, we can't set job input size from here.
     ResourceEstimator re = new ResourceEstimator(jip);
     
-    for(int i = 0; i < maps / 10 ; ++i) {
-
-      long estOutSize = re.getEstimatedMapOutputSize();
-      System.out.println(estOutSize);
-      assertEquals(0, estOutSize);
-      
+    for(int i = 0; i < maps; ++i) {
+      if (i < maps / 10) {
+        // re.thresholdToUse is maps / 10
+        long estOutSize = re.getEstimatedMapOutputSize();
+        System.out.println(estOutSize);
+        assertEquals(0, estOutSize);
+      }
       TaskStatus ts = new MapTaskStatus();
       ts.setOutputSize(singleMapOutputSize);
       JobSplit.TaskSplitMetaInfo split =
@@ -120,9 +121,10 @@ public class TestResourceEstimation {
     TaskInProgress tip = 
       new TaskInProgress(jid, "", split, jip.jobtracker, jc, jip, 0, 1);
     re.updateWithCompletedTask(ts, tip);
-    
+    // for 0 input size, use output size as input size for calculation
     long expectedTotalMapOutSize = (singleMapOutputSize*11) * 
-      ((maps*singleMapInputSize)+maps)/((singleMapInputSize+1)*10+1);
+      ((maps*singleMapInputSize)+maps)/((singleMapInputSize+1)*10+
+      singleMapOutputSize+1);
     assertEquals(2* expectedTotalMapOutSize/maps, re.getEstimatedMapOutputSize());
   }
 
