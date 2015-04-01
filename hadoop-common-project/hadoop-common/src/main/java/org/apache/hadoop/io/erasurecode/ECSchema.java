@@ -64,7 +64,7 @@ public class ECSchema {
       }
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Option value " +
-          options.get(CHUNK_SIZE_KEY) + " for " + CHUNK_SIZE_KEY +
+          options.get(NUM_DATA_UNITS_KEY) + " for " + NUM_DATA_UNITS_KEY +
           " is found. It should be an integer");
     }
 
@@ -74,7 +74,7 @@ public class ECSchema {
       }
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Option value " +
-          options.get(CHUNK_SIZE_KEY) + " for " + CHUNK_SIZE_KEY +
+          options.get(NUM_PARITY_UNITS_KEY) + " for " + NUM_PARITY_UNITS_KEY +
           " is found. It should be an integer");
     }
 
