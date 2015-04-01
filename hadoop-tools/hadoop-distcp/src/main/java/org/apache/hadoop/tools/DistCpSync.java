@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 
 import java.io.IOException;
@@ -86,6 +87,22 @@ class DistCpSync {
     } finally {
       deleteTargetTmpDir(targetFs, tmpDir);
       // TODO: since we have tmp directory, we can support "undo" with failures
+      // set the source path using the snapshot path
+      inputOptions.setSourcePaths(Arrays.asList(getSourceSnapshotPath(sourceDir,
+          inputOptions.getToSnapshot())));
+    }
+  }
+
+  private static String getSnapshotName(String name) {
+    return Path.CUR_DIR.equals(name) ? "" : name;
+  }
+
+  private static Path getSourceSnapshotPath(Path sourceDir, String snapshotName) {
+    if (Path.CUR_DIR.equals(snapshotName)) {
+      return sourceDir;
+    } else {
+      return new Path(sourceDir,
+          HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + snapshotName);
     }
   }
 
@@ -136,8 +153,10 @@ class DistCpSync {
   static DiffInfo[] getDiffs(DistCpOptions inputOptions,
       DistributedFileSystem fs, Path sourceDir, Path targetDir) {
     try {
+      final String from = getSnapshotName(inputOptions.getFromSnapshot());
+      final String to = getSnapshotName(inputOptions.getToSnapshot());
       SnapshotDiffReport sourceDiff = fs.getSnapshotDiffReport(sourceDir,
-          inputOptions.getFromSnapshot(), inputOptions.getToSnapshot());
+          from, to);
       return DiffInfo.getDiffs(sourceDiff, targetDir);
     } catch (IOException e) {
       DistCp.LOG.warn("Failed to compute snapshot diff on " + sourceDir, e);
