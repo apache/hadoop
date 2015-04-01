@@ -409,6 +409,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-6945. BlockManager should remove a block from excessReplicateMap and
     decrement ExcessBlocks metric when the block is removed. (aajisaka)
 
+    HDFS-7922. ShortCircuitCache#close is not releasing
+    ScheduledThreadPoolExecutors (Rakesh R via Colin P. McCabe)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
