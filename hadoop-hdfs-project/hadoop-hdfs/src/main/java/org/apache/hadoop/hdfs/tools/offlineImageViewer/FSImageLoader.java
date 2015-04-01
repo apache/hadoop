@@ -147,8 +147,10 @@ class FSImageLoader {
             summary.getCodec(), new BufferedInputStream(new LimitInputStream(
             fin, s.getLength())));
 
-        LOG.debug("Loading section " + s.getName() + " length: " + s.getLength
-                ());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Loading section " + s.getName() + " length: " + s.getLength
+              ());
+        }
         switch (FSImageFormatProtobuf.SectionName.fromString(s.getName())) {
           case STRING_TABLE:
             stringTable = loadStringTable(is);

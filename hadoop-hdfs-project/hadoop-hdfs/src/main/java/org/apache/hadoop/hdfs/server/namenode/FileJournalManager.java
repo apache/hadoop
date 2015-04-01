@@ -320,9 +320,11 @@ public class FileJournalManager implements JournalManager {
       Collection<EditLogInputStream> streams, long fromTxId,
       boolean inProgressOk) throws IOException {
     List<EditLogFile> elfs = matchEditLogs(sd.getCurrentDir());
-    LOG.debug(this + ": selecting input streams starting at " + fromTxId + 
-        (inProgressOk ? " (inProgress ok) " : " (excluding inProgress) ") +
-        "from among " + elfs.size() + " candidate file(s)");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(this + ": selecting input streams starting at " + fromTxId +
+          (inProgressOk ? " (inProgress ok) " : " (excluding inProgress) ") +
+          "from among " + elfs.size() + " candidate file(s)");
+    }
     addStreamsToCollectionFromFiles(elfs, streams, fromTxId, inProgressOk);
   }
   
@@ -331,8 +333,10 @@ public class FileJournalManager implements JournalManager {
     for (EditLogFile elf : elfs) {
       if (elf.isInProgress()) {
         if (!inProgressOk) {
-          LOG.debug("passing over " + elf + " because it is in progress " +
-              "and we are ignoring in-progress logs.");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("passing over " + elf + " because it is in progress " +
+                "and we are ignoring in-progress logs.");
+          }
           continue;
         }
         try {
@@ -345,9 +349,11 @@ public class FileJournalManager implements JournalManager {
       }
       if (elf.lastTxId < fromTxId) {
         assert elf.lastTxId != HdfsConstants.INVALID_TXID;
-        LOG.debug("passing over " + elf + " because it ends at " +
-            elf.lastTxId + ", but we only care about transactions " +
-            "as new as " + fromTxId);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("passing over " + elf + " because it ends at " +
+              elf.lastTxId + ", but we only care about transactions " +
+              "as new as " + fromTxId);
+        }
         continue;
       }
       EditLogFileInputStream elfis = new EditLogFileInputStream(elf.getFile(),

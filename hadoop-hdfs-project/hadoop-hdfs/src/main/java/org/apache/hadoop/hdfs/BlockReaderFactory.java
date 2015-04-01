@@ -369,9 +369,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       return null;
     }
     if (clientContext.getDisableLegacyBlockReaderLocal()) {
-      PerformanceAdvisory.LOG.debug(this + ": can't construct " +
-          "BlockReaderLocalLegacy because " +
-          "disableLegacyBlockReaderLocal is set.");
+        PerformanceAdvisory.LOG.debug("{}: can't construct " +
+            "BlockReaderLocalLegacy because " +
+            "disableLegacyBlockReaderLocal is set.", this);
       return null;
     }
     IOException ioe = null;
@@ -410,8 +410,8 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
                       getPathInfo(inetSocketAddress, conf);
     }
     if (!pathInfo.getPathState().getUsableForShortCircuit()) {
-      PerformanceAdvisory.LOG.debug(this + ": " + pathInfo + " is not " +
-          "usable for short circuit; giving up on BlockReaderLocal.");
+      PerformanceAdvisory.LOG.debug("{}: {} is not usable for short circuit; " +
+              "giving up on BlockReaderLocal.", this, pathInfo);
       return null;
     }
     ShortCircuitCache cache = clientContext.getShortCircuitCache();
@@ -426,11 +426,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       throw exc;
     }
     if (info.getReplica() == null) {
-      if (LOG.isTraceEnabled()) {
-        PerformanceAdvisory.LOG.debug(this + ": failed to get " +
-            "ShortCircuitReplica. Cannot construct " +
-            "BlockReaderLocal via " + pathInfo.getPath());
-      }
+      PerformanceAdvisory.LOG.debug("{}: failed to get " +
+          "ShortCircuitReplica. Cannot construct " +
+          "BlockReaderLocal via {}", this, pathInfo.getPath());
       return null;
     }
     return new BlockReaderLocal.Builder(conf).
@@ -610,9 +608,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
                       getPathInfo(inetSocketAddress, conf);
     }
     if (!pathInfo.getPathState().getUsableForDataTransfer()) {
-      PerformanceAdvisory.LOG.debug(this + ": not trying to create a " +
-          "remote block reader because the UNIX domain socket at " +
-          pathInfo + " is not usable.");
+      PerformanceAdvisory.LOG.debug("{}: not trying to create a " +
+          "remote block reader because the UNIX domain socket at {}" +
+           " is not usable.", this, pathInfo);
       return null;
     }
     if (LOG.isTraceEnabled()) {

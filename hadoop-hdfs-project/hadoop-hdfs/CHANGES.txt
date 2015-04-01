@@ -373,6 +373,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8009. Signal congestion on the DataNode. (wheat9)
 
+    HDFS-7978. Add LOG.isDebugEnabled() guard for some LOG.debug(..).
+    (Walter Su via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
