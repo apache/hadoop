@@ -72,7 +72,7 @@ public class AppAttemptBlock extends HtmlBlock {
     }
 
     UserGroupInformation callerUGI = getCallerUGI();
-    ApplicationAttemptReport appAttemptReport = null;
+    ApplicationAttemptReport appAttemptReport;
     try {
       final GetApplicationAttemptReportRequest request =
           GetApplicationAttemptReportRequest.newInstance(appAttemptId);
@@ -135,32 +135,7 @@ public class AppAttemptBlock extends HtmlBlock {
         && appAttempt.getRpcPort() < 65536) {
       node = appAttempt.getHost() + ":" + appAttempt.getRpcPort();
     }
-    info("Application Attempt Overview")
-      ._(
-        "Application Attempt State:",
-        appAttempt.getAppAttemptState() == null ? UNAVAILABLE : appAttempt
-          .getAppAttemptState())
-      ._(
-        "AM Container:",
-        appAttempt.getAmContainerId() == null || containers == null
-            || !hasAMContainer(appAttemptReport.getAMContainerId(), containers)
-            ? null : root_url("container", appAttempt.getAmContainerId()),
-        String.valueOf(appAttempt.getAmContainerId()))
-      ._("Node:", node)
-      ._(
-        "Tracking URL:",
-        appAttempt.getTrackingUrl() == null
-            || appAttempt.getTrackingUrl() == UNAVAILABLE ? null
-            : root_url(appAttempt.getTrackingUrl()),
-        appAttempt.getTrackingUrl() == null
-            || appAttempt.getTrackingUrl() == UNAVAILABLE
-            ? "Unassigned"
-            : appAttempt.getAppAttemptState() == YarnApplicationAttemptState.FINISHED
-                || appAttempt.getAppAttemptState() == YarnApplicationAttemptState.FAILED
-                || appAttempt.getAppAttemptState() == YarnApplicationAttemptState.KILLED
-                ? "History" : "ApplicationMaster")
-      ._("Diagnostics Info:", appAttempt.getDiagnosticsInfo() == null ?
-          "" : appAttempt.getDiagnosticsInfo());
+    generateOverview(appAttemptReport, containers, appAttempt, node);
 
     if (exceptionWhenGetContainerReports) {
       html
@@ -216,7 +191,40 @@ public class AppAttemptBlock extends HtmlBlock {
     tbody._()._();
   }
 
-  private boolean hasAMContainer(ContainerId containerId,
+  protected void generateOverview(ApplicationAttemptReport appAttemptReport,
+      Collection<ContainerReport> containers, AppAttemptInfo appAttempt,
+      String node) {
+    info("Application Attempt Overview")
+      ._(
+        "Application Attempt State:",
+        appAttempt.getAppAttemptState() == null ? UNAVAILABLE : appAttempt
+          .getAppAttemptState())
+      ._(
+        "AM Container:",
+        appAttempt.getAmContainerId() == null || containers == null
+            || !hasAMContainer(appAttemptReport.getAMContainerId(), containers)
+            ? null : root_url("container", appAttempt.getAmContainerId()),
+        String.valueOf(appAttempt.getAmContainerId()))
+      ._("Node:", node)
+      ._(
+        "Tracking URL:",
+        appAttempt.getTrackingUrl() == null
+            || appAttempt.getTrackingUrl().equals(UNAVAILABLE) ? null
+            : root_url(appAttempt.getTrackingUrl()),
+        appAttempt.getTrackingUrl() == null
+            || appAttempt.getTrackingUrl().equals(UNAVAILABLE)
+            ? "Unassigned"
+            : appAttempt.getAppAttemptState() == YarnApplicationAttemptState.FINISHED
+                || appAttempt.getAppAttemptState() == YarnApplicationAttemptState.FAILED
+                || appAttempt.getAppAttemptState() == YarnApplicationAttemptState.KILLED
+                ? "History" : "ApplicationMaster")
+      ._(
+        "Diagnostics Info:",
+        appAttempt.getDiagnosticsInfo() == null ? "" : appAttempt
+          .getDiagnosticsInfo());
+  }
+
+  protected boolean hasAMContainer(ContainerId containerId,
       Collection<ContainerReport> containers) {
     for (ContainerReport container : containers) {
       if (containerId.equals(container.getContainerId())) {

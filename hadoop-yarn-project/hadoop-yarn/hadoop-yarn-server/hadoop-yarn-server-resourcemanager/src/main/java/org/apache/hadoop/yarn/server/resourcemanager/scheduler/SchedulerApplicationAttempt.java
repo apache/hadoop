@@ -642,4 +642,8 @@ public class SchedulerApplicationAttempt {
           Resources.clone(headroom));
     }
   }
+
+  public Set<String> getBlacklistedNodes() {
+    return this.appSchedulingInfo.getBlackListCopy();
+  }
 }

@@ -648,8 +648,9 @@ public class RMWebServices {
 
     AppAttemptsInfo appAttemptsInfo = new AppAttemptsInfo();
     for (RMAppAttempt attempt : app.getAppAttempts().values()) {
-      AppAttemptInfo attemptInfo = new AppAttemptInfo(attempt, app.getUser(),
-          hsr.getScheme() + "://");
+      AppAttemptInfo attemptInfo =
+          new AppAttemptInfo(rm, attempt, app.getUser(), hsr.getScheme()
+              + "://");
       appAttemptsInfo.add(attemptInfo);
     }
 
