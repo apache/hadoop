@@ -88,7 +88,7 @@ public class AppBlock extends HtmlBlock {
     }
 
     UserGroupInformation callerUGI = getCallerUGI();
-    ApplicationReport appReport = null;
+    ApplicationReport appReport;
     try {
       final GetApplicationReportRequest request =
           GetApplicationReportRequest.newInstance(appID);
@@ -160,7 +160,8 @@ public class AppBlock extends HtmlBlock {
       ._("Application Type:", app.getType())
       ._("Application Tags:",
         app.getApplicationTags() == null ? "" : app.getApplicationTags())
-      ._("YarnApplicationState:",
+      ._(
+        "YarnApplicationState:",
         app.getAppState() == null ? UNAVAILABLE : clarifyAppState(app
           .getAppState()))
       ._("FinalStatus Reported by AM:",
@@ -170,16 +171,19 @@ public class AppBlock extends HtmlBlock {
         "Elapsed:",
         StringUtils.formatTime(Times.elapsed(app.getStartedTime(),
           app.getFinishedTime())))
-      ._("Tracking URL:",
-        app.getTrackingUrl() == null || app.getTrackingUrl() == UNAVAILABLE
-            ? null : root_url(app.getTrackingUrl()),
-        app.getTrackingUrl() == null || app.getTrackingUrl() == UNAVAILABLE
-            ? "Unassigned" : app.getAppState() == YarnApplicationState.FINISHED
-                || app.getAppState() == YarnApplicationState.FAILED
-                || app.getAppState() == YarnApplicationState.KILLED ? "History"
-                : "ApplicationMaster")
+      ._(
+        "Tracking URL:",
+        app.getTrackingUrl() == null
+            || app.getTrackingUrl().equals(UNAVAILABLE) ? null : root_url(app
+          .getTrackingUrl()),
+        app.getTrackingUrl() == null
+            || app.getTrackingUrl().equals(UNAVAILABLE) ? "Unassigned" : app
+          .getAppState() == YarnApplicationState.FINISHED
+            || app.getAppState() == YarnApplicationState.FAILED
+            || app.getAppState() == YarnApplicationState.KILLED ? "History"
+            : "ApplicationMaster")
       ._("Diagnostics:",
-          app.getDiagnosticsInfo() == null ? "" : app.getDiagnosticsInfo());
+        app.getDiagnosticsInfo() == null ? "" : app.getDiagnosticsInfo());
 
     Collection<ApplicationAttemptReport> attempts;
     try {
@@ -210,6 +214,13 @@ public class AppBlock extends HtmlBlock {
 
     html._(InfoBlock.class);
 
+    generateApplicationTable(html, callerUGI, attempts);
+
+  }
+
+  protected void generateApplicationTable(Block html,
+      UserGroupInformation callerUGI,
+      Collection<ApplicationAttemptReport> attempts) {
     // Application Attempt Table
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#attempts").thead().tr().th(".id", "Attempt ID")
@@ -219,7 +230,7 @@ public class AppBlock extends HtmlBlock {
     StringBuilder attemptsTableData = new StringBuilder("[\n");
     for (final ApplicationAttemptReport appAttemptReport : attempts) {
       AppAttemptInfo appAttempt = new AppAttemptInfo(appAttemptReport);
-      ContainerReport containerReport = null;
+      ContainerReport containerReport;
       try {
         // AM container is always the first container of the attempt
         final GetContainerReportRequest request =
@@ -230,7 +241,7 @@ public class AppBlock extends HtmlBlock {
               appBaseProt.getContainerReport(request).getContainerReport();
         } else {
           containerReport = callerUGI.doAs(
-              new PrivilegedExceptionAction<ContainerReport> () {
+              new PrivilegedExceptionAction<ContainerReport>() {
             @Override
             public ContainerReport run() throws Exception {
               ContainerReport report = null;

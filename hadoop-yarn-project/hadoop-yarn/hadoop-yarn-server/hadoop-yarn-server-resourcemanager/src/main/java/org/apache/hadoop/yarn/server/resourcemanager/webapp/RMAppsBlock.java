@@ -16,94 +16,41 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.webapp;
+package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
-import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
-import java.util.Collection;
-import java.util.EnumSet;
+import java.util.Set;
 
 import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.webapp.AppsBlock;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
 
-public class AppsBlock extends HtmlBlock {
+public class RMAppsBlock extends AppsBlock {
 
-  private static final Log LOG = LogFactory.getLog(AppsBlock.class);
-  protected ApplicationBaseProtocol appBaseProt;
-  protected EnumSet<YarnApplicationState> reqAppStates;
-  protected UserGroupInformation callerUGI;
-  protected Collection<ApplicationReport> appReports;
+  private ResourceManager rm;
 
   @Inject
-  protected AppsBlock(ApplicationBaseProtocol appBaseProt, ViewContext ctx) {
-    super(ctx);
-    this.appBaseProt = appBaseProt;
-  }
-
-  protected void fetchData() throws YarnException, IOException,
-      InterruptedException {
-    reqAppStates = EnumSet.noneOf(YarnApplicationState.class);
-    String reqStateString = $(APP_STATE);
-    if (reqStateString != null && !reqStateString.isEmpty()) {
-      String[] appStateStrings = reqStateString.split(",");
-      for (String stateString : appStateStrings) {
-        reqAppStates.add(YarnApplicationState.valueOf(stateString.trim()));
-      }
-    }
-
-    callerUGI = getCallerUGI();
-    final GetApplicationsRequest request =
-        GetApplicationsRequest.newInstance(reqAppStates);
-    if (callerUGI == null) {
-      appReports = appBaseProt.getApplications(request).getApplicationList();
-    } else {
-      appReports =
-          callerUGI
-            .doAs(new PrivilegedExceptionAction<Collection<ApplicationReport>>() {
-              @Override
-              public Collection<ApplicationReport> run() throws Exception {
-                return appBaseProt.getApplications(request)
-                  .getApplicationList();
-              }
-            });
-    }
+  RMAppsBlock(ResourceManager rm, ApplicationBaseProtocol appBaseProt,
+      View.ViewContext ctx) {
+    super(appBaseProt, ctx);
+    this.rm = rm;
   }
 
   @Override
-  public void render(Block html) {
-    setTitle("Applications");
-
-    try {
-      fetchData();
-    }
-    catch( Exception e) {
-      String message = "Failed to read the applications.";
-      LOG.error(message, e);
-      html.p()._(message)._();
-      return;
-    }
-    renderData(html);
-  }
-
   protected void renderData(Block html) {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
@@ -111,7 +58,8 @@ public class AppsBlock extends HtmlBlock {
           .th(".queue", "Queue").th(".starttime", "StartTime")
           .th(".finishtime", "FinishTime").th(".state", "State")
           .th(".finalstatus", "FinalStatus").th(".progress", "Progress")
-          .th(".ui", "Tracking UI")._()._().tbody();
+          .th(".ui", "Tracking UI").th(".blacklisted", "Blacklisted Nodes")._()
+          ._().tbody();
 
     StringBuilder appsTableData = new StringBuilder("[\n");
     for (ApplicationReport appReport : appReports) {
@@ -122,7 +70,16 @@ public class AppsBlock extends HtmlBlock {
           && !reqAppStates.contains(appReport.getYarnApplicationState())) {
         continue;
       }
+
       AppInfo app = new AppInfo(appReport);
+      String blacklistedNodesCount = "N/A";
+      Set<String> nodes =
+          RMAppAttemptBlock
+            .getBlacklistedNodes(rm, ConverterUtils.toApplicationAttemptId(app
+              .getCurrentAppAttemptId()));
+      if (nodes != null) {
+        blacklistedNodesCount = String.valueOf(nodes.size());
+      }
       String percent = String.format("%.1f", app.getProgress());
       // AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData
@@ -133,7 +90,7 @@ public class AppsBlock extends HtmlBlock {
         .append("</a>\",\"")
         .append(
           StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
-              .getUser())))
+            .getUser())))
         .append("\",\"")
         .append(
           StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
@@ -165,14 +122,15 @@ public class AppsBlock extends HtmlBlock {
             .getTrackingUrl();
 
       String trackingUI =
-          app.getTrackingUrl() == null || app.getTrackingUrl().equals(UNAVAILABLE)
-              ? "Unassigned"
-              : app.getAppState() == YarnApplicationState.FINISHED
-                  || app.getAppState() == YarnApplicationState.FAILED
-                  || app.getAppState() == YarnApplicationState.KILLED
-                  ? "History" : "ApplicationMaster";
+          app.getTrackingUrl() == null
+              || app.getTrackingUrl().equals(UNAVAILABLE) ? "Unassigned" : app
+            .getAppState() == YarnApplicationState.FINISHED
+              || app.getAppState() == YarnApplicationState.FAILED
+              || app.getAppState() == YarnApplicationState.KILLED ? "History"
+              : "ApplicationMaster";
       appsTableData.append(trackingURL == null ? "#" : "href='" + trackingURL)
-        .append("'>").append(trackingUI).append("</a>\"],\n");
+        .append("'>").append(trackingUI).append("</a>\",").append("\"")
+        .append(blacklistedNodesCount).append("\"],\n");
 
     }
     if (appsTableData.charAt(appsTableData.length() - 2) == ',') {

@@ -864,6 +864,9 @@ Release 2.7.0 - UNRELEASED
     removing inconsistencies in the default values. (Junping Du and Karthik
     Kambatla via vinodkv)
 
+    YARN-3248. Display count of nodes blacklisted by apps in the web UI.
+    (Varun Vasudev via xgong)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

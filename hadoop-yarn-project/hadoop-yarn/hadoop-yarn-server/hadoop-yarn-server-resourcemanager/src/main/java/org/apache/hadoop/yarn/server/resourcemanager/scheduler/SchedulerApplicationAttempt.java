@@ -665,4 +665,8 @@ public class SchedulerApplicationAttempt {
       }
     }
   }
+
+  public Set<String> getBlacklistedNodes() {
+    return this.appSchedulingInfo.getBlackListCopy();
+  }
 }
