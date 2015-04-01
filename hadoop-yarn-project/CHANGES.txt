@@ -129,6 +129,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3412. RM tests should use MockRM where possible. (kasha)
 
+    YARN-3425. NPE from RMNodeLabelsManager.serviceStop when 
+    NodeLabelsManager.serviceInit failed. (Bibin A Chundatt via wangda)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
