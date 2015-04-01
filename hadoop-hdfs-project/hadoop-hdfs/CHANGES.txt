@@ -398,6 +398,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7997. The first non-existing xattr should also throw IOException.
     (zhouyingchao via yliu)
 
+    HDFS-6945. BlockManager should remove a block from excessReplicateMap and
+    decrement ExcessBlocks metric when the block is removed. (aajisaka)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
