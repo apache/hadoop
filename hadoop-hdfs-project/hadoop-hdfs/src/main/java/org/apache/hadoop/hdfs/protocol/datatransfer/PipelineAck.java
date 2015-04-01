@@ -257,6 +257,10 @@ public class PipelineAck {
     return StatusFormat.getStatus(header);
   }
 
+  public static ECN getECNFromHeader(int header) {
+    return StatusFormat.getECN(header);
+  }
+
   public static int setStatusForHeader(int old, Status status) {
     return StatusFormat.setStatus(old, status);
   }
