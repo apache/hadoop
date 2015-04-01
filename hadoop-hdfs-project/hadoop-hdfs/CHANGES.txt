@@ -17,6 +17,9 @@ Release 2.6.4 - UNRELEASED
     HDFS-9314. Improve BlockPlacementPolicyDefault's picking of excess
     replicas. (Xiao Chen via zhz)
 
+    HDFS-6945. BlockManager should remove a block from excessReplicateMap and
+    decrement ExcessBlocks metric when the block is removed. (aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
