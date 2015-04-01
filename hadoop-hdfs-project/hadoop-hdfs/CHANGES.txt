@@ -371,6 +371,8 @@ Release 2.8.0 - UNRELEASED
     HDFS-7671. hdfs user guide should point to the common rack awareness doc.
     (Kai Sasaki via aajisaka)
 
+    HDFS-8009. Signal congestion on the DataNode. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

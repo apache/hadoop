@@ -354,6 +354,9 @@ public class DataNode extends ReconfigurableBase
   private String dnUserName = null;
 
   private SpanReceiverHost spanReceiverHost;
+  private static final int NUM_CORES = Runtime.getRuntime()
+      .availableProcessors();
+  private static final double CONGESTION_RATIO = 1.5;
 
   /**
    * Creates a dummy DataNode for testing purpose.
@@ -484,8 +487,13 @@ public class DataNode extends ReconfigurableBase
    * </ul>
    */
   public PipelineAck.ECN getECN() {
-    return pipelineSupportECN ? PipelineAck.ECN.SUPPORTED : PipelineAck.ECN
-      .DISABLED;
+    if (!pipelineSupportECN) {
+      return PipelineAck.ECN.DISABLED;
+    }
+    double load = ManagementFactory.getOperatingSystemMXBean()
+        .getSystemLoadAverage();
+    return load > NUM_CORES * CONGESTION_RATIO ? PipelineAck.ECN.CONGESTED :
+        PipelineAck.ECN.SUPPORTED;
   }
 
   /**
