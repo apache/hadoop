@@ -15,6 +15,10 @@ Release 2.7.6 - UNRELEASED
     YARN-7661. NodeManager metrics return wrong value after update node
     resource (Yang Wang via jlowe)
 
+    YARN-3425. NPE from RMNodeLabelsManager.serviceStop when
+    NodeLabelsManager.serviceInit failed. (Bibin A Chundatt via wangda)
+    Backport YARN-6632 by Inigo Goiri.
+
 Release 2.7.5 - 2017-12-14
 
   INCOMPATIBLE CHANGES

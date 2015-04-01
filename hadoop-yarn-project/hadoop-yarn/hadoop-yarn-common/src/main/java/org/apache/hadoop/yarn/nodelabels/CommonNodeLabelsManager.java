@@ -248,7 +248,9 @@ public class CommonNodeLabelsManager extends AbstractService {
   // for UT purpose
   protected void stopDispatcher() {
     AsyncDispatcher asyncDispatcher = (AsyncDispatcher) dispatcher;
-    asyncDispatcher.stop();
+    if (null != asyncDispatcher) {
+      asyncDispatcher.stop();
+    }
   }
   
   @Override
