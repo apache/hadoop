@@ -89,6 +89,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3258. FairScheduler: Need to add more logging to investigate
     allocations. (Anubhav Dhoot via ozawa)
 
+    YARN-3428. Debug log resources to be localized for a container. (kasha)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
