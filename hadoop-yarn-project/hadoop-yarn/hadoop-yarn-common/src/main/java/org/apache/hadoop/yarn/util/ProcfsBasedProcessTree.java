@@ -344,14 +344,22 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   public long getVirtualMemorySize(int olderThanAge) {
     long total = UNAVAILABLE;
     for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.getAge() > olderThanAge)) {
+      if (p != null) {
         if (total == UNAVAILABLE ) {
           total = 0;
         }
-        total += p.getVmem();
+        if (p.getAge() > olderThanAge) {
+          total += p.getVmem();
+        }
       }
     }
     return total;
+  }
+  
+  @Override
+  @SuppressWarnings("deprecation")
+  public long getCumulativeVmem(int olderThanAge) {
+    return getVirtualMemorySize(olderThanAge);
   }
 
   @Override
@@ -365,12 +373,20 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     boolean isAvailable = false;
     long totalPages = 0;
     for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.getAge() > olderThanAge)) {
-        totalPages += p.getRssmemPage();
+      if ((p != null) ) {
+        if (p.getAge() > olderThanAge) {
+          totalPages += p.getRssmemPage();
+        }
         isAvailable = true;
       }
     }
     return isAvailable ? totalPages * PAGE_SIZE : UNAVAILABLE; // convert # pages to byte
+  }
+  
+  @Override
+  @SuppressWarnings("deprecation")
+  public long getCumulativeRssmem(int olderThanAge) {
+    return getRssMemorySize(olderThanAge);
   }
 
   /**
@@ -388,36 +404,42 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   private long getSmapBasedRssMemorySize(int olderThanAge) {
     long total = UNAVAILABLE;
     for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.getAge() > olderThanAge)) {
-        ProcessTreeSmapMemInfo procMemInfo = processSMAPTree.get(p.getPid());
-        if (procMemInfo != null) {
-          for (ProcessSmapMemoryInfo info : procMemInfo.getMemoryInfoList()) {
-            // Do not account for r--s or r-xs mappings
-            if (info.getPermission().trim()
-              .equalsIgnoreCase(READ_ONLY_WITH_SHARED_PERMISSION)
-                || info.getPermission().trim()
-                  .equalsIgnoreCase(READ_EXECUTE_WITH_SHARED_PERMISSION)) {
-              continue;
-            }
-            if (total == UNAVAILABLE){
-              total = 0;
-            }
-            total +=
-                Math.min(info.sharedDirty, info.pss) + info.privateDirty
-                    + info.privateClean;
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(" total(" + olderThanAge + "): PID : " + p.getPid()
-                  + ", SharedDirty : " + info.sharedDirty + ", PSS : "
-                  + info.pss + ", Private_Dirty : " + info.privateDirty
-                  + ", Private_Clean : " + info.privateClean + ", total : "
-                  + (total * KB_TO_BYTES));
+      if (p != null) {
+        // set resource to 0 instead of UNAVAILABLE
+        if (total == UNAVAILABLE){
+          total = 0;
+        }
+        if (p.getAge() > olderThanAge) {
+          ProcessTreeSmapMemInfo procMemInfo = processSMAPTree.get(p.getPid());
+          if (procMemInfo != null) {
+            for (ProcessSmapMemoryInfo info : procMemInfo.getMemoryInfoList()) {
+              // Do not account for r--s or r-xs mappings
+              if (info.getPermission().trim()
+                .equalsIgnoreCase(READ_ONLY_WITH_SHARED_PERMISSION)
+                  || info.getPermission().trim()
+                    .equalsIgnoreCase(READ_EXECUTE_WITH_SHARED_PERMISSION)) {
+                continue;
+              }
+
+              total +=
+                  Math.min(info.sharedDirty, info.pss) + info.privateDirty
+                      + info.privateClean;
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(" total(" + olderThanAge + "): PID : " + p.getPid()
+                    + ", SharedDirty : " + info.sharedDirty + ", PSS : "
+                    + info.pss + ", Private_Dirty : " + info.privateDirty
+                    + ", Private_Clean : " + info.privateClean + ", total : "
+                    + (total * KB_TO_BYTES));
+              }
             }
           }
-        }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(procMemInfo.toString());
+        
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(procMemInfo.toString());
+          }
         }
       }
+      
     }
     if (total > 0) {
       total *= KB_TO_BYTES; // convert to bytes
