@@ -176,28 +176,44 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   public long getVirtualMemorySize(int olderThanAge) {
     long total = UNAVAILABLE;
     for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.age > olderThanAge)) {
+      if (p != null) {
         if (total == UNAVAILABLE) {
           total = 0;
         }
-        total += p.vmem;
+        if (p.age > olderThanAge) {
+          total += p.vmem;
+        }
       }
     }
     return total;
+  }
+  
+  @Override
+  @SuppressWarnings("deprecation")
+  public long getCumulativeVmem(int olderThanAge) {
+    return getVirtualMemorySize(olderThanAge);
   }
 
   @Override
   public long getRssMemorySize(int olderThanAge) {
     long total = UNAVAILABLE;
     for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.age > olderThanAge)) {
+      if (p != null) {
         if (total == UNAVAILABLE) {
           total = 0;
         }
-        total += p.workingSet;
+        if (p.age > olderThanAge) {
+          total += p.workingSet;
+        }
       }
     }
     return total;
+  }
+  
+  @Override
+  @SuppressWarnings("deprecation")
+  public long getCumulativeRssmem(int olderThanAge) {
+    return getRssMemorySize(olderThanAge);
   }
 
   @Override

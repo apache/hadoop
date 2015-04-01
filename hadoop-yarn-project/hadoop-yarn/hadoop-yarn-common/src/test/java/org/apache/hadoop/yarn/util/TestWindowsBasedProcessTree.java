@@ -41,6 +41,7 @@ public class TestWindowsBasedProcessTree {
   }
 
   @Test (timeout = 30000)
+  @SuppressWarnings("deprecation")
   public void tree() {
     if( !Shell.WINDOWS) {
       LOG.info("Platform not Windows. Not testing");
@@ -49,30 +50,42 @@ public class TestWindowsBasedProcessTree {
     assertTrue("WindowsBasedProcessTree should be available on Windows", 
                WindowsBasedProcessTree.isAvailable());
     
-    
     WindowsBasedProcessTreeTester pTree = new WindowsBasedProcessTreeTester("-1");
     pTree.infoStr = "3524,1024,1024,500\r\n2844,1024,1024,500\r\n";
     pTree.updateProcessTree();
     assertTrue(pTree.getVirtualMemorySize() == 2048);
+    assertTrue(pTree.getCumulativeVmem() == 2048);
     assertTrue(pTree.getVirtualMemorySize(0) == 2048);
+    assertTrue(pTree.getCumulativeVmem(0) == 2048);
+    
     assertTrue(pTree.getRssMemorySize() == 2048);
+    assertTrue(pTree.getCumulativeRssmem() == 2048);
     assertTrue(pTree.getRssMemorySize(0) == 2048);
+    assertTrue(pTree.getCumulativeRssmem(0) == 2048);
     assertTrue(pTree.getCumulativeCpuTime() == 1000);
 
     pTree.infoStr = "3524,1024,1024,1000\r\n2844,1024,1024,1000\r\n1234,1024,1024,1000\r\n";
     pTree.updateProcessTree();
     assertTrue(pTree.getVirtualMemorySize() == 3072);
+    assertTrue(pTree.getCumulativeVmem() == 3072);
     assertTrue(pTree.getVirtualMemorySize(1) == 2048);
+    assertTrue(pTree.getCumulativeVmem(1) == 2048);
     assertTrue(pTree.getRssMemorySize() == 3072);
+    assertTrue(pTree.getCumulativeRssmem() == 3072);
     assertTrue(pTree.getRssMemorySize(1) == 2048);
+    assertTrue(pTree.getCumulativeRssmem(1) == 2048);
     assertTrue(pTree.getCumulativeCpuTime() == 3000);
 
     pTree.infoStr = "3524,1024,1024,1500\r\n2844,1024,1024,1500\r\n";
     pTree.updateProcessTree();
     assertTrue(pTree.getVirtualMemorySize() == 2048);
+    assertTrue(pTree.getCumulativeVmem() == 2048);
     assertTrue(pTree.getVirtualMemorySize(2) == 2048);
+    assertTrue(pTree.getCumulativeVmem(2) == 2048);
     assertTrue(pTree.getRssMemorySize() == 2048);
+    assertTrue(pTree.getCumulativeRssmem() == 2048);
     assertTrue(pTree.getRssMemorySize(2) == 2048);
+    assertTrue(pTree.getCumulativeRssmem(2) == 2048);
     assertTrue(pTree.getCumulativeCpuTime() == 4000);
   }
 }
