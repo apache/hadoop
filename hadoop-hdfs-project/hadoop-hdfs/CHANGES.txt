@@ -868,6 +868,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7742. Favoring decommissioning node for replication can cause a block 
     to stay underreplicated for long periods (Nathan Roberts via kihwal)
 
+    HDFS-8008. Support client-side back off when the datanodes are congested.
+    (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
