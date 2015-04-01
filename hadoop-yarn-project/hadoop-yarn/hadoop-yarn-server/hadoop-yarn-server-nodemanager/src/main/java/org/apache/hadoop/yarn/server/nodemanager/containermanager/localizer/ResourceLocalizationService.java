@@ -448,6 +448,10 @@ public class ResourceLocalizationService extends CompositeService
                   .getApplicationId());
       for (LocalResourceRequest req : e.getValue()) {
         tracker.handle(new ResourceRequestEvent(req, e.getKey(), ctxt));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Localizing " + req.getPath() +
+              " for container " + c.getContainerId());
+        }
       }
     }
   }
@@ -456,10 +460,14 @@ public class ResourceLocalizationService extends CompositeService
     ResourceRetentionSet retain =
       new ResourceRetentionSet(delService, cacheTargetSize);
     retain.addResources(publicRsrc);
-    LOG.debug("Resource cleanup (public) " + retain);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Resource cleanup (public) " + retain);
+    }
     for (LocalResourcesTracker t : privateRsrc.values()) {
       retain.addResources(t);
-      LOG.debug("Resource cleanup " + t.getUser() + ":" + retain);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Resource cleanup " + t.getUser() + ":" + retain);
+      }
     }
     //TODO Check if appRsrcs should also be added to the retention set.
   }
