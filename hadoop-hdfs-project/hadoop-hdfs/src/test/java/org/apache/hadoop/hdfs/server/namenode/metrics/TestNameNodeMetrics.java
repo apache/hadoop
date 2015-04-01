@@ -265,12 +265,17 @@ public class TestNameNodeMetrics {
   public void testExcessBlocks() throws Exception {
     Path file = getTestPath("testExcessBlocks");
     createFile(file, 100, (short)2);
-    long totalBlocks = 1;
     NameNodeAdapter.setReplication(namesystem, file.toString(), (short)1);
     updateMetrics();
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
-    assertGauge("ExcessBlocks", totalBlocks, rb);
+    assertGauge("ExcessBlocks", 1L, rb);
+
+    // verify ExcessBlocks metric is decremented and
+    // excessReplicateMap is cleared after deleting a file
     fs.delete(file, true);
+    rb = getMetrics(NS_METRICS);
+    assertGauge("ExcessBlocks", 0L, rb);
+    assertTrue(bm.excessReplicateMap.isEmpty());
   }
   
   /** Test to ensure metrics reflects missing blocks */

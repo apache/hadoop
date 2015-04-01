@@ -16,6 +16,9 @@ Release 2.7.2 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-6945. BlockManager should remove a block from excessReplicateMap and
+    decrement ExcessBlocks metric when the block is removed. (aajisaka)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
