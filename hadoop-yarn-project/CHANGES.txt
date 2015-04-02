@@ -132,6 +132,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3425. NPE from RMNodeLabelsManager.serviceStop when 
     NodeLabelsManager.serviceInit failed. (Bibin A Chundatt via wangda)
 
+    YARN-3415. Non-AM containers can be counted towards amResourceUsage of a
+    Fair Scheduler queue (Zhihai Xu via Sandy Ryza)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
