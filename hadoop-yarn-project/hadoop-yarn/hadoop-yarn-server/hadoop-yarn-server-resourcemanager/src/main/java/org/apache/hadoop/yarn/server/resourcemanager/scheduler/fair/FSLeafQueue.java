@@ -124,8 +124,9 @@ public class FSLeafQueue extends FSQueue {
       writeLock.unlock();
     }
 
-    // Update AM resource usage if needed
-    if (runnable && app.isAmRunning() && app.getAMResource() != null) {
+    // Update AM resource usage if needed. If isAMRunning is true, we're not
+    // running an unmanaged AM.
+    if (runnable && app.isAmRunning()) {
       Resources.subtractFrom(amResourceUsage, app.getAMResource());
     }
 

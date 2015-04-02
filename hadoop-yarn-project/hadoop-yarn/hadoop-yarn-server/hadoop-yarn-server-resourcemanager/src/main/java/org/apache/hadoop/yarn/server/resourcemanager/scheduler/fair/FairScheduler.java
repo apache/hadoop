@@ -901,12 +901,6 @@ public class FairScheduler extends
     // Record container allocation start time
     application.recordContainerRequestTime(getClock().getTime());
 
-    // Set amResource for this app
-    if (!application.getUnmanagedAM() && ask.size() == 1
-        && application.getLiveContainers().isEmpty()) {
-      application.setAMResource(ask.get(0).getCapability());
-    }
-
     // Release containers
     releaseContainers(release, application);
 
