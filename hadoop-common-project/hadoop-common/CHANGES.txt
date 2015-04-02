@@ -715,7 +715,10 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11787. OpensslSecureRandom.c pthread_threadid_np usage signature is
     wrong on 32-bit Mac. (Kiran Kumar M R via cnauroth)
-
+    
+    HADOOP-11757. NFS gateway should shutdown when it can't start UDP or TCP
+    server (brandonli)
+    
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
