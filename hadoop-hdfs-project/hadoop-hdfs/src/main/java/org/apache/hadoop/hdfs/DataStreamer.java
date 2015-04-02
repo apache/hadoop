@@ -1519,7 +1519,7 @@ class DataStreamer extends Daemon {
     }
   }
 
-  private LocatedBlock locateFollowingBlock(DatanodeInfo[] excludedNodes)
+  protected LocatedBlock locateFollowingBlock(DatanodeInfo[] excludedNodes)
       throws IOException {
     int retries = dfsClient.getConf().nBlockWriteLocateFollowingRetry;
     long sleeptime = dfsClient.getConf().
@@ -1726,15 +1726,6 @@ class DataStreamer extends Daemon {
    */
   AtomicReference<IOException> getLastException(){
     return lastException;
-  }
-
-  /**
-   * get the socket connecting to the first datanode in pipeline
-   *
-   * @return socket connecting to the first datanode in pipeline
-   */
-  Socket getSocket() {
-    return s;
   }
 
   /**
