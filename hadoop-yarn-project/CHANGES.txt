@@ -56,6 +56,10 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3345. Add non-exclusive node label API. (Wangda Tan via jianhe)
 
+    YARN-3365. Enhanced NodeManager to support using the 'tc' tool via
+    container-executor for outbound network traffic control. (Sidharta Seethana
+    via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA
