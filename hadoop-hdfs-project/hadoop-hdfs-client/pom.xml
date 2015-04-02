@@ -19,40 +19,31 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project</artifactId>
+    <artifactId>hadoop-project-dist</artifactId>
     <version>3.0.0-SNAPSHOT</version>
-    <relativePath>../hadoop-project</relativePath>
+    <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-hdfs-project</artifactId>
+  <artifactId>hadoop-hdfs-client</artifactId>
   <version>3.0.0-SNAPSHOT</version>
-  <description>Apache Hadoop HDFS Project</description>
-  <name>Apache Hadoop HDFS Project</name>
-  <packaging>pom</packaging>
-
-  <modules>
-    <module>hadoop-hdfs</module>
-    <module>hadoop-hdfs-client</module>
-    <module>hadoop-hdfs-httpfs</module>
-    <module>hadoop-hdfs/src/contrib/bkjournal</module>
-    <module>hadoop-hdfs-nfs</module>
-  </modules>
-
+  <description>Apache Hadoop HDFS Client</description>
+  <name>Apache Hadoop HDFS Client</name>
+  <packaging>jar</packaging>
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
         <configuration>
+          <excludes>
+            <exclude>dev-support/findbugsExcludeFile.xml</exclude>
+          </excludes>
         </configuration>
       </plugin>
     </plugins>
   </build>
-
 </project>
