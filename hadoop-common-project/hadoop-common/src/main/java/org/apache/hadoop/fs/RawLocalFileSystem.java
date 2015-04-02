@@ -43,7 +43,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
-import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -347,11 +346,29 @@ public class RawLocalFileSystem extends FileSystem {
       return true;
     }
 
-    // Enforce POSIX rename behavior that a source directory replaces an existing
-    // destination if the destination is an empty directory.  On most platforms,
-    // this is already handled by the Java API call above.  Some platforms
-    // (notably Windows) do not provide this behavior, so the Java API call above
-    // fails.  Delete destination and attempt rename again.
+    // Else try POSIX style rename on Windows only
+    if (Shell.WINDOWS &&
+        handleEmptyDstDirectoryOnWindows(src, srcFile, dst, dstFile)) {
+      return true;
+    }
+
+    // The fallback behavior accomplishes the rename by a full copy.
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Falling through to a copy of " + src + " to " + dst);
+    }
+    return FileUtil.copy(this, src, this, dst, true, getConf());
+  }
+
+  @VisibleForTesting
+  public final boolean handleEmptyDstDirectoryOnWindows(Path src, File srcFile,
+      Path dst, File dstFile) throws IOException {
+
+    // Enforce POSIX rename behavior that a source directory replaces an
+    // existing destination if the destination is an empty directory. On most
+    // platforms, this is already handled by the Java API call above. Some
+    // platforms (notably Windows) do not provide this behavior, so the Java API
+    // call renameTo(dstFile) fails. Delete destination and attempt rename
+    // again.
     if (this.exists(dst)) {
       FileStatus sdst = this.getFileStatus(dst);
       if (sdst.isDirectory() && dstFile.list().length == 0) {
@@ -364,12 +381,7 @@ public class RawLocalFileSystem extends FileSystem {
         }
       }
     }
-
-    // The fallback behavior accomplishes the rename by a full copy.
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Falling through to a copy of " + src + " to " + dst);
-    }
-    return FileUtil.copy(this, src, this, dst, true, getConf());
+    return false;
   }
 
   @Override
