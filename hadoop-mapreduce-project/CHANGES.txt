@@ -189,6 +189,9 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6285. ClientServiceDelegate should not retry upon
     AuthenticationException. (Jonathan Eagles via ozawa)
 
+    MAPREDUCE-6303. Read timeout when retrying a fetch error can be fatal 
+    to a reducer. (Jason Lowe via junping_du)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
