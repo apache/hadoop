@@ -41,8 +41,11 @@ public class SimpleUdpServer {
   protected final SimpleChannelUpstreamHandler rpcProgram;
   protected final int workerCount;
   protected int boundPort = -1; // Will be set after server starts
+  private ConnectionlessBootstrap server;
+  private Channel ch;
 
-  public SimpleUdpServer(int port, SimpleChannelUpstreamHandler program, int workerCount) {
+  public SimpleUdpServer(int port, SimpleChannelUpstreamHandler program,
+      int workerCount) {
     this.port = port;
     this.rpcProgram = program;
     this.workerCount = workerCount;
@@ -53,20 +56,19 @@ public class SimpleUdpServer {
     DatagramChannelFactory f = new NioDatagramChannelFactory(
         Executors.newCachedThreadPool(), workerCount);
 
-    ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
-    b.setPipeline(Channels.pipeline(
-            RpcUtil.STAGE_RPC_MESSAGE_PARSER, rpcProgram,
-            RpcUtil.STAGE_RPC_UDP_RESPONSE));
+    server = new ConnectionlessBootstrap(f);
+    server.setPipeline(Channels.pipeline(RpcUtil.STAGE_RPC_MESSAGE_PARSER,
+        rpcProgram, RpcUtil.STAGE_RPC_UDP_RESPONSE));
 
-    b.setOption("broadcast", "false");
-    b.setOption("sendBufferSize", SEND_BUFFER_SIZE);
-    b.setOption("receiveBufferSize", RECEIVE_BUFFER_SIZE);
-    
+    server.setOption("broadcast", "false");
+    server.setOption("sendBufferSize", SEND_BUFFER_SIZE);
+    server.setOption("receiveBufferSize", RECEIVE_BUFFER_SIZE);
+
     // Listen to the UDP port
-    Channel ch = b.bind(new InetSocketAddress(port));
+    ch = server.bind(new InetSocketAddress(port));
     InetSocketAddress socketAddr = (InetSocketAddress) ch.getLocalAddress();
     boundPort = socketAddr.getPort();
-    
+
     LOG.info("Started listening to UDP requests at port " + boundPort + " for "
         + rpcProgram + " with workerCount " + workerCount);
   }
@@ -74,5 +76,14 @@ public class SimpleUdpServer {
   // boundPort will be set only after server starts
   public int getBoundPort() {
     return this.boundPort;
+  }
+
+  public void shutdown() {
+    if (ch != null) {
+      ch.close().awaitUninterruptibly();
+    }
+    if (server != null) {
+      server.releaseExternalResources();
+    }
   }
 }
