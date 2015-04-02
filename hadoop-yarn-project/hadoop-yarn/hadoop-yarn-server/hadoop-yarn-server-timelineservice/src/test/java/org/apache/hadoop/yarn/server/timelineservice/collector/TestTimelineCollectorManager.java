@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
@@ -61,6 +63,16 @@ public class TestTimelineCollectorManager {
     if (collectorManager != null) {
       collectorManager.stop();
     }
+  }
+
+  @Test
+  public void testStartWebApp() throws Exception {
+    assertNotNull(collectorManager.getRestServerBindAddress());
+    String address = collectorManager.getRestServerBindAddress();
+    String[] parts = address.split(":");
+    assertEquals(2, parts.length);
+    assertNotNull(parts[0]);
+    assertTrue(Integer.valueOf(parts[1]) > 0);
   }
 
   @Test(timeout=60000)

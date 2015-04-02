@@ -210,22 +210,17 @@ public class TimelineCollectorManager extends CompositeService {
    */
   private void startWebApp() {
     Configuration conf = getConfig();
-    // use the same ports as the old ATS for now; we could create new properties
-    // for the new timeline service if needed
-    String bindAddress = WebAppUtils.getWebAppBindURL(conf,
-        YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
-        WebAppUtils.getAHSWebAppURLWithoutScheme(conf));
-    this.timelineRestServerBindAddress = WebAppUtils.getResolvedAddress(
-        NetUtils.createSocketAddr(bindAddress));
-    LOG.info("Instantiating the per-node collector webapp at " +
-        timelineRestServerBindAddress);
+    String bindAddress = conf.get(YarnConfiguration.TIMELINE_SERVICE_BIND_HOST,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST) + ":0";
     try {
       Configuration confForInfoServer = new Configuration(conf);
       confForInfoServer.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
       HttpServer2.Builder builder = new HttpServer2.Builder()
           .setName("timeline")
           .setConf(conf)
-          .addEndpoint(URI.create("http://" + bindAddress));
+          .addEndpoint(URI.create(
+              (YarnConfiguration.useHttps(conf) ? "https://" : "http://") +
+                  bindAddress));
       timelineRestServer = builder.build();
       // TODO: replace this by an authentication filter in future.
       HashMap<String, String> options = new HashMap<>();
@@ -249,6 +244,11 @@ public class TimelineCollectorManager extends CompositeService {
       LOG.error(msg, e);
       throw new YarnRuntimeException(msg, e);
     }
+    //TODO: We need to think of the case of multiple interfaces
+    this.timelineRestServerBindAddress = WebAppUtils.getResolvedAddress(
+        timelineRestServer.getConnectorAddress(0));
+    LOG.info("Instantiated the per-node collector webapp at " +
+        timelineRestServerBindAddress);
   }
 
   private void reportNewCollectorToNM(ApplicationId appId)
