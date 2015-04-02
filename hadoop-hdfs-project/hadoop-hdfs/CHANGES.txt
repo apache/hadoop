@@ -947,6 +947,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-8036. Use snapshot path as source when using snapshot diff report in
     DistCp. (Jing Zhao via wheat9)
 
+    HDFS-8001 RpcProgramNfs3 : wrong parsing of dfs.blocksize
+    (Remi Catherinot via brandonli)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
