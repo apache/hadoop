@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -66,6 +67,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -83,8 +85,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KE
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.*;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
+import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
+import static org.apache.hadoop.hdfs.server.namenode.INodeId.ROOT_INODE_ID;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
+import static org.apache.hadoop.util.Time.now;
 
 /**
  * Both FSDirectory and FSNamesystem manage the state of the namespace.
@@ -99,7 +103,7 @@ public class FSDirectory implements Closeable {
 
   private static INodeDirectory createRoot(FSNamesystem namesystem) {
     final INodeDirectory r = new INodeDirectory(
-        INodeId.ROOT_INODE_ID,
+        ROOT_INODE_ID,
         INodeDirectory.ROOT_NAME,
         namesystem.createFsOwnerPermissions(new FsPermission((short) 0755)),
         0L);
@@ -111,6 +115,20 @@ public class FSDirectory implements Closeable {
     r.addSnapshottableFeature();
     r.setSnapshotQuota(0);
     return r;
+  }
+
+  private ByteString createRootForFlatNS(FSNamesystem namesystem) {
+    PermissionStatus perm = namesystem.createFsOwnerPermissions(
+        new FsPermission((short) 0755));
+    ByteString b = new FlatINode.Builder()
+        .id(ROOT_INODE_ID)
+        .parentId(INVALID_INODE_ID)
+        .userId(ugid.getId(perm.getUserName()))
+        .groupId(ugid.getId(perm.getGroupName()))
+        .permission((short) 0755)
+        .mtime(now())
+        .build();
+    return b;
   }
 
   @VisibleForTesting
@@ -213,6 +231,30 @@ public class FSDirectory implements Closeable {
    */
   private final NameCache<ByteArray> nameCache;
 
+  private final DB db;
+  // Mapping user / group name into id
+  private final StringMap ugid = new StringMap();
+
+  DB db() {
+    return db;
+  }
+
+  StringMap ugid() {
+    return ugid;
+  }
+
+  RWTransaction newRWTransaction() {
+    return new RWTransaction(this);
+  }
+
+  public ROTransaction newROTransaction() {
+    return new ROTransaction(db());
+  }
+
+  public ReplayTransaction newReplayTransaction() {
+    return new ReplayTransaction(this);
+  }
+
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.inodeId = new INodeId();
@@ -284,10 +326,8 @@ public class FSDirectory implements Closeable {
     // to 64MB. This means we can only store approximately 6.7 million entries
     // per directory, but let's use 6.4 million for some safety.
     final int MAX_DIR_ITEMS = 64 * 100 * 1000;
-    Preconditions.checkArgument(
-        maxDirItems > 0 && maxDirItems <= MAX_DIR_ITEMS, "Cannot set "
-            + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
-            + " to a value less than 1 or greater than " + MAX_DIR_ITEMS);
+    Preconditions.checkArgument(maxDirItems > 0 && maxDirItems <= MAX_DIR_ITEMS,
+                                "Cannot set " + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY + " to a value less than 1 or greater than " + MAX_DIR_ITEMS);
 
     int threshold = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
@@ -298,6 +338,9 @@ public class FSDirectory implements Closeable {
     namesystem = ns;
     this.editLog = ns.getEditLog();
     ezManager = new EncryptionZoneManager(this, conf);
+    this.db = new DB();
+    // TODO: Load fsimage
+    db.addRoot(createRootForFlatNS(ns));
   }
     
   FSNamesystem getFSNamesystem() {
@@ -1364,7 +1407,7 @@ public class FSDirectory implements Closeable {
     } catch (NumberFormatException e) {
       throw new FileNotFoundException("Invalid inode path: " + src);
     }
-    if (id == INodeId.ROOT_INODE_ID && pathComponents.length == 4) {
+    if (id == ROOT_INODE_ID && pathComponents.length == 4) {
       return Path.SEPARATOR;
     }
     INode inode = fsd.getInode(id);
@@ -1377,7 +1420,7 @@ public class FSDirectory implements Closeable {
     if ((pathComponents.length > 4)
         && DFSUtil.bytes2String(pathComponents[4]).equals("..")) {
       INode parent = inode.getParent();
-      if (parent == null || parent.getId() == INodeId.ROOT_INODE_ID) {
+      if (parent == null || parent.getId() == ROOT_INODE_ID) {
         // inode is root, or its parent is root.
         return Path.SEPARATOR;
       } else {
@@ -1386,7 +1429,7 @@ public class FSDirectory implements Closeable {
     }
 
     String path = "";
-    if (id != INodeId.ROOT_INODE_ID) {
+    if (id != ROOT_INODE_ID) {
       path = inode.getFullPathName();
     }
     return constructRemainingPath(path, pathComponents, 4);
@@ -1578,6 +1621,11 @@ public class FSDirectory implements Closeable {
     return (namesystem.isAuditEnabled() && namesystem.isExternalInvocation())
         ? FSDirStatAndListingOp.getFileInfo(this, iip.getPath(), iip, false,
             false) : null;
+  }
+
+  public HdfsFileStatus getAuditFileInfo(FlatINodesInPath iip) {
+    // TODO
+    return null;
   }
 
   /**
