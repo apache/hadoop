@@ -39,7 +39,9 @@ public class SimpleTcpServer {
   protected final int port;
   protected int boundPort = -1; // Will be set after server starts
   protected final SimpleChannelUpstreamHandler rpcProgram;
-  
+  private ServerBootstrap server;
+  private Channel ch;
+
   /** The maximum number of I/O worker threads */
   protected final int workerCount;
 
@@ -53,7 +55,7 @@ public class SimpleTcpServer {
     this.rpcProgram = program;
     this.workerCount = workercount;
   }
-  
+
   public void run() {
     // Configure the Server.
     ChannelFactory factory;
@@ -66,9 +68,9 @@ public class SimpleTcpServer {
           Executors.newCachedThreadPool(), Executors.newCachedThreadPool(),
           workerCount);
     }
-    
-    ServerBootstrap bootstrap = new ServerBootstrap(factory);
-    bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+
+    server = new ServerBootstrap(factory);
+    server.setPipelineFactory(new ChannelPipelineFactory() {
 
       @Override
       public ChannelPipeline getPipeline() throws Exception {
@@ -77,14 +79,14 @@ public class SimpleTcpServer {
             RpcUtil.STAGE_RPC_TCP_RESPONSE);
       }
     });
-    bootstrap.setOption("child.tcpNoDelay", true);
-    bootstrap.setOption("child.keepAlive", true);
-    
+    server.setOption("child.tcpNoDelay", true);
+    server.setOption("child.keepAlive", true);
+
     // Listen to TCP port
-    Channel ch = bootstrap.bind(new InetSocketAddress(port));
+    ch = server.bind(new InetSocketAddress(port));
     InetSocketAddress socketAddr = (InetSocketAddress) ch.getLocalAddress();
     boundPort = socketAddr.getPort();
-    
+
     LOG.info("Started listening to TCP requests at port " + boundPort + " for "
         + rpcProgram + " with workerCount " + workerCount);
   }
@@ -92,5 +94,14 @@ public class SimpleTcpServer {
   // boundPort will be set only after server starts
   public int getBoundPort() {
     return this.boundPort;
+  }
+
+  public void shutdown() {
+    if (ch != null) {
+      ch.close().awaitUninterruptibly();
+    }
+    if (server != null) {
+      server.releaseExternalResources();
+    }
   }
 }
