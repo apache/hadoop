@@ -568,6 +568,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-8008. Support client-side back off when the datanodes are congested.
     (wheat9)
 
+    HDFS-8035. Move checkBlocksProperlyReplicated() in FSNamesystem to
+    BlockManager. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
