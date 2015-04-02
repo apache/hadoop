@@ -376,6 +376,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7978. Add LOG.isDebugEnabled() guard for some LOG.debug(..).
     (Walter Su via wang)
 
+    HDFS-7888. Change DFSOutputStream and DataStreamer for convenience of
+    subclassing. (Li Bo via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
