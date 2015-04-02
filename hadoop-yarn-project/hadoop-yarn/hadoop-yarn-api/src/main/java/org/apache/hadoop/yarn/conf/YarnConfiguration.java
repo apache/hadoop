@@ -2012,6 +2012,7 @@ public class YarnConfiguration extends Configuration {
   /** The listening endpoint for the timeline service application.*/
   public static final String TIMELINE_SERVICE_BIND_HOST =
       TIMELINE_SERVICE_PREFIX + "bind-host";
+  public static final String DEFAULT_TIMELINE_SERVICE_BIND_HOST = "0.0.0.0";
 
   /** The number of threads to handle client RPC API requests. */
   public static final String TIMELINE_SERVICE_HANDLER_THREAD_COUNT =
