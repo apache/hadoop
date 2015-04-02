@@ -412,6 +412,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7922. ShortCircuitCache#close is not releasing
     ScheduledThreadPoolExecutors (Rakesh R via Colin P. McCabe)
 
+    HDFS-7916. 'reportBadBlocks' from datanodes to standby Node BPServiceActor
+    goes for infinite loop (vinayakumarb)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

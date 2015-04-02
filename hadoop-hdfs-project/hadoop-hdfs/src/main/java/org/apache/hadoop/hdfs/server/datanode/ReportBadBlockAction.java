@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.ipc.StandbyException;
 
 /**
  * ReportBadBlockAction is an instruction issued by {{BPOfferService}} to
@@ -58,8 +59,11 @@ public class ReportBadBlockAction implements BPServiceActorAction {
         dnArr, uuids, types) };
 
     try {
-      bpNamenode.reportBadBlocks(locatedBlock);  
-    } catch (IOException e){
+      bpNamenode.reportBadBlocks(locatedBlock);
+    } catch (StandbyException e) {
+      DataNode.LOG.warn("Failed to report bad block " + block
+          + " to standby namenode");
+    } catch (IOException e) {
       throw new BPServiceActorActionException("Failed to report bad block "
           + block + " to namenode: ");
     }
