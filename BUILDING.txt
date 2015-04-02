@@ -73,7 +73,7 @@ Where to run Maven from?
 ----------------------------------------------------------------------------------
 Maven build goals:
 
- * Clean                     : mvn clean
+ * Clean                     : mvn clean [-Preleasedocs]
  * Compile                   : mvn compile [-Pnative]
  * Run tests                 : mvn test [-Pnative]
  * Create JAR                : mvn package
@@ -84,7 +84,7 @@ Maven build goals:
  * Run clover                : mvn test -Pclover [-DcloverLicenseLocation=${user.name}/.clover.license]
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
- * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar]
+ * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs]
  * Change Hadoop version     : mvn versions:set -DnewVersion=NEWVERSION
 
  Build options:
@@ -93,6 +93,7 @@ Maven build goals:
   * Use -Pdocs to generate & bundle the documentation in the distribution (using -Pdist)
   * Use -Psrc to create a project source TAR.GZ
   * Use -Dtar to create a TAR with the distribution (using -Pdist)
+  * Use -Preleasedocs to include the changelog and release docs (requires Internet connectivity)
 
  Snappy build options:
 
@@ -203,7 +204,7 @@ Create source and binary distributions with native code and documentation:
 
 Create a local staging version of the website (in /tmp/hadoop-site)
 
-  $ mvn clean site; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
+  $ mvn clean site -Preleasedocs; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
 
 ----------------------------------------------------------------------------------
 Installing Hadoop

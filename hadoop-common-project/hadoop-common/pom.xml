@@ -479,6 +479,7 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
@@ -901,6 +902,56 @@
         </plugins>
       </build>
     </profile>
+
+    <profile>
+      <id>releasedocs</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+                <execution>
+                    <id>releasedocs</id>
+                    <phase>pre-site</phase>
+                    <goals>
+                        <goal>exec</goal>
+                    </goals>
+                    <configuration>
+                        <executable>python</executable>
+                        <workingDirectory>src/site/markdown/release/</workingDirectory>
+                        <requiresOnline>true</requiresOnline>
+                        <arguments>
+                            <argument>${basedir}/../../dev-support/releasedocmaker.py</argument>
+                            <argument>--version</argument>
+                            <argument>${project.version}</argument>
+                            <argument>--index</argument>
+                        </arguments>
+                    </configuration>
+                </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-clean-plugin</artifactId>
+            <configuration>
+              <filesets>
+                <fileset>
+                  <directory>src/site/markdown/release</directory>
+                    <includes>
+                      <include>${project.version}</include>
+                    </includes>
+                  <followSymlinks>false</followSymlinks>
+                </fileset>
+              </filesets>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
   </profiles>
 </project>
 

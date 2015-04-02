@@ -21,6 +21,8 @@ Trunk (Unreleased)
 
     HADOOP-11553. Formalize the shell API (aw)
 
+    HADOOP-11731. Rework the changelog and releasenotes (aw)
+
   NEW FEATURES
 
     HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via aw)

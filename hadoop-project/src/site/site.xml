@@ -159,13 +159,9 @@
     </menu>
 
     <menu name="Reference" inherit="top">
-      <item name="Release Notes" href="hadoop-project-dist/hadoop-common/releasenotes.html"/>
+      <item name="Changelog and Release Notes" href="hadoop-project-dist/hadoop-common/release/index.html"/>
       <item name="Java API docs" href="api/index.html"/>
       <item name="Unix Shell API" href="hadoop-project-dist/hadoop-common/UnixShellAPI.html"/>
-      <item name="Common CHANGES.txt" href="hadoop-project-dist/hadoop-common/CHANGES.txt"/>
-      <item name="HDFS CHANGES.txt" href="hadoop-project-dist/hadoop-hdfs/CHANGES.txt"/>
-      <item name="MapReduce CHANGES.txt" href="hadoop-project-dist/hadoop-mapreduce/CHANGES.txt"/>
-      <item name="YARN CHANGES.txt" href="hadoop-project-dist/hadoop-yarn/CHANGES.txt"/>
       <item name="Metrics" href="hadoop-project-dist/hadoop-common/Metrics.html"/>
     </menu>
     
