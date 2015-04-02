@@ -187,7 +187,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     clientCache = new DFSClientCache(config);
     replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
         DFSConfigKeys.DFS_REPLICATION_DEFAULT);
-    blockSize = config.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
+    blockSize = config.getLongBytes(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
     bufferSize = config.getInt(
         CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
