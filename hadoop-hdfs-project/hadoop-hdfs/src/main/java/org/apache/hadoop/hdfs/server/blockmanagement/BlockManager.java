@@ -3408,6 +3408,27 @@ public class BlockManager {
     }
   }
 
+  /**
+   * Check that the indicated blocks are present and
+   * replicated.
+   */
+  public boolean checkBlocksProperlyReplicated(
+      String src, BlockInfoContiguous[] blocks) {
+    for (BlockInfoContiguous b: blocks) {
+      if (!b.isComplete()) {
+        final BlockInfoContiguousUnderConstruction uc =
+            (BlockInfoContiguousUnderConstruction)b;
+        final int numNodes = b.numNodes();
+        LOG.info("BLOCK* " + b + " is not COMPLETE (ucState = "
+          + uc.getBlockUCState() + ", replication# = " + numNodes
+          + (numNodes < minReplication ? " < ": " >= ")
+          + " minimum = " + minReplication + ") in file " + src);
+        return false;
+      }
+    }
+    return true;
+  }
+
   /** 
    * @return 0 if the block is not found;
    *         otherwise, return the replication factor of the block.
