@@ -40,6 +40,12 @@ static const int DEFAULT_MIN_USERID = 1000;
 
 static const char* DEFAULT_BANNED_USERS[] = {"mapred", "hdfs", "bin", 0};
 
+//location of traffic control binary
+static const char* TC_BIN = "/sbin/tc";
+static const char* TC_MODIFY_STATE_OPTS [] = { "-b" , NULL};
+static const char* TC_READ_STATE_OPTS [] = { "-b", NULL};
+static const char* TC_READ_STATS_OPTS [] = { "-s",  "-b", NULL};
+
 //struct to store the user details
 struct passwd *user_detail = NULL;
 
@@ -291,27 +297,20 @@ static int write_exit_code_file(const char* exit_code_file, int exit_code) {
   return 0;
 }
 
-/**
- * Wait for the container process to exit and write the exit code to
- * the exit code file.
- * Returns the exit code of the container process.
- */
-static int wait_and_write_exit_code(pid_t pid, const char* exit_code_file) {
+static int wait_and_get_exit_code(pid_t pid) {
   int child_status = -1;
   int exit_code = -1;
   int waitpid_result;
 
-  if (change_effective_user(nm_uid, nm_gid) != 0) {
-    return -1;
-  }
   do {
-    waitpid_result = waitpid(pid, &child_status, 0);
+      waitpid_result = waitpid(pid, &child_status, 0);
   } while (waitpid_result == -1 && errno == EINTR);
+
   if (waitpid_result < 0) {
-    fprintf(LOGFILE, "Error waiting for container process %d - %s\n",
-        pid, strerror(errno));
+    fprintf(LOGFILE, "error waiting for process %d - %s\n", pid, strerror(errno));
     return -1;
   }
+
   if (WIFEXITED(child_status)) {
     exit_code = WEXITSTATUS(child_status);
   } else if (WIFSIGNALED(child_status)) {
@@ -319,9 +318,26 @@ static int wait_and_write_exit_code(pid_t pid, const char* exit_code_file) {
   } else {
     fprintf(LOGFILE, "Unable to determine exit status for pid %d\n", pid);
   }
+
+  return exit_code;
+}
+
+/**
+ * Wait for the container process to exit and write the exit code to
+ * the exit code file.
+ * Returns the exit code of the container process.
+ */
+static int wait_and_write_exit_code(pid_t pid, const char* exit_code_file) {
+  int exit_code = -1;
+
+  if (change_effective_user(nm_uid, nm_gid) != 0) {
+    return -1;
+  }
+  exit_code = wait_and_get_exit_code(pid);
   if (write_exit_code_file(exit_code_file, exit_code) < 0) {
     return -1;
   }
+
   return exit_code;
 }
 
@@ -1470,3 +1486,63 @@ int mount_cgroup(const char *pair, const char *hierarchy) {
 #endif
 }
 
+static int run_traffic_control(const char *opts[], char *command_file) {
+  const int max_tc_args = 16;
+  char *args[max_tc_args];
+  int i = 0, j = 0;
+
+  args[i++] = TC_BIN;
+  while (opts[j] != NULL && i < max_tc_args - 1) {
+    args[i] = opts[j];
+    ++i, ++j;
+  }
+  //too many args to tc
+  if (i == max_tc_args - 1) {
+    fprintf(LOGFILE, "too many args to tc");
+    return TRAFFIC_CONTROL_EXECUTION_FAILED;
+  }
+  args[i++] = command_file;
+  args[i] = 0;
+
+  pid_t child_pid = fork();
+  if (child_pid != 0) {
+    int exit_code = wait_and_get_exit_code(child_pid);
+    if (exit_code != 0) {
+      fprintf(LOGFILE, "failed to execute tc command!\n");
+      return TRAFFIC_CONTROL_EXECUTION_FAILED;
+    }
+    unlink(command_file);
+    return 0;
+  } else {
+    execv(TC_BIN, args);
+    //if we reach here, exec failed
+    fprintf(LOGFILE, "failed to execute tc command! error: %s\n", strerror(errno));
+    return TRAFFIC_CONTROL_EXECUTION_FAILED;
+  }
+}
+
+/**
+ * Run a batch of tc commands that modify interface configuration. command_file
+ * is deleted after being used.
+ */
+int traffic_control_modify_state(char *command_file) {
+  return run_traffic_control(TC_MODIFY_STATE_OPTS, command_file);
+}
+
+/**
+ * Run a batch of tc commands that read interface configuration. Output is
+ * written to standard output and it is expected to be read and parsed by the
+ * calling process. command_file is deleted after being used.
+ */
+int traffic_control_read_state(char *command_file) {
+  return run_traffic_control(TC_READ_STATE_OPTS, command_file);
+}
+
+/**
+ * Run a batch of tc commands that read interface stats. Output is
+ * written to standard output and it is expected to be read and parsed by the
+ * calling process. command_file is deleted after being used.
+ */
+int traffic_control_read_stats(char *command_file) {
+  return run_traffic_control(TC_READ_STATS_OPTS, command_file);
+}

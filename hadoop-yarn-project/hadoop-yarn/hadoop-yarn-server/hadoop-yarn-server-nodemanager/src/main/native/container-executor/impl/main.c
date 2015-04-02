@@ -42,84 +42,71 @@
   #error HADOOP_CONF_DIR must be defined
 #endif
 
-void display_usage(FILE *stream) {
-  fprintf(stream,
-          "Usage: container-executor --checksetup\n");
-  fprintf(stream,
-          "Usage: container-executor --mount-cgroups "\
-          "hierarchy controller=path...\n");
-  fprintf(stream,
-      "Usage: container-executor user yarn-user command command-args\n");
-  fprintf(stream, "Commands:\n");
-  fprintf(stream, "   initialize container: %2d appid tokens " \
-   "nm-local-dirs nm-log-dirs cmd app...\n", INITIALIZE_CONTAINER);
-  fprintf(stream,
-      "   launch container:    %2d appid containerid workdir "\
-      "container-script tokens pidfile nm-local-dirs nm-log-dirs resources\n",
-	  LAUNCH_CONTAINER);
-  fprintf(stream, "   signal container:    %2d container-pid signal\n",
-	  SIGNAL_CONTAINER);
-  fprintf(stream, "   delete as user: %2d relative-path\n",
-	  DELETE_AS_USER);
+static void display_usage(FILE *stream) {
+  char *usage_template =
+      "Usage: container-executor --checksetup\n" \
+      "       container-executor --mount-cgroups <hierarchy> <controller=path>...\n" \
+      "       container-executor --tc-modify-state <command-file>\n" \
+      "       container-executor --tc-read-state <command-file>\n" \
+      "       container-executor --tc-read-stats <command-file>\n" \
+      "       container-executor <user> <yarn-user> <command> <command-args>\n"  \
+      "       where command and command-args: \n" \
+      "            initialize container:  %2d appid tokens nm-local-dirs nm-log-dirs cmd app...\n" \
+      "            launch container:      %2d appid containerid workdir container-script " \
+                              "tokens pidfile nm-local-dirs nm-log-dirs resources optional-tc-command-file\n" \
+      "            signal container:      %2d container-pid signal\n" \
+      "            delete as user:        %2d relative-path\n" ;
+
+
+  fprintf(stream, usage_template, INITIALIZE_CONTAINER, LAUNCH_CONTAINER,
+          SIGNAL_CONTAINER, DELETE_AS_USER);
 }
 
-int main(int argc, char **argv) {
-  int invalid_args = 0; 
-  int do_check_setup = 0;
-  int do_mount_cgroups = 0;
-  
-  LOGFILE = stdout;
-  ERRORFILE = stderr;
-
-  if (argc > 1) {
-    if (strcmp("--mount-cgroups", argv[1]) == 0) {
-      do_mount_cgroups = 1;
-    }
+/* Sets up log files for normal/error logging */
+static void open_log_files() {
+  if (LOGFILE == NULL) {
+    LOGFILE = stdout;
   }
 
-  // Minimum number of arguments required to run 
-  // the std. container-executor commands is 4
-  // 4 args not needed for checksetup option
-  if (argc < 4 && !do_mount_cgroups) {
-    invalid_args = 1;
-    if (argc == 2) {
-      const char *arg1 = argv[1];
-      if (strcmp("--checksetup", arg1) == 0) {
-        invalid_args = 0;
-        do_check_setup = 1;        
-      }      
-    }
+  if (ERRORFILE == NULL) {
+    ERRORFILE = stderr;
+  }
+}
+
+/* Flushes and closes log files */
+static void flush_and_close_log_files() {
+  if (LOGFILE != NULL) {
+    fflush(LOGFILE);
+    fclose(LOGFILE);
+    LOGFILE = NULL;
   }
   
-  if (invalid_args != 0) {
-    display_usage(stdout);
-    return INVALID_ARGUMENT_NUMBER;
+if (ERRORFILE != NULL) {
+    fflush(ERRORFILE);
+    fclose(ERRORFILE);
+    ERRORFILE = NULL;
   }
+}
 
-  int command;
-  const char * app_id = NULL;
-  const char * container_id = NULL;
-  const char * cred_file = NULL;
-  const char * script_file = NULL;
-  const char * current_dir = NULL;
-  const char * pid_file = NULL;
+/** Validates the current container-executor setup. Causes program exit
+in case of validation failures. Also sets up configuration / group information etc.,
+This function is to be called in every invocation of container-executor, irrespective
+of whether an explicit checksetup operation is requested. */
 
-  int exit_code = 0;
-
-  char * dir_to_be_deleted = NULL;
-
+static void assert_valid_setup(char *current_executable) {
   char *executable_file = get_executable();
 
   char *orig_conf_file = HADOOP_CONF_DIR "/" CONF_FILENAME;
-  char *conf_file = resolve_config_path(orig_conf_file, argv[0]);
-  char *local_dirs, *log_dirs;
-  char *resources, *resources_key, *resources_value;
+  char *conf_file = resolve_config_path(orig_conf_file, current_executable);
 
   if (conf_file == NULL) {
     fprintf(ERRORFILE, "Configuration file %s not found.\n", orig_conf_file);
+    flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
+
   if (check_configuration_permissions(conf_file) != 0) {
+    flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
   read_config(conf_file);
@@ -129,13 +116,14 @@ int main(int argc, char **argv) {
   char *nm_group = get_value(NM_GROUP_KEY);
   if (nm_group == NULL) {
     fprintf(ERRORFILE, "Can't get configured value for %s.\n", NM_GROUP_KEY);
+    flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
   struct group *group_info = getgrnam(nm_group);
   if (group_info == NULL) {
     fprintf(ERRORFILE, "Can't get group information for %s - %s.\n", nm_group,
             strerror(errno));
-    fflush(LOGFILE);
+    flush_and_close_log_files();
     exit(INVALID_CONFIG_FILE);
   }
   set_nm_uid(getuid(), group_info->gr_gid);
@@ -146,91 +134,162 @@ int main(int argc, char **argv) {
 
   if (check_executor_permissions(executable_file) != 0) {
     fprintf(ERRORFILE, "Invalid permissions on container-executor binary.\n");
-    return INVALID_CONTAINER_EXEC_PERMISSIONS;
+    flush_and_close_log_files();
+    exit(INVALID_CONTAINER_EXEC_PERMISSIONS);
+  }
+}
+
+
+/* Use to store parsed input parmeters for various operations */
+static struct {
+  char *cgroups_hierarchy;
+  char *traffic_control_command_file;
+  const char * run_as_user_name;
+  const char * yarn_user_name;
+  char *local_dirs;
+  char *log_dirs;
+  char *resources_key;
+  char *resources_value;
+  char **resources_values;
+  const char * app_id;
+  const char * container_id;
+  const char * cred_file;
+  const char * script_file;
+  const char * current_dir;
+  const char * pid_file;
+  const char *dir_to_be_deleted;
+  int container_pid;
+  int signal;
+} cmd_input;
+
+static int validate_run_as_user_commands(int argc, char **argv, int *operation);
+
+/* Validates that arguments used in the invocation are valid. In case of validation
+failure, an 'errorcode' is returned. In case of successful validation, a zero is
+returned and 'operation' is populated based on the operation being requested.
+Ideally, we should re-factor container-executor to use a more structured, command
+line parsing mechanism (e.g getopt). For the time being, we'll use this manual
+validation mechanism so that we don't have to change the invocation interface.
+*/
+
+static int validate_arguments(int argc, char **argv , int *operation) {
+  if (argc < 2) {
+    display_usage(stdout);
+    return INVALID_ARGUMENT_NUMBER;
   }
 
-  if (do_check_setup != 0) {
-    // basic setup checks done
-    // verified configs available and valid
-    // verified executor permissions
+  if (strcmp("--checksetup", argv[1]) == 0) {
+    *operation = CHECK_SETUP;
     return 0;
   }
 
-  if (do_mount_cgroups) {
-    optind++;
-    char *hierarchy = argv[optind++];
-    int result = 0;
-
-    while (optind < argc && result == 0) {
-      result = mount_cgroup(argv[optind++], hierarchy);
+  if (strcmp("--mount-cgroups", argv[1]) == 0) {
+    if (argc < 4) {
+      display_usage(stdout);
+      return INVALID_ARGUMENT_NUMBER;
     }
-
-    return result;
+    optind++;
+    cmd_input.cgroups_hierarchy = argv[optind++];
+    *operation = MOUNT_CGROUPS;
+    return 0;
   }
 
-  //checks done for user name
-  if (argv[optind] == NULL) {
-    fprintf(ERRORFILE, "Invalid user name.\n");
-    return INVALID_USER_NAME;
+  if (strcmp("--tc-modify-state", argv[1]) == 0) {
+    if (argc != 3) {
+      display_usage(stdout);
+      return INVALID_ARGUMENT_NUMBER;
+    }
+    optind++;
+    cmd_input.traffic_control_command_file = argv[optind++];
+    *operation = TRAFFIC_CONTROL_MODIFY_STATE;
+    return 0;
   }
 
-  int ret = set_user(argv[optind]);
-  if (ret != 0) {
-    return ret;
+  if (strcmp("--tc-read-state", argv[1]) == 0) {
+    if (argc != 3) {
+      display_usage(stdout);
+      return INVALID_ARGUMENT_NUMBER;
+    }
+    optind++;
+    cmd_input.traffic_control_command_file = argv[optind++];
+    *operation = TRAFFIC_CONTROL_READ_STATE;
+    return 0;
   }
 
-  // this string is used for building pathnames, the
-  // process management is done based on the 'user_detail'
-  // global, which was set by 'set_user()' above
-  optind = optind + 1;
-  char *yarn_user_name = argv[optind];
-  if (yarn_user_name == NULL) {
-    fprintf(ERRORFILE, "Invalid yarn user name.\n");
-    return INVALID_USER_NAME;
+  if (strcmp("--tc-read-stats", argv[1]) == 0) {
+    if (argc != 3) {
+      display_usage(stdout);
+      return INVALID_ARGUMENT_NUMBER;
+    }
+    optind++;
+    cmd_input.traffic_control_command_file = argv[optind++];
+    *operation = TRAFFIC_CONTROL_READ_STATS;
+    return 0;
   }
- 
-  optind = optind + 1;
-  command = atoi(argv[optind++]);
 
-  fprintf(LOGFILE, "main : command provided %d\n",command);
-  fprintf(LOGFILE, "main : user is %s\n", user_detail->pw_name);
-  fprintf(LOGFILE, "main : requested yarn user is %s\n", yarn_user_name);
+  /* Now we have to validate 'run as user' operations that don't use
+    a 'long option' - we should fix this at some point. The validation/argument
+    parsing here is extensive enough that it done in a separate function */
+
+  return validate_run_as_user_commands(argc, argv, operation);
+}
+
+/* Parse/validate 'run as user' commands */
+static int validate_run_as_user_commands(int argc, char **argv, int *operation) {
+  /* We need at least the following arguments in order to proceed further :
+    <user>, <yarn-user> <command> - i.e at argc should be at least 4 */
+
+  if (argc < 4) {
+    display_usage(stdout);
+    return INVALID_ARGUMENT_NUMBER;
+  }
+
+  cmd_input.run_as_user_name = argv[optind++];
+  cmd_input.yarn_user_name = argv[optind++];
+  int command = atoi(argv[optind++]);
+
+  fprintf(LOGFILE, "main : command provided %d\n", command);
+  fprintf(LOGFILE, "main : run as user is %s\n", cmd_input.run_as_user_name);
+  fprintf(LOGFILE, "main : requested yarn user is %s\n", cmd_input.yarn_user_name);
   fflush(LOGFILE);
 
   switch (command) {
   case INITIALIZE_CONTAINER:
     if (argc < 9) {
       fprintf(ERRORFILE, "Too few arguments (%d vs 9) for initialize container\n",
-	      argc);
+       argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
-    app_id = argv[optind++];
-    cred_file = argv[optind++];
-    local_dirs = argv[optind++];// good local dirs as a comma separated list
-    log_dirs = argv[optind++];// good log dirs as a comma separated list
-    exit_code = initialize_app(yarn_user_name, app_id, cred_file,
-                               extract_values(local_dirs),
-                               extract_values(log_dirs), argv + optind);
-    break;
+    cmd_input.app_id = argv[optind++];
+    cmd_input.cred_file = argv[optind++];
+    cmd_input.local_dirs = argv[optind++];// good local dirs as a comma separated list
+    cmd_input.log_dirs = argv[optind++];// good log dirs as a comma separated list
+
+    *operation = RUN_AS_USER_INITIALIZE_CONTAINER;
+    return 0;
+
   case LAUNCH_CONTAINER:
-    if (argc != 13) {
-      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 13) for launch container\n",
-	      argc);
+    //kill me now.
+    if (!(argc == 13 || argc == 14)) {
+      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 13 or 14) for launch container\n",
+       argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
-    app_id = argv[optind++];
-    container_id = argv[optind++];
-    current_dir = argv[optind++];
-    script_file = argv[optind++];
-    cred_file = argv[optind++];
-    pid_file = argv[optind++];
-    local_dirs = argv[optind++];// good local dirs as a comma separated list
-    log_dirs = argv[optind++];// good log dirs as a comma separated list
-    resources = argv[optind++];// key,value pair describing resources
-    char *resources_key = malloc(strlen(resources));
-    char *resources_value = malloc(strlen(resources));
+
+    cmd_input.app_id = argv[optind++];
+    cmd_input.container_id = argv[optind++];
+    cmd_input.current_dir = argv[optind++];
+    cmd_input.script_file = argv[optind++];
+    cmd_input.cred_file = argv[optind++];
+    cmd_input.pid_file = argv[optind++];
+    cmd_input.local_dirs = argv[optind++];// good local dirs as a comma separated list
+    cmd_input.log_dirs = argv[optind++];// good log dirs as a comma separated list
+    char * resources = argv[optind++];// key,value pair describing resources
+    char * resources_key = malloc(strlen(resources));
+    char * resources_value = malloc(strlen(resources));
+
     if (get_kv_key(resources, resources_key, strlen(resources)) < 0 ||
         get_kv_value(resources, resources_value, strlen(resources)) < 0) {
         fprintf(ERRORFILE, "Invalid arguments for cgroups resources: %s",
@@ -240,51 +299,157 @@ int main(int argc, char **argv) {
         free(resources_value);
         return INVALID_ARGUMENT_NUMBER;
     }
-    char** resources_values = extract_values(resources_value);
-    exit_code = launch_container_as_user(yarn_user_name, app_id,
-                    container_id, current_dir, script_file, cred_file,
-                    pid_file, extract_values(local_dirs),
-                    extract_values(log_dirs), resources_key,
-                    resources_values);
-    free(resources_key);
-    free(resources_value);
-    break;
+
+    //network isolation through tc
+    if (argc == 14) {
+      cmd_input.traffic_control_command_file = argv[optind++];
+    }
+
+    cmd_input.resources_key = resources_key;
+    cmd_input.resources_value = resources_value;
+    cmd_input.resources_values = extract_values(resources_value);
+    *operation = RUN_AS_USER_LAUNCH_CONTAINER;
+    return 0;
+
   case SIGNAL_CONTAINER:
     if (argc != 6) {
       fprintf(ERRORFILE, "Wrong number of arguments (%d vs 6) for " \
           "signal container\n", argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
-    } else {
-      char* end_ptr = NULL;
-      char* option = argv[optind++];
-      int container_pid = strtol(option, &end_ptr, 10);
-      if (option == end_ptr || *end_ptr != '\0') {
-        fprintf(ERRORFILE, "Illegal argument for container pid %s\n", option);
-        fflush(ERRORFILE);
-        return INVALID_ARGUMENT_NUMBER;
-      }
-      option = argv[optind++];
-      int signal = strtol(option, &end_ptr, 10);
-      if (option == end_ptr || *end_ptr != '\0') {
-        fprintf(ERRORFILE, "Illegal argument for signal %s\n", option);
-        fflush(ERRORFILE);
-        return INVALID_ARGUMENT_NUMBER;
-      }
-      exit_code = signal_container_as_user(yarn_user_name, container_pid, signal);
     }
-    break;
+
+    char* end_ptr = NULL;
+    char* option = argv[optind++];
+    cmd_input.container_pid = strtol(option, &end_ptr, 10);
+    if (option == end_ptr || *end_ptr != '\0') {
+      fprintf(ERRORFILE, "Illegal argument for container pid %s\n", option);
+      fflush(ERRORFILE);
+      return INVALID_ARGUMENT_NUMBER;
+    }
+    option = argv[optind++];
+    cmd_input.signal = strtol(option, &end_ptr, 10);
+    if (option == end_ptr || *end_ptr != '\0') {
+      fprintf(ERRORFILE, "Illegal argument for signal %s\n", option);
+      fflush(ERRORFILE);
+      return INVALID_ARGUMENT_NUMBER;
+    }
+
+    *operation = RUN_AS_USER_SIGNAL_CONTAINER;
+    return 0;
+
   case DELETE_AS_USER:
-    dir_to_be_deleted = argv[optind++];
-    exit_code= delete_as_user(yarn_user_name, dir_to_be_deleted,
-                              argv + optind);
-    break;
+    cmd_input.dir_to_be_deleted = argv[optind++];
+    *operation = RUN_AS_USER_DELETE;
+    return 0;
   default:
     fprintf(ERRORFILE, "Invalid command %d not supported.",command);
     fflush(ERRORFILE);
-    exit_code = INVALID_COMMAND_PROVIDED;
+    return INVALID_COMMAND_PROVIDED;
   }
-  fclose(LOGFILE);
-  fclose(ERRORFILE);
+}
+
+int main(int argc, char **argv) {
+  open_log_files();
+  assert_valid_setup(argv[0]);
+
+  int operation;
+  int ret = validate_arguments(argc, argv, &operation);
+
+  if (ret != 0) {
+    flush_and_close_log_files();
+    return ret;
+  }
+
+  int exit_code = 0;
+
+  switch (operation) {
+  case CHECK_SETUP:
+    //we already did this
+    exit_code = 0;
+    break;
+  case MOUNT_CGROUPS:
+    exit_code = 0;
+
+    while (optind < argc && exit_code == 0) {
+      exit_code = mount_cgroup(argv[optind++], cmd_input.cgroups_hierarchy);
+    }
+
+    break;
+  case TRAFFIC_CONTROL_MODIFY_STATE:
+    exit_code = traffic_control_modify_state(cmd_input.traffic_control_command_file);
+    break;
+  case TRAFFIC_CONTROL_READ_STATE:
+    exit_code = traffic_control_read_state(cmd_input.traffic_control_command_file);
+    break;
+  case TRAFFIC_CONTROL_READ_STATS:
+    exit_code = traffic_control_read_stats(cmd_input.traffic_control_command_file);
+    break;
+  case RUN_AS_USER_INITIALIZE_CONTAINER:
+    exit_code = set_user(cmd_input.run_as_user_name);
+    if (exit_code != 0) {
+      break;
+    }
+
+    exit_code = initialize_app(cmd_input.yarn_user_name,
+                            cmd_input.app_id,
+                            cmd_input.cred_file,
+                            extract_values(cmd_input.local_dirs),
+                            extract_values(cmd_input.log_dirs),
+                            argv + optind);
+    break;
+  case RUN_AS_USER_LAUNCH_CONTAINER:
+    if (cmd_input.traffic_control_command_file != NULL) {
+      //apply tc rules before switching users and launching the container
+      exit_code = traffic_control_modify_state(cmd_input.traffic_control_command_file);
+      if( exit_code != 0) {
+        //failed to apply tc rules - break out before launching the container
+        break;
+      }
+    }
+
+    exit_code = set_user(cmd_input.run_as_user_name);
+    if (exit_code != 0) {
+      break;
+    }
+
+    exit_code = launch_container_as_user(cmd_input.yarn_user_name,
+                    cmd_input.app_id,
+                    cmd_input.container_id,
+                    cmd_input.current_dir,
+                    cmd_input.script_file,
+                    cmd_input.cred_file,
+                    cmd_input.pid_file,
+                    extract_values(cmd_input.local_dirs),
+                    extract_values(cmd_input.log_dirs),
+                    cmd_input.resources_key,
+                    cmd_input.resources_values);
+    free(cmd_input.resources_key);
+    free(cmd_input.resources_value);
+    free(cmd_input.resources_values);
+    break;
+  case RUN_AS_USER_SIGNAL_CONTAINER:
+    exit_code = set_user(cmd_input.run_as_user_name);
+    if (exit_code != 0) {
+      break;
+    }
+
+    exit_code = signal_container_as_user(cmd_input.yarn_user_name,
+                                  cmd_input.container_pid,
+                                  cmd_input.signal);
+    break;
+  case RUN_AS_USER_DELETE:
+    exit_code = set_user(cmd_input.run_as_user_name);
+    if (exit_code != 0) {
+      break;
+    }
+
+    exit_code = delete_as_user(cmd_input.yarn_user_name,
+                        cmd_input.dir_to_be_deleted,
+                        argv + optind);
+    break;
+  }
+
+  flush_and_close_log_files();
   return exit_code;
 }
