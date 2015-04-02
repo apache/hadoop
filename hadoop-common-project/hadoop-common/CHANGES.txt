@@ -476,6 +476,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11660. Add support for hardware crc of HDFS checksums on ARM aarch64
     architecture (Edward Nevill via Colin P. McCabe)
 
+    HADOOP-9805. Refactor RawLocalFileSystem#rename for improved testability.
+    (Jean-Pierre Matsumoto via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
