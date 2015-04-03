@@ -1136,20 +1136,23 @@ public class TestDFSClientRetries {
       throws Exception {
     // test if DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_KEY
     // is not configured, verify DFSClient uses the default value 400.
-    Configuration dfsConf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(dfsConf).build();
-    cluster.waitActive();
-    NamenodeProtocols nn = cluster.getNameNodeRpc();
-    DFSClient client = new DFSClient(null, nn, dfsConf, null);
-    assertEquals(client.getConf().
-        getBlockWriteLocateFollowingInitialDelayMs(), 400);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      NamenodeProtocols nn = cluster.getNameNodeRpc();
+      DFSClient client = new DFSClient(null, nn, conf, null);
+      assertEquals(client.getConf().
+          getBlockWriteLocateFollowingInitialDelayMs(), 400);
 
-    // change DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_KEY,
-    // verify DFSClient uses the configured value 1000.
-    dfsConf.setInt(DFSConfigKeys.
-        DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_KEY, 1000);
-    client = new DFSClient(null, nn, dfsConf, null);
-    assertEquals(client.getConf().
-        getBlockWriteLocateFollowingInitialDelayMs(), 1000);
+      // change DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_KEY,
+      // verify DFSClient uses the configured value 1000.
+      conf.setInt(DFSConfigKeys.
+          DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_KEY, 1000);
+      client = new DFSClient(null, nn, conf, null);
+      assertEquals(client.getConf().
+          getBlockWriteLocateFollowingInitialDelayMs(), 1000);
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

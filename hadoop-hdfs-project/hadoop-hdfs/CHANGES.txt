@@ -1366,6 +1366,10 @@ Release 2.7.0 - UNRELEASED
     HDFS-7954. TestBalancer#testBalancerWithPinnedBlocks should not be executed
     on Windows.  (Xiaoyu Yao via szetszwo)
 
+    HDFS-8034. Fix
+    TestDFSClientRetries#testDFSClientConfigurationLocateFollowingBlockInitialDelay
+    for Windows. (Xiaoyu Yao via cnauroth)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
