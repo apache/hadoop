@@ -482,9 +482,6 @@ class FSDirWriteFileOp {
     try {
       INodesInPath iip = fsd.addINode(existing, newNode);
       if (iip != null) {
-        if (newNode.isStriped()) {
-          newNode.addStripedBlocksFeature();
-        }
         if (aclEntries != null) {
           AclStorage.updateINodeAcl(newNode, aclEntries, CURRENT_STATE_ID);
         }
@@ -560,9 +557,6 @@ class FSDirWriteFileOp {
     fsd.writeLock();
     try {
       newiip = fsd.addINode(existing, newNode);
-      if (newiip != null && newNode.isStriped()) {
-        newNode.addStripedBlocksFeature();
-      }
     } finally {
       fsd.writeUnlock();
     }

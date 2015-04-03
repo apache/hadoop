@@ -445,8 +445,7 @@ public class TestFSEditLogLoader {
 
       //set the storage policy of the directory
       fs.mkdir(new Path(testDir), new FsPermission("755"));
-      fs.setStoragePolicy(new Path(testDir),
-          HdfsConstants.EC_STORAGE_POLICY_NAME);
+      fs.getClient().getNamenode().createErasureCodingZone(testDir);
 
       // Create a file with striped block
       Path p = new Path(testFilePath);
@@ -518,8 +517,7 @@ public class TestFSEditLogLoader {
 
       //set the storage policy of the directory
       fs.mkdir(new Path(testDir), new FsPermission("755"));
-      fs.setStoragePolicy(new Path(testDir),
-          HdfsConstants.EC_STORAGE_POLICY_NAME);
+      fs.getClient().getNamenode().createErasureCodingZone(testDir);
 
       //create a file with striped blocks
       Path p = new Path(testFilePath);
