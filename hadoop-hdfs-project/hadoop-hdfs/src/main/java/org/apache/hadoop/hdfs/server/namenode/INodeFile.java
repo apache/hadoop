@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite.ID_UNSPECIFIED;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.NO_SNAPSHOT_ID;
 
@@ -24,7 +25,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -393,7 +393,7 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public byte getStoragePolicyID() {
     byte id = getLocalStoragePolicyID();
-    if (id == BlockStoragePolicySuite.ID_UNSPECIFIED) {
+    if (id == ID_UNSPECIFIED) {
       return this.getParent() != null ?
           this.getParent().getStoragePolicyID() : id;
     }
@@ -554,7 +554,8 @@ public class INodeFile extends INodeWithAdditionalFields
   // derive the intended storage type usage for quota by storage type
   @Override
   public final QuotaCounts computeQuotaUsage(
-      BlockStoragePolicySuite bsps, QuotaCounts counts, boolean useCache,
+      BlockStoragePolicySuite bsps, byte blockStoragePolicyId,
+      QuotaCounts counts, boolean useCache,
       int lastSnapshotId) {
     long nsDelta = 1;
     final long ssDeltaNoReplication;
@@ -583,8 +584,8 @@ public class INodeFile extends INodeWithAdditionalFields
     counts.addNameSpace(nsDelta);
     counts.addStorageSpace(ssDeltaNoReplication * replication);
 
-    if (getStoragePolicyID() != BlockStoragePolicySuite.ID_UNSPECIFIED){
-      BlockStoragePolicy bsp = bsps.getPolicy(getStoragePolicyID());
+    if (blockStoragePolicyId != ID_UNSPECIFIED){
+      BlockStoragePolicy bsp = bsps.getPolicy(blockStoragePolicyId);
       List<StorageType> storageTypes = bsp.chooseStorageTypes(replication);
       for (StorageType t : storageTypes) {
         if (!t.supportTypeQuota()) {
@@ -618,7 +619,7 @@ public class INodeFile extends INodeWithAdditionalFields
     counts.addContent(Content.LENGTH, fileLen);
     counts.addContent(Content.DISKSPACE, storagespaceConsumed());
 
-    if (getStoragePolicyID() != BlockStoragePolicySuite.ID_UNSPECIFIED){
+    if (getStoragePolicyID() != ID_UNSPECIFIED){
       BlockStoragePolicy bsp = summary.getBlockStoragePolicySuite().
           getPolicy(getStoragePolicyID());
       List<StorageType> storageTypes = bsp.chooseStorageTypes(getFileReplication());

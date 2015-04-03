@@ -860,23 +860,27 @@ public class FSImage implements Closeable {
    */
   static void updateCountForQuota(BlockStoragePolicySuite bsps,
                                   INodeDirectory root) {
-    updateCountForQuotaRecursively(bsps, root, new QuotaCounts.Builder().build());
+    updateCountForQuotaRecursively(bsps, root.getStoragePolicyID(), root,
+        new QuotaCounts.Builder().build());
  }
 
   private static void updateCountForQuotaRecursively(BlockStoragePolicySuite bsps,
-      INodeDirectory dir, QuotaCounts counts) {
+      byte blockStoragePolicyId, INodeDirectory dir, QuotaCounts counts) {
     final long parentNamespace = counts.getNameSpace();
     final long parentStoragespace = counts.getStorageSpace();
     final EnumCounters<StorageType> parentTypeSpaces = counts.getTypeSpaces();
 
-    dir.computeQuotaUsage4CurrentDirectory(bsps, counts);
+    dir.computeQuotaUsage4CurrentDirectory(bsps, blockStoragePolicyId, counts);
     
     for (INode child : dir.getChildrenList(Snapshot.CURRENT_STATE_ID)) {
+      final byte childPolicyId = child.getStoragePolicyIDForQuota(blockStoragePolicyId);
       if (child.isDirectory()) {
-        updateCountForQuotaRecursively(bsps, child.asDirectory(), counts);
+        updateCountForQuotaRecursively(bsps, childPolicyId,
+            child.asDirectory(), counts);
       } else {
         // file or symlink: count here to reduce recursive calls.
-        child.computeQuotaUsage(bsps, counts, false);
+        child.computeQuotaUsage(bsps, childPolicyId, counts, false,
+            Snapshot.CURRENT_STATE_ID);
       }
     }
       

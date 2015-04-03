@@ -462,6 +462,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7742. Favoring decommissioning node for replication can cause a block 
     to stay underreplicated for long periods (Nathan Roberts via kihwal)
 
+    HDFS-7811. Avoid recursive call getStoragePolicyID in
+    INodeFile#computeQuotaUsage. (Xiaoyu Yao and jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

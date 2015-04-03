@@ -641,10 +641,13 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
   }
 
   public QuotaCounts computeQuotaUsage4CurrentDirectory(
-    BlockStoragePolicySuite bsps, QuotaCounts counts) {
+      BlockStoragePolicySuite bsps, byte storagePolicyId,
+      QuotaCounts counts) {
     for(DirectoryDiff d : diffs) {
       for(INode deleted : d.getChildrenDiff().getList(ListType.DELETED)) {
-        deleted.computeQuotaUsage(bsps, counts, false, Snapshot.CURRENT_STATE_ID);
+        final byte childPolicyId = deleted.getStoragePolicyIDForQuota(storagePolicyId);
+        deleted.computeQuotaUsage(bsps, childPolicyId, counts, false,
+            Snapshot.CURRENT_STATE_ID);
       }
     }
     return counts;
