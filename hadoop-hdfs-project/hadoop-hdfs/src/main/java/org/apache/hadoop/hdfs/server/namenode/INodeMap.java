@@ -103,8 +103,8 @@ public class INodeMap {
 
       @Override
       public QuotaCounts computeQuotaUsage(
-          BlockStoragePolicySuite bsps, QuotaCounts counts,
-          boolean useCache, int lastSnapshotId) {
+          BlockStoragePolicySuite bsps, byte blockStoragePolicyId,
+          QuotaCounts counts, boolean useCache, int lastSnapshotId) {
         return null;
       }
 
