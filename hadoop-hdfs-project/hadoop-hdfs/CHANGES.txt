@@ -1376,6 +1376,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7996. After swapping a volume, BlockReceiver reports
     ReplicaNotFoundException (Lei (Eddy) Xu via Colin P. McCabe)
 
+    HDFS-8051. FsVolumeList#addVolume should release volume reference if not
+    put it into BlockScanner. (Lei (Eddy) Xu via Colin P. McCabe)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
