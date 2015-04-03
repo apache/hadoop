@@ -431,6 +431,8 @@ Trunk (Unreleased)
     HADOOP-11703. git should ignore .DS_Store files on Mac OS X (Abin Shahab
     via aw)
 
+    HADOOP-11797. releasedocmaker.py needs to put ASF headers on output (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
