@@ -23,13 +23,12 @@ import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 /**
  * An abstract erasure encoder that's to be inherited by new encoders.
  *
- * It implements the {@link ErasureEncoder} interface.
+ * It implements the {@link ErasureCoder} interface.
  */
-public abstract class AbstractErasureEncoder extends AbstractErasureCoder
-    implements ErasureEncoder {
+public abstract class AbstractErasureEncoder extends AbstractErasureCoder {
 
   @Override
-  public ErasureCodingStep encode(ECBlockGroup blockGroup) {
+  public ErasureCodingStep calculateCoding(ECBlockGroup blockGroup) {
     // We may have more than this when considering complicate cases. HADOOP-11550
     return prepareEncodingStep(blockGroup);
   }

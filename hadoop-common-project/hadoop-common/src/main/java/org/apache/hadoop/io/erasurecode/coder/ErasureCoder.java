@@ -18,6 +18,7 @@
 package org.apache.hadoop.io.erasurecode.coder;
 
 import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.io.erasurecode.ECBlockGroup;
 
 /**
  * An erasure coder to perform encoding or decoding given a group. Generally it
@@ -62,6 +63,17 @@ public interface ErasureCoder extends Configurable {
    * @return chunk buffer size
    */
   public int getChunkSize();
+
+  /**
+   * Calculate the encoding or decoding steps given a block blockGroup.
+   *
+   * Note, currently only one coding step is supported. Will support complex
+   * cases of multiple coding steps.
+   *
+   * @param blockGroup the erasure coding block group containing all necessary
+   *                   information for codec calculation
+   */
+  public ErasureCodingStep calculateCoding(ECBlockGroup blockGroup);
 
   /**
    * Tell if native or off-heap buffer is preferred or not. It's for callers to
