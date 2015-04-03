@@ -26,8 +26,8 @@ import org.apache.hadoop.io.erasurecode.TestCoderBase;
  * Erasure coder test base with utilities.
  */
 public abstract class TestErasureCoderBase extends TestCoderBase {
-  protected Class<? extends ErasureEncoder> encoderClass;
-  protected Class<? extends ErasureDecoder> decoderClass;
+  protected Class<? extends ErasureCoder> encoderClass;
+  protected Class<? extends ErasureCoder> decoderClass;
 
   protected int numChunksInBlock = 16;
 
@@ -55,7 +55,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
   protected void testCoding(boolean usingDirectBuffer) {
     this.usingDirectBuffer = usingDirectBuffer;
 
-    ErasureEncoder encoder = createEncoder();
+    ErasureCoder encoder = createEncoder();
 
     // Generate data and encode
     ECBlockGroup blockGroup = prepareBlockGroupForEncoding();
@@ -68,7 +68,7 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
 
     ErasureCodingStep codingStep;
     try {
-      codingStep = encoder.encode(blockGroup);
+      codingStep = encoder.calculateCoding(blockGroup);
       performCodingStep(codingStep);
     } finally {
       encoder.release();
@@ -78,9 +78,9 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
 
     //Decode
     blockGroup = new ECBlockGroup(clonedDataBlocks, blockGroup.getParityBlocks());
-    ErasureDecoder decoder = createDecoder();
+    ErasureCoder decoder = createDecoder();
     try {
-      codingStep = decoder.decode(blockGroup);
+      codingStep = decoder.calculateCoding(blockGroup);
       performCodingStep(codingStep);
     } finally {
       decoder.release();
@@ -138,8 +138,8 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
    * Create erasure encoder for test.
    * @return
    */
-  private ErasureEncoder createEncoder() {
-    ErasureEncoder encoder;
+  private ErasureCoder createEncoder() {
+    ErasureCoder encoder;
     try {
       encoder = encoderClass.newInstance();
     } catch (Exception e) {
@@ -155,8 +155,8 @@ public abstract class TestErasureCoderBase extends TestCoderBase {
    * Create the erasure decoder for the test.
    * @return
    */
-  private ErasureDecoder createDecoder() {
-    ErasureDecoder decoder;
+  private ErasureCoder createDecoder() {
+    ErasureCoder decoder;
     try {
       decoder = decoderClass.newInstance();
     } catch (Exception e) {

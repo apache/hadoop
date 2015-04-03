@@ -44,3 +44,15 @@
 
     HDFS-8005. Erasure Coding: simplify striped block recovery work computation
     and add tests (Jing Zhao)
+
+    HDFS-7617. Add unit tests for editlog transactions for EC 
+    (Hui Zheng via Zhe Zhang)
+
+    HADOOP-11782. Correct two thrown messages in ECSchema class
+    (Xinwei Qin via Kai Zheng)
+
+    HDFS-7839. Erasure coding: implement facilities in NameNode to create and
+    manage EC zones (Zhe Zhang)
+
+    HADOOP-11740. Combine erasure encoder and decoder interfaces (Zhe Zhang)
+
