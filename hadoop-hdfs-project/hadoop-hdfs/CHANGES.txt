@@ -571,6 +571,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-8035. Move checkBlocksProperlyReplicated() in FSNamesystem to
     BlockManager. (wheat9)
 
+    HDFS-7811. Avoid recursive call getStoragePolicyID in
+    INodeFile#computeQuotaUsage. (Xiaoyu Yao and jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.

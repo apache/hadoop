@@ -45,6 +45,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
+import static org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite.ID_UNSPECIFIED;
+
 /**
  * Directory INode class.
  */
@@ -123,18 +125,18 @@ public class INodeDirectory extends INodeWithAdditionalFields
         return (xattr.getValue())[0];
       }
     }
-    return BlockStoragePolicySuite.ID_UNSPECIFIED;
+    return ID_UNSPECIFIED;
   }
 
   @Override
   public byte getStoragePolicyID() {
     byte id = getLocalStoragePolicyID();
-    if (id != BlockStoragePolicySuite.ID_UNSPECIFIED) {
+    if (id != ID_UNSPECIFIED) {
       return id;
     }
     // if it is unspecified, check its parent
     return getParent() != null ? getParent().getStoragePolicyID() :
-        BlockStoragePolicySuite.ID_UNSPECIFIED;
+        ID_UNSPECIFIED;
   }
 
   void setQuota(BlockStoragePolicySuite bsps, long nsQuota, long ssQuota, StorageType type) {
@@ -568,10 +570,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   @Override
-  public QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps, QuotaCounts counts, boolean useCache,
+  public QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps,
+      byte blockStoragePolicyId, QuotaCounts counts, boolean useCache,
       int lastSnapshotId) {
     final DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
-    
+
     // we are computing the quota usage for a specific snapshot here, i.e., the
     // computation only includes files/directories that exist at the time of the
     // given snapshot
@@ -579,7 +582,9 @@ public class INodeDirectory extends INodeWithAdditionalFields
         && !(useCache && isQuotaSet())) {
       ReadOnlyList<INode> childrenList = getChildrenList(lastSnapshotId);
       for (INode child : childrenList) {
-        child.computeQuotaUsage(bsps, counts, useCache, lastSnapshotId);
+        final byte childPolicyId = child.getStoragePolicyIDForQuota(blockStoragePolicyId);
+        child.computeQuotaUsage(bsps, childPolicyId, counts, useCache,
+            lastSnapshotId);
       }
       counts.addNameSpace(1);
       return counts;
@@ -591,28 +596,33 @@ public class INodeDirectory extends INodeWithAdditionalFields
       return q.AddCurrentSpaceUsage(counts);
     } else {
       useCache = q != null && !q.isQuotaSet() ? false : useCache;
-      return computeDirectoryQuotaUsage(bsps, counts, useCache, lastSnapshotId);
+      return computeDirectoryQuotaUsage(bsps, blockStoragePolicyId, counts,
+          useCache, lastSnapshotId);
     }
   }
 
   private QuotaCounts computeDirectoryQuotaUsage(BlockStoragePolicySuite bsps,
-      QuotaCounts counts, boolean useCache, int lastSnapshotId) {
+      byte blockStoragePolicyId, QuotaCounts counts, boolean useCache,
+      int lastSnapshotId) {
     if (children != null) {
       for (INode child : children) {
-        child.computeQuotaUsage(bsps, counts, useCache, lastSnapshotId);
+        final byte childPolicyId = child.getStoragePolicyIDForQuota(blockStoragePolicyId);
+        child.computeQuotaUsage(bsps, childPolicyId, counts, useCache,
+            lastSnapshotId);
       }
     }
-    return computeQuotaUsage4CurrentDirectory(bsps, counts);
+    return computeQuotaUsage4CurrentDirectory(bsps, blockStoragePolicyId,
+        counts);
   }
   
   /** Add quota usage for this inode excluding children. */
   public QuotaCounts computeQuotaUsage4CurrentDirectory(
-      BlockStoragePolicySuite bsps, QuotaCounts counts) {
+      BlockStoragePolicySuite bsps, byte storagePolicyId, QuotaCounts counts) {
     counts.addNameSpace(1);
     // include the diff list
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     if (sf != null) {
-      sf.computeQuotaUsage4CurrentDirectory(bsps, counts);
+      sf.computeQuotaUsage4CurrentDirectory(bsps, storagePolicyId, counts);
     }
     return counts;
   }
