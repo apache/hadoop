@@ -33,18 +33,14 @@ import java.io.IOException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.junit.Assert;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -59,7 +55,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
@@ -137,9 +132,10 @@ public class TestFSImage {
     }
   }
 
-  private void testSaveAndLoadINodeFile(FSNamesystem fsn, Configuration conf,
-      boolean isUC) throws IOException{
+  private void testSaveAndLoadStripedINodeFile(FSNamesystem fsn, Configuration conf,
+                                               boolean isUC) throws IOException{
     // contruct a INode with StripedBlock for saving and loading
+    fsn.createErasureCodingZone("/", false);
     long id = 123456789;
     byte[] name = "testSaveAndLoadInodeFile_testfile".getBytes();
     PermissionStatus permissionStatus = new PermissionStatus("testuser_a",
@@ -149,9 +145,8 @@ public class TestFSImage {
     BlockInfoContiguous[] blks = new BlockInfoContiguous[0];
     short replication = 3;
     long preferredBlockSize = 128*1024*1024;
-    byte storagePolicyID = HdfsConstants.EC_STORAGE_POLICY_ID;
     INodeFile file = new INodeFile(id, name, permissionStatus, mtime, atime,
-        blks, replication, preferredBlockSize, storagePolicyID);
+        blks, replication, preferredBlockSize);
     ByteArrayOutputStream bs = new ByteArrayOutputStream();
     file.addStripedBlocksFeature();
 
@@ -237,13 +232,13 @@ public class TestFSImage {
    * FSImageSerialization and loaded by FSImageFormat#Loader.
    */
   @Test
-  public void testSaveAndLoadInodeFile() throws IOException{
+  public void testSaveAndLoadStripedINodeFile() throws IOException{
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
-      testSaveAndLoadINodeFile(cluster.getNamesystem(), conf, false);
+      testSaveAndLoadStripedINodeFile(cluster.getNamesystem(), conf, false);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -256,14 +251,14 @@ public class TestFSImage {
    * saved and loaded by FSImageSerialization
    */
   @Test
-  public void testSaveAndLoadInodeFileUC() throws IOException{
+  public void testSaveAndLoadStripedINodeFileUC() throws IOException{
     // construct a INode with StripedBlock for saving and loading
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
-      testSaveAndLoadINodeFile(cluster.getNamesystem(), conf, true);
+      testSaveAndLoadStripedINodeFile(cluster.getNamesystem(), conf, true);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -402,7 +397,7 @@ public class TestFSImage {
           .build();
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
-      fs.setStoragePolicy(new Path("/"), HdfsConstants.EC_STORAGE_POLICY_NAME);
+      fs.getClient().getNamenode().createErasureCodingZone("/");
       Path file = new Path("/striped");
       FSDataOutputStream out = fs.create(file);
       byte[] bytes = DFSTestUtil.generateSequentialBytes(0, BLOCK_SIZE);

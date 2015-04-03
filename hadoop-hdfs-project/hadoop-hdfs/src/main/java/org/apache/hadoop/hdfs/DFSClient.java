@@ -2994,6 +2994,21 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return new EncryptionZoneIterator(namenode, traceSampler);
   }
 
+  public void createErasureCodingZone(String src)
+      throws IOException {
+    checkOpen();
+    TraceScope scope = getPathTraceScope("createErasureCodingZone", src);
+    try {
+      namenode.createErasureCodingZone(src);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          SafeModeException.class,
+          UnresolvedPathException.class);
+    } finally {
+      scope.close();
+    }
+  }
+
   public void setXAttr(String src, String name, byte[] value, 
       EnumSet<XAttrSetFlag> flag) throws IOException {
     checkOpen();

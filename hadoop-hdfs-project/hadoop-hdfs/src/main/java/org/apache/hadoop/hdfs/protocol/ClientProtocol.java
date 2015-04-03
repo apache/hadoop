@@ -1363,6 +1363,14 @@ public interface ClientProtocol {
       long prevId) throws IOException;
 
   /**
+   * Create an erasure coding zone (currently with hardcoded schema)
+   * TODO: Configurable and pluggable schemas (HDFS-7337)
+   */
+  @Idempotent
+  public void createErasureCodingZone(String src)
+      throws IOException;
+
+  /**
    * Set xattr of a file or directory.
    * The name must be prefixed with the namespace followed by ".". For example,
    * "user.attr".
