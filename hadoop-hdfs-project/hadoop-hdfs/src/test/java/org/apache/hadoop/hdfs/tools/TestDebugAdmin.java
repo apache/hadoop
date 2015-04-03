@@ -77,17 +77,18 @@ public class TestDebugAdmin {
       System.setOut(oldOut);
       IOUtils.closeStream(out);
     }
-    return "ret: " + ret + ", " + bytes.toString();
+    return "ret: " + ret + ", " +
+        bytes.toString().replaceAll(System.getProperty("line.separator"), "");
   }
 
   @Test(timeout = 60000)
   public void testRecoverLease() throws Exception {
-    assertEquals("ret: 1, You must supply a -path argument to recoverLease.\n",
+    assertEquals("ret: 1, You must supply a -path argument to recoverLease.",
         runCmd(new String[]{"recoverLease", "-retries", "1"}));
     FSDataOutputStream out = fs.create(new Path("/foo"));
     out.write(123);
     out.close();
-    assertEquals("ret: 0, recoverLease SUCCEEDED on /foo\n",
+    assertEquals("ret: 0, recoverLease SUCCEEDED on /foo",
         runCmd(new String[]{"recoverLease", "-path", "/foo"}));
   }
 
@@ -98,18 +99,18 @@ public class TestDebugAdmin {
     ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, new Path("/bar"));
     File blockFile = getBlockFile(fsd,
         block.getBlockPoolId(), block.getLocalBlock());
-    assertEquals("ret: 1, You must specify a meta file with -meta\n",
+    assertEquals("ret: 1, You must specify a meta file with -meta",
         runCmd(new String[]{"verify", "-block", blockFile.getAbsolutePath()}));
     File metaFile = getMetaFile(fsd,
         block.getBlockPoolId(), block.getLocalBlock());
     assertEquals("ret: 0, Checksum type: " +
-          "DataChecksum(type=CRC32C, chunkSize=512)\n",
+          "DataChecksum(type=CRC32C, chunkSize=512)",
         runCmd(new String[]{"verify",
             "-meta", metaFile.getAbsolutePath()}));
     assertEquals("ret: 0, Checksum type: " +
-          "DataChecksum(type=CRC32C, chunkSize=512)\n" +
+          "DataChecksum(type=CRC32C, chunkSize=512)" +
           "Checksum verification succeeded on block file " +
-          blockFile.getAbsolutePath() + "\n",
+          blockFile.getAbsolutePath(),
         runCmd(new String[]{"verify",
             "-meta", metaFile.getAbsolutePath(),
             "-block", blockFile.getAbsolutePath()})

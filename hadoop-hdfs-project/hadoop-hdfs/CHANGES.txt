@@ -1370,6 +1370,9 @@ Release 2.7.0 - UNRELEASED
     TestDFSClientRetries#testDFSClientConfigurationLocateFollowingBlockInitialDelay
     for Windows. (Xiaoyu Yao via cnauroth)
 
+    HDFS-8039. Fix TestDebugAdmin#testRecoverLease and
+    testVerifyBlockChecksumCommand on Windows. (Xiaoyu Yao via cnauroth)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
