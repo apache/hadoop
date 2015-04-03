@@ -75,6 +75,10 @@ public class NMController extends Controller implements YarnWebParams {
     render(ContainerPage.class);
   }
 
+  public void errorsAndWarnings() {
+    render(NMErrorsAndWarningsPage.class);
+  }
+
   public void logs() {
     String containerIdStr = $(CONTAINER_ID);
     ContainerId containerId = null;
