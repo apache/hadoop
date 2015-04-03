@@ -827,7 +827,7 @@ public class TestCodec {
     br.close();
   }
 
-  public void testGzipCodecWrite(boolean useNative) throws IOException {
+  private void testGzipCodecWrite(boolean useNative) throws IOException {
     // Create a gzipped file using a compressor from the CodecPool,
     // and try to read it back via the regular GZIPInputStream.
 
@@ -894,7 +894,7 @@ public class TestCodec {
   public void testGzipNativeCodecWrite() throws IOException {
     testGzipCodecWrite(true);
   }
-
+  @Test
   public void testCodecPoolAndGzipDecompressor() {
     // BuiltInZlibInflater should not be used as the GzipCodec decompressor.
     // Assert that this is the case.
