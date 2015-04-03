@@ -321,6 +321,9 @@ Release 2.8.0 - UNRELEASED
     causes counter limits are not reset correctly.
     (Zhihai Xu via harsh)
 
+    MAPREDUCE-4844. Counters / AbstractCounters have constant references not
+    declared final. (Brahma Reddy Battula via gera)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
