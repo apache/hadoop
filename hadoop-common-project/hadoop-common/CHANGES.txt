@@ -483,6 +483,9 @@ Release 2.8.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-11785. Reduce the number of listStatus operation in distcp
+    buildListing (Zoran Dimitrijevic via Colin P. McCabe)
+
   BUG FIXES
 
     HADOOP-10027. *Compressor_deflateBytesDirect passes instance instead of

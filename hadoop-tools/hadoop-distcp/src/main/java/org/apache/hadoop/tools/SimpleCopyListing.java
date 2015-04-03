@@ -193,12 +193,12 @@ public class SimpleCopyListing extends CopyListing {
             writeToFileListing(fileListWriter, sourceCopyListingStatus,
                 sourcePathRoot, options);
 
-            if (isDirectoryAndNotEmpty(sourceFS, sourceStatus)) {
+            if (sourceStatus.isDirectory()) {
               if (LOG.isDebugEnabled()) {
-                LOG.debug("Traversing non-empty source dir: " + sourceStatus.getPath());
+                LOG.debug("Traversing source dir: " + sourceStatus.getPath());
               }
-              traverseNonEmptyDirectory(fileListWriter, sourceStatus, sourcePathRoot,
-                  options);
+              traverseDirectory(fileListWriter, sourceFS, sourceStatus,
+                                sourcePathRoot, options);
             }
           }
         }
@@ -275,22 +275,17 @@ public class SimpleCopyListing extends CopyListing {
             SequenceFile.Writer.compression(SequenceFile.CompressionType.NONE));
   }
 
-  private static boolean isDirectoryAndNotEmpty(FileSystem fileSystem,
-                                    FileStatus fileStatus) throws IOException {
-    return fileStatus.isDirectory() && getChildren(fileSystem, fileStatus).length > 0;
-  }
-
   private static FileStatus[] getChildren(FileSystem fileSystem,
                                          FileStatus parent) throws IOException {
     return fileSystem.listStatus(parent.getPath());
   }
 
-  private void traverseNonEmptyDirectory(SequenceFile.Writer fileListWriter,
-                                         FileStatus sourceStatus,
-                                         Path sourcePathRoot,
-                                         DistCpOptions options)
-                                         throws IOException {
-    FileSystem sourceFS = sourcePathRoot.getFileSystem(getConf());
+  private void traverseDirectory(SequenceFile.Writer fileListWriter,
+                                 FileSystem sourceFS,
+                                 FileStatus sourceStatus,
+                                 Path sourcePathRoot,
+                                 DistCpOptions options)
+                                 throws IOException {
     final boolean preserveAcls = options.shouldPreserve(FileAttribute.ACL);
     final boolean preserveXAttrs = options.shouldPreserve(FileAttribute.XATTR);
     final boolean preserveRawXattrs = options.shouldPreserveRawXattrs();
@@ -299,9 +294,9 @@ public class SimpleCopyListing extends CopyListing {
 
     while (!pathStack.isEmpty()) {
       for (FileStatus child: getChildren(sourceFS, pathStack.pop())) {
-        if (LOG.isDebugEnabled())
-          LOG.debug("Recording source-path: "
-                    + sourceStatus.getPath() + " for copy.");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Recording source-path: " + child.getPath() + " for copy.");
+        }
         CopyListingFileStatus childCopyListingStatus =
           DistCpUtils.toCopyListingFileStatus(sourceFS, child,
             preserveAcls && child.isDirectory(),
@@ -309,16 +304,16 @@ public class SimpleCopyListing extends CopyListing {
             preserveRawXattrs && child.isDirectory());
         writeToFileListing(fileListWriter, childCopyListingStatus,
              sourcePathRoot, options);
-        if (isDirectoryAndNotEmpty(sourceFS, child)) {
-          if (LOG.isDebugEnabled())
-            LOG.debug("Traversing non-empty source dir: "
-                       + sourceStatus.getPath());
+        if (child.isDirectory()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Traversing into source dir: " + child.getPath());
+          }
           pathStack.push(child);
         }
       }
     }
   }
-  
+
   private void writeToFileListingRoot(SequenceFile.Writer fileListWriter,
       CopyListingFileStatus fileStatus, Path sourcePathRoot,
       DistCpOptions options) throws IOException {
