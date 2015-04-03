@@ -67,6 +67,7 @@ public class RMWebApp extends WebApp implements YarnWebParams {
     route(pajoin("/appattempt", APPLICATION_ATTEMPT_ID), RmController.class,
       "appattempt");
     route(pajoin("/container", CONTAINER_ID), RmController.class, "container");
+    route("/errors-and-warnings", RmController.class, "errorsAndWarnings");
   }
 
   @Override

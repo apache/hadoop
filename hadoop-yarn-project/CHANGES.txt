@@ -101,6 +101,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3248. Display count of nodes blacklisted by apps in the web UI.
     (Varun Vasudev via xgong)
 
+    YARN-2901. Add errors and warning metrics page to RM, NM web UI. 
+    (Varun Vasudev via wangda)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

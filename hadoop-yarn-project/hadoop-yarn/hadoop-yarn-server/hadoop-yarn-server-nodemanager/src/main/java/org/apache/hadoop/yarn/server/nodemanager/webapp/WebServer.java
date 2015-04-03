@@ -126,6 +126,7 @@ public class WebServer extends AbstractService {
       route(
           pajoin("/containerlogs", CONTAINER_ID, APP_OWNER, CONTAINER_LOG_TYPE),
           NMController.class, "logs");
+      route("/errors-and-warnings", NMController.class, "errorsAndWarnings");
     }
 
   }
