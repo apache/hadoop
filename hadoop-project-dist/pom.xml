@@ -165,8 +165,10 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <jdiff.stable.api>0.20.2</jdiff.stable.api>
+        <jdiff.stable.api>2.6.0</jdiff.stable.api>
         <jdiff.stability>-unstable</jdiff.stability>
+        <!-- Commented out for HADOOP-11776 -->
+        <!-- Uncomment param name="${jdiff.compatibility}" in javadoc doclet if compatibility is not empty -->
         <jdiff.compatibility></jdiff.compatibility>
         <jdiff.javadoc.maxmemory>512m</jdiff.javadoc.maxmemory>
       </properties>
@@ -227,6 +229,14 @@
                       <outputDirectory>${project.build.directory}</outputDirectory>
                       <destFileName>hadoop-annotations.jar</destFileName>
                     </artifactItem>
+                    <artifactItem>
+                      <groupId>xerces</groupId>
+                      <artifactId>xercesImpl</artifactId>
+                      <version>${xerces.jdiff.version}</version>
+                      <overWrite>false</overWrite>
+                      <outputDirectory>${project.build.directory}</outputDirectory>
+                      <destFileName>xerces.jar</destFileName>
+                    </artifactItem>
                   </artifactItems>
                 </configuration>
               </execution>
@@ -276,7 +286,7 @@
                       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsJDiffDoclet"
                               path="${project.build.directory}/hadoop-annotations.jar:${project.build.directory}/jdiff.jar">
                         <param name="-apidir" value="${project.build.directory}/site/jdiff/xml"/>
-                        <param name="-apiname" value="hadoop-core ${project.version}"/>
+                        <param name="-apiname" value="${project.name} ${project.version}"/>
                         <param name="${jdiff.stability}"/>
                       </doclet>
                       <packageset dir="${basedir}/src/main/java"/>
@@ -289,17 +299,17 @@
                              sourceFiles="${basedir}/dev-support/jdiff/Null.java"
                              maxmemory="${jdiff.javadoc.maxmemory}">
                       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsJDiffDoclet"
-                              path="${project.build.directory}/hadoop-annotations.jar:${project.build.directory}/jdiff.jar">
-                        <param name="-oldapi" value="hadoop-core ${jdiff.stable.api}"/>
-                        <param name="-newapi" value="hadoop-core ${project.version}"/>
+                              path="${project.build.directory}/hadoop-annotations.jar:${project.build.directory}/jdiff.jar:${project.build.directory}/xerces.jar">
+                        <param name="-oldapi" value="${project.name} ${jdiff.stable.api}"/>
+                        <param name="-newapi" value="${project.name} ${project.version}"/>
                         <param name="-oldapidir" value="${basedir}/dev-support/jdiff"/>
                         <param name="-newapidir" value="${project.build.directory}/site/jdiff/xml"/>
                         <param name="-javadocold"
-                               value="http://hadoop.apache.org/docs/${jdiff.stable.api}/api/"/>
+                               value="http://hadoop.apache.org/docs/r${jdiff.stable.api}/api/"/>
                         <param name="-javadocnew" value="${project.build.directory}/site/api"/>
                         <param name="-stats"/>
                         <param name="${jdiff.stability}"/>
-                        <param name="${jdiff.compatibility}"/>
+                        <!--param name="${jdiff.compatibility}"/-->
                       </doclet>
                       <classpath>
                         <path refid="maven.compile.classpath"/>

@@ -1205,6 +1205,8 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11377. Added Null.java without which jdiff completely flops. (Tsuyoshi
     Ozawa via vinodkv)
+
+    HADOOP-11776. Fixed the broken JDiff support in Hadoop 2. (Li Lu via vinodkv)
     
 Release 2.6.1 - UNRELEASED
 
