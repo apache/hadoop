@@ -1202,6 +1202,9 @@ Release 2.7.0 - UNRELEASED
     
     HADOOP-11757. NFS gateway should shutdown when it can't start UDP or TCP
     server (brandonli)
+
+    HADOOP-11377. Added Null.java without which jdiff completely flops. (Tsuyoshi
+    Ozawa via vinodkv)
     
 Release 2.6.1 - UNRELEASED
 
