@@ -142,6 +142,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3415. Non-AM containers can be counted towards amResourceUsage of a
     Fair Scheduler queue (Zhihai Xu via Sandy Ryza)
 
+    YARN-3435. AM container to be allocated Appattempt AM container shown as null.
+    (Bibin A Chundatt via xgong)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
