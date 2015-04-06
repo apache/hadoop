@@ -31,13 +31,20 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCSt
  * Represents a striped block that is currently being constructed.
  * This is usually the last block of a file opened for write or append.
  */
-public class BlockInfoStripedUnderConstruction extends BlockInfoStriped {
+public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
+    implements BlockInfoUnderConstruction{
   private BlockUCState blockUCState;
 
   /**
    * Block replicas as assigned when the block was allocated.
    */
   private ReplicaUnderConstruction[] replicas;
+
+  /**
+   * Index of the primary data node doing the recovery. Useful for log
+   * messages.
+   */
+  private int primaryNodeIndex = -1;
 
   /**
    * The new generation stamp, which this block will have
@@ -82,6 +89,7 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped {
   }
 
   /** Set expected locations */
+  @Override
   public void setExpectedLocations(DatanodeStorageInfo[] targets) {
     int numLocations = targets == null ? 0 : targets.length;
     this.replicas = new ReplicaUnderConstruction[numLocations];
@@ -98,6 +106,7 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped {
    * Create array of expected replica locations
    * (as has been assigned by chooseTargets()).
    */
+  @Override
   public DatanodeStorageInfo[] getExpectedStorageLocations() {
     int numLocations = getNumExpectedLocations();
     DatanodeStorageInfo[] storages = new DatanodeStorageInfo[numLocations];
@@ -117,7 +126,7 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped {
     return indices;
   }
 
-  /** Get the number of expected locations */
+  @Override
   public int getNumExpectedLocations() {
     return replicas == null ? 0 : replicas.length;
   }
@@ -135,16 +144,22 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped {
     blockUCState = s;
   }
 
-  /** Get block recovery ID */
+  @Override
   public long getBlockRecoveryId() {
     return blockRecoveryId;
   }
 
-  /**
-   * Process the recorded replicas. When about to commit or finish the
-   * pipeline recovery sort out bad replicas.
-   * @param genStamp  The final generation stamp for the block.
-   */
+  @Override
+  public Block getTruncateBlock() {
+    return null;
+  }
+
+  @Override
+  public Block toBlock(){
+    return this;
+  }
+
+  @Override
   public void setGenerationStampAndVerifyReplicas(long genStamp) {
     // Set the generation stamp for the block.
     setGenerationStamp(genStamp);
@@ -178,18 +193,53 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped {
     setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
   }
 
-  /**
-   * Initialize lease recovery for this striped block.
-   */
+  @Override
   public void initializeBlockRecovery(long recoveryId) {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
     if (replicas == null || replicas.length == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*" +
-          " BlockInfoUnderConstruction.initLeaseRecovery:" +
+          " BlockInfoStripedUnderConstruction.initLeaseRecovery:" +
           " No blocks found, lease removed.");
     }
-    // TODO we need to implement different recovery logic here
+    boolean allLiveReplicasTriedAsPrimary = true;
+    for (ReplicaUnderConstruction replica : replicas) {
+      // Check if all replicas have been tried or not.
+      if (replica.isAlive()) {
+        allLiveReplicasTriedAsPrimary = (allLiveReplicasTriedAsPrimary &&
+            replica.getChosenAsPrimary());
+      }
+    }
+    if (allLiveReplicasTriedAsPrimary) {
+      // Just set all the replicas to be chosen whether they are alive or not.
+      for (ReplicaUnderConstruction replica : replicas) {
+        replica.setChosenAsPrimary(false);
+      }
+    }
+    long mostRecentLastUpdate = 0;
+    ReplicaUnderConstruction primary = null;
+    primaryNodeIndex = -1;
+    for(int i = 0; i < replicas.length; i++) {
+      // Skip alive replicas which have been chosen for recovery.
+      if (!(replicas[i].isAlive() && !replicas[i].getChosenAsPrimary())) {
+        continue;
+      }
+      final ReplicaUnderConstruction ruc = replicas[i];
+      final long lastUpdate = ruc.getExpectedStorageLocation()
+          .getDatanodeDescriptor().getLastUpdateMonotonic();
+      if (lastUpdate > mostRecentLastUpdate) {
+        primaryNodeIndex = i;
+        primary = ruc;
+        mostRecentLastUpdate = lastUpdate;
+      }
+    }
+    if (primary != null) {
+      primary.getExpectedStorageLocation().getDatanodeDescriptor()
+          .addBlockToBeRecovered(this);
+      primary.setChosenAsPrimary(true);
+      NameNode.blockStateChangeLog.info(
+          "BLOCK* {} recovery started, primary={}", this, primary);
+    }
   }
 
   void addReplicaIfNotPresent(DatanodeStorageInfo storage, Block reportedBlock,
@@ -238,7 +288,9 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped {
   }
 
   private void appendUCParts(StringBuilder sb) {
-    sb.append("{UCState=").append(blockUCState).append(", replicas=[");
+    sb.append("{UCState=").append(blockUCState).
+        append(", primaryNodeIndex=").append(primaryNodeIndex).
+        append(", replicas=[");
     if (replicas != null) {
       int i = 0;
       for (ReplicaUnderConstruction r : replicas) {
