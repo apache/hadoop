@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -90,7 +91,7 @@ public class TestAddBlockRetry {
   public void testRetryAddBlockWhileInChooseTarget() throws Exception {
     final String src = "/testRetryAddBlockWhileInChooseTarget";
 
-    FSNamesystem ns = cluster.getNamesystem();
+    final FSNamesystem ns = cluster.getNamesystem();
     BlockManager spyBM = spy(ns.getBlockManager());
     final NamenodeProtocols nn = cluster.getNameNodeRpc();
 
@@ -107,11 +108,15 @@ public class TestAddBlockRetry {
         LOG.info("chooseTarget for " + src);
         DatanodeStorageInfo[] ret =
             (DatanodeStorageInfo[]) invocation.callRealMethod();
+        assertTrue("Penultimate block must be complete",
+            checkFileProgress(src, false));
         count++;
         if(count == 1) { // run second addBlock()
           LOG.info("Starting second addBlock for " + src);
           nn.addBlock(src, "clientName", null, null,
               INodeId.GRANDFATHER_INODE_ID, null);
+          assertTrue("Penultimate block must be complete",
+              checkFileProgress(src, false));
           LocatedBlocks lbs = nn.getBlockLocations(src, 0, Long.MAX_VALUE);
           assertEquals("Must be one block", 1, lbs.getLocatedBlocks().size());
           lb2 = lbs.get(0);
@@ -140,6 +145,16 @@ public class TestAddBlockRetry {
     lb1 = lbs.get(0);
     assertEquals("Wrong replication", REPLICATION, lb1.getLocations().length);
     assertEquals("Blocks are not equal", lb1.getBlock(), lb2.getBlock());
+  }
+
+  boolean checkFileProgress(String src, boolean checkall) throws IOException {
+    final FSNamesystem ns = cluster.getNamesystem();
+    ns.readLock();
+    try {
+      return ns.checkFileProgress(src, ns.dir.getINode(src).asFile(), checkall);
+    } finally {
+      ns.readUnlock();
+    }
   }
 
   /*

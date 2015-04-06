@@ -3032,6 +3032,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       FileState fileState = analyzeFileState(
           src, fileId, clientName, previous, onRetryBlock);
       final INodeFile pendingFile = fileState.inode;
+      // Check if the penultimate block is minimally replicated
+      if (!checkFileProgress(src, pendingFile, false)) {
+        throw new NotReplicatedYetException("Not replicated yet: " + src);
+      }
       src = fileState.path;
 
       if (onRetryBlock[0] != null && onRetryBlock[0].getLocations().length > 0) {
@@ -3243,11 +3247,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             "passed 'previous' block " + previous + " does not match actual " +
             "last block in file " + lastBlockInFile);
       }
-    }
-
-    // Check if the penultimate block is minimally replicated
-    if (!checkFileProgress(src, pendingFile, false)) {
-      throw new NotReplicatedYetException("Not replicated yet: " + src);
     }
     return new FileState(pendingFile, src, iip);
   }
@@ -3551,28 +3550,23 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * replicated.  If not, return false. If checkall is true, then check
    * all blocks, otherwise check only penultimate block.
    */
-  private boolean checkFileProgress(String src, INodeFile v, boolean checkall) {
-    readLock();
-    try {
-      if (checkall) {
-        // check all blocks of the file.
-        for (BlockInfoContiguous block: v.getBlocks()) {
-          if (!isCompleteBlock(src, block, blockManager.minReplication)) {
-            return false;
-          }
-        }
-      } else {
-        // check the penultimate block of this file
-        BlockInfoContiguous b = v.getPenultimateBlock();
-        if (b != null
-            && !isCompleteBlock(src, b, blockManager.minReplication)) {
+  boolean checkFileProgress(String src, INodeFile v, boolean checkall) {
+    if (checkall) {
+      // check all blocks of the file.
+      for (BlockInfoContiguous block: v.getBlocks()) {
+        if (!isCompleteBlock(src, block, blockManager.minReplication)) {
           return false;
         }
       }
-      return true;
-    } finally {
-      readUnlock();
+    } else {
+      // check the penultimate block of this file
+      BlockInfoContiguous b = v.getPenultimateBlock();
+      if (b != null
+          && !isCompleteBlock(src, b, blockManager.minReplication)) {
+        return false;
+      }
     }
+    return true;
   }
 
   private static boolean isCompleteBlock(String src, BlockInfoContiguous b, int minRepl) {
