@@ -107,6 +107,12 @@ public class TestAMRMTokens {
   @SuppressWarnings("unchecked")
   @Test
   public void testTokenExpiry() throws Exception {
+    conf.setLong(
+        YarnConfiguration.RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS,
+        YarnConfiguration.
+            DEFAULT_RM_AMRM_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS);
+    conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS);
 
     MyContainerManager containerManager = new MyContainerManager();
     final MockRMWithAMS rm =
