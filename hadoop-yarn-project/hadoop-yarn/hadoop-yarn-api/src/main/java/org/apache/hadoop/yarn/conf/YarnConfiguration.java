@@ -2749,6 +2749,14 @@ public class YarnConfiguration extends Configuration {
     }
     return clusterId;
   }
+  
+  public static boolean systemMetricsPublisherEnabled(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED)
+        && conf.getBoolean(
+            YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED,
+            YarnConfiguration.DEFAULT_SYSTEM_METRICS_PUBLISHER_ENABLED);  
+  }
 
   /* For debugging. mp configurations to system output as XML format. */
   public static void main(String[] args) throws Exception {

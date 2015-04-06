@@ -30,6 +30,7 @@ import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -39,6 +40,8 @@ import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
@@ -80,6 +83,7 @@ public class ApplicationImpl implements Application {
   private final ReadLock readLock;
   private final WriteLock writeLock;
   private final Context context;
+  private TimelineClient timelineClient;
 
   private static final Log LOG = LogFactory.getLog(ApplicationImpl.class);
 
@@ -122,6 +126,17 @@ public class ApplicationImpl implements Application {
       Context context) {
     this(dispatcher, user, flowId, flowRunId, appId, credentials,
       context, -1);
+    Configuration conf = context.getConf();
+    if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
+      createAndStartTimelienClient(conf);
+    }
+  }
+  
+  private void createAndStartTimelienClient(Configuration conf) {
+    // create and start timeline client
+    this.timelineClient = TimelineClient.createTimelineClient(appId);
+    timelineClient.init(conf);
+    timelineClient.start();
   }
 
   @Override
@@ -132,6 +147,11 @@ public class ApplicationImpl implements Application {
   @Override
   public ApplicationId getAppId() {
     return appId;
+  }
+  
+  @Override
+  public TimelineClient getTimelineClient() {
+    return timelineClient;
   }
 
   @Override
@@ -507,7 +527,11 @@ public class ApplicationImpl implements Application {
       // TODO check we remove related collectors info in failure cases
       // (YARN-3038)
       app.context.getRegisteredCollectors().remove(app.getAppId());
-      app.context.getKnownCollectors().remove(app.getAppId());
+      // stop timelineClient when application get finished.
+      TimelineClient timelineClient = app.getTimelineClient();
+      if (timelineClient != null) {
+        timelineClient.stop();
+      }
     }
   }
 

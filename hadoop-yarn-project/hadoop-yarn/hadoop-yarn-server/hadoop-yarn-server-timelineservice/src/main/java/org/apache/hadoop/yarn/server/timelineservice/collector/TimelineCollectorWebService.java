@@ -135,7 +135,7 @@ public class TimelineCollectorWebService {
       }
       TimelineCollector collector = getCollector(req, appId);
       if (collector == null) {
-        LOG.error("Application not found");
+        LOG.error("Application: "+ appId + " is not found");
         throw new NotFoundException(); // different exception?
       }
       collector.putEntities(entities, callerUgi);
