@@ -3922,12 +3922,9 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             createResourceRequest(1024, 1, ResourceRequest.ANY, 2, 1, true);
     ask.clear();
     ask.add(request);
+    scheduler.stop();
     scheduler.allocate(appAttemptId, ask, new ArrayList<ContainerId>(), null, null);
-
-    // Wait until app gets resources
-    while (app.getCurrentConsumption()
-            .equals(Resources.createResource(1024, 1))) { }
-
+    scheduler.continuousSchedulingAttempt();
     Assert.assertEquals(2048, app.getCurrentConsumption().getMemory());
     Assert.assertEquals(2, app.getCurrentConsumption().getVirtualCores());
 
