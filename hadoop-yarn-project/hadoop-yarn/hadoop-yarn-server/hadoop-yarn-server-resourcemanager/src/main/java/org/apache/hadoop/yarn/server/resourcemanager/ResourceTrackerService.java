@@ -596,18 +596,16 @@ public class ResourceTrackerService extends AbstractService implements
     Map<ApplicationId, String> liveAppCollectorsMap = new
         ConcurrentHashMap<ApplicationId, String>();
     Map<ApplicationId, RMApp> rmApps = rmContext.getRMApps();
-      for (ApplicationId appId : liveApps) {
-        String appCollectorAddr = rmApps.get(appId).getCollectorAddr();
-        if (appCollectorAddr != null) {
-          liveAppCollectorsMap.put(appId, appCollectorAddr);
-        } else {
-          // Log a debug info if collector address is not found.
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Collector for applicaton: " + appId +
-                " hasn't registered yet!");
-          }
-        }
+    // Set collectors for all apps now.
+    // TODO set collectors for only active apps running on NM (liveApps cannot be
+    // used for this case)
+    for (Map.Entry<ApplicationId, RMApp> rmApp : rmApps.entrySet()) {
+      ApplicationId appId = rmApp.getKey();
+      String appCollectorAddr = rmApp.getValue().getCollectorAddr();
+      if (appCollectorAddr != null) {
+        liveAppCollectorsMap.put(appId, appCollectorAddr);
       }
+    }
     response.setAppCollectorsMap(liveAppCollectorsMap);
   }
 

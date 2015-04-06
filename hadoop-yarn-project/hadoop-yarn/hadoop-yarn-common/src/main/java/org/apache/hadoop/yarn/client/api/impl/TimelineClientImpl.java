@@ -482,14 +482,11 @@ public class TimelineClientImpl extends TimelineClient {
     }
     if (resp == null ||
         resp.getClientResponseStatus() != ClientResponse.Status.OK) {
-      String msg =
-          "Failed to get the response from the timeline server.";
+      String msg = "Response from the timeline server is " + 
+          ((resp == null) ? "null": 
+          "not successful," + " HTTP error code: " + resp.getStatus()
+          + ", Server response:\n" + resp.getEntity(String.class));
       LOG.error(msg);
-      if (LOG.isDebugEnabled() && resp != null) {
-        String output = resp.getEntity(String.class);
-        LOG.debug("HTTP error code: " + resp.getStatus()
-            + " Server response:\n" + output);
-      }
       throw new YarnException(msg);
     }
   }

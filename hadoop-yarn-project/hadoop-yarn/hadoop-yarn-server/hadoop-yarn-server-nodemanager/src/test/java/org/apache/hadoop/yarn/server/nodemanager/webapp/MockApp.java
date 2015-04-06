@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -41,7 +42,7 @@ public class MockApp implements Application {
   Application app;
   String flowId;
   String flowRunId;
-
+  TimelineClient timelineClient = null;
 
   public MockApp(int uniqId) {
     this("mockUser", 1234, uniqId);
@@ -86,5 +87,10 @@ public class MockApp implements Application {
 
   public String getFlowRunId() {
     return flowRunId;
+  }
+  
+  @Override
+  public TimelineClient getTimelineClient() {
+    return timelineClient;
   }
 }
