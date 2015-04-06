@@ -148,6 +148,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2666. TestFairScheduler.testContinuousScheduling fails Intermittently.
     (Zhihai Xu via ozawa)
 
+    YARN-2429. TestAMRMTokens.testTokenExpiry fails Intermittently with
+    error message:Invalid AMRMToken (zxu via rkanter)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
