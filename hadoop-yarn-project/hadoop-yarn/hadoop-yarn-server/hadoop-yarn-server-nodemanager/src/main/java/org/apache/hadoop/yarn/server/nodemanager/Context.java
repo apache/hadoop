@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -66,13 +67,6 @@ public interface Context {
    */
   Map<ApplicationId, String> getRegisteredCollectors();
 
-  /**
-   * Return the known collectors which get from RM for all active applications
-   * running on this NM.
-   * @return known collectors.
-   */
-  Map<ApplicationId, String> getKnownCollectors();
-
   ConcurrentMap<ContainerId, Container> getContainers();
 
   ConcurrentMap<ContainerId, org.apache.hadoop.yarn.api.records.Container>
@@ -95,6 +89,8 @@ public interface Context {
   NMStateStoreService getNMStateStore();
 
   boolean getDecommissioned();
+  
+  Configuration getConf();
 
   void setDecommissioned(boolean isDecommissioned);
 

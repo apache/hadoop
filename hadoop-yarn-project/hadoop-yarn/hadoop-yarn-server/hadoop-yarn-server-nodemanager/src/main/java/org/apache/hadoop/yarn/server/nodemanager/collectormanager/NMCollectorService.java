@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -103,7 +104,15 @@ public class NMCollectorService extends CompositeService implements
       Map<ApplicationId, String> newCollectorsMap =
           new HashMap<ApplicationId, String>();
       for (AppCollectorsMap collector : newCollectorsList) {
-        newCollectorsMap.put(collector.getApplicationId(), collector.getCollectorAddr());
+        ApplicationId appId = collector.getApplicationId();
+        String collectorAddr = collector.getCollectorAddr();
+        newCollectorsMap.put(appId, collectorAddr);
+        // set registered collector address to TimelineClient.
+        if (YarnConfiguration.systemMetricsPublisherEnabled(context.getConf())) {
+          TimelineClient client = 
+              context.getApplications().get(appId).getTimelineClient();
+          client.setTimelineServiceAddress(collectorAddr);
+        }
       }
       ((NodeManager.NMContext)context).addRegisteredCollectors(newCollectorsMap);
     }

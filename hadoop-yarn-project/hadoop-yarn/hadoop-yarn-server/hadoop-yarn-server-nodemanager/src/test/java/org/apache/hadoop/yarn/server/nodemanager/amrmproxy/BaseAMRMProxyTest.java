@@ -620,11 +620,6 @@ public abstract class BaseAMRMProxyTest {
     }
 
     @Override
-    public Map<ApplicationId, String> getKnownCollectors() {
-      return null;
-    }
-
-    @Override
     public ConcurrentMap<ContainerId, Container> getContainers() {
       return null;
     }
@@ -672,6 +667,11 @@ public abstract class BaseAMRMProxyTest {
     @Override
     public boolean getDecommissioned() {
       return false;
+    }
+
+    @Override
+    public Configuration getConf() {
+      return null;
     }
 
     @Override

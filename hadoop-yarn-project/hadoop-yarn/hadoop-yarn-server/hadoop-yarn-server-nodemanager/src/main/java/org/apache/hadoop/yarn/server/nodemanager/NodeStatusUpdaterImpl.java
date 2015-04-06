@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -77,6 +78,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
@@ -819,10 +821,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               dispatcher.getEventHandler().handle(
                   new CMgrSignalContainersEvent(containersToSignal));
             }
-
-            Map<ApplicationId, String> knownCollectors =
-                response.getAppCollectorsMap();
-            ((NodeManager.NMContext)context).addKnownCollectors(knownCollectors);
+            if (YarnConfiguration.systemMetricsPublisherEnabled(context.getConf())) {
+              updateTimelineClientsAddress(response);
+            }
 
           } catch (ConnectException e) {
             //catch and throw the exception if tried MAX wait time to connect RM
@@ -849,6 +850,46 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         }
       }
 
+      /**
+       * Caller should take care of sending non null nodelabels for both
+       * arguments
+       * 
+       * @param nodeLabelsNew
+       * @param nodeLabelsOld
+       * @return if the New node labels are diff from the older one.
+       */
+      private boolean areNodeLabelsUpdated(Set<NodeLabel> nodeLabelsNew,
+          Set<NodeLabel> nodeLabelsOld) {
+        if (nodeLabelsNew.size() != nodeLabelsOld.size()
+            || !nodeLabelsOld.containsAll(nodeLabelsNew)) {
+          return true;
+        }
+        return false;
+      }
+
+      private void updateTimelineClientsAddress(
+          NodeHeartbeatResponse response) {
+        Set<Map.Entry<ApplicationId, String>> rmKnownCollectors = 
+            response.getAppCollectorsMap().entrySet();
+        for (Map.Entry<ApplicationId, String> entry : rmKnownCollectors) {
+          ApplicationId appId = entry.getKey();
+          String collectorAddr = entry.getValue();
+
+          // Only handle applications running on local node.
+          // Not include apps with timeline collectors running in local
+          Application application = context.getApplications().get(appId);
+          if (application != null &&
+              !context.getRegisteredCollectors().containsKey(appId)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Sync a new collector address: " + collectorAddr + 
+                  " for application: " + appId + " from RM.");
+            }
+            TimelineClient client = application.getTimelineClient();
+            client.setTimelineServiceAddress(collectorAddr);
+          }
+        }
+      }
+      
       private void updateMasterKeys(NodeHeartbeatResponse response) {
         // See if the master-key has rolled over
         MasterKey updatedMasterKey = response.getContainerTokenMasterKey();
