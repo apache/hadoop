@@ -48,13 +48,17 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
+import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
+import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -105,6 +109,16 @@ public class TestDistributedShell {
     }
     conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    // Enable ContainersMonitorImpl
+    conf.set(YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
+        LinuxResourceCalculatorPlugin.class.getName());
+    conf.set(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE, 
+        ProcfsBasedProcessTree.class.getName());
+    conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING,
+        true);
+    conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED, true);
 
     if (yarnCluster == null) {
       yarnCluster =
@@ -349,15 +363,14 @@ public class TestDistributedShell {
     File tmpRootFolder = new File(tmpRoot);
     try {
       Assert.assertTrue(tmpRootFolder.isDirectory());
-
-      // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs
-      String outputDirApp = tmpRoot +
+      String basePath = tmpRoot +
           YarnConfiguration.DEFAULT_RM_CLUSTER_ID + "/" +
           UserGroupInformation.getCurrentUser().getShortUserName() +
           (defaultFlow ? "/" +
               TimelineUtils.generateDefaultFlowIdBasedOnAppId(appId) +
-              "/0/" : "/test_flow_id/12345678/") +
-          appId.toString() + "/DS_APP_ATTEMPT/";
+              "/0/" : "/test_flow_id/12345678/") + appId.toString();
+      // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs
+      String outputDirApp = basePath + "/DS_APP_ATTEMPT/";
 
       File entityFolder = new File(outputDirApp);
       Assert.assertTrue(entityFolder.isDirectory());
@@ -370,13 +383,7 @@ public class TestDistributedShell {
       File appAttemptFile = new File(appAttemptFileName);
       Assert.assertTrue(appAttemptFile.exists());
 
-      String outputDirContainer = tmpRoot +
-          YarnConfiguration.DEFAULT_RM_CLUSTER_ID + "/" +
-          UserGroupInformation.getCurrentUser().getShortUserName() +
-          (defaultFlow ? "/" +
-              TimelineUtils.generateDefaultFlowIdBasedOnAppId(appId) +
-              "/0/" : "/test_flow_id/12345678/") +
-          appId.toString() + "/DS_CONTAINER/";
+      String outputDirContainer = basePath + "/DS_CONTAINER/";
       File containerFolder = new File(outputDirContainer);
       Assert.assertTrue(containerFolder.isDirectory());
 
@@ -388,6 +395,22 @@ public class TestDistributedShell {
       Assert.assertTrue(containerFile.exists());
       String appTimeStamp = appId.getClusterTimestamp() + "_" + appId.getId()
           + "_";
+
+      // Verify NM posting container metrics info.
+      String outputDirContainerMetrics = basePath + "/" + 
+          TimelineEntityType.YARN_CONTAINER + "/";
+      File containerMetricsFolder = new File(outputDirContainerMetrics);
+      Assert.assertTrue(containerMetricsFolder.isDirectory());
+
+      String containerMetricsTimestampFileName = "container_"
+        + appId.getClusterTimestamp() + "_000" + appId.getId()
+        + "_01_000001.thist";
+      String containerMetricsFileName = outputDirContainerMetrics + 
+        containerMetricsTimestampFileName;
+
+      File containerMetricsFile = new File(containerMetricsFileName);
+      Assert.assertTrue(containerMetricsFile.exists());
+
     } finally {
       FileUtils.deleteDirectory(tmpRootFolder.getParentFile());
     }

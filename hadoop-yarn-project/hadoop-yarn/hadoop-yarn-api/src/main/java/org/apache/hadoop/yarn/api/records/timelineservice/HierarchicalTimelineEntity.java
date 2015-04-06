@@ -58,7 +58,9 @@ public abstract class HierarchicalTimelineEntity extends TimelineEntity {
 
   // required by JAXB
   @InterfaceAudience.Private
-  @XmlElement(name = "children")
+  // comment out XmlElement here because it cause UnrecognizedPropertyException
+  // TODO we need a better fix
+  //@XmlElement(name = "children")
   public HashMap<String, Set<String>> getChildrenJAXB() {
     return children;
   }

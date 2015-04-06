@@ -47,6 +47,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3374. Collector's web server should randomly bind an available port. (
     Zhijie Shen via junping_du)
 
+    YARN-3334. NM uses timeline client to publish container metrics to new
+    timeline service. (Junping Du via zjshen)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
