@@ -112,6 +112,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7742. Favoring decommissioning node for replication can cause a block
     to stay underreplicated for long periods (Nathan Roberts via kihwal)
 
+    HDFS-7999. FsDatasetImpl#createTemporary sometimes holds the FSDatasetImpl
+    lock for a very long time (sinago via cmccabe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
