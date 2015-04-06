@@ -31,7 +31,8 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
  * Represents a block that is currently being constructed.<br>
  * This is usually the last block of a file opened for write or append.
  */
-public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
+public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous
+    implements BlockInfoUnderConstruction{
   /** Block state. See {@link BlockUCState} */
   private BlockUCState blockUCState;
 
@@ -94,7 +95,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
     return new BlockInfoContiguous(this);
   }
 
-  /** Set expected locations */
+  @Override
   public void setExpectedLocations(DatanodeStorageInfo[] targets) {
     int numLocations = targets == null ? 0 : targets.length;
     this.replicas = new ArrayList<>(numLocations);
@@ -104,10 +105,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
     }
   }
 
-  /**
-   * Create array of expected replica locations
-   * (as has been assigned by chooseTargets()).
-   */
+  @Override
   public DatanodeStorageInfo[] getExpectedStorageLocations() {
     int numLocations = replicas == null ? 0 : replicas.size();
     DatanodeStorageInfo[] storages = new DatanodeStorageInfo[numLocations];
@@ -117,7 +115,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
     return storages;
   }
 
-  /** Get the number of expected locations */
+  @Override
   public int getNumExpectedLocations() {
     return replicas == null ? 0 : replicas.size();
   }
@@ -135,25 +133,26 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
     blockUCState = s;
   }
 
-  /** Get block recovery ID */
+  @Override
   public long getBlockRecoveryId() {
     return blockRecoveryId;
   }
 
-  /** Get recover block */
+  @Override
   public Block getTruncateBlock() {
     return truncateBlock;
+  }
+
+  @Override
+  public Block toBlock(){
+    return this;
   }
 
   public void setTruncateBlock(Block recoveryBlock) {
     this.truncateBlock = recoveryBlock;
   }
 
-  /**
-   * Process the recorded replicas. When about to commit or finish the
-   * pipeline recovery sort out bad replicas.
-   * @param genStamp  The final generation stamp for the block.
-   */
+  @Override
   public void setGenerationStampAndVerifyReplicas(long genStamp) {
     // Set the generation stamp for the block.
     setGenerationStamp(genStamp);
@@ -187,11 +186,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
     setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
   }
 
-  /**
-   * Initialize lease recovery for this block.
-   * Find the first alive data-node starting from the previous primary and
-   * make it primary.
-   */
+  @Override
   public void initializeBlockRecovery(long recoveryId) {
     setBlockUCState(BlockUCState.UNDER_RECOVERY);
     blockRecoveryId = recoveryId;
