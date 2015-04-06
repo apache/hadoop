@@ -880,6 +880,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7811. Avoid recursive call getStoragePolicyID in
     INodeFile#computeQuotaUsage. (Xiaoyu Yao and jing9)
 
+    HDFS-8071. Redundant checkFileProgress() in PART II of getAdditionalBlock().
+    (shv)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
