@@ -331,19 +331,8 @@ public class ApplicationMaster {
       }
       appMaster.run();
       result = appMaster.finish();
-
-      threadPool.shutdown();
-
-      while (!threadPool.isTerminated()) { // wait for all posting thread to finish
-        try {
-          if (!threadPool.awaitTermination(30, TimeUnit.SECONDS)) {
-            threadPool.shutdownNow(); // send interrupt to hurry them along
-          }
-        } catch (InterruptedException e) {
-          LOG.warn("Timeline client service stop interrupted!");
-          break;
-        }
-      }
+      
+      shutdownAndAwaitTermination();
     } catch (Throwable t) {
       LOG.fatal("Error running ApplicationMaster", t);
       LogManager.shutdown();
@@ -355,6 +344,23 @@ public class ApplicationMaster {
     } else {
       LOG.info("Application Master failed. exiting");
       System.exit(2);
+    }
+  }
+  
+  //TODO remove threadPool after adding non-blocking call in TimelineClient
+  private static void shutdownAndAwaitTermination() {
+    threadPool.shutdown();
+    try {
+      // Wait a while for existing tasks to terminate
+      if (!threadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+        threadPool.shutdownNow();
+        if (!threadPool.awaitTermination(60, TimeUnit.SECONDS))
+            LOG.error("ThreadPool did not terminate");
+      }
+    } catch (InterruptedException ie) {
+      threadPool.shutdownNow();
+      // Preserve interrupt status
+      Thread.currentThread().interrupt();
     }
   }
 

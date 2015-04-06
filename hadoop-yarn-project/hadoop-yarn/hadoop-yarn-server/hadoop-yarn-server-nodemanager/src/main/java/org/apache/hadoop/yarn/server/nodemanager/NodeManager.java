@@ -202,9 +202,10 @@ public class NodeManager extends CompositeService
   protected NMContext createNMContext(
       NMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInNM nmTokenSecretManager,
-      NMStateStoreService stateStore, boolean isDistSchedulerEnabled) {
+      NMStateStoreService stateStore, boolean isDistSchedulerEnabled,
+      Configuration conf) {
     return new NMContext(containerTokenSecretManager, nmTokenSecretManager,
-        dirsHandler, aclsManager, stateStore, isDistSchedulerEnabled);
+        dirsHandler, aclsManager, stateStore, isDistSchedulerEnabled, conf);
   }
 
   protected void doSecureLogin() throws IOException {
@@ -330,7 +331,7 @@ public class NodeManager extends CompositeService
             YarnConfiguration.DIST_SCHEDULING_ENABLED_DEFAULT);
 
     this.context = createNMContext(containerTokenSecretManager,
-        nmTokenSecretManager, nmStore, isDistSchedulingEnabled);
+        nmTokenSecretManager, nmStore, isDistSchedulingEnabled, conf);
 
     nodeLabelsProvider = createNodeLabelsProvider(conf);
 
@@ -459,6 +460,9 @@ public class NodeManager extends CompositeService
   public static class NMContext implements Context {
 
     private NodeId nodeId = null;
+    
+    private Configuration conf = null;
+    
     protected final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
 
@@ -469,9 +473,6 @@ public class NodeManager extends CompositeService
         new ConcurrentSkipListMap<ContainerId, Container>();
 
     protected Map<ApplicationId, String> registeredCollectors =
-        new ConcurrentHashMap<ApplicationId, String>();
-
-    protected Map<ApplicationId, String> knownCollectors =
         new ConcurrentHashMap<ApplicationId, String>();
 
     protected final ConcurrentMap<ContainerId,
@@ -501,7 +502,8 @@ public class NodeManager extends CompositeService
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
         LocalDirsHandlerService dirsHandler, ApplicationACLsManager aclsManager,
-        NMStateStoreService stateStore, boolean isDistSchedulingEnabled) {
+        NMStateStoreService stateStore, boolean isDistSchedulingEnabled,
+        Configuration conf) {
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.nmTokenSecretManager = nmTokenSecretManager;
       this.dirsHandler = dirsHandler;
@@ -514,6 +516,7 @@ public class NodeManager extends CompositeService
           LogAggregationReport>();
       this.queuingContext = new QueuingNMContext();
       this.isDistSchedulingEnabled = isDistSchedulingEnabled;
+      this.conf = conf;
     }
 
     /**
@@ -532,6 +535,11 @@ public class NodeManager extends CompositeService
     @Override
     public ConcurrentMap<ApplicationId, Application> getApplications() {
       return this.applications;
+    }
+    
+    @Override
+    public Configuration getConf() {
+      return this.conf;
     }
 
     @Override
@@ -662,19 +670,6 @@ public class NodeManager extends CompositeService
     public void addRegisteredCollectors(
         Map<ApplicationId, String> newRegisteredCollectors) {
       this.registeredCollectors.putAll(newRegisteredCollectors);
-      // Update to knownCollectors as well so it can immediately be consumed by
-      // this NM's TimelineClient.
-      this.knownCollectors.putAll(newRegisteredCollectors);
-    }
-
-    @Override
-    public Map<ApplicationId, String> getKnownCollectors() {
-      return this.knownCollectors;
-    }
-
-    public void addKnownCollectors(
-        Map<ApplicationId, String> knownCollectors) {
-      this.knownCollectors.putAll(knownCollectors);
     }
   }
 

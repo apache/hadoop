@@ -119,7 +119,8 @@ public abstract class BaseContainerManagerTest {
   protected Configuration conf = new YarnConfiguration();
   protected Context context = new NMContext(new NMContainerTokenSecretManager(
     conf), new NMTokenSecretManagerInNM(), null,
-    new ApplicationACLsManager(conf), new NMNullStateStoreService(), false) {
+      new ApplicationACLsManager(conf), new NMNullStateStoreService(), false,
+      conf) {
     public int getHttpPort() {
       return HTTP_PORT;
     };
