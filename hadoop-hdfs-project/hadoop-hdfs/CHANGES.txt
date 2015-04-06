@@ -1379,6 +1379,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-8051. FsVolumeList#addVolume should release volume reference if not
     put it into BlockScanner. (Lei (Eddy) Xu via Colin P. McCabe)
 
+    HDFS-7999. FsDatasetImpl#createTemporary sometimes holds the FSDatasetImpl
+    lock for a very long time (sinago via cmccabe)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
