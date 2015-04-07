@@ -196,6 +196,40 @@ class CapacitySchedulerPage extends RmView {
     @Override
     public void render(Block html) {
       html._(MetricsOverviewTable.class);
+      // Dump CapacityScheduler debug logs
+      html.div()
+          .button()
+          .$onclick("confirmAction()").b("Dump scheduler logs")._()
+          .select().$id("time")
+            .option().$value("60")._("1 min")._()
+            .option().$value("300")._("5 min")._()
+            .option().$value("600")._("10 min")._()
+          ._()._();
+
+      StringBuilder script = new StringBuilder();
+      script.append("function confirmAction() {")
+          .append(" b = confirm(\"Are you sure you wish to generate scheduler logs?\");")
+          .append(" if (b == true) {")
+          .append(" var timePeriod = $(\"#time\").val();")
+          .append(" $.ajax({")
+          .append(" type: 'POST',")
+          .append(" url: '/ws/v1/cluster/scheduler/logs',")
+          .append(" contentType: 'text/plain',")
+          .append(" data: 'time=' + timePeriod,")
+          .append(" dataType: 'text'")
+          .append(" }).done(function(data){")
+          .append(" setTimeout(function(){")
+          .append(" alert(\"Scheduler log is being generated.\");")
+          .append(" }, 1000);")
+          .append(" }).fail(function(data){")
+          .append(" alert(\"Scheduler log generation failed. Please check the ResourceManager log for more informtion.\");")
+          .append(" console.log(data);")
+          .append(" });")
+          .append(" }")
+          .append("}");
+
+      html.script().$type("text/javascript")._(script.toString())._();
+
       UL<DIV<DIV<Hamlet>>> ul = html.
         div("#cs-wrapper.ui-widget").
           div(".ui-widget-header.ui-corner-top").

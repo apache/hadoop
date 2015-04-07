@@ -38,6 +38,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
@@ -139,6 +140,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.AdHocLogDumper;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -236,6 +238,30 @@ public class RMWebServices {
       throw new NotFoundException("Unknown scheduler configured");
     }
     return new SchedulerTypeInfo(sinfo);
+  }
+
+  @POST
+  @Path("/scheduler/logs")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public String dumpSchedulerLogs(@FormParam("time") String time) throws IOException {
+    init();
+    ResourceScheduler rs = rm.getResourceScheduler();
+    int period = Integer.parseInt(time);
+    if (period <= 0) {
+      throw new BadRequestException("Period must be greater than 0");
+    }
+    final String logHierarchy =
+        "org.apache.hadoop.yarn.server.resourcemanager.scheduler";
+    String logfile = "yarn-scheduler-debug.log";
+    if (rs instanceof CapacityScheduler) {
+      logfile = "yarn-capacity-scheduler-debug.log";
+    } else if (rs instanceof FairScheduler) {
+      logfile = "yarn-fair-scheduler-debug.log";
+    }
+    AdHocLogDumper dumper = new AdHocLogDumper(logHierarchy, logfile);
+    // time period is sent to us in seconds
+    dumper.dumpLogs("DEBUG", period * 1000);
+    return "Capacity scheduler logs are being created.";
   }
 
   /**

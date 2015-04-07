@@ -101,6 +101,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2901. Add errors and warning metrics page to RM, NM web UI. 
     (Varun Vasudev via wangda)
 
+    YARN-3294. Allow dumping of Capacity Scheduler debug logs via
+    web UI for a fixed time period. (Varun Vasudev via xgong)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
