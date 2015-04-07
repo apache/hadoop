@@ -3207,7 +3207,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       LOG.debug("Using hedged reads; pool threads=" + num);
     }
   }
-  
+
   /**
    * Create thread pool for parallel reading in striped layout,
    * STRIPED_READ_THREAD_POOL, if it does not already exist.
