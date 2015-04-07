@@ -37,3 +37,6 @@
 
     HADOOP-11805 Better to rename some raw erasure coders. Contributed by Kai Zheng
     ( Kai Zheng )
+
+    HADOOP-11645. Erasure Codec API covering the essential aspects for an erasure code
+    ( Kai Zheng via vinayakumarb )
