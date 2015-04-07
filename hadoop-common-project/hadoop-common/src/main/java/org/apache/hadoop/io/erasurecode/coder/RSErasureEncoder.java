@@ -3,7 +3,7 @@ package org.apache.hadoop.io.erasurecode.coder;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
-import org.apache.hadoop.io.erasurecode.rawcoder.JRSRawEncoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 
 /**
@@ -30,7 +30,7 @@ public class RSErasureEncoder extends AbstractErasureEncoder {
       rawEncoder = createRawEncoder(
           CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY);
       if (rawEncoder == null) {
-        rawEncoder = new JRSRawEncoder();
+        rawEncoder = new RSRawEncoder();
       }
       rawEncoder.initialize(getNumDataUnits(),
           getNumParityUnits(), getChunkSize());

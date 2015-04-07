@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
  * isn't available in some environment. Please always use native implementations
  * when possible.
  */
-public class JRSRawDecoder extends AbstractRawErasureDecoder {
+public class RSRawDecoder extends AbstractRawErasureDecoder {
   // To describe and calculate the needed Vandermonde matrix
   private int[] errSignature;
   private int[] primitivePower;
