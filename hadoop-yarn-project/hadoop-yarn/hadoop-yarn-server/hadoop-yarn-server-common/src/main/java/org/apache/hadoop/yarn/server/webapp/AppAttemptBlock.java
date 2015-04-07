@@ -194,17 +194,18 @@ public class AppAttemptBlock extends HtmlBlock {
   protected void generateOverview(ApplicationAttemptReport appAttemptReport,
       Collection<ContainerReport> containers, AppAttemptInfo appAttempt,
       String node) {
+    String amContainerId = appAttempt.getAmContainerId();
     info("Application Attempt Overview")
       ._(
         "Application Attempt State:",
         appAttempt.getAppAttemptState() == null ? UNAVAILABLE : appAttempt
           .getAppAttemptState())
-      ._(
-        "AM Container:",
-        appAttempt.getAmContainerId() == null || containers == null
-            || !hasAMContainer(appAttemptReport.getAMContainerId(), containers)
-            ? null : root_url("container", appAttempt.getAmContainerId()),
-        String.valueOf(appAttempt.getAmContainerId()))
+      ._("AM Container:",
+          amContainerId == null
+              || containers == null
+              || !hasAMContainer(appAttemptReport.getAMContainerId(),
+                  containers) ? null : root_url("container", amContainerId),
+          amContainerId == null ? "N/A" : amContainerId)
       ._("Node:", node)
       ._(
         "Tracking URL:",

@@ -219,10 +219,11 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     String type = null;
     long createdTime = 0;
     long finishedTime = 0;
+    float progress = 0.0f;
     ApplicationAttemptId latestApplicationAttemptId = null;
     String diagnosticsInfo = null;
     FinalApplicationStatus finalStatus = FinalApplicationStatus.UNDEFINED;
-    YarnApplicationState state = null;
+    YarnApplicationState state = YarnApplicationState.ACCEPTED;
     ApplicationResourceUsageReport appResources = null;
     Map<ApplicationAccessType, String> appViewACLs =
         new HashMap<ApplicationAccessType, String>();
@@ -245,7 +246,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
             ConverterUtils.toApplicationId(entity.getEntityId()),
             latestApplicationAttemptId, user, queue, name, null, -1, null, state,
             diagnosticsInfo, null, createdTime, finishedTime, finalStatus, null,
-            null, 1.0F, type, null), appViewACLs);
+            null, progress, type, null), appViewACLs);
       }
       if (entityInfo.containsKey(ApplicationMetricsConstants.QUEUE_ENTITY_INFO)) {
         queue =
@@ -279,6 +280,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           createdTime = event.getTimestamp();
         } else if (event.getEventType().equals(
             ApplicationMetricsConstants.FINISHED_EVENT_TYPE)) {
+          progress=1.0F;
           finishedTime = event.getTimestamp();
           Map<String, Object> eventInfo = event.getEventInfo();
           if (eventInfo == null) {
@@ -321,7 +323,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
         ConverterUtils.toApplicationId(entity.getEntityId()),
         latestApplicationAttemptId, user, queue, name, null, -1, null, state,
         diagnosticsInfo, null, createdTime, finishedTime, finalStatus, appResources,
-        null, 1.0F, type, null), appViewACLs);
+        null, progress, type, null), appViewACLs);
   }
 
   private static ApplicationAttemptReport convertToApplicationAttemptReport(
