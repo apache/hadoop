@@ -481,6 +481,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-9805. Refactor RawLocalFileSystem#rename for improved testability.
     (Jean-Pierre Matsumoto via cnauroth)
 
+    HADOOP-11717. Support JWT tokens for web single sign on to the Hadoop
+    servers. (Larry McCay via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
