@@ -50,6 +50,3 @@
 
     HDFS-7839. Erasure coding: implement facilities in NameNode to create and
     manage EC zones (Zhe Zhang)
-
-    HADOOP-11740. Combine erasure encoder and decoder interfaces (Zhe Zhang)
-
