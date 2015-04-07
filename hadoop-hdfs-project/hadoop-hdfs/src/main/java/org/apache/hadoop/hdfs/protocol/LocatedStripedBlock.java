@@ -65,4 +65,9 @@ public class LocatedStripedBlock extends LocatedBlock {
   public int[] getBlockIndices() {
     return this.blockIndices;
   }
+
+  @Override
+  public boolean isStriped() {
+    return true;
+  }
 }
