@@ -40,6 +40,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -109,6 +111,7 @@ import com.google.common.cache.RemovalNotification;
  *
  *********************************************************************/
 
+@InterfaceAudience.Private
 class DataStreamer extends Daemon {
   /**
    * Create a socket for a write pipeline

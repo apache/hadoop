@@ -30,6 +30,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
@@ -68,6 +69,7 @@ import com.google.common.annotations.VisibleForTesting;
  * </ul>
  * </p>
  */
+@InterfaceAudience.Private
 class LeaseRenewer {
   static final Log LOG = LogFactory.getLog(LeaseRenewer.class);
 

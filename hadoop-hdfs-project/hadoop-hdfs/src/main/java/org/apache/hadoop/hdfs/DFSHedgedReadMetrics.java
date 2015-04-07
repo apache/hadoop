@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -24,6 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * This class has a number of metrics variables that are publicly accessible,
  * we can grab them from client side, like HBase.
  */
+@InterfaceAudience.Private
 public class DFSHedgedReadMetrics {
   public final AtomicLong hedgedReadOps = new AtomicLong();
   public final AtomicLong hedgedReadOpsWin = new AtomicLong();

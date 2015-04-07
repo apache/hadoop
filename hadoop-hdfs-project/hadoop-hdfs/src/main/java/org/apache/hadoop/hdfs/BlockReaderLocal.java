@@ -24,6 +24,7 @@ import java.util.EnumSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
@@ -57,6 +58,7 @@ import com.google.common.base.Preconditions;
  * <li>The client reads the file descriptors.</li>
  * </ul>
  */
+@InterfaceAudience.Private
 class BlockReaderLocal implements BlockReader {
   static final Log LOG = LogFactory.getLog(BlockReaderLocal.class);
 

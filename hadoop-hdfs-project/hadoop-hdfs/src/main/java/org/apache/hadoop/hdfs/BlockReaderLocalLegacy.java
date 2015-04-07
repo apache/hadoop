@@ -31,6 +31,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.StorageType;
@@ -73,6 +74,7 @@ import org.apache.htrace.TraceScope;
  * if security is enabled.</li>
  * </ul>
  */
+@InterfaceAudience.Private
 class BlockReaderLocalLegacy implements BlockReader {
   private static final Log LOG = LogFactory.getLog(BlockReaderLocalLegacy.class);
 
