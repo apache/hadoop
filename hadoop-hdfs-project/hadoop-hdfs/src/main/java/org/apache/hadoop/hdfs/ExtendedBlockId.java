@@ -19,11 +19,13 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 
 /**
  * An immutable key which identifies a block.
  */
+@InterfaceAudience.Private
 final public class ExtendedBlockId {
   /**
    * The block ID for this block.

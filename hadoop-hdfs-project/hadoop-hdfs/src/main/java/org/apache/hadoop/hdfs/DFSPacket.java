@@ -23,6 +23,7 @@ import java.nio.BufferOverflowException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
@@ -34,6 +35,7 @@ import org.apache.htrace.Span;
  * to send them to datanodes.
  ****************************************************************/
 
+@InterfaceAudience.Private
 class DFSPacket {
   public static final long HEART_BEAT_SEQNO = -1L;
   private static long[] EMPTY = new long[0];
