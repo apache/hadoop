@@ -129,6 +129,7 @@ public class TestShellBasedIdMapping {
   // Test staticMap refreshing
   @Test
   public void testStaticMapUpdate() throws IOException {
+    assumeTrue(!Shell.WINDOWS);
     File tempStaticMapFile = File.createTempFile("nfs-", ".map");
     tempStaticMapFile.delete();
     Configuration conf = new Configuration();

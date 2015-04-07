@@ -723,6 +723,9 @@ Release 2.7.0 - UNRELEASED
     Ozawa via vinodkv)
 
     HADOOP-11776. Fixed the broken JDiff support in Hadoop 2. (Li Lu via vinodkv)
+
+    HADOOP-11796. Skip TestShellBasedIdMapping.testStaticMapUpdate on Windows.
+    (Xiaoyu Yao via cnauroth)
     
 Release 2.6.1 - UNRELEASED
 
