@@ -32,3 +32,6 @@
 
     HADOOP-11782 Correct two thrown messages in ECSchema class. Contributed by Xinwei Qin
     ( Xinwei Qin via Kai Zheng )
+
+    HADOOP-11805 Better to rename some raw erasure coders. Contributed by Kai Zheng
+    ( Kai Zheng )
