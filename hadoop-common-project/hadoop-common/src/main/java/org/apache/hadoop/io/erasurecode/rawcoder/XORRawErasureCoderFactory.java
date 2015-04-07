@@ -18,17 +18,17 @@
 package org.apache.hadoop.io.erasurecode.rawcoder;
 
 /**
- * A raw coder factory for raw Reed-Solomon coder in Java.
+ * A raw coder factory for raw XOR coder.
  */
-public class JRSRawErasureCoderFactory implements RawErasureCoderFactory {
+public class XORRawErasureCoderFactory implements RawErasureCoderFactory {
 
   @Override
   public RawErasureEncoder createEncoder() {
-    return new JRSRawEncoder();
+    return new XORRawEncoder();
   }
 
   @Override
   public RawErasureDecoder createDecoder() {
-    return new JRSRawDecoder();
+    return new XORRawDecoder();
   }
 }

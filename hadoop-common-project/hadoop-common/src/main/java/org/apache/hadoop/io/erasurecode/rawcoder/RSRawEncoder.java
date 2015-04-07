@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
  * isn't available in some environment. Please always use native implementations
  * when possible.
  */
-public class JRSRawEncoder extends AbstractRawErasureEncoder {
+public class RSRawEncoder extends AbstractRawErasureEncoder {
   private int[] generatingPolynomial;
 
   @Override

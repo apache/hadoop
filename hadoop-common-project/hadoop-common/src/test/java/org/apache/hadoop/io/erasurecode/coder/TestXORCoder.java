@@ -15,20 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.erasurecode.rawcoder;
+package org.apache.hadoop.io.erasurecode.coder;
+
+import org.junit.Before;
+import org.junit.Test;
 
 /**
- * A raw coder factory for raw XOR coder.
+ * Test XOR encoding and decoding.
  */
-public class XorRawErasureCoderFactory implements RawErasureCoderFactory {
+public class TestXORCoder extends TestErasureCoderBase {
 
-  @Override
-  public RawErasureEncoder createEncoder() {
-    return new XorRawEncoder();
+  @Before
+  public void setup() {
+    this.encoderClass = XORErasureEncoder.class;
+    this.decoderClass = XORErasureDecoder.class;
+
+    this.numDataUnits = 10;
+    this.numParityUnits = 1;
+    this.erasedDataIndexes = new int[] {0};
+
+    this.numChunksInBlock = 10;
   }
 
-  @Override
-  public RawErasureDecoder createDecoder() {
-    return new XorRawDecoder();
+  @Test
+  public void testCodingNoDirectBuffer() {
+    testCoding(false);
   }
+
+  @Test
+  public void testCodingDirectBuffer() {
+    testCoding(true);
+  }
+
 }

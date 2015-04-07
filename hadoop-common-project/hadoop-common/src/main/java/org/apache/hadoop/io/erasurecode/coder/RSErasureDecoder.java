@@ -4,9 +4,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.erasurecode.ECBlock;
 import org.apache.hadoop.io.erasurecode.ECBlockGroup;
-import org.apache.hadoop.io.erasurecode.rawcoder.JRSRawDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RSRawDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
-import org.apache.hadoop.io.erasurecode.rawcoder.XorRawDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.XORRawDecoder;
 
 /**
  * Reed-Solomon erasure decoder that decodes a block group.
@@ -56,7 +56,7 @@ public class RSErasureDecoder extends AbstractErasureDecoder {
       rsRawDecoder = createRawDecoder(
           CommonConfigurationKeys.IO_ERASURECODE_CODEC_RS_RAWCODER_KEY);
       if (rsRawDecoder == null) {
-        rsRawDecoder = new JRSRawDecoder();
+        rsRawDecoder = new RSRawDecoder();
       }
       rsRawDecoder.initialize(getNumDataUnits(),
           getNumParityUnits(), getChunkSize());
@@ -66,7 +66,7 @@ public class RSErasureDecoder extends AbstractErasureDecoder {
 
   private RawErasureDecoder checkCreateXorRawDecoder() {
     if (xorRawDecoder == null) {
-      xorRawDecoder = new XorRawDecoder();
+      xorRawDecoder = new XORRawDecoder();
       xorRawDecoder.initialize(getNumDataUnits(), 1, getChunkSize());
     }
     return xorRawDecoder;

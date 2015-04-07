@@ -15,36 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.io.erasurecode.coder;
-
-import org.junit.Before;
-import org.junit.Test;
+package org.apache.hadoop.io.erasurecode.rawcoder;
 
 /**
- * Test XOR encoding and decoding.
+ * A raw coder factory for raw Reed-Solomon coder in Java.
  */
-public class TestXorCoder extends TestErasureCoderBase {
+public class RSRawErasureCoderFactory implements RawErasureCoderFactory {
 
-  @Before
-  public void setup() {
-    this.encoderClass = XorErasureEncoder.class;
-    this.decoderClass = XorErasureDecoder.class;
-
-    this.numDataUnits = 10;
-    this.numParityUnits = 1;
-    this.erasedDataIndexes = new int[] {0};
-
-    this.numChunksInBlock = 10;
+  @Override
+  public RawErasureEncoder createEncoder() {
+    return new RSRawEncoder();
   }
 
-  @Test
-  public void testCodingNoDirectBuffer() {
-    testCoding(false);
+  @Override
+  public RawErasureDecoder createDecoder() {
+    return new RSRawDecoder();
   }
-
-  @Test
-  public void testCodingDirectBuffer() {
-    testCoding(true);
-  }
-
 }

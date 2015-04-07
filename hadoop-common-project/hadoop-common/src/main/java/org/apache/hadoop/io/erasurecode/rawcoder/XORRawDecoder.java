@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 /**
  * A raw decoder in XOR code scheme in pure Java, adapted from HDFS-RAID.
  */
-public class XorRawDecoder extends AbstractRawErasureDecoder {
+public class XORRawDecoder extends AbstractRawErasureDecoder {
 
   @Override
   protected void doDecode(ByteBuffer[] inputs, int[] erasedIndexes,
