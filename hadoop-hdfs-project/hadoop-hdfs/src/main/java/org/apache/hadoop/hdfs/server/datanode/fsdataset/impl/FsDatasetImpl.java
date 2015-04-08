@@ -2494,9 +2494,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   private static class VolumeInfo {
     final String directory;
-    final long usedSpace;
-    final long freeSpace;
-    final long reservedSpace;
+    final long usedSpace; // size of space used by HDFS
+    final long freeSpace; // size of free space excluding reserved space
+    final long reservedSpace; // size of space reserved for non-HDFS and RBW
 
     VolumeInfo(FsVolumeImpl v, long usedSpace, long freeSpace) {
       this.directory = v.toString();
