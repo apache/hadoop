@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -69,7 +70,7 @@ public class TestListCorruptFileBlocks {
       conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1); // datanode scans directories
       conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000); // datanode sends block reports
       // Set short retry timeouts so this test runs faster
-      conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+      conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
       cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();
 
@@ -148,7 +149,7 @@ public class TestListCorruptFileBlocks {
       conf.setFloat(DFSConfigKeys.DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
                     0f);
       // Set short retry timeouts so this test runs faster
-      conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+      conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
       cluster = new MiniDFSCluster.Builder(conf).waitSafeMode(false).build();
       cluster.getNameNodeRpc().setSafeMode(
           HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false);

@@ -24,8 +24,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_RETRY_MAX_ATTEMPTS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_RETRY_MAX_ATTEMPTS_DEFAULT;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -43,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -52,10 +51,10 @@ import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
-import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
-import org.apache.hadoop.hdfs.server.namenode.ha.WrappedFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
+import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
+import org.apache.hadoop.hdfs.server.namenode.ha.WrappedFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -69,7 +68,9 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
@@ -79,9 +80,6 @@ import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolC
 import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolPB;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
-import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
-import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
-import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolClientSideTranslatorPB;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
@@ -145,7 +143,6 @@ public class NameNodeProxies {
    *         delegation token service it corresponds to
    * @throws IOException if there is an error creating the proxy
    **/
-  @SuppressWarnings("unchecked")
   public static <T> ProxyAndInfo<T> createProxy(Configuration conf,
       URI nameNodeUri, Class<T> xface) throws IOException {
     return createProxy(conf, nameNodeUri, xface, null);
@@ -242,8 +239,8 @@ public class NameNodeProxies {
           DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY,
           DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT);
       int maxRetryAttempts = config.getInt(
-          DFS_CLIENT_RETRY_MAX_ATTEMPTS_KEY,
-          DFS_CLIENT_RETRY_MAX_ATTEMPTS_DEFAULT);
+          HdfsClientConfigKeys.Retry.MAX_ATTEMPTS_KEY,
+          HdfsClientConfigKeys.Retry.MAX_ATTEMPTS_DEFAULT);
       InvocationHandler dummyHandler = new LossyRetryInvocationHandler<T>(
               numResponseToDrop, failoverProxyProvider,
               RetryPolicies.failoverOnNetworkException(
@@ -284,7 +281,6 @@ public class NameNodeProxies {
    *         delegation token service it corresponds to
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   public static <T> ProxyAndInfo<T> createNonHAProxy(
       Configuration conf, InetSocketAddress nnAddr, Class<T> xface,
       UserGroupInformation ugi, boolean withRetries) throws IOException {
@@ -412,10 +408,10 @@ public class NameNodeProxies {
     final RetryPolicy defaultPolicy = 
         RetryUtils.getDefaultRetryPolicy(
             conf, 
-            DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_ENABLED_KEY, 
-            DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_ENABLED_DEFAULT, 
-            DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_SPEC_KEY,
-            DFSConfigKeys.DFS_CLIENT_RETRY_POLICY_SPEC_DEFAULT,
+            HdfsClientConfigKeys.Retry.POLICY_ENABLED_KEY, 
+            HdfsClientConfigKeys.Retry.POLICY_ENABLED_DEFAULT, 
+            HdfsClientConfigKeys.Retry.POLICY_SPEC_KEY,
+            HdfsClientConfigKeys.Retry.POLICY_SPEC_DEFAULT,
             SafeModeException.class);
     
     final long version = RPC.getProtocolVersion(ClientNamenodeProtocolPB.class);
