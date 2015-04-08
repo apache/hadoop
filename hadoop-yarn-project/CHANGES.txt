@@ -159,6 +159,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3459. Fix failiure of TestLog4jWarningErrorMetricsAppender.
     (Varun Vasudev via wangda)
 
+    YARN-2890. MiniYarnCluster should turn on timeline service if
+    configured to do so. (Mit Desai via hitesh)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
