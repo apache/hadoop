@@ -194,6 +194,9 @@ Trunk (Unreleased)
     HADOOP-11524. hadoop_do_classpath_subcommand throws a shellcheck warning.
     (cnauroth)
 
+    HADOOP-11781. fix race conditions and add URL support to
+    smart-apply-patch.sh (Raymie Stata via aw)
+
   BUG FIXES
 
     HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
