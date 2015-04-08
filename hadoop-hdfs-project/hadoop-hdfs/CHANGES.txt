@@ -77,6 +77,10 @@ Release 2.7.1 - 2015-07-06
     HDFS-7546. Document, and set an accepting default for
     dfs.namenode.kerberos.principal.pattern (Harsh J via aw)
 
+    HDFS-8046. Allow better control of getContentSummary (kihwal)
+
+  OPTIMIZATIONS
+
     HDFS-7164. Feature documentation for HDFS-6581. (Arpit Agarwal)
 
   OPTIMIZATIONS
