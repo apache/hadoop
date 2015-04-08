@@ -3308,6 +3308,11 @@ public class BlockManager {
    * liveness. Dead nodes cannot always be safely decommissioned.
    */
   boolean isNodeHealthyForDecommission(DatanodeDescriptor node) {
+    if (!node.checkBlockReportReceived()) {
+      LOG.info("Node {} hasn't sent its first block report.", node);
+      return false;
+    }
+
     if (node.isAlive) {
       return true;
     }
