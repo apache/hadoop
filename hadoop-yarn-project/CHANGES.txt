@@ -153,6 +153,9 @@ Release 2.8.0 - UNRELEASED
 
     YARN-3110. Few issues in ApplicationHistory web ui. (Naganarasimha G R via xgong)
 
+    YARN-3457. NPE when NodeManager.serviceInit fails and stopRecoveryStore called.
+    (Bibin A Chundatt via ozawa)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
