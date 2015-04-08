@@ -1241,9 +1241,6 @@ Release 2.7.0 - UNRELEASED
     HDFS-7814. Fix usage string of storageType parameter for
     "dfsadmin -setSpaceQuota/clrSpaceQuota". (Xiaoyu Yao via cnauroth)
 
-    HDFS-7813. TestDFSHAAdminMiniCluster#testFencer testcase is failing
-    frequently. (Rakesh R via cnauroth)
-
     HDFS-7009. Active NN and standby NN have different live nodes.
     (Ming Ma via cnauroth)
 
