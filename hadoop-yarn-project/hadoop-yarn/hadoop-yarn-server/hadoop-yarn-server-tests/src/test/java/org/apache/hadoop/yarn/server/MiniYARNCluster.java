@@ -57,7 +57,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.MemoryApplicationHistoryStore;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
@@ -260,8 +259,9 @@ public class MiniYARNCluster extends CompositeService {
       addService(new NodeManagerWrapper(index));
     }
 
-    if (enableAHS) {
-      addService(new ApplicationHistoryServerWrapper());
+    if(conf.getBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED) || enableAHS) {
+        addService(new ApplicationHistoryServerWrapper());
     }
     
     super.serviceInit(
