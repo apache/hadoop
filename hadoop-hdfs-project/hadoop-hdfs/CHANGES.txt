@@ -391,6 +391,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8080. Separate JSON related routines used by WebHdfsFileSystem to a
     package local class. (wheat9)
 
+    HDFS-8085. Move CorruptFileBlockIterator to a new hdfs.client.impl package.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
