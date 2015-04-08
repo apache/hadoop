@@ -23,12 +23,12 @@ import java.util.Map;
 /**
  * Erasure coding schema to housekeeper relevant information.
  */
-public class ECSchema {
+public final class ECSchema {
   public static final String NUM_DATA_UNITS_KEY = "k";
   public static final String NUM_PARITY_UNITS_KEY = "m";
   public static final String CODEC_NAME_KEY = "codec";
   public static final String CHUNK_SIZE_KEY = "chunkSize";
-  public static final int DEFAULT_CHUNK_SIZE = 64 * 1024; // 64K
+  public static final int DEFAULT_CHUNK_SIZE = 256 * 1024; // 256K
 
   private String schemaName;
   private String codecName;
@@ -79,6 +79,18 @@ public class ECSchema {
     }
 
     initWith(codecName, dataUnits, parityUnits, options);
+  }
+
+  /**
+   * Constructor with key parameters provided.
+   * @param schemaName
+   * @param codecName
+   * @param numDataUnits
+   * @param numParityUnits
+   */
+  public ECSchema(String schemaName, String codecName,
+                  int numDataUnits, int numParityUnits) {
+    this(schemaName, codecName, numDataUnits, numParityUnits, null);
   }
 
   /**
@@ -199,5 +211,46 @@ public class ECSchema {
     sb.append("]");
 
     return sb.toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    ECSchema ecSchema = (ECSchema) o;
+
+    if (numDataUnits != ecSchema.numDataUnits) {
+      return false;
+    }
+    if (numParityUnits != ecSchema.numParityUnits) {
+      return false;
+    }
+    if (chunkSize != ecSchema.chunkSize) {
+      return false;
+    }
+    if (!schemaName.equals(ecSchema.schemaName)) {
+      return false;
+    }
+    if (!codecName.equals(ecSchema.codecName)) {
+      return false;
+    }
+    return options.equals(ecSchema.options);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = schemaName.hashCode();
+    result = 31 * result + codecName.hashCode();
+    result = 31 * result + options.hashCode();
+    result = 31 * result + numDataUnits;
+    result = 31 * result + numParityUnits;
+    result = 31 * result + chunkSize;
+
+    return result;
   }
 }

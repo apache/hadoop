@@ -27,11 +27,6 @@ You can modify and remove those not used yet, or add new ones.
 -->
 
 <schemas>
-  <schema name="RS-6-3">
-    <k>6</k>
-    <m>3</m>
-    <codec>RS</codec>
-  </schema>
   <schema name="RS-10-4">
     <k>10</k>
     <m>4</m>

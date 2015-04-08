@@ -53,3 +53,5 @@
 
     HDFS-8023. Erasure Coding: retrieve eraure coding schema for a file from
     NameNode (vinayakumarb)
+    
+    HDFS-8074. Define a system-wide default EC schema. (Kai Zheng)
