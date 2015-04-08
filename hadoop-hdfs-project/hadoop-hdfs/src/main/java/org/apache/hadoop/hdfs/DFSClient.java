@@ -118,6 +118,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ECInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -3131,6 +3132,19 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throw re.unwrapRemoteException(AccessControlException.class,
           FileNotFoundException.class,
           UnresolvedPathException.class);
+    } finally {
+      scope.close();
+    }
+  }
+
+  public ECInfo getErasureCodingInfo(String src) throws IOException {
+    checkOpen();
+    TraceScope scope = getPathTraceScope("getErasureCodingInfo", src);
+    try {
+      return namenode.getErasureCodingInfo(src);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          FileNotFoundException.class, UnresolvedPathException.class);
     } finally {
       scope.close();
     }

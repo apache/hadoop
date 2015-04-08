@@ -20,8 +20,10 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.ECInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,8 +31,7 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class TestErasureCodingZones {
   private final int NUM_OF_DATANODES = 3;
@@ -147,5 +148,38 @@ public class TestErasureCodingZones {
       assertExceptionContains("can't be moved because the source and " +
           "destination have different erasure coding policies", e);
     }
+  }
+
+  @Test
+  public void testGetErasureCodingInfo() throws Exception {
+    String src = "/ec";
+    final Path ecDir = new Path(src);
+    fs.mkdir(ecDir, FsPermission.getDirDefault());
+    // dir ECInfo before creating ec zone
+    assertNull(fs.getClient().getErasureCodingInfo(src));
+    // dir ECInfo after creating ec zone
+    fs.getClient().createErasureCodingZone(src);
+    verifyErasureCodingInfo(src);
+    fs.create(new Path(ecDir, "/child1")).close();
+    // verify for the files in ec zone
+    verifyErasureCodingInfo(src + "/child1");
+  }
+
+  private void verifyErasureCodingInfo(String src) throws IOException {
+    ECInfo ecInfo = fs.getClient().getErasureCodingInfo(src);
+    assertNotNull("ECInfo should have been non-null", ecInfo);
+    assertEquals(src, ecInfo.getSrc());
+    ECSchema schema = ecInfo.getSchema();
+    assertNotNull(schema);
+    assertEquals("Default schema should be returned", "RS-6-3",
+        schema.getSchemaName());
+    assertEquals("Default codec(rs) should be returned", "rs",
+        schema.getCodecName());
+    assertEquals("Default numDataUnits should be used", 6,
+        schema.getNumDataUnits());
+    assertEquals("Default numParityUnits should be used", 3,
+        schema.getNumParityUnits());
+    assertEquals("Default chunkSize should be used",
+        ECSchema.DEFAULT_CHUNK_SIZE, schema.getChunkSize());
   }
 }

@@ -176,6 +176,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ECInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -255,6 +256,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RetryCache;
 import org.apache.hadoop.ipc.Server;
@@ -7142,6 +7144,35 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     getEditLog().logSync();
     logAuditEvent(true, "createErasureCodingZone", srcArg, null, resultingStat);
+  }
+
+  /**
+   * Get the erasure coding information for specified src
+   */
+  ECInfo getErasureCodingInfo(String src) throws AccessControlException,
+      UnresolvedLinkException, IOException {
+    checkOperation(OperationCategory.READ);
+    final byte[][] pathComponents = FSDirectory
+        .getPathComponentsForReservedPath(src);
+    final FSPermissionChecker pc = getPermissionChecker();
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      src = dir.resolvePath(pc, src, pathComponents);
+      final INodesInPath iip = dir.getINodesInPath(src, true);
+      if (isPermissionEnabled) {
+        dir.checkPathAccess(pc, iip, FsAction.READ);
+      }
+      if (dir.getECPolicy(iip)) {
+        // TODO HDFS-8074 and HDFS-7859 : To get from loaded schemas
+        Map<String, String> options = new HashMap<String, String>();
+        ECSchema defaultSchema = new ECSchema("RS-6-3", "rs", 6, 3, options);
+        return new ECInfo(src, defaultSchema);
+      }
+    } finally {
+      readUnlock();
+    }
+    return null;
   }
 
   void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
