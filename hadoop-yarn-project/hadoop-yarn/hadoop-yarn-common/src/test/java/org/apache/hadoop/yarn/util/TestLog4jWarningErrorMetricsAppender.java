@@ -84,7 +84,7 @@ public class TestLog4jWarningErrorMetricsAppender {
     Assert.assertEquals(1, appender.getErrorCounts(cutoff).get(0).longValue());
     Assert.assertEquals(1, appender.getErrorMessagesAndCounts(cutoff).get(0)
       .size());
-    Thread.sleep(2000);
+    Thread.sleep(3000);
     Assert.assertEquals(1, appender.getErrorCounts(cutoff).size());
     Assert.assertEquals(0, appender.getErrorCounts(cutoff).get(0).longValue());
     Assert.assertEquals(0, appender.getErrorMessagesAndCounts(cutoff).get(0)

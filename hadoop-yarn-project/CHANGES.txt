@@ -156,6 +156,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3457. NPE when NodeManager.serviceInit fails and stopRecoveryStore called.
     (Bibin A Chundatt via ozawa)
 
+    YARN-3459. Fix failiure of TestLog4jWarningErrorMetricsAppender.
+    (Varun Vasudev via wangda)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
