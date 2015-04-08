@@ -45,7 +45,7 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
 
     /** @return true if the operation cannot use a token */
     public boolean getRequireAuth();
-    
+
     /** @return true if the operation will do output. */
     public boolean getDoOutput();
 
@@ -69,7 +69,7 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
         GetOpParam.Op.OPEN);
     static final TemporaryRedirectOp GETFILECHECKSUM = new TemporaryRedirectOp(
         GetOpParam.Op.GETFILECHECKSUM);
-    
+
     static final List<TemporaryRedirectOp> values
         = Collections.unmodifiableList(Arrays.asList(CREATE, APPEND, OPEN,
                                        GETFILECHECKSUM));

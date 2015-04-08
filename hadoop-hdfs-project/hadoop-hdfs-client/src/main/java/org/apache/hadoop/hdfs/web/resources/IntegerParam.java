@@ -38,7 +38,7 @@ abstract class IntegerParam extends Param<Integer, IntegerParam.Domain> {
           + " = " + domain.toString(value) + " > " + domain.toString(max));
     }
   }
-  
+
   @Override
   public String toString() {
     return getName() + "=" + domain.toString(getValue());
@@ -80,7 +80,7 @@ abstract class IntegerParam extends Param<Integer, IntegerParam.Domain> {
       }
     }
 
-    /** Convert an Integer to a String. */ 
+    /** Convert an Integer to a String. */
     String toString(final Integer n) {
       return n == null? NULL: Integer.toString(n, radix);
     }

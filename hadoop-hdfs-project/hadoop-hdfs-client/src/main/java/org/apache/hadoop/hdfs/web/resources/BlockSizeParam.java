@@ -17,40 +17,44 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-import org.apache.hadoop.fs.XAttrCodec;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BLOCK_SIZE_KEY;
 
-public class XAttrEncodingParam extends EnumParam<XAttrCodec> {
+import org.apache.hadoop.conf.Configuration;
+
+/** Block size parameter. */
+public class BlockSizeParam extends LongParam {
   /** Parameter name. */
-  public static final String NAME = "encoding";
+  public static final String NAME = "blocksize";
   /** Default parameter value. */
-  public static final String DEFAULT = "";
-  
-  private static final Domain<XAttrCodec> DOMAIN = 
-      new Domain<XAttrCodec>(NAME, XAttrCodec.class);
-  
-  public XAttrEncodingParam(final XAttrCodec encoding) {
-    super(DOMAIN, encoding);
+  public static final String DEFAULT = NULL;
+
+  private static final Domain DOMAIN = new Domain(NAME);
+
+  /**
+   * Constructor.
+   * @param value the parameter value.
+   */
+  public BlockSizeParam(final Long value) {
+    super(DOMAIN, value, 1L, null);
   }
-  
+
   /**
    * Constructor.
    * @param str a string representation of the parameter value.
    */
-  public XAttrEncodingParam(final String str) {
-    super(DOMAIN, str != null && !str.isEmpty() ? DOMAIN.parse(str) : null);
+  public BlockSizeParam(final String str) {
+    this(DOMAIN.parse(str));
   }
 
   @Override
   public String getName() {
     return NAME;
   }
-  
-  @Override
-  public String getValueString() {
-    return value.toString();
-  }
-  
-  public XAttrCodec getEncoding() {
-    return getValue();
+
+  /** @return the value or, if it is null, return the default from conf. */
+  public long getValue(final Configuration conf) {
+    return getValue() != null? getValue()
+        : conf.getLongBytes(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT);
   }
 }

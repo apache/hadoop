@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys
+    .DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -37,7 +38,7 @@ public class AclPermissionParam extends StringParam {
 
   /**
    * Constructor.
-   * 
+   *
    * @param str a string representation of the parameter value.
    */
   public AclPermissionParam(final String str) {

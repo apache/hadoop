@@ -19,63 +19,44 @@ package org.apache.hadoop.hdfs.web.resources;
 
 import java.net.HttpURLConnection;
 
-/** Http GET operation parameter. */
-public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
-  /** Get operations. */
+/** Http POST operation parameter. */
+public class PostOpParam extends HttpOpParam<PostOpParam.Op> {
+  /** Post operations. */
   public static enum Op implements HttpOpParam.Op {
-    OPEN(true, HttpURLConnection.HTTP_OK),
+    APPEND(true, HttpURLConnection.HTTP_OK),
 
-    GETFILESTATUS(false, HttpURLConnection.HTTP_OK),
-    LISTSTATUS(false, HttpURLConnection.HTTP_OK),
-    GETCONTENTSUMMARY(false, HttpURLConnection.HTTP_OK),
-    GETFILECHECKSUM(true, HttpURLConnection.HTTP_OK),
+    CONCAT(false, HttpURLConnection.HTTP_OK),
 
-    GETHOMEDIRECTORY(false, HttpURLConnection.HTTP_OK),
-    GETDELEGATIONTOKEN(false, HttpURLConnection.HTTP_OK, true),
+    TRUNCATE(false, HttpURLConnection.HTTP_OK),
 
-    /** GET_BLOCK_LOCATIONS is a private unstable op. */
-    GET_BLOCK_LOCATIONS(false, HttpURLConnection.HTTP_OK),
-    GETACLSTATUS(false, HttpURLConnection.HTTP_OK),
-    GETXATTRS(false, HttpURLConnection.HTTP_OK),
-    LISTXATTRS(false, HttpURLConnection.HTTP_OK),
+    NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 
-    NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED),
-
-    CHECKACCESS(false, HttpURLConnection.HTTP_OK);
-
-    final boolean redirect;
+    final boolean doOutputAndRedirect;
     final int expectedHttpResponseCode;
-    final boolean requireAuth;
 
-    Op(final boolean redirect, final int expectedHttpResponseCode) {
-      this(redirect, expectedHttpResponseCode, false);
-    }
-    
-    Op(final boolean redirect, final int expectedHttpResponseCode,
-       final boolean requireAuth) {
-      this.redirect = redirect;
+    Op(final boolean doOutputAndRedirect, final int expectedHttpResponseCode) {
+      this.doOutputAndRedirect = doOutputAndRedirect;
       this.expectedHttpResponseCode = expectedHttpResponseCode;
-      this.requireAuth = requireAuth;
     }
 
     @Override
-    public HttpOpParam.Type getType() {
-      return HttpOpParam.Type.GET;
+    public Type getType() {
+      return Type.POST;
     }
-    
+
     @Override
     public boolean getRequireAuth() {
-      return requireAuth;
-    }
-
-    @Override
-    public boolean getDoOutput() {
       return false;
     }
 
     @Override
+    public boolean getDoOutput() {
+      return doOutputAndRedirect;
+    }
+
+    @Override
     public boolean getRedirect() {
-      return redirect;
+      return doOutputAndRedirect;
     }
 
     @Override
@@ -83,19 +64,20 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
       return expectedHttpResponseCode;
     }
 
+    /** @return a URI query string. */
     @Override
     public String toQueryString() {
       return NAME + "=" + this;
     }
   }
 
-  private static final Domain<Op> DOMAIN = new Domain<Op>(NAME, Op.class);
+  private static final Domain<Op> DOMAIN = new Domain<PostOpParam.Op>(NAME, Op.class);
 
   /**
    * Constructor.
    * @param str a string representation of the parameter value.
    */
-  public GetOpParam(final String str) {
+  public PostOpParam(final String str) {
     super(DOMAIN, DOMAIN.parse(str));
   }
 

@@ -17,34 +17,38 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import org.apache.hadoop.fs.permission.FsPermission;
 
-import org.apache.hadoop.conf.Configuration;
-
-/** Replication parameter. */
-public class ReplicationParam extends ShortParam {
+/** Permission parameter, use a Short to represent a FsPermission. */
+public class PermissionParam extends ShortParam {
   /** Parameter name. */
-  public static final String NAME = "replication";
+  public static final String NAME = "permission";
   /** Default parameter value. */
   public static final String DEFAULT = NULL;
 
-  private static final Domain DOMAIN = new Domain(NAME);
+  private static final Domain DOMAIN = new Domain(NAME, 8);
+
+  private static final short DEFAULT_PERMISSION = 0755;
+
+  /** @return the default FsPermission. */
+  public static FsPermission getDefaultFsPermission() {
+    return new FsPermission(DEFAULT_PERMISSION);
+  }
 
   /**
    * Constructor.
    * @param value the parameter value.
    */
-  public ReplicationParam(final Short value) {
-    super(DOMAIN, value, (short)1, null);
+  public PermissionParam(final FsPermission value) {
+    super(DOMAIN, value == null? null: value.toShort(), null, null);
   }
 
   /**
    * Constructor.
    * @param str a string representation of the parameter value.
    */
-  public ReplicationParam(final String str) {
-    this(DOMAIN.parse(str));
+  public PermissionParam(final String str) {
+    super(DOMAIN, DOMAIN.parse(str), (short)0, (short)01777);
   }
 
   @Override
@@ -52,9 +56,9 @@ public class ReplicationParam extends ShortParam {
     return NAME;
   }
 
-  /** @return the value or, if it is null, return the default from conf. */
-  public short getValue(final Configuration conf) {
-    return getValue() != null? getValue()
-        : (short)conf.getInt(DFS_REPLICATION_KEY, DFS_REPLICATION_DEFAULT);
+  /** @return the represented FsPermission. */
+  public FsPermission getFsPermission() {
+    final Short v = getValue();
+    return new FsPermission(v != null? v: DEFAULT_PERMISSION);
   }
 }

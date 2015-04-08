@@ -59,7 +59,7 @@ abstract class EnumSetParam<E extends Enum<E>> extends Param<EnumSet<E>, EnumSet
   public String getValueString() {
     return toString(value);
   }
-  
+
   /** The domain of the parameter. */
   static final class Domain<E extends Enum<E>> extends Param.Domain<EnumSet<E>> {
     private final Class<E> enumClass;
