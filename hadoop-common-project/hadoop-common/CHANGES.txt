@@ -244,6 +244,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-10670. Allow AuthenticationFilters to load secret from signature
     secret files. (Kai Zheng via wheat9)
 
+    HADOOP-11801. Update BUILDING.txt for Ubuntu. (Gabor Liptak via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
