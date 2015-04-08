@@ -22,6 +22,8 @@ Release 2.6.1 - UNRELEASED
     HDFS-7596. NameNode should prune dead storages from storageMap.
     (Arpit Agarwal via cnauroth)
 
+    HDFS-8046. Allow better control of getContentSummary (kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

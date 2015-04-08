@@ -144,6 +144,7 @@ public class FSDirectory implements Closeable {
   private final int maxDirItems;
   private final int lsLimit;  // max list limit
   private final int contentCountLimit; // max content summary counts per run
+  private final long contentSleepMicroSec;
   private final INodeMap inodeMap; // Synchronized by dirLock
   private long yieldCount = 0; // keep track of lock yield count.
   private final int inodeXAttrsLimit; //inode xattrs max limit
@@ -204,6 +205,9 @@ public class FSDirectory implements Closeable {
     this.contentCountLimit = conf.getInt(
         DFSConfigKeys.DFS_CONTENT_SUMMARY_LIMIT_KEY,
         DFSConfigKeys.DFS_CONTENT_SUMMARY_LIMIT_DEFAULT);
+    this.contentSleepMicroSec = conf.getLong(
+        DFSConfigKeys.DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_KEY,
+        DFSConfigKeys.DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_DEFAULT);
     
     // filesystem limits
     this.maxComponentLength = conf.getInt(
@@ -250,6 +254,10 @@ public class FSDirectory implements Closeable {
   /** @return the root directory inode. */
   public INodeDirectory getRoot() {
     return rootDir;
+  }
+
+  long getContentSleepMicroSec() {
+    return contentSleepMicroSec;
   }
 
   /**
@@ -2166,7 +2174,7 @@ public class FSDirectory implements Closeable {
         ContentSummaryComputationContext cscc =
 
             new ContentSummaryComputationContext(this, getFSNamesystem(),
-            contentCountLimit);
+            contentCountLimit, contentCountLimit);
         ContentSummary cs = targetNode.computeAndConvertContentSummary(cscc);
         yieldCount += cscc.getYieldCount();
         return cs;
