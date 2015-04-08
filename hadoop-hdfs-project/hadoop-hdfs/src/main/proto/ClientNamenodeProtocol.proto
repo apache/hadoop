@@ -721,6 +721,14 @@ message CreateErasureCodingZoneRequestProto {
 message CreateErasureCodingZoneResponseProto {
 }
 
+message GetErasureCodingInfoRequestProto {
+  required string src = 1;
+}
+
+message GetErasureCodingInfoResponseProto {
+  optional ECInfoProto ECInfo = 1;
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -869,4 +877,6 @@ service ClientNamenodeProtocol {
       returns(GetCurrentEditLogTxidResponseProto);
   rpc getEditsFromTxid(GetEditsFromTxidRequestProto)
       returns(GetEditsFromTxidResponseProto);
+  rpc getErasureCodingInfo(GetErasureCodingInfoRequestProto)
+      returns(GetErasureCodingInfoResponseProto);
 }

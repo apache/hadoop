@@ -1464,4 +1464,14 @@ public interface ClientProtocol {
    */
   @Idempotent
   public EventBatchList getEditsFromTxid(long txid) throws IOException;
+
+  /**
+   * Gets the ECInfo for the specified file/directory
+   * 
+   * @param src
+   * @return Returns the ECInfo if the file/directory is erasure coded, null otherwise
+   * @throws IOException
+   */
+  @Idempotent
+  public ECInfo getErasureCodingInfo(String src) throws IOException;
 }
