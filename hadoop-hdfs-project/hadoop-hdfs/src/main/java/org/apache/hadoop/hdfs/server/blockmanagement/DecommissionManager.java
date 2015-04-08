@@ -197,23 +197,21 @@ public class DecommissionManager {
    */
   @VisibleForTesting
   public void startDecommission(DatanodeDescriptor node) {
-    if (!node.isDecommissionInProgress()) {
-      if (!node.isAlive) {
-        LOG.info("Dead node {} is decommissioned immediately.", node);
-        node.setDecommissioned();
-      } else if (!node.isDecommissioned()) {
+    if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
+      // Update DN stats maintained by HeartbeatManager
+      hbManager.startDecommission(node);
+      // hbManager.startDecommission will set dead node to decommissioned.
+      if (node.isDecommissionInProgress()) {
         for (DatanodeStorageInfo storage : node.getStorageInfos()) {
-          LOG.info("Starting decommission of {} {} with {} blocks", 
+          LOG.info("Starting decommission of {} {} with {} blocks",
               node, storage, storage.numBlocks());
         }
-        // Update DN stats maintained by HeartbeatManager
-        hbManager.startDecommission(node);
         node.decommissioningStatus.setStartTime(monotonicNow());
         pendingNodes.add(node);
       }
     } else {
-      LOG.trace("startDecommission: Node {} is already decommission in "
-              + "progress, nothing to do.", node);
+      LOG.trace("startDecommission: Node {} in {}, nothing to do." +
+          node, node.getAdminState());
     }
   }
 
@@ -221,12 +219,12 @@ public class DecommissionManager {
    * Stop decommissioning the specified datanode. 
    * @param node
    */
-  void stopDecommission(DatanodeDescriptor node) {
+  @VisibleForTesting
+  public void stopDecommission(DatanodeDescriptor node) {
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
-      LOG.info("Stopping decommissioning of node {}", node);
       // Update DN stats maintained by HeartbeatManager
       hbManager.stopDecommission(node);
-      // Over-replicated blocks will be detected and processed when 
+      // Over-replicated blocks will be detected and processed when
       // the dead node comes back and send in its full block report.
       if (node.isAlive) {
         blockManager.processOverReplicatedBlocksOnReCommission(node);
@@ -235,8 +233,8 @@ public class DecommissionManager {
       pendingNodes.remove(node);
       decomNodeBlocks.remove(node);
     } else {
-      LOG.trace("stopDecommission: Node {} is not decommission in progress " +
-          "or decommissioned, nothing to do.", node);
+      LOG.trace("stopDecommission: Node {} in {}, nothing to do." +
+          node, node.getAdminState());
     }
   }
 

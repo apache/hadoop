@@ -441,6 +441,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-5215. dfs.datanode.du.reserved is not considered while computing
     available space ( Brahma Reddy Battula via Yongjun Zhang)
 
+    HDFS-7725. Incorrect "nodes in service" metrics caused all writes to fail.
+    (Ming Ma via wang)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
