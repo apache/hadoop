@@ -496,7 +496,7 @@ class FSDirStatAndListingOp {
         // processed. 0 means disabled. I.e. blocking for the entire duration.
         ContentSummaryComputationContext cscc =
             new ContentSummaryComputationContext(fsd, fsd.getFSNamesystem(),
-                fsd.getContentCountLimit());
+                fsd.getContentCountLimit(), fsd.getContentSleepMicroSec());
         ContentSummary cs = targetNode.computeAndConvertContentSummary(cscc);
         fsd.addYieldCount(cscc.getYieldCount());
         return cs;
