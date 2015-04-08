@@ -254,7 +254,6 @@ Release 2.7.1 - 2015-07-06
     YARN-3850. NM fails to read files from full disks which can lead to
     container logs being lost and other issues (Varun Saxena via jlowe)
 
-
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
@@ -1038,6 +1037,9 @@ Release 2.6.1 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-2890. MiniYarnCluster should turn on timeline service if
+    configured to do so. (Mit Desai via hitesh)
 
 Release 2.6.0 - 2014-11-18
 
