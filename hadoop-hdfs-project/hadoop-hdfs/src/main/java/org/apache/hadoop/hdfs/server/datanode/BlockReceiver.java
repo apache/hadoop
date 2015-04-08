@@ -808,6 +808,7 @@ class BlockReceiver implements Closeable {
       }
 
     } catch (IOException ioe) {
+      replicaInfo.releaseAllBytesReserved();
       if (datanode.isRestarting()) {
         // Do not throw if shutting down for restart. Otherwise, it will cause
         // premature termination of responder.

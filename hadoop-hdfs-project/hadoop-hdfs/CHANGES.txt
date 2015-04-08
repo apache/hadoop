@@ -115,6 +115,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-7999. FsDatasetImpl#createTemporary sometimes holds the FSDatasetImpl
     lock for a very long time (sinago via cmccabe)
 
+    HDFS-8072. Reserved RBW space is not released if client terminates while
+    writing block. (Arpit Agarwal)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
