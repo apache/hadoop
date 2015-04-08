@@ -20,8 +20,9 @@ package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTP_POLICY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_KEY;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 
@@ -30,10 +31,10 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.IOUtils;
@@ -49,10 +50,8 @@ import org.junit.rules.Timeout;
 public class TestSaslDataTransfer extends SaslDataTransferTestCase {
 
   private static final int BLOCK_SIZE = 4096;
-  private static final int BUFFER_SIZE= 1024;
   private static final int NUM_BLOCKS = 3;
   private static final Path PATH  = new Path("/file1");
-  private static final short REPLICATION = 3;
 
   private MiniDFSCluster cluster;
   private FileSystem fs;
@@ -117,7 +116,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     HdfsConfiguration clusterConf = createSecureConfig(
       "authentication,integrity,privacy");
     // Set short retry timeouts so this test runs faster
-    clusterConf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+    clusterConf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     startCluster(clusterConf);
     HdfsConfiguration clientConf = new HdfsConfiguration(clusterConf);
     clientConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "");

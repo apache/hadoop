@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -1553,7 +1554,7 @@ public class TestDFSShell {
     final Path remotef = new Path(root, fname);
     final Configuration conf = new HdfsConfiguration();
     // Set short retry timeouts so this test runs faster
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+    conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     TestGetRunner runner = new TestGetRunner() {
     	private int count = 0;
     	private final FsShell shell = new FsShell(conf);
@@ -2584,8 +2585,6 @@ public class TestDFSShell {
   /* HDFS-6413 xattr names erroneously handled as case-insensitive */
   @Test (timeout = 30000)
   public void testSetXAttrCaseSensitivity() throws Exception {
-    UserGroupInformation user = UserGroupInformation.
-        createUserForTesting("user", new String[] {"mygroup"});
     MiniDFSCluster cluster = null;
     PrintStream bak = null;
     try {
