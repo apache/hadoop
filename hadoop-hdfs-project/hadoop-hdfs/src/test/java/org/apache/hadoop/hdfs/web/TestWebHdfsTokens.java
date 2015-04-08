@@ -36,7 +36,6 @@ import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
-import org.apache.commons.httpclient.HttpConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -281,7 +280,7 @@ public class TestWebHdfsTokens {
             @Override
             Token<DelegationTokenIdentifier> decodeResponse(Map<?, ?> json)
                 throws IOException {
-              return JsonUtil.toDelegationToken(json);
+              return JsonUtilClient.toDelegationToken(json);
             }
           }.run();
 

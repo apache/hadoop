@@ -73,7 +73,7 @@ public class TestJsonUtil {
     System.out.println("json    = " + json.replace(",", ",\n  "));
     ObjectReader reader = new ObjectMapper().reader(Map.class);
     final HdfsFileStatus s2 =
-        JsonUtil.toFileStatus((Map<?, ?>) reader.readValue(json), true);
+        JsonUtilClient.toFileStatus((Map<?, ?>) reader.readValue(json), true);
     final FileStatus fs2 = toFileStatus(s2, parent);
     System.out.println("s2      = " + s2);
     System.out.println("fs2     = " + fs2);
@@ -102,7 +102,7 @@ public class TestJsonUtil {
     response.put("cacheCapacity", 123l);
     response.put("cacheUsed", 321l);
     
-    JsonUtil.toDatanodeInfo(response);
+    JsonUtilClient.toDatanodeInfo(response);
   }
 
   @Test
@@ -128,7 +128,7 @@ public class TestJsonUtil {
     response.put("cacheCapacity", 123l);
     response.put("cacheUsed", 321l);
 
-    DatanodeInfo di = JsonUtil.toDatanodeInfo(response);
+    DatanodeInfo di = JsonUtilClient.toDatanodeInfo(response);
     Assert.assertEquals(name, di.getXferAddr());
 
     // The encoded result should contain name, ipAddr and xferPort.
@@ -175,7 +175,7 @@ public class TestJsonUtil {
     aclStatusBuilder.stickyBit(false);
 
     Assert.assertEquals("Should be equal", aclStatusBuilder.build(),
-        JsonUtil.toAclStatus(json));
+        JsonUtilClient.toAclStatus(json));
   }
 
   @Test
@@ -229,7 +229,7 @@ public class TestJsonUtil {
     xAttrs.add(xAttr1);
     xAttrs.add(xAttr2);
     Map<String, byte[]> xAttrMap = XAttrHelper.buildXAttrMap(xAttrs);
-    Map<String, byte[]> parsedXAttrMap = JsonUtil.toXAttrs(json);
+    Map<String, byte[]> parsedXAttrMap = JsonUtilClient.toXAttrs(json);
     
     Assert.assertEquals(xAttrMap.size(), parsedXAttrMap.size());
     Iterator<Entry<String, byte[]>> iter = xAttrMap.entrySet().iterator();
@@ -249,13 +249,13 @@ public class TestJsonUtil {
     Map<?, ?> json = reader.readValue(jsonString);
 
     // Get xattr: user.a2
-    byte[] value = JsonUtil.getXAttr(json, "user.a2");
+    byte[] value = JsonUtilClient.getXAttr(json, "user.a2");
     Assert.assertArrayEquals(XAttrCodec.decodeValue("0x313131"), value);
   }
 
   private void checkDecodeFailure(Map<String, Object> map) {
     try {
-      JsonUtil.toDatanodeInfo(map);
+      JsonUtilClient.toDatanodeInfo(map);
       Assert.fail("Exception not thrown against bad input.");
     } catch (Exception e) {
       // expected
