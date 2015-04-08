@@ -41,6 +41,10 @@ public class ExternalReplicaInPipeline implements ReplicaInPipelineInterface {
   }
 
   @Override
+  public void releaseAllBytesReserved() {
+  }
+
+  @Override
   public void setLastChecksumAndDataLen(long dataLength, byte[] lastChecksum) {
   }
 
