@@ -24,10 +24,10 @@ public class XAttrNameParam extends StringParam {
   public static final String NAME = "xattr.name";
   /** Default parameter value. **/
   public static final String DEFAULT = "";
-  
+
   private static Domain DOMAIN = new Domain(NAME,
       Pattern.compile(".*"));
-  
+
   public XAttrNameParam(final String str) {
     super(DOMAIN, str == null || str.equals(DEFAULT) ? null : str);
   }
@@ -36,7 +36,7 @@ public class XAttrNameParam extends StringParam {
   public String getName() {
     return NAME;
   }
-  
+
   public String getXAttrName() {
     final String v = getValue();
     return v;

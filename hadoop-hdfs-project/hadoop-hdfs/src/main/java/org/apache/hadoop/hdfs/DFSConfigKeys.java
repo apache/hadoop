@@ -34,10 +34,15 @@ import org.apache.hadoop.http.HttpConfig;
  */
 @InterfaceAudience.Private
 public class DFSConfigKeys extends CommonConfigurationKeys {
-  public static final String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";
-  public static final long    DFS_BLOCK_SIZE_DEFAULT = 128*1024*1024;
-  public static final String  DFS_REPLICATION_KEY = "dfs.replication";
-  public static final short   DFS_REPLICATION_DEFAULT = 3;
+  public static final String  DFS_BLOCK_SIZE_KEY =
+      HdfsClientConfigKeys.DFS_BLOCK_SIZE_KEY;
+  public static final long    DFS_BLOCK_SIZE_DEFAULT =
+      HdfsClientConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
+  public static final String  DFS_REPLICATION_KEY =
+      HdfsClientConfigKeys.DFS_REPLICATION_KEY;
+  public static final short   DFS_REPLICATION_DEFAULT =
+      HdfsClientConfigKeys.DFS_REPLICATION_DEFAULT;
+
   public static final String  DFS_STREAM_BUFFER_SIZE_KEY = "dfs.stream-buffer-size";
   public static final int     DFS_STREAM_BUFFER_SIZE_DEFAULT = 4096;
   public static final String  DFS_BYTES_PER_CHECKSUM_KEY = "dfs.bytes-per-checksum";
@@ -49,7 +54,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_HDFS_BLOCKS_METADATA_ENABLED = "dfs.datanode.hdfs-blocks-metadata.enabled";
   public static final boolean DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT = false;
   public static final String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT =
-      "^(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
+      HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT;
 
   // HA related configuration
   public static final String  DFS_DATANODE_RESTART_REPLICA_EXPIRY_KEY = "dfs.datanode.restart.replica.expiration";
@@ -154,7 +159,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_WEBHDFS_AUTHENTICATION_FILTER_KEY = "dfs.web.authentication.filter";
   public static final String  DFS_WEBHDFS_AUTHENTICATION_FILTER_DEFAULT = AuthFilter.class.getName();
   public static final String  DFS_WEBHDFS_USER_PATTERN_KEY = "dfs.webhdfs.user.provider.user.pattern";
-  public static final String  DFS_WEBHDFS_USER_PATTERN_DEFAULT = "^[A-Za-z_][A-Za-z0-9._-]*[$]?$";
+  public static final String  DFS_WEBHDFS_USER_PATTERN_DEFAULT =
+      HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT;
   public static final String  DFS_PERMISSIONS_ENABLED_KEY = "dfs.permissions.enabled";
   public static final boolean DFS_PERMISSIONS_ENABLED_DEFAULT = true;
   public static final String  DFS_PERMISSIONS_SUPERUSERGROUP_KEY = "dfs.permissions.superusergroup";

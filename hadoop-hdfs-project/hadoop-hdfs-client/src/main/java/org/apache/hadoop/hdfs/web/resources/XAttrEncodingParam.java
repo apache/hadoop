@@ -17,38 +17,27 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.XAttrCodec;
 
-/** Permission parameter, use a Short to represent a FsPermission. */
-public class PermissionParam extends ShortParam {
+public class XAttrEncodingParam extends EnumParam<XAttrCodec> {
   /** Parameter name. */
-  public static final String NAME = "permission";
+  public static final String NAME = "encoding";
   /** Default parameter value. */
-  public static final String DEFAULT = NULL;
+  public static final String DEFAULT = "";
 
-  private static final Domain DOMAIN = new Domain(NAME, 8);
+  private static final Domain<XAttrCodec> DOMAIN =
+      new Domain<XAttrCodec>(NAME, XAttrCodec.class);
 
-  private static final short DEFAULT_PERMISSION = 0755;
-
-  /** @return the default FsPermission. */
-  public static FsPermission getDefaultFsPermission() {
-    return new FsPermission(DEFAULT_PERMISSION);
-  }
-  
-  /**
-   * Constructor.
-   * @param value the parameter value.
-   */
-  public PermissionParam(final FsPermission value) {
-    super(DOMAIN, value == null? null: value.toShort(), null, null);
+  public XAttrEncodingParam(final XAttrCodec encoding) {
+    super(DOMAIN, encoding);
   }
 
   /**
    * Constructor.
    * @param str a string representation of the parameter value.
    */
-  public PermissionParam(final String str) {
-    super(DOMAIN, DOMAIN.parse(str), (short)0, (short)01777);
+  public XAttrEncodingParam(final String str) {
+    super(DOMAIN, str != null && !str.isEmpty() ? DOMAIN.parse(str) : null);
   }
 
   @Override
@@ -56,9 +45,12 @@ public class PermissionParam extends ShortParam {
     return NAME;
   }
 
-  /** @return the represented FsPermission. */
-  public FsPermission getFsPermission() {
-    final Short v = getValue();
-    return new FsPermission(v != null? v: DEFAULT_PERMISSION);
+  @Override
+  public String getValueString() {
+    return value.toString();
+  }
+
+  public XAttrCodec getEncoding() {
+    return getValue();
   }
 }

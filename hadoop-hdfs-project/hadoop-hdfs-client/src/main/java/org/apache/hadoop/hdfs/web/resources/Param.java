@@ -26,7 +26,7 @@ import java.util.Comparator;
 /** Base class of parameters. */
 public abstract class Param<T, D extends Param.Domain<T>> {
   static final String NULL = "null";
-  
+
   static final Comparator<Param<?,?>> NAME_CMP = new Comparator<Param<?,?>>() {
     @Override
     public int compare(Param<?, ?> left, Param<?, ?> right) {
@@ -90,11 +90,11 @@ public abstract class Param<T, D extends Param.Domain<T>> {
   static abstract class Domain<T> {
     /** Parameter name. */
     final String paramName;
-    
+
     Domain(final String paramName) {
       this.paramName = paramName;
     }
- 
+
     /** @return the parameter name. */
     public final String getParamName() {
       return paramName;
