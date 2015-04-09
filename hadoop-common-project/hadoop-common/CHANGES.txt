@@ -487,6 +487,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11717. Support JWT tokens for web single sign on to the Hadoop
     servers. (Larry McCay via omalley)
 
+    HADOOP-11814. Reformat hadoop-annotations, o.a.h.classification.tools.
+    (Li Lu via wheat9)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
