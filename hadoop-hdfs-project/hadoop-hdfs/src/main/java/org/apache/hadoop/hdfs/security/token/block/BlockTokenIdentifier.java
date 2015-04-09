@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -34,6 +33,10 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 @InterfaceAudience.Private
 public class BlockTokenIdentifier extends TokenIdentifier {
   static final Text KIND_NAME = new Text("HDFS_BLOCK_TOKEN");
+
+  public enum AccessMode {
+    READ, WRITE, COPY, REPLACE
+  }
 
   private long expiryDate;
   private int keyId;
@@ -175,7 +178,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     
     return cache;
   }
-  
+
   @InterfaceAudience.Private
   public static class Renewer extends Token.TrivialRenewer {
     @Override

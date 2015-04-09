@@ -197,8 +197,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager.SecretManagerState;
@@ -3288,7 +3287,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     LocatedBlock lBlk = new LocatedBlock(
         getExtendedBlock(blk), locs, offset, false);
     getBlockManager().setBlockToken(
-        lBlk, BlockTokenSecretManager.AccessMode.WRITE);
+        lBlk, BlockTokenIdentifier.AccessMode.WRITE);
     return lBlk;
   }
 
@@ -3350,7 +3349,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         src, numAdditionalNodes, clientnode, chosen, 
         excludes, preferredblocksize, storagePolicyID);
     final LocatedBlock lb = new LocatedBlock(blk, targets, -1, false);
-    blockManager.setBlockToken(lb, AccessMode.COPY);
+    blockManager.setBlockToken(lb, BlockTokenIdentifier.AccessMode.COPY);
     return lb;
   }
 
@@ -6272,7 +6271,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // get a new generation stamp and an access token
       block.setGenerationStamp(nextGenerationStamp(blockIdManager.isLegacyBlock(block.getLocalBlock())));
       locatedBlock = new LocatedBlock(block, new DatanodeInfo[0]);
-      blockManager.setBlockToken(locatedBlock, AccessMode.WRITE);
+      blockManager.setBlockToken(locatedBlock, BlockTokenIdentifier.AccessMode.WRITE);
     } finally {
       writeUnlock();
     }

@@ -413,21 +413,21 @@ public class TestBlockTokenWithDFS {
       tryRead(conf, lblock, false);
       // use a valid new token
       lblock.setBlockToken(sm.generateToken(lblock.getBlock(),
-              EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
+              EnumSet.of(BlockTokenIdentifier.AccessMode.READ)));
       // read should succeed
       tryRead(conf, lblock, true);
       // use a token with wrong blockID
       ExtendedBlock wrongBlock = new ExtendedBlock(lblock.getBlock()
           .getBlockPoolId(), lblock.getBlock().getBlockId() + 1);
       lblock.setBlockToken(sm.generateToken(wrongBlock,
-          EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
+          EnumSet.of(BlockTokenIdentifier.AccessMode.READ)));
       // read should fail
       tryRead(conf, lblock, false);
       // use a token with wrong access modes
       lblock.setBlockToken(sm.generateToken(lblock.getBlock(),
-          EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE,
-                     BlockTokenSecretManager.AccessMode.COPY,
-                     BlockTokenSecretManager.AccessMode.REPLACE)));
+          EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE,
+                     BlockTokenIdentifier.AccessMode.COPY,
+                     BlockTokenIdentifier.AccessMode.REPLACE)));
       // read should fail
       tryRead(conf, lblock, false);
 

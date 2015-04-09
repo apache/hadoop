@@ -55,8 +55,9 @@ import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier.AccessMode;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplicasMap.Reason;
@@ -747,7 +748,7 @@ public class BlockManager {
 
     final long fileLength = bc.computeContentSummary(getStoragePolicySuite()).getLength();
     final long pos = fileLength - ucBlock.getNumBytes();
-    return createLocatedBlock(ucBlock, pos, AccessMode.WRITE);
+    return createLocatedBlock(ucBlock, pos, BlockTokenIdentifier.AccessMode.WRITE);
   }
 
   /**
@@ -813,7 +814,7 @@ public class BlockManager {
   }
   
   private LocatedBlock createLocatedBlock(final BlockInfoContiguous blk, final long pos,
-    final BlockTokenSecretManager.AccessMode mode) throws IOException {
+    final AccessMode mode) throws IOException {
     final LocatedBlock lb = createLocatedBlock(blk, pos);
     if (mode != null) {
       setBlockToken(lb, mode);
@@ -886,7 +887,7 @@ public class BlockManager {
       if (LOG.isDebugEnabled()) {
         LOG.debug("blocks = " + java.util.Arrays.asList(blocks));
       }
-      final AccessMode mode = needBlockToken? AccessMode.READ: null;
+      final AccessMode mode = needBlockToken? BlockTokenIdentifier.AccessMode.READ: null;
       final List<LocatedBlock> locatedblocks = createLocatedBlockList(
           blocks, offset, length, Integer.MAX_VALUE, mode);
 
@@ -918,7 +919,7 @@ public class BlockManager {
 
   /** Generate a block token for the located block. */
   public void setBlockToken(final LocatedBlock b,
-      final BlockTokenSecretManager.AccessMode mode) throws IOException {
+      final AccessMode mode) throws IOException {
     if (isBlockTokenEnabled()) {
       // Use cached UGI if serving RPC calls.
       b.setBlockToken(blockTokenSecretManager.generateToken(
