@@ -450,7 +450,8 @@ class FSDirXAttrOp {
       INodesInPath iip = fsd.getINodesInPath(srcs, true);
       INode inode = FSDirectory.resolveLastINode(iip);
       int snapshotId = iip.getPathSnapshotId();
-      return XAttrStorage.readINodeXAttrs(inode, snapshotId);
+      return XAttrStorage.readINodeXAttrs(fsd.getAttributes(src,
+              inode.getLocalNameBytes(), inode, snapshotId));
     } finally {
       fsd.readUnlock();
     }

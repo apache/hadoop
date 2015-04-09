@@ -163,6 +163,17 @@ public final class AclStorage {
   }
 
   /**
+   * Reads the existing extended ACL entries of an INodeAttribute object.
+   *
+   * @param inodeAttr INode to read
+   * @return List<AclEntry> containing extended inode ACL entries
+   */
+  public static List<AclEntry> readINodeAcl(INodeAttributes inodeAttr) {
+    AclFeature f = inodeAttr.getAclFeature();
+    return getEntriesFromAclFeature(f);
+  }
+
+  /**
    * Build list of AclEntries from the AclFeature
    * @param aclFeature AclFeature
    * @return List of entries

@@ -57,11 +57,11 @@ public class XAttrStorage {
    * <p/>
    * Must be called while holding the FSDirectory read lock.
    *
-   * @param inode INode to read.
+   * @param inodeAttr INodeAttributes to read.
    * @return List<XAttr> <code>XAttr</code> list.
    */
-  public static List<XAttr> readINodeXAttrs(INode inode) {
-    XAttrFeature f = inode.getXAttrFeature();
+  public static List<XAttr> readINodeXAttrs(INodeAttributes inodeAttr) {
+    XAttrFeature f = inodeAttr.getXAttrFeature();
     return f == null ? ImmutableList.<XAttr> of() : f.getXAttrs();
   }
   
