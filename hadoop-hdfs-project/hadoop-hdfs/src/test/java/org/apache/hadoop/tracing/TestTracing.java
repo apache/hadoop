@@ -31,7 +31,7 @@ import org.apache.htrace.Span;
 import org.apache.htrace.SpanReceiver;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -56,27 +56,26 @@ public class TestTracing {
   private static SpanReceiverHost spanReceiverHost;
 
   @Test
-  public void testGetSpanReceiverHost() throws Exception {
-    Configuration c = new Configuration();
+  public void testTracing() throws Exception {
     // getting instance already loaded.
-    c.set(SpanReceiverHost.SPAN_RECEIVERS_CONF_KEY, "");
-    SpanReceiverHost s = SpanReceiverHost.getInstance(c);
-    Assert.assertEquals(spanReceiverHost, s);
+    Assert.assertEquals(spanReceiverHost,
+        SpanReceiverHost.getInstance(new Configuration()));
+
+    // write and read without tracing started
+    String fileName = "testTracingDisabled.dat";
+    writeTestFile(fileName);
+    Assert.assertTrue(SetSpanReceiver.SetHolder.size() == 0);
+    readTestFile(fileName);
+    Assert.assertTrue(SetSpanReceiver.SetHolder.size() == 0);
+
+    writeWithTracing();
+    readWithTracing();
   }
 
-  @Test
-  public void testWriteTraceHooks() throws Exception {
+  public void writeWithTracing() throws Exception {
     long startTime = System.currentTimeMillis();
     TraceScope ts = Trace.startSpan("testWriteTraceHooks", Sampler.ALWAYS);
-    Path file = new Path("traceWriteTest.dat");
-    FSDataOutputStream stream = dfs.create(file);
-
-    for (int i = 0; i < 10; i++) {
-      byte[] data = RandomStringUtils.randomAlphabetic(102400).getBytes();
-      stream.write(data);
-    }
-    stream.hflush();
-    stream.close();
+    writeTestFile("testWriteTraceHooks.dat");
     long endTime = System.currentTimeMillis();
     ts.close();
 
@@ -125,55 +124,17 @@ public class TestTracing {
         Assert.assertEquals(ts.getSpan().getTraceId(), span.getTraceId());
       }
     }
+    SetSpanReceiver.SetHolder.spans.clear();
   }
 
-  @Test
-  public void testWriteWithoutTraceHooks() throws Exception {
-    Path file = new Path("withoutTraceWriteTest.dat");
-    FSDataOutputStream stream = dfs.create(file);
-    for (int i = 0; i < 10; i++) {
-      byte[] data = RandomStringUtils.randomAlphabetic(102400).getBytes();
-      stream.write(data);
-    }
-    stream.hflush();
-    stream.close();
-    Assert.assertTrue(SetSpanReceiver.SetHolder.size() == 0);
-  }
-
-  @Test
-  public void testReadTraceHooks() throws Exception {
-    String fileName = "traceReadTest.dat";
-    Path filePath = new Path(fileName);
-
-    // Create the file.
-    FSDataOutputStream ostream = dfs.create(filePath);
-    for (int i = 0; i < 50; i++) {
-      byte[] data = RandomStringUtils.randomAlphabetic(10240).getBytes();
-      ostream.write(data);
-    }
-    ostream.close();
-
-
+  public void readWithTracing() throws Exception {
+    String fileName = "testReadTraceHooks.dat";
+    writeTestFile(fileName);
     long startTime = System.currentTimeMillis();
     TraceScope ts = Trace.startSpan("testReadTraceHooks", Sampler.ALWAYS);
-    FSDataInputStream istream = dfs.open(filePath, 10240);
-    ByteBuffer buf = ByteBuffer.allocate(10240);
-
-    int count = 0;
-    try {
-      while (istream.read(buf) > 0) {
-        count += 1;
-        buf.clear();
-        istream.seek(istream.getPos() + 5);
-      }
-    } catch (IOException ioe) {
-      // Ignore this it's probably a seek after eof.
-    } finally {
-      istream.close();
-    }
-    ts.getSpan().addTimelineAnnotation("count: " + count);
-    long endTime = System.currentTimeMillis();
+    readTestFile(fileName);
     ts.close();
+    long endTime = System.currentTimeMillis();
 
     String[] expectedSpanNames = {
       "testReadTraceHooks",
@@ -198,21 +159,22 @@ public class TestTracing {
     for (Span span : SetSpanReceiver.SetHolder.spans.values()) {
       Assert.assertEquals(ts.getSpan().getTraceId(), span.getTraceId());
     }
+    SetSpanReceiver.SetHolder.spans.clear();
   }
 
-  @Test
-  public void testReadWithoutTraceHooks() throws Exception {
-    String fileName = "withoutTraceReadTest.dat";
-    Path filePath = new Path(fileName);
-
-    // Create the file.
-    FSDataOutputStream ostream = dfs.create(filePath);
-    for (int i = 0; i < 50; i++) {
-      byte[] data = RandomStringUtils.randomAlphabetic(10240).getBytes();
-      ostream.write(data);
+  private void writeTestFile(String testFileName) throws Exception {
+    Path filePath = new Path(testFileName);
+    FSDataOutputStream stream = dfs.create(filePath);
+    for (int i = 0; i < 10; i++) {
+      byte[] data = RandomStringUtils.randomAlphabetic(102400).getBytes();
+      stream.write(data);
     }
-    ostream.close();
+    stream.hsync();
+    stream.close();
+  }
 
+  private void readTestFile(String testFileName) throws Exception {
+    Path filePath = new Path(testFileName);
     FSDataInputStream istream = dfs.open(filePath, 10240);
     ByteBuffer buf = ByteBuffer.allocate(10240);
 
@@ -228,32 +190,29 @@ public class TestTracing {
     } finally {
       istream.close();
     }
-    Assert.assertTrue(SetSpanReceiver.SetHolder.size() == 0);
-  }
-
-  @Before
-  public void cleanSet() {
-    SetSpanReceiver.SetHolder.spans.clear();
   }
 
   @BeforeClass
-  public static void setupCluster() throws IOException {
+  public static void setup() throws IOException {
     conf = new Configuration();
     conf.setLong("dfs.blocksize", 100 * 1024);
     conf.set(SpanReceiverHost.SPAN_RECEIVERS_CONF_KEY,
         SetSpanReceiver.class.getName());
+    spanReceiverHost = SpanReceiverHost.getInstance(conf);
+  }
 
+  @Before
+  public void startCluster() throws IOException {
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3)
         .build();
     cluster.waitActive();
-
     dfs = cluster.getFileSystem();
-    spanReceiverHost = SpanReceiverHost.getInstance(conf);
+    SetSpanReceiver.SetHolder.spans.clear();
   }
 
-  @AfterClass
-  public static void shutDown() throws IOException {
+  @After
+  public void shutDown() throws IOException {
     cluster.shutdown();
   }
 
