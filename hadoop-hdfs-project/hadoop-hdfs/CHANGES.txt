@@ -974,6 +974,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-8025. Addendum fix for HDFS-3087 Decomissioning on NN restart can
     complete without blocks being replicated. (Ming Ma via wang)
 
+    HDFS-8063: Fix intermittent test failures in TestTracing (Masatake Iwasaki
+    via Colin P. McCabe)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
