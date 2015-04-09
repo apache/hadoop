@@ -153,9 +153,6 @@ Trunk (Unreleased)
 
   BUG FIXES
  
-    HDFS-8091: ACLStatus and XAttributes should be presented to INodeAttributesProvider
-               before returning to client (asuresh)
-
     HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
                 via cmccabe)
 
@@ -462,6 +459,9 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8096. DatanodeMetrics#blocksReplicated will get incremented early and
     even for failed transfers (vinayakumarb)
+
+    HDFS-8091: ACLStatus and XAttributes should be presented to
+    INodeAttributesProvider before returning to client (asuresh)
 
 Release 2.7.0 - UNRELEASED
 
