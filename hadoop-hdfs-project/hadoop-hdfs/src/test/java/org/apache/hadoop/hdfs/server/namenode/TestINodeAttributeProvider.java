@@ -20,16 +20,16 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.AclEntryType;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -131,7 +131,17 @@ public class TestINodeAttributeProvider {
 
         @Override
         public XAttrFeature getXAttrFeature() {
-          return (useDefault) ? inode.getXAttrFeature() : null;
+          XAttrFeature x;
+          if (useDefault) {
+            x = inode.getXAttrFeature();
+          } else {
+            x = new XAttrFeature(ImmutableList.copyOf(
+                    Lists.newArrayList(
+                            new XAttr.Builder().setName("test")
+                                    .setValue(new byte[] {1, 2})
+                                    .build())));
+          }
+          return x;
         }
 
         @Override
@@ -218,12 +228,24 @@ public class TestINodeAttributeProvider {
     FileStatus status = fs.getFileStatus(new Path("/user/xxx"));
     Assert.assertEquals(System.getProperty("user.name"), status.getOwner());
     Assert.assertEquals("supergroup", status.getGroup());
-    Assert.assertEquals(new FsPermission((short)0755), status.getPermission());
+    Assert.assertEquals(new FsPermission((short) 0755), status.getPermission());
     fs.mkdirs(new Path("/user/authz"));
-    status = fs.getFileStatus(new Path("/user/authz"));
+    Path p = new Path("/user/authz");
+    status = fs.getFileStatus(p);
     Assert.assertEquals("foo", status.getOwner());
     Assert.assertEquals("bar", status.getGroup());
     Assert.assertEquals(new FsPermission((short) 0770), status.getPermission());
+    AclStatus aclStatus = fs.getAclStatus(p);
+    Assert.assertEquals(1, aclStatus.getEntries().size());
+    Assert.assertEquals(AclEntryType.GROUP, aclStatus.getEntries().get(0)
+            .getType());
+    Assert.assertEquals("xxx", aclStatus.getEntries().get(0)
+            .getName());
+    Assert.assertEquals(FsAction.ALL, aclStatus.getEntries().get(0)
+            .getPermission());
+    Map<String, byte[]> xAttrs = fs.getXAttrs(p);
+    Assert.assertTrue(xAttrs.containsKey("user.test"));
+    Assert.assertEquals(2, xAttrs.get("user.test").length);
   }
 
 }

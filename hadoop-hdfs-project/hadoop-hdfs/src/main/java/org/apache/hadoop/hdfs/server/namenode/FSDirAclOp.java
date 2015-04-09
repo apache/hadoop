@@ -172,7 +172,8 @@ class FSDirAclOp {
       }
       INode inode = FSDirectory.resolveLastINode(iip);
       int snapshotId = iip.getPathSnapshotId();
-      List<AclEntry> acl = AclStorage.readINodeAcl(inode, snapshotId);
+      List<AclEntry> acl = AclStorage.readINodeAcl(fsd.getAttributes(src,
+              inode.getLocalNameBytes(), inode, snapshotId));
       FsPermission fsPermission = inode.getFsPermission(snapshotId);
       return new AclStatus.Builder()
           .owner(inode.getUserName()).group(inode.getGroupName())
