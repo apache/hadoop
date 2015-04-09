@@ -55,3 +55,5 @@
     NameNode (vinayakumarb)
     
     HDFS-8074. Define a system-wide default EC schema. (Kai Zheng)
+
+    HDFS-8104. Make hard-coded values consistent with the system default schema first before remove them. (Kai Zheng)
