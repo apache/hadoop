@@ -324,6 +324,9 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-4844. Counters / AbstractCounters have constant references not
     declared final. (Brahma Reddy Battula via gera)
 
+    MAPREDUCE-6266. Job#getTrackingURL should consistently return a proper URL
+    (rchiang via rkanter)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
