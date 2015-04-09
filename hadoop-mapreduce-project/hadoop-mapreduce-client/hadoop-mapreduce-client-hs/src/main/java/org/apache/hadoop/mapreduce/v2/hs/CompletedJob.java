@@ -157,10 +157,10 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     String historyUrl = "N/A";
     try {
       historyUrl =
-          MRWebAppUtil.getApplicationWebURLOnJHSWithoutScheme(conf,
+          MRWebAppUtil.getApplicationWebURLOnJHSWithScheme(conf,
               jobId.getAppId());
     } catch (UnknownHostException e) {
-      //Ignore.
+        LOG.error("Problem determining local host: " + e.getMessage());
     }
     report.setTrackingUrl(historyUrl);
     report.setAMInfos(getAMInfos());
