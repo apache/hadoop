@@ -1427,6 +1427,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-8072. Reserved RBW space is not released if client terminates while
     writing block. (Arpit Agarwal)
 
+    HDFS-8063: Fix intermittent test failures in TestTracing (Masatake Iwasaki
+    via Colin P. McCabe)
+
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
       HDFS-7720. Quota by Storage Type API, tools and ClientNameNode
