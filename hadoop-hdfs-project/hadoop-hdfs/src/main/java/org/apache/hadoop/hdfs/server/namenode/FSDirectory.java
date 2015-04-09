@@ -564,7 +564,8 @@ public class FSDirectory implements Closeable {
       getStorageTypeDeltas(fileINode.getStoragePolicyID(), ssDelta,
           replication, replication);;
     updateCount(iip, iip.length() - 1,
-      new QuotaCounts.Builder().nameSpace(nsDelta).storageSpace(ssDelta * replication).
+      new QuotaCounts.Builder().nameSpace(nsDelta).storageSpace(
+          ssDelta * replication).
           typeSpaces(typeSpaceDeltas).build(),
         checkQuota);
   }
@@ -578,10 +579,9 @@ public class FSDirectory implements Closeable {
     EnumCounters<StorageType> typeSpaceDeltas =
         getStorageTypeDeltas(fileINode.getStoragePolicyID(), ssDelta, oldRep, newRep);
     updateCount(iip, iip.length() - 1,
-        new QuotaCounts.Builder().nameSpace(nsDelta).
-            storageSpace(ssDelta * (newRep - oldRep)).
-            typeSpaces(typeSpaceDeltas).build(),
-        checkQuota);
+                new QuotaCounts.Builder().nameSpace(nsDelta).
+                    storageSpace(ssDelta * (newRep - oldRep)).
+                    typeSpaces(typeSpaceDeltas).build(), checkQuota);
   }
 
   /** update count of each inode with quota
@@ -1566,6 +1566,16 @@ public class FSDirectory implements Closeable {
   void checkTraverse(FSPermissionChecker pc, INodesInPath iip)
       throws AccessControlException {
     checkPermission(pc, iip, false, null, null, null, null);
+  }
+
+  void checkTraverse(FSPermissionChecker pc, Resolver.Result iip)
+      throws AccessControlException {
+    // TODO
+  }
+
+  void checkAncestorAccess(FSPermissionChecker pc, Resolver.Result iip,
+      FsAction access) throws AccessControlException {
+    // TODO
   }
 
   /**

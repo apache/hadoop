@@ -813,7 +813,31 @@ public class FSEditLog implements LogsPurgeable {
     }
     logEdit(op);
   }
-  
+
+  /**
+   * Add create directory record to edit log
+   */
+  public void logMkDir(FlatINodesInPath iip, StringMap ugidMap) {
+    FlatINode inode = iip.getLastINode();
+    PermissionStatus permissions = inode.permissionStatus(ugidMap);
+    MkdirOp op = MkdirOp.getInstance(cache.get())
+        .setInodeId(inode.id())
+        .setPath(iip.path())
+        .setTimestamp(inode.mtime())
+        .setPermissionStatus(permissions);
+
+    // TODO: Handle ACL and XAttr
+//    AclFeature f = newNode.getAclFeature();
+//    if (f != null) {
+//      op.setAclEntries(AclStorage.readINodeLogicalAcl(newNode));
+//    }
+//
+//    XAttrFeature x = newNode.getXAttrFeature();
+//    if (x != null) {
+//      op.setXAttrs(x.getXAttrs());
+//    }
+    logEdit(op);
+  }
   /** 
    * Add rename record to edit log.
    *
