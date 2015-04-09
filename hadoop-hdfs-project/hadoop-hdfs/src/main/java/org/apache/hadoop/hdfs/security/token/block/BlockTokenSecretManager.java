@@ -80,9 +80,7 @@ public class BlockTokenSecretManager extends
   
   private final SecureRandom nonceGenerator = new SecureRandom();
 
-  public static enum AccessMode {
-    READ, WRITE, COPY, REPLACE
-  };
+  ;
   
   /**
    * Constructor for slaves.
@@ -239,7 +237,7 @@ public class BlockTokenSecretManager extends
 
   /** Generate an block token for current user */
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock block,
-      EnumSet<AccessMode> modes) throws IOException {
+      EnumSet<BlockTokenIdentifier.AccessMode> modes) throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String userID = (ugi == null ? null : ugi.getShortUserName());
     return generateToken(userID, block, modes);
@@ -247,7 +245,7 @@ public class BlockTokenSecretManager extends
 
   /** Generate a block token for a specified user */
   public Token<BlockTokenIdentifier> generateToken(String userId,
-      ExtendedBlock block, EnumSet<AccessMode> modes) throws IOException {
+      ExtendedBlock block, EnumSet<BlockTokenIdentifier.AccessMode> modes) throws IOException {
     BlockTokenIdentifier id = new BlockTokenIdentifier(userId, block
         .getBlockPoolId(), block.getBlockId(), modes);
     return new Token<BlockTokenIdentifier>(id, this);
@@ -259,7 +257,7 @@ public class BlockTokenSecretManager extends
    * when token password has already been verified (e.g., in the RPC layer).
    */
   public void checkAccess(BlockTokenIdentifier id, String userId,
-      ExtendedBlock block, AccessMode mode) throws InvalidToken {
+      ExtendedBlock block, BlockTokenIdentifier.AccessMode mode) throws InvalidToken {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Checking access for user=" + userId + ", block=" + block
           + ", access mode=" + mode + " using " + id.toString());
@@ -288,7 +286,7 @@ public class BlockTokenSecretManager extends
 
   /** Check if access should be allowed. userID is not checked if null */
   public void checkAccess(Token<BlockTokenIdentifier> token, String userId,
-      ExtendedBlock block, AccessMode mode) throws InvalidToken {
+      ExtendedBlock block, BlockTokenIdentifier.AccessMode mode) throws InvalidToken {
     BlockTokenIdentifier id = new BlockTokenIdentifier();
     try {
       id.readFields(new DataInputStream(new ByteArrayInputStream(token
