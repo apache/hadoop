@@ -19,7 +19,22 @@
 #ifndef _HDFS_LIBHDFS3_COMMON_UNORDERED_MAP_H_
 #define _HDFS_LIBHDFS3_COMMON_UNORDERED_MAP_H_
 
-#ifdef _LIBCPP_VERSION
+// Use boost for Windows, to avoid xutility type cast complain.
+#if (defined NEED_BOOST && defined _WIN32)
+
+#include <boost/unordered_map.hpp>
+#include <boost/unordered_set.hpp>
+
+namespace hdfs {
+namespace internal {
+
+using boost::unordered_map;
+using boost::unordered_set;
+
+}
+}
+
+#elif (defined _LIBCPP_VERSION || defined _WIN32)
 
 #include <unordered_map>
 #include <unordered_set>

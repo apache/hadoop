@@ -19,6 +19,7 @@
 #ifndef _HDFS_LIBHDFS3_COMMON_WRITEBUFFER_H_
 #define _HDFS_LIBHDFS3_COMMON_WRITEBUFFER_H_
 
+#include "platform.h"
 #include <cassert>
 #include <cstddef>
 #include <cstring>

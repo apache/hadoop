@@ -16,52 +16,26 @@
  * limitations under the License.
  */
 
-#ifndef _HDFS_LIBHDFS_3_UTIL_WRITABLEUTILS_H_
-#define _HDFS_LIBHDFS_3_UTIL_WRITABLEUTILS_H_
+#include "Thread.h"
 
-#include <stdint.h>
-#include <string>
+#include <pthread.h>
+#include <signal.h>
+#include <unistd.h>
 
 namespace hdfs {
 namespace internal {
 
-class WritableUtils {
-public:
-    WritableUtils(char *b, size_t l);
+// Signal in Windows is limited.
+sigset_t ThreadBlockSignal() {
+    signal(SIGINT, SIG_IGN);
+    signal(SIGTERM, SIG_IGN);
+    return 0;
+}
 
-    int32_t ReadInt32();
-
-    int64_t ReadInt64();
-
-    void ReadRaw(char *buf, size_t size);
-
-    std::string ReadText();
-
-    int readByte();
-
-    size_t WriteInt32(int32_t value);
-
-    size_t WriteInt64(int64_t value);
-
-    size_t WriteRaw(const char *buf, size_t size);
-
-    size_t WriteText(const std::string &str);
-
-private:
-    int decodeWritableUtilsSize(int value);
-
-    void writeByte(int val);
-
-    bool isNegativeWritableUtils(int value);
-
-    int32_t ReadBigEndian32();
-
-private:
-    char *buffer;
-    size_t len;
-    size_t current;
-};
+void ThreadUnBlockSignal(sigset_t sigs) {
+    signal(SIGINT, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
+}
 
 }
 }
-#endif /* _HDFS_LIBHDFS_3_UTIL_WritableUtils_H_ */

@@ -20,13 +20,18 @@
 #define _UUID_HEADER_FOR_WIN_
 
 /*
- * This file an Windows equivalent of libuuid.
+ * This file a Windows equivalence of libuuid.
  */
 
 #include <Rpc.h>
 #include <RpcDce.h>
 #pragma comment(lib, "rpcrt4.lib")
 
-#define uuid_generate(id) UuidCreate(&(id))
+#undef uuid_t
+typedef unsigned char uuid_t[16];
+
+// It is OK to reinterpret cast, as UUID is a struct with 16 bytes.
+// TODO: write our own uuid generator to get rid of libuuid dependency.
+#define uuid_generate(id) UuidCreate(reinterpret_cast<UUID *>(id))
 
 #endif

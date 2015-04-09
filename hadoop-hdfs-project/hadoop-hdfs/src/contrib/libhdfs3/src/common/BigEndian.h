@@ -19,6 +19,7 @@
 #ifndef _HDFS_LIBHDFS3_COMMON_BIGENDIAN_H_
 #define _HDFS_LIBHDFS3_COMMON_BIGENDIAN_H_
 
+#include <platform.h>
 #include <arpa/inet.h>
 #include <stdint.h>
 #include <string.h>

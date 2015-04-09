@@ -45,6 +45,8 @@ typedef std::pair<int64_t, std::string> LocalBlockInforCacheKey;
 typedef LruMap<LocalBlockInforCacheKey, BlockLocalPathInfo>
     LocalBlockInforCacheType;
 
+unordered_set<std::string> BuildLocalAddrSet();
+
 /**
  * A input stream used read data from hdfs.
  */

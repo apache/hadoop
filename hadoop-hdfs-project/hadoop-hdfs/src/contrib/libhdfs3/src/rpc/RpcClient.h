@@ -123,7 +123,7 @@ public:
         static mutex mutid;
         lock_guard<mutex> lock(mutid);
         ++count;
-        count = count < std::numeric_limits<int32_t>::max() ? count : 0;
+        count = count < (std::numeric_limits<int32_t>::max)() ? count : 0;
         return count;
     }
 

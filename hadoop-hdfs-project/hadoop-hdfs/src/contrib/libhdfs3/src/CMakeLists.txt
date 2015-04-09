@@ -47,6 +47,17 @@ LIST(APPEND LIBHDFS3_SOURCES ${files})
 AUTO_SOURCES(files "*.h" "RECURSE" "${CMAKE_CURRENT_SOURCE_DIR}")
 LIST(APPEND LIBHDFS3_SOURCES ${files})
 
+SET(LIBHDFS3_SOURCES
+  ${LIBHDFS3_SOURCES}
+  ${libhdfs3_OS_PLATFORM_DIR}/Thread.cc
+  ${libhdfs3_OS_PLATFORM_DIR}/StackPrinter.cc
+  ${libhdfs3_OS_PLATFORM_DIR}/Platform.cc
+)
+IF(MSVC)
+  SET(LIBHDFS3_SOURCES
+    ${LIBHDFS3_SOURCES}
+    ${libhdfs3_OS_PLATFORM_DIR}/sys/mman.c)
+ENDIF(MSVC)
 AUTO_SOURCES(libhdfs3_PROTO_FILES "proto/*.proto" "RECURSE" "${CMAKE_CURRENT_SOURCE_DIR}")
 SET(libhdfs3_PROTO_FILES ${libhdfs3_PROTO_FILES} PARENT_SCOPE)
 
@@ -54,7 +65,10 @@ INCLUDE(GenerateProtobufs.cmake)
 INCLUDE_DIRECTORIES("${CMAKE_BINARY_DIR}")
 
 SET(LIBHDFS_SRC_DIR ${HADOOP_TOP_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/native/libhdfs/)
-INCLUDE_DIRECTORIES(${LIBHDFS_SRC_DIR})
+IF(NOT MSVC)
+  # In windows, there will a conflict with Exception.h native/libhdfs.
+  INCLUDE_DIRECTORIES(${LIBHDFS_SRC_DIR})
+ENDIF(NOT MSVC)
 
 SET(HEADER 
     ${LIBHDFS_SRC_DIR}/hdfs.h

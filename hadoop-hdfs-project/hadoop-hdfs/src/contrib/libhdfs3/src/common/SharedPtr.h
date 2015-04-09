@@ -19,7 +19,7 @@
 #ifndef _HDFS_LIBHDFS3_COMMON_SHARED_PTR_H_
 #define _HDFS_LIBHDFS3_COMMON_SHARED_PTR_H_
 
-#ifdef _LIBCPP_VERSION
+#if (defined _LIBCPP_VERSION || defined _WIN32)
 #include <memory>
 
 namespace hdfs {

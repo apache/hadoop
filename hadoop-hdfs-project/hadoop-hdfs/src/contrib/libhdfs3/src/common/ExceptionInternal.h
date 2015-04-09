@@ -34,7 +34,6 @@
 
 #define STACK_DEPTH 64
 
-#define PATH_SEPRATOR '/'
 inline static const char *SkipPathPrefix(const char *path) {
     int i, len = strlen(path);
 

@@ -19,6 +19,7 @@
 #ifndef _HDFS_LIBHDFS3_NETWORK_SYSCALL_H_
 #define _HDFS_LIBHDFS3_NETWORK_SYSCALL_H_
 
+#include "platform.h"
 #include <fcntl.h>
 #include <netdb.h>
 #include <poll.h>
@@ -34,11 +35,16 @@ using ::freeaddrinfo;
 using ::socket;
 using ::connect;
 using ::getpeername;
-using ::fcntl;
 using ::setsockopt;
 using ::poll;
 using ::shutdown;
 using ::close;
+#ifdef _WIN32
+using ::ioctlsocket;
+using ::closesocket;
+#else
+using ::fcntl;
+#endif
 
 }
 

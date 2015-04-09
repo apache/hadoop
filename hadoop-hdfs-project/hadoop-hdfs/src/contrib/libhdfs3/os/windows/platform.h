@@ -77,6 +77,16 @@
 #define lseek _lseek
 
 /*
+ * Constants used for socket api.
+ */
+#define SHUT_RDWR SD_BOTH
+
+/*
+ * Account for lack of poll syscall.
+ */
+int poll(struct pollfd *fds, unsigned long nfds, int timeout);
+
+/*
  * String related.
  */
 #define snprintf(str, size, format, ...) \
@@ -105,8 +115,33 @@
 #define PATH_SEPRATOR '\\'
 
 /*
+ * gcc-style type-checked format arguments are not supported on Windows, so just
+ * stub this macro.
+ */
+#define TYPE_CHECKED_PRINTF_FORMAT(formatArg, varArgs)
+
+/*
  * Support for signals in Windows is limited.
  */
 typedef unsigned long sigset_t;
+
+/*
+ * Account for lack of dprint in Windows by using
+ * write syscall to write message to a file.
+ */
+#include<vector>
+inline int dprintf(int fd, const char *fmt, ...) {
+    va_list ap;
+    std::vector<char> buffer;
+    //determine buffer size
+    va_start(ap, fmt);
+    int size = vsnprintf(&buffer[0], buffer.size(), fmt, ap);
+    va_end(ap);
+    va_start(ap, fmt);
+    buffer.resize(size);
+    vsnprintf(&buffer[0], buffer.size(), fmt, ap);
+    va_end(ap);
+    _write(fd, &buffer[0], buffer.size());
+}
 
 #endif // LIBHDFS3_WINDOWS_PLATFORM_H

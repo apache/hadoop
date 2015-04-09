@@ -16,4 +16,24 @@
  * limitations under the License.
  */
 
-/* Dummy file for Windows build */
+#include "platform.h"
+
+inline int gettimeofday(struct timeval *tv, struct timezone* tz) {
+    SYSTEMTIME localtime;
+    GetLocalTime(&localtime);
+    // GetLocalTime only allows upto ms.
+    tv->tv_usec = localtime.wMilliseconds;
+    time_t timeval;
+    tv->tv_sec = time(&timeval);
+    return 0;
+}
+
+inline struct tm *localtime_r(long* tv_sec, struct tm *result) {
+    if (localtime_s(result, reinterpret_cast<time_t*>(tv_sec))  == 0) {
+        // Good
+        return result;
+    }
+    else {
+        return NULL;
+    }
+}

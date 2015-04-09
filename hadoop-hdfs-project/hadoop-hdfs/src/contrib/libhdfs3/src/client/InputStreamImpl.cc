@@ -42,79 +42,6 @@ mutex InputStreamImpl::MutLocalBlockInforCache;
 unordered_map<uint32_t, shared_ptr<LocalBlockInforCacheType>>
     InputStreamImpl::LocalBlockInforCache;
 
-unordered_set<std::string> BuildLocalAddrSet() {
-    unordered_set<std::string> set;
-    struct ifaddrs *ifAddr = NULL;
-    struct ifaddrs *pifAddr = NULL;
-    struct sockaddr *addr;
-
-    if (getifaddrs(&ifAddr)) {
-        THROW(HdfsNetworkException,
-              "InputStreamImpl: cannot get local network interface: %s",
-              GetSystemErrorInfo(errno));
-    }
-
-    try {
-        std::vector<char> host;
-        const char *pHost;
-        host.resize(INET6_ADDRSTRLEN + 1);
-
-        for (pifAddr = ifAddr; pifAddr != NULL; pifAddr = pifAddr->ifa_next) {
-            addr = pifAddr->ifa_addr;
-            memset(&host[0], 0, INET6_ADDRSTRLEN + 1);
-
-            if (addr->sa_family == AF_INET) {
-                pHost = inet_ntop(
-                    addr->sa_family,
-                    &(reinterpret_cast<struct sockaddr_in *>(addr))->sin_addr,
-                    &host[0], INET6_ADDRSTRLEN);
-            } else if (addr->sa_family == AF_INET6) {
-                pHost = inet_ntop(
-                    addr->sa_family,
-                    &(reinterpret_cast<struct sockaddr_in6 *>(addr))->sin6_addr,
-                    &host[0], INET6_ADDRSTRLEN);
-            } else {
-                continue;
-            }
-
-            if (NULL == pHost) {
-                THROW(HdfsNetworkException,
-                      "InputStreamImpl: cannot get convert network address "
-                      "to textual form: %s",
-                      GetSystemErrorInfo(errno));
-            }
-
-            set.insert(pHost);
-        }
-
-        /*
-         * add hostname.
-         */
-        long hostlen = sysconf(_SC_HOST_NAME_MAX);
-        host.resize(hostlen + 1);
-
-        if (gethostname(&host[0], host.size())) {
-            THROW(HdfsNetworkException,
-                  "InputStreamImpl: cannot get hostname: %s",
-                  GetSystemErrorInfo(errno));
-        }
-
-        set.insert(&host[0]);
-    } catch (...) {
-        if (ifAddr != NULL) {
-            freeifaddrs(ifAddr);
-        }
-
-        throw;
-    }
-
-    if (ifAddr != NULL) {
-        freeifaddrs(ifAddr);
-    }
-
-    return set;
-}
-
 InputStreamImpl::InputStreamImpl()
     : closed(true),
       localRead(true),
@@ -772,9 +699,9 @@ void InputStreamImpl::readFullyInternal(char *buf, int64_t size) {
 
     try {
         while (todo > 0) {
-            done = todo < std::numeric_limits<int32_t>::max()
+            done = todo < (std::numeric_limits<int32_t>::max)()
                        ? static_cast<int32_t>(todo)
-                       : std::numeric_limits<int32_t>::max();
+                       : (std::numeric_limits<int32_t>::max)();
             done = readInternal(buf + (size - todo), done);
             todo -= done;
         }

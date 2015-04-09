@@ -67,7 +67,7 @@ bool MappedFileWrapper::open(int fd, bool delegate) {
     path = ss.str();
 
     if (static_cast<uint64_t>(size) >
-        static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+        static_cast<uint64_t>((std::numeric_limits<size_t>::max)())) {
         THROW(HdfsIOException,
               "Cannot create memory mapped file for \"%s\", file is too large.",
               path.c_str());
@@ -86,7 +86,7 @@ bool MappedFileWrapper::open(const std::string &path) {
     size = st.st_size;
 
     if (static_cast<uint64_t>(size) >
-        static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+        static_cast<uint64_t>((std::numeric_limits<size_t>::max)())) {
         THROW(HdfsIOException,
               "Cannot create memory mapped file for \"%s\", file is too large.",
               path.c_str());

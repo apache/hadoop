@@ -84,8 +84,8 @@ void CFileWrapper::seek(int64_t offset) {
     bool seek_set = true;
 
     while (todo > 0) {
-        batch = todo < std::numeric_limits<long>::max() ?
-                todo : std::numeric_limits<long>::max();
+        batch = todo < (std::numeric_limits<long>::max)() ?
+                todo : (std::numeric_limits<long>::max)();
         off_t rc = fseek(file, static_cast<long>(batch),
                          seek_set ? SEEK_SET : SEEK_CUR);
         seek_set = false;

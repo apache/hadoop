@@ -280,7 +280,7 @@ void TcpSocketImpl::connect(struct addrinfo * paddr, const char * host,
 
             struct sockaddr peer;
 
-            unsigned int len = sizeof(peer);
+            socklen_t len = sizeof(peer);
 
             memset(&peer, 0, sizeof(peer));
 
@@ -306,23 +306,6 @@ void TcpSocketImpl::connect(struct addrinfo * paddr, const char * host,
     } catch (...) {
         close();
         throw;
-    }
-}
-
-void TcpSocketImpl::setBlockMode(bool enable) {
-    int flag;
-    flag = syscalls::fcntl(sock, F_GETFL, 0);
-
-    if (-1 == flag) {
-        THROW(HdfsNetworkException, "Get socket flag failed for remote node %s: %s",
-              remoteAddr.c_str(), GetSystemErrorInfo(errno));
-    }
-
-    flag = enable ? (flag & ~O_NONBLOCK) : (flag | O_NONBLOCK);
-
-    if (-1 == syscalls::fcntl(sock, F_SETFL, flag)) {
-        THROW(HdfsNetworkException, "Set socket flag failed for remote "
-              "node %s: %s", remoteAddr.c_str(), GetSystemErrorInfo(errno));
     }
 }
 
@@ -375,7 +358,8 @@ void TcpSocketImpl::setLingerTimeoutInternal(int timeout) {
     l.l_onoff = timeout > 0 ? true : false;
     l.l_linger = timeout > 0 ? timeout : 0;
 
-    if (syscalls::setsockopt(sock, SOL_SOCKET, SO_LINGER, &l, sizeof(l))) {
+    if (syscalls::setsockopt(sock, SOL_SOCKET, SO_LINGER,
+            reinterpret_cast<char *>(&l), sizeof(l))) {
         THROW(HdfsNetworkException, "Set socket flag failed for remote "
               "node %s: %s", remoteAddr.c_str(), GetSystemErrorInfo(errno));
     }
@@ -388,7 +372,7 @@ void TcpSocketImpl::setSendTimeout(int timeout) {
     timeo.tv_usec = (timeout % 1000) * 1000;
 
     if (syscalls::setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO,
-                                &timeo, sizeof(timeo))) {
+                                reinterpret_cast<char *>(&timeo), sizeof(timeo))) {
         THROW(HdfsNetworkException, "Set socket flag failed for remote "
               "node %s: %s", remoteAddr.c_str(), GetSystemErrorInfo(errno));
     }

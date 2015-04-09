@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "platform.h"
 #include "WritableUtils.h"
 
 #include <arpa/inet.h>
@@ -35,8 +36,8 @@ int32_t WritableUtils::ReadInt32() {
     int64_t val;
     val = ReadInt64();
 
-    if (val < std::numeric_limits<int32_t>::min()
-            || val > std::numeric_limits<int32_t>::max()) {
+    if (val < (std::numeric_limits<int32_t>::min)()
+            || val > (std::numeric_limits<int32_t>::max)()) {
         throw std::range_error("overflow");
     }
 

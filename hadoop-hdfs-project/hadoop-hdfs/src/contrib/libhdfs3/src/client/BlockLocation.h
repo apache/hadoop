@@ -19,6 +19,7 @@
 #ifndef _HDFS_LIBHDFS3_CLIENT_BLOCKLOCATION_H_
 #define _HDFS_LIBHDFS3_CLIENT_BLOCKLOCATION_H_
 
+#include <stdint.h>
 #include <string>
 #include <vector>
 

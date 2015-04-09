@@ -30,6 +30,10 @@
 namespace hdfs {
 namespace internal {
 
+void SetInitNamenodeIndex(const std::string & id, uint32_t index);
+uint32_t GetInitNamenodeIndex(const std::string id);
+
+
 class NamenodeProxy : public Namenode {
 public:
     NamenodeProxy(const std::vector<NamenodeInfo> &namenodeInfos,

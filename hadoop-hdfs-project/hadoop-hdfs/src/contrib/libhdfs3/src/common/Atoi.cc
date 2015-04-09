@@ -42,8 +42,8 @@ Status StrToInt32(const char *str, int32_t *ret) {
         oss << "Invalid int32_t type: " << str;
         return Status(EINVAL, oss.str());
     }
-    if (ERANGE == errno || retval > std::numeric_limits<int32_t>::max() ||
-        retval < std::numeric_limits<int32_t>::min()) {
+    if (ERANGE == errno || retval > (std::numeric_limits<int32_t>::max)() ||
+        retval < (std::numeric_limits<int32_t>::min)()) {
         ostringstream oss;
         oss << "Underflow/Overflow in int32_t type: " << str;
         return Status(EINVAL, oss.str());
@@ -63,8 +63,8 @@ Status StrToInt64(const char *str, int64_t *ret) {
         oss << "Invalid int64_t type: " << str;
         return Status(EINVAL, oss.str());
     }
-    if (ERANGE == errno || retval > std::numeric_limits<int64_t>::max() ||
-        retval < std::numeric_limits<int64_t>::min()) {
+    if (ERANGE == errno || retval > (std::numeric_limits<int64_t>::max)() ||
+        retval < (std::numeric_limits<int64_t>::min)()) {
         ostringstream oss;
         oss << "Underflow/Overflow in int64_t type: " << str;
         return Status(EINVAL, oss.str());
@@ -100,8 +100,8 @@ Status StrToDouble(const char *str, double *ret) {
         oss << "Invalid double type: " << str;
         return Status(EINVAL, oss.str());
     }
-    if (ERANGE == errno || retval > std::numeric_limits<double>::max() ||
-        retval < std::numeric_limits<double>::min()) {
+    if (ERANGE == errno || retval > (std::numeric_limits<double>::max)() ||
+        retval < (std::numeric_limits<double>::min)()) {
         ostringstream oss;
         oss << "Underflow/Overflow in double type: " << str;
         return Status(EINVAL, oss.str());
