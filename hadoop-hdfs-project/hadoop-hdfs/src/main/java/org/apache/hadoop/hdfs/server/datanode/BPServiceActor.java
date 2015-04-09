@@ -118,6 +118,7 @@ class BPServiceActor implements Runnable {
   private volatile boolean shouldServiceRun = true;
   private final DataNode dn;
   private final DNConf dnConf;
+  private long prevBlockReportId;
 
   private DatanodeRegistration bpRegistration;
   final LinkedList<BPServiceActorAction> bpThreadQueue 
@@ -128,6 +129,7 @@ class BPServiceActor implements Runnable {
     this.dn = bpos.getDataNode();
     this.nnAddr = nnAddr;
     this.dnConf = dn.getDnConf();
+    prevBlockReportId = DFSUtil.getRandom().nextLong();
   }
 
   boolean isAlive() {
@@ -434,15 +436,15 @@ class BPServiceActor implements Runnable {
     return sendImmediateIBR;
   }
 
-  private long prevBlockReportId = 0;
-
   private long generateUniqueBlockReportId() {
-    long id = System.nanoTime();
-    if (id <= prevBlockReportId) {
-      id = prevBlockReportId + 1;
+    // Initialize the block report ID the first time through.
+    // Note that 0 is used on the NN to indicate "uninitialized", so we should
+    // not send a 0 value ourselves.
+    prevBlockReportId++;
+    while (prevBlockReportId == 0) {
+      prevBlockReportId = DFSUtil.getRandom().nextLong();
     }
-    prevBlockReportId = id;
-    return id;
+    return prevBlockReportId;
   }
 
   /**
