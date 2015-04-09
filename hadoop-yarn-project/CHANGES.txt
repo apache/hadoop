@@ -162,6 +162,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2890. MiniYarnCluster should turn on timeline service if
     configured to do so. (Mit Desai via hitesh)
 
+    YARN-3465. Use LinkedHashMap to preserve order of resource requests. 
+    (Zhihai Xu via kasha)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
