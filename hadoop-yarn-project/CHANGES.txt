@@ -120,6 +120,9 @@ Release 2.6.1 - UNRELEASED
     YARN-3393. Getting application(s) goes wrong when app finishes before
     starting the attempt. (Zhijie Shen via xgong)
 
+    YARN-3055. Fixed ResourceManager's DelegationTokenRenewer to not stop token
+    renewal of applications part of a bigger workflow. (Daryn Sharp via vinodkv)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
