@@ -101,6 +101,9 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-8091: ACLStatus and XAttributes should be presented to
+    INodeAttributesProvider before returning to client (asuresh)
+
     HDFS-7501. TransactionsSinceLastCheckpoint can be negative on SBNs.
     (Gautam Gopalakrishnan via harsh)
 
