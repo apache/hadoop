@@ -451,6 +451,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7725. Incorrect "nodes in service" metrics caused all writes to fail.
     (Ming Ma via wang)
 
+    HDFS-8096. DatanodeMetrics#blocksReplicated will get incremented early and
+    even for failed transfers (vinayakumarb)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
