@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -638,7 +639,7 @@ public class ContainerImpl implements Container {
           return ContainerState.LOCALIZATION_FAILED;
         }
         Map<LocalResourceVisibility, Collection<LocalResourceRequest>> req =
-            new HashMap<LocalResourceVisibility, 
+            new LinkedHashMap<LocalResourceVisibility,
                         Collection<LocalResourceRequest>>();
         if (!container.publicRsrcs.isEmpty()) {
           req.put(LocalResourceVisibility.PUBLIC, container.publicRsrcs);
