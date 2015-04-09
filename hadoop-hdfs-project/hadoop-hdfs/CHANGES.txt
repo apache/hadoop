@@ -167,6 +167,9 @@ Release 2.7.2 - 2016-01-25
 
     HDFS-9574. Reduce client failures during datanode restart (kihwal)
 
+    HDFS-8101. DFSClient use of non-constant DFSConfigKeys pulls in WebHDFS
+    classes at runtime. (Sean Busbey via atm)
+
   OPTIMIZATIONS
 
     HDFS-8722. Optimize datanode writes for small writes and flushes (kihwal)
