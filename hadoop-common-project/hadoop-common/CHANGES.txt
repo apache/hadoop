@@ -239,6 +239,11 @@ Release 2.7.1 - 2015-07-06
     HADOOP-11663. Remove description about Java 6 from docs.
     (Masatake Iwasaki via aajisaka)
 
+    HADOOP-11814. Reformat hadoop-annotations, o.a.h.classification.tools.
+    (Li Lu via wheat9)
+
+  OPTIMIZATIONS
+
     HADOOP-11966. Variable cygwin is undefined in hadoop-config.sh when executed
     through hadoop-daemon.sh. (cnauroth)
 

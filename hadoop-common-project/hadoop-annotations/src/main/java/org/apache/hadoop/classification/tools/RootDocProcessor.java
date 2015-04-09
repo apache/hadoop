@@ -48,47 +48,47 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Based on code from http://www.sixlegs.com/blog/java/exclude-javadoc-tag.html.
  */
 class RootDocProcessor {
-  
+
   static String stability = StabilityOptions.UNSTABLE_OPTION;
   static boolean treatUnannotatedClassesAsPrivate = false;
-  
+
   public static RootDoc process(RootDoc root) {
     return (RootDoc) process(root, RootDoc.class);
   }
-  
-  private static Object process(Object obj, Class<?> type) { 
-    if (obj == null) { 
-      return null; 
-    } 
-    Class<?> cls = obj.getClass(); 
-    if (cls.getName().startsWith("com.sun.")) { 
-      return getProxy(obj); 
-    } else if (obj instanceof Object[]) { 
-      Class<?> componentType = type.isArray() ? type.getComponentType() 
-	  : cls.getComponentType();
+
+  private static Object process(Object obj, Class<?> type) {
+    if (obj == null) {
+      return null;
+    }
+    Class<?> cls = obj.getClass();
+    if (cls.getName().startsWith("com.sun.")) {
+      return getProxy(obj);
+    } else if (obj instanceof Object[]) {
+      Class<?> componentType = type.isArray() ? type.getComponentType()
+          : cls.getComponentType();
       Object[] array = (Object[]) obj;
       Object[] newArray = (Object[]) Array.newInstance(componentType,
-	  array.length); 
+          array.length);
       for (int i = 0; i < array.length; ++i) {
         newArray[i] = process(array[i], componentType);
       }
       return newArray;
-    } 
-    return obj; 
+    }
+    return obj;
   }
-  
+
   private static Map<Object, Object> proxies =
-    new WeakHashMap<Object, Object>(); 
-  
-  private static Object getProxy(Object obj) { 
-    Object proxy = proxies.get(obj); 
-    if (proxy == null) { 
-      proxy = Proxy.newProxyInstance(obj.getClass().getClassLoader(), 
-        obj.getClass().getInterfaces(), new ExcludeHandler(obj)); 
-      proxies.put(obj, proxy); 
-    } 
-    return proxy; 
-  } 
+    new WeakHashMap<Object, Object>();
+
+  private static Object getProxy(Object obj) {
+    Object proxy = proxies.get(obj);
+    if (proxy == null) {
+      proxy = Proxy.newProxyInstance(obj.getClass().getClassLoader(),
+        obj.getClass().getInterfaces(), new ExcludeHandler(obj));
+      proxies.put(obj, proxy);
+    }
+    return proxy;
+  }
 
   private static class ExcludeHandler implements InvocationHandler {
     private Object target;
@@ -96,116 +96,116 @@ class RootDocProcessor {
     public ExcludeHandler(Object target) {
       this.target = target;
     }
-    
+
     @Override
     public Object invoke(Object proxy, Method method, Object[] args)
-	throws Throwable {
+        throws Throwable {
       String methodName = method.getName();
       if (target instanceof Doc) {
-	if (methodName.equals("isIncluded")) {
-	  Doc doc = (Doc) target;
-	  return !exclude(doc) && doc.isIncluded();
-	}
-	if (target instanceof RootDoc) {
-	  if (methodName.equals("classes")) {
-	    return filter(((RootDoc) target).classes(), ClassDoc.class);
-	  } else if (methodName.equals("specifiedClasses")) {
-	    return filter(((RootDoc) target).specifiedClasses(), ClassDoc.class);
-	  } else if (methodName.equals("specifiedPackages")) {
-	    return filter(((RootDoc) target).specifiedPackages(), PackageDoc.class);
-	  }
-	} else if (target instanceof ClassDoc) {
-	  if (isFiltered(args)) {
-	    if (methodName.equals("methods")) {
-	      return filter(((ClassDoc) target).methods(true), MethodDoc.class);
-	    } else if (methodName.equals("fields")) {
-	      return filter(((ClassDoc) target).fields(true), FieldDoc.class);
-	    } else if (methodName.equals("innerClasses")) {
-	      return filter(((ClassDoc) target).innerClasses(true),
-		  ClassDoc.class);
-	    } else if (methodName.equals("constructors")) {
-	      return filter(((ClassDoc) target).constructors(true),
-		  ConstructorDoc.class);
-	    }
-	  }
-	} else if (target instanceof PackageDoc) {
-	  if (methodName.equals("allClasses")) {
-	    if (isFiltered(args)) {
-	      return filter(((PackageDoc) target).allClasses(true),
-		ClassDoc.class);
-	    } else {
-	      return filter(((PackageDoc) target).allClasses(), ClassDoc.class);  
-	    }
-	  } else if (methodName.equals("annotationTypes")) {
-	    return filter(((PackageDoc) target).annotationTypes(),
-		AnnotationTypeDoc.class);
-	  } else if (methodName.equals("enums")) {
-	    return filter(((PackageDoc) target).enums(),
-		ClassDoc.class);
-	  } else if (methodName.equals("errors")) {
-	    return filter(((PackageDoc) target).errors(),
-		ClassDoc.class);
-	  } else if (methodName.equals("exceptions")) {
-	    return filter(((PackageDoc) target).exceptions(),
-		ClassDoc.class);
-	  } else if (methodName.equals("interfaces")) {
-	    return filter(((PackageDoc) target).interfaces(),
-		ClassDoc.class);
-	  } else if (methodName.equals("ordinaryClasses")) {
-	    return filter(((PackageDoc) target).ordinaryClasses(),
-		ClassDoc.class);
-	  }
-	}
+        if (methodName.equals("isIncluded")) {
+          Doc doc = (Doc) target;
+          return !exclude(doc) && doc.isIncluded();
+        }
+        if (target instanceof RootDoc) {
+          if (methodName.equals("classes")) {
+            return filter(((RootDoc) target).classes(), ClassDoc.class);
+          } else if (methodName.equals("specifiedClasses")) {
+            return filter(((RootDoc) target).specifiedClasses(), ClassDoc.class);
+          } else if (methodName.equals("specifiedPackages")) {
+            return filter(((RootDoc) target).specifiedPackages(), PackageDoc.class);
+          }
+        } else if (target instanceof ClassDoc) {
+          if (isFiltered(args)) {
+            if (methodName.equals("methods")) {
+              return filter(((ClassDoc) target).methods(true), MethodDoc.class);
+            } else if (methodName.equals("fields")) {
+              return filter(((ClassDoc) target).fields(true), FieldDoc.class);
+            } else if (methodName.equals("innerClasses")) {
+              return filter(((ClassDoc) target).innerClasses(true),
+                  ClassDoc.class);
+            } else if (methodName.equals("constructors")) {
+              return filter(((ClassDoc) target).constructors(true),
+                  ConstructorDoc.class);
+            }
+          }
+        } else if (target instanceof PackageDoc) {
+          if (methodName.equals("allClasses")) {
+            if (isFiltered(args)) {
+              return filter(((PackageDoc) target).allClasses(true),
+                  ClassDoc.class);
+            } else {
+              return filter(((PackageDoc) target).allClasses(), ClassDoc.class);
+            }
+          } else if (methodName.equals("annotationTypes")) {
+            return filter(((PackageDoc) target).annotationTypes(),
+                AnnotationTypeDoc.class);
+          } else if (methodName.equals("enums")) {
+            return filter(((PackageDoc) target).enums(),
+                ClassDoc.class);
+          } else if (methodName.equals("errors")) {
+            return filter(((PackageDoc) target).errors(),
+                ClassDoc.class);
+          } else if (methodName.equals("exceptions")) {
+            return filter(((PackageDoc) target).exceptions(),
+                ClassDoc.class);
+          } else if (methodName.equals("interfaces")) {
+            return filter(((PackageDoc) target).interfaces(),
+                ClassDoc.class);
+          } else if (methodName.equals("ordinaryClasses")) {
+            return filter(((PackageDoc) target).ordinaryClasses(),
+                ClassDoc.class);
+          }
+        }
       }
 
       if (args != null) {
-	if (methodName.equals("compareTo") || methodName.equals("equals")
-	    || methodName.equals("overrides")
-	    || methodName.equals("subclassOf")) {
-	  args[0] = unwrap(args[0]);
-	}
+        if (methodName.equals("compareTo") || methodName.equals("equals")
+            || methodName.equals("overrides")
+            || methodName.equals("subclassOf")) {
+          args[0] = unwrap(args[0]);
+        }
       }
       try {
-	return process(method.invoke(target, args), method.getReturnType());
+        return process(method.invoke(target, args), method.getReturnType());
       } catch (InvocationTargetException e) {
-	throw e.getTargetException();
+        throw e.getTargetException();
       }
     }
-      
+
     private static boolean exclude(Doc doc) {
       AnnotationDesc[] annotations = null;
       if (doc instanceof ProgramElementDoc) {
-	annotations = ((ProgramElementDoc) doc).annotations();
+        annotations = ((ProgramElementDoc) doc).annotations();
       } else if (doc instanceof PackageDoc) {
-	annotations = ((PackageDoc) doc).annotations();
+        annotations = ((PackageDoc) doc).annotations();
       }
       if (annotations != null) {
-	for (AnnotationDesc annotation : annotations) {
-	  String qualifiedTypeName = annotation.annotationType().qualifiedTypeName();
-	  if (qualifiedTypeName.equals(
-	        InterfaceAudience.Private.class.getCanonicalName())
-	    || qualifiedTypeName.equals(
-                InterfaceAudience.LimitedPrivate.class.getCanonicalName())) {
-	    return true;
-	  }
-	  if (stability.equals(StabilityOptions.EVOLVING_OPTION)) {
-	    if (qualifiedTypeName.equals(
-		InterfaceStability.Unstable.class.getCanonicalName())) {
-	      return true;
-	    }
-	  }
-	  if (stability.equals(StabilityOptions.STABLE_OPTION)) {
-	    if (qualifiedTypeName.equals(
-		InterfaceStability.Unstable.class.getCanonicalName())
+        for (AnnotationDesc annotation : annotations) {
+          String qualifiedTypeName = annotation.annotationType().qualifiedTypeName();
+          if (qualifiedTypeName.equals(
+              InterfaceAudience.Private.class.getCanonicalName())
               || qualifiedTypeName.equals(
-  		InterfaceStability.Evolving.class.getCanonicalName())) {
-	      return true;
-	    }
-	  }
-	}
+              InterfaceAudience.LimitedPrivate.class.getCanonicalName())) {
+            return true;
+          }
+          if (stability.equals(StabilityOptions.EVOLVING_OPTION)) {
+            if (qualifiedTypeName.equals(
+                InterfaceStability.Unstable.class.getCanonicalName())) {
+              return true;
+            }
+          }
+          if (stability.equals(StabilityOptions.STABLE_OPTION)) {
+            if (qualifiedTypeName.equals(
+                InterfaceStability.Unstable.class.getCanonicalName())
+                || qualifiedTypeName.equals(
+                InterfaceStability.Evolving.class.getCanonicalName())) {
+              return true;
+            }
+          }
+        }
         for (AnnotationDesc annotation : annotations) {
           String qualifiedTypeName =
-            annotation.annotationType().qualifiedTypeName();
+              annotation.annotationType().qualifiedTypeName();
           if (qualifiedTypeName.equals(
               InterfaceAudience.Public.class.getCanonicalName())) {
             return false;
@@ -217,27 +217,27 @@ class RootDocProcessor {
       }
       return false;
     }
-      
+
     private static Object[] filter(Doc[] array, Class<?> componentType) {
       if (array == null || array.length == 0) {
-	return array;
+        return array;
       }
       List<Object> list = new ArrayList<Object>(array.length);
       for (Doc entry : array) {
-	if (!exclude(entry)) {
-	  list.add(process(entry, componentType));
-	}
+        if (!exclude(entry)) {
+          list.add(process(entry, componentType));
+        }
       }
       return list.toArray((Object[]) Array.newInstance(componentType, list
-	  .size()));
+          .size()));
     }
 
     private Object unwrap(Object proxy) {
       if (proxy instanceof Proxy)
-	return ((ExcludeHandler) Proxy.getInvocationHandler(proxy)).target;
+        return ((ExcludeHandler) Proxy.getInvocationHandler(proxy)).target;
       return proxy;
     }
-      
+
     private boolean isFiltered(Object[] args) {
       return args != null && Boolean.TRUE.equals(args[0]);
     }
