@@ -40,3 +40,5 @@
 
     HADOOP-11645. Erasure Codec API covering the essential aspects for an erasure code
     ( Kai Zheng via vinayakumarb )
+  
+    HADOOP-11818. Minor improvements for erasurecode classes. (Rakesh R via Kai Zheng)

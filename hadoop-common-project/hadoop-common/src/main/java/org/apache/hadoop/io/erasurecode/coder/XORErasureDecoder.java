@@ -25,7 +25,7 @@ import org.apache.hadoop.io.erasurecode.rawcoder.XORRawDecoder;
 /**
  * Xor erasure decoder that decodes a block group.
  *
- * It implements {@link ErasureDecoder}.
+ * It implements {@link ErasureCoder}.
  */
 public class XORErasureDecoder extends AbstractErasureDecoder {
 

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.w3c.dom.*;
@@ -36,7 +36,7 @@ import java.util.*;
  * A EC schema loading utility that loads predefined EC schemas from XML file
  */
 public class SchemaLoader {
-  private static final Log LOG = LogFactory.getLog(SchemaLoader.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(SchemaLoader.class.getName());
 
   /**
    * Load predefined ec schemas from configuration file. This file is
@@ -63,7 +63,7 @@ public class SchemaLoader {
   private List<ECSchema> loadSchema(File schemaFile)
       throws ParserConfigurationException, IOException, SAXException {
 
-    LOG.info("Loading predefined EC schema file " + schemaFile);
+    LOG.info("Loading predefined EC schema file {}", schemaFile);
 
     // Read and parse the schema file.
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -87,7 +87,7 @@ public class SchemaLoader {
           ECSchema schema = loadSchema(element);
             schemas.add(schema);
         } else {
-          LOG.warn("Bad element in EC schema configuration file: " +
+          LOG.warn("Bad element in EC schema configuration file: {}",
               element.getTagName());
         }
       }
@@ -109,7 +109,7 @@ public class SchemaLoader {
       URL url = Thread.currentThread().getContextClassLoader()
           .getResource(schemaFilePath);
       if (url == null) {
-        LOG.warn(schemaFilePath + " not found on the classpath.");
+        LOG.warn("{} not found on the classpath.", schemaFilePath);
         schemaFile = null;
       } else if (! url.getProtocol().equalsIgnoreCase("file")) {
         throw new RuntimeException(
