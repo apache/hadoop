@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
@@ -172,25 +173,25 @@ public class WebHdfsFileSystem extends FileSystem
       this.retryPolicy =
           RetryUtils.getDefaultRetryPolicy(
               conf,
-              DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_POLICY_ENABLED_KEY,
-              DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_POLICY_ENABLED_DEFAULT,
-              DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_POLICY_SPEC_KEY,
-              DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_POLICY_SPEC_DEFAULT,
+              HdfsClientConfigKeys.WebHdfsRetry.RETRY_POLICY_ENABLED_KEY,
+              HdfsClientConfigKeys.WebHdfsRetry.RETRY_POLICY_ENABLED_DEFAULT,
+              HdfsClientConfigKeys.WebHdfsRetry.RETRY_POLICY_SPEC_KEY,
+              HdfsClientConfigKeys.WebHdfsRetry.RETRY_POLICY_SPEC_DEFAULT,
               SafeModeException.class);
     } else {
 
       int maxFailoverAttempts = conf.getInt(
-          DFSConfigKeys.DFS_HTTP_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY,
-          DFSConfigKeys.DFS_HTTP_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT);
+          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_MAX_ATTEMPTS_KEY,
+          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_MAX_ATTEMPTS_DEFAULT);
       int maxRetryAttempts = conf.getInt(
-          DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_MAX_ATTEMPTS_KEY,
-          DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_MAX_ATTEMPTS_DEFAULT);
+          HdfsClientConfigKeys.WebHdfsRetry.RETRY_MAX_ATTEMPTS_KEY,
+          HdfsClientConfigKeys.WebHdfsRetry.RETRY_MAX_ATTEMPTS_DEFAULT);
       int failoverSleepBaseMillis = conf.getInt(
-          DFSConfigKeys.DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_BASE_KEY,
-          DFSConfigKeys.DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_BASE_DEFAULT);
+          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_SLEEPTIME_BASE_KEY,
+          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_SLEEPTIME_BASE_DEFAULT);
       int failoverSleepMaxMillis = conf.getInt(
-          DFSConfigKeys.DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_MAX_KEY,
-          DFSConfigKeys.DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_MAX_DEFAULT);
+          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_SLEEPTIME_MAX_KEY,
+          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_SLEEPTIME_MAX_DEFAULT);
 
       this.retryPolicy = RetryPolicies
           .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,

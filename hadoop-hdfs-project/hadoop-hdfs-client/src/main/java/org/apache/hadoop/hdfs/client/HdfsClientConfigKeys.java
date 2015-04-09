@@ -60,4 +60,21 @@ public interface HdfsClientConfigKeys {
     public static final int     WINDOW_BASE_DEFAULT
         = 3000;
   }
+
+  // WebHDFS retry configuration policy
+  interface WebHdfsRetry {
+    String  PREFIX = HdfsClientConfigKeys.PREFIX + "http.client.";
+    String  RETRY_POLICY_ENABLED_KEY = PREFIX + "dfs.http.client.retry.policy.enabled";
+    boolean RETRY_POLICY_ENABLED_DEFAULT = false;
+    String  RETRY_POLICY_SPEC_KEY = PREFIX + "dfs.http.client.retry.policy.spec";
+    String  RETRY_POLICY_SPEC_DEFAULT = "10000,6,60000,10"; //t1,n1,t2,n2,...
+    String  FAILOVER_MAX_ATTEMPTS_KEY = PREFIX + "dfs.http.client.failover.max.attempts";
+    int     FAILOVER_MAX_ATTEMPTS_DEFAULT =  15;
+    String  RETRY_MAX_ATTEMPTS_KEY = PREFIX + "dfs.http.client.retry.max.attempts";
+    int     RETRY_MAX_ATTEMPTS_DEFAULT = 10;
+    String  FAILOVER_SLEEPTIME_BASE_KEY = PREFIX + "dfs.http.client.failover.sleep.base.millis";
+    int     FAILOVER_SLEEPTIME_BASE_DEFAULT = 500;
+    String  FAILOVER_SLEEPTIME_MAX_KEY = PREFIX + "dfs.http.client.failover.sleep.max.millis";
+    int     FAILOVER_SLEEPTIME_MAX_DEFAULT =  15000;
+  }
 }

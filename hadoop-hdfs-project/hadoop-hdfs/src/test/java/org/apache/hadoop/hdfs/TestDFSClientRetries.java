@@ -875,7 +875,7 @@ public class TestDFSClientRetries {
     final Path dir = new Path("/testNamenodeRestart");
 
     if (isWebHDFS) {
-      conf.setBoolean(DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_POLICY_ENABLED_KEY, true);
+      conf.setBoolean(HdfsClientConfigKeys.WebHdfsRetry.RETRY_POLICY_ENABLED_KEY, true);
     } else {
       conf.setBoolean(HdfsClientConfigKeys.Retry.POLICY_ENABLED_KEY, true);
     }
