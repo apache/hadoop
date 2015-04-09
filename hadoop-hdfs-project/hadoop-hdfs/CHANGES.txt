@@ -463,6 +463,18 @@ Release 2.8.0 - UNRELEASED
     HDFS-8091: ACLStatus and XAttributes should be presented to
     INodeAttributesProvider before returning to client (asuresh)
 
+Release 2.7.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -165,6 +165,18 @@ Release 2.8.0 - UNRELEASED
     YARN-3465. Use LinkedHashMap to preserve order of resource requests. 
     (Zhihai Xu via kasha)
 
+Release 2.7.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

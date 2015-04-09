@@ -509,6 +509,18 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11800. Clean up some test methods in TestCodec.java.
     (Brahma Reddy Battula via aajisaka)
 
+Release 2.7.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
