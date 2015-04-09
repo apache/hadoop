@@ -912,6 +912,9 @@ Release 2.7.0 - UNRELEASED
     YARN-3466. Fix RM nodes web page to sort by node HTTP-address, #containers 
     and node-label column (Jason Lowe via wangda)
 
+    YARN-3055. Fixed ResourceManager's DelegationTokenRenewer to not stop token
+    renewal of applications part of a bigger workflow. (Daryn Sharp via vinodkv)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
