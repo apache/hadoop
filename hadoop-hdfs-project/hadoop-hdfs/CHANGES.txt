@@ -84,9 +84,6 @@ Release 2.8.0 - UNRELEASED
     HDFS-8076. Code cleanup for DFSInputStream: use offset instead of
     LocatedBlock when possible. (Zhe Zhang via wang)
 
-    HDFS-8025. Addendum fix for HDFS-3087 Decomissioning on NN restart can
-    complete without blocks being replicated. (Ming Ma via wang)
-
     HDFS-8089. Move o.a.h.hdfs.web.resources.* to the client jars. (wheat9)
 
     HDFS-7979. Initialize block report IDs with a random number. (wang)
@@ -1119,6 +1116,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-8072. Reserved RBW space is not released if client terminates while
     writing block. (Arpit Agarwal)
+
+    HDFS-8025. Addendum fix for HDFS-3087 Decomissioning on NN restart can
+    complete without blocks being replicated. (Ming Ma via wang)
 
     BREAKDOWN OF HDFS-7584 SUBTASKS AND RELATED JIRAS
 
