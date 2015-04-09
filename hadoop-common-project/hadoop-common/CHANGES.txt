@@ -729,7 +729,10 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11796. Skip TestShellBasedIdMapping.testStaticMapUpdate on Windows.
     (Xiaoyu Yao via cnauroth)
-    
+
+    HADOOP-11815. HttpServer2 should destroy SignerSecretProvider when it
+    stops. (Rohith via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -140,6 +140,7 @@ public final class HttpServer2 implements FilterContainer {
   protected final List<String> filterNames = new ArrayList<>();
   static final String STATE_DESCRIPTION_ALIVE = " - alive";
   static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
+  private final SignerSecretProvider secretProvider;
 
   /**
    * Class to construct instances of HTTP server with specific options.
@@ -335,7 +336,7 @@ public final class HttpServer2 implements FilterContainer {
     this.adminsAcl = b.adminsAcl;
     this.webAppContext = createWebAppContext(b.name, b.conf, adminsAcl, appDir);
     try {
-      SignerSecretProvider secretProvider =
+      this.secretProvider =
           constructSecretProvider(b, webAppContext.getServletContext());
       this.webAppContext.getServletContext().setAttribute
           (AuthenticationFilter.SIGNER_SECRET_PROVIDER_ATTRIBUTE,
@@ -945,6 +946,8 @@ public final class HttpServer2 implements FilterContainer {
     }
 
     try {
+      // explicitly destroy the secrete provider
+      secretProvider.destroy();
       // clear & stop webAppContext attributes to avoid memory leaks.
       webAppContext.clearAttributes();
       webAppContext.stop();
