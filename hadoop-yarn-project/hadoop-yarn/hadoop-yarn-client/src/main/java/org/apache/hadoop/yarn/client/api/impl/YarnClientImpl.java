@@ -485,6 +485,19 @@ public class YarnClientImpl extends YarnClient {
   }
 
   @Override
+  public List<ApplicationReport> getApplications(Set<String> queues,
+      Set<String> users, Set<String> applicationTypes,
+      EnumSet<YarnApplicationState> applicationStates) throws YarnException,
+      IOException {
+    GetApplicationsRequest request =
+        GetApplicationsRequest.newInstance(applicationTypes, applicationStates);
+    request.setQueues(queues);
+    request.setUsers(users);
+    GetApplicationsResponse response = rmClient.getApplications(request);
+    return response.getApplicationList();
+  }
+
+  @Override
   public YarnClusterMetrics getYarnClusterMetrics() throws YarnException,
       IOException {
     GetClusterMetricsRequest request =

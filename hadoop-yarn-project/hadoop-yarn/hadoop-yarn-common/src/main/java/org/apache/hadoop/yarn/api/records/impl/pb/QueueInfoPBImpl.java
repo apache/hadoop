@@ -29,10 +29,12 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.QueueStatisticsProto;
 
 import com.google.protobuf.TextFormat;
 
@@ -367,5 +369,30 @@ public class QueueInfoPBImpl extends QueueInfo {
       return;
     }
     builder.setDefaultNodeLabelExpression(defaultNodeLabelExpression);
+  }
+
+  private QueueStatistics convertFromProtoFormat(QueueStatisticsProto q) {
+    return new QueueStatisticsPBImpl(q);
+  }
+
+  private QueueStatisticsProto convertToProtoFormat(QueueStatistics q) {
+    return ((QueueStatisticsPBImpl) q).getProto();
+  }
+
+  @Override
+  public QueueStatistics getQueueStatistics() {
+    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasQueueStatistics()) ? convertFromProtoFormat(p
+      .getQueueStatistics()) : null;
+  }
+
+  @Override
+  public void setQueueStatistics(QueueStatistics queueStatistics) {
+    maybeInitBuilder();
+    if (queueStatistics == null) {
+      builder.clearQueueStatistics();
+      return;
+    }
+    builder.setQueueStatistics(convertToProtoFormat(queueStatistics));
   }
 }

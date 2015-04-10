@@ -92,6 +92,7 @@ function print_usage(){
   echo "  cluster                               prints cluster information"
   echo "  daemonlog                             get/set the log level for each"
   echo "                                        daemon"
+  echo "  top                                   run cluster usage tool"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
@@ -295,6 +296,35 @@ elif [ "$COMMAND" = "daemonlog" ] ; then
 elif [ "$COMMAND" = "cluster" ] ; then
   CLASS=org.apache.hadoop.yarn.client.cli.ClusterCLI
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+elif [ "$COMMAND" = "top" ]; then
+  CLASS=org.apache.hadoop.yarn.client.cli.TopCLI
+  YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
+  doNotSetCols=0
+  doNotSetRows=0
+  for i in "$@"; do
+    if [[ $i == "-cols" ]]; then
+      doNotSetCols=1
+    fi
+    if [[ $i == "-rows" ]]; then
+      doNotSetRows=1
+    fi
+  done
+  if [ $doNotSetCols == 0 ] && [ -n "${TERM}" ]; then
+    cols=$(tput cols)
+    if [ -n "$cols" ]; then
+      args=( $@ )
+      args=("${args[@]}" "-cols" "$cols")
+      set -- "${args[@]}"
+    fi
+  fi
+  if [ $doNotSetRows == 0 ] && [ -n "${TERM}" ]; then
+    rows=$(tput lines)
+    if [ -n "$rows" ]; then
+      args=( $@ )
+      args=("${args[@]}" "-rows" "$rows")
+      set -- "${args[@]}"
+    fi
+  fi
 else
   CLASS=$COMMAND
 fi

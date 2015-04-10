@@ -53,4 +53,70 @@ public abstract class YarnClusterMetrics {
   @Unstable
   public abstract void setNumNodeManagers(int numNodeManagers);
 
+  /**
+   * Get the number of <code>DecommissionedNodeManager</code>s in the cluster.
+   * 
+   * @return number of <code>DecommissionedNodeManager</code>s in the cluster
+   */
+  @Public
+  @Unstable
+  public abstract int getNumDecommissionedNodeManagers();
+
+  @Private
+  @Unstable
+  public abstract void setNumDecommissionedNodeManagers(
+      int numDecommissionedNodeManagers);
+
+  /**
+   * Get the number of <code>ActiveNodeManager</code>s in the cluster.
+   * 
+   * @return number of <code>ActiveNodeManager</code>s in the cluster
+   */
+  @Public
+  @Unstable
+  public abstract int getNumActiveNodeManagers();
+
+  @Private
+  @Unstable
+  public abstract void setNumActiveNodeManagers(int numActiveNodeManagers);
+
+  /**
+   * Get the number of <code>LostNodeManager</code>s in the cluster.
+   * 
+   * @return number of <code>LostNodeManager</code>s in the cluster
+   */
+  @Public
+  @Unstable
+  public abstract int getNumLostNodeManagers();
+
+  @Private
+  @Unstable
+  public abstract void setNumLostNodeManagers(int numLostNodeManagers);
+
+  /**
+   * Get the number of <code>UnhealthyNodeManager</code>s in the cluster.
+   * 
+   * @return number of <code>UnhealthyNodeManager</code>s in the cluster
+   */
+  @Public
+  @Unstable
+  public abstract int getNumUnhealthyNodeManagers();
+
+  @Private
+  @Unstable
+  public abstract void setNumUnhealthyNodeManagers(int numUnhealthNodeManagers);
+
+  /**
+   * Get the number of <code>RebootedNodeManager</code>s in the cluster.
+   * 
+   * @return number of <code>RebootedNodeManager</code>s in the cluster
+   */
+  @Public
+  @Unstable
+  public abstract int getNumRebootedNodeManagers();
+
+  @Private
+  @Unstable
+  public abstract void setNumRebootedNodeManagers(int numRebootedNodeManagers);
+
 }

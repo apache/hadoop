@@ -659,6 +659,13 @@ public class ClientRMService extends AbstractService implements
     YarnClusterMetrics ymetrics = recordFactory
         .newRecordInstance(YarnClusterMetrics.class);
     ymetrics.setNumNodeManagers(this.rmContext.getRMNodes().size());
+    ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
+    ymetrics.setNumDecommissionedNodeManagers(clusterMetrics
+      .getNumDecommisionedNMs());
+    ymetrics.setNumActiveNodeManagers(clusterMetrics.getNumActiveNMs());
+    ymetrics.setNumLostNodeManagers(clusterMetrics.getNumLostNMs());
+    ymetrics.setNumUnhealthyNodeManagers(clusterMetrics.getUnhealthyNMs());
+    ymetrics.setNumRebootedNodeManagers(clusterMetrics.getNumRebootedNMs());
     response.setClusterMetrics(ymetrics);
     return response;
   }
