@@ -35,7 +35,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -273,12 +272,16 @@ public class TimelineCollectorManager extends CompositeService {
     if (userId != null && !userId.isEmpty()) {
       collector.getTimelineEntityContext().setUserId(userId);
     }
-    String flowId = response.getFlowId();
-    if (flowId != null && !flowId.isEmpty()) {
-      collector.getTimelineEntityContext().setFlowId(flowId);
+    String flowName = response.getFlowName();
+    if (flowName != null && !flowName.isEmpty()) {
+      collector.getTimelineEntityContext().setFlowName(flowName);
     }
-    String flowRunId = response.getFlowRunId();
-    if (flowRunId != null && !flowRunId.isEmpty()) {
+    String flowVersion = response.getFlowVersion();
+    if (flowVersion != null && !flowVersion.isEmpty()) {
+      collector.getTimelineEntityContext().setFlowVersion(flowVersion);
+    }
+    long flowRunId = response.getFlowRunId();
+    if (flowRunId != 0L) {
       collector.getTimelineEntityContext().setFlowRunId(flowRunId);
     }
   }

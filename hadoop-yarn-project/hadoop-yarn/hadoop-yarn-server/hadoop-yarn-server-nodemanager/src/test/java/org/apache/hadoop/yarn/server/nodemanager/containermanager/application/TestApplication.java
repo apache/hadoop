@@ -551,7 +551,7 @@ public class TestApplication {
       this.appId = BuilderUtils.newApplicationId(timestamp, id);
 
       app = new ApplicationImpl(
-          dispatcher, this.user, null, null, appId, null, context);
+          dispatcher, this.user, null, null, 0, appId, null, context);
       containers = new ArrayList<Container>();
       for (int i = 0; i < numContainers; i++) {
         Container container = createMockedContainer(this.appId, i);

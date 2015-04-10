@@ -232,22 +232,9 @@ public class AMLauncher implements Runnable {
     // Set flow context info
     for (String tag :
         rmContext.getRMApps().get(applicationId).getApplicationTags()) {
-      if (tag.startsWith(TimelineUtils.FLOW_ID_TAG_PREFIX  + ":") ||
-          tag.startsWith(TimelineUtils.FLOW_ID_TAG_PREFIX.toLowerCase() + ":")) {
-        String value = tag.substring(
-            TimelineUtils.FLOW_ID_TAG_PREFIX.length() + 1);
-        if (!value.isEmpty()) {
-          environment.put(TimelineUtils.FLOW_ID_TAG_PREFIX, value);
-        }
-      }
-      if (tag.startsWith(TimelineUtils.FLOW_RUN_ID_TAG_PREFIX  + ":") ||
-          tag.startsWith(TimelineUtils.FLOW_RUN_ID_TAG_PREFIX.toLowerCase() + ":")) {
-        String value = tag.substring(
-            TimelineUtils.FLOW_RUN_ID_TAG_PREFIX.length() + 1);
-        if (!value.isEmpty()) {
-          environment.put(TimelineUtils.FLOW_RUN_ID_TAG_PREFIX, value);
-        }
-      }
+      setFlowTags(environment, TimelineUtils.FLOW_NAME_TAG_PREFIX, tag);
+      setFlowTags(environment, TimelineUtils.FLOW_VERSION_TAG_PREFIX, tag);
+      setFlowTags(environment, TimelineUtils.FLOW_RUN_ID_TAG_PREFIX, tag);
     }
     Credentials credentials = new Credentials();
     DataInputByteBuffer dibb = new DataInputByteBuffer();
@@ -267,6 +254,17 @@ public class AMLauncher implements Runnable {
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     container.setTokens(ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
+  }
+
+  private static void setFlowTags(
+      Map<String, String> environment, String tagPrefix, String tag) {
+    if (tag.startsWith(tagPrefix + ":") ||
+        tag.startsWith(tagPrefix.toLowerCase() + ":")) {
+      String value = tag.substring(tagPrefix.length() + 1);
+      if (!value.isEmpty()) {
+        environment.put(tagPrefix, value);
+      }
+    }
   }
 
   @VisibleForTesting
