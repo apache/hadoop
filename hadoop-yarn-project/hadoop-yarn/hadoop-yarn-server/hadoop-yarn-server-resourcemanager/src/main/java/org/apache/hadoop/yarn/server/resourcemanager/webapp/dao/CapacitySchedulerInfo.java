@@ -25,6 +25,7 @@ import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 
 @XmlRootElement(name = "capacityScheduler")
@@ -37,6 +38,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected float maxCapacity;
   protected String queueName;
   protected CapacitySchedulerQueueInfoList queues;
+  protected CapacitySchedulerHealthInfo health;
 
   @XmlTransient
   static final float EPSILON = 1e-8f;
@@ -44,7 +46,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   public CapacitySchedulerInfo() {
   } // JAXB needs this
 
-  public CapacitySchedulerInfo(CSQueue parent) {
+  public CapacitySchedulerInfo(CSQueue parent, CapacityScheduler cs) {
     this.queueName = parent.getQueueName();
     this.usedCapacity = parent.getUsedCapacity() * 100;
     this.capacity = parent.getCapacity() * 100;
@@ -54,6 +56,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     this.maxCapacity = max * 100;
 
     queues = getQueues(parent);
+    health = new CapacitySchedulerHealthInfo(cs);
   }
 
   public float getCapacity() {

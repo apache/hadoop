@@ -552,4 +552,12 @@ public class QueueMetrics implements MetricsSource {
   public MetricsSystem getMetricsSystem() {
     return metricsSystem;
   }
+
+  public long getAggregateAllocatedContainers() {
+    return aggregateContainersAllocated.value();
+  }
+
+  public long getAggegatedReleasedContainers() {
+    return aggregateContainersReleased.value();
+  }
 }

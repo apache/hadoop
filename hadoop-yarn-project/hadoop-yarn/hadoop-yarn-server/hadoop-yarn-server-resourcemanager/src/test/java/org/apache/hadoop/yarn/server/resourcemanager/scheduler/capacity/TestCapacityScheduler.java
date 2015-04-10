@@ -1660,7 +1660,7 @@ public class TestCapacityScheduler {
     CapacityScheduler cs =
         (CapacityScheduler) resourceManager.getResourceScheduler();
     CSQueue origRootQ = cs.getRootQueue();
-    CapacitySchedulerInfo oldInfo = new CapacitySchedulerInfo(origRootQ);
+    CapacitySchedulerInfo oldInfo = new CapacitySchedulerInfo(origRootQ, cs);
     int origNumAppsA = getNumAppsInQueue("a", origRootQ.getChildQueues());
     int origNumAppsRoot = origRootQ.getNumApplications();
 
@@ -1669,7 +1669,7 @@ public class TestCapacityScheduler {
     CSQueue newRootQ = cs.getRootQueue();
     int newNumAppsA = getNumAppsInQueue("a", newRootQ.getChildQueues());
     int newNumAppsRoot = newRootQ.getNumApplications();
-    CapacitySchedulerInfo newInfo = new CapacitySchedulerInfo(newRootQ);
+    CapacitySchedulerInfo newInfo = new CapacitySchedulerInfo(newRootQ, cs);
     CapacitySchedulerLeafQueueInfo origOldA1 =
         (CapacitySchedulerLeafQueueInfo) getQueueInfo("a1", oldInfo.getQueues());
     CapacitySchedulerLeafQueueInfo origNewA1 =

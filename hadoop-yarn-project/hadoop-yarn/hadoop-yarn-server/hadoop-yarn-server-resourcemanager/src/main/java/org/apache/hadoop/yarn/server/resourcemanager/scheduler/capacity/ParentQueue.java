@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.AssignmentInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -415,7 +416,27 @@ public class ParentQueue extends AbstractCSQueue {
             nodeLabels);
         
         // Track resource utilization in this pass of the scheduler
-        Resources.addTo(assignment.getResource(), assignedToChild.getResource());
+        Resources
+          .addTo(assignment.getResource(), assignedToChild.getResource());
+        Resources.addTo(assignment.getAssignmentInformation().getAllocated(),
+          assignedToChild.getAssignmentInformation().getAllocated());
+        Resources.addTo(assignment.getAssignmentInformation().getReserved(),
+            assignedToChild.getAssignmentInformation().getReserved());
+        assignment.getAssignmentInformation().incrAllocations(
+          assignedToChild.getAssignmentInformation().getNumAllocations());
+        assignment.getAssignmentInformation().incrReservations(
+          assignedToChild.getAssignmentInformation().getNumReservations());
+        assignment
+          .getAssignmentInformation()
+          .getAllocationDetails()
+          .addAll(
+              assignedToChild.getAssignmentInformation().getAllocationDetails());
+        assignment
+          .getAssignmentInformation()
+          .getReservationDetails()
+          .addAll(
+              assignedToChild.getAssignmentInformation()
+                  .getReservationDetails());
         
         LOG.info("assignedContainer" +
             " queue=" + getQueueName() + 

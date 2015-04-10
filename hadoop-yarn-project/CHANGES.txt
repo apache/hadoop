@@ -104,6 +104,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3294. Allow dumping of Capacity Scheduler debug logs via
     web UI for a fixed time period. (Varun Vasudev via xgong)
 
+    YARN-3293. Track and display capacity scheduler health metrics
+    in web UI. (Varun Vasudev via xgong)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

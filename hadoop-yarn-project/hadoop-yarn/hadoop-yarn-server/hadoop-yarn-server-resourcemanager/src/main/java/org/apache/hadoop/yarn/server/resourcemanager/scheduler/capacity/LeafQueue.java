@@ -913,12 +913,17 @@ public class LeafQueue extends AbstractCSQueue {
     }
 
     // Try to assign if we have sufficient resources
-    assignContainersOnNode(clusterResource, node, application, priority, 
-        rmContainer);
+    CSAssignment tmp =
+        assignContainersOnNode(clusterResource, node, application, priority,
+          rmContainer);
     
     // Doesn't matter... since it's already charged for at time of reservation
     // "re-reservation" is *free*
-    return new CSAssignment(Resources.none(), NodeType.NODE_LOCAL);
+    CSAssignment ret = new CSAssignment(Resources.none(), NodeType.NODE_LOCAL);
+    if (tmp.getAssignmentInformation().getNumAllocations() > 0) {
+      ret.setFulfilledReservation(true);
+    }
+    return ret;
   }
   
   protected Resource getHeadroom(User user, Resource queueCurrentLimit,
@@ -1172,7 +1177,8 @@ public class LeafQueue extends AbstractCSQueue {
   private CSAssignment assignContainersOnNode(Resource clusterResource,
       FiCaSchedulerNode node, FiCaSchedulerApp application, Priority priority,
       RMContainer reservedContainer) {
-    Resource assigned = Resources.none();
+
+    CSAssignment assigned;
 
     NodeType requestType = null;
     MutableObject allocatedContainer = new MutableObject();
@@ -1186,14 +1192,15 @@ public class LeafQueue extends AbstractCSQueue {
             node, application, priority, reservedContainer,
             allocatedContainer);
       if (Resources.greaterThan(resourceCalculator, clusterResource,
-          assigned, Resources.none())) {
+        assigned.getResource(), Resources.none())) {
 
         //update locality statistics
         if (allocatedContainer.getValue() != null) {
           application.incNumAllocatedContainers(NodeType.NODE_LOCAL,
             requestType);
         }
-        return new CSAssignment(assigned, NodeType.NODE_LOCAL);
+        assigned.setType(NodeType.NODE_LOCAL);
+        return assigned;
       }
     }
 
@@ -1214,14 +1221,15 @@ public class LeafQueue extends AbstractCSQueue {
             node, application, priority, reservedContainer,
             allocatedContainer);
       if (Resources.greaterThan(resourceCalculator, clusterResource,
-          assigned, Resources.none())) {
+        assigned.getResource(), Resources.none())) {
 
         //update locality statistics
         if (allocatedContainer.getValue() != null) {
           application.incNumAllocatedContainers(NodeType.RACK_LOCAL,
             requestType);
         }
-        return new CSAssignment(assigned, NodeType.RACK_LOCAL);
+        assigned.setType(NodeType.RACK_LOCAL);
+        return assigned;
       }
     }
     
@@ -1246,7 +1254,8 @@ public class LeafQueue extends AbstractCSQueue {
       if (allocatedContainer.getValue() != null) {
         application.incNumAllocatedContainers(NodeType.OFF_SWITCH, requestType);
       }
-      return new CSAssignment(assigned, NodeType.OFF_SWITCH);
+      assigned.setType(NodeType.OFF_SWITCH);
+      return assigned;
     }
     
     return SKIP_ASSIGNMENT;
@@ -1255,10 +1264,9 @@ public class LeafQueue extends AbstractCSQueue {
   private Resource getMinimumResourceNeedUnreserved(Resource askedResource) {
     // First we need to get minimum resource we need unreserve
     // minimum-resource-need-unreserve = used + asked - limit
-    Resource minimumUnreservedResource =
-        Resources.subtract(Resources.add(queueUsage.getUsed(), askedResource),
-            currentResourceLimits.getLimit());
-    return minimumUnreservedResource;
+    return Resources.subtract(
+      Resources.add(queueUsage.getUsed(), askedResource),
+      currentResourceLimits.getLimit());
   }
 
   @Private
@@ -1334,7 +1342,7 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
 
-  private Resource assignNodeLocalContainers(Resource clusterResource,
+  private CSAssignment assignNodeLocalContainers(Resource clusterResource,
       ResourceRequest nodeLocalResourceRequest, FiCaSchedulerNode node,
       FiCaSchedulerApp application, Priority priority,
       RMContainer reservedContainer, MutableObject allocatedContainer) {
@@ -1344,11 +1352,11 @@ public class LeafQueue extends AbstractCSQueue {
           nodeLocalResourceRequest, NodeType.NODE_LOCAL, reservedContainer,
           allocatedContainer);
     }
-    
-    return Resources.none();
+
+    return new CSAssignment(Resources.none(), NodeType.NODE_LOCAL);
   }
 
-  private Resource assignRackLocalContainers(Resource clusterResource,
+  private CSAssignment assignRackLocalContainers(Resource clusterResource,
       ResourceRequest rackLocalResourceRequest, FiCaSchedulerNode node,
       FiCaSchedulerApp application, Priority priority,
       RMContainer reservedContainer, MutableObject allocatedContainer) {
@@ -1358,11 +1366,11 @@ public class LeafQueue extends AbstractCSQueue {
           rackLocalResourceRequest, NodeType.RACK_LOCAL, reservedContainer,
           allocatedContainer);
     }
-    
-    return Resources.none();
+
+    return new CSAssignment(Resources.none(), NodeType.RACK_LOCAL);
   }
 
-  private Resource assignOffSwitchContainers(Resource clusterResource,
+  private CSAssignment assignOffSwitchContainers(Resource clusterResource,
       ResourceRequest offSwitchResourceRequest, FiCaSchedulerNode node,
       FiCaSchedulerApp application, Priority priority,
       RMContainer reservedContainer, MutableObject allocatedContainer) {
@@ -1373,7 +1381,7 @@ public class LeafQueue extends AbstractCSQueue {
           allocatedContainer);
     }
     
-    return Resources.none();
+    return new CSAssignment(Resources.none(), NodeType.OFF_SWITCH);
   }
 
   boolean canAssign(FiCaSchedulerApp application, Priority priority, 
@@ -1443,15 +1451,13 @@ public class LeafQueue extends AbstractCSQueue {
         .getApplicationAttemptId(), application.getNewContainerId());
   
     // Create the container
-    Container container =
-        BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
-          .getHttpAddress(), capability, priority, null);
-  
-    return container;
+    return BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
+      .getHttpAddress(), capability, priority, null);
+
   }
 
 
-  private Resource assignContainer(Resource clusterResource, FiCaSchedulerNode node, 
+  private CSAssignment assignContainer(Resource clusterResource, FiCaSchedulerNode node,
       FiCaSchedulerApp application, Priority priority, 
       ResourceRequest request, NodeType type, RMContainer rmContainer,
       MutableObject createdContainer) {
@@ -1472,7 +1478,7 @@ public class LeafQueue extends AbstractCSQueue {
       if (rmContainer != null) {
         unreserve(application, priority, node, rmContainer);
       }
-      return Resources.none();
+      return new CSAssignment(Resources.none(), type);
     }
     
     Resource capability = request.getCapability();
@@ -1484,7 +1490,7 @@ public class LeafQueue extends AbstractCSQueue {
       LOG.warn("Node : " + node.getNodeID()
           + " does not have sufficient resource for request : " + request
           + " node total capability : " + node.getTotalResource());
-      return Resources.none();
+      return new CSAssignment(Resources.none(), type);
     }
 
     assert Resources.greaterThan(
@@ -1497,7 +1503,7 @@ public class LeafQueue extends AbstractCSQueue {
     // something went wrong getting/creating the container 
     if (container == null) {
       LOG.warn("Couldn't get container for allocation!");
-      return Resources.none();
+      return new CSAssignment(Resources.none(), type);
     }
     
     boolean shouldAllocOrReserveNewContainer = shouldAllocOrReserveNewContainer(
@@ -1529,7 +1535,7 @@ public class LeafQueue extends AbstractCSQueue {
           // container (That means we *have to* unreserve some resource to
           // continue)). If we failed to unreserve some resource,
           if (!containerUnreserved) {
-            return Resources.none();
+            return new CSAssignment(Resources.none(), type);
           }
         }
       }
@@ -1540,7 +1546,7 @@ public class LeafQueue extends AbstractCSQueue {
 
       // Does the application need this resource?
       if (allocatedContainer == null) {
-        return Resources.none();
+        return new CSAssignment(Resources.none(), type);
       }
 
       // Inform the node
@@ -1552,7 +1558,13 @@ public class LeafQueue extends AbstractCSQueue {
           " queue=" + this + 
           " clusterResource=" + clusterResource);
       createdContainer.setValue(allocatedContainer);
-      return container.getResource();
+      CSAssignment assignment = new CSAssignment(container.getResource(), type);
+      assignment.getAssignmentInformation().addAllocationDetails(
+        container.getId(), getQueuePath());
+      assignment.getAssignmentInformation().incrAllocations();
+      Resources.addTo(assignment.getAssignmentInformation().getAllocated(),
+        container.getResource());
+      return assignment;
     } else {
       // if we are allowed to allocate but this node doesn't have space, reserve it or
       // if this was an already a reserved container, reserve it again
@@ -1566,7 +1578,7 @@ public class LeafQueue extends AbstractCSQueue {
           // reserve the new container
           if (!checkLimitsToReserve(clusterResource, 
               application, capability)) {
-            return Resources.none();
+            return new CSAssignment(Resources.none(), type);
           }
         }
 
@@ -1581,10 +1593,16 @@ public class LeafQueue extends AbstractCSQueue {
             " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + 
             " used=" + queueUsage.getUsed() +
             " cluster=" + clusterResource);
-
-        return request.getCapability();
+        CSAssignment assignment =
+            new CSAssignment(request.getCapability(), type);
+        assignment.getAssignmentInformation().addReservationDetails(
+          container.getId(), getQueuePath());
+        assignment.getAssignmentInformation().incrReservations();
+        Resources.addTo(assignment.getAssignmentInformation().getReserved(),
+          request.getCapability());
+        return assignment;
       }
-      return Resources.none();
+      return new CSAssignment(Resources.none(), type);
     }
   }
 
