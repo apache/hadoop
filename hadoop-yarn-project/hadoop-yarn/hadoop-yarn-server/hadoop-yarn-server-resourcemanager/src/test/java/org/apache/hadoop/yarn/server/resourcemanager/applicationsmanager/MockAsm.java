@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -189,6 +190,11 @@ public abstract class MockAsm extends MockApps {
     @Override
     public ResourceRequest getAMResourceRequest() {
       return this.amReq; 
+    }
+
+    @Override
+    public Map<NodeId, LogAggregationReport> getLogAggregationReportsForApp() {
+      throw new UnsupportedOperationException("Not supported yet.");
     }
   }
 

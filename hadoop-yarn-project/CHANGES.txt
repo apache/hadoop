@@ -60,6 +60,9 @@ Release 2.8.0 - UNRELEASED
     container-executor for outbound network traffic control. (Sidharta Seethana
     via vinodkv)
 
+    YARN-1376. NM need to notify the log aggregation status to RM through 
+    heartbeat. (Xuan Gong via junping_du)
+
   IMPROVEMENTS
 
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA
