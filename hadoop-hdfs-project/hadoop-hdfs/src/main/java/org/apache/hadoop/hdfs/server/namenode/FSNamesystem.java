@@ -3009,6 +3009,31 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   LocatedBlock getAdditionalBlock(String src, long fileId, String clientName,
       ExtendedBlock previous, Set<Node> excludedNodes, 
       List<String> favoredNodes) throws IOException {
+    LocatedBlock[] onRetryBlock = new LocatedBlock[1];
+    DatanodeStorageInfo targets[] = getNewBlockTargets(src, fileId,
+        clientName, previous, excludedNodes, favoredNodes, onRetryBlock);
+    if (targets == null) {
+      assert onRetryBlock[0] != null : "Retry block is null";
+      // This is a retry. Just return the last block.
+      return onRetryBlock[0];
+    }
+    LocatedBlock newBlock = storeAllocatedBlock(
+        src, fileId, clientName, previous, targets);
+    return newBlock;
+  }
+
+  /**
+   * Part I of getAdditionalBlock().
+   * Analyze the state of the file under read lock to determine if the client
+   * can add a new block, detect potential retries, lease mismatches,
+   * and minimal replication of the penultimate block.
+   * 
+   * Generate target DataNode locations for the new block,
+   * but do not create the new block yet.
+   */
+  DatanodeStorageInfo[] getNewBlockTargets(String src, long fileId,
+      String clientName, ExtendedBlock previous, Set<Node> excludedNodes,
+      List<String> favoredNodes, LocatedBlock[] onRetryBlock) throws IOException {
     final long blockSize;
     final int replication;
     final byte storagePolicyID;
@@ -3020,7 +3045,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           + src + " inodeId " +  fileId  + " for " + clientName);
     }
 
-    // Part I. Analyze the state of the file with respect to the input data.
     checkOperation(OperationCategory.READ);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     FSPermissionChecker pc = getPermissionChecker();
@@ -3028,7 +3052,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.READ);
       src = dir.resolvePath(pc, src, pathComponents);
-      LocatedBlock[] onRetryBlock = new LocatedBlock[1];
       FileState fileState = analyzeFileState(
           src, fileId, clientName, previous, onRetryBlock);
       final INodeFile pendingFile = fileState.inode;
@@ -3039,8 +3062,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       src = fileState.path;
 
       if (onRetryBlock[0] != null && onRetryBlock[0].getLocations().length > 0) {
-        // This is a retry. Just return the last block if having locations.
-        return onRetryBlock[0];
+        // This is a retry. No need to generate new locations.
+        // Use the last block if it has locations.
+        return null;
       }
       if (pendingFile.getBlocks().length >= maxBlocksPerFile) {
         throw new IOException("File has reached the limit on maximum number of"
@@ -3064,12 +3088,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
 
     // choose targets for the new block to be allocated.
-    final DatanodeStorageInfo targets[] = getBlockManager().chooseTarget4NewBlock( 
+    return getBlockManager().chooseTarget4NewBlock( 
         src, replication, clientNode, excludedNodes, blockSize, favoredNodes,
         storagePolicyID);
+  }
 
-    // Part II.
-    // Allocate a new block, add it to the INode and the BlocksMap. 
+  /**
+   * Part II of getAdditionalBlock().
+   * Should repeat the same analysis of the file state as in Part 1,
+   * but under the write lock.
+   * If the conditions still hold, then allocate a new block with
+   * the new targets, add it to the INode and to the BlocksMap.
+   */
+  LocatedBlock storeAllocatedBlock(String src, long fileId, String clientName,
+      ExtendedBlock previous, DatanodeStorageInfo[] targets) throws IOException {
     Block newBlock = null;
     long offset;
     checkOperation(OperationCategory.WRITE);
