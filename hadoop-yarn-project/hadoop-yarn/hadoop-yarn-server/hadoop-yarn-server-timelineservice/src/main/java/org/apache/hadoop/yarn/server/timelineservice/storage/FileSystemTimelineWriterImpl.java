@@ -65,22 +65,23 @@ public class FileSystemTimelineWriterImpl extends AbstractService
 
   @Override
   public TimelineWriteResponse write(String clusterId, String userId,
-      String flowId, String flowRunId, String appId,
+      String flowName, String flowVersion, long flowRunId, String appId,
       TimelineEntities entities) throws IOException {
     TimelineWriteResponse response = new TimelineWriteResponse();
     for (TimelineEntity entity : entities.getEntities()) {
-      write(clusterId, userId, flowId, flowRunId, appId, entity, response);
+      write(clusterId, userId, flowName, flowVersion, flowRunId, appId, entity,
+          response);
     }
     return response;
   }
 
-  private void write(String clusterId, String userId,
-      String flowId, String flowRunId, String appId, TimelineEntity entity,
+  private void write(String clusterId, String userId, String flowName,
+      String flowVersion, long flowRun, String appId, TimelineEntity entity,
       TimelineWriteResponse response) throws IOException {
     PrintWriter out = null;
     try {
-      String dir = mkdirs(outputRoot, ENTITIES_DIR, clusterId, userId,flowId,
-          flowRunId, appId, entity.getType());
+      String dir = mkdirs(outputRoot, ENTITIES_DIR, clusterId, userId,flowName,
+          flowVersion, String.valueOf(flowRun), appId, entity.getType());
       String fileName = dir + entity.getId() + TIMELINE_SERVICE_STORAGE_EXTENSION;
       out = new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)));
       out.println(TimelineUtils.dumpTimelineRecordtoJSON(entity));

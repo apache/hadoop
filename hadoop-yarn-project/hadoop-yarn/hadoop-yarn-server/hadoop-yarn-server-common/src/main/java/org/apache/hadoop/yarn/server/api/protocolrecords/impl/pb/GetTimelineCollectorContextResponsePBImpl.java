@@ -102,40 +102,52 @@ public class GetTimelineCollectorContextResponsePBImpl extends
   }
 
   @Override
-  public String getFlowId() {
+  public String getFlowName() {
     GetTimelineCollectorContextResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasFlowId()) {
+    if (!p.hasFlowName()) {
       return null;
     }
-    return p.getFlowId();
+    return p.getFlowName();
   }
 
   @Override
-  public void setFlowId(String flowId) {
+  public void setFlowName(String flowName) {
     maybeInitBuilder();
-    if (flowId == null) {
-      builder.clearFlowId();
+    if (flowName == null) {
+      builder.clearFlowName();
       return;
     }
-    builder.setFlowId(flowId);
+    builder.setFlowName(flowName);
   }
 
   @Override
-  public String getFlowRunId() {
+  public String getFlowVersion() {
     GetTimelineCollectorContextResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasFlowRunId()) {
+    if (!p.hasFlowVersion()) {
       return null;
     }
+    return p.getFlowVersion();
+  }
+
+  @Override
+  public void setFlowVersion(String flowVersion) {
+    maybeInitBuilder();
+    if (flowVersion == null) {
+      builder.clearFlowVersion();
+      return;
+    }
+    builder.setFlowVersion(flowVersion);
+  }
+
+  @Override
+  public long getFlowRunId() {
+    GetTimelineCollectorContextResponseProtoOrBuilder p = viaProto ? proto : builder;
     return p.getFlowRunId();
   }
 
   @Override
-  public void setFlowRunId(String flowRunId) {
+  public void setFlowRunId(long flowRunId) {
     maybeInitBuilder();
-    if (flowRunId == null) {
-      builder.clearFlowRunId();
-      return;
-    }
     builder.setFlowRunId(flowRunId);
   }
 }
