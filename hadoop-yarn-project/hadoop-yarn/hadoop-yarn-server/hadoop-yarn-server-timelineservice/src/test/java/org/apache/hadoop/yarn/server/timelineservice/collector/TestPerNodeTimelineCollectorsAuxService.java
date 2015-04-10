@@ -162,7 +162,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
     CollectorNodemanagerProtocol nmCollectorService =
         mock(CollectorNodemanagerProtocol.class);
     GetTimelineCollectorContextResponse response =
-        GetTimelineCollectorContextResponse.newInstance(null, null, null);
+        GetTimelineCollectorContextResponse.newInstance(null, null, null, 0L);
     try {
       when(nmCollectorService.getTimelineCollectorContext(any(
           GetTimelineCollectorContextRequest.class))).thenReturn(response);

@@ -57,11 +57,13 @@ public class TestFileSystemTimelineWriterImpl {
       fsi = new FileSystemTimelineWriterImpl();
       fsi.init(new YarnConfiguration());
       fsi.start();
-      fsi.write("cluster_id", "user_id", "flow_id", "flow_run_id", "app_id", te);
+      fsi.write("cluster_id", "user_id", "flow_name", "flow_version", 12345678L,
+          "app_id", te);
 
       String fileName = fsi.getOutputRoot() +
-          "/entities/cluster_id/user_id/flow_id/flow_run_id/app_id/" + type +
-          "/" + id + FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
+          "/entities/cluster_id/user_id/flow_name/flow_version/12345678/app_id/" +
+          type + "/" + id +
+          FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path = Paths.get(fileName);
       File f = new File(fileName);
       assertTrue(f.exists() && !f.isDirectory());
