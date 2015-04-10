@@ -10,6 +10,9 @@ Release 2.7.1 - UNRELEASED
 
     HDFS-8081. Split getAdditionalBlock() into two methods. (shv)
 
+    HDFS-7931. DistributedFileSystem should not look for keyProvider in
+    cache if Encryption is disabled (asuresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
