@@ -57,3 +57,5 @@
     HDFS-8074. Define a system-wide default EC schema. (Kai Zheng)
 
     HDFS-8104. Make hard-coded values consistent with the system default schema first before remove them. (Kai Zheng)
+
+    HDFS-7889. Subclass DFSOutputStream to support writing striping layout files. (Li Bo via Kai Zheng)
