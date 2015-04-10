@@ -16,6 +16,9 @@ Release 2.7.1 - UNRELEASED
     YARN-3006. Improve the error message when attempting manual failover with 
     auto-failover enabled. (Akira AJISAKA via wangda)
 
+    YARN-3469. ZKRMStateStore: Avoid setting watches that are not required. 
+    (Jun Hong via kasha)
+
   BUG FIXES
 
     YARN-3487. CapacityScheduler scheduler lock obtained unnecessarily when 
