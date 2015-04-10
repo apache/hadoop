@@ -59,6 +59,13 @@ public class ErasureCodingZoneManager {
       if (inode == null) {
         continue;
       }
+      // We don't allow symlinks in an EC zone, or pointing to a file/dir in
+      // an EC. Therefore if a symlink is encountered, the dir shouldn't have
+      // EC
+      // TODO: properly support symlinks in EC zones
+      if (inode.isSymlink()) {
+        return false;
+      }
       final List<XAttr> xAttrs = inode.getXAttrFeature() == null ?
           new ArrayList<XAttr>(0)
           : inode.getXAttrFeature().getXAttrs();

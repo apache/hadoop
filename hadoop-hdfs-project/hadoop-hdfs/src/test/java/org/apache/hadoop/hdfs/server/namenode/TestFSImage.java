@@ -199,7 +199,7 @@ public class TestFSImage {
     assertEquals(mtime, fileByLoaded.getModificationTime());
     assertEquals(isUC ? mtime : atime, fileByLoaded.getAccessTime());
     assertEquals(0, fileByLoaded.getContiguousBlocks().length);
-    assertEquals(0, fileByLoaded.getBlockReplication());
+    assertEquals(0, fileByLoaded.getFileReplication());
     assertEquals(preferredBlockSize, fileByLoaded.getPreferredBlockSize());
 
     //check the BlockInfoStriped

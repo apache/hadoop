@@ -185,15 +185,11 @@ public class INodeFile extends INodeWithAdditionalFields
   public FileWithStripedBlocksFeature addStripedBlocksFeature() {
     assert blocks == null || blocks.length == 0:
         "The file contains contiguous blocks";
-    assert !isWithStripedBlocks();
+    assert !isStriped();
     this.setFileReplication((short) 0);
     FileWithStripedBlocksFeature sb = new FileWithStripedBlocksFeature();
     addFeature(sb);
     return sb;
-  }
-
-  public boolean isWithStripedBlocks() {
-    return getStripedBlocksFeature() != null;
   }
 
   /** Used to make sure there is no contiguous block related info */
@@ -432,7 +428,7 @@ public class INodeFile extends INodeWithAdditionalFields
   /** Set the replication factor of this file. */
   public final INodeFile setFileReplication(short replication,
       int latestSnapshotId) throws QuotaExceededException {
-    Preconditions.checkState(!isWithStripedBlocks(),
+    Preconditions.checkState(!isStriped(),
         "Cannot set replication to a file with striped blocks");
     recordModification(latestSnapshotId);
     setFileReplication(replication);
@@ -679,7 +675,6 @@ public class INodeFile extends INodeWithAdditionalFields
 
     final long ssDeltaNoReplication;
     short replication;
-
     if (isStriped()) {
       return computeQuotaUsageWithStriped(bsps, counts);
     }
@@ -708,11 +703,6 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /**
    * Compute quota of striped file
-   * @param bsps
-   * @param counts
-   * @param useCache
-   * @param lastSnapshotId
-   * @return quota counts
    */
   public final QuotaCounts computeQuotaUsageWithStriped(
       BlockStoragePolicySuite bsps, QuotaCounts counts) {
