@@ -109,4 +109,8 @@ public class RmController extends Controller {
   public void errorsAndWarnings() {
     render(RMErrorsAndWarningsPage.class);
   }
+
+  public void logaggregationstatus() {
+    render(AppLogAggregationStatusPage.class);
+  }
 }

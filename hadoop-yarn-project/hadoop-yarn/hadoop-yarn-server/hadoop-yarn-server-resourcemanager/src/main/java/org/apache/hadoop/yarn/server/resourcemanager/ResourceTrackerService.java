@@ -458,10 +458,16 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     // 4. Send status to RMNode, saving the latest response.
-    this.rmContext.getDispatcher().getEventHandler().handle(
+    RMNodeStatusEvent nodeStatusEvent =
         new RMNodeStatusEvent(nodeId, remoteNodeStatus.getNodeHealthStatus(),
-            remoteNodeStatus.getContainersStatuses(), 
-            remoteNodeStatus.getKeepAliveApplications(), nodeHeartBeatResponse));
+          remoteNodeStatus.getContainersStatuses(),
+          remoteNodeStatus.getKeepAliveApplications(), nodeHeartBeatResponse);
+    if (request.getLogAggregationReportsForApps() != null
+        && !request.getLogAggregationReportsForApps().isEmpty()) {
+      nodeStatusEvent.setLogAggregationReportsForApps(request
+        .getLogAggregationReportsForApps());
+    }
+    this.rmContext.getDispatcher().getEventHandler().handle(nodeStatusEvent);
 
     // 5. Update node's labels to RM's NodeLabelManager.
     if (isDistributesNodeLabelsConf && request.getNodeLabels() != null) {

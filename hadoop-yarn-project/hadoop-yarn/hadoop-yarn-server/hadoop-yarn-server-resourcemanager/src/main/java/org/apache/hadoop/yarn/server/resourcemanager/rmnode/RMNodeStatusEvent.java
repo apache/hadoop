@@ -19,10 +19,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 
@@ -32,6 +34,7 @@ public class RMNodeStatusEvent extends RMNodeEvent {
   private final List<ContainerStatus> containersCollection;
   private final NodeHeartbeatResponse latestResponse;
   private final List<ApplicationId> keepAliveAppIds;
+  private Map<ApplicationId, LogAggregationReport> logAggregationReportsForApps;
 
   public RMNodeStatusEvent(NodeId nodeId, NodeHealthStatus nodeHealthStatus,
       List<ContainerStatus> collection, List<ApplicationId> keepAliveAppIds,
@@ -41,6 +44,19 @@ public class RMNodeStatusEvent extends RMNodeEvent {
     this.containersCollection = collection;
     this.keepAliveAppIds = keepAliveAppIds;
     this.latestResponse = latestResponse;
+    this.logAggregationReportsForApps = null;
+  }
+
+  public RMNodeStatusEvent(NodeId nodeId, NodeHealthStatus nodeHealthStatus,
+      List<ContainerStatus> collection, List<ApplicationId> keepAliveAppIds,
+      NodeHeartbeatResponse latestResponse,
+      Map<ApplicationId, LogAggregationReport> logAggregationReportsForApps) {
+    super(nodeId, RMNodeEventType.STATUS_UPDATE);
+    this.nodeHealthStatus = nodeHealthStatus;
+    this.containersCollection = collection;
+    this.keepAliveAppIds = keepAliveAppIds;
+    this.latestResponse = latestResponse;
+    this.logAggregationReportsForApps = logAggregationReportsForApps;
   }
 
   public NodeHealthStatus getNodeHealthStatus() {
@@ -57,5 +73,15 @@ public class RMNodeStatusEvent extends RMNodeEvent {
   
   public List<ApplicationId> getKeepAliveAppIds() {
     return this.keepAliveAppIds;
+  }
+
+  public Map<ApplicationId, LogAggregationReport>
+      getLogAggregationReportsForApps() {
+    return this.logAggregationReportsForApps;
+  }
+
+  public void setLogAggregationReportsForApps(
+      Map<ApplicationId, LogAggregationReport> logAggregationReportsForApps) {
+    this.logAggregationReportsForApps = logAggregationReportsForApps;
   }
 }

@@ -25,9 +25,11 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -61,6 +63,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
+import org.apache.hadoop.yarn.server.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
@@ -141,6 +145,12 @@ public class RMAppImpl implements RMApp, Recoverable {
   private static final AppFinishedTransition FINISHED_TRANSITION =
       new AppFinishedTransition();
   private Set<NodeId> ranNodes = new ConcurrentSkipListSet<NodeId>();
+
+  private final boolean logAggregationEnabled;
+  private long logAggregationStartTime = 0;
+  private final long logAggregationStatusTimeout;
+  private final Map<NodeId, LogAggregationReport> logAggregationStatus =
+      new HashMap<NodeId, LogAggregationReport>();
 
   // These states stored are only valid when app is at killing or final_saving.
   private RMAppState stateBeforeKilling;
@@ -413,6 +423,19 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     rmContext.getRMApplicationHistoryWriter().applicationStarted(this);
     rmContext.getSystemMetricsPublisher().appCreated(this, startTime);
+
+    long localLogAggregationStatusTimeout =
+        conf.getLong(YarnConfiguration.LOG_AGGREGATION_STATUS_TIME_OUT_MS,
+          YarnConfiguration.DEFAULT_LOG_AGGREGATION_STATUS_TIME_OUT_MS);
+    if (localLogAggregationStatusTimeout <= 0) {
+      this.logAggregationStatusTimeout =
+          YarnConfiguration.DEFAULT_LOG_AGGREGATION_STATUS_TIME_OUT_MS;
+    } else {
+      this.logAggregationStatusTimeout = localLogAggregationStatusTimeout;
+    }
+    this.logAggregationEnabled =
+        conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+          YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED);
   }
 
   @Override
@@ -803,6 +826,12 @@ public class RMAppImpl implements RMApp, Recoverable {
       
       // otherwise, add it to ranNodes for further process
       app.ranNodes.add(nodeAddedEvent.getNodeId());
+
+      app.logAggregationStatus.put(nodeAddedEvent.getNodeId(),
+        LogAggregationReport.newInstance(app.applicationId, nodeAddedEvent
+          .getNodeId(), app.logAggregationEnabled
+            ? LogAggregationStatus.NOT_START : LogAggregationStatus.DISABLED,
+          ""));
     };
   }
 
@@ -1153,6 +1182,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     }
 
     public void transition(RMAppImpl app, RMAppEvent event) {
+      app.logAggregationStartTime = System.currentTimeMillis();
       for (NodeId nodeId : app.getRanNodes()) {
         app.handler.handle(
             new RMNodeCleanAppEvent(nodeId, app.applicationId));
@@ -1355,5 +1385,63 @@ public class RMAppImpl implements RMApp, Recoverable {
       tokens.rewind();
     }
     return credentials;
+  }
+
+  @Override
+  public Map<NodeId, LogAggregationReport> getLogAggregationReportsForApp() {
+    try {
+      this.readLock.lock();
+      Map<NodeId, LogAggregationReport> outputs =
+          new HashMap<NodeId, LogAggregationReport>();
+      outputs.putAll(logAggregationStatus);
+      for (Entry<NodeId, LogAggregationReport> output : outputs.entrySet()) {
+        if (!output.getValue().getLogAggregationStatus()
+          .equals(LogAggregationStatus.TIME_OUT)
+            && !output.getValue().getLogAggregationStatus()
+              .equals(LogAggregationStatus.FINISHED)
+            && isAppInFinalState(this)
+            && System.currentTimeMillis() > this.logAggregationStartTime
+                + this.logAggregationStatusTimeout) {
+          output.getValue().setLogAggregationStatus(
+            LogAggregationStatus.TIME_OUT);
+        }
+      }
+      return outputs;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  public void aggregateLogReport(NodeId nodeId, LogAggregationReport report) {
+    try {
+      this.writeLock.lock();
+      if (this.logAggregationEnabled) {
+        LogAggregationReport curReport = this.logAggregationStatus.get(nodeId);
+        if (curReport == null) {
+          this.logAggregationStatus.put(nodeId, report);
+        } else {
+          if (curReport.getLogAggregationStatus().equals(
+            LogAggregationStatus.TIME_OUT)) {
+            if (report.getLogAggregationStatus().equals(
+              LogAggregationStatus.FINISHED)) {
+              curReport.setLogAggregationStatus(report
+                .getLogAggregationStatus());
+            }
+          } else {
+            curReport.setLogAggregationStatus(report.getLogAggregationStatus());
+          }
+
+          if (report.getDiagnosticMessage() != null
+              && !report.getDiagnosticMessage().isEmpty()) {
+            curReport
+              .setDiagnosticMessage(curReport.getDiagnosticMessage() == null
+                  ? report.getDiagnosticMessage() : curReport
+                    .getDiagnosticMessage() + report.getDiagnosticMessage());
+          }
+        }
+      }
+    } finally {
+      this.writeLock.unlock();
+    }
   }
 }

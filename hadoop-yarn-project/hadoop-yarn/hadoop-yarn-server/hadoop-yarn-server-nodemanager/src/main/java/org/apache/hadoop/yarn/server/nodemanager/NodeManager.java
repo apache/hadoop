@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -52,6 +53,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -362,6 +364,8 @@ public class NodeManager extends CompositeService
         .getRecordFactory(null).newRecordInstance(NodeHealthStatus.class);
     private final NMStateStoreService stateStore;
     private boolean isDecommissioned = false;
+    private final ConcurrentLinkedQueue<LogAggregationReport>
+        logAggregationReportForApps;
 
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
@@ -375,6 +379,8 @@ public class NodeManager extends CompositeService
       this.nodeHealthStatus.setHealthReport("Healthy");
       this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
       this.stateStore = stateStore;
+      this.logAggregationReportForApps = new ConcurrentLinkedQueue<
+          LogAggregationReport>();
     }
 
     /**
@@ -465,6 +471,12 @@ public class NodeManager extends CompositeService
     public void setSystemCrendentialsForApps(
         Map<ApplicationId, Credentials> systemCredentials) {
       this.systemCredentials = systemCredentials;
+    }
+
+    @Override
+    public ConcurrentLinkedQueue<LogAggregationReport>
+        getLogAggregationStatusForApps() {
+      return this.logAggregationReportForApps;
     }
   }
 

@@ -21,8 +21,10 @@ package org.apache.hadoop.yarn.server.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ID;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.WEB_UI_TYPE;
+
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,6 +49,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
@@ -154,7 +157,7 @@ public class AppBlock extends HtmlBlock {
       html.script().$type("text/javascript")._(script.toString())._();
     }
 
-    info("Application Overview")
+    ResponseInfo overviewTable = info("Application Overview")
       ._("User:", app.getUser())
       ._("Name:", app.getName())
       ._("Application Type:", app.getType())
@@ -181,8 +184,13 @@ public class AppBlock extends HtmlBlock {
           .getAppState() == YarnApplicationState.FINISHED
             || app.getAppState() == YarnApplicationState.FAILED
             || app.getAppState() == YarnApplicationState.KILLED ? "History"
-            : "ApplicationMaster")
-      ._("Diagnostics:",
+            : "ApplicationMaster");
+    if (webUiType != null
+        && webUiType.equals(YarnWebParams.RM_WEB_UI)) {
+      overviewTable._("Log Aggregation Status",
+        root_url("logaggregationstatus", app.getAppId()), "Status");
+    }
+    overviewTable._("Diagnostics:",
         app.getDiagnosticsInfo() == null ? "" : app.getDiagnosticsInfo());
 
     Collection<ApplicationAttemptReport> attempts;

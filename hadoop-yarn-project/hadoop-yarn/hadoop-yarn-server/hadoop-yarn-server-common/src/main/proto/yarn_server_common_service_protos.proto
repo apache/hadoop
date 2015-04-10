@@ -50,6 +50,19 @@ message NodeHeartbeatRequestProto {
   optional MasterKeyProto last_known_container_token_master_key = 2;
   optional MasterKeyProto last_known_nm_token_master_key = 3;
   optional StringArrayProto nodeLabels = 4;
+  repeated LogAggregationReportsForAppsProto log_aggregation_reports_for_apps = 5;
+}
+
+message LogAggregationReportsForAppsProto {
+  optional ApplicationIdProto appId = 1;
+  optional LogAggregationReportProto log_aggregation_report = 2;
+}
+
+message LogAggregationReportProto {
+optional ApplicationIdProto application_id = 1;
+optional NodeIdProto node_id = 2;
+optional LogAggregationStatusProto log_aggregation_status = 3;
+optional string diagnostics = 4 [default = "N/A"];
 }
 
 message NodeHeartbeatResponseProto {
