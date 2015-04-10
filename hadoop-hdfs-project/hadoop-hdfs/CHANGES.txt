@@ -466,6 +466,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8091: ACLStatus and XAttributes should be presented to
     INodeAttributesProvider before returning to client (asuresh)
 
+    HDFS-7939. Two fsimage_rollback_* files are created which are not deleted
+    after rollback. (J.Andreina via vinayakumarb)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

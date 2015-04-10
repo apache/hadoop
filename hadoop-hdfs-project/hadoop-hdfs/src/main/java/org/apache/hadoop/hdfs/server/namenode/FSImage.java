@@ -707,6 +707,8 @@ public class FSImage implements Closeable {
         true);
     // purge all the checkpoints after the marker
     archivalManager.purgeCheckpoinsAfter(NameNodeFile.IMAGE, ckptId);
+    // HDFS-7939: purge all old fsimage_rollback_*
+    archivalManager.purgeCheckpoints(NameNodeFile.IMAGE_ROLLBACK);
     String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
     if (HAUtil.isHAEnabled(conf, nameserviceId)) {
       // close the editlog since it is currently open for write
