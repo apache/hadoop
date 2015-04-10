@@ -21,17 +21,19 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerHealth;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerLeafQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.apache.hadoop.yarn.server.webapp.AppsBlock;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -244,7 +246,7 @@ class CapacitySchedulerPage extends RmView {
               span(".q", "default")._()._();
       } else {
         CSQueue root = cs.getRootQueue();
-        CapacitySchedulerInfo sinfo = new CapacitySchedulerInfo(root);
+        CapacitySchedulerInfo sinfo = new CapacitySchedulerInfo(root, cs);
         csqinfo.csinfo = sinfo;
         csqinfo.qinfo = null;
 
@@ -274,6 +276,95 @@ class CapacitySchedulerPage extends RmView {
       script().$type("text/javascript").
           _("$('#cs').hide();")._()._().
       _(RMAppsBlock.class);
+      html._(HealthBlock.class);
+    }
+  }
+
+  public static class HealthBlock extends HtmlBlock {
+
+    final CapacityScheduler cs;
+
+    @Inject
+    HealthBlock(ResourceManager rm) {
+      cs = (CapacityScheduler) rm.getResourceScheduler();
+    }
+
+    @Override
+    public void render(HtmlBlock.Block html) {
+      SchedulerHealth healthInfo = cs.getSchedulerHealth();
+      DIV<Hamlet> div = html.div("#health");
+      div.h4("Aggregate scheduler counts");
+      TBODY<TABLE<DIV<Hamlet>>> tbody =
+          div.table("#lastrun").thead().$class("ui-widget-header").tr().th()
+            .$class("ui-state-default")._("Total Container Allocations(count)")
+            ._().th().$class("ui-state-default")
+            ._("Total Container Releases(count)")._().th()
+            .$class("ui-state-default")
+            ._("Total Fulfilled Reservations(count)")._().th()
+            .$class("ui-state-default")._("Total Container Preemptions(count)")
+            ._()._()._().tbody();
+      tbody
+        .$class("ui-widget-content")
+        .tr()
+        .td(
+          String.valueOf(cs.getRootQueueMetrics()
+            .getAggregateAllocatedContainers()))
+        .td(
+          String.valueOf(cs.getRootQueueMetrics()
+            .getAggegatedReleasedContainers()))
+        .td(healthInfo.getAggregateFulFilledReservationsCount().toString())
+        .td(healthInfo.getAggregatePreemptionCount().toString())._()._()._();
+      div.h4("Last scheduler run");
+      tbody =
+          div.table("#lastrun").thead().$class("ui-widget-header").tr().th()
+            .$class("ui-state-default")._("Time")._().th()
+            .$class("ui-state-default")._("Allocations(count - resources)")._()
+            .th().$class("ui-state-default")._("Reservations(count - resources)")
+            ._().th().$class("ui-state-default")._("Releases(count - resources)")
+            ._()._()._().tbody();
+      tbody
+        .$class("ui-widget-content")
+        .tr()
+        .td(Times.format(healthInfo.getLastSchedulerRunTime()))
+        .td(
+          healthInfo.getAllocationCount().toString() + " - "
+              + healthInfo.getResourcesAllocated().toString())
+        .td(
+          healthInfo.getReservationCount().toString() + " - "
+              + healthInfo.getResourcesReserved().toString())
+        .td(
+          healthInfo.getReleaseCount().toString() + " - "
+              + healthInfo.getResourcesReleased().toString())._()._()._();
+      Map<String, SchedulerHealth.DetailedInformation> info = new HashMap<>();
+      info.put("Allocation", healthInfo.getLastAllocationDetails());
+      info.put("Reservation", healthInfo.getLastReservationDetails());
+      info.put("Release", healthInfo.getLastReleaseDetails());
+      info.put("Preemption", healthInfo.getLastPreemptionDetails());
+
+      for (Map.Entry<String, SchedulerHealth.DetailedInformation> entry : info
+        .entrySet()) {
+        String containerId = "N/A";
+        String nodeId = "N/A";
+        String queue = "N/A";
+        String table = "#" + entry.getKey();
+        div.h4("Last " + entry.getKey());
+        tbody =
+            div.table(table).thead().$class("ui-widget-header").tr().th()
+              .$class("ui-state-default")._("Time")._().th()
+              .$class("ui-state-default")._("Container Id")._().th()
+              .$class("ui-state-default")._("Node Id")._().th()
+              .$class("ui-state-default")._("Queue")._()._()._().tbody();
+        SchedulerHealth.DetailedInformation di = entry.getValue();
+        if (di.getTimestamp() != 0) {
+          containerId = di.getContainerId().toString();
+          nodeId = di.getNodeId().toString();
+          queue = di.getQueue();
+        }
+        tbody.$class("ui-widget-content").tr()
+          .td(Times.format(di.getTimestamp())).td(containerId).td(nodeId)
+          .td(queue)._()._()._();
+      }
+      div._();
     }
   }
 
