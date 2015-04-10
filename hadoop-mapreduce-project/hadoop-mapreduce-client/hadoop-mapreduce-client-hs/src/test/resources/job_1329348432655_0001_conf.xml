@@ -45,7 +45,6 @@
 <property><!--Loaded from job.xml--><name>mapreduce.job.outputformat.class</name><value>org.apache.hadoop.mapreduce.lib.output.NullOutputFormat</value></property>
 <property><!--Loaded from job.xml--><name>yarn.log.server.url</name><value>http://localhost:19888/jobhistory/nmlogs</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.http.authentication.kerberos.principal</name><value>HTTP/localhost@LOCALHOST</value></property>
-<property><!--Loaded from job.xml--><name>mapreduce.tasktracker.taskmemorymanager.monitoringinterval</name><value>5000</value></property>
 <property><!--Loaded from job.xml--><name>s3native.blocksize</name><value>67108864</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.edits.dir</name><value>${dfs.namenode.name.dir}</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.map.class</name><value>org.apache.hadoop.mapreduce.SleepJob$SleepMapper</value></property>

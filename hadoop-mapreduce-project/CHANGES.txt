@@ -293,6 +293,10 @@ Release 2.8.0 - UNRELEASED
     CompletedJob#loadFullHistoryData for code optimization.
     (zxu via rkanter)
 
+    MAPREDUCE-6307. Remove property
+    mapreduce.tasktracker.taskmemorymanager.monitoringinterval.
+    (J.Andreina via aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
