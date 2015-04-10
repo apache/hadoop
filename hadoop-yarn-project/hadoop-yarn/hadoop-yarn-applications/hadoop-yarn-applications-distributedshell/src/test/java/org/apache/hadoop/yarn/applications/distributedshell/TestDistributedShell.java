@@ -332,9 +332,11 @@ public class TestDistributedShell {
       args = mergeArgs(args, timelineArgs);
       if (!defaultFlow) {
         String[] flowArgs = {
-            "--flow",
-            "test_flow_id",
-            "--flow_run",
+            "--flow_name",
+            "test_flow_name",
+            "--flow_version",
+            "test_flow_version",
+            "--flow_run_id",
             "12345678"
         };
         args = mergeArgs(args, flowArgs);
@@ -489,7 +491,8 @@ public class TestDistributedShell {
           UserGroupInformation.getCurrentUser().getShortUserName() +
           (defaultFlow ? "/" +
               TimelineUtils.generateDefaultFlowIdBasedOnAppId(appId) +
-              "/0/" : "/test_flow_id/12345678/") + appId.toString();
+              "/1/1/" : "/test_flow_name/test_flow_version/12345678/") +
+              appId.toString();
       // for this test, we expect DS_APP_ATTEMPT AND DS_CONTAINER dirs
       String outputDirApp = basePath + "/DS_APP_ATTEMPT/";
 
@@ -514,8 +517,6 @@ public class TestDistributedShell {
       String containerFileName = outputDirContainer + containerTimestampFileName;
       File containerFile = new File(containerFileName);
       Assert.assertTrue(containerFile.exists());
-      String appTimeStamp = appId.getClusterTimestamp() + "_" + appId.getId()
-          + "_";
 
       // Verify NM posting container metrics info.
       String outputDirContainerMetrics = basePath + "/" + 

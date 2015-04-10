@@ -180,8 +180,9 @@ public class TestRPC {
       GetTimelineCollectorContextResponse response =
           proxy.getTimelineCollectorContext(request);
       Assert.assertEquals("test_user_id", response.getUserId());
-      Assert.assertEquals("test_flow_id", response.getFlowId());
-      Assert.assertEquals("test_flow_run_id", response.getFlowRunId());
+      Assert.assertEquals("test_flow_name", response.getFlowName());
+      Assert.assertEquals("test_flow_version", response.getFlowVersion());
+      Assert.assertEquals(12345678L, response.getFlowRunId());
     } catch (YarnException | IOException e) {
       Assert.fail("RPC call failured is not expected here.");
     }
@@ -392,7 +393,7 @@ public class TestRPC {
         throws  YarnException, IOException {
       if (request.getApplicationId().getId() == 1) {
          return GetTimelineCollectorContextResponse.newInstance(
-                "test_user_id", "test_flow_id", "test_flow_run_id");
+                "test_user_id", "test_flow_name", "test_flow_version", 12345678L);
       } else {
         throw new YarnException("The application is not found.");
       }

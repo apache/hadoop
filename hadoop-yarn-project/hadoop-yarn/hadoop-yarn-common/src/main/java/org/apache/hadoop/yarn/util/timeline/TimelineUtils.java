@@ -44,7 +44,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 @Evolving
 public class TimelineUtils {
 
-  public static final String FLOW_ID_TAG_PREFIX = "TIMELINE_FLOW_ID_TAG";
+  public static final String FLOW_NAME_TAG_PREFIX = "TIMELINE_FLOW_NAME_TAG";
+  public static final String FLOW_VERSION_TAG_PREFIX = "TIMELINE_FLOW_VERSION_TAG";
   public static final String FLOW_RUN_ID_TAG_PREFIX = "TIMELINE_FLOW_RUN_ID_TAG";
 
   private static ObjectMapper mapper;
@@ -163,11 +164,36 @@ public class TimelineUtils {
     return "flow_" + appId.getClusterTimestamp() + "_" + appId.getId();
   }
 
-  public static String generateFlowIdTag(String flowId) {
-    return FLOW_ID_TAG_PREFIX + ":" + flowId;
+  /**
+   * Generate flow name tag
+   *
+   * @param flowName flow name that identifies a distinct flow application which
+   *                 can be run repeatedly over time
+   * @return
+   */
+  public static String generateFlowNameTag(String flowName) {
+    return FLOW_NAME_TAG_PREFIX + ":" + flowName;
   }
 
-  public static String generateFlowRunIdTag(String flowRunId) {
+  /**
+   * Generate flow version tag
+   *
+   * @param flowVersion flow version that keeps track of the changes made to the
+   *                    flow
+   * @return
+   */
+  public static String generateFlowVersionTag(String flowVersion) {
+    return FLOW_VERSION_TAG_PREFIX + ":" + flowVersion;
+  }
+
+  /**
+   * Generate flow run ID tag
+   *
+   * @param flowRunId flow run ID that identifies one instance (or specific
+   *                  execution) of that flow
+   * @return
+   */
+  public static String generateFlowRunIdTag(long flowRunId) {
     return FLOW_RUN_ID_TAG_PREFIX + ":" + flowRunId;
   }
 }
