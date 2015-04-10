@@ -80,8 +80,6 @@ public interface TTConfig extends MRConfig {
     "mapreduce.tasktracker.resourcecalculatorplugin";
   public static final String TT_REDUCE_SLOTS = 
     "mapreduce.tasktracker.reduce.tasks.maximum";
-  public static final String TT_MEMORY_MANAGER_MONITORING_INTERVAL = 
-    "mapreduce.tasktracker.taskmemorymanager.monitoringinterval";
   public static final String TT_LOCAL_CACHE_SIZE = 
     "mapreduce.tasktracker.cache.local.size";
   public static final String TT_LOCAL_CACHE_SUBDIRS_LIMIT =

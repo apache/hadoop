@@ -165,9 +165,6 @@ public class ConfigUtil {
       new DeprecationDelta("mapred.tasktracker.reduce.tasks.maximum",
         TTConfig.TT_REDUCE_SLOTS),
       new DeprecationDelta(
-        "mapred.tasktracker.taskmemorymanager.monitoring-interval",
-        TTConfig.TT_MEMORY_MANAGER_MONITORING_INTERVAL),
-      new DeprecationDelta(
         "mapred.tasktracker.tasks.sleeptime-before-sigkill",
         TTConfig.TT_SLEEP_TIME_BEFORE_SIG_KILL),
       new DeprecationDelta("slave.host.name",

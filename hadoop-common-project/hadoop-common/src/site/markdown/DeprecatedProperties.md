@@ -239,7 +239,6 @@ The following table lists the configuration property names that are deprecated i
 | mapred.tasktracker.reduce.tasks.maximum | mapreduce.tasktracker.reduce.tasks.maximum |
 | mapred.task.tracker.report.address | mapreduce.tasktracker.report.address |
 | mapred.task.tracker.task-controller | mapreduce.tasktracker.taskcontroller |
-| mapred.tasktracker.taskmemorymanager.monitoring-interval | mapreduce.tasktracker.taskmemorymanager.monitoringinterval |
 | mapred.tasktracker.tasks.sleeptime-before-sigkill | mapreduce.tasktracker.tasks.sleeptimebeforesigkill |
 | mapred.temp.dir | mapreduce.cluster.temp.dir |
 | mapred.text.key.comparator.options | mapreduce.partition.keycomparator.options |

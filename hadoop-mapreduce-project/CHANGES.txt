@@ -48,6 +48,10 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-5762. Port MAPREDUCE-3223 (Remove MRv1 config from
     mapred-default.xml) to branch-2. (aajisaka)
 
+    MAPREDUCE-6307. Remove property
+    mapreduce.tasktracker.taskmemorymanager.monitoringinterval.
+    (J.Andreina via aajisaka)
+
   OPTIMIZATIONS
 
   BUG FIXES
