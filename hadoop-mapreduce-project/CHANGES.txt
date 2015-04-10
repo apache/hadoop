@@ -24,6 +24,8 @@ Release 2.6.1 - UNRELEASED
     MAPREDUCE-6303. Read timeout when retrying a fetch error can be fatal 
     to a reducer. (Jason Lowe via junping_du)
 
+    MAPREDUCE-6300. Task list sort by task id broken. (Siqi Li via aajisaka)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
