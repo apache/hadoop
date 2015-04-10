@@ -173,6 +173,7 @@ import org.apache.hadoop.yarn.util.UTCClock;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 
 /**
@@ -580,6 +581,26 @@ public class ClientRMService extends AbstractService implements
           ie.getMessage(), "ClientRMService",
           "Exception in submitting application", applicationId, callerContext);
       throw RPCUtil.getRemoteException(ie);
+    }
+
+    // Sanity check for flow run
+    String value = null;
+    try {
+      for (String tag : submissionContext.getApplicationTags()) {
+        if (tag.startsWith(TimelineUtils.FLOW_RUN_ID_TAG_PREFIX + ":") ||
+            tag.startsWith(
+                TimelineUtils.FLOW_RUN_ID_TAG_PREFIX.toLowerCase() + ":")) {
+          value = tag.substring(TimelineUtils.FLOW_RUN_ID_TAG_PREFIX.length() + 1);
+          Long.valueOf(value);
+        }
+      }
+    } catch (NumberFormatException e) {
+      LOG.warn("Invalid to flow run: " + value +
+          ". Flow run should be a long integer", e);
+      RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
+          e.getMessage(), "ClientRMService",
+          "Exception in submitting application", applicationId);
+      throw RPCUtil.getRemoteException(e);
     }
 
     // Check whether app has already been put into rmContext,

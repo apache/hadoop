@@ -130,6 +130,6 @@ public class NMCollectorService extends CompositeService implements
           " doesn't exist on NM.");
     }
     return GetTimelineCollectorContextResponse.newInstance(
-        app.getUser(), app.getFlowId(), app.getFlowRunId());
+        app.getUser(), app.getFlowName(), app.getFlowVersion(), app.getFlowRunId());
   }
 }

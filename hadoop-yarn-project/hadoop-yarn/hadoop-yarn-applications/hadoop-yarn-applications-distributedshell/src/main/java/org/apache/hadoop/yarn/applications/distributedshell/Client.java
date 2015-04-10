@@ -189,8 +189,9 @@ public class Client {
   // Timeline domain writer access control
   private String modifyACLs = null;
 
-  private String flowId = null;
-  private String flowRunId = null;
+  private String flowName = null;
+  private String flowVersion = null;
+  private long flowRunId = 0L;
 
   // Command line options
   private Options opts;
@@ -293,9 +294,11 @@ public class Client {
         + "modify the timeline entities in the given domain");
     opts.addOption("create", false, "Flag to indicate whether to create the "
         + "domain specified with -domain.");
-    opts.addOption("flow", true, "ID of the flow which the distributed shell "
+    opts.addOption("flow_name", true, "Flow name which the distributed shell "
         + "app belongs to");
-    opts.addOption("flow_run", true, "ID of the flowrun which the distributed "
+    opts.addOption("flow_version", true, "Flow version which the distributed "
+        + "shell app belongs to");
+    opts.addOption("flow_run_id", true, "Flow run ID which the distributed "
         + "shell app belongs to");
     opts.addOption("help", false, "Print usage");
     opts.addOption("node_label_expression", true,
@@ -486,11 +489,19 @@ public class Client {
           + cliParser.getOptionValue("container_retry_interval"));
     }
 
-    if (cliParser.hasOption("flow")) {
-      flowId = cliParser.getOptionValue("flow");
+    if (cliParser.hasOption("flow_name")) {
+      flowName = cliParser.getOptionValue("flow_name");
     }
-    if (cliParser.hasOption("flow_run")) {
-      flowRunId = cliParser.getOptionValue("flow_run");
+    if (cliParser.hasOption("flow_version")) {
+      flowVersion = cliParser.getOptionValue("flow_version");
+    }
+    if (cliParser.hasOption("flow_run_id")) {
+      try {
+        flowRunId = Long.valueOf(cliParser.getOptionValue("flow_run_id"));
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException(
+            "Flow run is not a valid long value", e);
+      }
     }
     return true;
   }
@@ -584,10 +595,13 @@ public class Client {
     }
 
     Set<String> tags = new HashSet<String>();
-    if (flowId != null) {
-      tags.add(TimelineUtils.generateFlowIdTag(flowId));
+    if (flowName != null) {
+      tags.add(TimelineUtils.generateFlowNameTag(flowName));
     }
-    if (flowRunId != null) {
+    if (flowVersion != null) {
+      tags.add(TimelineUtils.generateFlowVersionTag(flowVersion));
+    }
+    if (flowRunId != 0) {
       tags.add(TimelineUtils.generateFlowRunIdTag(flowRunId));
     }
     appContext.setApplicationTags(tags);

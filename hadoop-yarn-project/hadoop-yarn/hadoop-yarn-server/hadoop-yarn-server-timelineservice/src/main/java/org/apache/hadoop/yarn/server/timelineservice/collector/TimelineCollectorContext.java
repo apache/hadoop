@@ -22,19 +22,21 @@ public class TimelineCollectorContext {
 
   private String clusterId;
   private String userId;
-  private String flowId;
-  private String flowRunId;
+  private String flowName;
+  private String flowVersion;
+  private long flowRunId;
   private String appId;
 
   public TimelineCollectorContext() {
-    this(null, null, null, null, null);
+    this(null, null, null, null, 0L, null);
   }
 
   public TimelineCollectorContext(String clusterId, String userId,
-      String flowId, String flowRunId, String appId) {
+      String flowName, String flowVersion, long flowRunId, String appId) {
     this.clusterId = clusterId;
     this.userId = userId;
-    this.flowId = flowId;
+    this.flowName = flowName;
+    this.flowVersion = flowVersion;
     this.flowRunId = flowRunId;
     this.appId = appId;
   }
@@ -55,19 +57,27 @@ public class TimelineCollectorContext {
     this.userId = userId;
   }
 
-  public String getFlowId() {
-    return flowId;
+  public String getFlowName() {
+    return flowName;
   }
 
-  public void setFlowId(String flowId) {
-    this.flowId = flowId;
+  public void setFlowName(String flowName) {
+    this.flowName = flowName;
   }
 
-  public String getFlowRunId() {
+  public String getFlowVersion() {
+    return flowVersion;
+  }
+
+  public void setFlowVersion(String flowVersion) {
+    this.flowVersion = flowVersion;
+  }
+
+  public long getFlowRunId() {
     return flowRunId;
   }
 
-  public void setFlowRunId(String flowRunId) {
+  public void setFlowRunId(long flowRunId) {
     this.flowRunId = flowRunId;
   }
 

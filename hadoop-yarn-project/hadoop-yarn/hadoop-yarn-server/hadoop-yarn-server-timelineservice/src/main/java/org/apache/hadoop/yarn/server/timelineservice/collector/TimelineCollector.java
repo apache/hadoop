@@ -100,8 +100,8 @@ public abstract class TimelineCollector extends CompositeService {
 
     TimelineCollectorContext context = getTimelineEntityContext();
     return writer.write(context.getClusterId(), context.getUserId(),
-        context.getFlowId(), context.getFlowRunId(), context.getAppId(),
-        entities);
+        context.getFlowName(), context.getFlowVersion(), context.getFlowRunId(),
+        context.getAppId(), entities);
   }
 
   /**

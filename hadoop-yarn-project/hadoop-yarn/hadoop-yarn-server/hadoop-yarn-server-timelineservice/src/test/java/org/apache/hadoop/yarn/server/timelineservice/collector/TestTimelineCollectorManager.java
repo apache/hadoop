@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -146,7 +147,7 @@ public class TestTimelineCollectorManager {
     CollectorNodemanagerProtocol nmCollectorService =
         mock(CollectorNodemanagerProtocol.class);
     GetTimelineCollectorContextResponse response =
-        GetTimelineCollectorContextResponse.newInstance(null, null, null);
+        GetTimelineCollectorContextResponse.newInstance(null, null, null, 0L);
     try {
       when(nmCollectorService.getTimelineCollectorContext(any(
           GetTimelineCollectorContextRequest.class))).thenReturn(response);

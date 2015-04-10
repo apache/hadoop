@@ -141,8 +141,9 @@ message GetTimelineCollectorContextRequestProto {
 
 message GetTimelineCollectorContextResponseProto {
   optional string user_id = 1;
-  optional string flow_id = 2;
-  optional string flow_run_id = 3;
+  optional string flow_name = 2;
+  optional string flow_version = 3;
+  optional int64 flow_run_id = 4;
 }
 
 message NMContainerStatusProto {
