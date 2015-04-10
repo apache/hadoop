@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.retry.AtMostOnce;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.KerberosInfo;
@@ -1501,4 +1502,13 @@ public interface ClientProtocol {
    */
   @Idempotent
   public ECInfo getErasureCodingInfo(String src) throws IOException;
+
+  /**
+   * Gets list of ECSchemas loaded in Namenode
+   *
+   * @return Returns the list of ECSchemas loaded at Namenode
+   * @throws IOException
+   */
+  @Idempotent
+  public ECSchema[] getECSchemas() throws IOException;
 }

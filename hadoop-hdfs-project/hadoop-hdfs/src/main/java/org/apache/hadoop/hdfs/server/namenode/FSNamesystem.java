@@ -7175,6 +7175,23 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return null;
   }
 
+  /**
+   * Get available ECSchemas
+   */
+  ECSchema[] getECSchemas() throws IOException {
+    checkOperation(OperationCategory.READ);
+    waitForLoadingFSImage();
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      // TODO HDFS-7866 Need to return all schemas maintained by Namenode
+      ECSchema defaultSchema = ECSchemaManager.getSystemDefaultSchema();
+      return new ECSchema[] { defaultSchema };
+    } finally {
+      readUnlock();
+    }
+  }
+
   void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
                 boolean logRetryCache)
       throws IOException {
