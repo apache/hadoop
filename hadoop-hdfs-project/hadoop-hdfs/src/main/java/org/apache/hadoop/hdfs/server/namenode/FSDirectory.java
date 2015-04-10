@@ -338,7 +338,7 @@ public class FSDirectory implements Closeable {
     namesystem = ns;
     this.editLog = ns.getEditLog();
     ezManager = new EncryptionZoneManager(this, conf);
-    this.db = new DB();
+    this.db = new DB(dirLock);
     // TODO: Load fsimage
     db.addRoot(createRootForFlatNS(ns));
   }

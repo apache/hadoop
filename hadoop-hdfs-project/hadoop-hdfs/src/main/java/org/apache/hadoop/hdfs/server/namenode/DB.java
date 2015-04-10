@@ -82,7 +82,7 @@ class DB {
     }
   }
 
-  private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final ReentrantReadWriteLock lock;
 
   private HashMap<Long, INodeContainer> inodeMap = new
       HashMap<>();
@@ -106,5 +106,9 @@ class DB {
 
   ReentrantReadWriteLock lock() {
     return lock;
+  }
+
+  DB(ReentrantReadWriteLock lock) {
+    this.lock = lock;
   }
 }
