@@ -55,7 +55,7 @@ public abstract class QueueInfo {
       float maximumCapacity, float currentCapacity,
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
-      String defaultNodeLabelExpression) {
+      String defaultNodeLabelExpression, QueueStatistics queueStatistics) {
     QueueInfo queueInfo = Records.newRecord(QueueInfo.class);
     queueInfo.setQueueName(queueName);
     queueInfo.setCapacity(capacity);
@@ -66,6 +66,7 @@ public abstract class QueueInfo {
     queueInfo.setQueueState(queueState);
     queueInfo.setAccessibleNodeLabels(accessibleNodeLabels);
     queueInfo.setDefaultNodeLabelExpression(defaultNodeLabelExpression);
+    queueInfo.setQueueStatistics(queueStatistics);
     return queueInfo;
   }
 
@@ -184,4 +185,24 @@ public abstract class QueueInfo {
   @Stable
   public abstract void setDefaultNodeLabelExpression(
       String defaultLabelExpression);
+
+  /**
+   * Get the <code>queue stats</code> for the queue
+   *
+   * @return <code>queue stats</code> of the queue
+   */
+  @Public
+  @Unstable
+  public abstract QueueStatistics getQueueStatistics();
+
+  /**
+   * Set the queue statistics for the queue
+   * 
+   * @param queueStatistics
+   *          the queue statistics
+   */
+  @Public
+  @Unstable
+  public abstract void setQueueStatistics(QueueStatistics queueStatistics);
+
 }

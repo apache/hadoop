@@ -130,6 +130,7 @@ import org.apache.hadoop.yarn.api.records.PreemptionResourceRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.QueueStatistics;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -482,7 +483,8 @@ public class TestPBImplRecords {
     // it is recursive(has sub queues)
     typeValueCache.put(QueueInfo.class, QueueInfo.newInstance("root", 1.0f,
         1.0f, 0.1f, null, null, QueueState.RUNNING, ImmutableSet.of("x", "y"),
-        "x && y"));
+        "x && y", null));
+    generateByNewInstance(QueueStatistics.class);
     generateByNewInstance(QueueUserACLInfo.class);
     generateByNewInstance(YarnClusterMetrics.class);
     // for reservation system

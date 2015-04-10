@@ -89,6 +89,80 @@ public class YarnClusterMetricsPBImpl extends YarnClusterMetrics {
     builder.setNumNodeManagers((numNodeManagers));
   }
 
+  @Override
+  public int getNumDecommissionedNodeManagers() {
+    YarnClusterMetricsProtoOrBuilder p = viaProto ? proto : builder;
+    if (p.hasNumDecommissionedNms()) {
+      return (p.getNumDecommissionedNms());
+    }
+    return 0;
+  }
 
+  @Override
+  public void
+      setNumDecommissionedNodeManagers(int numDecommissionedNodeManagers) {
+    maybeInitBuilder();
+    builder.setNumDecommissionedNms((numDecommissionedNodeManagers));
+  }
 
-}  
+  @Override
+  public int getNumActiveNodeManagers() {
+    YarnClusterMetricsProtoOrBuilder p = viaProto ? proto : builder;
+    if (p.hasNumActiveNms()) {
+      return (p.getNumActiveNms());
+    }
+    return 0;
+  }
+
+  @Override
+  public void setNumActiveNodeManagers(int numActiveNodeManagers) {
+    maybeInitBuilder();
+    builder.setNumActiveNms((numActiveNodeManagers));
+  }
+
+  @Override
+  public int getNumLostNodeManagers() {
+    YarnClusterMetricsProtoOrBuilder p = viaProto ? proto : builder;
+    if (p.hasNumLostNms()) {
+      return (p.getNumLostNms());
+    }
+    return 0;
+  }
+
+  @Override
+  public void setNumLostNodeManagers(int numLostNodeManagers) {
+    maybeInitBuilder();
+    builder.setNumLostNms((numLostNodeManagers));
+  }
+
+  @Override
+  public int getNumUnhealthyNodeManagers() {
+    YarnClusterMetricsProtoOrBuilder p = viaProto ? proto : builder;
+    if (p.hasNumUnhealthyNms()) {
+      return (p.getNumUnhealthyNms());
+    }
+    return 0;
+
+  }
+
+  @Override
+  public void setNumUnhealthyNodeManagers(int numUnhealthyNodeManagers) {
+    maybeInitBuilder();
+    builder.setNumUnhealthyNms((numUnhealthyNodeManagers));
+  }
+
+  @Override
+  public int getNumRebootedNodeManagers() {
+    YarnClusterMetricsProtoOrBuilder p = viaProto ? proto : builder;
+    if (p.hasNumRebootedNms()) {
+      return (p.getNumRebootedNms());
+    }
+    return 0;
+  }
+
+  @Override
+  public void setNumRebootedNodeManagers(int numRebootedNodeManagers) {
+    maybeInitBuilder();
+    builder.setNumRebootedNms((numRebootedNodeManagers));
+  }
+}

@@ -339,11 +339,34 @@ message ApplicationACLMapProto {
 
 message YarnClusterMetricsProto {
   optional int32 num_node_managers = 1;
+  optional int32 num_decommissioned_nms = 2;
+  optional int32 num_active_nms = 3;
+  optional int32 num_lost_nms = 4;
+  optional int32 num_unhealthy_nms = 5;
+  optional int32 num_rebooted_nms = 6;
 }
 
 enum QueueStateProto {
   Q_STOPPED = 1;
   Q_RUNNING = 2;
+}
+
+message QueueStatisticsProto {
+  optional int64 numAppsSubmitted = 1;
+  optional int64 numAppsRunning = 2;
+  optional int64 numAppsPending = 3;
+  optional int64 numAppsCompleted = 4;
+  optional int64 numAppsKilled = 5;
+  optional int64 numAppsFailed = 6;
+  optional int64 numActiveUsers = 7;
+  optional int64 availableMemoryMB = 8;
+  optional int64 allocatedMemoryMB = 9;
+  optional int64 pendingMemoryMB = 10;
+  optional int64 reservedMemoryMB = 11;
+  optional int64 availableVCores = 12;
+  optional int64 allocatedVCores = 13;
+  optional int64 pendingVCores = 14;
+  optional int64 reservedVCores = 15;
 }
 
 message QueueInfoProto {
@@ -356,6 +379,7 @@ message QueueInfoProto {
   repeated ApplicationReportProto applications = 7;
   repeated string accessibleNodeLabels = 8;
   optional string defaultNodeLabelExpression = 9;
+  optional QueueStatisticsProto queueStatistics = 10;
 }
 
 enum QueueACLProto {
