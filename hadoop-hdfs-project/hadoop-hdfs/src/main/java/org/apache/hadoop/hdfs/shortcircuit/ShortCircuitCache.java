@@ -40,6 +40,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
+import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
 import org.apache.hadoop.hdfs.net.DomainPeer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
@@ -357,6 +358,17 @@ public class ShortCircuitCache implements Closeable {
             DFSConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS_DEFAULT),
         conf.getInt(DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS,
             DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT));
+  }
+
+  public static ShortCircuitCache fromConf(ShortCircuitConf conf) {
+    return new ShortCircuitCache(
+        conf.getShortCircuitStreamsCacheSize(),
+        conf.getShortCircuitStreamsCacheExpiryMs(),
+        conf.getShortCircuitMmapCacheSize(),
+        conf.getShortCircuitMmapCacheExpiryMs(),
+        conf.getShortCircuitMmapCacheRetryTimeout(),
+        conf.getShortCircuitCacheStaleThresholdMs(),
+        conf.getShortCircuitSharedMemoryWatcherInterruptCheckMs());
   }
 
   public ShortCircuitCache(int maxTotalSize, long maxNonMmappedEvictableLifespanMs,

@@ -22,6 +22,7 @@ import static org.junit.Assert.assertSame;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -59,13 +60,13 @@ public class TestLeaseRenewer {
 }
  
   private DFSClient createMockClient() {
+    final DfsClientConf mockConf = Mockito.mock(DfsClientConf.class);
+    Mockito.doReturn((int)FAST_GRACE_PERIOD).when(mockConf).getHdfsTimeout();
+
     DFSClient mock = Mockito.mock(DFSClient.class);
-    Mockito.doReturn(true)
-      .when(mock).isClientRunning();
-    Mockito.doReturn((int)FAST_GRACE_PERIOD)
-      .when(mock).getHdfsTimeout();
-    Mockito.doReturn("myclient")
-      .when(mock).getClientName();
+    Mockito.doReturn(true).when(mock).isClientRunning();
+    Mockito.doReturn(mockConf).when(mock).getConf();
+    Mockito.doReturn("myclient").when(mock).getClientName();
     return mock;
   }
 
