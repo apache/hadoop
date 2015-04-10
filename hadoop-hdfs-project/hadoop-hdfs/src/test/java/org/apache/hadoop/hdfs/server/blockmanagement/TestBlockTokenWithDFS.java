@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.RemotePeerFactory;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -146,7 +147,7 @@ public class TestBlockTokenWithDFS {
       DatanodeInfo[] nodes = lblock.getLocations();
       targetAddr = NetUtils.createSocketAddr(nodes[0].getXferAddr());
 
-      blockReader = new BlockReaderFactory(new DFSClient.Conf(conf)).
+      blockReader = new BlockReaderFactory(new DfsClientConf(conf)).
           setFileName(BlockReaderFactory.getFileName(targetAddr, 
                         "test-blockpoolid", block.getBlockId())).
           setBlock(block).

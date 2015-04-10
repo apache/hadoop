@@ -657,7 +657,7 @@ public class TestShortCircuitCache {
 
     // The second read should fail, and we should only have 1 segment and 1 slot
     // left.
-    fs.getClient().getConf().brfFailureInjector =
+    fs.getClient().getConf().getShortCircuitConf().brfFailureInjector =
         new TestCleanupFailureInjector();
     try {
       DFSTestUtil.readFileBuffer(fs, TEST_PATH2);

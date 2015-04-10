@@ -26,14 +26,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.DFSClient.Conf;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.client.impl.DfsClientConf.ShortCircuitConf;
 import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.util.PerformanceAdvisory;
 
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.util.PerformanceAdvisory;
 
 public class DomainSocketFactory {
   private static final Log LOG = LogFactory.getLog(DomainSocketFactory.class);
@@ -95,7 +95,7 @@ public class DomainSocketFactory {
       .expireAfterWrite(10, TimeUnit.MINUTES)
       .build();
 
-  public DomainSocketFactory(Conf conf) {
+  public DomainSocketFactory(ShortCircuitConf conf) {
     final String feature;
     if (conf.isShortCircuitLocalReads() && (!conf.isUseLegacyBlockReaderLocal())) {
       feature = "The short-circuit local reads feature";
@@ -129,7 +129,7 @@ public class DomainSocketFactory {
    *
    * @return             Information about the socket path.
    */
-  public PathInfo getPathInfo(InetSocketAddress addr, DFSClient.Conf conf) {
+  public PathInfo getPathInfo(InetSocketAddress addr, ShortCircuitConf conf) {
     // If there is no domain socket path configured, we can't use domain
     // sockets.
     if (conf.getDomainSocketPath().isEmpty()) return PathInfo.NOT_CONFIGURED;

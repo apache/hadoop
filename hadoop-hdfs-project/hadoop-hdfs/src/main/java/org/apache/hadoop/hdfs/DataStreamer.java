@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -84,6 +85,7 @@ import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceInfo;
 import org.apache.htrace.TraceScope;
+
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -123,15 +125,15 @@ class DataStreamer extends Daemon {
    */
   static Socket createSocketForPipeline(final DatanodeInfo first,
       final int length, final DFSClient client) throws IOException {
-    final String dnAddr = first.getXferAddr(
-        client.getConf().connectToDnViaHostname);
+    final DfsClientConf conf = client.getConf();
+    final String dnAddr = first.getXferAddr(conf.isConnectToDnViaHostname());
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("Connecting to datanode " + dnAddr);
     }
     final InetSocketAddress isa = NetUtils.createSocketAddr(dnAddr);
     final Socket sock = client.socketFactory.createSocket();
     final int timeout = client.getDatanodeReadTimeout(length);
-    NetUtils.connect(sock, isa, client.getRandomLocalInterfaceAddr(), client.getConf().socketTimeout);
+    NetUtils.connect(sock, isa, client.getRandomLocalInterfaceAddr(), conf.getSocketTimeout());
     sock.setSoTimeout(timeout);
     sock.setSendBufferSize(HdfsConstants.DEFAULT_DATA_SOCKET_SIZE);
     if(DFSClient.LOG.isDebugEnabled()) {
@@ -244,7 +246,7 @@ class DataStreamer extends Daemon {
     this.byteArrayManager = byteArrayManage;
     isLazyPersistFile = isLazyPersist(stat);
     this.dfsclientSlowLogThresholdMs =
-        dfsClient.getConf().dfsclientSlowIoWarningThresholdMs;
+        dfsClient.getConf().getSlowIoWarningThresholdMs();
     excludedNodes = initExcludedNodes();
   }
 
@@ -368,6 +370,7 @@ class DataStreamer extends Daemon {
           doSleep = processDatanodeError();
         }
 
+        final int halfSocketTimeout = dfsClient.getConf().getSocketTimeout()/2; 
         synchronized (dataQueue) {
           // wait for a packet to be sent.
           long now = Time.monotonicNow();
@@ -375,8 +378,8 @@ class DataStreamer extends Daemon {
               && dataQueue.size() == 0 &&
               (stage != BlockConstructionStage.DATA_STREAMING ||
                   stage == BlockConstructionStage.DATA_STREAMING &&
-                      now - lastPacket < dfsClient.getConf().socketTimeout/2)) || doSleep ) {
-            long timeout = dfsClient.getConf().socketTimeout/2 - (now-lastPacket);
+                      now - lastPacket < halfSocketTimeout)) || doSleep ) {
+            long timeout = halfSocketTimeout - (now-lastPacket);
             timeout = timeout <= 0 ? 1000 : timeout;
             timeout = (stage == BlockConstructionStage.DATA_STREAMING)?
                 timeout : 1000;
@@ -627,7 +630,7 @@ class DataStreamer extends Daemon {
         boolean firstWait = true;
         try {
           while (!streamerClosed && dataQueue.size() + ackQueue.size() >
-              dfsClient.getConf().writeMaxPackets) {
+              dfsClient.getConf().getWriteMaxPackets()) {
             if (firstWait) {
               Span span = Trace.currentSpan();
               if (span != null) {
@@ -842,7 +845,7 @@ class DataStreamer extends Daemon {
             // the local node or the only one in the pipeline.
             if (PipelineAck.isRestartOOBStatus(reply) &&
                 shouldWaitForRestart(i)) {
-              restartDeadline = dfsClient.getConf().datanodeRestartTimeout
+              restartDeadline = dfsClient.getConf().getDatanodeRestartTimeout()
                   + Time.monotonicNow();
               setRestartingNodeIndex(i);
               String message = "A datanode is restarting: " + targets[i];
@@ -1158,7 +1161,7 @@ class DataStreamer extends Daemon {
         // 4 seconds or the configured deadline period, whichever is shorter.
         // This is the retry interval and recovery will be retried in this
         // interval until timeout or success.
-        long delay = Math.min(dfsClient.getConf().datanodeRestartTimeout,
+        long delay = Math.min(dfsClient.getConf().getDatanodeRestartTimeout(),
             4000L);
         try {
           Thread.sleep(delay);
@@ -1311,7 +1314,7 @@ class DataStreamer extends Daemon {
     LocatedBlock lb = null;
     DatanodeInfo[] nodes = null;
     StorageType[] storageTypes = null;
-    int count = dfsClient.getConf().nBlockWriteRetry;
+    int count = dfsClient.getConf().getNumBlockWriteRetry();
     boolean success = false;
     ExtendedBlock oldBlock = block;
     do {
@@ -1471,7 +1474,7 @@ class DataStreamer extends Daemon {
         }
         // Check whether there is a restart worth waiting for.
         if (checkRestart && shouldWaitForRestart(errorIndex)) {
-          restartDeadline = dfsClient.getConf().datanodeRestartTimeout
+          restartDeadline = dfsClient.getConf().getDatanodeRestartTimeout()
               + Time.monotonicNow();
           restartingNodeIndex.set(errorIndex);
           errorIndex = -1;
@@ -1524,9 +1527,9 @@ class DataStreamer extends Daemon {
 
   protected LocatedBlock locateFollowingBlock(DatanodeInfo[] excludedNodes)
       throws IOException {
-    int retries = dfsClient.getConf().nBlockWriteLocateFollowingRetry;
-    long sleeptime = dfsClient.getConf().
-        blockWriteLocateFollowingInitialDelayMs;
+    final DfsClientConf conf = dfsClient.getConf(); 
+    int retries = conf.getNumBlockWriteLocateFollowingRetry();
+    long sleeptime = conf.getBlockWriteLocateFollowingInitialDelayMs();
     while (true) {
       long localstart = Time.monotonicNow();
       while (true) {
@@ -1674,7 +1677,8 @@ class DataStreamer extends Daemon {
 
   private LoadingCache<DatanodeInfo, DatanodeInfo> initExcludedNodes() {
     return CacheBuilder.newBuilder().expireAfterWrite(
-        dfsClient.getConf().excludedNodesCacheExpiry, TimeUnit.MILLISECONDS)
+        dfsClient.getConf().getExcludedNodesCacheExpiry(),
+        TimeUnit.MILLISECONDS)
         .removalListener(new RemovalListener<DatanodeInfo, DatanodeInfo>() {
           @Override
           public void onRemoval(
