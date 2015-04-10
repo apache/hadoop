@@ -8,6 +8,8 @@ Release 2.7.1 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-8081. Split getAdditionalBlock() into two methods. (shv)
+
   OPTIMIZATIONS
 
   BUG FIXES

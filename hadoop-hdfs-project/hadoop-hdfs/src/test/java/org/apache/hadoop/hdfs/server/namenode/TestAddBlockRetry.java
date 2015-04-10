@@ -20,16 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.spy;
-
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,18 +32,12 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.EnumSetWritable;
-import org.apache.hadoop.net.Node;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
  * Race between two threads simultaneously calling
@@ -62,10 +50,6 @@ public class TestAddBlockRetry {
 
   private Configuration conf;
   private MiniDFSCluster cluster;
-
-  private int count = 0;
-  private LocatedBlock lb1;
-  private LocatedBlock lb2;
 
   @Before
   public void setUp() throws Exception {
@@ -92,42 +76,7 @@ public class TestAddBlockRetry {
     final String src = "/testRetryAddBlockWhileInChooseTarget";
 
     final FSNamesystem ns = cluster.getNamesystem();
-    BlockManager spyBM = spy(ns.getBlockManager());
     final NamenodeProtocols nn = cluster.getNameNodeRpc();
-
-    // substitute mocked BlockManager into FSNamesystem
-    Class<? extends FSNamesystem> nsClass = ns.getClass();
-    Field bmField = nsClass.getDeclaredField("blockManager");
-    bmField.setAccessible(true);
-    bmField.set(ns, spyBM);
-
-    doAnswer(new Answer<DatanodeStorageInfo[]>() {
-      @Override
-      public DatanodeStorageInfo[] answer(InvocationOnMock invocation)
-          throws Throwable {
-        LOG.info("chooseTarget for " + src);
-        DatanodeStorageInfo[] ret =
-            (DatanodeStorageInfo[]) invocation.callRealMethod();
-        assertTrue("Penultimate block must be complete",
-            checkFileProgress(src, false));
-        count++;
-        if(count == 1) { // run second addBlock()
-          LOG.info("Starting second addBlock for " + src);
-          nn.addBlock(src, "clientName", null, null,
-              INodeId.GRANDFATHER_INODE_ID, null);
-          assertTrue("Penultimate block must be complete",
-              checkFileProgress(src, false));
-          LocatedBlocks lbs = nn.getBlockLocations(src, 0, Long.MAX_VALUE);
-          assertEquals("Must be one block", 1, lbs.getLocatedBlocks().size());
-          lb2 = lbs.get(0);
-          assertEquals("Wrong replication",
-              REPLICATION, lb2.getLocations().length);
-        }
-        return ret;
-      }
-    }).when(spyBM).chooseTarget4NewBlock(Mockito.anyString(), Mockito.anyInt(),
-        Mockito.<DatanodeDescriptor>any(), Mockito.<HashSet<Node>>any(),
-        Mockito.anyLong(), Mockito.<List<String>>any(), Mockito.anyByte());
 
     // create file
     nn.create(src, FsPermission.getFileDefault(),
@@ -137,12 +86,32 @@ public class TestAddBlockRetry {
 
     // start first addBlock()
     LOG.info("Starting first addBlock for " + src);
-    nn.addBlock(src, "clientName", null, null, INodeId.GRANDFATHER_INODE_ID, null);
+    LocatedBlock[] onRetryBlock = new LocatedBlock[1];
+    DatanodeStorageInfo targets[] = ns.getNewBlockTargets(
+        src, INodeId.GRANDFATHER_INODE_ID, "clientName",
+        null, null, null, onRetryBlock);
+    assertNotNull("Targets must be generated", targets);
 
-    // check locations
+    // run second addBlock()
+    LOG.info("Starting second addBlock for " + src);
+    nn.addBlock(src, "clientName", null, null,
+        INodeId.GRANDFATHER_INODE_ID, null);
+    assertTrue("Penultimate block must be complete",
+        checkFileProgress(src, false));
     LocatedBlocks lbs = nn.getBlockLocations(src, 0, Long.MAX_VALUE);
     assertEquals("Must be one block", 1, lbs.getLocatedBlocks().size());
-    lb1 = lbs.get(0);
+    LocatedBlock lb2 = lbs.get(0);
+    assertEquals("Wrong replication", REPLICATION, lb2.getLocations().length);
+
+    // continue first addBlock()
+    LocatedBlock newBlock = ns.storeAllocatedBlock(
+        src, INodeId.GRANDFATHER_INODE_ID, "clientName", null, targets);
+    assertEquals("Blocks are not equal", lb2.getBlock(), newBlock.getBlock());
+
+    // check locations
+    lbs = nn.getBlockLocations(src, 0, Long.MAX_VALUE);
+    assertEquals("Must be one block", 1, lbs.getLocatedBlocks().size());
+    LocatedBlock lb1 = lbs.get(0);
     assertEquals("Wrong replication", REPLICATION, lb1.getLocations().length);
     assertEquals("Blocks are not equal", lb1.getBlock(), lb2.getBlock());
   }
