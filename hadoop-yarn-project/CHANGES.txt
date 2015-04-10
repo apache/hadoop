@@ -50,6 +50,9 @@ Branch YARN-2928: Timeline Server Next Generation: Phase 1
     YARN-3334. NM uses timeline client to publish container metrics to new
     timeline service. (Junping Du via zjshen)
 
+    YARN-3391. Clearly define flow ID/ flow run / flow version in API and storage.
+    (Zhijie Shen via junping_du)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

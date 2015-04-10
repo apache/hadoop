@@ -36,9 +36,11 @@ public interface Application extends EventHandler<ApplicationEvent> {
 
   ApplicationState getApplicationState();
 
-  String getFlowId();
+  String getFlowName();
 
-  String getFlowRunId();
+  String getFlowVersion();
+
+  long getFlowRunId();
   
   TimelineClient getTimelineClient();
 

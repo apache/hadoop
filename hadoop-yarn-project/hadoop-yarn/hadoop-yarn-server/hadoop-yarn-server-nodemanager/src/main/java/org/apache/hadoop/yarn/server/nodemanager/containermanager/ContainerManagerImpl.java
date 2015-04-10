@@ -326,7 +326,7 @@ public class ContainerManagerImpl extends CompositeService implements
     LOG.info("Recovering application " + appId);
     //TODO: Recover flow and flow run ID
     ApplicationImpl app = new ApplicationImpl(
-        dispatcher, p.getUser(), null, null, appId, creds, context);
+        dispatcher, p.getUser(), null, null, 0, appId, creds, context);
     context.getApplications().put(appId, app);
     app.handle(new ApplicationInitEvent(appId, acls, logAggregationContext));
   }
@@ -925,12 +925,18 @@ public class ContainerManagerImpl extends CompositeService implements
     try {
       if (!serviceStopped) {
         // Create the application
-        String flowId = launchContext.getEnvironment().get(
-            TimelineUtils.FLOW_ID_TAG_PREFIX);
-        String flowRunId = launchContext.getEnvironment().get(
+        String flowName = launchContext.getEnvironment().get(
+            TimelineUtils.FLOW_NAME_TAG_PREFIX);
+        String flowVersion = launchContext.getEnvironment().get(
+            TimelineUtils.FLOW_VERSION_TAG_PREFIX);
+        String flowRunIdStr = launchContext.getEnvironment().get(
             TimelineUtils.FLOW_RUN_ID_TAG_PREFIX);
-        Application application = new ApplicationImpl(
-            dispatcher, user, flowId, flowRunId, applicationID, credentials, context);
+        long flowRunId = 0L;
+        if (flowRunIdStr != null && !flowRunIdStr.isEmpty()) {
+          flowRunId = Long.valueOf(flowRunIdStr);
+        }
+        Application application = new ApplicationImpl(dispatcher, user,
+            flowName, flowVersion, flowRunId, applicationID, credentials, context);
         if (null == context.getApplications().putIfAbsent(applicationID,
           application)) {
           LOG.info("Creating a new application reference for app " + applicationID);

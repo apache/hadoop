@@ -67,8 +67,9 @@ public class ApplicationImpl implements Application {
 
   final Dispatcher dispatcher;
   final String user;
-  final String flowId;
-  final String flowRunId;
+  final String flowName;
+  final String flowVersion;
+  final long flowRunId;
   final ApplicationId appId;
   final Credentials credentials;
   Map<ApplicationAccessType, String> applicationACLs;
@@ -85,12 +86,13 @@ public class ApplicationImpl implements Application {
   Map<ContainerId, Container> containers =
       new HashMap<ContainerId, Container>();
 
-  public ApplicationImpl(Dispatcher dispatcher, String user, String flowId,
-      String flowRunId, ApplicationId appId, Credentials credentials,
-      Context context) {
+  public ApplicationImpl(Dispatcher dispatcher, String user, String flowName,
+      String flowVersion, long flowRunId, ApplicationId appId,
+      Credentials credentials, Context context) {
     this.dispatcher = dispatcher;
     this.user = user;
-    this.flowId = flowId;
+    this.flowName = flowName;
+    this.flowVersion = flowVersion;
     this.flowRunId = flowRunId;
     this.appId = appId;
     this.credentials = credentials;
@@ -517,11 +519,18 @@ public class ApplicationImpl implements Application {
     }
   }
 
-  public String getFlowId() {
-    return flowId;
+  @Override
+  public String getFlowName() {
+    return flowName;
   }
 
-  public String getFlowRunId() {
+  @Override
+  public String getFlowVersion() {
+    return flowVersion;
+  }
+
+  @Override
+  public long getFlowRunId() {
     return flowRunId;
   }
 }

@@ -23,11 +23,12 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class GetTimelineCollectorContextResponse {
 
   public static GetTimelineCollectorContextResponse newInstance(
-      String userId, String flowId, String flowRunId) {
+      String userId, String flowName, String flowVersion, long flowRunId) {
     GetTimelineCollectorContextResponse response =
         Records.newRecord(GetTimelineCollectorContextResponse.class);
     response.setUserId(userId);
-    response.setFlowId(flowId);
+    response.setFlowName(flowName);
+    response.setFlowVersion(flowVersion);
     response.setFlowRunId(flowRunId);
     return response;
   }
@@ -36,11 +37,15 @@ public abstract class GetTimelineCollectorContextResponse {
 
   public abstract void setUserId(String userId);
 
-  public abstract String getFlowId();
+  public abstract String getFlowName();
 
-  public abstract void setFlowId(String flowId);
+  public abstract void setFlowName(String flowName);
 
-  public abstract String getFlowRunId();
+  public abstract String getFlowVersion();
 
-  public abstract void setFlowRunId(String flowRunId);
+  public abstract void setFlowVersion(String flowVersion);
+
+  public abstract long getFlowRunId();
+
+  public abstract void setFlowRunId(long flowRunId);
 }

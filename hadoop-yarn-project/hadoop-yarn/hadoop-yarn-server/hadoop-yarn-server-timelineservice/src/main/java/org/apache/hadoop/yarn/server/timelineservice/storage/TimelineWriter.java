@@ -41,8 +41,9 @@ public interface TimelineWriter extends Service {
    *
    * @param clusterId context cluster ID
    * @param userId context user ID
-   * @param flowId context flow ID
-   * @param flowRunId context flow run ID
+   * @param flowName context flow name
+   * @param flowVersion context flow version
+   * @param flowRunId
    * @param appId context app ID
    * @param data
    *          a {@link TimelineEntities} object.
@@ -50,7 +51,7 @@ public interface TimelineWriter extends Service {
    * @throws IOException
    */
   TimelineWriteResponse write(String clusterId, String userId,
-      String flowId, String flowRunId, String appId,
+      String flowName, String flowVersion, long flowRunId, String appId,
       TimelineEntities data) throws IOException;
 
   /**
