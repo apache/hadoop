@@ -208,7 +208,7 @@ public class FSImageSerialization {
     out.writeLong(cons.getModificationTime());
     out.writeLong(cons.getPreferredBlockSize());
     // whether the file has striped blocks
-    out.writeBoolean(cons.isWithStripedBlocks());
+    out.writeBoolean(cons.isStriped());
     writeBlocks(cons.getBlocks(), out);
     cons.getPermissionStatus().write(out);
 
@@ -234,7 +234,7 @@ public class FSImageSerialization {
     out.writeLong(file.getAccessTime());
     out.writeLong(file.getPreferredBlockSize());
     // whether the file has striped blocks
-    out.writeBoolean(file.isWithStripedBlocks());
+    out.writeBoolean(file.isStriped());
     writeBlocks(file.getBlocks(), out);
     SnapshotFSImageFormat.saveFileDiffList(file, out);
 

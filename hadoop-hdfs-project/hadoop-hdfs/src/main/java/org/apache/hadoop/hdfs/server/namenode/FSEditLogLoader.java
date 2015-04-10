@@ -417,7 +417,7 @@ public class FSEditLogLoader {
       newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
       newFile.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
       // TODO whether the file is striped should later be retrieved from iip
-      updateBlocks(fsDir, addCloseOp, iip, newFile, newFile.isStriped());
+      updateBlocks(fsDir, addCloseOp, iip, newFile, fsDir.getECPolicy(iip));
       break;
     }
     case OP_CLOSE: {
@@ -438,7 +438,7 @@ public class FSEditLogLoader {
       file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
       file.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
       // TODO whether the file is striped should later be retrieved from iip
-      updateBlocks(fsDir, addCloseOp, iip, file, file.isStriped());
+      updateBlocks(fsDir, addCloseOp, iip, file, fsDir.getECPolicy(iip));
 
       // Now close the file
       if (!file.isUnderConstruction() &&
@@ -497,7 +497,7 @@ public class FSEditLogLoader {
       INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path);
       // Update in-memory data structures
       // TODO whether the file is striped should later be retrieved from iip
-      updateBlocks(fsDir, updateOp, iip, oldFile, oldFile.isStriped());
+      updateBlocks(fsDir, updateOp, iip, oldFile, fsDir.getECPolicy(iip));
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(updateOp.rpcClientId, updateOp.rpcCallId);
@@ -511,10 +511,11 @@ public class FSEditLogLoader {
         FSNamesystem.LOG.debug(op.opCode + ": " + path +
             " new block id : " + addBlockOp.getLastBlock().getBlockId());
       }
-      INodeFile oldFile = INodeFile.valueOf(fsDir.getINode(path), path);
+      INodesInPath iip = fsDir.getINodesInPath(path, true);
+      INodeFile oldFile = INodeFile.valueOf(iip.getLastINode(), path);
       // add the new block to the INodeFile
       // TODO whether the file is striped should later be retrieved from iip
-      addNewBlock(addBlockOp, oldFile, oldFile.isStriped());
+      addNewBlock(addBlockOp, oldFile, fsDir.getECPolicy(iip));
       break;
     }
     case OP_SET_REPLICATION: {

@@ -473,7 +473,7 @@ public class TestFSEditLogLoader {
       INodeFile inodeLoaded = (INodeFile)fns.getFSDirectory()
           .getINode(testFilePath);
 
-      assertTrue(inodeLoaded.isWithStripedBlocks());
+      assertTrue(inodeLoaded.isStriped());
 
       BlockInfoStriped[] blks = (BlockInfoStriped[])inodeLoaded.getBlocks();
       assertEquals(1, blks.length);
@@ -552,7 +552,7 @@ public class TestFSEditLogLoader {
       INodeFile inodeLoaded = (INodeFile)fns.getFSDirectory()
           .getINode(testFilePath);
 
-      assertTrue(inodeLoaded.isWithStripedBlocks());
+      assertTrue(inodeLoaded.isStriped());
 
       BlockInfoStriped[] blks = (BlockInfoStriped[])inodeLoaded.getBlocks();
       assertEquals(1, blks.length);

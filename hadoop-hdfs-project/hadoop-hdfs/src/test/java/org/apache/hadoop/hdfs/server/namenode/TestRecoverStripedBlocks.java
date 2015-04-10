@@ -84,7 +84,7 @@ public class TestRecoverStripedBlocks {
     final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
         .getINode4Write(filePath.toString()).asFile();
     assertFalse(fileNode.isUnderConstruction());
-    assertTrue(fileNode.isWithStripedBlocks());
+    assertTrue(fileNode.isStriped());
     BlockInfo[] blocks = fileNode.getBlocks();
     assertEquals(numBlocks, blocks.length);
     for (BlockInfo blk : blocks) {

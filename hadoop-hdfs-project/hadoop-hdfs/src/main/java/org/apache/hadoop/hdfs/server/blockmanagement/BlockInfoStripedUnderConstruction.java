@@ -96,7 +96,7 @@ public class BlockInfoStripedUnderConstruction extends BlockInfoStriped
     for(int i = 0; i < numLocations; i++) {
       // when creating a new block we simply sequentially assign block index to
       // each storage
-      Block blk = new Block(this.getBlockId() + i, this.getGenerationStamp(), 0);
+      Block blk = new Block(this.getBlockId() + i, 0, this.getGenerationStamp());
       replicas[i] = new ReplicaUnderConstruction(blk, targets[i],
           ReplicaState.RBW);
     }
