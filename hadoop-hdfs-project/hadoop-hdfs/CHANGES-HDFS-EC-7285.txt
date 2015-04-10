@@ -59,3 +59,6 @@
     HDFS-8104. Make hard-coded values consistent with the system default schema first before remove them. (Kai Zheng)
 
     HDFS-7889. Subclass DFSOutputStream to support writing striping layout files. (Li Bo via Kai Zheng)
+
+    HDFS-8090. Erasure Coding: Add RPC to client-namenode to list all
+    ECSchemas loaded in Namenode. (vinayakumarb)

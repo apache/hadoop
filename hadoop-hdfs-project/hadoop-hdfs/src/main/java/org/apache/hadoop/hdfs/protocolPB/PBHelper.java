@@ -3121,8 +3121,6 @@ public class PBHelper {
     for (ECSchemaOptionEntryProto option : optionsList) {
       options.put(option.getKey(), option.getValue());
     }
-    // include chunksize in options.
-    options.put(ECSchema.CHUNK_SIZE_KEY, String.valueOf(schema.getChunkSize()));
     return new ECSchema(schema.getSchemaName(), schema.getCodecName(),
         schema.getDataUnits(), schema.getParityUnits(), options);
   }
@@ -3132,8 +3130,7 @@ public class PBHelper {
         .setSchemaName(schema.getSchemaName())
         .setCodecName(schema.getCodecName())
         .setDataUnits(schema.getNumDataUnits())
-        .setParityUnits(schema.getNumParityUnits())
-        .setChunkSize(schema.getChunkSize());
+        .setParityUnits(schema.getNumParityUnits());
     Set<Entry<String, String>> entrySet = schema.getOptions().entrySet();
     for (Entry<String, String> entry : entrySet) {
       builder.addOptions(ECSchemaOptionEntryProto.newBuilder()

@@ -729,6 +729,13 @@ message GetErasureCodingInfoResponseProto {
   optional ECInfoProto ECInfo = 1;
 }
 
+message GetECSchemasRequestProto { // void request
+}
+
+message GetECSchemasResponseProto {
+  repeated ECSchemaProto schemas = 1;
+}
+
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
       returns(GetBlockLocationsResponseProto);
@@ -879,4 +886,6 @@ service ClientNamenodeProtocol {
       returns(GetEditsFromTxidResponseProto);
   rpc getErasureCodingInfo(GetErasureCodingInfoRequestProto)
       returns(GetErasureCodingInfoResponseProto);
+  rpc getECSchemas(GetECSchemasRequestProto)
+      returns(GetECSchemasResponseProto);
 }

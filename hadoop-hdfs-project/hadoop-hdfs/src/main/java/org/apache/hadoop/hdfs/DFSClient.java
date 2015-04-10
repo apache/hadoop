@@ -165,6 +165,7 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.retry.LossyRetryInvocationHandler;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -3144,6 +3145,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
           FileNotFoundException.class, UnresolvedPathException.class);
+    } finally {
+      scope.close();
+    }
+  }
+
+  public ECSchema[] getECSchemas() throws IOException {
+    checkOpen();
+    TraceScope scope = Trace.startSpan("getECSchemas", traceSampler);
+    try {
+      return namenode.getECSchemas();
     } finally {
       scope.close();
     }

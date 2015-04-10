@@ -637,8 +637,7 @@ message ECSchemaProto {
   required string codecName = 2;
   required uint32 dataUnits = 3;
   required uint32 parityUnits = 4;
-  required uint32 chunkSize = 5;
-  repeated ECSchemaOptionEntryProto options = 6;
+  repeated ECSchemaOptionEntryProto options = 5;
 }
 
 /**

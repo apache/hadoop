@@ -123,12 +123,12 @@ public final class ECSchema {
 
     this.chunkSize = DEFAULT_CHUNK_SIZE;
     try {
-      if (options.containsKey(CHUNK_SIZE_KEY)) {
+      if (this.options.containsKey(CHUNK_SIZE_KEY)) {
         this.chunkSize = Integer.parseInt(options.get(CHUNK_SIZE_KEY));
       }
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Option value " +
-          options.get(CHUNK_SIZE_KEY) + " for " + CHUNK_SIZE_KEY +
+          this.options.get(CHUNK_SIZE_KEY) + " for " + CHUNK_SIZE_KEY +
           " is found. It should be an integer");
     }
 
