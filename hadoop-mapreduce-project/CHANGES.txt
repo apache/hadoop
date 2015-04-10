@@ -297,6 +297,9 @@ Release 2.8.0 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6314. TestPipeApplication fails on trunk.
+    (Varun Vasudev via harsh)
+
     MAPREDUCE-5448. MapFileOutputFormat#getReaders bug with hidden
     files/folders. (Maysam Yabandeh via harsh)
 

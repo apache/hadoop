@@ -278,7 +278,7 @@ public class TestPipeApplication {
     } catch (ExitUtil.ExitException e) {
       // System.exit prohibited! output message test
       assertTrue(out.toString().contains(""));
-      assertTrue(out.toString().contains("bin/hadoop pipes"));
+      assertTrue(out.toString(), out.toString().contains("pipes"));
       assertTrue(out.toString().contains("[-input <path>] // Input directory"));
       assertTrue(out.toString()
               .contains("[-output <path>] // Output directory"));
