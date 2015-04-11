@@ -173,25 +173,25 @@ public class WebHdfsFileSystem extends FileSystem
       this.retryPolicy =
           RetryUtils.getDefaultRetryPolicy(
               conf,
-              HdfsClientConfigKeys.WebHdfsRetry.RETRY_POLICY_ENABLED_KEY,
-              HdfsClientConfigKeys.WebHdfsRetry.RETRY_POLICY_ENABLED_DEFAULT,
-              HdfsClientConfigKeys.WebHdfsRetry.RETRY_POLICY_SPEC_KEY,
-              HdfsClientConfigKeys.WebHdfsRetry.RETRY_POLICY_SPEC_DEFAULT,
+              HdfsClientConfigKeys.HttpClient.RETRY_POLICY_ENABLED_KEY,
+              HdfsClientConfigKeys.HttpClient.RETRY_POLICY_ENABLED_DEFAULT,
+              HdfsClientConfigKeys.HttpClient.RETRY_POLICY_SPEC_KEY,
+              HdfsClientConfigKeys.HttpClient.RETRY_POLICY_SPEC_DEFAULT,
               SafeModeException.class);
     } else {
 
       int maxFailoverAttempts = conf.getInt(
-          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_MAX_ATTEMPTS_KEY,
-          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_MAX_ATTEMPTS_DEFAULT);
+          HdfsClientConfigKeys.HttpClient.FAILOVER_MAX_ATTEMPTS_KEY,
+          HdfsClientConfigKeys.HttpClient.FAILOVER_MAX_ATTEMPTS_DEFAULT);
       int maxRetryAttempts = conf.getInt(
-          HdfsClientConfigKeys.WebHdfsRetry.RETRY_MAX_ATTEMPTS_KEY,
-          HdfsClientConfigKeys.WebHdfsRetry.RETRY_MAX_ATTEMPTS_DEFAULT);
+          HdfsClientConfigKeys.HttpClient.RETRY_MAX_ATTEMPTS_KEY,
+          HdfsClientConfigKeys.HttpClient.RETRY_MAX_ATTEMPTS_DEFAULT);
       int failoverSleepBaseMillis = conf.getInt(
-          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_SLEEPTIME_BASE_KEY,
-          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_SLEEPTIME_BASE_DEFAULT);
+          HdfsClientConfigKeys.HttpClient.FAILOVER_SLEEPTIME_BASE_KEY,
+          HdfsClientConfigKeys.HttpClient.FAILOVER_SLEEPTIME_BASE_DEFAULT);
       int failoverSleepMaxMillis = conf.getInt(
-          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_SLEEPTIME_MAX_KEY,
-          HdfsClientConfigKeys.WebHdfsRetry.FAILOVER_SLEEPTIME_MAX_DEFAULT);
+          HdfsClientConfigKeys.HttpClient.FAILOVER_SLEEPTIME_MAX_KEY,
+          HdfsClientConfigKeys.HttpClient.FAILOVER_SLEEPTIME_MAX_DEFAULT);
 
       this.retryPolicy = RetryPolicies
           .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,
