@@ -31,12 +31,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY;
@@ -119,18 +113,28 @@ public class DfsClientConf {
     // The hdfsTimeout is currently the same as the ipc timeout 
     hdfsTimeout = Client.getTimeout(conf);
 
-    maxFailoverAttempts = conf.getInt(
-        DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY,
-        DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT);
     maxRetryAttempts = conf.getInt(
         HdfsClientConfigKeys.Retry.MAX_ATTEMPTS_KEY,
         HdfsClientConfigKeys.Retry.MAX_ATTEMPTS_DEFAULT);
+    timeWindow = conf.getInt(
+        HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY,
+        HdfsClientConfigKeys.Retry.WINDOW_BASE_DEFAULT);
+    retryTimesForGetLastBlockLength = conf.getInt(
+        HdfsClientConfigKeys.Retry.TIMES_GET_LAST_BLOCK_LENGTH_KEY,
+        HdfsClientConfigKeys.Retry.TIMES_GET_LAST_BLOCK_LENGTH_DEFAULT);
+    retryIntervalForGetLastBlockLength = conf.getInt(
+        HdfsClientConfigKeys.Retry.INTERVAL_GET_LAST_BLOCK_LENGTH_KEY,
+        HdfsClientConfigKeys.Retry.INTERVAL_GET_LAST_BLOCK_LENGTH_DEFAULT);
+
+    maxFailoverAttempts = conf.getInt(
+        HdfsClientConfigKeys.Failover.MAX_ATTEMPTS_KEY,
+        HdfsClientConfigKeys.Failover.MAX_ATTEMPTS_DEFAULT);
     failoverSleepBaseMillis = conf.getInt(
-        DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_KEY,
-        DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_DEFAULT);
+        HdfsClientConfigKeys.Failover.SLEEPTIME_BASE_KEY,
+        HdfsClientConfigKeys.Failover.SLEEPTIME_BASE_DEFAULT);
     failoverSleepMaxMillis = conf.getInt(
-        DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_KEY,
-        DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_DEFAULT);
+        HdfsClientConfigKeys.Failover.SLEEPTIME_MAX_KEY,
+        HdfsClientConfigKeys.Failover.SLEEPTIME_MAX_DEFAULT);
 
     maxBlockAcquireFailures = conf.getInt(
         DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
@@ -179,9 +183,6 @@ public class DfsClientConf {
         DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT);
     prefetchSize = conf.getLong(DFS_CLIENT_READ_PREFETCH_SIZE_KEY,
         10 * defaultBlockSize);
-    timeWindow = conf.getInt(
-        HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY,
-        HdfsClientConfigKeys.Retry.WINDOW_BASE_DEFAULT);
     numCachedConnRetry = conf.getInt(DFS_CLIENT_CACHED_CONN_RETRY_KEY,
         DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT);
     numBlockWriteRetry = conf.getInt(DFS_CLIENT_BLOCK_WRITE_RETRIES_KEY,
@@ -204,13 +205,6 @@ public class DfsClientConf {
     fileBlockStorageLocationsTimeoutMs = conf.getInt(
         DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS,
         DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS_DEFAULT);
-    retryTimesForGetLastBlockLength = conf.getInt(
-        HdfsClientConfigKeys.Retry.TIMES_GET_LAST_BLOCK_LENGTH_KEY,
-        HdfsClientConfigKeys.Retry.TIMES_GET_LAST_BLOCK_LENGTH_DEFAULT);
-    retryIntervalForGetLastBlockLength = conf.getInt(
-        HdfsClientConfigKeys.Retry.INTERVAL_GET_LAST_BLOCK_LENGTH_KEY,
-        HdfsClientConfigKeys.Retry.INTERVAL_GET_LAST_BLOCK_LENGTH_DEFAULT);
-
 
     datanodeRestartTimeout = conf.getLong(
         DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY,
