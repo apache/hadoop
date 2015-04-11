@@ -298,7 +298,8 @@ public class DecommissionManager {
     LOG.info("Block: " + block + ", Expected Replicas: "
         + curExpectedReplicas + ", live replicas: " + curReplicas
         + ", corrupt replicas: " + num.corruptReplicas()
-        + ", decommissioned replicas: " + num.decommissionedReplicas()
+        + ", decommissioned replicas: " + num.decommissioned()
+        + ", decommissioning replicas: " + num.decommissioning()
         + ", excess replicas: " + num.excessReplicas()
         + ", Is Open File: " + bc.isUnderConstruction()
         + ", Datanodes having this block: " + nodeList + ", Current Datanode: "
@@ -571,7 +572,7 @@ public class DecommissionManager {
             // Process these blocks only when active NN is out of safe mode.
             blockManager.neededReplications.add(block,
                 curReplicas,
-                num.decommissionedReplicas(),
+                num.decommissionedAndDecommissioning(),
                 bc.getBlockReplication());
           }
         }
@@ -600,7 +601,7 @@ public class DecommissionManager {
         if (bc.isUnderConstruction()) {
           underReplicatedInOpenFiles++;
         }
-        if ((curReplicas == 0) && (num.decommissionedReplicas() > 0)) {
+        if ((curReplicas == 0) && (num.decommissionedAndDecommissioning() > 0)) {
           decommissionOnlyReplicas++;
         }
       }
