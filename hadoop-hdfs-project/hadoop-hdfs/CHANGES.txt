@@ -425,6 +425,9 @@ Release 2.8.0 - UNRELEASED
     HdfsClientConfigKeys.Failover and fix typos in the dfs.http.client.*
     configuration keys.  (szetszwo)
 
+    HDFS-7933. fsck should also report decommissioning replicas.
+    (Xiaoyu Yao via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than
