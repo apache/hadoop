@@ -180,6 +180,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3382. Some of UserMetricsInfo metrics are incorrectly set to root
     queue metrics. (Rohit Agarwal via jianhe)
 
+    YARN-3472. Fixed possible leak in DelegationTokenRenewer#allTokens.
+    (Rohith Sharmaks via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
