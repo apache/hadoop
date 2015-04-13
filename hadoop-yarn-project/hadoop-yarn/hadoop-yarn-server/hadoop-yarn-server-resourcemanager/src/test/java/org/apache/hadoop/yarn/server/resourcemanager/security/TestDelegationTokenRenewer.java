@@ -906,7 +906,16 @@ public class TestDelegationTokenRenewer {
           new HashMap<ApplicationAccessType, String>(), false, "default", 1,
           credentials);
 
-    // wait for the initial expiring hdfs token to be removed.
+    // wait for the initial expiring hdfs token to be removed from allTokens
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        return
+            rm.getRMContext().getDelegationTokenRenewer().getAllTokens()
+            .get(token1) == null;
+      }
+    }, 1000, 20000);
+
+    // wait for the initial expiring hdfs token to be removed from appTokens
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       public Boolean get() {
         return !rm.getRMContext().getDelegationTokenRenewer()

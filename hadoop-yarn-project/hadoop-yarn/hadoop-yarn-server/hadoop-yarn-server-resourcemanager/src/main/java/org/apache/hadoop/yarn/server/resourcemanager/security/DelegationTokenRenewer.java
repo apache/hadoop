@@ -577,6 +577,7 @@ public class DelegationTokenRenewer extends AbstractService {
             DelegationTokenToRenew t = iter.next();
             if (t.token.getKind().equals(new Text("HDFS_DELEGATION_TOKEN"))) {
               iter.remove();
+              allTokens.remove(t.token);
               t.cancelTimer();
               LOG.info("Removed expiring token " + t);
             }
