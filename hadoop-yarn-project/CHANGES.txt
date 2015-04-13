@@ -119,7 +119,7 @@ Release 2.8.0 - UNRELEASED
     the entire centos repository. (Ravindra Kumar Naik via raviprak)
 
     YARN-3469. ZKRMStateStore: Avoid setting watches that are not required. 
-    (Jun Hong via kasha)
+    (Jun Gong via kasha)
 
   BUG FIXES
 
