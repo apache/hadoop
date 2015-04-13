@@ -22,6 +22,9 @@ import com.google.common.collect.Lists;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ECSchemaProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.io.erasurecode.ECSchema;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,7 +53,11 @@ public class ErasureCodingZoneManager {
     this.dir = dir;
   }
 
-  boolean getECPolicy(INodesInPath iip) {
+  boolean getECPolicy(INodesInPath iip) throws IOException {
+    return getECSchema(iip) != null;
+  }
+
+  ECSchema getECSchema(INodesInPath iip) throws IOException{
     assert dir.hasReadLock();
     Preconditions.checkNotNull(iip);
     List<INode> inodes = iip.getReadOnlyINodes();
@@ -64,21 +71,23 @@ public class ErasureCodingZoneManager {
       // EC
       // TODO: properly support symlinks in EC zones
       if (inode.isSymlink()) {
-        return false;
+        return null;
       }
       final List<XAttr> xAttrs = inode.getXAttrFeature() == null ?
           new ArrayList<XAttr>(0)
           : inode.getXAttrFeature().getXAttrs();
       for (XAttr xAttr : xAttrs) {
         if (XATTR_ERASURECODING_ZONE.equals(XAttrHelper.getPrefixName(xAttr))) {
-          return true;
+          ECSchemaProto ecSchemaProto;
+          ecSchemaProto = ECSchemaProto.parseFrom(xAttr.getValue());
+          return PBHelper.convertECSchema(ecSchemaProto);
         }
       }
     }
-    return false;
+    return null;
   }
 
-  XAttr createErasureCodingZone(String src)
+  XAttr createErasureCodingZone(String src, ECSchema schema)
       throws IOException {
     assert dir.hasWriteLock();
     final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
@@ -97,8 +106,15 @@ public class ErasureCodingZoneManager {
       throw new IOException("Directory " + src + " is already in an " +
           "erasure coding zone.");
     }
-    final XAttr ecXAttr = XAttrHelper
-        .buildXAttr(XATTR_ERASURECODING_ZONE, null);
+    // TODO HDFS-7859 Need to persist the schema in xattr in efficient way
+    // As of now storing the protobuf format
+    if (schema == null) {
+      schema = ECSchemaManager.getSystemDefaultSchema();
+    }
+    ECSchemaProto schemaProto = PBHelper.convertECSchema(schema);
+    byte[] schemaBytes = schemaProto.toByteArray();
+    final XAttr ecXAttr = XAttrHelper.buildXAttr(XATTR_ERASURECODING_ZONE,
+        schemaBytes);
     final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
     xattrs.add(ecXAttr);
     FSDirXAttrOp.unprotectedSetXAttrs(dir, src, xattrs,

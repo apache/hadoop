@@ -724,6 +724,7 @@ message GetEditsFromTxidResponseProto {
 
 message CreateErasureCodingZoneRequestProto {
   required string src = 1;
+  optional ECSchemaProto schema = 2;
 }
 
 message CreateErasureCodingZoneResponseProto {

@@ -7108,16 +7108,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Create an erasure coding zone on directory src.
-   *
+   * @param schema  ECSchema for the erasure coding zone
    * @param src     the path of a directory which will be the root of the
    *                erasure coding zone. The directory must be empty.
+   *
    * @throws AccessControlException  if the caller is not the superuser.
    * @throws UnresolvedLinkException if the path can't be resolved.
    * @throws SafeModeException       if the Namenode is in safe mode.
    */
-  void createErasureCodingZone(final String srcArg,
-      final boolean logRetryCache)
-      throws IOException, UnresolvedLinkException,
+  void createErasureCodingZone(final String srcArg, final ECSchema schema,
+      final boolean logRetryCache) throws IOException, UnresolvedLinkException,
       SafeModeException, AccessControlException {
     String src = srcArg;
     HdfsFileStatus resultingStat = null;
@@ -7133,7 +7133,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkNameNodeSafeMode("Cannot create erasure coding zone on " + src);
       src = dir.resolvePath(pc, src, pathComponents);
 
-      final XAttr ecXAttr = dir.createErasureCodingZone(src);
+      final XAttr ecXAttr = dir.createErasureCodingZone(src, schema);
       List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
       xAttrs.add(ecXAttr);
       getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
@@ -7163,11 +7163,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (isPermissionEnabled) {
         dir.checkPathAccess(pc, iip, FsAction.READ);
       }
-      if (dir.getECPolicy(iip)) {
-        // TODO HDFS-8074 and HDFS-7859 : To get from loaded schemas
-        Map<String, String> options = new HashMap<String, String>();
-        ECSchema defaultSchema = new ECSchema("RS-6-3", "rs", 6, 3, options);
-        return new ECInfo(src, defaultSchema);
+      // Get schema set for the zone
+      ECSchema schema = dir.getECSchema(iip);
+      if (schema != null) {
+        return new ECInfo(src, schema);
       }
     } finally {
       readUnlock();

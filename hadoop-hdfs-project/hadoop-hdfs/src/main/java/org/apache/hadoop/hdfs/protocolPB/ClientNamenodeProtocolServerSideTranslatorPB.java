@@ -1406,7 +1406,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, CreateErasureCodingZoneRequestProto req)
       throws ServiceException {
     try {
-      server.createErasureCodingZone(req.getSrc());
+      ECSchema schema = req.hasSchema() ? PBHelper.convertECSchema(req
+          .getSchema()) : null;
+      server.createErasureCodingZone(req.getSrc(), schema);
       return CreateErasureCodingZoneResponseProto.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
