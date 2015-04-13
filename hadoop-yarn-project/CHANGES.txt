@@ -177,6 +177,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3465. Use LinkedHashMap to preserve order of resource requests. 
     (Zhihai Xu via kasha)
 
+    YARN-3382. Some of UserMetricsInfo metrics are incorrectly set to root
+    queue metrics. (Rohit Agarwal via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

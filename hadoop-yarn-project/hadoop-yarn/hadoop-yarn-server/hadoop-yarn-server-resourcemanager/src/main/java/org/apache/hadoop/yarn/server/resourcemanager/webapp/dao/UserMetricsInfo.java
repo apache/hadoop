@@ -63,11 +63,11 @@ public class UserMetricsInfo {
       this.userMetricsAvailable = true;
 
       this.appsSubmitted = userMetrics.getAppsSubmitted();
-      this.appsCompleted = metrics.getAppsCompleted();
-      this.appsPending = metrics.getAppsPending();
-      this.appsRunning = metrics.getAppsRunning();
-      this.appsFailed = metrics.getAppsFailed();
-      this.appsKilled = metrics.getAppsKilled();
+      this.appsCompleted = userMetrics.getAppsCompleted();
+      this.appsPending = userMetrics.getAppsPending();
+      this.appsRunning = userMetrics.getAppsRunning();
+      this.appsFailed = userMetrics.getAppsFailed();
+      this.appsKilled = userMetrics.getAppsKilled();
 
       this.runningContainers = userMetrics.getAllocatedContainers();
       this.pendingContainers = userMetrics.getPendingContainers();
