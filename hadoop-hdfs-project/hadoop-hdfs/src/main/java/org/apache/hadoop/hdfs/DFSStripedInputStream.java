@@ -224,7 +224,7 @@ public class DFSStripedInputStream extends DFSInputStream {
    * Real implementation of pread.
    */
   @Override
-  protected void fetchBlockByteRange(LocatedBlock block, long start,
+  protected void fetchBlockByteRange(long blockStartOffset, long start,
       long end, byte[] buf, int offset,
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
@@ -234,7 +234,7 @@ public class DFSStripedInputStream extends DFSInputStream {
     int len = (int) (end - start + 1);
 
     // Refresh the striped block group
-    block = getBlockGroupAt(block.getStartOffset());
+    LocatedBlock block = getBlockGroupAt(blockStartOffset);
     assert block instanceof LocatedStripedBlock : "NameNode" +
         " should return a LocatedStripedBlock for a striped file";
     LocatedStripedBlock blockGroup = (LocatedStripedBlock) block;
@@ -254,9 +254,11 @@ public class DFSStripedInputStream extends DFSInputStream {
       DatanodeInfo loc = blks[i].getLocations()[0];
       StorageType type = blks[i].getStorageTypes()[0];
       DNAddrPair dnAddr = new DNAddrPair(loc, NetUtils.createSocketAddr(
-          loc.getXferAddr(dfsClient.getConf().connectToDnViaHostname)), type);
-      Callable<Void> readCallable = getFromOneDataNode(dnAddr, blks[i],
-          rp.startOffsetInBlock, rp.startOffsetInBlock + rp.readLength - 1, buf,
+          loc.getXferAddr(dfsClient.getConf().isConnectToDnViaHostname())),
+          type);
+      Callable<Void> readCallable = getFromOneDataNode(dnAddr,
+          blks[i].getStartOffset(), rp.startOffsetInBlock,
+          rp.startOffsetInBlock + rp.readLength - 1, buf,
           rp.getOffsets(), rp.getLengths(), corruptedBlockMap, i);
       Future<Void> getFromDNRequest = stripedReadsService.submit(readCallable);
       DFSClient.LOG.debug("Submitting striped read request for " + blks[i]);
@@ -272,7 +274,7 @@ public class DFSStripedInputStream extends DFSInputStream {
   }
 
   private Callable<Void> getFromOneDataNode(final DNAddrPair datanode,
-      final LocatedBlock block, final long start, final long end,
+      final long blockStartOffset, final long start, final long end,
       final byte[] buf, final int[] offsets, final int[] lengths,
       final Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap,
       final int hedgedReadId) {
@@ -283,7 +285,7 @@ public class DFSStripedInputStream extends DFSInputStream {
         TraceScope scope =
             Trace.startSpan("Parallel reading " + hedgedReadId, parentSpan);
         try {
-          actualGetFromOneDataNode(datanode, block, start,
+          actualGetFromOneDataNode(datanode, blockStartOffset, start,
               end, buf, offsets, lengths, corruptedBlockMap);
         } finally {
           scope.close();

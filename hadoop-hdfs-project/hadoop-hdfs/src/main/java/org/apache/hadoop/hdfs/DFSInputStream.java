@@ -1109,7 +1109,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       int offset, Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
     final int length = (int) (end - start + 1);
-    actualGetFromOneDataNode(datanode, block, start, end, buf,
+    actualGetFromOneDataNode(datanode, blockStartOffset, start, end, buf,
         new int[]{offset}, new int[]{length}, corruptedBlockMap);
   }
 
@@ -1128,7 +1128,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    *                          block replica
    */
   void actualGetFromOneDataNode(final DNAddrPair datanode,
-      LocatedBlock block, final long startInBlk, final long endInBlk,
+      long blockStartOffset, final long startInBlk, final long endInBlk,
       byte[] buf, int[] offsets, int[] lengths,
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
