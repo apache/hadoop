@@ -284,7 +284,8 @@ public class DFSStripedOutputStream extends DFSOutputStream {
     }
     for (StripedDataStreamer streamer : streamers) {
       streamer.setLastException(new IOException("Lease timeout of "
-          + (dfsClient.getHdfsTimeout()/1000) + " seconds expired."));
+          + (dfsClient.getConf().getHdfsTimeout()/1000) +
+          " seconds expired."));
     }
     closeThreads(true);
     dfsClient.endFileLease(fileId);
