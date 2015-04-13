@@ -482,6 +482,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7939. Two fsimage_rollback_* files are created which are not deleted
     after rollback. (J.Andreina via vinayakumarb)
 
+    HDFS-8111. NPE thrown when invalid FSImage filename given for
+    'hdfs oiv_legacy' cmd ( surendra singh lilhore via vinayakumarb )
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
