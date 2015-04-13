@@ -34,8 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.util.ByteArrayManager.Counter;
 import org.apache.hadoop.hdfs.util.ByteArrayManager.CounterMap;
 import org.apache.hadoop.hdfs.util.ByteArrayManager.FixedLengthManager;
@@ -578,9 +578,9 @@ public class TestByteArrayManager {
         new ByteArrayManager.NewByteArrayWithoutLimit(),
         new NewByteArrayWithLimit(maxArrays),
         new ByteArrayManager.Impl(new ByteArrayManager.Conf(
-            DFSConfigKeys.DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_COUNT_THRESHOLD_DEFAULT,
+            HdfsClientConfigKeys.Write.ByteArrayManager.COUNT_THRESHOLD_DEFAULT,
             maxArrays,
-            DFSConfigKeys.DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_COUNT_RESET_TIME_PERIOD_MS_DEFAULT))
+            HdfsClientConfigKeys.Write.ByteArrayManager.COUNT_RESET_TIME_PERIOD_MS_DEFAULT))
     };
     final double[] avg = new double[impls.length];
 
