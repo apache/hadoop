@@ -1364,11 +1364,11 @@ public interface ClientProtocol {
       long prevId) throws IOException;
 
   /**
-   * Create an erasure coding zone (currently with hardcoded schema)
-   * TODO: Configurable and pluggable schemas (HDFS-7337)
+   * Create an erasure coding zone with specified schema, if any, otherwise
+   * default
    */
   @Idempotent
-  public void createErasureCodingZone(String src)
+  public void createErasureCodingZone(String src, ECSchema schema)
       throws IOException;
 
   /**

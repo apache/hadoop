@@ -1855,7 +1855,7 @@ public class DFSTestUtil {
       int numBlocks, int numStripesPerBlk) throws Exception {
     DistributedFileSystem dfs = cluster.getFileSystem();
     dfs.mkdirs(dir);
-    dfs.getClient().createErasureCodingZone(dir.toString());
+    dfs.getClient().createErasureCodingZone(dir.toString(), null);
 
     FSDataOutputStream out = null;
     try {
