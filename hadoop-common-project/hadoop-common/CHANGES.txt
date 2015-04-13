@@ -509,6 +509,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-11800. Clean up some test methods in TestCodec.java.
     (Brahma Reddy Battula via aajisaka)
 
+    HADOOP-11811. Fix typos in hadoop-project/pom.xml and TestAccessControlList.
+    (Brahma Reddy Battula via ozawa)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
