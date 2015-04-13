@@ -19,6 +19,9 @@ package org.apache.hadoop.hdfs.client;
 
 /** Client configuration properties */
 public interface HdfsClientConfigKeys {
+  long SECOND = 1000L;
+  long MINUTE = 60 * SECOND;
+
   String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";
   long    DFS_BLOCK_SIZE_DEFAULT = 128*1024*1024;
   String  DFS_REPLICATION_KEY = "dfs.replication";
@@ -65,7 +68,50 @@ public interface HdfsClientConfigKeys {
     int     CONNECTION_RETRIES_DEFAULT = 0;
     String  CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_KEY = PREFIX + "connection.retries.on.timeouts";
     int     CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT = 0;
-    
+  }
+  
+  interface Write {
+    String PREFIX = HdfsClientConfigKeys.PREFIX + "write.";
+
+    String  MAX_PACKETS_IN_FLIGHT_KEY = PREFIX + "max-packets-in-flight";
+    int     MAX_PACKETS_IN_FLIGHT_DEFAULT = 80;
+    String  EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_KEY = PREFIX + "exclude.nodes.cache.expiry.interval.millis";
+    long    EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT = 10*MINUTE;
+
+    interface ByteArrayManager {
+      String PREFIX = Write.PREFIX + "byte-array-manager.";
+
+      String  ENABLED_KEY = PREFIX + "enabled";
+      boolean ENABLED_DEFAULT = false;
+      String  COUNT_THRESHOLD_KEY = PREFIX + "count-threshold";
+      int     COUNT_THRESHOLD_DEFAULT = 128;
+      String  COUNT_LIMIT_KEY = PREFIX + "count-limit";
+      int     COUNT_LIMIT_DEFAULT = 2048;
+      String  COUNT_RESET_TIME_PERIOD_MS_KEY = PREFIX + "count-reset-time-period-ms";
+      long    COUNT_RESET_TIME_PERIOD_MS_DEFAULT = 10*SECOND;
+    }
+  }
+
+  interface BlockWrite {
+    String PREFIX = HdfsClientConfigKeys.PREFIX + "block.write.";
+
+    String  RETRIES_KEY = PREFIX + "retries";
+    int     RETRIES_DEFAULT = 3;
+    String  LOCATEFOLLOWINGBLOCK_RETRIES_KEY = PREFIX + "locateFollowingBlock.retries";
+    int     LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT = 5;
+    String  LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_MS_KEY = PREFIX + "locateFollowingBlock.initial.delay.ms";
+    int     LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_MS_DEFAULT = 400;
+
+    interface ReplaceDatanodeOnFailure {
+      String PREFIX = BlockWrite.PREFIX + "replace-datanode-on-failure.";
+
+      String  ENABLE_KEY = PREFIX + "enable";
+      boolean ENABLE_DEFAULT = true;
+      String  POLICY_KEY = PREFIX + "policy";
+      String  POLICY_DEFAULT = "DEFAULT";
+      String  BEST_EFFORT_KEY = PREFIX + "best-effort";
+      boolean BEST_EFFORT_DEFAULT = false;
+    }
   }
 
   /** HTTP client configuration properties */
@@ -87,5 +133,5 @@ public interface HdfsClientConfigKeys {
     int     FAILOVER_SLEEPTIME_BASE_DEFAULT = 500;
     String  FAILOVER_SLEEPTIME_MAX_KEY = PREFIX + "failover.sleep.max.millis";
     int     FAILOVER_SLEEPTIME_MAX_DEFAULT =  15000;
-  }  
+  }
 }

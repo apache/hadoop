@@ -39,7 +39,7 @@ abstract class EnumSetParam<E extends Enum<E>> extends Param<EnumSet<E>, EnumSet
   }
 
   static <E extends Enum<E>> EnumSet<E> toEnumSet(final Class<E> clazz,
-      final E... values) {
+      final E[] values) {
     final EnumSet<E> set = EnumSet.noneOf(clazz);
     set.addAll(Arrays.asList(values));
     return set;

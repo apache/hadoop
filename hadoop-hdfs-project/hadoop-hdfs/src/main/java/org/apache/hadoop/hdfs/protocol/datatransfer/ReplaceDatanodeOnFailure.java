@@ -21,7 +21,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 
 /**
@@ -115,7 +115,7 @@ public class ReplaceDatanodeOnFailure {
     if (policy == Policy.DISABLE) {
       throw new UnsupportedOperationException(
           "This feature is disabled.  Please refer to "
-          + DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_ENABLE_KEY
+          + HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY
           + " configuration property.");
     }
   }
@@ -156,23 +156,23 @@ public class ReplaceDatanodeOnFailure {
   public static ReplaceDatanodeOnFailure get(final Configuration conf) {
     final Policy policy = getPolicy(conf);
     final boolean bestEffort = conf.getBoolean(
-        DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_BEST_EFFORT_KEY,
-        DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_BEST_EFFORT_DEFAULT);
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.BEST_EFFORT_KEY,
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.BEST_EFFORT_DEFAULT);
     
     return new ReplaceDatanodeOnFailure(policy, bestEffort);
   }
 
   private static Policy getPolicy(final Configuration conf) {
     final boolean enabled = conf.getBoolean(
-        DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_ENABLE_KEY,
-        DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_ENABLE_DEFAULT);
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_DEFAULT);
     if (!enabled) {
       return Policy.DISABLE;
     }
 
     final String policy = conf.get(
-        DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY,
-        DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_DEFAULT);
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.POLICY_KEY,
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.POLICY_DEFAULT);
     for(int i = 1; i < Policy.values().length; i++) {
       final Policy p = Policy.values()[i];
       if (p.name().equalsIgnoreCase(policy)) {
@@ -180,7 +180,7 @@ public class ReplaceDatanodeOnFailure {
       }
     }
     throw new HadoopIllegalArgumentException("Illegal configuration value for "
-        + DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY
+        + HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.POLICY_KEY
         + ": " + policy);
   }
 
@@ -188,13 +188,13 @@ public class ReplaceDatanodeOnFailure {
   public static void write(final Policy policy,
       final boolean bestEffort, final Configuration conf) {
     conf.setBoolean(
-        DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_ENABLE_KEY,
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
         policy != Policy.DISABLE);
     conf.set(
-        DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY,
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.POLICY_KEY,
         policy.name());
     conf.setBoolean(
-        DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_BEST_EFFORT_KEY,
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.BEST_EFFORT_KEY,
         bestEffort);
   }
 }
