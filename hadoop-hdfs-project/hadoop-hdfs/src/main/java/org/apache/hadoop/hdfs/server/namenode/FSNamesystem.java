@@ -7121,11 +7121,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       SafeModeException, AccessControlException {
     String src = srcArg;
     HdfsFileStatus resultingStat = null;
-    checkSuperuserPrivilege();
-    checkOperation(OperationCategory.WRITE);
-    final byte[][] pathComponents =
-        FSDirectory.getPathComponentsForReservedPath(src);
-    FSPermissionChecker pc = getPermissionChecker();
+    FSPermissionChecker pc = null;
+    byte[][] pathComponents = null;
+    boolean success = false;
+    try {
+      checkSuperuserPrivilege();
+      checkOperation(OperationCategory.WRITE);
+      pathComponents =
+          FSDirectory.getPathComponentsForReservedPath(src);
+      pc = getPermissionChecker();
+    } catch (Throwable e) {
+      logAuditEvent(success, "createErasureCodingZone", srcArg);
+      throw e;
+    }
     writeLock();
     try {
       checkSuperuserPrivilege();
@@ -7139,11 +7147,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       getEditLog().logSetXAttrs(src, xAttrs, logRetryCache);
       final INodesInPath iip = dir.getINodesInPath4Write(src, false);
       resultingStat = dir.getAuditFileInfo(iip);
+      success = true;
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "createErasureCodingZone", srcArg, null, resultingStat);
+    logAuditEvent(success, "createErasureCodingZone", srcArg, null, resultingStat);
   }
 
   /**
