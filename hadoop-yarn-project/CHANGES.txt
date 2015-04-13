@@ -17,7 +17,7 @@ Release 2.7.1 - UNRELEASED
     auto-failover enabled. (Akira AJISAKA via wangda)
 
     YARN-3469. ZKRMStateStore: Avoid setting watches that are not required. 
-    (Jun Hong via kasha)
+    (Jun Gong via kasha)
 
   BUG FIXES
 
