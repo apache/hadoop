@@ -143,7 +143,7 @@ public class TestAccessControlList {
     List<String> jerryLeeLewisGroups = groups.getGroups("jerryLeeLewis");
     assertTrue(jerryLeeLewisGroups.contains("@memphis"));
 
-    // allowed becuase his netgroup is in ACL
+    // allowed because his netgroup is in ACL
     UserGroupInformation elvis = 
       UserGroupInformation.createRemoteUser("elvis");
     assertUserAllowed(elvis, acl);
