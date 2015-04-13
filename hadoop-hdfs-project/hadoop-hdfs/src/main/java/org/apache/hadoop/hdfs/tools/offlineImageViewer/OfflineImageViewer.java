@@ -137,7 +137,11 @@ public class OfflineImageViewer {
       done = true;
     } finally {
       if (!done) {
-        LOG.error("image loading failed at offset " + tracker.getPos());
+        if (tracker != null) {
+          LOG.error("image loading failed at offset " + tracker.getPos());
+        } else {
+          LOG.error("Failed to load image file.");
+        }
       }
       IOUtils.cleanup(LOG, in, tracker);
     }
