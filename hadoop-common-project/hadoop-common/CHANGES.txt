@@ -170,9 +170,6 @@ Trunk (Unreleased)
     HADOOP-11346. Rewrite sls/rumen to use new shell framework (John Smith
     via aw)
 
-    HADOOP-7713. dfs -count -q should label output column (Jonathan Allen
-    via aw)
-
     HADOOP-6964. Allow compact property description in xml (Kengo Seki
     via aw)
 
@@ -489,6 +486,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11814. Reformat hadoop-annotations, o.a.h.classification.tools.
     (Li Lu via wheat9)
+
+    HADOOP-7713. dfs -count -q should label output column (Jonathan Allen
+    via aw)
 
   OPTIMIZATIONS
 
