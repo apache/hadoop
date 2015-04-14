@@ -497,6 +497,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-6666. Abort NameNode and DataNode startup if security is enabled but
     block access token is not enabled. (Vijay Bhat via cnauroth)
 
+    HDFS-8055. NullPointerException when topology script is missing.
+    (Anu Engineer via cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
