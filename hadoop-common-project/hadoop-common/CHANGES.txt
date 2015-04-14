@@ -25,7 +25,8 @@ Trunk (Unreleased)
 
   NEW FEATURES
 
-    HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via aw)
+    HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via
+    aw)
 
     HADOOP-11353. Add support for .hadooprc (aw)
 
@@ -40,6 +41,9 @@ Trunk (Unreleased)
     HADOOP-11554. Expose HadoopKerberosName as a hadoop subcommand (aw)
 
     HADOOP-11565. Add --slaves shell option (aw)
+
+    HADOOP-9642. Configuration to resolve environment variables via
+    ${env.VARIABLE} references (Kengo Seki via aw)
 
   IMPROVEMENTS
 

@@ -146,6 +146,8 @@ import com.google.common.base.Preconditions;
  * available properties are:<ol>
  * <li>Other properties defined in this Configuration; and, if a name is
  * undefined here,</li>
+ * <li>Environment variables in {@link System#getenv()} if a name starts with
+ * "env.", or</li>
  * <li>Properties in {@link System#getProperties()}.</li>
  * </ol>
  *
@@ -160,13 +162,25 @@ import com.google.common.base.Preconditions;
  *  &lt;property&gt;
  *    &lt;name&gt;tempdir&lt;/name&gt;
  *    &lt;value&gt;${<i>basedir</i>}/tmp&lt;/value&gt;
- *  &lt;/property&gt;</pre></tt>
+ *  &lt;/property&gt;
  *
- * When <tt>conf.get("tempdir")</tt> is called, then <tt>${<i>basedir</i>}</tt>
+ *  &lt;property&gt;
+ *    &lt;name&gt;otherdir&lt;/name&gt;
+ *    &lt;value&gt;${<i>env.BASE_DIR</i>}/other&lt;/value&gt;
+ *  &lt;/property&gt;
+ *  </pre></tt>
+ *
+ * <p>When <tt>conf.get("tempdir")</tt> is called, then <tt>${<i>basedir</i>}</tt>
  * will be resolved to another property in this Configuration, while
  * <tt>${<i>user.name</i>}</tt> would then ordinarily be resolved to the value
  * of the System property with that name.
- * By default, warnings will be given to any deprecated configuration 
+ * <p>When <tt>conf.get("otherdir")</tt> is called, then <tt>${<i>env.BASE_DIR</i>}</tt>
+ * will be resolved to the value of the <tt>${<i>BASE_DIR</i>}</tt> environment variable.
+ * It supports <tt>${<i>env.NAME:-default</i>}</tt> and <tt>${<i>env.NAME-default</i>}</tt> notations.
+ * The former is resolved to “default” if <tt>${<i>NAME</i>}</tt> environment variable is undefined
+ * or its value is empty.
+ * The latter behaves the same way only if <tt>${<i>NAME</i>}</tt> is undefined.
+ * <p>By default, warnings will be given to any deprecated configuration 
  * parameters and these are suppressible by configuring
  * <tt>log4j.logger.org.apache.hadoop.conf.Configuration.deprecation</tt> in
  * log4j.properties file.
@@ -915,6 +929,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Attempts to repeatedly expand the value {@code expr} by replacing the
    * left-most substring of the form "${var}" in the following precedence order
    * <ol>
+   *   <li>by the value of the environment variable "var" if defined</li>
    *   <li>by the value of the Java system property "var" if defined</li>
    *   <li>by the value of the configuration key "var" if defined</li>
    * </ol>
@@ -947,7 +962,31 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           varBounds[SUB_END_IDX]);
       String val = null;
       try {
-        val = System.getProperty(var);
+        if (var.startsWith("env.") && 4 < var.length()) {
+          String v = var.substring(4);
+          int i = 0;
+          for (; i < v.length(); i++) {
+            char c = v.charAt(i);
+            if (c == ':' && i < v.length() - 1 && v.charAt(i + 1) == '-') {
+              val = getenv(v.substring(0, i));
+              if (val == null || val.length() == 0) {
+                val = v.substring(i + 2);
+              }
+              break;
+            } else if (c == '-') {
+              val = getenv(v.substring(0, i));
+              if (val == null) {
+                val = v.substring(i + 1);
+              }
+              break;
+            }
+          }
+          if (i == v.length()) {
+            val = getenv(v);
+          }
+        } else {
+          val = getProperty(var);
+        }
       } catch(SecurityException se) {
         LOG.warn("Unexpected SecurityException in Configuration", se);
       }
@@ -979,6 +1018,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                                     + MAX_SUBST + " " + expr);
   }
   
+  String getenv(String name) {
+    return System.getenv(name);
+  }
+
+  String getProperty(String key) {
+    return System.getProperty(key);
+  }
+
   /**
    * Get the value of the <code>name</code> property, <code>null</code> if
    * no such property exists. If the key is deprecated, it returns the value of

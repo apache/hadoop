@@ -50,6 +50,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.mockito.Mockito;
 
 public class TestConfiguration extends TestCase {
 
@@ -148,46 +149,77 @@ public class TestConfiguration extends TestCase {
   }
 
   public void testVariableSubstitution() throws IOException {
+    // stubbing only environment dependent functions
+    Configuration mock = Mockito.spy(conf);
+    Mockito.when(mock.getProperty("user.name")).thenReturn("hadoop_user");
+    Mockito.when(mock.getenv("FILE_NAME")).thenReturn("hello");
+
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
     declareProperty("my.int", "${intvar}", "42");
     declareProperty("intvar", "42", "42");
-    declareProperty("my.base", "/tmp/${user.name}", UNSPEC);
-    declareProperty("my.file", "hello", "hello");
+    declareProperty("my.base", "/tmp/${user.name}", "/tmp/hadoop_user");
+    declareProperty("my.file", "${env.FILE_NAME}", "hello");
     declareProperty("my.suffix", ".txt", ".txt");
     declareProperty("my.relfile", "${my.file}${my.suffix}", "hello.txt");
-    declareProperty("my.fullfile", "${my.base}/${my.file}${my.suffix}", UNSPEC);
+    declareProperty("my.fullfile", "${my.base}/${my.file}${my.suffix}", "/tmp/hadoop_user/hello.txt");
     // check that undefined variables are returned as-is
     declareProperty("my.failsexpand", "a${my.undefvar}b", "a${my.undefvar}b");
     endConfig();
     Path fileResource = new Path(CONFIG);
-    conf.addResource(fileResource);
+    mock.addResource(fileResource);
 
     for (Prop p : props) {
       System.out.println("p=" + p.name);
-      String gotVal = conf.get(p.name);
-      String gotRawVal = conf.getRaw(p.name);
+      String gotVal = mock.get(p.name);
+      String gotRawVal = mock.getRaw(p.name);
       assertEq(p.val, gotRawVal);
-      if (p.expectEval == UNSPEC) {
-        // expansion is system-dependent (uses System properties)
-        // can't do exact match so just check that all variables got expanded
-        assertTrue(gotVal != null && -1 == gotVal.indexOf("${"));
-      } else {
-        assertEq(p.expectEval, gotVal);
-      }
+      assertEq(p.expectEval, gotVal);
     }
       
     // check that expansion also occurs for getInt()
-    assertTrue(conf.getInt("intvar", -1) == 42);
-    assertTrue(conf.getInt("my.int", -1) == 42);
+    assertTrue(mock.getInt("intvar", -1) == 42);
+    assertTrue(mock.getInt("my.int", -1) == 42);
+  }
 
-    Map<String, String> results = conf.getValByRegex("^my.*file$");
-    assertTrue(results.keySet().contains("my.relfile"));
-    assertTrue(results.keySet().contains("my.fullfile"));
-    assertTrue(results.keySet().contains("my.file"));
-    assertEquals(-1, results.get("my.relfile").indexOf("${"));
-    assertEquals(-1, results.get("my.fullfile").indexOf("${"));
-    assertEquals(-1, results.get("my.file").indexOf("${"));
+  public void testEnvDefault() throws IOException {
+    Configuration mock = Mockito.spy(conf);
+    Mockito.when(mock.getenv("NULL_VALUE")).thenReturn(null);
+    Mockito.when(mock.getenv("EMPTY_VALUE")).thenReturn("");
+    Mockito.when(mock.getenv("SOME_VALUE")).thenReturn("some value");
+
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+
+    // if var is unbound, literal ${var} is returned
+    declareProperty("null1", "${env.NULL_VALUE}", "${env.NULL_VALUE}");
+    declareProperty("null2", "${env.NULL_VALUE-a}", "a");
+    declareProperty("null3", "${env.NULL_VALUE:-b}", "b");
+    declareProperty("empty1", "${env.EMPTY_VALUE}", "");
+    declareProperty("empty2", "${env.EMPTY_VALUE-c}", "");
+    declareProperty("empty3", "${env.EMPTY_VALUE:-d}", "d");
+    declareProperty("some1", "${env.SOME_VALUE}", "some value");
+    declareProperty("some2", "${env.SOME_VALUE-e}", "some value");
+    declareProperty("some3", "${env.SOME_VALUE:-f}", "some value");
+
+    // some edge cases
+    declareProperty("edge1", "${env.NULL_VALUE-g-h}", "g-h");
+    declareProperty("edge2", "${env.NULL_VALUE:-i:-j}", "i:-j");
+    declareProperty("edge3", "${env.NULL_VALUE-}", "");
+    declareProperty("edge4", "${env.NULL_VALUE:-}", "");
+    declareProperty("edge5", "${env.NULL_VALUE:}", "${env.NULL_VALUE:}");
+
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    mock.addResource(fileResource);
+
+    for (Prop p : props) {
+      System.out.println("p=" + p.name);
+      String gotVal = mock.get(p.name);
+      String gotRawVal = mock.getRaw(p.name);
+      assertEq(p.val, gotRawVal);
+      assertEq(p.expectEval, gotVal);
+    }
   }
 
   public void testFinalParam() throws IOException {
@@ -247,7 +279,6 @@ public class TestConfiguration extends TestCase {
     String expectEval;
   }
 
-  final String UNSPEC = null;
   ArrayList<Prop> props = new ArrayList<Prop>();
 
   void declareProperty(String name, String val, String expectEval)
