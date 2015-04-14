@@ -120,6 +120,9 @@ Release 2.6.1 - UNRELEASED
     HDFS-8072. Reserved RBW space is not released if client terminates while
     writing block. (Arpit Agarwal)
 
+    HDFS-8127. NameNode Failover during HA upgrade can cause DataNode to
+    finalize upgrade. (jing9)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
