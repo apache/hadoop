@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.Task.State;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -276,6 +277,9 @@ public class Application {
       requests.put(resourceName, request);
     } else {
       request.setNumContainers(request.getNumContainers() + 1);
+    }
+    if (request.getNodeLabelExpression() == null) {
+      request.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
     }
     
     // Note this down for next interaction with ResourceManager

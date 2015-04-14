@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerReservedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import com.google.common.base.Preconditions;
@@ -108,13 +110,23 @@ public class SchedulerApplicationAttempt {
   private Set<ContainerId> pendingRelease = null;
 
   /**
-   * Count how many times the application has been given an opportunity
-   * to schedule a task at each priority. Each time the scheduler
-   * asks the application for a task at this priority, it is incremented,
-   * and each time the application successfully schedules a task, it
+   * Count how many times the application has been given an opportunity to
+   * schedule a task at each priority. Each time the scheduler asks the
+   * application for a task at this priority, it is incremented, and each time
+   * the application successfully schedules a task (at rack or node local), it
    * is reset to 0.
    */
   Multiset<Priority> schedulingOpportunities = HashMultiset.create();
+  
+  /**
+   * Count how many times the application has been given an opportunity to
+   * schedule a non-partitioned resource request at each priority. Each time the
+   * scheduler asks the application for a task at this priority, it is
+   * incremented, and each time the application successfully schedules a task,
+   * it is reset to 0 when schedule any task at corresponding priority.
+   */
+  Multiset<Priority> missedNonPartitionedRequestSchedulingOpportunity =
+      HashMultiset.create();
   
   // Time of the last container scheduled at the current allowed level
   protected Map<Priority, Long> lastScheduledContainer =
@@ -132,7 +144,7 @@ public class SchedulerApplicationAttempt {
     this.rmContext = rmContext;
     this.appSchedulingInfo = 
         new AppSchedulingInfo(applicationAttemptId, user, queue,  
-            activeUsersManager, rmContext.getEpoch());
+            activeUsersManager, rmContext.getEpoch(), attemptResourceUsage);
     this.queue = queue;
     this.pendingRelease = new HashSet<ContainerId>();
     this.attemptId = applicationAttemptId;
@@ -489,6 +501,18 @@ public class SchedulerApplicationAttempt {
     return this.appSchedulingInfo.isBlacklisted(resourceName);
   }
 
+  public synchronized int addMissedNonPartitionedRequestSchedulingOpportunity(
+      Priority priority) {
+    missedNonPartitionedRequestSchedulingOpportunity.add(priority);
+    return missedNonPartitionedRequestSchedulingOpportunity.count(priority);
+  }
+
+  public synchronized void
+      resetMissedNonPartitionedRequestSchedulingOpportunity(Priority priority) {
+    missedNonPartitionedRequestSchedulingOpportunity.setCount(priority, 0);
+  }
+
+  
   public synchronized void addSchedulingOpportunity(Priority priority) {
     schedulingOpportunities.setCount(priority,
         schedulingOpportunities.count(priority) + 1);
@@ -518,6 +542,7 @@ public class SchedulerApplicationAttempt {
   public synchronized void resetSchedulingOpportunities(Priority priority) {
     resetSchedulingOpportunities(priority, System.currentTimeMillis());
   }
+
   // used for continuous scheduling
   public synchronized void resetSchedulingOpportunities(Priority priority,
       long currentTimeMs) {
@@ -668,5 +693,14 @@ public class SchedulerApplicationAttempt {
 
   public Set<String> getBlacklistedNodes() {
     return this.appSchedulingInfo.getBlackListCopy();
+  }
+  
+  @Private
+  public boolean hasPendingResourceRequest(ResourceCalculator rc,
+      String nodePartition, Resource cluster,
+      SchedulingMode schedulingMode) {
+    return SchedulerUtils.hasPendingResourceRequest(rc,
+        this.attemptResourceUsage, nodePartition, cluster,
+        schedulingMode);
   }
 }

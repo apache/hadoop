@@ -160,6 +160,7 @@ public class TestUtils {
     request.setCapability(capability);
     request.setRelaxLocality(relaxLocality);
     request.setPriority(priority);
+    request.setNodeLabelExpression(RMNodeLabelsManager.NO_LABEL);
     return request;
   }
   
@@ -273,6 +274,7 @@ public class TestUtils {
     conf.setCapacity(B1, 100);
     conf.setMaximumCapacity(B1, 100);
     conf.setCapacityByLabel(B1, "y", 100);
+    conf.setMaximumApplicationMasterResourcePerQueuePercent(B1, 1f);
 
     final String C1 = C + ".c1";
     conf.setQueues(C, new String[] {"c1"});

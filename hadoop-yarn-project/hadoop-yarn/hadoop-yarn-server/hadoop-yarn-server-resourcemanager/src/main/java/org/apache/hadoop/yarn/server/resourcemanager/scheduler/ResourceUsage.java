@@ -27,6 +27,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -250,6 +251,10 @@ public class ResourceUsage {
   }
 
   private Resource _get(String label, ResourceType type) {
+    if (label == null) {
+      label = RMNodeLabelsManager.NO_LABEL;
+    }
+    
     try {
       readLock.lock();
       UsageByLabel usage = usages.get(label);
@@ -263,6 +268,9 @@ public class ResourceUsage {
   }
 
   private UsageByLabel getAndAddIfMissing(String label) {
+    if (label == null) {
+      label = RMNodeLabelsManager.NO_LABEL;
+    }
     if (!usages.containsKey(label)) {
       UsageByLabel u = new UsageByLabel(label);
       usages.put(label, u);
