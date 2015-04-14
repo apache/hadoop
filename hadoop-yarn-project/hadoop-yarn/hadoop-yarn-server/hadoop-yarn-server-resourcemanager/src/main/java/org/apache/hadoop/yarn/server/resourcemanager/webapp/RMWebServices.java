@@ -320,7 +320,7 @@ public class RMWebServices {
     RMNode ni = this.rm.getRMContext().getRMNodes().get(nid);
     boolean isInactive = false;
     if (ni == null) {
-      ni = this.rm.getRMContext().getInactiveRMNodes().get(nid.getHost());
+      ni = this.rm.getRMContext().getInactiveRMNodes().get(nid);
       if (ni == null) {
         throw new NotFoundException("nodeId, " + nodeId + ", is not found");
       }

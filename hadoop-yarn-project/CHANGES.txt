@@ -192,6 +192,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3472. Fixed possible leak in DelegationTokenRenewer#allTokens.
     (Rohith Sharmaks via jianhe)
 
+    YARN-3266. RMContext#inactiveNodes should have NodeId as map key.
+    (Chengbing Liu via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
