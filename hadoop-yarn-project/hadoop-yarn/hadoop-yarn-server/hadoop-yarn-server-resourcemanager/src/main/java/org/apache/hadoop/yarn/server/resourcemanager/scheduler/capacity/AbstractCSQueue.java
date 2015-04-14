@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,12 +37,12 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
@@ -55,6 +54,11 @@ import com.google.common.collect.Sets;
 
 public abstract class AbstractCSQueue implements CSQueue {
   private static final Log LOG = LogFactory.getLog(AbstractCSQueue.class);
+  
+  static final CSAssignment NULL_ASSIGNMENT =
+      new CSAssignment(Resources.createResource(0, 0), NodeType.NODE_LOCAL);
+  
+  static final CSAssignment SKIP_ASSIGNMENT = new CSAssignment(true);
   
   CSQueue parent;
   final String queueName;
@@ -343,16 +347,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   synchronized void allocateResource(Resource clusterResource, 
-      Resource resource, Set<String> nodeLabels) {
-    
-    // Update usedResources by labels
-    if (nodeLabels == null || nodeLabels.isEmpty()) {
-      queueUsage.incUsed(resource);
-    } else {
-      for (String label : Sets.intersection(accessibleLabels, nodeLabels)) {
-        queueUsage.incUsed(label, resource);
-      }
-    }
+      Resource resource, String nodePartition) {
+    queueUsage.incUsed(nodePartition, resource);
 
     ++numContainers;
     CSQueueUtils.updateQueueStatistics(resourceCalculator, this, getParent(),
@@ -360,15 +356,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
   
   protected synchronized void releaseResource(Resource clusterResource,
-      Resource resource, Set<String> nodeLabels) {
-    // Update usedResources by labels
-    if (null == nodeLabels || nodeLabels.isEmpty()) {
-      queueUsage.decUsed(resource);
-    } else {
-      for (String label : Sets.intersection(accessibleLabels, nodeLabels)) {
-        queueUsage.decUsed(label, resource);
-      }
-    }
+      Resource resource, String nodePartition) {
+    queueUsage.decUsed(nodePartition, resource);
 
     CSQueueUtils.updateQueueStatistics(resourceCalculator, this, getParent(),
         clusterResource, minimumAllocation);
@@ -434,103 +423,108 @@ public abstract class AbstractCSQueue implements CSQueue {
                                         parentQ.getPreemptionDisabled());
   }
   
-  private Resource getCurrentLimitResource(String nodeLabel,
-      Resource clusterResource, ResourceLimits currentResourceLimits) {
-    /*
-     * Current limit resource: For labeled resource: limit = queue-max-resource
-     * (TODO, this part need update when we support labeled-limit) For
-     * non-labeled resource: limit = min(queue-max-resource,
-     * limit-set-by-parent)
-     */
-    Resource queueMaxResource =
-        Resources.multiplyAndNormalizeDown(resourceCalculator,
-            labelManager.getResourceByLabel(nodeLabel, clusterResource),
-            queueCapacities.getAbsoluteMaximumCapacity(nodeLabel), minimumAllocation);
-    if (nodeLabel.equals(RMNodeLabelsManager.NO_LABEL)) {
-      return Resources.min(resourceCalculator, clusterResource,
-          queueMaxResource, currentResourceLimits.getLimit());
+  private Resource getCurrentLimitResource(String nodePartition,
+      Resource clusterResource, ResourceLimits currentResourceLimits,
+      SchedulingMode schedulingMode) {
+    if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
+      /*
+       * Current limit resource: For labeled resource: limit = queue-max-resource
+       * (TODO, this part need update when we support labeled-limit) For
+       * non-labeled resource: limit = min(queue-max-resource,
+       * limit-set-by-parent)
+       */
+      Resource queueMaxResource =
+          Resources.multiplyAndNormalizeDown(resourceCalculator,
+              labelManager.getResourceByLabel(nodePartition, clusterResource),
+              queueCapacities.getAbsoluteMaximumCapacity(nodePartition), minimumAllocation);
+      if (nodePartition.equals(RMNodeLabelsManager.NO_LABEL)) {
+        return Resources.min(resourceCalculator, clusterResource,
+            queueMaxResource, currentResourceLimits.getLimit());
+      }
+      return queueMaxResource;  
+    } else if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
+      // When we doing non-exclusive resource allocation, maximum capacity of
+      // all queues on this label equals to total resource with the label.
+      return labelManager.getResourceByLabel(nodePartition, clusterResource);
     }
-    return queueMaxResource;
+    
+    return Resources.none();
   }
   
   synchronized boolean canAssignToThisQueue(Resource clusterResource,
-      Set<String> nodeLabels, ResourceLimits currentResourceLimits,
-      Resource nowRequired, Resource resourceCouldBeUnreserved) {
-    // Get label of this queue can access, it's (nodeLabel AND queueLabel)
-    Set<String> labelCanAccess;
-    if (null == nodeLabels || nodeLabels.isEmpty()) {
-      labelCanAccess = new HashSet<String>();
-      // Any queue can always access any node without label
-      labelCanAccess.add(RMNodeLabelsManager.NO_LABEL);
-    } else {
-      labelCanAccess = new HashSet<String>(
-          accessibleLabels.contains(CommonNodeLabelsManager.ANY) ? nodeLabels
-              : Sets.intersection(accessibleLabels, nodeLabels));
-    }
-    
-    for (String label : labelCanAccess) {
-      // New total resource = used + required
-      Resource newTotalResource =
-          Resources.add(queueUsage.getUsed(label), nowRequired);
+      String nodePartition, ResourceLimits currentResourceLimits,
+      Resource nowRequired, Resource resourceCouldBeUnreserved,
+      SchedulingMode schedulingMode) {
+    // New total resource = used + required
+    Resource newTotalResource =
+        Resources.add(queueUsage.getUsed(nodePartition), nowRequired);
 
-      Resource currentLimitResource =
-          getCurrentLimitResource(label, clusterResource, currentResourceLimits);
+    // Get current limited resource: 
+    // - When doing RESPECT_PARTITION_EXCLUSIVITY allocation, we will respect
+    // queues' max capacity.
+    // - When doing IGNORE_PARTITION_EXCLUSIVITY allocation, we will not respect
+    // queue's max capacity, queue's max capacity on the partition will be
+    // considered to be 100%. Which is a queue can use all resource in the
+    // partition. 
+    // Doing this because: for non-exclusive allocation, we make sure there's
+    // idle resource on the partition, to avoid wastage, such resource will be
+    // leveraged as much as we can, and preemption policy will reclaim it back
+    // when partitoned-resource-request comes back.  
+    Resource currentLimitResource =
+        getCurrentLimitResource(nodePartition, clusterResource,
+            currentResourceLimits, schedulingMode);
 
-      // if reservation continous looking enabled, check to see if could we
-      // potentially use this node instead of a reserved node if the application
-      // has reserved containers.
-      // TODO, now only consider reservation cases when the node has no label
-      if (this.reservationsContinueLooking
-          && label.equals(RMNodeLabelsManager.NO_LABEL)
-          && Resources.greaterThan(resourceCalculator, clusterResource,
-              resourceCouldBeUnreserved, Resources.none())) {
-        // resource-without-reserved = used - reserved
-        Resource newTotalWithoutReservedResource =
-            Resources.subtract(newTotalResource, resourceCouldBeUnreserved);
-        
-        // when total-used-without-reserved-resource < currentLimit, we still
-        // have chance to allocate on this node by unreserving some containers
-        if (Resources.lessThan(resourceCalculator, clusterResource,
-            newTotalWithoutReservedResource, currentLimitResource)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("try to use reserved: " + getQueueName()
-                + " usedResources: " + queueUsage.getUsed()
-                + ", clusterResources: " + clusterResource
-                + ", reservedResources: " + resourceCouldBeUnreserved
-                + ", capacity-without-reserved: "
-                + newTotalWithoutReservedResource + ", maxLimitCapacity: "
-                + currentLimitResource); 
-          }
-          return true;
+    // if reservation continous looking enabled, check to see if could we
+    // potentially use this node instead of a reserved node if the application
+    // has reserved containers.
+    // TODO, now only consider reservation cases when the node has no label
+    if (this.reservationsContinueLooking
+        && nodePartition.equals(RMNodeLabelsManager.NO_LABEL)
+        && Resources.greaterThan(resourceCalculator, clusterResource,
+            resourceCouldBeUnreserved, Resources.none())) {
+      // resource-without-reserved = used - reserved
+      Resource newTotalWithoutReservedResource =
+          Resources.subtract(newTotalResource, resourceCouldBeUnreserved);
+
+      // when total-used-without-reserved-resource < currentLimit, we still
+      // have chance to allocate on this node by unreserving some containers
+      if (Resources.lessThan(resourceCalculator, clusterResource,
+          newTotalWithoutReservedResource, currentLimitResource)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("try to use reserved: " + getQueueName()
+              + " usedResources: " + queueUsage.getUsed()
+              + ", clusterResources: " + clusterResource
+              + ", reservedResources: " + resourceCouldBeUnreserved
+              + ", capacity-without-reserved: "
+              + newTotalWithoutReservedResource + ", maxLimitCapacity: "
+              + currentLimitResource);
         }
+        return true;
       }
-      
-      // Otherwise, if any of the label of this node beyond queue limit, we
-      // cannot allocate on this node. Consider a small epsilon here.
-      if (Resources.greaterThan(resourceCalculator, clusterResource,
-          newTotalResource, currentLimitResource)) {
-        return false;
-      }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(getQueueName()
-            + "Check assign to queue, label=" + label
-            + " usedResources: " + queueUsage.getUsed(label)
-            + " clusterResources: " + clusterResource
-            + " currentUsedCapacity "
-            + Resources.divide(resourceCalculator, clusterResource,
-                queueUsage.getUsed(label),
-                labelManager.getResourceByLabel(label, clusterResource))
-            + " max-capacity: "
-            + queueCapacities.getAbsoluteMaximumCapacity(label)
-            + ")");
-      }
-      return true;
     }
-    
-    // Actually, this will not happen, since labelCanAccess will be always
-    // non-empty
-    return false;
+
+    // Check if we over current-resource-limit computed.
+    if (Resources.greaterThan(resourceCalculator, clusterResource,
+        newTotalResource, currentLimitResource)) {
+      return false;
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(getQueueName()
+          + "Check assign to queue, nodePartition="
+          + nodePartition
+          + " usedResources: "
+          + queueUsage.getUsed(nodePartition)
+          + " clusterResources: "
+          + clusterResource
+          + " currentUsedCapacity "
+          + Resources.divide(resourceCalculator, clusterResource,
+              queueUsage.getUsed(nodePartition),
+              labelManager.getResourceByLabel(nodePartition, clusterResource))
+          + " max-capacity: "
+          + queueCapacities.getAbsoluteMaximumCapacity(nodePartition) + ")");
+    }
+    return true;
   }
   
   @Override
@@ -555,5 +549,34 @@ public abstract class AbstractCSQueue implements CSQueue {
     if (null != parent) {
       parent.decPendingResource(nodeLabel, resourceToDec);
     }
+  }
+  
+  /**
+   * Return if the queue has pending resource on given nodePartition and
+   * schedulingMode. 
+   */
+  boolean hasPendingResourceRequest(String nodePartition, 
+      Resource cluster, SchedulingMode schedulingMode) {
+    return SchedulerUtils.hasPendingResourceRequest(resourceCalculator,
+        queueUsage, nodePartition, cluster, schedulingMode);
+  }
+  
+  boolean accessibleToPartition(String nodePartition) {
+    // if queue's label is *, it can access any node
+    if (accessibleLabels != null
+        && accessibleLabels.contains(RMNodeLabelsManager.ANY)) {
+      return true;
+    }
+    // any queue can access to a node without label
+    if (nodePartition == null
+        || nodePartition.equals(RMNodeLabelsManager.NO_LABEL)) {
+      return true;
+    }
+    // a queue can access to a node only if it contains any label of the node
+    if (accessibleLabels != null && accessibleLabels.contains(nodePartition)) {
+      return true;
+    }
+    // sorry, you cannot access
+    return false;
   }
 }

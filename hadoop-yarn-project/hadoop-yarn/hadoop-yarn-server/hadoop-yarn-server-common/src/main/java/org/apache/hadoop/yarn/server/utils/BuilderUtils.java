@@ -313,6 +313,7 @@ public class BuilderUtils {
     request.setResourceName(r.getResourceName());
     request.setCapability(r.getCapability());
     request.setNumContainers(r.getNumContainers());
+    request.setNodeLabelExpression(r.getNodeLabelExpression());
     return request;
   }
 

@@ -73,10 +73,11 @@ public class AppSchedulingInfo {
   /* Allocated by scheduler */
   boolean pending = true; // for app metrics
   
+  private ResourceUsage appResourceUsage;
  
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId,
       String user, Queue queue, ActiveUsersManager activeUsersManager,
-      long epoch) {
+      long epoch, ResourceUsage appResourceUsage) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
     this.queue = queue;
@@ -84,6 +85,7 @@ public class AppSchedulingInfo {
     this.user = user;
     this.activeUsersManager = activeUsersManager;
     this.containerIdCounter = new AtomicLong(epoch << EPOCH_BIT_SHIFT);
+    this.appResourceUsage = appResourceUsage;
   }
 
   public ApplicationId getApplicationId() {
@@ -191,13 +193,19 @@ public class AppSchedulingInfo {
             lastRequestCapability);
         
         // update queue:
+        Resource increasedResource = Resources.multiply(request.getCapability(),
+            request.getNumContainers());
         queue.incPendingResource(
             request.getNodeLabelExpression(),
-            Resources.multiply(request.getCapability(),
-                request.getNumContainers()));
+            increasedResource);
+        appResourceUsage.incPending(request.getNodeLabelExpression(), increasedResource);
         if (lastRequest != null) {
+          Resource decreasedResource =
+              Resources.multiply(lastRequestCapability, lastRequestContainers);
           queue.decPendingResource(lastRequest.getNodeLabelExpression(),
-              Resources.multiply(lastRequestCapability, lastRequestContainers));
+              decreasedResource);
+          appResourceUsage.decPending(lastRequest.getNodeLabelExpression(),
+              decreasedResource);
         }
       }
     }
@@ -385,6 +393,8 @@ public class AppSchedulingInfo {
       checkForDeactivation();
     }
     
+    appResourceUsage.decPending(offSwitchRequest.getNodeLabelExpression(),
+        offSwitchRequest.getCapability());
     queue.decPendingResource(offSwitchRequest.getNodeLabelExpression(),
         offSwitchRequest.getCapability());
   }
@@ -492,9 +502,10 @@ public class AppSchedulingInfo {
   }
   
   public ResourceRequest cloneResourceRequest(ResourceRequest request) {
-    ResourceRequest newRequest = ResourceRequest.newInstance(
-        request.getPriority(), request.getResourceName(),
-        request.getCapability(), 1, request.getRelaxLocality());
+    ResourceRequest newRequest =
+        ResourceRequest.newInstance(request.getPriority(),
+            request.getResourceName(), request.getCapability(), 1,
+            request.getRelaxLocality(), request.getNodeLabelExpression());
     return newRequest;
   }
 }
