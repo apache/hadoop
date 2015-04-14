@@ -33,6 +33,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.util.Properties;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.http.HttpConfig;
@@ -48,9 +49,27 @@ public abstract class SaslDataTransferTestCase {
 
   private static File baseDir;
   private static String hdfsPrincipal;
+  private static String userPrincipal;
   private static MiniKdc kdc;
-  private static String keytab;
+  private static String hdfsKeytab;
+  private static String userKeyTab;
   private static String spnegoPrincipal;
+
+  public static String getUserKeyTab() {
+    return userKeyTab;
+  }
+
+  public static String getUserPrincipal() {
+    return userPrincipal;
+  }
+
+  public static String getHdfsPrincipal() {
+    return hdfsPrincipal;
+  }
+
+  public static String getHdfsKeytab() {
+    return hdfsKeytab;
+  }
 
   @BeforeClass
   public static void initKdc() throws Exception {
@@ -63,11 +82,17 @@ public abstract class SaslDataTransferTestCase {
     kdc = new MiniKdc(kdcConf, baseDir);
     kdc.start();
 
-    String userName = UserGroupInformation.getLoginUser().getShortUserName();
-    File keytabFile = new File(baseDir, userName + ".keytab");
-    keytab = keytabFile.getAbsolutePath();
-    kdc.createPrincipal(keytabFile, userName + "/localhost", "HTTP/localhost");
-    hdfsPrincipal = userName + "/localhost@" + kdc.getRealm();
+    String userName = RandomStringUtils.randomAlphabetic(8);
+    File userKeytabFile = new File(baseDir, userName + ".keytab");
+    userKeyTab = userKeytabFile.getAbsolutePath();
+    kdc.createPrincipal(userKeytabFile, userName + "/localhost");
+    userPrincipal = userName + "/localhost@" + kdc.getRealm();
+
+    String superUserName = "hdfs";
+    File hdfsKeytabFile = new File(baseDir, superUserName + ".keytab");
+    hdfsKeytab = hdfsKeytabFile.getAbsolutePath();
+    kdc.createPrincipal(hdfsKeytabFile, superUserName + "/localhost", "HTTP/localhost");
+    hdfsPrincipal = superUserName + "/localhost@" + kdc.getRealm();
     spnegoPrincipal = "HTTP/localhost@" + kdc.getRealm();
   }
 
@@ -91,9 +116,9 @@ public abstract class SaslDataTransferTestCase {
     HdfsConfiguration conf = new HdfsConfiguration();
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
     conf.set(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
-    conf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, keytab);
+    conf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, hdfsKeytab);
     conf.set(DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
-    conf.set(DFS_DATANODE_KEYTAB_FILE_KEY, keytab);
+    conf.set(DFS_DATANODE_KEYTAB_FILE_KEY, hdfsKeytab);
     conf.set(DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, spnegoPrincipal);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     conf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, dataTransferProtection);

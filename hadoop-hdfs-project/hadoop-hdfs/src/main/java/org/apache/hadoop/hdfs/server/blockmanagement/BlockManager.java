@@ -359,7 +359,7 @@ public class BlockManager {
   }
 
   private static BlockTokenSecretManager createBlockTokenSecretManager(
-      final Configuration conf) {
+      final Configuration conf) throws IOException {
     final boolean isEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, 
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_DEFAULT);
@@ -367,10 +367,11 @@ public class BlockManager {
 
     if (!isEnabled) {
       if (UserGroupInformation.isSecurityEnabled()) {
-        LOG.error("Security is enabled but block access tokens " +
+        String errMessage = "Security is enabled but block access tokens " +
             "(via " + DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY + ") " +
             "aren't enabled. This may cause issues " +
-            "when clients attempt to talk to a DataNode.");
+            "when clients attempt to connect to a DataNode. Aborting NameNode";
+        throw new IOException(errMessage);
       }
       return null;
     }
