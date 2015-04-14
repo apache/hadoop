@@ -113,6 +113,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3293. Track and display capacity scheduler health metrics
     in web UI. (Varun Vasudev via xgong)
 
+    YARN-3394. Enrich WebApplication proxy documentation. (Naganarasimha G R
+    via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
