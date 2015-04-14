@@ -491,6 +491,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8111. NPE thrown when invalid FSImage filename given for
     'hdfs oiv_legacy' cmd ( surendra singh lilhore via vinayakumarb )
 
+    HDFS-7701. Support reporting per storage type quota and usage
+    with hadoop/hdfs shell. (Peter Shi via Arpit Agarwal)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

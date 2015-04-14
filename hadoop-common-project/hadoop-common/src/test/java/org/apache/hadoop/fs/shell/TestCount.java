@@ -24,13 +24,15 @@ import java.io.PrintStream;
 import java.io.IOException;
 import java.net.URI;
 import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.shell.CommandFormat.NotEnoughArgumentsException;
 import org.junit.Test;
 import org.junit.Before;
@@ -79,11 +81,17 @@ public class TestCount {
     LinkedList<String> options = new LinkedList<String>();
     options.add("-q");
     options.add("-h");
+    options.add("-t");
+    options.add("SSD");
     options.add("dummy");
     Count count = new Count();
     count.processOptions(options);
     assertTrue(count.isShowQuotas());
     assertTrue(count.isHumanReadable());
+    assertTrue(count.isShowQuotabyType());
+    assertEquals(1, count.getStorageTypes().size());
+    assertEquals(StorageType.SSD, count.getStorageTypes().get(0));
+
   }
 
   // check no options is handled correctly
@@ -254,6 +262,112 @@ public class TestCount {
   }
 
   @Test
+  public void processPathWithQuotasByStorageTypesHeader() throws Exception {
+    Path path = new Path("mockfs:/test");
+
+    when(mockFs.getFileStatus(eq(path))).thenReturn(fileStat);
+
+    PrintStream out = mock(PrintStream.class);
+
+    Count count = new Count();
+    count.out = out;
+
+    LinkedList<String> options = new LinkedList<String>();
+    options.add("-q");
+    options.add("-v");
+    options.add("-t");
+    options.add("all");
+    options.add("dummy");
+    count.processOptions(options);
+    String withStorageTypeHeader =
+        // <----13---> <-------17------> <----13-----> <------17------->
+        "   DISK_QUOTA    REM_DISK_QUOTA     SSD_QUOTA     REM_SSD_QUOTA " +
+        // <----13---> <-------17------>
+        "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA " +
+        "PATHNAME";
+    verify(out).println(withStorageTypeHeader);
+    verifyNoMoreInteractions(out);
+  }
+
+  @Test
+  public void processPathWithQuotasBySSDStorageTypesHeader() throws Exception {
+    Path path = new Path("mockfs:/test");
+
+    when(mockFs.getFileStatus(eq(path))).thenReturn(fileStat);
+
+    PrintStream out = mock(PrintStream.class);
+
+    Count count = new Count();
+    count.out = out;
+
+    LinkedList<String> options = new LinkedList<String>();
+    options.add("-q");
+    options.add("-v");
+    options.add("-t");
+    options.add("SSD");
+    options.add("dummy");
+    count.processOptions(options);
+    String withStorageTypeHeader =
+        // <----13---> <-------17------>
+        "    SSD_QUOTA     REM_SSD_QUOTA " +
+        "PATHNAME";
+    verify(out).println(withStorageTypeHeader);
+    verifyNoMoreInteractions(out);
+  }
+
+  @Test
+  public void processPathWithQuotasByMultipleStorageTypesContent() throws Exception {
+    Path path = new Path("mockfs:/test");
+
+    when(mockFs.getFileStatus(eq(path))).thenReturn(fileStat);
+    PathData pathData = new PathData(path.toString(), conf);
+
+    PrintStream out = mock(PrintStream.class);
+
+    Count count = new Count();
+    count.out = out;
+
+    LinkedList<String> options = new LinkedList<String>();
+    options.add("-q");
+    options.add("-t");
+    options.add("SSD,DISK");
+    options.add("dummy");
+    count.processOptions(options);
+    count.processPath(pathData);
+    String withStorageType = BYTES + StorageType.SSD.toString()
+        + " " + StorageType.DISK.toString() + " " + pathData.toString();
+    verify(out).println(withStorageType);
+    verifyNoMoreInteractions(out);
+  }
+
+  @Test
+  public void processPathWithQuotasByMultipleStorageTypes() throws Exception {
+    Path path = new Path("mockfs:/test");
+
+    when(mockFs.getFileStatus(eq(path))).thenReturn(fileStat);
+
+    PrintStream out = mock(PrintStream.class);
+
+    Count count = new Count();
+    count.out = out;
+
+    LinkedList<String> options = new LinkedList<String>();
+    options.add("-q");
+    options.add("-v");
+    options.add("-t");
+    options.add("SSD,DISK");
+    options.add("dummy");
+    count.processOptions(options);
+    String withStorageTypeHeader =
+        // <----13---> <------17------->
+        "    SSD_QUOTA     REM_SSD_QUOTA " +
+        "   DISK_QUOTA    REM_DISK_QUOTA " +
+        "PATHNAME";
+    verify(out).println(withStorageTypeHeader);
+    verifyNoMoreInteractions(out);
+  }
+
+  @Test
   public void getCommandName() {
     Count count = new Count();
     String actual = count.getCommandName();
@@ -289,7 +403,7 @@ public class TestCount {
   public void getUsage() {
     Count count = new Count();
     String actual = count.getUsage();
-    String expected = "-count [-q] [-h] [-v] <path> ...";
+    String expected = "-count [-q] [-h] [-v] [-t [<storage type>]] <path> ...";
     assertEquals("Count.getUsage", expected, actual);
   }
 
@@ -306,7 +420,13 @@ public class TestCount {
         + "QUOTA REM_QUOTA SPACE_QUOTA REM_SPACE_QUOTA\n"
         + "      DIR_COUNT FILE_COUNT CONTENT_SIZE PATHNAME\n"
         + "The -h option shows file sizes in human readable format.\n"
-        + "The -v option displays a header line.";
+        + "The -v option displays a header line.\n"
+        + "The -t option displays quota by storage types.\n"
+        + "It must be used with -q option.\n"
+        + "If a comma-separated list of storage types is given after the -t option, \n"
+        + "it displays the quota and usage for the specified types. \n"
+        + "Otherwise, it displays the quota and usage for all the storage \n"
+        + "types that support quota";
 
     assertEquals("Count.getDescription", expected, actual);
   }
@@ -321,7 +441,19 @@ public class TestCount {
     }
 
     @Override
-    public String toString(boolean qOption, boolean hOption) {
+    public String toString(boolean qOption, boolean hOption,
+                           boolean tOption, List<StorageType> types) {
+      if (tOption) {
+        StringBuffer result = new StringBuffer();
+        result.append(hOption ? HUMAN : BYTES);
+
+        for (StorageType type : types) {
+          result.append(type.toString());
+          result.append(" ");
+        }
+        return result.toString();
+      }
+
       if (qOption) {
         if (hOption) {
           return (HUMAN + WITH_QUOTAS);
