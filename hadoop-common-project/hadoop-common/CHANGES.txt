@@ -494,6 +494,9 @@ Release 2.8.0 - UNRELEASED
     HADOOP-7713. dfs -count -q should label output column (Jonathan Allen
     via aw)
 
+    HADOOP-11819. HttpServerFunctionalTest#prepareTestWebapp should create web
+    app directory if it does not exist. (Rohith via vinayakumarb)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
