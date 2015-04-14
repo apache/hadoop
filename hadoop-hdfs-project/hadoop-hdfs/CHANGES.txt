@@ -517,6 +517,9 @@ Release 2.7.1 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-8127. NameNode Failover during HA upgrade can cause DataNode to
+    finalize upgrade. (jing9)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
