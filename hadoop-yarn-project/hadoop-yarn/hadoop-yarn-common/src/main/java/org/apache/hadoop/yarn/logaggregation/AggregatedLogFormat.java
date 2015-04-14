@@ -745,6 +745,60 @@ public class AggregatedLogFormat {
       readAContainerLogsForALogType(valueStream, out, -1);
     }
 
+    /**
+     * Keep calling this till you get a {@link EOFException} for getting logs of
+     * the specific types for a single container.
+     * @param valueStream
+     * @param out
+     * @param logUploadedTime
+     * @param logType
+     * @throws IOException
+     */
+    public static int readContainerLogsForALogType(
+        DataInputStream valueStream, PrintStream out, long logUploadedTime,
+        List<String> logType) throws IOException {
+      byte[] buf = new byte[65535];
+
+      String fileType = valueStream.readUTF();
+      String fileLengthStr = valueStream.readUTF();
+      long fileLength = Long.parseLong(fileLengthStr);
+      if (logType.contains(fileType)) {
+        out.print("LogType:");
+        out.println(fileType);
+        if (logUploadedTime != -1) {
+          out.print("Log Upload Time:");
+          out.println(Times.format(logUploadedTime));
+        }
+        out.print("LogLength:");
+        out.println(fileLengthStr);
+        out.println("Log Contents:");
+
+        long curRead = 0;
+        long pendingRead = fileLength - curRead;
+        int toRead = pendingRead > buf.length ? buf.length : (int) pendingRead;
+        int len = valueStream.read(buf, 0, toRead);
+        while (len != -1 && curRead < fileLength) {
+          out.write(buf, 0, len);
+          curRead += len;
+
+          pendingRead = fileLength - curRead;
+          toRead = pendingRead > buf.length ? buf.length : (int) pendingRead;
+          len = valueStream.read(buf, 0, toRead);
+        }
+        out.println("End of LogType:" + fileType);
+        out.println("");
+        return 0;
+      } else {
+        long totalSkipped = 0;
+        long currSkipped = 0;
+        while (currSkipped != -1 && totalSkipped < fileLength) {
+          currSkipped = valueStream.skip(fileLength - totalSkipped);
+          totalSkipped += currSkipped;
+        }
+        return -1;
+      }
+    }
+
     public void close() {
       IOUtils.cleanup(LOG, scanner, reader, fsDataIStream);
     }
