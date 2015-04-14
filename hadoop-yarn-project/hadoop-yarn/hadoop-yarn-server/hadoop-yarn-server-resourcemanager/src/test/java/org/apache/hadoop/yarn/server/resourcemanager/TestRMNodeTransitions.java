@@ -307,6 +307,47 @@ public class TestRMNodeTransitions {
   }
 
   @Test
+  public void testRunningExpireMultiple() {
+    RMNodeImpl node1 = getRunningNode(null, 10001);
+    RMNodeImpl node2 = getRunningNode(null, 10002);
+    ClusterMetrics cm = ClusterMetrics.getMetrics();
+    int initialActive = cm.getNumActiveNMs();
+    int initialLost = cm.getNumLostNMs();
+    int initialUnhealthy = cm.getUnhealthyNMs();
+    int initialDecommissioned = cm.getNumDecommisionedNMs();
+    int initialRebooted = cm.getNumRebootedNMs();
+    node1.handle(new RMNodeEvent(node1.getNodeID(), RMNodeEventType.EXPIRE));
+    Assert.assertEquals("Active Nodes", initialActive - 1, cm.getNumActiveNMs());
+    Assert.assertEquals("Lost Nodes", initialLost + 1, cm.getNumLostNMs());
+    Assert.assertEquals("Unhealthy Nodes", initialUnhealthy,
+        cm.getUnhealthyNMs());
+    Assert.assertEquals("Decommissioned Nodes", initialDecommissioned,
+        cm.getNumDecommisionedNMs());
+    Assert.assertEquals("Rebooted Nodes", initialRebooted,
+        cm.getNumRebootedNMs());
+    Assert.assertEquals(NodeState.LOST, node1.getState());
+    Assert.assertTrue("Node " + node1.toString() + " should be inactive",
+        rmContext.getInactiveRMNodes().containsKey(node1.getNodeID()));
+    Assert.assertFalse("Node " + node2.toString() + " should not be inactive",
+        rmContext.getInactiveRMNodes().containsKey(node2.getNodeID()));
+
+    node2.handle(new RMNodeEvent(node1.getNodeID(), RMNodeEventType.EXPIRE));
+    Assert.assertEquals("Active Nodes", initialActive - 2, cm.getNumActiveNMs());
+    Assert.assertEquals("Lost Nodes", initialLost + 2, cm.getNumLostNMs());
+    Assert.assertEquals("Unhealthy Nodes", initialUnhealthy,
+        cm.getUnhealthyNMs());
+    Assert.assertEquals("Decommissioned Nodes", initialDecommissioned,
+        cm.getNumDecommisionedNMs());
+    Assert.assertEquals("Rebooted Nodes", initialRebooted,
+        cm.getNumRebootedNMs());
+    Assert.assertEquals(NodeState.LOST, node2.getState());
+    Assert.assertTrue("Node " + node1.toString() + " should be inactive",
+        rmContext.getInactiveRMNodes().containsKey(node1.getNodeID()));
+    Assert.assertTrue("Node " + node2.toString() + " should be inactive",
+        rmContext.getInactiveRMNodes().containsKey(node2.getNodeID()));
+  }
+
+  @Test
   public void testUnhealthyExpire() {
     RMNodeImpl node = getUnhealthyNode();
     ClusterMetrics cm = ClusterMetrics.getMetrics();
@@ -458,14 +499,18 @@ public class TestRMNodeTransitions {
   }
 
   private RMNodeImpl getRunningNode() {
-    return getRunningNode(null);
+    return getRunningNode(null, 0);
   }
 
   private RMNodeImpl getRunningNode(String nmVersion) {
-    NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
+    return getRunningNode(nmVersion, 0);
+  }
+
+  private RMNodeImpl getRunningNode(String nmVersion, int port) {
+    NodeId nodeId = BuilderUtils.newNodeId("localhost", port);
     Resource capability = Resource.newInstance(4096, 4);
-    RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
-        null, capability, nmVersion);
+    RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null,
+        capability, nmVersion);
     node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     return node;

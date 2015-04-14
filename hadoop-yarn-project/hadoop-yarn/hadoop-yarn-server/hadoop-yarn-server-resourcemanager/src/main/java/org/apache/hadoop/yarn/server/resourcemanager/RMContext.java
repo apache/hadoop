@@ -61,7 +61,7 @@ public interface RMContext {
   
   ConcurrentMap<ApplicationId, ByteBuffer> getSystemCredentialsForApps();
 
-  ConcurrentMap<String, RMNode> getInactiveRMNodes();
+  ConcurrentMap<NodeId, RMNode> getInactiveRMNodes();
 
   ConcurrentMap<NodeId, RMNode> getRMNodes();
 

@@ -149,7 +149,7 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
-  public ConcurrentMap<String, RMNode> getInactiveRMNodes() {
+  public ConcurrentMap<NodeId, RMNode> getInactiveRMNodes() {
     return activeServiceContext.getInactiveRMNodes();
   }
 

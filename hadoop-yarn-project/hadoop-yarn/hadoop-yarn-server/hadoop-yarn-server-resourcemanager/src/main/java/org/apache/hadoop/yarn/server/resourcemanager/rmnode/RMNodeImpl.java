@@ -524,11 +524,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       RMNodeStartedEvent startEvent = (RMNodeStartedEvent) event;
       List<NMContainerStatus> containers = null;
 
-      String host = rmNode.nodeId.getHost();
-      if (rmNode.context.getInactiveRMNodes().containsKey(host)) {
+      NodeId nodeId = rmNode.nodeId;
+      if (rmNode.context.getInactiveRMNodes().containsKey(nodeId)) {
         // Old node rejoining
-        RMNode previouRMNode = rmNode.context.getInactiveRMNodes().get(host);
-        rmNode.context.getInactiveRMNodes().remove(host);
+        RMNode previouRMNode = rmNode.context.getInactiveRMNodes().get(nodeId);
+        rmNode.context.getInactiveRMNodes().remove(nodeId);
         rmNode.updateMetricsForRejoinedNode(previouRMNode.getState());
       } else {
         // Increment activeNodes explicitly because this is a new node.
@@ -737,7 +737,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.context.getRMNodes().remove(rmNode.nodeId);
       LOG.info("Deactivating Node " + rmNode.nodeId + " as it is now "
           + finalState);
-      rmNode.context.getInactiveRMNodes().put(rmNode.nodeId.getHost(), rmNode);
+      rmNode.context.getInactiveRMNodes().put(rmNode.nodeId, rmNode);
 
       //Update the metrics
       rmNode.updateMetricsForDeactivatedNode(initialState, finalState);

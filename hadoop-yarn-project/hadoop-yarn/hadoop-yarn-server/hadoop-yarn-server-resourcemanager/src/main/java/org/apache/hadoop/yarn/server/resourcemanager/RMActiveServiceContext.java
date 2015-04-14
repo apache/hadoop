@@ -68,8 +68,8 @@ public class RMActiveServiceContext {
   private final ConcurrentMap<NodeId, RMNode> nodes =
       new ConcurrentHashMap<NodeId, RMNode>();
 
-  private final ConcurrentMap<String, RMNode> inactiveNodes =
-      new ConcurrentHashMap<String, RMNode>();
+  private final ConcurrentMap<NodeId, RMNode> inactiveNodes =
+      new ConcurrentHashMap<NodeId, RMNode>();
 
   private final ConcurrentMap<ApplicationId, ByteBuffer> systemCredentials =
       new ConcurrentHashMap<ApplicationId, ByteBuffer>();
@@ -185,7 +185,7 @@ public class RMActiveServiceContext {
 
   @Private
   @Unstable
-  public ConcurrentMap<String, RMNode> getInactiveRMNodes() {
+  public ConcurrentMap<NodeId, RMNode> getInactiveRMNodes() {
     return this.inactiveNodes;
   }
 
