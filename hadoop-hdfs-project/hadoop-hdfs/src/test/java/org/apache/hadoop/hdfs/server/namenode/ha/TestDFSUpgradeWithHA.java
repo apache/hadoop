@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster.Builder;
 import org.apache.hadoop.hdfs.qjournal.server.Journal;
-import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -594,7 +593,7 @@ public class TestDFSUpgradeWithHA {
       cluster.restartNameNode(1);
       
       checkNnPreviousDirExistence(cluster, 0, true);
-      checkNnPreviousDirExistence(cluster, 1, false);
+      checkNnPreviousDirExistence(cluster, 1, true);
       checkPreviousDirExistence(sharedDir, true);
       assertCTimesEqual(cluster);
       
@@ -671,7 +670,7 @@ public class TestDFSUpgradeWithHA {
       cluster.restartNameNode(1);
       
       checkNnPreviousDirExistence(cluster, 0, true);
-      checkNnPreviousDirExistence(cluster, 1, false);
+      checkNnPreviousDirExistence(cluster, 1, true);
       checkJnPreviousDirExistence(qjCluster, true);
       assertCTimesEqual(cluster);
       

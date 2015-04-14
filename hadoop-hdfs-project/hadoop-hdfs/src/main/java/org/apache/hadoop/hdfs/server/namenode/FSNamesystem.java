@@ -7531,7 +7531,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void startRollingUpgradeInternal(long startTime)
       throws IOException {
     checkRollingUpgrade("start rolling upgrade");
-    getFSImage().checkUpgrade(this);
+    getFSImage().checkUpgrade();
     setRollingUpgradeInfo(false, startTime);
   }
 
@@ -7548,7 +7548,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           + "in order to create namespace image.");
     }
     checkRollingUpgrade("start rolling upgrade");
-    getFSImage().checkUpgrade(this);
+    getFSImage().checkUpgrade();
     // in non-HA setup, we do an extra checkpoint to generate a rollback image
     getFSImage().saveNamespace(this, NameNodeFile.IMAGE_ROLLBACK, null);
     LOG.info("Successfully saved namespace for preparing rolling upgrade.");

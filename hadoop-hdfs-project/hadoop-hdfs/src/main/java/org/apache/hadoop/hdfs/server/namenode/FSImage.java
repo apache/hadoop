@@ -212,7 +212,7 @@ public class FSImage implements Closeable {
     // check whether all is consistent before transitioning.
     Map<StorageDirectory, StorageState> dataDirStates = 
              new HashMap<StorageDirectory, StorageState>();
-    boolean isFormatted = recoverStorageDirs(startOpt, dataDirStates);
+    boolean isFormatted = recoverStorageDirs(startOpt, storage, dataDirStates);
 
     if (LOG.isTraceEnabled()) {
       LOG.trace("Data dir states:\n  " +
@@ -301,8 +301,9 @@ public class FSImage implements Closeable {
    * @param dataDirStates output of storage directory states
    * @return true if there is at least one valid formatted storage directory
    */
-  private boolean recoverStorageDirs(StartupOption startOpt,
-      Map<StorageDirectory, StorageState> dataDirStates) throws IOException {
+  public static boolean recoverStorageDirs(StartupOption startOpt,
+      NNStorage storage, Map<StorageDirectory, StorageState> dataDirStates)
+      throws IOException {
     boolean isFormatted = false;
     // This loop needs to be over all storage dirs, even shared dirs, to make
     // sure that we properly examine their state, but we make sure we don't
@@ -352,7 +353,7 @@ public class FSImage implements Closeable {
   }
 
   /** Check if upgrade is in progress. */
-  void checkUpgrade(FSNamesystem target) throws IOException {
+  public static void checkUpgrade(NNStorage storage) throws IOException {
     // Upgrade or rolling upgrade is allowed only if there are 
     // no previous fs states in any of the directories
     for (Iterator<StorageDirectory> it = storage.dirIterator(false); it.hasNext();) {
@@ -362,6 +363,10 @@ public class FSImage implements Closeable {
             "previous fs state should not exist during upgrade. "
             + "Finalize or rollback first.");
     }
+  }
+
+  void checkUpgrade() throws IOException {
+    checkUpgrade(storage);
   }
 
   /**
@@ -381,7 +386,7 @@ public class FSImage implements Closeable {
   }
 
   void doUpgrade(FSNamesystem target) throws IOException {
-    checkUpgrade(target);
+    checkUpgrade();
 
     // load the latest image
     this.loadFSImage(target, StartupOption.UPGRADE, null);
