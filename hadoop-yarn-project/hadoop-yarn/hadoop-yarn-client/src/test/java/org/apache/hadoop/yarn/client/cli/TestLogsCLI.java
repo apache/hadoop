@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -145,14 +146,28 @@ public class TestLogsCLI {
     pw.println("usage: yarn logs -applicationId <application ID> [OPTIONS]");
     pw.println();
     pw.println("general options are:");
+    pw.println(" -am <AM Containers>             Prints the AM Container logs for this");
+    pw.println("                                 application. Specify comma-separated");
+    pw.println("                                 value to get logs for related AM");
+    pw.println("                                 Container. For example, If we specify -am");
+    pw.println("                                 1,2, we will get the logs for the first");
+    pw.println("                                 AM Container as well as the second AM");
+    pw.println("                                 Container. To get logs for all AM");
+    pw.println("                                 Containers, use -am ALL. To get logs for");
+    pw.println("                                 the latest AM Container, use -am -1. By");
+    pw.println("                                 default, it will only print out syslog.");
+    pw.println("                                 Work with -logFiles to get other logs");
     pw.println(" -appOwner <Application Owner>   AppOwner (assumed to be current user if");
     pw.println("                                 not specified)");
-    pw.println(" -containerId <Container ID>     ContainerId (must be specified if node");
-    pw.println("                                 address is specified)");
+    pw.println(" -containerId <Container ID>     ContainerId. By default, it will only");
+    pw.println("                                 print syslog if the application is");
+    pw.println("                                 runing. Work with -logFiles to get other");
+    pw.println("                                 logs.");
     pw.println(" -help                           Displays help for all commands.");
+    pw.println(" -logFiles <Log File Name>       Work with -am/-containerId and specify");
+    pw.println("                                 comma-separated value to get specified");
+    pw.println("                                 Container log files");
     pw.println(" -nodeAddress <Node Address>     NodeAddress in the format nodename:port");
-    pw.println("                                 (must be specified if container id is");
-    pw.println("                                 specified)");
     pw.close();
     String appReportStr = baos.toString("UTF-8");
     Assert.assertEquals(appReportStr, sysOutStream.toString());
@@ -176,6 +191,7 @@ public class TestLogsCLI {
     ContainerId containerId0 = ContainerIdPBImpl.newContainerId(appAttemptId, 0);
     ContainerId containerId1 = ContainerIdPBImpl.newContainerId(appAttemptId, 1);
     ContainerId containerId2 = ContainerIdPBImpl.newContainerId(appAttemptId, 2);
+    ContainerId containerId3 = ContainerIdPBImpl.newContainerId(appAttemptId, 3);
     NodeId nodeId = NodeId.newInstance("localhost", 1234);
 
     // create local logs
@@ -193,9 +209,15 @@ public class TestLogsCLI {
     assertTrue(fs.mkdirs(appLogsDir));
     List<String> rootLogDirs = Arrays.asList(rootLogDir);
 
+    List<String> logTypes = new ArrayList<String>();
+    logTypes.add("syslog");
     // create container logs in localLogDir
-    createContainerLogInLocalDir(appLogsDir, containerId1, fs);
-    createContainerLogInLocalDir(appLogsDir, containerId2, fs);
+    createContainerLogInLocalDir(appLogsDir, containerId1, fs, logTypes);
+    createContainerLogInLocalDir(appLogsDir, containerId2, fs, logTypes);
+
+    // create two logs for container3 in localLogDir
+    logTypes.add("stdout");
+    createContainerLogInLocalDir(appLogsDir, containerId3, fs, logTypes);
 
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
@@ -217,6 +239,8 @@ public class TestLogsCLI {
       containerId1, path, fs);
     uploadContainerLogIntoRemoteDir(ugi, configuration, rootLogDirs, nodeId,
       containerId2, path, fs);
+    uploadContainerLogIntoRemoteDir(ugi, configuration, rootLogDirs, nodeId,
+      containerId3, path, fs);
 
     YarnClient mockYarnClient =
         createMockYarnClient(YarnApplicationState.FINISHED);
@@ -226,9 +250,13 @@ public class TestLogsCLI {
     int exitCode = cli.run(new String[] { "-applicationId", appId.toString() });
     assertTrue(exitCode == 0);
     assertTrue(sysOutStream.toString().contains(
-      "Hello container_0_0001_01_000001!"));
+      "Hello container_0_0001_01_000001 in syslog!"));
     assertTrue(sysOutStream.toString().contains(
-      "Hello container_0_0001_01_000002!"));
+      "Hello container_0_0001_01_000002 in syslog!"));
+    assertTrue(sysOutStream.toString().contains(
+      "Hello container_0_0001_01_000003 in syslog!"));
+    assertTrue(sysOutStream.toString().contains(
+      "Hello container_0_0001_01_000003 in stdout!"));
     sysOutStream.reset();
 
     // uploaded two logs for container1. The first log is empty.
@@ -240,7 +268,7 @@ public class TestLogsCLI {
             containerId1.toString() });
     assertTrue(exitCode == 0);
     assertTrue(sysOutStream.toString().contains(
-        "Hello container_0_0001_01_000001!"));
+        "Hello container_0_0001_01_000001 in syslog!"));
     assertTrue(sysOutStream.toString().contains("Log Upload Time"));
     assertTrue(!sysOutStream.toString().contains(
       "Logs for container " + containerId1.toString()
@@ -258,22 +286,51 @@ public class TestLogsCLI {
     assertTrue(sysOutStream.toString().contains(
       "Logs for container " + containerId0.toString()
           + " are not present in this log-file."));
+    sysOutStream.reset();
+
+    // uploaded two logs for container3. The first log is named as syslog.
+    // The second one is named as stdout.
+    exitCode =
+        cli.run(new String[] { "-applicationId", appId.toString(),
+            "-nodeAddress", nodeId.toString(), "-containerId",
+            containerId3.toString() });
+    assertTrue(exitCode == 0);
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in syslog!"));
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in stdout!"));
+    sysOutStream.reset();
+
+    // set -logFiles option as stdout
+    // should only print log with the name as stdout
+    exitCode =
+        cli.run(new String[] { "-applicationId", appId.toString(),
+            "-nodeAddress", nodeId.toString(), "-containerId",
+            containerId3.toString() , "-logFiles", "stdout"});
+    assertTrue(exitCode == 0);
+    assertTrue(sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in stdout!"));
+    assertTrue(!sysOutStream.toString().contains(
+        "Hello container_0_0001_01_000003 in syslog!"));
+    sysOutStream.reset();
 
     fs.delete(new Path(remoteLogRootDir), true);
     fs.delete(new Path(rootLogDir), true);
   }
 
   private static void createContainerLogInLocalDir(Path appLogsDir,
-      ContainerId containerId, FileSystem fs) throws Exception {
+      ContainerId containerId, FileSystem fs, List<String> logTypes) throws Exception {
     Path containerLogsDir = new Path(appLogsDir, containerId.toString());
     if (fs.exists(containerLogsDir)) {
       fs.delete(containerLogsDir, true);
     }
     assertTrue(fs.mkdirs(containerLogsDir));
-    Writer writer =
-        new FileWriter(new File(containerLogsDir.toString(), "sysout"));
-    writer.write("Hello " + containerId + "!");
-    writer.close();
+    for (String logType : logTypes) {
+      Writer writer =
+          new FileWriter(new File(containerLogsDir.toString(), logType));
+      writer.write("Hello " + containerId + " in " + logType + "!");
+      writer.close();
+    }
   }
 
   private static void uploadContainerLogIntoRemoteDir(UserGroupInformation ugi,

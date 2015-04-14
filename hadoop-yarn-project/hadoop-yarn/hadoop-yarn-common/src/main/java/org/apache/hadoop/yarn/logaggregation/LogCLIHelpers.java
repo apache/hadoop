@@ -23,6 +23,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -48,6 +49,14 @@ public class LogCLIHelpers implements Configurable {
   @VisibleForTesting
   public int dumpAContainersLogs(String appId, String containerId,
       String nodeId, String jobOwner) throws IOException {
+    return dumpAContainersLogsForALogType(appId, containerId, nodeId, jobOwner,
+      null);
+  }
+
+  @Private
+  @VisibleForTesting
+  public int dumpAContainersLogsForALogType(String appId, String containerId,
+      String nodeId, String jobOwner, List<String> logType) throws IOException {
     Path remoteRootLogDir = new Path(getConf().get(
         YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
@@ -78,9 +87,16 @@ public class LogCLIHelpers implements Configurable {
           reader =
               new AggregatedLogFormat.LogReader(getConf(),
                 thisNodeFile.getPath());
-          if (dumpAContainerLogs(containerId, reader, System.out,
+          if (logType == null) {
+            if (dumpAContainerLogs(containerId, reader, System.out,
               thisNodeFile.getModificationTime()) > -1) {
-            foundContainerLogs = true;
+              foundContainerLogs = true;
+            }
+          } else {
+            if (dumpAContainerLogsForALogType(containerId, reader, System.out,
+              thisNodeFile.getModificationTime(), logType) > -1) {
+              foundContainerLogs = true;
+            }
           }
         } finally {
           if (reader != null) {
@@ -124,6 +140,43 @@ public class LogCLIHelpers implements Configurable {
         break;
       }
     }
+    if (foundContainerLogs) {
+      return 0;
+    }
+    return -1;
+  }
+
+  @Private
+  public int dumpAContainerLogsForALogType(String containerIdStr,
+      AggregatedLogFormat.LogReader reader, PrintStream out,
+      long logUploadedTime, List<String> logType) throws IOException {
+    DataInputStream valueStream;
+    LogKey key = new LogKey();
+    valueStream = reader.next(key);
+
+    while (valueStream != null && !key.toString().equals(containerIdStr)) {
+      // Next container
+      key = new LogKey();
+      valueStream = reader.next(key);
+    }
+
+    if (valueStream == null) {
+      return -1;
+    }
+
+    boolean foundContainerLogs = false;
+    while (true) {
+      try {
+        int result = LogReader.readContainerLogsForALogType(
+            valueStream, out, logUploadedTime, logType);
+        if (result == 0) {
+          foundContainerLogs = true;
+        }
+      } catch (EOFException eof) {
+        break;
+      }
+    }
+
     if (foundContainerLogs) {
       return 0;
     }
