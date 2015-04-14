@@ -494,6 +494,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-7701. Support reporting per storage type quota and usage
     with hadoop/hdfs shell. (Peter Shi via Arpit Agarwal)
 
+    HDFS-6666. Abort NameNode and DataNode startup if security is enabled but
+    block access token is not enabled. (Vijay Bhat via cnauroth)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
