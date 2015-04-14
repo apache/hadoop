@@ -97,7 +97,7 @@ After calling an HTTP request, an application should check the response status c
 
 #### JSON response with single resource
 
-HTTP Request: GET http://rmhost.domain:8088/ws/v1/cluster/app/application\_1324057493980\_0001
+HTTP Request: GET http://rmhost.domain:8088/ws/v1/cluster/apps/application\_1324057493980\_0001
 
 Response Status Line: HTTP/1.1 200 OK
 
@@ -137,7 +137,7 @@ Response Body:
 
 Here we request information about an application that doesn't exist yet.
 
-HTTP Request: GET http://rmhost.domain:8088/ws/v1/cluster/app/application\_1324057493980\_9999
+HTTP Request: GET http://rmhost.domain:8088/ws/v1/cluster/apps/application\_1324057493980\_9999
 
 Response Status Line: HTTP/1.1 404 Not Found
 
