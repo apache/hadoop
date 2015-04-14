@@ -20,8 +20,8 @@ package org.apache.hadoop.fs;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
 
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
@@ -255,6 +255,8 @@ public class ContentSummary implements Writable{
   private static final String QUOTA_SUMMARY_FORMAT = "%12s %15s ";
   private static final String SPACE_QUOTA_SUMMARY_FORMAT = "%15s %15s ";
 
+  private static final String STORAGE_TYPE_SUMMARY_FORMAT = "%13s %17s ";
+
   private static final String[] HEADER_FIELDS = new String[] { "DIR_COUNT",
       "FILE_COUNT", "CONTENT_SIZE"};
   private static final String[] QUOTA_HEADER_FIELDS = new String[] { "QUOTA",
@@ -268,7 +270,11 @@ public class ContentSummary implements Writable{
       QUOTA_SUMMARY_FORMAT + SPACE_QUOTA_SUMMARY_FORMAT,
       (Object[]) QUOTA_HEADER_FIELDS) +
       HEADER;
-  
+
+  /** default quota display string */
+  private static final String QUOTA_NONE = "none";
+  private static final String QUOTA_INF = "inf";
+
   /** Return the header of the output.
    * if qOption is false, output directory count, file count, and content size;
    * if qOption is true, output quota and remaining quota as well.
@@ -278,6 +284,26 @@ public class ContentSummary implements Writable{
    */
   public static String getHeader(boolean qOption) {
     return qOption ? QUOTA_HEADER : HEADER;
+  }
+
+  /**
+   * return the header of with the StorageTypes
+   *
+   * @param storageTypes
+   * @return storage header string
+   */
+  public static String getStorageTypeHeader(List<StorageType> storageTypes) {
+    StringBuffer header = new StringBuffer();
+
+    for (StorageType st : storageTypes) {
+      /* the field length is 13/17 for quota and remain quota
+       * as the max length for quota name is ARCHIVE_QUOTA
+        * and remain quota name REM_ARCHIVE_QUOTA */
+      String storageName = st.toString();
+      header.append(String.format(STORAGE_TYPE_SUMMARY_FORMAT, storageName + "_QUOTA",
+          "REM_" + storageName + "_QUOTA"));
+    }
+    return header.toString();
   }
 
   /**
@@ -325,13 +351,49 @@ public class ContentSummary implements Writable{
    * @return the string representation of the object
    */
   public String toString(boolean qOption, boolean hOption) {
+    return toString(qOption, hOption, false, null);
+  }
+
+  /**
+   * Return the string representation of the object in the output format.
+   * if tOption is true, display the quota by storage types,
+   * Otherwise, same logic with #toString(boolean,boolean)
+   *
+   * @param qOption a flag indicating if quota needs to be printed or not
+   * @param hOption a flag indicating if human readable output if to be used
+   * @param tOption a flag indicating if display quota by storage types
+   * @param types Storage types to display
+   * @return the string representation of the object
+   */
+  public String toString(boolean qOption, boolean hOption,
+                         boolean tOption, List<StorageType> types) {
     String prefix = "";
+
+    if (tOption) {
+      StringBuffer content = new StringBuffer();
+      for (StorageType st : types) {
+        long typeQuota = getTypeQuota(st);
+        long typeConsumed = getTypeConsumed(st);
+        String quotaStr = QUOTA_NONE;
+        String quotaRem = QUOTA_INF;
+
+        if (typeQuota > 0) {
+          quotaStr = formatSize(typeQuota, hOption);
+          quotaRem = formatSize(typeQuota - typeConsumed, hOption);
+        }
+
+        content.append(String.format(STORAGE_TYPE_SUMMARY_FORMAT,
+            quotaStr, quotaRem));
+      }
+      return content.toString();
+    }
+
     if (qOption) {
-      String quotaStr = "none";
-      String quotaRem = "inf";
-      String spaceQuotaStr = "none";
-      String spaceQuotaRem = "inf";
-      
+      String quotaStr = QUOTA_NONE;
+      String quotaRem = QUOTA_INF;
+      String spaceQuotaStr = QUOTA_NONE;
+      String spaceQuotaRem = QUOTA_INF;
+
       if (quota>0) {
         quotaStr = formatSize(quota, hOption);
         quotaRem = formatSize(quota-(directoryCount+fileCount), hOption);
@@ -340,16 +402,17 @@ public class ContentSummary implements Writable{
         spaceQuotaStr = formatSize(spaceQuota, hOption);
         spaceQuotaRem = formatSize(spaceQuota - spaceConsumed, hOption);
       }
-      
+
       prefix = String.format(QUOTA_SUMMARY_FORMAT + SPACE_QUOTA_SUMMARY_FORMAT,
-                             quotaStr, quotaRem, spaceQuotaStr, spaceQuotaRem);
+          quotaStr, quotaRem, spaceQuotaStr, spaceQuotaRem);
     }
-    
+
     return prefix + String.format(SUMMARY_FORMAT,
-     formatSize(directoryCount, hOption),
-     formatSize(fileCount, hOption),
-     formatSize(length, hOption));
+        formatSize(directoryCount, hOption),
+        formatSize(fileCount, hOption),
+        formatSize(length, hOption));
   }
+
   /**
    * Formats a size to be human readable or in bytes
    * @param size value to be formatted
