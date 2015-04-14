@@ -26,7 +26,10 @@ import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedAction;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,13 +41,17 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NNUpgradeUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -142,11 +149,12 @@ public class BootstrapStandby implements Tool, Configurable {
   }
   
   private int doRun() throws IOException {
-
     NamenodeProtocol proxy = createNNProtocolProxy();
     NamespaceInfo nsInfo;
+    boolean isUpgradeFinalized;
     try {
       nsInfo = proxy.versionRequest();
+      isUpgradeFinalized = proxy.isUpgradeFinalized();
     } catch (IOException ioe) {
       LOG.fatal("Unable to fetch namespace information from active NN at " +
           otherIpcAddr + ": " + ioe.getMessage());
@@ -163,7 +171,6 @@ public class BootstrapStandby implements Tool, Configurable {
       return ERR_CODE_INVALID_VERSION;
     }
 
-    
     System.out.println(
         "=====================================================\n" +
         "About to bootstrap Standby ID " + nnId + " from:\n" +
@@ -175,35 +182,133 @@ public class BootstrapStandby implements Tool, Configurable {
         "            Block pool ID: " + nsInfo.getBlockPoolID() + "\n" +
         "               Cluster ID: " + nsInfo.getClusterID() + "\n" +
         "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
+        "       isUpgradeFinalized: " + isUpgradeFinalized + "\n" +
         "=====================================================");
-
-    long imageTxId = proxy.getMostRecentCheckpointTxId();
-    long curTxId = proxy.getTransactionID();
     
     NNStorage storage = new NNStorage(conf, dirsToFormat, editUrisToFormat);
-    
-    // Check with the user before blowing away data.
-    if (!Storage.confirmFormat(storage.dirIterable(null),
-            force, interactive)) {
-      storage.close();
+
+    if (!isUpgradeFinalized) {
+      // the remote NameNode is in upgrade state, this NameNode should also
+      // create the previous directory. First prepare the upgrade and rename
+      // the current dir to previous.tmp.
+      LOG.info("The active NameNode is in Upgrade. " +
+          "Prepare the upgrade for the standby NameNode as well.");
+      if (!doPreUpgrade(storage, nsInfo)) {
+        return ERR_CODE_ALREADY_FORMATTED;
+      }
+    } else if (!format(storage, nsInfo)) { // prompt the user to format storage
       return ERR_CODE_ALREADY_FORMATTED;
     }
-    
-    // Format the storage (writes VERSION file)
-    storage.format(nsInfo);
 
-    // Load the newly formatted image, using all of the directories (including shared
-    // edits)
+    // download the fsimage from active namenode
+    int download = downloadImage(storage, proxy);
+    if (download != 0) {
+      return download;
+    }
+
+    // finish the upgrade: rename previous.tmp to previous
+    if (!isUpgradeFinalized) {
+      doUpgrade(storage);
+    }
+    return 0;
+  }
+
+  /**
+   * Iterate over all the storage directories, checking if it should be
+   * formatted. Format the storage if necessary and allowed by the user.
+   * @return True if formatting is processed
+   */
+  private boolean format(NNStorage storage, NamespaceInfo nsInfo)
+      throws IOException {
+    // Check with the user before blowing away data.
+    if (!Storage.confirmFormat(storage.dirIterable(null), force, interactive)) {
+      storage.close();
+      return false;
+    } else {
+      // Format the storage (writes VERSION file)
+      storage.format(nsInfo);
+      return true;
+    }
+  }
+
+  /**
+   * This is called when using bootstrapStandby for HA upgrade. The SBN should
+   * also create previous directory so that later when it starts, it understands
+   * that the cluster is in the upgrade state. This function renames the old
+   * current directory to previous.tmp.
+   */
+  private boolean doPreUpgrade(NNStorage storage, NamespaceInfo nsInfo)
+      throws IOException {
+    boolean isFormatted = false;
+    Map<StorageDirectory, StorageState> dataDirStates =
+        new HashMap<>();
+    try {
+      isFormatted = FSImage.recoverStorageDirs(StartupOption.UPGRADE, storage,
+          dataDirStates);
+      if (dataDirStates.values().contains(StorageState.NOT_FORMATTED)) {
+        // recoverStorageDirs returns true if there is a formatted directory
+        isFormatted = false;
+        System.err.println("The original storage directory is not formatted.");
+      }
+    } catch (InconsistentFSStateException e) {
+      // if the storage is in a bad state,
+      LOG.warn("The storage directory is in an inconsistent state", e);
+    } finally {
+      storage.unlockAll();
+    }
+
+    // if there is InconsistentFSStateException or the storage is not formatted,
+    // format the storage. Although this format is done through the new
+    // software, since in HA setup the SBN is rolled back through
+    // "-bootstrapStandby", we should still be fine.
+    if (!isFormatted && !format(storage, nsInfo)) {
+      return false;
+    }
+
+    // make sure there is no previous directory
+    FSImage.checkUpgrade(storage);
+    // Do preUpgrade for each directory
+    for (Iterator<StorageDirectory> it = storage.dirIterator(false);
+         it.hasNext();) {
+      StorageDirectory sd = it.next();
+      try {
+        NNUpgradeUtil.renameCurToTmp(sd);
+      } catch (IOException e) {
+        LOG.error("Failed to move aside pre-upgrade storage " +
+            "in image directory " + sd.getRoot(), e);
+        throw e;
+      }
+    }
+    storage.setStorageInfo(nsInfo);
+    storage.setBlockPoolID(nsInfo.getBlockPoolID());
+    return true;
+  }
+
+  private void doUpgrade(NNStorage storage) throws IOException {
+    for (Iterator<StorageDirectory> it = storage.dirIterator(false);
+         it.hasNext();) {
+      StorageDirectory sd = it.next();
+      NNUpgradeUtil.doUpgrade(sd, storage);
+    }
+  }
+
+  private int downloadImage(NNStorage storage, NamenodeProtocol proxy)
+      throws IOException {
+    // Load the newly formatted image, using all of the directories
+    // (including shared edits)
+    final long imageTxId = proxy.getMostRecentCheckpointTxId();
+    final long curTxId = proxy.getTransactionID();
     FSImage image = new FSImage(conf);
     try {
       image.getStorage().setStorageInfo(storage);
       image.initEditLog(StartupOption.REGULAR);
       assert image.getEditLog().isOpenForRead() :
-        "Expected edit log to be open for read";
+          "Expected edit log to be open for read";
 
       // Ensure that we have enough edits already in the shared directory to
       // start up from the last checkpoint on the active.
-      if (!skipSharedEditsCheck && !checkLogsAvailableForRead(image, imageTxId, curTxId)) {
+      if (!skipSharedEditsCheck &&
+          !checkLogsAvailableForRead(image, imageTxId, curTxId)) {
         return ERR_CODE_LOGS_UNAVAILABLE;
       }
 
@@ -211,7 +316,7 @@ public class BootstrapStandby implements Tool, Configurable {
 
       // Download that checkpoint into our storage directories.
       MD5Hash hash = TransferFsImage.downloadImageToStorage(
-        otherHttpAddr, imageTxId, storage, true);
+          otherHttpAddr, imageTxId, storage, true);
       image.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE, imageTxId,
           hash);
     } catch (IOException ioe) {

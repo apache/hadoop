@@ -975,7 +975,7 @@ public class NNStorage extends Storage implements Closeable,
   }
 
   /** Validate and set block pool ID */
-  void setBlockPoolID(String bpid) {
+  public void setBlockPoolID(String bpid) {
     blockpoolID = bpid;
   }
 

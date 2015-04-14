@@ -182,6 +182,16 @@ message GetEditLogManifestResponseProto {
 }
 
 /**
+ * void request
+ */
+message IsUpgradeFinalizedRequestProto {
+}
+
+message IsUpgradeFinalizedResponseProto {
+  required bool isUpgradeFinalized = 1;
+}
+
+/**
  * Protocol used by the sub-ordinate namenode to send requests
  * the active/primary namenode.
  *
@@ -250,4 +260,10 @@ service NamenodeProtocolService {
    */
   rpc getEditLogManifest(GetEditLogManifestRequestProto) 
       returns(GetEditLogManifestResponseProto);
+
+  /**
+   * Return whether the NameNode is in upgrade state (false) or not (true)
+   */
+  rpc isUpgradeFinalized(IsUpgradeFinalizedRequestProto)
+      returns (IsUpgradeFinalizedResponseProto);
 }
