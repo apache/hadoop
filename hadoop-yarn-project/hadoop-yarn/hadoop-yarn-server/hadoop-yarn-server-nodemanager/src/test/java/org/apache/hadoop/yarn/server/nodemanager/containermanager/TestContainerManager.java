@@ -809,7 +809,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerTokenIdentifier containerTokenIdentifier =
         new ContainerTokenIdentifier(cId, nodeId.toString(), user, r,
           System.currentTimeMillis() + 100000L, 123, rmIdentifier,
-          Priority.newInstance(0), 0, logAggregationContext);
+          Priority.newInstance(0), 0, logAggregationContext, null);
     Token containerToken =
         BuilderUtils
           .newContainerToken(nodeId, containerTokenSecretManager

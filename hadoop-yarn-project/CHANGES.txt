@@ -81,6 +81,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3326. Support RESTful API for getLabelsToNodes. (Naganarasimha G R
     via ozawa)
 
+    YARN-3354. Add node label expression in ContainerTokenIdentifier to support
+    RM recovery. (Wangda Tan via jianhe)
+
   IMPROVEMENTS
 
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA

@@ -49,6 +49,7 @@ message ContainerTokenIdentifierProto {
   optional PriorityProto priority = 8;
   optional int64 creationTime = 9;
   optional LogAggregationContextProto logAggregationContext = 10;
+  optional string nodeLabelExpression = 11;
 }
 
 message ClientToAMTokenIdentifierProto {
