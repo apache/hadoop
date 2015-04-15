@@ -12,6 +12,9 @@ Release 2.7.1 - UNRELEASED
 
   BUG FIXES
 
+    YARN-3462. Patches applied for YARN-2424 are inconsistent between
+    trunk and branch-2. (Naganarasimha G R via harsh)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
