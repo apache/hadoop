@@ -59,9 +59,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private LCEResourcesHandler resourcesHandler;
   private boolean containerSchedPriorityIsSet = false;
   private int containerSchedPriorityAdjustment = 0;
-  private boolean containerLimitUsers = YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LIMIT_USERS;
-  
-  
+  private boolean containerLimitUsers;
+
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
@@ -71,6 +70,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             conf.getClass(YarnConfiguration.NM_LINUX_CONTAINER_RESOURCES_HANDLER,
               DefaultLCEResourcesHandler.class, LCEResourcesHandler.class), conf);
     resourcesHandler.setConf(conf);
+
     if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY) != null) {
      containerSchedPriorityIsSet = true;
      containerSchedPriorityAdjustment = conf
@@ -83,9 +83,13 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     nonsecureLocalUserPattern = Pattern.compile(
         conf.get(YarnConfiguration.NM_NONSECURE_MODE_USER_PATTERN_KEY,
             YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_USER_PATTERN));        
-    containerLimitUsers=conf.getBoolean(
+    containerLimitUsers = conf.getBoolean(
       YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS,
       YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LIMIT_USERS);
+    if (!containerLimitUsers) {
+      LOG.warn(YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS +
+          ": impersonation without authentication enabled");
+    }
   }
 
   void verifyUsernamePattern(String user) {
