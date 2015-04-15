@@ -97,12 +97,16 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     conf.set(DFSConfigKeys.DFS_DATANODE_FSDATASET_FACTORY_KEY,
         Factory.class.getName());
   }
+
+  public static byte simulatedByte(Block b, long offsetInBlk) {
+    byte firstByte = (byte) (b.getBlockId() % Byte.MAX_VALUE);
+    return (byte) ((firstByte + offsetInBlk) % Byte.MAX_VALUE);
+  }
   
   public static final String CONFIG_PROPERTY_CAPACITY =
       "dfs.datanode.simulateddatastorage.capacity";
   
   public static final long DEFAULT_CAPACITY = 2L<<40; // 1 terabyte
-  public static final byte DEFAULT_DATABYTE = 9;
   
   public static final String CONFIG_PROPERTY_STATE =
       "dfs.datanode.simulateddatastorage.state";
@@ -182,9 +186,9 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     synchronized SimulatedInputStream getIStream() {
       if (!finalized) {
         // throw new IOException("Trying to read an unfinalized block");
-         return new SimulatedInputStream(oStream.getLength(), DEFAULT_DATABYTE);
+         return new SimulatedInputStream(oStream.getLength(), theBlock);
       } else {
-        return new SimulatedInputStream(theBlock.getNumBytes(), DEFAULT_DATABYTE);
+        return new SimulatedInputStream(theBlock.getNumBytes(), theBlock);
       }
     }
     
@@ -991,21 +995,19 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
    *
    */
   static private class SimulatedInputStream extends java.io.InputStream {
-    
-
-    byte theRepeatedData = 7;
     final long length; // bytes
     int currentPos = 0;
     byte[] data = null;
+    Block theBlock = null;
     
     /**
      * An input stream of size l with repeated bytes
      * @param l size of the stream
      * @param iRepeatedData byte that is repeated in the stream
      */
-    SimulatedInputStream(long l, byte iRepeatedData) {
+    SimulatedInputStream(long l, Block b) {
       length = l;
-      theRepeatedData = iRepeatedData;
+      theBlock = b;
     }
     
     /**
@@ -1031,8 +1033,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       if (data !=null) {
         return data[currentPos++];
       } else {
-        currentPos++;
-        return theRepeatedData;
+        return simulatedByte(theBlock, currentPos++);
       }
     }
     
@@ -1052,8 +1053,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       if (data != null) {
         System.arraycopy(data, currentPos, b, 0, bytesRead);
       } else { // all data is zero
-        for (int i : b) {  
-          b[i] = theRepeatedData;
+        for (int i = 0; i < bytesRead; i++) {
+          b[i] = simulatedByte(theBlock, currentPos + i);
         }
       }
       currentPos += bytesRead;

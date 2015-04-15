@@ -144,7 +144,8 @@ public class TestSimulatedFSDataset {
     long lengthRead = 0;
     int data;
     while ((data = input.read()) != -1) {
-      assertEquals(SimulatedFSDataset.DEFAULT_DATABYTE, data);
+      assertEquals(SimulatedFSDataset.simulatedByte(b.getLocalBlock(),
+          lengthRead), data);
       lengthRead++;
     }
     assertEquals(expectedLen, lengthRead);
