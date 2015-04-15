@@ -528,6 +528,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-7934. Update RollingUpgrade rollback documentation: should use
     bootstrapstandby for standby NN. (J. Andreina via jing9)
 
+    HDFS-8149. The footer of the Web UI "Hadoop, 2014" is old.
+    (Brahma Reddy Battula via aajisaka)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
