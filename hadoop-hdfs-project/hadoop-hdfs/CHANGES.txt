@@ -522,6 +522,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8127. NameNode Failover during HA upgrade can cause DataNode to
     finalize upgrade. (jing9)
 
+    HDFS-8151. Always use snapshot path as source when invalid snapshot names
+    are used for diff based distcp. (jing9)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

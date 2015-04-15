@@ -88,24 +88,37 @@ public class TestDistCpSync {
   public void testFallback() throws Exception {
     // the source/target dir are not snapshottable dir
     Assert.assertFalse(DistCpSync.sync(options, conf));
+    // make sure the source path has been updated to the snapshot path
+    final Path spath = new Path(source,
+        HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
+    Assert.assertEquals(spath, options.getSourcePaths().get(0));
 
+    // reset source path in options
+    options.setSourcePaths(Arrays.asList(source));
     // the source/target does not have the given snapshots
     dfs.allowSnapshot(source);
     dfs.allowSnapshot(target);
     Assert.assertFalse(DistCpSync.sync(options, conf));
+    Assert.assertEquals(spath, options.getSourcePaths().get(0));
 
+    // reset source path in options
+    options.setSourcePaths(Arrays.asList(source));
     dfs.createSnapshot(source, "s1");
     dfs.createSnapshot(source, "s2");
     dfs.createSnapshot(target, "s1");
     Assert.assertTrue(DistCpSync.sync(options, conf));
+
     // reset source paths in options
     options.setSourcePaths(Arrays.asList(source));
-
     // changes have been made in target
     final Path subTarget = new Path(target, "sub");
     dfs.mkdirs(subTarget);
     Assert.assertFalse(DistCpSync.sync(options, conf));
+    // make sure the source path has been updated to the snapshot path
+    Assert.assertEquals(spath, options.getSourcePaths().get(0));
 
+    // reset source paths in options
+    options.setSourcePaths(Arrays.asList(source));
     dfs.delete(subTarget, true);
     Assert.assertTrue(DistCpSync.sync(options, conf));
   }
