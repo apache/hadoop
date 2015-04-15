@@ -34,6 +34,7 @@ import "acl.proto";
 import "xattr.proto";
 import "encryption.proto";
 import "inotify.proto";
+import "erasurecoding.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -712,29 +713,6 @@ message GetEditsFromTxidRequestProto {
 
 message GetEditsFromTxidResponseProto {
   required EventsListProto eventsList = 1;
-}
-
-message CreateErasureCodingZoneRequestProto {
-  required string src = 1;
-  optional ECSchemaProto schema = 2;
-}
-
-message CreateErasureCodingZoneResponseProto {
-}
-
-message GetErasureCodingInfoRequestProto {
-  required string src = 1;
-}
-
-message GetErasureCodingInfoResponseProto {
-  optional ECInfoProto ECInfo = 1;
-}
-
-message GetECSchemasRequestProto { // void request
-}
-
-message GetECSchemasResponseProto {
-  repeated ECSchemaProto schemas = 1;
 }
 
 service ClientNamenodeProtocol {
