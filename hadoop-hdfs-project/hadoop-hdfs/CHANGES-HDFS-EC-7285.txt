@@ -62,3 +62,6 @@
 
     HDFS-8090. Erasure Coding: Add RPC to client-namenode to list all
     ECSchemas loaded in Namenode. (vinayakumarb)
+
+    HDFS-8123. Erasure Coding: Better to move EC related proto messages to a
+    separate erasurecoding proto file (Rakesh R via vinayakumarb)
