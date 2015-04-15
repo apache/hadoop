@@ -47,8 +47,8 @@ class DistCpSync {
     List<Path> sourcePaths = inputOptions.getSourcePaths();
     if (sourcePaths.size() != 1) {
       // we only support one source dir which must be a snapshottable directory
-      DistCp.LOG.warn(sourcePaths.size() + " source paths are provided");
-      return false;
+      throw new IllegalArgumentException(sourcePaths.size()
+          + " source paths are provided");
     }
     final Path sourceDir = sourcePaths.get(0);
     final Path targetDir = inputOptions.getTargetPath();
@@ -59,15 +59,17 @@ class DistCpSync {
     // DistributedFileSystem.
     if (!(sfs instanceof DistributedFileSystem) ||
         !(tfs instanceof DistributedFileSystem)) {
-      DistCp.LOG.warn("To use diff-based distcp, the FileSystems needs to" +
-          " be DistributedFileSystem");
-      return false;
+      throw new IllegalArgumentException("The FileSystems needs to" +
+          " be DistributedFileSystem for using snapshot-diff-based distcp");
     }
     final DistributedFileSystem sourceFs = (DistributedFileSystem) sfs;
     final DistributedFileSystem targetFs= (DistributedFileSystem) tfs;
 
     // make sure targetFS has no change between from and the current states
     if (!checkNoChange(inputOptions, targetFs, targetDir)) {
+      // set the source path using the snapshot path
+      inputOptions.setSourcePaths(Arrays.asList(getSourceSnapshotPath(sourceDir,
+          inputOptions.getToSnapshot())));
       return false;
     }
 
