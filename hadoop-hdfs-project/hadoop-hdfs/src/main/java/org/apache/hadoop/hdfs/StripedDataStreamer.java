@@ -19,16 +19,16 @@
 package org.apache.hadoop.hdfs;
 
 import java.util.List;
-import org.apache.hadoop.fs.StorageType;
+
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
-import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 
@@ -134,19 +134,7 @@ public class StripedDataStreamer extends DataStreamer {
               "putting a block to stripeBlocks, ie = " + ie);
         }
       }
-    } else if (!isParityStreamer()) {
-      if (block == null || block.getNumBytes() == 0) {
-        LocatedBlock finishedBlock = new LocatedBlock(null, null);
-        try {
-          boolean offSuccess = stripedBlocks.get(0).offer(finishedBlock, 30,
-              TimeUnit.SECONDS);
-        } catch (InterruptedException ie) {
-          //TODO: Handle InterruptedException (HDFS-7786)
-          ie.printStackTrace();
-        }
-      }
     }
-
   }
 
   @Override
@@ -155,8 +143,10 @@ public class StripedDataStreamer extends DataStreamer {
     LocatedBlock lb = null;
     if (isLeadingStreamer()) {
       if(hasCommittedBlock) {
-        //when committing a block group, leading streamer has to adjust
-        // {@link block} including the size of block group
+        /**
+         * when committing a block group, leading streamer has to adjust
+         * {@link block} to include the size of block group
+         */
         for (int i = 1; i < HdfsConstants.NUM_DATA_BLOCKS; i++) {
           try {
             LocatedBlock finishedLocatedBlock = stripedBlocks.get(0).poll(30,
@@ -179,7 +169,13 @@ public class StripedDataStreamer extends DataStreamer {
 
       lb = super.locateFollowingBlock(excludedNodes);
       hasCommittedBlock = true;
-      LocatedBlock[] blocks = unwrapBlockGroup(lb);
+      assert lb instanceof LocatedStripedBlock;
+      DFSClient.LOG.debug("Leading streamer obtained bg " + lb);
+      LocatedBlock[] blocks = StripedBlockUtil.
+          parseStripedBlockGroup((LocatedStripedBlock) lb,
+              HdfsConstants.BLOCK_STRIPED_CELL_SIZE, HdfsConstants.NUM_DATA_BLOCKS,
+              HdfsConstants.NUM_PARITY_BLOCKS
+          );
       assert blocks.length == blockGroupSize :
           "Fail to get block group from namenode: blockGroupSize: " +
               blockGroupSize + ", blocks.length: " + blocks.length;
@@ -211,31 +207,5 @@ public class StripedDataStreamer extends DataStreamer {
       }
     }
     return lb;
-  }
-
-  /**
-   * Generate other blocks in a block group according to the first one.
-   *
-   * @param firstBlockInGroup the first block in a block group
-   * @return  other blocks in this group
-   */
-  public static LocatedBlock[] unwrapBlockGroup(
-      final LocatedBlock firstBlockInGroup) {
-    ExtendedBlock eb = firstBlockInGroup.getBlock();
-    DatanodeInfo[] locs = firstBlockInGroup.getLocations();
-    String[] storageIDs = firstBlockInGroup.getStorageIDs();
-    StorageType[] storageTypes = firstBlockInGroup.getStorageTypes();
-    Token<BlockTokenIdentifier> blockToken = firstBlockInGroup.getBlockToken();
-    LocatedBlock[] blocksInGroup = new LocatedBlock[locs.length];
-    for (int i = 0; i < blocksInGroup.length; i++) {
-      //each block in a group has the same number of bytes and timestamp
-      ExtendedBlock extendedBlock = new ExtendedBlock(eb.getBlockPoolId(),
-          eb.getBlockId() + i, eb.getNumBytes(), eb.getGenerationStamp());
-      blocksInGroup[i] = new LocatedBlock(extendedBlock,
-          new DatanodeInfo[] {locs[i]}, new String[]{storageIDs[i]},
-          new StorageType[] {storageTypes[i]});
-      blocksInGroup[i].setBlockToken(blockToken);
-    }
-    return blocksInGroup;
   }
 }

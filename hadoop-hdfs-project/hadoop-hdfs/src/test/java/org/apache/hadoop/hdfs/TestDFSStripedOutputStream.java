@@ -2,7 +2,6 @@ package org.apache.hadoop.hdfs;
 
 import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
@@ -14,10 +13,12 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
@@ -39,16 +40,16 @@ public class TestDFSStripedOutputStream {
   private MiniDFSCluster cluster;
   private Configuration conf = new Configuration();
   private DistributedFileSystem fs;
-  int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
-  int blockSize = 8 * 1024 * 1024;
-  int cellsInBlock = blockSize / cellSize;
+  private final int cellSize = HdfsConstants.BLOCK_STRIPED_CELL_SIZE;
+  private final int stripesPerBlock = 4;
+  int blockSize = cellSize * stripesPerBlock;
   private int mod = 29;
 
   @Before
   public void setup() throws IOException {
     int numDNs = dataBlocks + parityBlocks + 2;
     Configuration conf = new Configuration();
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, cellsInBlock * cellSize);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.getFileSystem().getClient().createErasureCodingZone("/", null);
     fs = cluster.getFileSystem();
@@ -103,8 +104,7 @@ public class TestDFSStripedOutputStream {
 
   @Test
   public void TestFileMoreThanOneStripe2() throws IOException {
-    testOneFile("/MoreThanOneStripe2",
-        cellSize * dataBlocks * (cellsInBlock >= 2 ? cellsInBlock / 2 : 1)
+    testOneFile("/MoreThanOneStripe2", cellSize * dataBlocks
             + cellSize * dataBlocks + 123);
   }
 
@@ -113,18 +113,22 @@ public class TestDFSStripedOutputStream {
     testOneFile("/FullBlockGroup", blockSize * dataBlocks);
   }
 
-  //TODO: The following tests will pass after HDFS-8121 fixed
-//  @Test
+  @Test
   public void TestFileMoreThanABlockGroup1() throws IOException {
     testOneFile("/MoreThanABlockGroup1", blockSize * dataBlocks + 123);
   }
 
-  //  @Test
+  @Test
   public void TestFileMoreThanABlockGroup2() throws IOException {
-    testOneFile("/MoreThanABlockGroup2",
-        blockSize * dataBlocks * 3
-            + (cellsInBlock >= 2 ? cellsInBlock / 2 : 1) * cellSize * dataBlocks
-            + 123);
+    testOneFile("/MoreThanABlockGroup2", blockSize * dataBlocks + cellSize+ 123);
+  }
+
+
+  @Test
+  public void TestFileMoreThanABlockGroup3() throws IOException {
+    testOneFile("/MoreThanABlockGroup3",
+        blockSize * dataBlocks * 3 + cellSize * dataBlocks
+        + cellSize + 123);
   }
 
   private int stripeDataSize() {
@@ -193,7 +197,10 @@ public class TestDFSStripedOutputStream {
     LocatedBlocks lbs = fs.getClient().getLocatedBlocks(src, 0L);
 
     for (LocatedBlock firstBlock : lbs.getLocatedBlocks()) {
-      LocatedBlock[] blocks = StripedDataStreamer.unwrapBlockGroup(firstBlock);
+      assert firstBlock instanceof LocatedStripedBlock;
+      LocatedBlock[] blocks = StripedBlockUtil.
+          parseStripedBlockGroup((LocatedStripedBlock) firstBlock,
+              cellSize, dataBlocks, parityBlocks);
       List<LocatedBlock> oneGroup = Arrays.asList(blocks);
       blockGroupList.add(oneGroup);
     }
@@ -205,12 +212,6 @@ public class TestDFSStripedOutputStream {
       byte[][] dataBlockBytes = new byte[dataBlocks][];
       byte[][] parityBlockBytes = new byte[allBlocks - dataBlocks][];
 
-      //calculate the size of this block group
-      int lenOfBlockGroup = group < blockGroupList.size() - 1 ?
-          blockSize * dataBlocks :
-          writeBytes - blockSize * (blockGroupList.size() - 1) * dataBlocks;
-      int intactStripes = lenOfBlockGroup / stripeDataSize();
-      int lastStripeLen = lenOfBlockGroup % stripeDataSize();
 
       //for each block, use BlockReader to read data
       for (int i = 0; i < blockList.size(); i++) {
@@ -223,25 +224,17 @@ public class TestDFSStripedOutputStream {
         InetSocketAddress targetAddr = NetUtils.createSocketAddr(
             nodes[0].getXferAddr());
 
-        int lenOfCell = cellSize;
-        if (i == lastStripeLen / cellSize) {
-          lenOfCell = lastStripeLen % cellSize;
-        } else if (i > lastStripeLen / cellSize) {
-          lenOfCell = 0;
-        }
-        int lenOfBlock = cellSize * intactStripes + lenOfCell;
-        byte[] blockBytes = new byte[lenOfBlock];
+        byte[] blockBytes = new byte[(int)block.getNumBytes()];
         if (i < dataBlocks) {
           dataBlockBytes[i] = blockBytes;
         } else {
           parityBlockBytes[i - dataBlocks] = blockBytes;
         }
 
-        if (lenOfBlock == 0) {
+        if (block.getNumBytes() == 0) {
           continue;
         }
 
-        block.setNumBytes(lenOfBlock);
         BlockReader blockReader = new BlockReaderFactory(new DfsClientConf(conf)).
             setFileName(src).
             setBlock(block).
@@ -276,33 +269,33 @@ public class TestDFSStripedOutputStream {
               }
             }).build();
 
-        blockReader.readAll(blockBytes, 0, lenOfBlock);
+        blockReader.readAll(blockBytes, 0, (int)block.getNumBytes());
         blockReader.close();
       }
 
       //check if we write the data correctly
-      for (int i = 0; i < dataBlockBytes.length; i++) {
-        byte[] cells = dataBlockBytes[i];
-        if (cells == null) {
+      for (int blkIdxInGroup = 0; blkIdxInGroup < dataBlockBytes.length; blkIdxInGroup++) {
+        byte[] actualBlkBytes = dataBlockBytes[blkIdxInGroup];
+        if (actualBlkBytes == null) {
           continue;
         }
-        for (int j = 0; j < cells.length; j++) {
+        for (int posInBlk = 0; posInBlk < actualBlkBytes.length; posInBlk++) {
           byte expected;
           //calculate the postion of this byte in the file
-          long pos = group * dataBlocks * blockSize
-              + (i * cellSize + j / cellSize * cellSize * dataBlocks)
-              + j % cellSize;
-          if (pos >= writeBytes) {
+          long posInFile = StripedBlockUtil.offsetInBlkToOffsetInBG(cellSize,
+              dataBlocks, posInBlk, blkIdxInGroup) +
+              group * blockSize * dataBlocks;
+          if (posInFile >= writeBytes) {
             expected = 0;
           } else {
-            expected = getByte(pos);
+            expected = getByte(posInFile);
           }
 
-          if (expected != cells[j]) {
-            Assert.fail("Unexpected byte " + cells[j] + ", expect " + expected
+          if (expected != actualBlkBytes[posInBlk]) {
+            Assert.fail("Unexpected byte " + actualBlkBytes[posInBlk] + ", expect " + expected
                 + ". Block group index is " + group +
-                ", stripe index is " + j / cellSize +
-                ", cell index is " + i + ", byte index is " + j % cellSize);
+                ", stripe index is " + posInBlk / cellSize +
+                ", cell index is " + blkIdxInGroup + ", byte index is " + posInBlk % cellSize);
           }
         }
       }

@@ -78,7 +78,8 @@ public class TestRecoverStripedBlocks {
   @Test
   public void testMissingStripedBlock() throws Exception {
     final int numBlocks = 4;
-    DFSTestUtil.createECFile(cluster, filePath, dirPath, numBlocks, 1);
+    DFSTestUtil.createStripedFile(cluster, filePath,
+        dirPath, numBlocks, 1, true);
 
     // make sure the file is complete in NN
     final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
