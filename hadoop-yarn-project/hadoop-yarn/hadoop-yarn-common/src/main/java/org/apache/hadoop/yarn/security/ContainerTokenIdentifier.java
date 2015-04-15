@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LogAggregationContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
 
 import com.google.protobuf.TextFormat;
@@ -64,13 +65,14 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       String hostName, String appSubmitter, Resource r, long expiryTimeStamp,
       int masterKeyId, long rmIdentifier, Priority priority, long creationTime) {
     this(containerID, hostName, appSubmitter, r, expiryTimeStamp, masterKeyId,
-        rmIdentifier, priority, creationTime, null);
+        rmIdentifier, priority, creationTime, null,
+        CommonNodeLabelsManager.NO_LABEL);
   }
 
   public ContainerTokenIdentifier(ContainerId containerID, String hostName,
       String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId,
       long rmIdentifier, Priority priority, long creationTime,
-      LogAggregationContext logAggregationContext) {
+      LogAggregationContext logAggregationContext, String nodeLabelExpression) {
     ContainerTokenIdentifierProto.Builder builder = 
         ContainerTokenIdentifierProto.newBuilder();
     if (containerID != null) {
@@ -93,6 +95,11 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
       builder.setLogAggregationContext(
           ((LogAggregationContextPBImpl)logAggregationContext).getProto());
     }
+    
+    if (nodeLabelExpression != null) {
+      builder.setNodeLabelExpression(nodeLabelExpression);
+    }
+    
     proto = builder.build();
   }
 
@@ -185,6 +192,16 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     }
     return UserGroupInformation.createRemoteUser(
         containerId);
+  }
+  
+  /**
+   * Get the node-label-expression in the original ResourceRequest
+   */
+  public String getNodeLabelExpression() {
+    if (proto.hasNodeLabelExpression()) {
+      return proto.getNodeLabelExpression();
+    }
+    return CommonNodeLabelsManager.NO_LABEL;
   }
 
   // TODO: Needed?

@@ -432,9 +432,10 @@ public class ContainerImpl implements Container {
     this.readLock.lock();
     try {
       return NMContainerStatus.newInstance(this.containerId, getCurrentState(),
-        getResource(), diagnostics.toString(), exitCode,
-        containerTokenIdentifier.getPriority(),
-        containerTokenIdentifier.getCreationTime());
+          getResource(), diagnostics.toString(), exitCode,
+          containerTokenIdentifier.getPriority(),
+          containerTokenIdentifier.getCreationTime(),
+          containerTokenIdentifier.getNodeLabelExpression());
     } finally {
       this.readLock.unlock();
     }

@@ -293,10 +293,11 @@ public class TestContainerAllocation {
         public Token createContainerToken(ContainerId containerId,
             NodeId nodeId, String appSubmitter, Resource capability,
             Priority priority, long createTime,
-            LogAggregationContext logAggregationContext) {
+            LogAggregationContext logAggregationContext, String nodeLabelExp) {
           numRetries++;
           return super.createContainerToken(containerId, nodeId, appSubmitter,
-            capability, priority, createTime, logAggregationContext);
+              capability, priority, createTime, logAggregationContext,
+              nodeLabelExp);
         }
       };
     }

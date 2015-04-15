@@ -60,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Scheduli
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -466,9 +467,10 @@ public class SchedulerApplicationAttempt {
       try {
         // create container token and NMToken altogether.
         container.setContainerToken(rmContext.getContainerTokenSecretManager()
-          .createContainerToken(container.getId(), container.getNodeId(),
-            getUser(), container.getResource(), container.getPriority(),
-            rmContainer.getCreationTime(), this.logAggregationContext));
+            .createContainerToken(container.getId(), container.getNodeId(),
+                getUser(), container.getResource(), container.getPriority(),
+                rmContainer.getCreationTime(), this.logAggregationContext,
+                rmContainer.getNodeLabelExpression()));
         NMToken nmToken =
             rmContext.getNMTokenSecretManager().createAndGetNMToken(getUser(),
               getApplicationAttemptId(), container);
@@ -702,5 +704,10 @@ public class SchedulerApplicationAttempt {
     return SchedulerUtils.hasPendingResourceRequest(rc,
         this.attemptResourceUsage, nodePartition, cluster,
         schedulingMode);
+  }
+  
+  @VisibleForTesting
+  public ResourceUsage getAppAttemptResourceUsage() {
+    return this.attemptResourceUsage;
   }
 }
