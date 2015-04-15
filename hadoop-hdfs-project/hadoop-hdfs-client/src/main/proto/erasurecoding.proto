@@ -49,6 +49,13 @@ message ECInfoProto {
  required ECSchemaProto schema = 2;
 }
 
+/**
+ * ECZoneInfo
+ */
+message ECZoneInfoProto {
+  required string dir = 1;
+  required ECSchemaProto schema = 2;
+}
 
 message CreateErasureCodingZoneRequestProto {
   required string src = 1;
@@ -71,4 +78,12 @@ message GetECSchemasRequestProto { // void request
 
 message GetECSchemasResponseProto {
   repeated ECSchemaProto schemas = 1;
+}
+
+message GetECZoneInfoRequestProto {
+  required string src = 1; // path to get the zone info
+}
+
+message GetECZoneInfoResponseProto {
+  optional ECZoneInfoProto ECZoneInfo = 1;
 }

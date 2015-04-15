@@ -1511,4 +1511,13 @@ public interface ClientProtocol {
    */
   @Idempotent
   public ECSchema[] getECSchemas() throws IOException;
+
+  /**
+   * Get the information about the EC zone for the path
+   * 
+   * @param src path to get the info for
+   * @throws IOException
+   */
+  @Idempotent
+  public ECZoneInfo getErasureCodingZoneInfo(String src) throws IOException;
 }

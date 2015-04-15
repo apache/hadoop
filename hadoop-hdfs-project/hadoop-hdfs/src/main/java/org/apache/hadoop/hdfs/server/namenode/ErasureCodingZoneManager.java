@@ -22,6 +22,7 @@ import com.google.common.collect.Lists;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECSchemaProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -57,7 +58,12 @@ public class ErasureCodingZoneManager {
     return getECSchema(iip) != null;
   }
 
-  ECSchema getECSchema(INodesInPath iip) throws IOException{
+  ECSchema getECSchema(INodesInPath iip) throws IOException {
+    ECZoneInfo ecZoneInfo = getECZoneInfo(iip);
+    return ecZoneInfo == null ? null : ecZoneInfo.getSchema();
+  }
+
+  ECZoneInfo getECZoneInfo(INodesInPath iip) throws IOException {
     assert dir.hasReadLock();
     Preconditions.checkNotNull(iip);
     List<INode> inodes = iip.getReadOnlyINodes();
@@ -80,7 +86,8 @@ public class ErasureCodingZoneManager {
         if (XATTR_ERASURECODING_ZONE.equals(XAttrHelper.getPrefixName(xAttr))) {
           ECSchemaProto ecSchemaProto;
           ecSchemaProto = ECSchemaProto.parseFrom(xAttr.getValue());
-          return PBHelper.convertECSchema(ecSchemaProto);
+          ECSchema schema = PBHelper.convertECSchema(ecSchemaProto);
+          return new ECZoneInfo(inode.getFullPathName(), schema);
         }
       }
     }

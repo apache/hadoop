@@ -119,6 +119,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECInfo;
+import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -3343,5 +3344,22 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       }
     }
     return scope;
+  }
+
+  /**
+   * Get the erasure coding zone information for the specified path
+   * 
+   * @param src path to get the information for
+   * @return Returns the zone information if path is in EC Zone, null otherwise
+   * @throws IOException
+   */
+  public ECZoneInfo getErasureCodingZoneInfo(String src) throws IOException {
+    checkOpen();
+    try {
+      return namenode.getErasureCodingZoneInfo(src);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(FileNotFoundException.class,
+          AccessControlException.class, UnresolvedPathException.class);
+    }
   }
 }

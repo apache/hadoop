@@ -80,3 +80,5 @@
 
     HDFS-8123. Erasure Coding: Better to move EC related proto messages to a
     separate erasurecoding proto file (Rakesh R via vinayakumarb)
+
+    HDFS-7349. Support DFS command for the EC encoding (vinayakumarb)
