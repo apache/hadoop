@@ -134,6 +134,11 @@ case ${COMMAND} in
     hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
     HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
   ;;
+  erasurecode)
+    CLASS=org.apache.hadoop.hdfs.tools.erasurecode.ECCli
+    hadoop_debug "Appending HADOOP_CLIENT_OPTS onto HADOOP_OPTS"
+    HADOOP_OPTS="${HADOOP_OPTS} ${HADOOP_CLIENT_OPTS}"
+  ;;
   fetchdt)
     CLASS=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
   ;;

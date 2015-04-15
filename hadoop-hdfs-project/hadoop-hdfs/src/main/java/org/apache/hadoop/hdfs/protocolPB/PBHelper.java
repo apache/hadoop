@@ -76,6 +76,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -134,6 +135,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportC
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECSchemaOptionEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECSchemaProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.ECZoneInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -3137,5 +3139,15 @@ public class PBHelper {
           .setKey(entry.getKey()).setValue(entry.getValue()).build());
     }
     return builder.build();
+  }
+
+  public static ECZoneInfoProto convertECZoneInfo(ECZoneInfo ecZoneInfo) {
+    return ECZoneInfoProto.newBuilder().setDir(ecZoneInfo.getDir())
+        .setSchema(convertECSchema(ecZoneInfo.getSchema())).build();
+  }
+
+  public static ECZoneInfo convertECZoneInfo(ECZoneInfoProto ecZoneInfoProto) {
+    return new ECZoneInfo(ecZoneInfoProto.getDir(),
+        convertECSchema(ecZoneInfoProto.getSchema()));
   }
 }

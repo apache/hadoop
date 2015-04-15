@@ -85,6 +85,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECInfo;
+import org.apache.hadoop.hdfs.protocol.ECZoneInfo;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
@@ -2042,5 +2043,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public ECSchema[] getECSchemas() throws IOException {
     checkNNStartup();
     return namesystem.getECSchemas();
+  }
+
+  @Override // ClientProtocol
+  public ECZoneInfo getErasureCodingZoneInfo(String src) throws IOException {
+    checkNNStartup();
+    return namesystem.getErasureCodingZoneInfo(src);
   }
 }

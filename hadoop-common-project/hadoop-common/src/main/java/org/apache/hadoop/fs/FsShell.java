@@ -111,6 +111,10 @@ public class FsShell extends Configured implements Tool {
     return getTrash().getCurrentTrashDir();
   }
 
+  protected String getUsagePrefix() {
+    return usagePrefix;
+  }
+
   // NOTE: Usage/Help are inner classes to allow access to outer methods
   // that access commandFactory
   
@@ -194,7 +198,7 @@ public class FsShell extends Configured implements Tool {
       }
     } else {
       // display help or usage for all commands 
-      out.println(usagePrefix);
+      out.println(getUsagePrefix());
       
       // display list of short usages
       ArrayList<Command> instances = new ArrayList<Command>();
@@ -218,7 +222,7 @@ public class FsShell extends Configured implements Tool {
   }
 
   private void printInstanceUsage(PrintStream out, Command instance) {
-    out.println(usagePrefix + " " + instance.getUsage());
+    out.println(getUsagePrefix() + " " + instance.getUsage());
   }
 
   private void printInstanceHelp(PrintStream out, Command instance) {
