@@ -263,14 +263,16 @@
   <p>
     Rollback from a newer release to the pre-upgrade release is always supported.
     However, it cannot be done in a rolling fashion.  It requires cluster downtime.
+    Suppose <em>NN1</em> and <em>NN2</em> are respectively in active and standby states.
     Below are the steps for rollback:
   </p>
   <ul>
     <li>Rollback HDFS<ol>
       <li>Shutdown all <em>NNs</em> and <em>DNs</em>.</li>
       <li>Restore the pre-upgrade release in all machines.</li>
-      <li>Start <em>NNs</em> with the
+      <li>Start <em>NN1</em> as Active with the
         "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade rollback</code></a>" option.</li>
+      <li>Run `-bootstrapStandby' on NN2 and start it normally as standby.</li>
       <li>Start <em>DNs</em> with the "<code>-rollback</code>" option.</li>
     </ol></li>
   </ul>
