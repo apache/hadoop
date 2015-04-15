@@ -51,10 +51,19 @@
     HDFS-7839. Erasure coding: implement facilities in NameNode to create and
     manage EC zones (Zhe Zhang)
 
+    HDFS-7969. Erasure coding: NameNode support for lease recovery of striped
+    block groups. (Zhe Zhang)
+
+    HDFS-7782. Erasure coding: pread from files in striped layout.
+    (Zhe Zhang and Jing Zhao via Zhe Zhang)
+
     HDFS-8023. Erasure Coding: retrieve eraure coding schema for a file from
     NameNode (vinayakumarb)
     
     HDFS-8074. Define a system-wide default EC schema. (Kai Zheng)
+
+    HDFS-8077. Erasure coding: fix bugs in EC zone and symlinks.
+    (Jing Zhao and Zhe Zhang via Jing Zhao)
 
     HDFS-8104. Make hard-coded values consistent with the system default schema first before remove them. (Kai Zheng)
 
@@ -62,6 +71,12 @@
 
     HDFS-8090. Erasure Coding: Add RPC to client-namenode to list all
     ECSchemas loaded in Namenode. (vinayakumarb)
+
+    HDFS-8122. Erasure Coding: Support specifying ECSchema during creation of ECZone.
+    (Vinayakumar B via Zhe Zhang)
+
+    HDFS-8114. Erasure coding: Add auditlog FSNamesystem#createErasureCodingZone if this
+    operation fails. (Rakesh R via Zhe Zhang)
 
     HDFS-8123. Erasure Coding: Better to move EC related proto messages to a
     separate erasurecoding proto file (Rakesh R via vinayakumarb)
