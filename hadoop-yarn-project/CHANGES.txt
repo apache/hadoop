@@ -131,6 +131,8 @@ Release 2.8.0 - UNRELEASED
     YARN-3394. Enrich WebApplication proxy documentation. (Naganarasimha G R
     via jianhe)
 
+    YARN-3404. Display queue name on application page. (Ryu Kobayashi via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not
