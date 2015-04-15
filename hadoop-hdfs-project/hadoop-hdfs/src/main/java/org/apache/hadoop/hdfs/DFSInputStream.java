@@ -1151,9 +1151,9 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
         for (int i = 0; i < offsets.length; i++) {
           int nread = reader.readAll(buf, offsets[i], lengths[i]);
           updateReadStatistics(readStatistics, nread, reader);
-          if (nread != len) {
+          if (nread != lengths[i]) {
             throw new IOException("truncated return from reader.read(): " +
-                "excpected " + len + ", got " + nread);
+                "excpected " + lengths[i] + ", got " + nread);
           }
         }
         DFSClientFaultInjector.get().readFromDatanodeDelay();

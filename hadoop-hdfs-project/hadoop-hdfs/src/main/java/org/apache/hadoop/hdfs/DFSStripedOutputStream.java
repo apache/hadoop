@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.erasurecode.rawcoder.RSRawEncoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.apache.hadoop.util.DataChecksum;
@@ -309,10 +310,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
         streamer.closeSocket();
         if (streamer.isLeadingStreamer()) {
           leadingStreamer = streamer;
-        } else {
-          streamer.countTailingBlockGroupBytes();
         }
-
       } catch (InterruptedException e) {
         throw new IOException("Failed to shutdown streamer");
       } finally {
@@ -320,6 +318,7 @@ public class DFSStripedOutputStream extends DFSOutputStream {
         setClosed();
       }
     }
+    assert leadingStreamer != null : "One streamer should be leader";
     leadingStreamer.countTailingBlockGroupBytes();
   }
 
@@ -337,23 +336,28 @@ public class DFSStripedOutputStream extends DFSOutputStream {
   }
 
   private void writeParityCellsForLastStripe() throws IOException{
-    if(currentBlockGroupBytes == 0 ||
-        currentBlockGroupBytes % stripeDataSize() == 0)
+    long parityBlkSize = StripedBlockUtil.getInternalBlockLength(
+        currentBlockGroupBytes, cellSize, blockGroupDataBlocks,
+        blockGroupDataBlocks + 1);
+    if (parityBlkSize == 0 || currentBlockGroupBytes % stripeDataSize() == 0) {
       return;
-    int lastStripeLen =(int)(currentBlockGroupBytes % stripeDataSize());
-    // Size of parity cells should equal the size of the first cell, if it
-    // is not full.
-    int parityCellSize = cellSize;
-    int index = lastStripeLen / cellSize;
-    if (lastStripeLen < cellSize) {
-      parityCellSize = lastStripeLen;
-      index++;
     }
+    int parityCellSize = parityBlkSize % cellSize == 0 ? cellSize :
+                        (int) (parityBlkSize % cellSize);
+
     for (int i = 0; i < blockGroupBlocks; i++) {
-      if (i >= index) {
+      long internalBlkLen = StripedBlockUtil.getInternalBlockLength(
+          currentBlockGroupBytes, cellSize, blockGroupDataBlocks, i);
+      // Pad zero bytes to make all cells exactly the size of parityCellSize
+      // If internal block is smaller than parity block, pad zero bytes.
+      // Also pad zero bytes to all parity cells
+      if (internalBlkLen < parityBlkSize || i >= blockGroupDataBlocks) {
         int position = cellBuffers[i].position();
+        assert position <= parityCellSize : "If an internal block is smaller" +
+            " than parity block, then its last cell should be small than last" +
+            " parity cell";
         for (int j = 0; j < parityCellSize - position; j++) {
-          cellBuffers[i].put((byte)0);
+          cellBuffers[i].put((byte) 0);
         }
       }
       cellBuffers[i].flip();
