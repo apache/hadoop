@@ -57,7 +57,10 @@ public class ResourceUsage {
 
   // Usage enum here to make implement cleaner
   private enum ResourceType {
-    USED(0), PENDING(1), AMUSED(2), RESERVED(3);
+    //CACHED_USED and CACHED_PENDING may be read by anyone, but must only
+    //be written by ordering policies
+    USED(0), PENDING(1), AMUSED(2), RESERVED(3), CACHED_USED(4),
+      CACHED_PENDING(5);
 
     private int idx;
 
@@ -102,6 +105,14 @@ public class ResourceUsage {
   public Resource getUsed(String label) {
     return _get(label, ResourceType.USED);
   }
+  
+  public Resource getCachedUsed(String label) {
+    return _get(label, ResourceType.CACHED_USED);
+  }
+  
+  public Resource getCachedPending(String label) {
+    return _get(label, ResourceType.CACHED_PENDING);
+  }
 
   public void incUsed(String label, Resource res) {
     _inc(label, ResourceType.USED, res);
@@ -136,6 +147,14 @@ public class ResourceUsage {
 
   public void setUsed(String label, Resource res) {
     _set(label, ResourceType.USED, res);
+  }
+  
+  public void setCachedUsed(String label, Resource res) {
+    _set(label, ResourceType.CACHED_USED, res);
+  }
+  
+  public void setCachedPending(String label, Resource res) {
+    _set(label, ResourceType.CACHED_PENDING, res);
   }
 
   /*
@@ -266,6 +285,28 @@ public class ResourceUsage {
       readLock.unlock();
     }
   }
+  
+  private Resource _getAll(ResourceType type) {
+    try {
+      readLock.lock();
+      Resource allOfType = Resources.createResource(0);
+      for (Map.Entry<String, UsageByLabel> usageEntry : usages.entrySet()) {
+        //all usages types are initialized
+        Resources.addTo(allOfType, usageEntry.getValue().resArr[type.idx]);
+      }
+      return allOfType;
+    } finally {
+      readLock.unlock();
+    }
+  }
+  
+  public Resource getAllPending() {
+    return _getAll(ResourceType.PENDING);
+  }
+  
+  public Resource getAllUsed() {
+    return _getAll(ResourceType.USED);
+  }
 
   private UsageByLabel getAndAddIfMissing(String label) {
     if (label == null) {
@@ -307,6 +348,18 @@ public class ResourceUsage {
       Resources.subtractFrom(usage.resArr[type.idx], res);
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  public Resource getCachedDemand(String label) {
+    try {
+      readLock.lock();
+      Resource demand = Resources.createResource(0);
+      Resources.addTo(demand, getCachedUsed(label));
+      Resources.addTo(demand, getCachedPending(label));
+      return demand;
+    } finally {
+      readLock.unlock();
     }
   }
   

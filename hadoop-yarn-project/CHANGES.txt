@@ -75,6 +75,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3361. CapacityScheduler side changes to support non-exclusive node
     labels. (Wangda Tan via jianhe)
 
+    YARN-3318. Create Initial OrderingPolicy Framework and FifoOrderingPolicy.
+    (Craig Welch via wangda)
+
   IMPROVEMENTS
 
     YARN-1880. Cleanup TestApplicationClientProtocolOnHA
