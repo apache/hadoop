@@ -64,6 +64,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 public abstract class LazyPersistTestCase {
+  static final byte LAZY_PERSIST_POLICY_ID = (byte) 15;
 
   static {
     DFSTestUtil.setNameNodeLogLevel(Level.ALL);
