@@ -33,6 +33,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -51,6 +52,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
 import com.sun.jersey.api.json.JSONUnmarshaller;
+import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
@@ -159,6 +161,59 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
               MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     LOG.info("posted node nodelabel");
+
+    // Add labels to another node
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("nodes").path("nid1:0")
+            .path("replace-labels")
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity("{\"nodeLabels\": [\"b\"]}",
+              MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    LOG.info("posted node nodelabel");
+
+    // Add labels to another node
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("nodes").path("nid2:0")
+            .path("replace-labels")
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity("{\"nodeLabels\": [\"b\"]}",
+              MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    LOG.info("posted node nodelabel");
+
+    // Verify, using get-labels-to-Nodes
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("label-mappings").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    LabelsToNodesInfo ltni = response.getEntity(LabelsToNodesInfo.class);
+    assertEquals(2, ltni.getLabelsToNodes().size());
+    NodeIDsInfo nodes = ltni.getLabelsToNodes().get("b");
+    assertTrue(nodes.getNodeIDs().contains("nid2:0"));
+    assertTrue(nodes.getNodeIDs().contains("nid1:0"));
+    nodes = ltni.getLabelsToNodes().get("a");
+    assertTrue(nodes.getNodeIDs().contains("nid:0"));
+
+    // Verify, using get-labels-to-Nodes for specifiedset of labels
+    MultivaluedMapImpl params = new MultivaluedMapImpl();
+    params.add("labels", "a");
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("label-mappings").queryParam("user.name", userName)
+            .queryParams(params)
+            .accept(MediaType.APPLICATION_JSON)
+            .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    ltni = response.getEntity(LabelsToNodesInfo.class);
+    assertEquals(1, ltni.getLabelsToNodes().size());
+    nodes = ltni.getLabelsToNodes().get("a");
+    assertTrue(nodes.getNodeIDs().contains("nid:0"));
 
     // Verify
     response =
