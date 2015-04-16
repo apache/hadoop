@@ -76,7 +76,7 @@ public class HsTasksPage extends HsView {
     .append(", bProcessing: true")
 
     .append("\n, aoColumnDefs: [\n")
-    .append("{'sType':'numeric', 'aTargets': [ 0 ]")
+    .append("{'sType':'string', 'aTargets': [ 0 ]")
     .append(", 'mRender': parseHadoopID }")
 
     .append(", {'sType':'numeric', 'aTargets': [ 4")

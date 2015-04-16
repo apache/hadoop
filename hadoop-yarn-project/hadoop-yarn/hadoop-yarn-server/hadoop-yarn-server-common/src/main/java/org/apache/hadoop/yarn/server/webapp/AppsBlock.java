@@ -124,7 +124,6 @@ public class AppsBlock extends HtmlBlock {
       }
       AppInfo app = new AppInfo(appReport);
       String percent = String.format("%.1f", app.getProgress());
-      // AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData
         .append("[\"<a href='")
         .append(url("app", app.getAppId()))

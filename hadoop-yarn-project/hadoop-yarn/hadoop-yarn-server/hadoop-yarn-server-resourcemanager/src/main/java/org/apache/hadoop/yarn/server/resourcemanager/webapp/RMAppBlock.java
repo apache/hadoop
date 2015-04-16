@@ -172,8 +172,6 @@ public class RMAppBlock extends AppBlock{
         blacklistedNodesCount = String.valueOf(nodes.size());
       }
 
-      // AppAttemptID numerical value parsed by parseHadoopID in
-      // yarn.dt.plugins.js
       attemptsTableData
           .append("[\"<a href='")
           .append(url("appattempt", appAttempt.getAppAttemptId()))
