@@ -33,6 +33,7 @@ import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -73,7 +74,6 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.LogManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -404,7 +404,7 @@ public class NameNode implements NameNodeStatusMXBean {
       return;
     }
 
-    if (DFSUtil.getNameServiceIds(conf).contains(nnHost)) {
+    if (DFSUtilClient.getNameServiceIds(conf).contains(nnHost)) {
       // host name is logical
       clientNamenodeAddress = nnHost;
     } else if (nnUri.getPort() > 0) {

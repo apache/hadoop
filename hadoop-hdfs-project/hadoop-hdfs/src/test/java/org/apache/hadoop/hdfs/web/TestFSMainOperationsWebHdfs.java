@@ -80,7 +80,7 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
       cluster.getFileSystem().setPermission(
           new Path("/"), new FsPermission((short)0777));
 
-      final String uri = WebHdfsFileSystem.SCHEME  + "://"
+      final String uri = WebHdfsConstants.WEBHDFS_SCHEME + "://"
           + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
 
       //get file system as a non-superuser

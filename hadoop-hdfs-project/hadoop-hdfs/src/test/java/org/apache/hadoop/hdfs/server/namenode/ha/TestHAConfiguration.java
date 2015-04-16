@@ -60,7 +60,7 @@ public class TestHAConfiguration {
 
   private Configuration getHAConf(String nsId, String host1, String host2) {
     Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsId);    
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsId);
     conf.set(DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX, nsId),
         "nn1,nn2");    

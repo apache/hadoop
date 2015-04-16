@@ -53,7 +53,7 @@ import org.junit.Test;
 
 public class TestWebHdfsUrl {
   // NOTE: port is never used 
-  final URI uri = URI.create(WebHdfsFileSystem.SCHEME + "://" + "127.0.0.1:0");
+  final URI uri = URI.create(WebHdfsConstants.WEBHDFS_SCHEME + "://" + "127.0.0.1:0");
 
   @Before
   public void resetUGI() {

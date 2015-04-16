@@ -29,6 +29,7 @@ import org.apache.hadoop.ha.HAAdmin;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -125,7 +126,9 @@ public class DFSHAAdmin extends HAAdmin {
    */
   @Override
   protected Collection<String> getTargetIds(String namenodeToActivate) {
-    return DFSUtil.getNameNodeIds(getConf(), (nameserviceId != null)? nameserviceId : DFSUtil.getNamenodeNameServiceId(getConf()));
+    return DFSUtilClient.getNameNodeIds(getConf(),
+                                        (nameserviceId != null) ? nameserviceId : DFSUtil.getNamenodeNameServiceId(
+                                            getConf()));
   }
   
   public static void main(String[] argv) throws Exception {

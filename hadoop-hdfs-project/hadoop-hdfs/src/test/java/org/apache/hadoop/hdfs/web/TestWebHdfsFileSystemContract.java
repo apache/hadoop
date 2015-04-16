@@ -42,7 +42,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AppendTestUtil;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
@@ -78,7 +77,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();
     ugi = UserGroupInformation.createUserForTesting(
         current.getShortUserName() + "x", new String[]{"user"});
-    fs = WebHdfsTestUtil.getWebHdfsFileSystemAs(ugi, conf, WebHdfsFileSystem.SCHEME);
+    fs = WebHdfsTestUtil.getWebHdfsFileSystemAs(ugi, conf, WebHdfsConstants.WEBHDFS_SCHEME);
     defaultWorkingDirectory = fs.getWorkingDirectory().toUri().getPath();
   }
 
@@ -539,7 +538,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       UserGroupInformation ugi = UserGroupInformation.createUserForTesting("alpha",
           new String[]{"beta"});
       WebHdfsFileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystemAs(ugi, conf,
-          WebHdfsFileSystem.SCHEME);
+          WebHdfsConstants.WEBHDFS_SCHEME);
 
       fs.mkdirs(p1);
       fs.setPermission(p1, new FsPermission((short) 0444));

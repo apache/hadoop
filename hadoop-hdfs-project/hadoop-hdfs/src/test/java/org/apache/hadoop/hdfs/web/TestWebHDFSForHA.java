@@ -55,7 +55,6 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 import org.mortbay.util.ajax.JSON;
 
@@ -64,7 +63,7 @@ import javax.ws.rs.core.Response;
 
 public class TestWebHDFSForHA {
   private static final String LOGICAL_NAME = "minidfs";
-  private static final URI WEBHDFS_URI = URI.create(WebHdfsFileSystem.SCHEME +
+  private static final URI WEBHDFS_URI = URI.create(WebHdfsConstants.WEBHDFS_SCHEME +
           "://" + LOGICAL_NAME);
   private static final MiniDFSNNTopology topo = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf(LOGICAL_NAME).addNN(

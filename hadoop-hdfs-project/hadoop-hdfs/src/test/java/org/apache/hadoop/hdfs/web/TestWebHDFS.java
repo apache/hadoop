@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -121,7 +120,7 @@ public class TestWebHDFS {
     try {
       cluster.waitActive();
 
-      final FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
+      final FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
       final Path dir = new Path("/test/largeFile");
       Assert.assertTrue(fs.mkdirs(dir));
 
@@ -249,7 +248,7 @@ public class TestWebHDFS {
         new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     try {
       cluster.waitActive();
-      WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME)
+      WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME)
           .setPermission(new Path("/"),
               new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
 
@@ -264,7 +263,7 @@ public class TestWebHDFS {
           @Override
           public Void run() throws IOException, URISyntaxException {
               FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-                  WebHdfsFileSystem.SCHEME);
+                  WebHdfsConstants.WEBHDFS_SCHEME);
               Path d = new Path("/my-dir");
             Assert.assertTrue(fs.mkdirs(d));
             for (int i=0; i < listLimit*3; i++) {
@@ -288,7 +287,7 @@ public class TestWebHDFS {
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
       cluster.waitActive();
-      WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME)
+      WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME)
           .setPermission(new Path("/"),
               new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
 
@@ -297,7 +296,7 @@ public class TestWebHDFS {
           @Override
           public Void run() throws IOException, URISyntaxException {
             FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-                WebHdfsFileSystem.SCHEME);
+                WebHdfsConstants.WEBHDFS_SCHEME);
             Path d = new Path("/my-dir");
             Assert.assertTrue(fs.mkdirs(d));
             return null;
@@ -321,7 +320,7 @@ public class TestWebHDFS {
       conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
       cluster.waitActive();
       FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-          WebHdfsFileSystem.SCHEME);
+          WebHdfsConstants.WEBHDFS_SCHEME);
       fs.create(new Path("/testnodatanode"));
       Assert.fail("No exception was thrown");
     } catch (IOException ex) {
@@ -345,7 +344,7 @@ public class TestWebHDFS {
       cluster.waitActive();
       final DistributedFileSystem dfs = cluster.getFileSystem();
       final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-          WebHdfsFileSystem.SCHEME);
+          WebHdfsConstants.WEBHDFS_SCHEME);
 
       final Path foo = new Path("/foo");
       dfs.mkdirs(foo);
@@ -387,7 +386,7 @@ public class TestWebHDFS {
       cluster.waitActive();
       final DistributedFileSystem dfs = cluster.getFileSystem();
       final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-          WebHdfsFileSystem.SCHEME);
+          WebHdfsConstants.WEBHDFS_SCHEME);
 
       final Path foo = new Path("/foo");
       dfs.mkdirs(foo);
@@ -423,7 +422,7 @@ public class TestWebHDFS {
       cluster.waitActive();
       final DistributedFileSystem dfs = cluster.getFileSystem();
       final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-          WebHdfsFileSystem.SCHEME);
+          WebHdfsConstants.WEBHDFS_SCHEME);
 
       final Path foo = new Path("/foo");
       dfs.mkdirs(foo);
@@ -465,7 +464,7 @@ public class TestWebHDFS {
 
       final Path foo = new Path("/foo");
       final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-          WebHdfsFileSystem.SCHEME);
+          WebHdfsConstants.WEBHDFS_SCHEME);
       try {
         webHdfs.mkdirs(foo);
         fail("Expected RetriableException");
@@ -491,7 +490,7 @@ public class TestWebHDFS {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-          WebHdfsFileSystem.SCHEME);
+          WebHdfsConstants.WEBHDFS_SCHEME);
       Assert.assertNull(webHdfs.getDelegationToken(null));
     } finally {
       if (cluster != null) {
@@ -507,7 +506,7 @@ public class TestWebHDFS {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
-          WebHdfsFileSystem.SCHEME);
+          WebHdfsConstants.WEBHDFS_SCHEME);
       webHdfs.getDelegationToken(null);
       fail("No exception is thrown.");
     } catch (AccessControlException ace) {
@@ -532,7 +531,7 @@ public class TestWebHDFS {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       final WebHdfsFileSystem fs =
-          WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
+          WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
       try (OutputStream os = fs.create(new Path(PATH))) {
         os.write(CONTENTS);
       }

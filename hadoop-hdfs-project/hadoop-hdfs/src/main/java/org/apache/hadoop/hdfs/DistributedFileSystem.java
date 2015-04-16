@@ -1534,7 +1534,7 @@ public class DistributedFileSystem extends FileSystem {
   
   @Override
   protected URI canonicalizeUri(URI uri) {
-    if (HAUtil.isLogicalUri(getConf(), uri)) {
+    if (HAUtilClient.isLogicalUri(getConf(), uri)) {
       // Don't try to DNS-resolve logical URIs, since the 'authority'
       // portion isn't a proper hostname
       return uri;

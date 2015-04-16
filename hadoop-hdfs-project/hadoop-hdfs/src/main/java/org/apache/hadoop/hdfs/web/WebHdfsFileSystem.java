@@ -58,7 +58,8 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -91,12 +92,10 @@ import com.google.common.collect.Lists;
 public class WebHdfsFileSystem extends FileSystem
     implements DelegationTokenRenewer.Renewable, TokenAspect.TokenManagementDelegator {
   public static final Log LOG = LogFactory.getLog(WebHdfsFileSystem.class);
-  /** File System URI: {SCHEME}://namenode:port/path/to/file */
-  public static final String SCHEME = "webhdfs";
   /** WebHdfs version. */
   public static final int VERSION = 1;
   /** Http URI: http://namenode:port/{PATH_PREFIX}/path/to/file */
-  public static final String PATH_PREFIX = "/" + SCHEME + "/v" + VERSION;
+  public static final String PATH_PREFIX = "/" + WebHdfsConstants.WEBHDFS_SCHEME + "/v" + VERSION;
 
   /** Default connection factory may be overridden in tests to use smaller timeout values */
   protected URLConnectionFactory connectionFactory;
@@ -125,7 +124,7 @@ public class WebHdfsFileSystem extends FileSystem
    */
   @Override
   public String getScheme() {
-    return SCHEME;
+    return WebHdfsConstants.WEBHDFS_SCHEME;
   }
 
   /**
@@ -157,13 +156,13 @@ public class WebHdfsFileSystem extends FileSystem
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.nnAddrs = resolveNNAddr();
 
-    boolean isHA = HAUtil.isClientFailoverConfigured(conf, this.uri);
-    boolean isLogicalUri = isHA && HAUtil.isLogicalUri(conf, this.uri);
+    boolean isHA = HAUtilClient.isClientFailoverConfigured(conf, this.uri);
+    boolean isLogicalUri = isHA && HAUtilClient.isLogicalUri(conf, this.uri);
     // In non-HA or non-logical URI case, the code needs to call
     // getCanonicalUri() in order to handle the case where no port is
     // specified in the URI
     this.tokenServiceName = isLogicalUri ?
-        HAUtil.buildTokenServiceForLogicalUri(uri, getScheme())
+        HAUtilClient.buildTokenServiceForLogicalUri(uri, getScheme())
         : SecurityUtil.buildTokenService(getCanonicalUri());
 
     if (!isHA) {
@@ -888,7 +887,6 @@ public class WebHdfsFileSystem extends FileSystem
 
   /**
    * Create a symlink pointing to the destination path.
-   * @see org.apache.hadoop.fs.Hdfs#createSymlink(Path, Path, boolean) 
    */
   public void createSymlink(Path destination, Path f, boolean createParent
       ) throws IOException {
@@ -1432,13 +1430,13 @@ public class WebHdfsFileSystem extends FileSystem
 
     ArrayList<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
 
-    if (!HAUtil.isLogicalUri(conf, uri)) {
+    if (!HAUtilClient.isLogicalUri(conf, uri)) {
       InetSocketAddress addr = NetUtils.createSocketAddr(uri.getAuthority(),
           getDefaultPort());
       ret.add(addr);
 
     } else {
-      Map<String, Map<String, InetSocketAddress>> addresses = DFSUtil
+      Map<String, Map<String, InetSocketAddress>> addresses = DFSUtilClient
           .getHaNnWebHdfsAddresses(conf, scheme);
 
       // Extract the entry corresponding to the logical name.

@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.Command;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -71,7 +72,6 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
-import org.apache.hadoop.ipc.GenericRefreshProtocol;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
@@ -574,7 +574,7 @@ public class DFSAdmin extends FsShell {
     DistributedFileSystem dfs = getDFS();
     Configuration dfsConf = dfs.getConf();
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
 
     if (isHaEnabled) {
       String nsId = dfsUri.getHost();
@@ -719,7 +719,7 @@ public class DFSAdmin extends FsShell {
     }
 
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
     if (isHaEnabled) {
       String nsId = dfsUri.getHost();
       List<ProxyAndInfo<ClientProtocol>> proxies =
@@ -770,7 +770,7 @@ public class DFSAdmin extends FsShell {
     DistributedFileSystem dfs = getDFS();
     Configuration dfsConf = dfs.getConf();
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
 
     if (isHaEnabled) {
       String nsId = dfsUri.getHost();
@@ -803,7 +803,7 @@ public class DFSAdmin extends FsShell {
     DistributedFileSystem dfs = getDFS();
     Configuration dfsConf = dfs.getConf();
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
 
     if (isHaEnabled) {
       String nsId = dfsUri.getHost();
@@ -854,7 +854,7 @@ public class DFSAdmin extends FsShell {
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     Configuration dfsConf = dfs.getConf();
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
 
     if (isHaEnabled) {
       String nsId = dfsUri.getHost();
@@ -1148,7 +1148,7 @@ public class DFSAdmin extends FsShell {
     
     Configuration dfsConf = dfs.getConf();
     URI dfsUri = dfs.getUri();
-    boolean isHaAndLogicalUri = HAUtil.isLogicalUri(dfsConf, dfsUri);
+    boolean isHaAndLogicalUri = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
     if (isHaAndLogicalUri) {
       // In the case of HA and logical URI, run finalizeUpgrade for all
       // NNs in this nameservice.
@@ -1188,7 +1188,7 @@ public class DFSAdmin extends FsShell {
     DistributedFileSystem dfs = getDFS();
     Configuration dfsConf = dfs.getConf();
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
 
     if (isHaEnabled) {
       String nsId = dfsUri.getHost();
@@ -1275,7 +1275,7 @@ public class DFSAdmin extends FsShell {
 
     DistributedFileSystem dfs = getDFS();
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(conf, dfsUri);
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(conf, dfsUri);
 
     if (isHaEnabled) {
       // Run refreshServiceAcl for all NNs if HA is enabled
@@ -1318,7 +1318,7 @@ public class DFSAdmin extends FsShell {
 
     DistributedFileSystem dfs = getDFS();
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(conf, dfsUri);
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(conf, dfsUri);
 
     if (isHaEnabled) {
       // Run refreshUserToGroupsMapings for all NNs if HA is enabled
@@ -1363,7 +1363,7 @@ public class DFSAdmin extends FsShell {
 
     DistributedFileSystem dfs = getDFS();
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(conf, dfsUri);
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(conf, dfsUri);
 
     if (isHaEnabled) {
       // Run refreshSuperUserGroupsConfiguration for all NNs if HA is enabled
@@ -1402,7 +1402,7 @@ public class DFSAdmin extends FsShell {
 
     DistributedFileSystem dfs = getDFS();
     URI dfsUri = dfs.getUri();
-    boolean isHaEnabled = HAUtil.isLogicalUri(conf, dfsUri);
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(conf, dfsUri);
 
     if (isHaEnabled) {
       // Run refreshCallQueue for all NNs if HA is enabled

@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.DelegationTokenRenewer.Renewable;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
@@ -74,8 +74,8 @@ final class TokenAspect<T extends FileSystem & Renewable> {
             throws IOException {
       final URI uri;
       final String scheme = getSchemeByKind(token.getKind());
-      if (HAUtil.isTokenForLogicalUri(token)) {
-        uri = HAUtil.getServiceUriFromToken(scheme, token);
+      if (HAUtilClient.isTokenForLogicalUri(token)) {
+        uri = HAUtilClient.getServiceUriFromToken(scheme, token);
       } else {
         final InetSocketAddress address = SecurityUtil.getTokenServiceAddr
                 (token);
@@ -86,9 +86,9 @@ final class TokenAspect<T extends FileSystem & Renewable> {
 
     private static String getSchemeByKind(Text kind) {
       if (kind.equals(WebHdfsConstants.WEBHDFS_TOKEN_KIND)) {
-        return WebHdfsFileSystem.SCHEME;
+        return WebHdfsConstants.WEBHDFS_SCHEME;
       } else if (kind.equals(WebHdfsConstants.SWEBHDFS_TOKEN_KIND)) {
-        return SWebHdfsFileSystem.SCHEME;
+        return WebHdfsConstants.SWEBHDFS_SCHEME;
       } else {
         throw new IllegalArgumentException("Unsupported scheme");
       }

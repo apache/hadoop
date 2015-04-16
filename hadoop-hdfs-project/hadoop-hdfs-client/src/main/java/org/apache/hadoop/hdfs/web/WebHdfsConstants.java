@@ -23,7 +23,8 @@ import org.apache.hadoop.io.Text;
 
 @InterfaceAudience.Private
 public class WebHdfsConstants {
-  /** Delegation token kind */
+  public static final String WEBHDFS_SCHEME = "webhdfs";
+  public static final String SWEBHDFS_SCHEME = "swebhdfs";
   public static final Text WEBHDFS_TOKEN_KIND = new Text("WEBHDFS delegation");
   public static final Text SWEBHDFS_TOKEN_KIND = new Text("SWEBHDFS delegation");
 
