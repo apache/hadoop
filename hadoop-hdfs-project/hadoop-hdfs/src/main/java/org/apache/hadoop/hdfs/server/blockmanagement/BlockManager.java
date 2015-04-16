@@ -284,6 +284,9 @@ public class BlockManager implements BlockStatsMXBean {
   /** Check whether name system is running before terminating */
   private boolean checkNSRunning = true;
 
+  /** Check whether there are any non-EC blocks using StripedID */
+  private boolean hasNonEcBlockUsingStripedID = false;
+
   public BlockManager(final Namesystem namesystem, final Configuration conf)
     throws IOException {
     this.namesystem = namesystem;
@@ -2984,6 +2987,24 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   /**
+   * Get the value of whether there are any non-EC blocks using StripedID.
+   *
+   * @return Returns the value of whether there are any non-EC blocks using StripedID.
+   */
+  public boolean hasNonEcBlockUsingStripedID(){
+    return hasNonEcBlockUsingStripedID;
+  }
+
+  /**
+   * Set the value of whether there are any non-EC blocks using StripedID.
+   *
+   * @param has - the value of whether there are any non-EC blocks using StripedID.
+   */
+  public void hasNonEcBlockUsingStripedID(boolean has){
+    hasNonEcBlockUsingStripedID = has;
+  }
+
+  /**
    * Process a single possibly misreplicated block. This adds it to the
    * appropriate queues if necessary, and returns a result code indicating
    * what happened with it.
@@ -3603,8 +3624,10 @@ public class BlockManager implements BlockStatsMXBean {
     if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
       info = blocksMap.getStoredBlock(
           new Block(BlockIdManager.convertToStripedID(block.getBlockId())));
-    }
-    if (info == null) {
+      if ((info == null) && hasNonEcBlockUsingStripedID()){
+        info = blocksMap.getStoredBlock(block);
+      }
+    } else {
       info = blocksMap.getStoredBlock(block);
     }
     return info;
@@ -3776,6 +3799,21 @@ public class BlockManager implements BlockStatsMXBean {
   public BlockInfo addBlockCollection(BlockInfo block,
       BlockCollection bc) {
     return blocksMap.addBlockCollection(block, bc);
+  }
+
+  /**
+   * Do some check when adding a block to blocksmap.
+   * For HDFS-7994 to check whether then block is a NonEcBlockUsingStripedID.
+   *
+   */
+  public BlockInfo addBlockCollectionWithCheck(
+      BlockInfo block, BlockCollection bc) {
+    if (!hasNonEcBlockUsingStripedID()){
+      if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
+        hasNonEcBlockUsingStripedID(true);
+      }
+    }
+    return addBlockCollection(block, bc);
   }
 
   public BlockCollection getBlockCollection(Block b) {

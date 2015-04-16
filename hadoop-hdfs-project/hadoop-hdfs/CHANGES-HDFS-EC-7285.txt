@@ -82,3 +82,6 @@
     separate erasurecoding proto file (Rakesh R via vinayakumarb)
 
     HDFS-7349. Support DFS command for the EC encoding (vinayakumarb)
+
+    HDFS-7994. Detect if resevered EC Block ID is already used during namenode
+    startup. (Hui Zheng via szetszwo)

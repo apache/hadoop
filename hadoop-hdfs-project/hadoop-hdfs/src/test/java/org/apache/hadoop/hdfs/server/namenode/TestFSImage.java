@@ -468,4 +468,162 @@ public class TestFSImage {
       cluster.shutdown();
     }
   }
+
+  @Test
+  public void testHasNonEcBlockUsingStripedIDForLoadFile() throws IOException{
+    // start a cluster
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
+          .build();
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      FSNamesystem fns = cluster.getNamesystem();
+
+      String testDir = "/test_block_manager";
+      String testFile = "testfile_loadfile";
+      String testFilePath = testDir + "/" + testFile;
+      String clientName = "testUser_loadfile";
+      String clientMachine = "testMachine_loadfile";
+      long blkId = -1;
+      long blkNumBytes = 1024;
+      long timestamp = 1426222918;
+
+      fs.mkdir(new Path(testDir), new FsPermission("755"));
+      Path p = new Path(testFilePath);
+
+      DFSTestUtil.createFile(fs, p, 0, (short) 1, 1);
+      BlockInfoContiguous cBlk = new BlockInfoContiguous(
+          new Block(blkId, blkNumBytes, timestamp), (short)3);
+      INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
+      file.toUnderConstruction(clientName, clientMachine);
+      file.addBlock(cBlk);
+      file.toCompleteFile(System.currentTimeMillis());
+      fns.enterSafeMode(false);
+      fns.saveNamespace(0, 0);
+      cluster.restartNameNodes();
+      cluster.waitActive();
+      fns = cluster.getNamesystem();
+      assertTrue(fns.getBlockManager().hasNonEcBlockUsingStripedID());
+
+      //after nonEcBlockUsingStripedID is deleted
+      //the hasNonEcBlockUsingStripedID is set to false
+      fs = cluster.getFileSystem();
+      fs.delete(p,false);
+      fns.enterSafeMode(false);
+      fns.saveNamespace(0, 0);
+      cluster.restartNameNodes();
+      cluster.waitActive();
+      fns = cluster.getNamesystem();
+      assertFalse(fns.getBlockManager().hasNonEcBlockUsingStripedID());
+
+      cluster.shutdown();
+      cluster = null;
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testHasNonEcBlockUsingStripedIDForLoadUCFile()
+      throws IOException{
+    // start a cluster
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
+          .build();
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      FSNamesystem fns = cluster.getNamesystem();
+
+      String testDir = "/test_block_manager";
+      String testFile = "testfile_loaducfile";
+      String testFilePath = testDir + "/" + testFile;
+      String clientName = "testUser_loaducfile";
+      String clientMachine = "testMachine_loaducfile";
+      long blkId = -1;
+      long blkNumBytes = 1024;
+      long timestamp = 1426222918;
+
+      fs.mkdir(new Path(testDir), new FsPermission("755"));
+      Path p = new Path(testFilePath);
+
+      DFSTestUtil.createFile(fs, p, 0, (short) 1, 1);
+      BlockInfoContiguous cBlk = new BlockInfoContiguous(
+          new Block(blkId, blkNumBytes, timestamp), (short)3);
+      INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
+      file.toUnderConstruction(clientName, clientMachine);
+      file.addBlock(cBlk);
+      fns.enterSafeMode(false);
+      fns.saveNamespace(0, 0);
+      cluster.restartNameNodes();
+      cluster.waitActive();
+      fns = cluster.getNamesystem();
+      assertTrue(fns.getBlockManager().hasNonEcBlockUsingStripedID());
+
+      cluster.shutdown();
+      cluster = null;
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testHasNonEcBlockUsingStripedIDForLoadSnapshot()
+      throws IOException{
+    // start a cluster
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(9)
+          .build();
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      FSNamesystem fns = cluster.getNamesystem();
+
+      String testDir = "/test_block_manager";
+      String testFile = "testfile_loadSnapshot";
+      String testFilePath = testDir + "/" + testFile;
+      String clientName = "testUser_loadSnapshot";
+      String clientMachine = "testMachine_loadSnapshot";
+      long blkId = -1;
+      long blkNumBytes = 1024;
+      long timestamp = 1426222918;
+
+      Path d = new Path(testDir);
+      fs.mkdir(d, new FsPermission("755"));
+      fs.allowSnapshot(d);
+
+      Path p = new Path(testFilePath);
+      DFSTestUtil.createFile(fs, p, 0, (short) 1, 1);
+      BlockInfoContiguous cBlk = new BlockInfoContiguous(
+          new Block(blkId, blkNumBytes, timestamp), (short)3);
+      INodeFile file = (INodeFile)fns.getFSDirectory().getINode(testFilePath);
+      file.toUnderConstruction(clientName, clientMachine);
+      file.addBlock(cBlk);
+      file.toCompleteFile(System.currentTimeMillis());
+
+      fs.createSnapshot(d,"testHasNonEcBlockUsingStripeID");
+      fs.truncate(p,0);
+      fns.enterSafeMode(false);
+      fns.saveNamespace(0, 0);
+      cluster.restartNameNodes();
+      cluster.waitActive();
+      fns = cluster.getNamesystem();
+      assertTrue(fns.getBlockManager().hasNonEcBlockUsingStripedID());
+
+      cluster.shutdown();
+      cluster = null;
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }
