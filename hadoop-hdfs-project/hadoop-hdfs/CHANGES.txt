@@ -319,6 +319,8 @@ Release 2.8.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HDFS-8135. Remove the deprecated FSConstants class. (Li Lu via wheat9)
+
   NEW FEATURES
 
   IMPROVEMENTS
