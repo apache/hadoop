@@ -247,7 +247,7 @@ public class FSImageFormatPBSnapshot {
               (BlockInfoContiguous) fsn.getBlockManager().getStoredBlock(blk);
           if(storedBlock == null) {
             storedBlock = (BlockInfoContiguous) fsn.getBlockManager()
-                .addBlockCollection(new BlockInfoContiguous(blk,
+                .addBlockCollectionWithCheck(new BlockInfoContiguous(blk,
                     copy.getFileReplication()), file);
           }
           blocks[j] = storedBlock;
