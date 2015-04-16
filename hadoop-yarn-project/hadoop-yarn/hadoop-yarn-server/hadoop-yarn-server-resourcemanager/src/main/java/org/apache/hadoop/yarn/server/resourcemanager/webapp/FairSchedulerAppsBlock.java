@@ -116,7 +116,6 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
         // FairScheduler#applications don't have the entry. Skip it.
         continue;
       }
-      //AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData.append("[\"<a href='")
       .append(url("app", appInfo.getAppId())).append("'>")
       .append(appInfo.getAppId()).append("</a>\",\"")

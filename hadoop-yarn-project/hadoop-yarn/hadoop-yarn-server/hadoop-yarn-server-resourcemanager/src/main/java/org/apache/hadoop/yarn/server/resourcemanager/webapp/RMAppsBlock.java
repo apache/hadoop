@@ -81,7 +81,6 @@ public class RMAppsBlock extends AppsBlock {
         blacklistedNodesCount = String.valueOf(nodes.size());
       }
       String percent = String.format("%.1f", app.getProgress());
-      // AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData
         .append("[\"<a href='")
         .append(url("app", app.getAppId()))
