@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+
 import java.io.File;
 
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import static org.hamcrest.CoreMatchers.*;
 
 public class TestParallelUnixDomainRead extends TestParallelReadUtil {
   private static TemporarySocketDirectory sockDir;
@@ -38,7 +40,7 @@ public class TestParallelUnixDomainRead extends TestParallelReadUtil {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
       new File(sockDir.getDir(), "TestParallelLocalRead.%d.sock").getAbsolutePath());
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, false);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, false);
     conf.setBoolean(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC, true);
     DomainSocket.disableBindPathValidation();
     setupCluster(1, conf);
