@@ -31,6 +31,12 @@ public interface HdfsClientConfigKeys {
       "^(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?(,(default:)?(user|group|mask|other):[[A-Za-z_][A-Za-z0-9._-]]*:([rwx-]{3})?)*$";
 
   static final String PREFIX = "dfs.client.";
+  String  DFS_NAMESERVICES = "dfs.nameservices";
+  int     DFS_NAMENODE_HTTP_PORT_DEFAULT = 50070;
+  String  DFS_NAMENODE_HTTP_ADDRESS_KEY = "dfs.namenode.http-address";
+  int     DFS_NAMENODE_HTTPS_PORT_DEFAULT = 50470;
+  String  DFS_NAMENODE_HTTPS_ADDRESS_KEY = "dfs.namenode.https-address";
+  String DFS_HA_NAMENODES_KEY_PREFIX = "dfs.ha.namenodes";
 
   /** dfs.client.retry configuration properties */
   interface Retry {

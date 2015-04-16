@@ -24,11 +24,9 @@ import com.google.common.annotations.VisibleForTesting;
 
 public class SWebHdfsFileSystem extends WebHdfsFileSystem {
 
-  public static final String SCHEME = "swebhdfs";
-
   @Override
   public String getScheme() {
-    return SCHEME;
+    return WebHdfsConstants.SWEBHDFS_SCHEME;
   }
 
   @Override

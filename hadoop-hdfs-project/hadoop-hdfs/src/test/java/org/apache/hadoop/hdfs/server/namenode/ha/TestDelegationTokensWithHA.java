@@ -281,8 +281,8 @@ public class TestDelegationTokensWithHA {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("test");
     
     URI haUri = new URI("hdfs://my-ha-uri/");
-    token.setService(HAUtil.buildTokenServiceForLogicalUri(haUri,
-        HdfsConstants.HDFS_URI_SCHEME));
+    token.setService(HAUtilClient.buildTokenServiceForLogicalUri(haUri,
+                                                                 HdfsConstants.HDFS_URI_SCHEME));
     ugi.addToken(token);
 
     Collection<InetSocketAddress> nnAddrs = new HashSet<InetSocketAddress>();
@@ -338,8 +338,8 @@ public class TestDelegationTokensWithHA {
   @Test(timeout = 300000)
   public void testDFSGetCanonicalServiceName() throws Exception {
     URI hAUri = HATestUtil.getLogicalUri(cluster);
-    String haService = HAUtil.buildTokenServiceForLogicalUri(hAUri,
-        HdfsConstants.HDFS_URI_SCHEME).toString();
+    String haService = HAUtilClient.buildTokenServiceForLogicalUri(hAUri,
+                                                                   HdfsConstants.HDFS_URI_SCHEME).toString();
     assertEquals(haService, dfs.getCanonicalServiceName());
     final String renewer = UserGroupInformation.getCurrentUser().getShortUserName();
     final Token<DelegationTokenIdentifier> token =
@@ -355,8 +355,8 @@ public class TestDelegationTokensWithHA {
     Configuration conf = dfs.getConf();
     URI haUri = HATestUtil.getLogicalUri(cluster);
     AbstractFileSystem afs =  AbstractFileSystem.createFileSystem(haUri, conf);    
-    String haService = HAUtil.buildTokenServiceForLogicalUri(haUri,
-        HdfsConstants.HDFS_URI_SCHEME).toString();
+    String haService = HAUtilClient.buildTokenServiceForLogicalUri(haUri,
+                                                                   HdfsConstants.HDFS_URI_SCHEME).toString();
     assertEquals(haService, afs.getCanonicalServiceName());
     Token<?> token = afs.getDelegationTokens(
         UserGroupInformation.getCurrentUser().getShortUserName()).get(0);

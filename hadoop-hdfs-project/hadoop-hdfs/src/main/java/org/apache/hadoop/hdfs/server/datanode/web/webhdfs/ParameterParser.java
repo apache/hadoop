@@ -21,7 +21,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import org.apache.commons.io.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
@@ -112,10 +112,10 @@ class ParameterParser {
       Token<DelegationTokenIdentifier>();
     token.decodeFromUrlString(delegation);
     URI nnUri = URI.create(HDFS_URI_SCHEME + "://" + namenodeId());
-    boolean isLogical = HAUtil.isLogicalUri(conf, nnUri);
+    boolean isLogical = HAUtilClient.isLogicalUri(conf, nnUri);
     if (isLogical) {
-      token.setService(HAUtil.buildTokenServiceForLogicalUri(nnUri,
-        HDFS_URI_SCHEME));
+      token.setService(
+          HAUtilClient.buildTokenServiceForLogicalUri(nnUri, HDFS_URI_SCHEME));
     } else {
       token.setService(SecurityUtil.buildTokenService(nnUri));
     }

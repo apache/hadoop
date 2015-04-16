@@ -216,13 +216,13 @@ public class TestDFSUtil {
   }
 
   /**
-   * Test {@link DFSUtil#getNameServiceIds(Configuration)}
+   * Test {@link DFSUtilClient#getNameServiceIds(Configuration)}
    */
   @Test
   public void testGetNameServiceIds() {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(DFS_NAMESERVICES, "nn1,nn2");
-    Collection<String> nameserviceIds = DFSUtil.getNameServiceIds(conf);
+    Collection<String> nameserviceIds = DFSUtilClient.getNameServiceIds(conf);
     Iterator<String> it = nameserviceIds.iterator();
     assertEquals(2, nameserviceIds.size());
     assertEquals("nn1", it.next().toString());
@@ -587,7 +587,7 @@ public class TestDFSUtil {
     Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
 
     Map<String, Map<String, InetSocketAddress>> map =
-        DFSUtil.getHaNnWebHdfsAddresses(conf, "webhdfs");
+        DFSUtilClient.getHaNnWebHdfsAddresses(conf, "webhdfs");
 
     assertEquals(NS1_NN1_ADDR, map.get("ns1").get("nn1").toString());
     assertEquals(NS1_NN2_ADDR, map.get("ns1").get("nn2").toString());

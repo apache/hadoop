@@ -103,8 +103,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final float    DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT_DEFAULT = 0.25f;
 
   public static final String  DFS_NAMENODE_HTTP_PORT_KEY = "dfs.http.port";
-  public static final int     DFS_NAMENODE_HTTP_PORT_DEFAULT = 50070;
-  public static final String  DFS_NAMENODE_HTTP_ADDRESS_KEY = "dfs.namenode.http-address";
+  public static final int     DFS_NAMENODE_HTTP_PORT_DEFAULT =
+      HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
+  public static final String  DFS_NAMENODE_HTTP_ADDRESS_KEY =
+      HdfsClientConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
   public static final String  DFS_NAMENODE_HTTP_ADDRESS_DEFAULT = "0.0.0.0:" + DFS_NAMENODE_HTTP_PORT_DEFAULT;
   public static final String  DFS_NAMENODE_HTTP_BIND_HOST_KEY = "dfs.namenode.http-bind-host";
   public static final String  DFS_NAMENODE_RPC_ADDRESS_KEY = "dfs.namenode.rpc-address";
@@ -304,8 +306,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   //Following keys have no defaults
   public static final String  DFS_DATANODE_DATA_DIR_KEY = "dfs.datanode.data.dir";
   public static final String  DFS_NAMENODE_HTTPS_PORT_KEY = "dfs.https.port";
-  public static final int     DFS_NAMENODE_HTTPS_PORT_DEFAULT = 50470;
-  public static final String  DFS_NAMENODE_HTTPS_ADDRESS_KEY = "dfs.namenode.https-address";
+  public static final int     DFS_NAMENODE_HTTPS_PORT_DEFAULT =
+      HdfsClientConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
+  public static final String  DFS_NAMENODE_HTTPS_ADDRESS_KEY =
+      HdfsClientConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
   public static final String  DFS_NAMENODE_HTTPS_BIND_HOST_KEY = "dfs.namenode.https-bind-host";
   public static final String  DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT = "0.0.0.0:" + DFS_NAMENODE_HTTPS_PORT_DEFAULT;
   public static final String  DFS_NAMENODE_NAME_DIR_KEY = "dfs.namenode.name.dir";
@@ -491,7 +495,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY = "dfs.namenode.name.cache.threshold";
   public static final int     DFS_NAMENODE_NAME_CACHE_THRESHOLD_DEFAULT = 10;
   public static final String  DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY = "dfs.namenode.legacy-oiv-image.dir";
-  
+
   public static final String  DFS_NAMESERVICES = "dfs.nameservices";
   public static final String  DFS_NAMESERVICE_ID = "dfs.nameservice.id";
   public static final String  DFS_INTERNAL_NAMESERVICES_KEY = "dfs.internal.nameservices";
@@ -519,7 +523,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT = true;
 
   // HA related configuration
-  public static final String DFS_HA_NAMENODES_KEY_PREFIX = "dfs.ha.namenodes";
+  public static final String DFS_HA_NAMENODES_KEY_PREFIX =
+      HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
   public static final String DFS_HA_NAMENODE_ID_KEY = "dfs.ha.namenode.id";
   public static final String  DFS_HA_STANDBY_CHECKPOINTS_KEY = "dfs.ha.standby.checkpoints";
   public static final boolean DFS_HA_STANDBY_CHECKPOINTS_DEFAULT = true;

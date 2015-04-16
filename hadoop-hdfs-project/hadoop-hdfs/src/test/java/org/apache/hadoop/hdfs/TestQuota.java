@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
@@ -800,7 +800,7 @@ public class TestQuota {
     DFSAdmin admin = new DFSAdmin(conf);
 
     final String nnAddr = conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
-    final String webhdfsuri = WebHdfsFileSystem.SCHEME  + "://" + nnAddr;
+    final String webhdfsuri = WebHdfsConstants.WEBHDFS_SCHEME + "://" + nnAddr;
     System.out.println("webhdfsuri=" + webhdfsuri);
     final FileSystem webhdfs = new Path(webhdfsuri).getFileSystem(conf);
 
@@ -865,7 +865,7 @@ public class TestQuota {
     DFSAdmin admin = new DFSAdmin(conf);
 
     final String nnAddr = conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
-    final String webhdfsuri = WebHdfsFileSystem.SCHEME  + "://" + nnAddr;
+    final String webhdfsuri = WebHdfsConstants.WEBHDFS_SCHEME + "://" + nnAddr;
     System.out.println("webhdfsuri=" + webhdfsuri);
     final FileSystem webhdfs = new Path(webhdfsuri).getFileSystem(conf);
     

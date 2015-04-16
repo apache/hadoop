@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
@@ -30,11 +30,8 @@ import org.junit.Test;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
 
-import javax.servlet.ServletContext;
-
 import java.io.IOException;
 
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 public class TestParameterParser {
@@ -51,7 +48,7 @@ public class TestParameterParser {
       + DelegationParam.NAME + "=" + token.encodeToUrlString());
     ParameterParser testParser = new ParameterParser(decoder, conf);
     final Token<DelegationTokenIdentifier> tok2 = testParser.delegationToken();
-    Assert.assertTrue(HAUtil.isTokenForLogicalUri(tok2));
+    Assert.assertTrue(HAUtilClient.isTokenForLogicalUri(tok2));
   }
 
   @Test

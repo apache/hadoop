@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HA_DT_SERVICE_PREFIX;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -38,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.NameNodeProxies.ProxyAndInfo;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -151,7 +149,7 @@ public class HAUtil {
         "machine is one of the machines listed as a NN RPC address, " +
         "or configure " + DFSConfigKeys.DFS_NAMESERVICE_ID);
     
-    Collection<String> nnIds = DFSUtil.getNameNodeIds(conf, nsId);
+    Collection<String> nnIds = DFSUtilClient.getNameNodeIds(conf, nsId);
     String myNNId = conf.get(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY);
     Preconditions.checkArgument(nnIds != null,
         "Could not determine namenode ids in namespace '%s'. " +
@@ -205,32 +203,6 @@ public class HAUtil {
   public static void setAllowStandbyReads(Configuration conf, boolean val) {
     conf.setBoolean("dfs.ha.allow.stale.reads", val);
   }
- 
-  /**
-   * @return true if the given nameNodeUri appears to be a logical URI.
-   */
-  public static boolean isLogicalUri(
-      Configuration conf, URI nameNodeUri) {
-    String host = nameNodeUri.getHost();
-    // A logical name must be one of the service IDs.
-    return DFSUtil.getNameServiceIds(conf).contains(host);
-  }
-
-  /**
-   * Check whether the client has a failover proxy provider configured
-   * for the namenode/nameservice.
-   *
-   * @param conf Configuration
-   * @param nameNodeUri The URI of namenode
-   * @return true if failover is configured.
-   */
-  public static boolean isClientFailoverConfigured(
-      Configuration conf, URI nameNodeUri) {
-    String host = nameNodeUri.getHost();
-    String configKey = HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
-        + "." + host;
-    return conf.get(configKey) != null;
-  }
 
   /**
    * Check whether logical URI is needed for the namenode and
@@ -257,43 +229,6 @@ public class HAUtil {
   }
 
   /**
-   * Parse the file system URI out of the provided token.
-   */
-  public static URI getServiceUriFromToken(final String scheme, Token<?> token) {
-    String tokStr = token.getService().toString();
-    final String prefix = buildTokenServicePrefixForLogicalUri(scheme);
-    if (tokStr.startsWith(prefix)) {
-      tokStr = tokStr.replaceFirst(prefix, "");
-    }
-    return URI.create(scheme + "://" + tokStr);
-  }
-  
-  /**
-   * Get the service name used in the delegation token for the given logical
-   * HA service.
-   * @param uri the logical URI of the cluster
-   * @param scheme the scheme of the corresponding FileSystem
-   * @return the service name
-   */
-  public static Text buildTokenServiceForLogicalUri(final URI uri,
-      final String scheme) {
-    return new Text(buildTokenServicePrefixForLogicalUri(scheme)
-        + uri.getHost());
-  }
-  
-  /**
-   * @return true if this token corresponds to a logical nameservice
-   * rather than a specific namenode.
-   */
-  public static boolean isTokenForLogicalUri(Token<?> token) {
-    return token.getService().toString().startsWith(HA_DT_SERVICE_PREFIX);
-  }
-
-  public static String buildTokenServicePrefixForLogicalUri(String scheme) {
-    return HA_DT_SERVICE_PREFIX + scheme + ":";
-  }
-
-  /**
    * Locate a delegation token associated with the given HA cluster URI, and if
    * one is found, clone it to also represent the underlying namenode address.
    * @param ugi the UGI to modify
@@ -305,8 +240,8 @@ public class HAUtil {
       UserGroupInformation ugi, URI haUri,
       Collection<InetSocketAddress> nnAddrs) {
     // this cloning logic is only used by hdfs
-    Text haService = HAUtil.buildTokenServiceForLogicalUri(haUri,
-        HdfsConstants.HDFS_URI_SCHEME);
+    Text haService = HAUtilClient.buildTokenServiceForLogicalUri(haUri,
+                                                                 HdfsConstants.HDFS_URI_SCHEME);
     Token<DelegationTokenIdentifier> haToken =
         tokenSelector.selectToken(haService, ugi.getTokens());
     if (haToken != null) {
@@ -318,7 +253,8 @@ public class HAUtil {
             new Token.PrivateToken<DelegationTokenIdentifier>(haToken);
         SecurityUtil.setTokenService(specificToken, singleNNAddr);
         Text alias = new Text(
-            buildTokenServicePrefixForLogicalUri(HdfsConstants.HDFS_URI_SCHEME)
+            HAUtilClient.buildTokenServicePrefixForLogicalUri(
+                HdfsConstants.HDFS_URI_SCHEME)
                 + "//" + specificToken.getService());
         ugi.addToken(alias, specificToken);
         if (LOG.isDebugEnabled()) {

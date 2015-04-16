@@ -82,7 +82,7 @@ public class TestWebHdfsWithMultipleNameNodes {
     webhdfs = new WebHdfsFileSystem[nNameNodes];
     for(int i = 0; i < webhdfs.length; i++) {
       final InetSocketAddress addr = cluster.getNameNode(i).getHttpAddress();
-      final String uri = WebHdfsFileSystem.SCHEME  + "://"
+      final String uri = WebHdfsConstants.WEBHDFS_SCHEME + "://"
           + addr.getHostName() + ":" + addr.getPort() + "/";
       webhdfs[i] = (WebHdfsFileSystem)FileSystem.get(new URI(uri), conf);
     }

@@ -232,7 +232,7 @@ public class DFSTestUtil {
     } else { // append the nsid
       conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsIds + "," + logicalName);
     }
-    conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX,
+    conf.set(DFSUtil.addKeySuffixes(HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX,
             logicalName), "nn1,nn2");
     conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX +
             "." + logicalName,
