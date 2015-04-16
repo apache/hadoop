@@ -502,6 +502,9 @@ Release 2.8.0 - UNRELEASED
     HDFS-8055. NullPointerException when topology script is missing.
     (Anu Engineer via cnauroth)
 
+    HDFS-8142. DistributedFileSystem encryption zone commands should resolve
+    relative paths. (Rakesh R via wang)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

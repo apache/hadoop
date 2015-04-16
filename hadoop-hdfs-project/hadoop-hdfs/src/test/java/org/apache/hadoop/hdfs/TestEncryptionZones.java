@@ -1310,4 +1310,22 @@ public class TestEncryptionZones {
         true, fs.getFileStatus(zoneFile).isEncrypted());
     DFSTestUtil.verifyFilesNotEqual(fs, zoneFile, rawFile, len);
   }
+
+  @Test(timeout = 60000)
+  public void testEncryptionZonesOnRelativePath() throws Exception {
+    final int len = 8196;
+    final Path baseDir = new Path("/somewhere/base");
+    final Path zoneDir = new Path("zone");
+    final Path zoneFile = new Path("file");
+    fs.setWorkingDirectory(baseDir);
+    fs.mkdirs(zoneDir);
+    dfsAdmin.createEncryptionZone(zoneDir, TEST_KEY);
+    DFSTestUtil.createFile(fs, zoneFile, len, (short) 1, 0xFEED);
+
+    assertNumZones(1);
+    assertZonePresent(TEST_KEY, "/somewhere/base/zone");
+
+    assertEquals("Got unexpected ez path", "/somewhere/base/zone", dfsAdmin
+        .getEncryptionZoneForPath(zoneDir).getPath().toString());
+  }
 }
