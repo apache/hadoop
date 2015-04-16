@@ -2940,9 +2940,6 @@ Release 2.5.0 - 2014-08-11
 
     HDFS-4909. Avoid protocol buffer RPC namespace clashes. (cmccabe)
 
-    HDFS-6153. Document "fileId" and "childrenNum" fields in the FileStatus Json schema
-    (Akira Ajisaka via vinayakumarb)
-
     HDFS-6178. Decommission on standby NN couldn't finish. (Ming Ma via jing9)
 
     HDFS-6213. TestDataNodeConfig failing on Jenkins runs due to DN web port

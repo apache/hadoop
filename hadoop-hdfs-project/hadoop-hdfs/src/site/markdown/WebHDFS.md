@@ -426,8 +426,6 @@ See also: [`newlength`](#New_Length), [FileSystem](../../api/org/apache/hadoop/f
           {
             "accessTime"      : 0,
             "blockSize"       : 0,
-            "childrenNum"     : 1,
-            "fileId"          : 16386,
             "group"           : "supergroup",
             "length"          : 0,             //in bytes, zero for directories
             "modificationTime": 1320173277227,
@@ -461,8 +459,6 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
               {
                 "accessTime"      : 1320171722771,
                 "blockSize"       : 33554432,
-                "childrenNum"     : 0,
-                "fileId"          : 16387,
                 "group"           : "supergroup",
                 "length"          : 24930,
                 "modificationTime": 1320171722771,
@@ -475,8 +471,6 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileSt
               {
                 "accessTime"      : 0,
                 "blockSize"       : 0,
-                "childrenNum"     : 2,
-                "fileId"          : 16388,
                 "group"           : "supergroup",
                 "length"          : 0,
                 "modificationTime": 1320895981256,
@@ -1320,18 +1314,6 @@ var fileStatusProperties =
     "blockSize":
     {
       "description": "The block size of a file.",
-      "type"       : "integer",
-      "required"   : true
-    },
-    "childrenNum":
-    {
-      "description": "The number of children.",
-      "type"       : "integer",
-      "required"   : true
-    },
-    "fileId":
-    {
-      "description": "The inode ID.",
       "type"       : "integer",
       "required"   : true
     },
