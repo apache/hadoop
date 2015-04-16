@@ -19,6 +19,8 @@ package org.apache.hadoop.tracing;
 
 import static org.junit.Assume.assumeTrue;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -26,19 +28,17 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.htrace.Sampler;
-import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import java.io.IOException;
 
 public class TestTracingShortCircuitLocalRead {
   private static Configuration conf;
@@ -67,8 +67,8 @@ public class TestTracingShortCircuitLocalRead {
     conf.set(SpanReceiverHost.SPAN_RECEIVERS_CONF_KEY,
         TestTracing.SetSpanReceiver.class.getName());
     conf.setLong("dfs.blocksize", 100 * 1024);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, false);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY, false);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
         "testShortCircuitTraceHooks._PORT");
     conf.set(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY, "CRC32C");

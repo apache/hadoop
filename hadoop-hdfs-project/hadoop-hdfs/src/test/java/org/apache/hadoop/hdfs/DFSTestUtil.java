@@ -1462,7 +1462,7 @@ public class DFSTestUtil {
     
     public Configuration newConfiguration() {
       Configuration conf = new Configuration();
-      conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
+      conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
       conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
           new File(sockDir.getDir(),
             testName + "._PORT.sock").getAbsolutePath());

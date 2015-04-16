@@ -18,8 +18,6 @@
 package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_SIZE;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_MMAP_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS;
@@ -48,6 +46,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -120,15 +119,15 @@ public class TestEnhancedByteBufferAccess {
     Assume.assumeTrue(NativeIO.isAvailable());
     Assume.assumeTrue(SystemUtils.IS_OS_UNIX);
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_SIZE, 3);
-    conf.setLong(DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_TIMEOUT_MS, 100);
+    conf.setInt(HdfsClientConfigKeys.Mmap.CACHE_SIZE_KEY, 3);
+    conf.setLong(HdfsClientConfigKeys.Mmap.CACHE_TIMEOUT_MS_KEY, 100);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
         new File(sockDir.getDir(),
           "TestRequestMmapAccess._PORT.sock").getAbsolutePath());
-    conf.setBoolean(DFSConfigKeys.
-        DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
+        true);
     conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setLong(DFS_CACHEREPORT_INTERVAL_MSEC_KEY, 1000);
     conf.setLong(DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 1000);
@@ -597,8 +596,8 @@ public class TestEnhancedByteBufferAccess {
     final Path TEST_PATH = new Path("/a");
     final int RANDOM_SEED = 23453;
     HdfsConfiguration conf = initZeroCopyTest();
-    conf.setBoolean(DFSConfigKeys.
-        DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, false);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
+        false);
     final String CONTEXT = "testZeroCopyReadOfCachedData";
     conf.set(DFSConfigKeys.DFS_CLIENT_CONTEXT, CONTEXT);
     conf.setLong(DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
@@ -715,7 +714,7 @@ public class TestEnhancedByteBufferAccess {
   @Test
   public void testClientMmapDisable() throws Exception {
     HdfsConfiguration conf = initZeroCopyTest();
-    conf.setBoolean(DFS_CLIENT_MMAP_ENABLED, false);
+    conf.setBoolean(HdfsClientConfigKeys.Mmap.ENABLED_KEY, false);
     MiniDFSCluster cluster = null;
     final Path TEST_PATH = new Path("/a");
     final int TEST_FILE_LENGTH = 16385;
@@ -726,8 +725,8 @@ public class TestEnhancedByteBufferAccess {
     conf.set(DFSConfigKeys.DFS_CLIENT_CONTEXT, CONTEXT);
 
     try {
-      // With DFS_CLIENT_MMAP_ENABLED set to false, we should not do memory
-      // mapped reads.
+      // With HdfsClientConfigKeys.Mmap.ENABLED_KEY set to false,
+      // we should not do memory mapped reads.
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
@@ -751,9 +750,9 @@ public class TestEnhancedByteBufferAccess {
     fs = null;
     cluster = null;
     try {
-      // Now try again with DFS_CLIENT_MMAP_CACHE_SIZE == 0.  It should work.
-      conf.setBoolean(DFS_CLIENT_MMAP_ENABLED, true);
-      conf.setInt(DFS_CLIENT_MMAP_CACHE_SIZE, 0);
+      // Now try again with HdfsClientConfigKeys.Mmap.CACHE_SIZE_KEY == 0.
+      conf.setBoolean(HdfsClientConfigKeys.Mmap.ENABLED_KEY, true);
+      conf.setInt(HdfsClientConfigKeys.Mmap.CACHE_SIZE_KEY, 0);
       conf.set(DFSConfigKeys.DFS_CLIENT_CONTEXT, CONTEXT + ".1");
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive();

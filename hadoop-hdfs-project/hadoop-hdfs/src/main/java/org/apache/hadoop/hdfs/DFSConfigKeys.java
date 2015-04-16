@@ -688,7 +688,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   
   
-  // client retry confs are moved to HdfsClientConfigKeys.Retry 
+  // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated
   public static final String  DFS_CLIENT_RETRY_POLICY_ENABLED_KEY
       = HdfsClientConfigKeys.Retry.POLICY_ENABLED_KEY;
@@ -726,7 +726,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_CLIENT_RETRY_WINDOW_BASE_DEFAULT
       = HdfsClientConfigKeys.Retry.WINDOW_BASE_DEFAULT;
 
-  // client failover confs are moved to HdfsClientConfigKeys.Failover 
+  // dfs.client.failover confs are moved to HdfsClientConfigKeys.Failover 
   @Deprecated
   public static final String  DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX
       = HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX;
@@ -761,7 +761,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_CLIENT_FAILOVER_CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT
       = HdfsClientConfigKeys.Failover.CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT;
   
-  // client write confs are moved to HdfsClientConfigKeys.Write 
+  // dfs.client.write confs are moved to HdfsClientConfigKeys.Write 
   @Deprecated
   public static final String  DFS_CLIENT_WRITE_MAX_PACKETS_IN_FLIGHT_KEY
       = HdfsClientConfigKeys.Write.MAX_PACKETS_IN_FLIGHT_KEY;
@@ -799,7 +799,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_CLIENT_WRITE_BYTE_ARRAY_MANAGER_COUNT_RESET_TIME_PERIOD_MS_DEFAULT
       = HdfsClientConfigKeys.Write.ByteArrayManager.COUNT_RESET_TIME_PERIOD_MS_DEFAULT;
 
-  // client block.write confs are moved to HdfsClientConfigKeys.BlockWrite 
+  // dfs.client.block.write confs are moved to HdfsClientConfigKeys.BlockWrite 
   @Deprecated
   public static final String  DFS_CLIENT_BLOCK_WRITE_RETRIES_KEY
       = HdfsClientConfigKeys.BlockWrite.RETRIES_KEY;
@@ -837,9 +837,91 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_BEST_EFFORT_DEFAULT
       = HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.BEST_EFFORT_DEFAULT;
 
+  // dfs.client.read confs are moved to HdfsClientConfigKeys.Read 
+  @Deprecated
+  public static final String  DFS_CLIENT_READ_PREFETCH_SIZE_KEY
+      = HdfsClientConfigKeys.Read.PREFETCH_SIZE_KEY; 
+  @Deprecated
+  public static final String  DFS_CLIENT_READ_SHORTCIRCUIT_KEY
+      = HdfsClientConfigKeys.Read.ShortCircuit.KEY; 
+  @Deprecated
+  public static final boolean DFS_CLIENT_READ_SHORTCIRCUIT_DEFAULT
+      = HdfsClientConfigKeys.Read.ShortCircuit.DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY
+      = HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY;
+  @Deprecated
+  public static final boolean DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_DEFAULT
+      = HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_KEY
+      = HdfsClientConfigKeys.Read.ShortCircuit.BUFFER_SIZE_KEY;
+  @Deprecated
+  public static final int     DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_DEFAULT
+      = HdfsClientConfigKeys.Read.ShortCircuit.BUFFER_SIZE_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_SIZE_KEY
+      = HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_SIZE_KEY;
+  @Deprecated
+  public static final int     DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_SIZE_DEFAULT
+      = HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_SIZE_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_KEY
+      = HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_EXPIRY_MS_KEY;
+  @Deprecated
+  public static final long    DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_DEFAULT
+      = HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_EXPIRY_MS_DEFAULT;
 
-  
-  
+  // dfs.client.mmap confs are moved to HdfsClientConfigKeys.Mmap 
+  @Deprecated
+  public static final String  DFS_CLIENT_MMAP_ENABLED
+      = HdfsClientConfigKeys.Mmap.ENABLED_KEY;
+  @Deprecated
+  public static final boolean DFS_CLIENT_MMAP_ENABLED_DEFAULT
+      = HdfsClientConfigKeys.Mmap.ENABLED_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_MMAP_CACHE_SIZE
+      = HdfsClientConfigKeys.Mmap.CACHE_SIZE_KEY;
+  @Deprecated
+  public static final int     DFS_CLIENT_MMAP_CACHE_SIZE_DEFAULT
+      = HdfsClientConfigKeys.Mmap.CACHE_SIZE_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_MMAP_CACHE_TIMEOUT_MS
+      = HdfsClientConfigKeys.Mmap.CACHE_TIMEOUT_MS_KEY;
+  @Deprecated
+  public static final long    DFS_CLIENT_MMAP_CACHE_TIMEOUT_MS_DEFAULT
+      = HdfsClientConfigKeys.Mmap.CACHE_TIMEOUT_MS_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_MMAP_RETRY_TIMEOUT_MS
+      = HdfsClientConfigKeys.Mmap.RETRY_TIMEOUT_MS_KEY;
+  @Deprecated
+  public static final long    DFS_CLIENT_MMAP_RETRY_TIMEOUT_MS_DEFAULT
+      = HdfsClientConfigKeys.Mmap.RETRY_TIMEOUT_MS_DEFAULT;
+
+  // dfs.client.short.circuit confs are moved to HdfsClientConfigKeys.ShortCircuit 
+  @Deprecated
+  public static final String  DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS
+      = HdfsClientConfigKeys.ShortCircuit.REPLICA_STALE_THRESHOLD_MS_KEY;
+  @Deprecated
+  public static final long    DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS_DEFAULT
+      = HdfsClientConfigKeys.ShortCircuit.REPLICA_STALE_THRESHOLD_MS_DEFAULT;
+
+  // dfs.client.hedged.read confs are moved to HdfsClientConfigKeys.HedgedRead 
+  @Deprecated
+  public static final String  DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS
+      = HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_KEY;
+  @Deprecated
+  public static final long    DEFAULT_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS
+      = HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_DEFAULT;
+  @Deprecated
+  public static final String  DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE
+      = HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY;
+  @Deprecated
+  public static final int     DEFAULT_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE
+      = HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_DEFAULT;
+
+
+
   public static final String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY = "dfs.client-write-packet-size";
   public static final int     DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
 
@@ -883,30 +965,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_CLIENT_LOCAL_INTERFACES = "dfs.client.local.interfaces";
 
-  public static final String  DFS_CLIENT_READ_PREFETCH_SIZE_KEY = "dfs.client.read.prefetch.size"; 
-  public static final String  DFS_CLIENT_READ_SHORTCIRCUIT_KEY = "dfs.client.read.shortcircuit";
-  public static final boolean DFS_CLIENT_READ_SHORTCIRCUIT_DEFAULT = false;
-  public static final String  DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY = "dfs.client.read.shortcircuit.skip.checksum";
-  public static final boolean DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_DEFAULT = false;
-  public static final String  DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_KEY = "dfs.client.read.shortcircuit.buffer.size";
-  public static final int     DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_DEFAULT = 1024 * 1024;
-  public static final String  DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_SIZE_KEY = "dfs.client.read.shortcircuit.streams.cache.size";
-  public static final int     DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_SIZE_DEFAULT = 256;
-  public static final String  DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_KEY = "dfs.client.read.shortcircuit.streams.cache.expiry.ms";
-  public static final long    DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_DEFAULT = 5 * 60 * 1000;
 
   public static final String  DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC = "dfs.client.domain.socket.data.traffic";
   public static final boolean DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT = false;
-  public static final String  DFS_CLIENT_MMAP_ENABLED= "dfs.client.mmap.enabled";
-  public static final boolean DFS_CLIENT_MMAP_ENABLED_DEFAULT = true;
-  public static final String  DFS_CLIENT_MMAP_CACHE_SIZE = "dfs.client.mmap.cache.size";
-  public static final int     DFS_CLIENT_MMAP_CACHE_SIZE_DEFAULT = 256;
-  public static final String  DFS_CLIENT_MMAP_CACHE_TIMEOUT_MS = "dfs.client.mmap.cache.timeout.ms";
-  public static final long    DFS_CLIENT_MMAP_CACHE_TIMEOUT_MS_DEFAULT  = 60 * 60 * 1000;
-  public static final String  DFS_CLIENT_MMAP_RETRY_TIMEOUT_MS = "dfs.client.mmap.retry.timeout.ms";
-  public static final long    DFS_CLIENT_MMAP_RETRY_TIMEOUT_MS_DEFAULT = 5 * 60 * 1000;
-  public static final String  DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS = "dfs.client.short.circuit.replica.stale.threshold.ms";
-  public static final long    DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS_DEFAULT = 30 * 60 * 1000;
 
   // The number of NN response dropped by client proactively in each RPC call.
   // For testing NN retry cache, we can set this property with positive value.
@@ -919,14 +980,4 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.client.key.provider.cache.expiry";
   public static final long    DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
       TimeUnit.DAYS.toMillis(10); // 10 days
-
-  // hedged read properties
-  public static final String  DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS =
-      "dfs.client.hedged.read.threshold.millis";
-  public static final long    DEFAULT_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS =
-      500;
-
-  public static final String  DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE =
-      "dfs.client.hedged.read.threadpool.size";
-  public static final int     DEFAULT_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE = 0;
 }

@@ -438,6 +438,10 @@ Release 2.8.0 - UNRELEASED
 
     HDFS-8144. Split TestLazyPersistFiles into multiple tests. (Arpit Agarwal)
 
+    HDFS-8082. Move dfs.client.read.*, dfs.client.short.circuit.*,
+    dfs.client.mmap.* and dfs.client.hedged.read.* conf from DFSConfigKeys
+    to HdfsClientConfigKeys.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-8026. Trace FSOutputSummer#writeChecksumChunks rather than

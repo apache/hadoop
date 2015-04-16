@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestBlockReaderLocal;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -247,8 +248,8 @@ public class TestShortCircuitLocalRead {
       int readOffset, String shortCircuitUser, String readingUser,
       boolean legacyShortCircuitFails) throws IOException, InterruptedException {
     Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY,
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
         ignoreChecksum);
     // Set a random client context name so that we don't share a cache with
     // other invocations of this function.
@@ -384,8 +385,8 @@ public class TestShortCircuitLocalRead {
   public void testSkipWithVerifyChecksum() throws IOException {
     int size = blockSize;
     Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, false);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY, false);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
         "/tmp/testSkipWithVerifyChecksum._PORT");
     DomainSocket.disableBindPathValidation();
@@ -431,8 +432,8 @@ public class TestShortCircuitLocalRead {
   public void testHandleTruncatedBlockFile() throws IOException {
     MiniDFSCluster cluster = null;
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, false);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY, false);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
         "/tmp/testHandleTruncatedBlockFile._PORT");
     conf.set(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY, "CRC32C");
@@ -529,10 +530,10 @@ public class TestShortCircuitLocalRead {
 
     // Setup create a file
     final Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, shortcircuit);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, shortcircuit);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
         "/tmp/TestShortCircuitLocalRead._PORT");
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY,
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
         checksum);
     
     //Override fileSize and DATA_TO_WRITE to much larger values for benchmark test
@@ -592,7 +593,7 @@ public class TestShortCircuitLocalRead {
                                                           int readOffset, boolean shortCircuitFails) throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER, true);
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
              .format(true).build();

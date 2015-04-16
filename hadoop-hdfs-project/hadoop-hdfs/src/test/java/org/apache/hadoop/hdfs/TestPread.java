@@ -273,8 +273,8 @@ public class TestPread {
   public void testHedgedPreadDFSBasic() throws IOException {
     isHedgedRead = true;
     Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE, 5);
-    conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS, 1);
+    conf.setInt(HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY, 5);
+    conf.setLong(HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_KEY, 1);
     dfsPreadTest(conf, false, true); // normal pread
     dfsPreadTest(conf, true, true); // trigger read code path without
                                     // transferTo.
@@ -286,9 +286,9 @@ public class TestPread {
     int numHedgedReadPoolThreads = 5;
     final int hedgedReadTimeoutMillis = 50;
 
-    conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE,
+    conf.setInt(HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY,
         numHedgedReadPoolThreads);
-    conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS,
+    conf.setLong(HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_KEY,
         hedgedReadTimeoutMillis);
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 0);
     // Set up the InjectionHandler
@@ -362,9 +362,9 @@ public class TestPread {
     int numHedgedReadPoolThreads = 5;
     final int initialHedgedReadTimeoutMillis = 50000;
     final int fixedSleepIntervalMillis = 50;
-    conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE,
+    conf.setInt(HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY,
         numHedgedReadPoolThreads);
-    conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS,
+    conf.setLong(HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_KEY,
         initialHedgedReadTimeoutMillis);
 
     // Set up the InjectionHandler
@@ -404,7 +404,14 @@ public class TestPread {
        * that there were hedged reads. But, none of the reads had to run in the
        * current thread.
        */
-      dfsClient.setHedgedReadTimeout(50); // 50ms
+      {
+        Configuration conf2 =  new Configuration(cluster.getConfiguration(0));
+        conf2.setBoolean("fs.hdfs.impl.disable.cache", true);
+        conf2.setLong(HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_KEY, 50);
+        fileSys.close();
+        fileSys = (DistributedFileSystem)FileSystem.get(cluster.getURI(0), conf2);
+        metrics = fileSys.getClient().getHedgedReadMetrics();
+      }
       pReadFile(fileSys, file1);
       // assert that there were hedged reads
       assertTrue(metrics.getHedgedReadOps() > 0);
@@ -439,7 +446,7 @@ public class TestPread {
   private void dfsPreadTest(Configuration conf, boolean disableTransferTo, boolean verifyChecksum)
       throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
-    conf.setLong(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 4096);
+    conf.setLong(HdfsClientConfigKeys.Read.PREFETCH_SIZE_KEY, 4096);
     // Set short retry timeouts so this test runs faster
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 0);
     if (simulatedStorage) {

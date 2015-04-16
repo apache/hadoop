@@ -32,8 +32,8 @@ public interface HdfsClientConfigKeys {
 
   static final String PREFIX = "dfs.client.";
 
-  /** Client retry configuration properties */
-  public interface Retry {
+  /** dfs.client.retry configuration properties */
+  interface Retry {
     String PREFIX = HdfsClientConfigKeys.PREFIX + "retry.";
 
     String  POLICY_ENABLED_KEY = PREFIX + "policy.enabled";
@@ -53,7 +53,7 @@ public interface HdfsClientConfigKeys {
     int     WINDOW_BASE_DEFAULT = 3000;
   }
 
-  /** Client failover configuration properties */
+  /** dfs.client.failover configuration properties */
   interface Failover {
     String PREFIX = HdfsClientConfigKeys.PREFIX + "failover.";
 
@@ -70,6 +70,7 @@ public interface HdfsClientConfigKeys {
     int     CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT = 0;
   }
   
+  /** dfs.client.write configuration properties */
   interface Write {
     String PREFIX = HdfsClientConfigKeys.PREFIX + "write.";
 
@@ -92,6 +93,7 @@ public interface HdfsClientConfigKeys {
     }
   }
 
+  /** dfs.client.block.write configuration properties */
   interface BlockWrite {
     String PREFIX = HdfsClientConfigKeys.PREFIX + "block.write.";
 
@@ -114,7 +116,60 @@ public interface HdfsClientConfigKeys {
     }
   }
 
-  /** HTTP client configuration properties */
+  /** dfs.client.read configuration properties */
+  interface Read {
+    String PREFIX = HdfsClientConfigKeys.PREFIX + "read.";
+    
+    String  PREFETCH_SIZE_KEY = PREFIX + "prefetch.size"; 
+
+    interface ShortCircuit {
+      String PREFIX = Read.PREFIX + "shortcircuit.";
+
+      String  KEY = PREFIX.substring(0, PREFIX.length()-1);
+      boolean DEFAULT = false;
+      String  SKIP_CHECKSUM_KEY = PREFIX + "skip.checksum";
+      boolean SKIP_CHECKSUM_DEFAULT = false;
+      String  BUFFER_SIZE_KEY = PREFIX + "buffer.size";
+      int     BUFFER_SIZE_DEFAULT = 1024 * 1024;
+
+      String  STREAMS_CACHE_SIZE_KEY = PREFIX + "streams.cache.size";
+      int     STREAMS_CACHE_SIZE_DEFAULT = 256;
+      String  STREAMS_CACHE_EXPIRY_MS_KEY = PREFIX + "streams.cache.expiry.ms";
+      long    STREAMS_CACHE_EXPIRY_MS_DEFAULT = 5*MINUTE;
+    }
+  }
+
+  /** dfs.client.short.circuit configuration properties */
+  interface ShortCircuit {
+    String PREFIX = Read.PREFIX + "short.circuit.";
+
+    String  REPLICA_STALE_THRESHOLD_MS_KEY = PREFIX + "replica.stale.threshold.ms";
+    long    REPLICA_STALE_THRESHOLD_MS_DEFAULT = 30*MINUTE;
+  }
+
+  /** dfs.client.mmap configuration properties */
+  interface Mmap {
+    String PREFIX = HdfsClientConfigKeys.PREFIX + "mmap.";
+
+    String  ENABLED_KEY = PREFIX + "enabled";
+    boolean ENABLED_DEFAULT = true;
+    String  CACHE_SIZE_KEY = PREFIX + "cache.size";
+    int     CACHE_SIZE_DEFAULT = 256;
+    String  CACHE_TIMEOUT_MS_KEY = PREFIX + "cache.timeout.ms";
+    long    CACHE_TIMEOUT_MS_DEFAULT  = 60*MINUTE;
+    String  RETRY_TIMEOUT_MS_KEY = PREFIX + "retry.timeout.ms";
+    long    RETRY_TIMEOUT_MS_DEFAULT = 5*MINUTE;
+  }
+
+  /** dfs.client.hedged.read configuration properties */
+  interface HedgedRead {
+    String  THRESHOLD_MILLIS_KEY = PREFIX + "threshold.millis";
+    long    THRESHOLD_MILLIS_DEFAULT = 500;
+    String  THREADPOOL_SIZE_KEY = PREFIX + "threadpool.size";
+    int     THREADPOOL_SIZE_DEFAULT = 0;
+  }
+
+  /** dfs.http.client configuration properties */
   interface HttpClient {
     String  PREFIX = "dfs.http.client.";
 

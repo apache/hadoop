@@ -27,7 +27,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_DATANODE_RESTART_T
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_DEFAULT;
@@ -98,6 +97,9 @@ public class DfsClientConf {
   private final long slowIoWarningThresholdMs;
 
   private final ShortCircuitConf shortCircuitConf;
+  
+  private final long hedgedReadThresholdMillis;
+  private final int hedgedReadThreadpoolSize;
 
   public DfsClientConf(Configuration conf) {
     // The hdfsTimeout is currently the same as the ipc timeout 
@@ -172,7 +174,7 @@ public class DfsClientConf {
     excludedNodesCacheExpiry = conf.getLong(
         HdfsClientConfigKeys.Write.EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_KEY,
         HdfsClientConfigKeys.Write.EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT);
-    prefetchSize = conf.getLong(DFS_CLIENT_READ_PREFETCH_SIZE_KEY,
+    prefetchSize = conf.getLong(HdfsClientConfigKeys.Read.PREFETCH_SIZE_KEY,
         10 * defaultBlockSize);
     numCachedConnRetry = conf.getInt(DFS_CLIENT_CACHED_CONN_RETRY_KEY,
         DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT);
@@ -206,6 +208,13 @@ public class DfsClientConf {
         DFSConfigKeys.DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT);
     
     shortCircuitConf = new ShortCircuitConf(conf);
+
+    hedgedReadThresholdMillis = conf.getLong(
+        HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_KEY,
+        HdfsClientConfigKeys.HedgedRead.THRESHOLD_MILLIS_DEFAULT);
+    hedgedReadThreadpoolSize = conf.getInt(
+        HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY,
+        HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_DEFAULT);
   }
 
   private DataChecksum.Type getChecksumType(Configuration conf) {
@@ -469,6 +478,20 @@ public class DfsClientConf {
   }
 
   /**
+   * @return the hedgedReadThresholdMillis
+   */
+  public long getHedgedReadThresholdMillis() {
+    return hedgedReadThresholdMillis;
+  }
+
+  /**
+   * @return the hedgedReadThreadpoolSize
+   */
+  public int getHedgedReadThreadpoolSize() {
+    return hedgedReadThreadpoolSize;
+  }
+
+  /**
    * @return the shortCircuitConf
    */
   public ShortCircuitConf getShortCircuitConf() {
@@ -520,8 +543,8 @@ public class DfsClientConf {
           DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL,
           DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT);
       shortCircuitLocalReads = conf.getBoolean(
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY,
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_DEFAULT);
+          HdfsClientConfigKeys.Read.ShortCircuit.KEY,
+          HdfsClientConfigKeys.Read.ShortCircuit.DEFAULT);
       domainSocketDataTraffic = conf.getBoolean(
           DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC,
           DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT);
@@ -532,7 +555,7 @@ public class DfsClientConf {
       if (LOG.isDebugEnabled()) {
         LOG.debug(DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL
             + " = " + useLegacyBlockReaderLocal);
-        LOG.debug(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY
+        LOG.debug(HdfsClientConfigKeys.Read.ShortCircuit.KEY
             + " = " + shortCircuitLocalReads);
         LOG.debug(DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC
             + " = " + domainSocketDataTraffic);
@@ -541,32 +564,32 @@ public class DfsClientConf {
       }
 
       skipShortCircuitChecksums = conf.getBoolean(
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY,
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_DEFAULT);
+          HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
+          HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_DEFAULT);
       shortCircuitBufferSize = conf.getInt(
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_KEY,
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_DEFAULT);
+          HdfsClientConfigKeys.Read.ShortCircuit.BUFFER_SIZE_KEY,
+          HdfsClientConfigKeys.Read.ShortCircuit.BUFFER_SIZE_DEFAULT);
       shortCircuitStreamsCacheSize = conf.getInt(
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_SIZE_KEY,
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_SIZE_DEFAULT);
+          HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_SIZE_KEY,
+          HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_SIZE_DEFAULT);
       shortCircuitStreamsCacheExpiryMs = conf.getLong(
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_KEY,
-          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_DEFAULT);
+          HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_EXPIRY_MS_KEY,
+          HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_EXPIRY_MS_DEFAULT);
       shortCircuitMmapEnabled = conf.getBoolean(
-          DFSConfigKeys.DFS_CLIENT_MMAP_ENABLED,
-          DFSConfigKeys.DFS_CLIENT_MMAP_ENABLED_DEFAULT);
+          HdfsClientConfigKeys.Mmap.ENABLED_KEY,
+          HdfsClientConfigKeys.Mmap.ENABLED_DEFAULT);
       shortCircuitMmapCacheSize = conf.getInt(
-          DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_SIZE,
-          DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_SIZE_DEFAULT);
+          HdfsClientConfigKeys.Mmap.CACHE_SIZE_KEY,
+          HdfsClientConfigKeys.Mmap.CACHE_SIZE_DEFAULT);
       shortCircuitMmapCacheExpiryMs = conf.getLong(
-          DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_TIMEOUT_MS,
-          DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_TIMEOUT_MS_DEFAULT);
+          HdfsClientConfigKeys.Mmap.CACHE_TIMEOUT_MS_KEY,
+          HdfsClientConfigKeys.Mmap.CACHE_TIMEOUT_MS_DEFAULT);
       shortCircuitMmapCacheRetryTimeout = conf.getLong(
-          DFSConfigKeys.DFS_CLIENT_MMAP_RETRY_TIMEOUT_MS,
-          DFSConfigKeys.DFS_CLIENT_MMAP_RETRY_TIMEOUT_MS_DEFAULT);
+          HdfsClientConfigKeys.Mmap.RETRY_TIMEOUT_MS_KEY,
+          HdfsClientConfigKeys.Mmap.RETRY_TIMEOUT_MS_DEFAULT);
       shortCircuitCacheStaleThresholdMs = conf.getLong(
-          DFSConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS,
-          DFSConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS_DEFAULT);
+          HdfsClientConfigKeys.ShortCircuit.REPLICA_STALE_THRESHOLD_MS_KEY,
+          HdfsClientConfigKeys.ShortCircuit.REPLICA_STALE_THRESHOLD_MS_DEFAULT);
       shortCircuitSharedMemoryWatcherInterruptCheckMs = conf.getInt(
           DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS,
           DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT);
