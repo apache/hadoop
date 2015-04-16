@@ -261,8 +261,6 @@ public class AppBlock extends HtmlBlock {
         logsLink = containerReport.getLogUrl();
         nodeLink = containerReport.getNodeHttpAddress();
       }
-      // AppAttemptID numerical value parsed by parseHadoopID in
-      // yarn.dt.plugins.js
       attemptsTableData
         .append("[\"<a href='")
         .append(url("appattempt", appAttempt.getAppAttemptId()))

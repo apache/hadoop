@@ -12,6 +12,8 @@ Release 2.7.1 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-6300. Task list sort by task id broken. (Siqi Li via aajisaka)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

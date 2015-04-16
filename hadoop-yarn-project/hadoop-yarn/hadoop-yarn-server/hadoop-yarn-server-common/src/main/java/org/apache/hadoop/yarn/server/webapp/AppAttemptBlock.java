@@ -183,8 +183,6 @@ public class AppAttemptBlock extends HtmlBlock {
     StringBuilder containersTableData = new StringBuilder("[\n");
     for (ContainerReport containerReport : containers) {
       ContainerInfo container = new ContainerInfo(containerReport);
-      // ConatinerID numerical value parsed by parseHadoopID in
-      // yarn.dt.plugins.js
       containersTableData
         .append("[\"<a href='")
         .append(url("container", container.getContainerId()))

@@ -139,6 +139,9 @@ function renderHadoopElapsedTime(data, type, full) {
   return data;  
 }
 
+//JSON array element is formatted like
+//"<a href="/proxy/application_1360183373897_0001>">application_1360183373897_0001</a>"
+//this function removes <a> tag and return a string value for sorting
 function parseHadoopID(data, type, full) {
   if (type === 'display') {
     return data;
