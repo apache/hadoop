@@ -543,6 +543,9 @@ Release 2.7.1 - UNRELEASED
     HDFS-8149. The footer of the Web UI "Hadoop, 2014" is old.
     (Brahma Reddy Battula via aajisaka)
 
+    HDFS-8153. Error Message points to wrong parent directory in case of
+    path component name length error (Anu Engineer via jitendra)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
