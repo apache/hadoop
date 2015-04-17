@@ -85,3 +85,5 @@
 
     HDFS-7994. Detect if resevered EC Block ID is already used during namenode
     startup. (Hui Zheng via szetszwo)
+
+    HDFS-8167. BlockManager.addBlockCollectionWithCheck should check if the block is a striped block. (Hui Zheng via zhz).
