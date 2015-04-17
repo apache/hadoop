@@ -212,6 +212,9 @@ Release 2.8.0 - UNRELEASED
     YARN-3436. Fix URIs in documantion of YARN web service REST APIs.
     (Bibin A Chundatt via ozawa)
 
+    YARN-3021. YARN's delegation-token handling disallows certain trust setups
+    to operate properly over DistCp. (Yongjun Zhang via jianhe)
+
 Release 2.7.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

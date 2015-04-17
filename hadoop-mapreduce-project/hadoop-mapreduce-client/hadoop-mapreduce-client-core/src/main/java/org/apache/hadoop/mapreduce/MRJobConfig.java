@@ -367,6 +367,8 @@ public interface MRJobConfig {
 
   public static final String JOB_NAMENODES = "mapreduce.job.hdfs-servers";
 
+  public static final String JOB_NAMENODES_TOKEN_RENEWAL_EXCLUDE = "mapreduce.job.hdfs-servers.token-renewal.exclude";
+
   public static final String JOB_JOBTRACKER_ID = "mapreduce.job.kerberos.jtprinicipal";
 
   public static final String JOB_CANCEL_DELEGATION_TOKEN = "mapreduce.job.complete.cancel.delegation.tokens";
