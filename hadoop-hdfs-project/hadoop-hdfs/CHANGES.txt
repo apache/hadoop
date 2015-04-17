@@ -323,6 +323,9 @@ Release 2.8.0 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-7891. A block placement policy with best rack failure tolerance.
+    (Walter Su via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-3918. EditLogTailer shouldn't log WARN when other node
