@@ -1568,6 +1568,11 @@ public class FSDirectory implements Closeable {
     checkPermission(pc, iip, false, null, null, null, null);
   }
 
+  void checkPathAccess(FSPermissionChecker pc, FlatINodesInPath iip,
+      FsAction access) throws AccessControlException {
+    // TODO
+  }
+
   void checkTraverse(FSPermissionChecker pc, Resolver.Result iip)
       throws AccessControlException {
     // TODO

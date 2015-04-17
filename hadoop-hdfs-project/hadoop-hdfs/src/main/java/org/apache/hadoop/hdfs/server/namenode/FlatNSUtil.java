@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.common.base.Preconditions;
+
 public class FlatNSUtil {
   public static String getNextComponent(String src, int offset) {
     if (offset >= src.length()) {
@@ -34,5 +36,11 @@ public class FlatNSUtil {
 
   public static boolean hasNextLevelInPath(String src, int offset) {
     return src.indexOf('/', offset + 1) != -1;
+  }
+
+  public static String getLastComponent(String src) {
+    int next = src.lastIndexOf('/');
+    Preconditions.checkState(next != -1);
+    return getNextComponent(src, next);
   }
 }
