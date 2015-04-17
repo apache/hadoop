@@ -328,7 +328,7 @@ public class TestWebHdfsUrl {
           dtId, dtSecretManager);
       SecurityUtil.setTokenService(
           token, NetUtils.createSocketAddr(uri.getAuthority()));
-      token.setKind(WebHdfsFileSystem.TOKEN_KIND);
+      token.setKind(WebHdfsConstants.WEBHDFS_TOKEN_KIND);
       ugi.addToken(token);
     }
     return (WebHdfsFileSystem) FileSystem.get(uri, conf);

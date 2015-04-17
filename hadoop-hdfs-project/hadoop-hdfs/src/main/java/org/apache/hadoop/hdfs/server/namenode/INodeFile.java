@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite.ID_UNSPECIFIED;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.NO_SNAPSHOT_ID;
 
@@ -393,7 +393,7 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public byte getStoragePolicyID() {
     byte id = getLocalStoragePolicyID();
-    if (id == ID_UNSPECIFIED) {
+    if (id == BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
       return this.getParent() != null ?
           this.getParent().getStoragePolicyID() : id;
     }
@@ -584,7 +584,7 @@ public class INodeFile extends INodeWithAdditionalFields
     counts.addNameSpace(nsDelta);
     counts.addStorageSpace(ssDeltaNoReplication * replication);
 
-    if (blockStoragePolicyId != ID_UNSPECIFIED){
+    if (blockStoragePolicyId != BLOCK_STORAGE_POLICY_ID_UNSPECIFIED){
       BlockStoragePolicy bsp = bsps.getPolicy(blockStoragePolicyId);
       List<StorageType> storageTypes = bsp.chooseStorageTypes(replication);
       for (StorageType t : storageTypes) {
@@ -619,7 +619,7 @@ public class INodeFile extends INodeWithAdditionalFields
     counts.addContent(Content.LENGTH, fileLen);
     counts.addContent(Content.DISKSPACE, storagespaceConsumed());
 
-    if (getStoragePolicyID() != ID_UNSPECIFIED){
+    if (getStoragePolicyID() != BLOCK_STORAGE_POLICY_ID_UNSPECIFIED){
       BlockStoragePolicy bsp = summary.getBlockStoragePolicySuite().
           getPolicy(getStoragePolicyID());
       List<StorageType> storageTypes = bsp.chooseStorageTypes(getFileReplication());

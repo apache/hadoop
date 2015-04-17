@@ -50,7 +50,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
 
   /**
    * UUID identifying a given datanode. For upgraded Datanodes this is the
-   * same as the StorageID that was previously used by this Datanode. 
+   * same as the StorageID that was previously used by this Datanode.
    * For newly formatted Datanodes it is a UUID.
    */
   private final String datanodeUuid;
@@ -80,7 +80,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
    *                     e.g. if this is a new datanode. A new UUID will
    *                     be assigned by the namenode.
    * @param xferPort data transfer port
-   * @param infoPort info server port 
+   * @param infoPort info server port
    * @param ipcPort ipc server port
    */
   public DatanodeID(String ipAddr, String hostName, String datanodeUuid,
@@ -92,7 +92,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
     this.infoSecurePort = infoSecurePort;
     this.ipcPort = ipcPort;
   }
-  
+
   public void setIpAddr(String ipAddr) {
     //updated during registration, preserve former xferPort
     setIpAndXferPort(ipAddr, xferPort);
@@ -108,7 +108,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
   public void setPeerHostName(String peerHostName) {
     this.peerHostName = peerHostName;
   }
-  
+
   /**
    * @return data node ID.
    */
@@ -139,12 +139,12 @@ public class DatanodeID implements Comparable<DatanodeID> {
   }
 
   /**
-   * @return hostname from the actual connection 
+   * @return hostname from the actual connection
    */
   public String getPeerHostName() {
     return peerHostName;
   }
-  
+
   /**
    * @return IP:xferPort string
    */
@@ -242,17 +242,17 @@ public class DatanodeID implements Comparable<DatanodeID> {
     return (getXferAddr().equals(((DatanodeID)to).getXferAddr()) &&
         datanodeUuid.equals(((DatanodeID)to).getDatanodeUuid()));
   }
-  
+
   @Override
   public int hashCode() {
     return datanodeUuid.hashCode();
   }
-  
+
   @Override
   public String toString() {
     return getXferAddr();
   }
-  
+
   /**
    * Update fields when a new registration request comes in.
    * Note that this does not update storageID.
@@ -265,7 +265,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
     infoSecurePort = nodeReg.getInfoSecurePort();
     ipcPort = nodeReg.getIpcPort();
   }
-    
+
   /**
    * Compare based on data transfer address.
    *

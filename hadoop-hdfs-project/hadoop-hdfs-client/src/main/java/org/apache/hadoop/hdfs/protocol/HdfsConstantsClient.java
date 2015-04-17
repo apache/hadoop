@@ -31,4 +31,5 @@ public interface HdfsConstantsClient {
    * uses GRANDFATHER_INODE_ID for backward compatibility.
    */
   long GRANDFATHER_INODE_ID = 0;
+  byte BLOCK_STORAGE_POLICY_ID_UNSPECIFIED = 0;
 }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite.ID_UNSPECIFIED;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -853,8 +853,10 @@ public class TestBlockStoragePolicy {
           HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
       HdfsFileStatus[] barList = fs.getClient().listPaths(barDir.toString(),
           HdfsFileStatus.EMPTY_NAME, true).getPartialListing();
-      checkDirectoryListing(dirList, ID_UNSPECIFIED, ID_UNSPECIFIED);
-      checkDirectoryListing(barList, ID_UNSPECIFIED, ID_UNSPECIFIED);
+      checkDirectoryListing(dirList, BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
+                            BLOCK_STORAGE_POLICY_ID_UNSPECIFIED);
+      checkDirectoryListing(barList, BLOCK_STORAGE_POLICY_ID_UNSPECIFIED,
+                            BLOCK_STORAGE_POLICY_ID_UNSPECIFIED);
 
       final Path invalidPath = new Path("/invalidPath");
       try {

@@ -42,7 +42,6 @@ public class BlockStoragePolicySuite {
   public static final XAttr.NameSpace XAttrNS = XAttr.NameSpace.SYSTEM;
 
   public static final int ID_BIT_LENGTH = 4;
-  public static final byte ID_UNSPECIFIED = 0;
 
   @VisibleForTesting
   public static BlockStoragePolicySuite createDefaultSuite() {

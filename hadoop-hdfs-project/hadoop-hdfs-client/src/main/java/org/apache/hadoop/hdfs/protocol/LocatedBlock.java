@@ -24,8 +24,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.Lists;
@@ -48,7 +46,7 @@ public class LocatedBlock {
   /** Cached storage type for each replica, if reported. */
   private final StorageType[] storageTypes;
   // corrupt flag is true if all of the replicas of a block are corrupt.
-  // else false. If block has few corrupt replicas, they are filtered and 
+  // else false. If block has few corrupt replicas, they are filtered and
   // their locations are not part of this object
   private boolean corrupt;
   private Token<BlockTokenIdentifier> blockToken = new Token<BlockTokenIdentifier>();
@@ -69,14 +67,6 @@ public class LocatedBlock {
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs,
                       String[] storageIDs, StorageType[] storageTypes) {
     this(b, locs, storageIDs, storageTypes, -1, false, EMPTY_LOCS);
-  }
-
-  public LocatedBlock(ExtendedBlock b, DatanodeStorageInfo[] storages,
-      long startOffset, boolean corrupt) {
-    this(b, DatanodeStorageInfo.toDatanodeInfos(storages),
-        DatanodeStorageInfo.toStorageIDs(storages),
-        DatanodeStorageInfo.toStorageTypes(storages),
-        startOffset, corrupt, EMPTY_LOCS); // startOffset is unknown
   }
 
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, String[] storageIDs,
@@ -132,7 +122,7 @@ public class LocatedBlock {
   public StorageType[] getStorageTypes() {
     return storageTypes;
   }
-  
+
   public String[] getStorageIDs() {
     return storageIDs;
   }
@@ -157,7 +147,7 @@ public class LocatedBlock {
   public long getStartOffset() {
     return offset;
   }
-  
+
   public long getBlockSize() {
     return b.getNumBytes();
   }
@@ -169,14 +159,14 @@ public class LocatedBlock {
   public void setCorrupt(boolean corrupt) {
     this.corrupt = corrupt;
   }
-  
+
   public boolean isCorrupt() {
     return this.corrupt;
   }
 
   /**
    * Add a the location of a cached replica of the block.
-   * 
+   *
    * @param loc of datanode with the cached replica
    */
   public void addCachedLoc(DatanodeInfo loc) {
@@ -214,4 +204,3 @@ public class LocatedBlock {
         + "}";
   }
 }
-

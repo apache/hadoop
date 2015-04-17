@@ -22,7 +22,6 @@ import org.apache.hadoop.io.Text;
 
 public class SWebHdfsFileSystem extends WebHdfsFileSystem {
 
-  public static final Text TOKEN_KIND = new Text("SWEBHDFS delegation");
   public static final String SCHEME = "swebhdfs";
 
   @Override
@@ -37,7 +36,7 @@ public class SWebHdfsFileSystem extends WebHdfsFileSystem {
 
   @Override
   protected Text getTokenKind() {
-    return TOKEN_KIND;
+    return WebHdfsConstants.SWEBHDFS_TOKEN_KIND;
   }
 
   @Override

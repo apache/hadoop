@@ -1234,21 +1234,6 @@ public class DFSUtil {
       }
     }
   }
-  
-  /** Return used as percentage of capacity */
-  public static float getPercentUsed(long used, long capacity) {
-    return capacity <= 0 ? 100 : (used * 100.0f)/capacity; 
-  }
-  
-  /** Return remaining as percentage of capacity */
-  public static float getPercentRemaining(long remaining, long capacity) {
-    return capacity <= 0 ? 0 : (remaining * 100.0f)/capacity; 
-  }
-
-  /** Convert percentage to a string. */
-  public static String percent2String(double percentage) {
-    return StringUtils.format("%.2f%%", percentage);
-  }
 
   /**
    * Round bytes to GiB (gibibyte)

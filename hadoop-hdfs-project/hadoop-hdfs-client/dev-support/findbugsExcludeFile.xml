@@ -1,2 +1,10 @@
 <FindBugsFilter>
+  <Match>
+    <Or>
+      <Class name="org.apache.hadoop.hdfs.protocol.HdfsFileStatus"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.LocatedBlock"/>
+      <Class name="org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier"/>
+    </Or>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
+  </Match>
 </FindBugsFilter>

@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -115,7 +115,7 @@ class HeartbeatManager implements DatanodeStatistics {
 
   @Override
   public synchronized float getCapacityUsedPercent() {
-    return DFSUtil.getPercentUsed(stats.capacityUsed, stats.capacityTotal);
+    return DFSUtilClient.getPercentUsed(stats.capacityUsed, stats.capacityTotal);
   }
 
   @Override
@@ -125,8 +125,8 @@ class HeartbeatManager implements DatanodeStatistics {
 
   @Override
   public synchronized float getCapacityRemainingPercent() {
-    return DFSUtil.getPercentRemaining(
-        stats.capacityRemaining, stats.capacityTotal);
+    return DFSUtilClient.getPercentRemaining(stats.capacityRemaining,
+                                             stats.capacityTotal);
   }
 
   @Override
@@ -136,7 +136,8 @@ class HeartbeatManager implements DatanodeStatistics {
 
   @Override
   public synchronized float getPercentBlockPoolUsed() {
-    return DFSUtil.getPercentUsed(stats.blockPoolUsed, stats.capacityTotal);
+    return DFSUtilClient.getPercentUsed(stats.blockPoolUsed,
+                                        stats.capacityTotal);
   }
 
   @Override

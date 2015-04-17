@@ -123,7 +123,7 @@ public class BlockManager {
   private final AtomicLong excessBlocksCount = new AtomicLong(0L);
   private final AtomicLong postponedMisreplicatedBlocksCount = new AtomicLong(0L);
   private final long startupDelayBlockDeletionInMs;
-  
+
   /** Used by metrics */
   public long getPendingReplicationBlocksCount() {
     return pendingReplicationBlocksCount;
@@ -836,7 +836,7 @@ public class BlockManager {
           (BlockInfoContiguousUnderConstruction) blk;
       final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
       final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
-      return new LocatedBlock(eb, storages, pos, false);
+      return newLocatedBlock(eb, storages, pos, false);
     }
 
     // get block locations
@@ -868,7 +868,7 @@ public class BlockManager {
       " numCorrupt: " + numCorruptNodes +
       " numCorruptRepls: " + numCorruptReplicas;
     final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
-    return new LocatedBlock(eb, machines, pos, isCorrupt);
+    return newLocatedBlock(eb, machines, pos, isCorrupt);
   }
 
   /** Create a LocatedBlocks. */
@@ -3723,7 +3723,18 @@ public class BlockManager {
     postponedMisreplicatedBlocks.clear();
     postponedMisreplicatedBlocksCount.set(0);
   };
-  
+
+  public static LocatedBlock newLocatedBlock(
+      ExtendedBlock b, DatanodeStorageInfo[] storages,
+      long startOffset, boolean corrupt) {
+    // startOffset is unknown
+    return new LocatedBlock(
+        b, DatanodeStorageInfo.toDatanodeInfos(storages),
+        DatanodeStorageInfo.toStorageIDs(storages),
+        DatanodeStorageInfo.toStorageTypes(storages),
+        startOffset, corrupt,
+        null);
+  }
 
   private static class ReplicationWork {
 

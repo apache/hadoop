@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.*;
 
 /**************************************************
- * A Block is a Hadoop FS primitive, identified by a 
+ * A Block is a Hadoop FS primitive, identified by a
  * long.
  *
  **************************************************/
@@ -124,7 +124,7 @@ public class Block implements Writable, Comparable<Block> {
   public long getBlockId() {
     return blockId;
   }
-  
+
   public void setBlockId(long bid) {
     blockId = bid;
   }
@@ -147,7 +147,7 @@ public class Block implements Writable, Comparable<Block> {
   public long getGenerationStamp() {
     return generationStamp;
   }
-  
+
   public void setGenerationStamp(long stamp) {
     generationStamp = stamp;
   }
@@ -179,13 +179,13 @@ public class Block implements Writable, Comparable<Block> {
   public void readFields(DataInput in) throws IOException {
     readHelper(in);
   }
-  
+
   final void writeHelper(DataOutput out) throws IOException {
     out.writeLong(blockId);
     out.writeLong(numBytes);
     out.writeLong(generationStamp);
   }
-  
+
   final void readHelper(DataInput in) throws IOException {
     this.blockId = in.readLong();
     this.numBytes = in.readLong();
@@ -194,7 +194,7 @@ public class Block implements Writable, Comparable<Block> {
       throw new IOException("Unexpected block size: " + numBytes);
     }
   }
-  
+
   // write only the identifier part of the block
   public void writeId(DataOutput out) throws IOException {
     out.writeLong(blockId);
@@ -223,7 +223,7 @@ public class Block implements Writable, Comparable<Block> {
     }
     return compareTo((Block)o) == 0;
   }
-  
+
   /**
    * @return true if the two blocks have the same block ID and the same
    * generation stamp, or if both blocks are null.

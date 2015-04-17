@@ -17,9 +17,16 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.io.Text;
 
-class WebHdfsConstants {
+@InterfaceAudience.Private
+public class WebHdfsConstants {
+  /** Delegation token kind */
+  public static final Text WEBHDFS_TOKEN_KIND = new Text("WEBHDFS delegation");
+  public static final Text SWEBHDFS_TOKEN_KIND = new Text("SWEBHDFS delegation");
+
   enum PathType {
     FILE, DIRECTORY, SYMLINK;
 

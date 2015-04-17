@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HA_DT_SERVICE_PREFIX;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -57,8 +55,8 @@ final class TokenAspect<T extends FileSystem & Renewable> {
 
     @Override
     public boolean handleKind(Text kind) {
-      return kind.equals(WebHdfsFileSystem.TOKEN_KIND)
-          || kind.equals(SWebHdfsFileSystem.TOKEN_KIND);
+      return kind.equals(WebHdfsConstants.WEBHDFS_TOKEN_KIND)
+          || kind.equals(WebHdfsConstants.SWEBHDFS_TOKEN_KIND);
     }
 
     @Override
@@ -87,9 +85,9 @@ final class TokenAspect<T extends FileSystem & Renewable> {
     }
 
     private static String getSchemeByKind(Text kind) {
-      if (kind.equals(WebHdfsFileSystem.TOKEN_KIND)) {
+      if (kind.equals(WebHdfsConstants.WEBHDFS_TOKEN_KIND)) {
         return WebHdfsFileSystem.SCHEME;
-      } else if (kind.equals(SWebHdfsFileSystem.TOKEN_KIND)) {
+      } else if (kind.equals(WebHdfsConstants.SWEBHDFS_TOKEN_KIND)) {
         return SWebHdfsFileSystem.SCHEME;
       } else {
         throw new IllegalArgumentException("Unsupported scheme");

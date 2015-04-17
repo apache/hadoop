@@ -23,8 +23,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
@@ -33,7 +32,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
  * A delegation token identifier that is specific to HDFS.
  */
 @InterfaceAudience.Private
-public class DelegationTokenIdentifier 
+public class DelegationTokenIdentifier
     extends AbstractDelegationTokenIdentifier {
   public static final Text HDFS_DELEGATION_KIND = new Text("HDFS_DELEGATION_TOKEN");
 
@@ -68,7 +67,7 @@ public class DelegationTokenIdentifier
   public static String stringifyToken(final Token<?> token) throws IOException {
     DelegationTokenIdentifier ident = new DelegationTokenIdentifier();
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
-    DataInputStream in = new DataInputStream(buf);  
+    DataInputStream in = new DataInputStream(buf);
     ident.readFields(in);
 
     if (token.getService().getLength() > 0) {
@@ -77,7 +76,7 @@ public class DelegationTokenIdentifier
       return ident.toString();
     }
   }
-  
+
   public static class WebHdfsDelegationTokenIdentifier
       extends DelegationTokenIdentifier {
     public WebHdfsDelegationTokenIdentifier() {
@@ -85,17 +84,17 @@ public class DelegationTokenIdentifier
     }
     @Override
     public Text getKind() {
-      return WebHdfsFileSystem.TOKEN_KIND;
+      return WebHdfsConstants.WEBHDFS_TOKEN_KIND;
     }
   }
-  
+
   public static class SWebHdfsDelegationTokenIdentifier extends WebHdfsDelegationTokenIdentifier {
 	public SWebHdfsDelegationTokenIdentifier() {
 	  super();
 	}
 	@Override
 	public Text getKind() {
-	  return SWebHdfsFileSystem.TOKEN_KIND;
+	  return WebHdfsConstants.SWEBHDFS_TOKEN_KIND;
 	}
   }
 }
