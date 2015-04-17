@@ -17,16 +17,14 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.Test;
 
 public class TestSchemaLoader {
 
@@ -54,12 +52,8 @@ public class TestSchemaLoader {
     out.println("</schemas>");
     out.close();
 
-    Configuration conf = new Configuration();
-    conf.set(CommonConfigurationKeys.IO_ERASURECODE_SCHEMA_FILE_KEY,
-        SCHEMA_FILE);
-
     SchemaLoader schemaLoader = new SchemaLoader();
-    List<ECSchema> schemas = schemaLoader.loadSchema(conf);
+    List<ECSchema> schemas = schemaLoader.loadSchema(SCHEMA_FILE);
 
     assertEquals(2, schemas.size());
 

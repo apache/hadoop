@@ -17,20 +17,27 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.w3c.dom.*;
-import org.xml.sax.SAXException;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.*;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Text;
+import org.xml.sax.SAXException;
 
 /**
  * A EC schema loading utility that loads predefined EC schemas from XML file
@@ -42,8 +49,8 @@ public class SchemaLoader {
    * Load predefined ec schemas from configuration file. This file is
    * expected to be in the XML format.
    */
-  public List<ECSchema> loadSchema(Configuration conf) {
-    File confFile = getSchemaFile(conf);
+  public List<ECSchema> loadSchema(String schemaFilePath) {
+    File confFile = getSchemaFile(schemaFilePath);
     if (confFile == null) {
       LOG.warn("Not found any predefined EC schema file");
       return Collections.emptyList();
@@ -100,10 +107,7 @@ public class SchemaLoader {
    * Path to the XML file containing predefined ec schemas. If the path is
    * relative, it is searched for in the classpath.
    */
-  private File getSchemaFile(Configuration conf) {
-    String schemaFilePath = conf.get(
-        CommonConfigurationKeys.IO_ERASURECODE_SCHEMA_FILE_KEY,
-        CommonConfigurationKeys.IO_ERASURECODE_SCHEMA_FILE_DEFAULT);
+  private File getSchemaFile(String schemaFilePath) {
     File schemaFile = new File(schemaFilePath);
     if (! schemaFile.isAbsolute()) {
       URL url = Thread.currentThread().getContextClassLoader()
