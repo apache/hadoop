@@ -194,6 +194,16 @@ message ApplicationReportProto {
   optional string applicationType = 18;
   optional hadoop.common.TokenProto am_rm_token = 19;
   repeated string applicationTags = 20;
+  optional LogAggregationStatusProto log_aggregation_status = 21;
+}
+
+enum LogAggregationStatusProto {
+  LOG_DISABLED = 1;
+  LOG_NOT_START = 2;
+  LOG_RUNNING = 3;
+  LOG_SUCCEEDED = 4;
+  LOG_FAILED = 5;
+  LOG_TIME_OUT = 6;
 }
 
 message ApplicationAttemptReportProto {

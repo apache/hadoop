@@ -530,6 +530,9 @@ public class ApplicationCLI extends YarnCLI {
       } else {
         appReportStr.println("N/A");
       }
+      appReportStr.print("\tLog Aggregation Status : ");
+      appReportStr.println(appReport.getLogAggregationStatus() == null ? "N/A"
+          : appReport.getLogAggregationStatus());
       appReportStr.print("\tDiagnostics : ");
       appReportStr.print(appReport.getDiagnostics());
     } else {

@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -104,6 +105,7 @@ public class TestYarnCLI {
           YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
           FinalApplicationStatus.SUCCEEDED, usageReport, "N/A", 0.53789f, "YARN",
           null);
+      newApplicationReport.setLogAggregationStatus(LogAggregationStatus.SUCCEEDED);
       when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
           newApplicationReport);
       int result = cli.run(new String[] { "application", "-status", applicationId.toString() });
@@ -127,6 +129,7 @@ public class TestYarnCLI {
       pw.println("\tAM Host : host");
       pw.println("\tAggregate Resource Allocation : " +
           (i == 0 ? "N/A" : "123456 MB-seconds, 4567 vcore-seconds"));
+      pw.println("\tLog Aggregation Status : SUCCEEDED");
       pw.println("\tDiagnostics : diagnostics");
       pw.close();
       String appReportStr = baos.toString("UTF-8");

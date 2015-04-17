@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceVisibilityProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueACLProto;
@@ -253,4 +255,19 @@ public class ProtoUtils {
     return ReservationRequestInterpreter.valueOf(e.name());
   }
 
+  /*
+   * Log Aggregation Status
+   */
+  private static final String LOG_AGGREGATION_STATUS_PREFIX = "LOG_";
+  public static LogAggregationStatusProto convertToProtoFormat(
+      LogAggregationStatus e) {
+    return LogAggregationStatusProto.valueOf(LOG_AGGREGATION_STATUS_PREFIX
+        + e.name());
+  }
+
+  public static LogAggregationStatus convertFromProtoFormat(
+      LogAggregationStatusProto e) {
+    return LogAggregationStatus.valueOf(e.name().replace(
+      LOG_AGGREGATION_STATUS_PREFIX, ""));
+  }
 }

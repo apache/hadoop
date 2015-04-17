@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
+import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -58,7 +59,6 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogWriter;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
-import org.apache.hadoop.yarn.server.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
@@ -347,7 +347,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       report.setDiagnosticMessage(diagnosticMessage);
       if (appFinished) {
         report.setLogAggregationStatus(renameTemporaryLogFileFailed
-            ? LogAggregationStatus.FAILED : LogAggregationStatus.FINISHED);
+            ? LogAggregationStatus.FAILED : LogAggregationStatus.SUCCEEDED);
       } else {
         report.setLogAggregationStatus(LogAggregationStatus.RUNNING);
       }
