@@ -101,6 +101,20 @@ public class TokenCache {
     }
   }
 
+  static boolean isTokenRenewalExcluded(FileSystem fs, Configuration conf) {
+    String [] nns =
+        conf.getStrings(MRJobConfig.JOB_NAMENODES_TOKEN_RENEWAL_EXCLUDE);
+    if (nns != null) {
+      String host = fs.getUri().getHost();
+      for(int i=0; i< nns.length; i++) {
+        if (nns[i].equals(host)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   /**
    * get delegation token for a specific FS
    * @param fs
@@ -110,11 +124,16 @@ public class TokenCache {
    */
   static void obtainTokensForNamenodesInternal(FileSystem fs, 
       Credentials credentials, Configuration conf) throws IOException {
-    String delegTokenRenewer = Master.getMasterPrincipal(conf);
-    if (delegTokenRenewer == null || delegTokenRenewer.length() == 0) {
-      throw new IOException(
-          "Can't get Master Kerberos principal for use as renewer");
+    // RM skips renewing token with empty renewer
+    String delegTokenRenewer = "";
+    if (!isTokenRenewalExcluded(fs, conf)) {
+      delegTokenRenewer = Master.getMasterPrincipal(conf);
+      if (delegTokenRenewer == null || delegTokenRenewer.length() == 0) {
+        throw new IOException(
+            "Can't get Master Kerberos principal for use as renewer");
+      }
     }
+
     mergeBinaryTokens(credentials, conf);
 
     final Token<?> tokens[] = fs.addDelegationTokens(delegTokenRenewer,
