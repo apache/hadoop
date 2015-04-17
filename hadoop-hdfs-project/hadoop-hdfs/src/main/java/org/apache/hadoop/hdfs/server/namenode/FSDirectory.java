@@ -964,7 +964,7 @@ public class FSDirectory implements Closeable {
     // original location because a quota violation would cause the the item
     // to go "poof".  The fs limits must be bypassed for the same reason.
     if (checkQuota) {
-      final String parentPath = existing.getPath(pos - 1);
+      final String parentPath = existing.getPath();
       verifyMaxComponentLength(inode.getLocalNameBytes(), parentPath);
       verifyMaxDirItems(parent, parentPath);
     }
