@@ -3287,7 +3287,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   LocatedBlock makeLocatedBlock(Block blk, DatanodeStorageInfo[] locs,
                                         long offset) throws IOException {
-    LocatedBlock lBlk = new LocatedBlock(
+    LocatedBlock lBlk = BlockManager.newLocatedBlock(
         getExtendedBlock(blk), locs, offset, false);
     getBlockManager().setBlockToken(
         lBlk, BlockTokenIdentifier.AccessMode.WRITE);
@@ -3351,7 +3351,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final DatanodeStorageInfo[] targets = blockManager.chooseTarget4AdditionalDatanode(
         src, numAdditionalNodes, clientnode, chosen, 
         excludes, preferredblocksize, storagePolicyID);
-    final LocatedBlock lb = new LocatedBlock(blk, targets, -1, false);
+    final LocatedBlock lb = BlockManager.newLocatedBlock(
+        blk, targets, -1, false);
     blockManager.setBlockToken(lb, BlockTokenIdentifier.AccessMode.COPY);
     return lb;
   }

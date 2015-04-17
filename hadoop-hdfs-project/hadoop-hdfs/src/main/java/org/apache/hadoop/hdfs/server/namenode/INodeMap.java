@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.protocol.HdfsConstantsClient;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
@@ -123,12 +124,12 @@ public class INodeMap {
 
       @Override
       public byte getStoragePolicyID(){
-        return BlockStoragePolicySuite.ID_UNSPECIFIED;
+        return HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
       }
 
       @Override
       public byte getLocalStoragePolicyID() {
-        return BlockStoragePolicySuite.ID_UNSPECIFIED;
+        return HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
       }
     };
       

@@ -45,7 +45,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
-import static org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite.ID_UNSPECIFIED;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
 
 /**
  * Directory INode class.
@@ -125,18 +125,17 @@ public class INodeDirectory extends INodeWithAdditionalFields
         return (xattr.getValue())[0];
       }
     }
-    return ID_UNSPECIFIED;
+    return BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
   }
 
   @Override
   public byte getStoragePolicyID() {
     byte id = getLocalStoragePolicyID();
-    if (id != ID_UNSPECIFIED) {
+    if (id != BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
       return id;
     }
     // if it is unspecified, check its parent
-    return getParent() != null ? getParent().getStoragePolicyID() :
-        ID_UNSPECIFIED;
+    return getParent() != null ? getParent().getStoragePolicyID() : BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
   }
 
   void setQuota(BlockStoragePolicySuite bsps, long nsQuota, long ssQuota, StorageType type) {

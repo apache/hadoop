@@ -101,9 +101,6 @@ public class WebHdfsFileSystem extends FileSystem
   /** Default connection factory may be overridden in tests to use smaller timeout values */
   protected URLConnectionFactory connectionFactory;
 
-  /** Delegation token kind */
-  public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
-
   @VisibleForTesting
   public static final String CANT_FALLBACK_TO_INSECURE_MSG =
       "The client is configured to only allow connecting to secure cluster";
@@ -139,7 +136,7 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   protected Text getTokenKind() {
-    return TOKEN_KIND;
+    return WebHdfsConstants.WEBHDFS_TOKEN_KIND;
   }
 
   @Override

@@ -53,7 +53,6 @@ import org.apache.hadoop.util.ToolRunner;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
@@ -331,7 +330,7 @@ public class Mover {
     private boolean processFile(String fullPath, HdfsLocatedFileStatus status) {
       final byte policyId = status.getStoragePolicy();
       // currently we ignore files with unspecified storage policy
-      if (policyId == BlockStoragePolicySuite.ID_UNSPECIFIED) {
+      if (policyId == HdfsConstantsClient.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
         return false;
       }
       final BlockStoragePolicy policy = blockStoragePolicies[policyId];

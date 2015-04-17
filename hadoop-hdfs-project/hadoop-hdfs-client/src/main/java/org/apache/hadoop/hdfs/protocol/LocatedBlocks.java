@@ -57,19 +57,19 @@ public class LocatedBlocks {
     this.isLastBlockComplete = isLastBlockCompleted;
     this.fileEncryptionInfo = feInfo;
   }
-  
+
   /**
    * Get located blocks.
    */
   public List<LocatedBlock> getLocatedBlocks() {
     return blocks;
   }
-  
+
   /** Get the last located block. */
   public LocatedBlock getLastLocatedBlock() {
     return lastLocatedBlock;
   }
-  
+
   /** Is the last block completed? */
   public boolean isLastBlockComplete() {
     return isLastBlockComplete;
@@ -81,7 +81,7 @@ public class LocatedBlocks {
   public LocatedBlock get(int index) {
     return blocks.get(index);
   }
-  
+
   /**
    * Get number of located blocks.
    */
@@ -90,7 +90,7 @@ public class LocatedBlocks {
   }
 
   /**
-   * 
+   *
    */
   public long getFileLength() {
     return this.fileLength;
@@ -113,7 +113,7 @@ public class LocatedBlocks {
 
   /**
    * Find block containing specified offset.
-   * 
+   *
    * @return block if found, or null otherwise.
    */
   public int findBlock(long offset) {
@@ -122,7 +122,7 @@ public class LocatedBlocks {
         new ExtendedBlock(), new DatanodeInfo[0]);
     key.setStartOffset(offset);
     key.getBlock().setNumBytes(1);
-    Comparator<LocatedBlock> comp = 
+    Comparator<LocatedBlock> comp =
       new Comparator<LocatedBlock>() {
         // Returns 0 iff a is inside b or b is inside a
         @Override
@@ -131,7 +131,7 @@ public class LocatedBlocks {
           long bBeg = b.getStartOffset();
           long aEnd = aBeg + a.getBlockSize();
           long bEnd = bBeg + b.getBlockSize();
-          if(aBeg <= bBeg && bEnd <= aEnd 
+          if(aBeg <= bBeg && bEnd <= aEnd
               || bBeg <= aBeg && aEnd <= bEnd)
             return 0; // one of the blocks is inside the other
           if(aBeg < bBeg)
@@ -141,11 +141,11 @@ public class LocatedBlocks {
       };
     return Collections.binarySearch(blocks, key, comp);
   }
-  
+
   public void insertRange(int blockIdx, List<LocatedBlock> newBlocks) {
     int oldIdx = blockIdx;
     int insStart = 0, insEnd = 0;
-    for(int newIdx = 0; newIdx < newBlocks.size() && oldIdx < blocks.size(); 
+    for(int newIdx = 0; newIdx < newBlocks.size() && oldIdx < blocks.size();
                                                         newIdx++) {
       long newOff = newBlocks.get(newIdx).getStartOffset();
       long oldOff = blocks.get(oldIdx).getStartOffset();
@@ -169,7 +169,7 @@ public class LocatedBlocks {
       blocks.addAll(oldIdx, newBlocks.subList(insStart, insEnd));
     }
   }
-  
+
   public static int getInsertIndex(int binSearchResult) {
     return binSearchResult >= 0 ? binSearchResult : -(binSearchResult+1);
   }
