@@ -30,10 +30,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
-import org.apache.hadoop.yarn.server.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.util.Apps;
@@ -93,15 +93,16 @@ public class RMAppLogAggregationStatusBlock extends HtmlBlock {
       .td("Log Aggregation does not Start.")._();
     table_description.tr().td(LogAggregationStatus.RUNNING.name())
       .td("Log Aggregation is Running.")._();
-    table_description.tr().td(LogAggregationStatus.FINISHED.name())
-      .td("Log Aggregation is Finished. All of the logs have been "
+    table_description.tr().td(LogAggregationStatus.SUCCEEDED.name())
+      .td("Log Aggregation is Succeeded. All of the logs have been "
           + "aggregated successfully.")._();
     table_description.tr().td(LogAggregationStatus.FAILED.name())
       .td("Log Aggregation is Failed. At least one of the logs "
           + "have not been aggregated.")._();
     table_description.tr().td(LogAggregationStatus.TIME_OUT.name())
-      .td("Does not get the Log aggregation status for a long time. "
-          + "Not sure what is the current Log Aggregation Status.")._();
+      .td("The application is finished, but the log aggregation status is "
+          + "not updated for a long time. Not sure whether the log aggregation "
+          + "is finished or not.")._();
     table_description._();
     div_description._();
 

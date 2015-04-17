@@ -53,12 +53,3 @@ message VersionProto {
   optional int32 major_version = 1;
   optional int32 minor_version = 2;
 }
-
-enum LogAggregationStatusProto {
-  LOG_DISABLED = 1;
-  LOG_NOT_START = 2;
-  LOG_RUNNING = 3;
-  LOG_FINISHED = 4;
-  LOG_TIME_OUT = 5;
-}
-

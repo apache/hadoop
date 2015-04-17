@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
@@ -34,6 +35,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
 import com.google.protobuf.TextFormat;
@@ -547,5 +549,36 @@ public class ApplicationReportPBImpl extends ApplicationReport {
 
   private TokenProto convertToProtoFormat(Token t) {
     return ((TokenPBImpl)t).getProto();
+  }
+
+  @Override
+  public LogAggregationStatus getLogAggregationStatus() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasLogAggregationStatus()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getLogAggregationStatus());
+  }
+
+  @Override
+  public void setLogAggregationStatus(
+      LogAggregationStatus logAggregationStatus) {
+    maybeInitBuilder();
+    if (logAggregationStatus == null) {
+      builder.clearLogAggregationStatus();
+      return;
+    }
+    builder.setLogAggregationStatus(
+        convertToProtoFormat(logAggregationStatus));
+  }
+
+  private LogAggregationStatus convertFromProtoFormat(
+      LogAggregationStatusProto s) {
+    return ProtoUtils.convertFromProtoFormat(s);
+  }
+
+  private LogAggregationStatusProto
+      convertToProtoFormat(LogAggregationStatus s) {
+    return ProtoUtils.convertToProtoFormat(s);
   }
 }

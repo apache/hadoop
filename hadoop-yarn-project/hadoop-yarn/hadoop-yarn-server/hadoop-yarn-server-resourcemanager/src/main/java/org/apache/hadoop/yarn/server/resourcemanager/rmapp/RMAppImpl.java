@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -64,7 +65,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
-import org.apache.hadoop.yarn.server.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
@@ -151,6 +151,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final long logAggregationStatusTimeout;
   private final Map<NodeId, LogAggregationReport> logAggregationStatus =
       new HashMap<NodeId, LogAggregationReport>();
+  private LogAggregationStatus logAggregationStatusForAppReport;
 
   // These states stored are only valid when app is at killing or final_saving.
   private RMAppState stateBeforeKilling;
@@ -578,6 +579,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       String trackingUrl = UNAVAILABLE;
       String host = UNAVAILABLE;
       String origTrackingUrl = UNAVAILABLE;
+      LogAggregationStatus logAggregationStatus = null;
       int rpcPort = -1;
       ApplicationResourceUsageReport appUsageReport =
           RMServerUtils.DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
@@ -608,6 +610,7 @@ public class RMAppImpl implements RMApp, Recoverable {
           rpcPort = this.currentAttempt.getRpcPort();
           appUsageReport = currentAttempt.getApplicationResourceUsageReport();
           progress = currentAttempt.getProgress();
+          logAggregationStatus = this.getLogAggregationStatusForAppReport();
         }
         diags = this.diagnostics.toString();
 
@@ -635,13 +638,15 @@ public class RMAppImpl implements RMApp, Recoverable {
                 DUMMY_APPLICATION_ATTEMPT_NUMBER);
       }
 
-      return BuilderUtils.newApplicationReport(this.applicationId,
-          currentApplicationAttemptId, this.user, this.queue,
-          this.name, host, rpcPort, clientToAMToken,
+      ApplicationReport report = BuilderUtils.newApplicationReport(
+          this.applicationId, currentApplicationAttemptId, this.user,
+          this.queue, this.name, host, rpcPort, clientToAMToken,
           createApplicationState(), diags,
           trackingUrl, this.startTime, this.finishTime, finishState,
           appUsageReport, origTrackingUrl, progress, this.applicationType, 
           amrmToken, applicationTags);
+      report.setLogAggregationStatus(logAggregationStatus);
+      return report;
     } finally {
       this.readLock.unlock();
     }
@@ -827,11 +832,13 @@ public class RMAppImpl implements RMApp, Recoverable {
       // otherwise, add it to ranNodes for further process
       app.ranNodes.add(nodeAddedEvent.getNodeId());
 
-      app.logAggregationStatus.put(nodeAddedEvent.getNodeId(),
-        LogAggregationReport.newInstance(app.applicationId, nodeAddedEvent
-          .getNodeId(), app.logAggregationEnabled
-            ? LogAggregationStatus.NOT_START : LogAggregationStatus.DISABLED,
-          ""));
+      if (!app.logAggregationStatus.containsKey(nodeAddedEvent.getNodeId())) {
+        app.logAggregationStatus.put(nodeAddedEvent.getNodeId(),
+          LogAggregationReport.newInstance(app.applicationId, nodeAddedEvent
+            .getNodeId(), app.logAggregationEnabled
+              ? LogAggregationStatus.NOT_START : LogAggregationStatus.DISABLED,
+            ""));
+      }
     };
   }
 
@@ -1398,7 +1405,9 @@ public class RMAppImpl implements RMApp, Recoverable {
         if (!output.getValue().getLogAggregationStatus()
           .equals(LogAggregationStatus.TIME_OUT)
             && !output.getValue().getLogAggregationStatus()
-              .equals(LogAggregationStatus.FINISHED)
+              .equals(LogAggregationStatus.SUCCEEDED)
+            && !output.getValue().getLogAggregationStatus()
+              .equals(LogAggregationStatus.FAILED)
             && isAppInFinalState(this)
             && System.currentTimeMillis() > this.logAggregationStartTime
                 + this.logAggregationStatusTimeout) {
@@ -1423,7 +1432,9 @@ public class RMAppImpl implements RMApp, Recoverable {
           if (curReport.getLogAggregationStatus().equals(
             LogAggregationStatus.TIME_OUT)) {
             if (report.getLogAggregationStatus().equals(
-              LogAggregationStatus.FINISHED)) {
+              LogAggregationStatus.SUCCEEDED)
+                || report.getLogAggregationStatus().equals(
+                  LogAggregationStatus.FAILED)) {
               curReport.setLogAggregationStatus(report
                 .getLogAggregationStatus());
             }
@@ -1442,6 +1453,72 @@ public class RMAppImpl implements RMApp, Recoverable {
       }
     } finally {
       this.writeLock.unlock();
+    }
+  }
+
+  @Override
+  public LogAggregationStatus getLogAggregationStatusForAppReport() {
+    if (!logAggregationEnabled) {
+      return LogAggregationStatus.DISABLED;
+    }
+    if (this.logAggregationStatusForAppReport == LogAggregationStatus.FAILED
+        || this.logAggregationStatusForAppReport == LogAggregationStatus.SUCCEEDED) {
+      return this.logAggregationStatusForAppReport;
+    }
+    try {
+      this.readLock.lock();
+      Map<NodeId, LogAggregationReport> reports =
+          getLogAggregationReportsForApp();
+      if (reports.size() == 0) {
+        return null;
+      }
+      int logNotStartCount = 0;
+      int logCompletedCount = 0;
+      int logTimeOutCount = 0;
+      int logFailedCount = 0;
+      for (Entry<NodeId, LogAggregationReport> report : reports.entrySet()) {
+        switch (report.getValue().getLogAggregationStatus()) {
+          case NOT_START:
+            logNotStartCount++;
+            break;
+          case SUCCEEDED:
+            logCompletedCount++;
+            break;
+          case FAILED:
+            logFailedCount++;
+            logCompletedCount++;
+            break;
+          case TIME_OUT:
+            logTimeOutCount++;
+            logCompletedCount++;
+            break;
+          default:
+            break;
+        }
+      }
+      if (logNotStartCount == reports.size()) {
+        return LogAggregationStatus.NOT_START;
+      } else if (logCompletedCount == reports.size()) {
+        // We should satisfy two condition in order to return SUCCEEDED or FAILED
+        // 1) make sure the application is in final state
+        // 2) logs status from all NMs are SUCCEEDED/FAILED/TIMEOUT
+        // The SUCCEEDED/FAILED status is the final status which means
+        // the log aggregation is finished. And the log aggregation status will
+        // not be updated anymore.
+        if (logFailedCount > 0 && isAppInFinalState(this)) {
+          this.logAggregationStatusForAppReport = LogAggregationStatus.FAILED;
+          return LogAggregationStatus.FAILED;
+        } else if (logTimeOutCount > 0) {
+          return LogAggregationStatus.TIME_OUT;
+        }
+        if (isAppInFinalState(this)) {
+          this.logAggregationStatusForAppReport = LogAggregationStatus.SUCCEEDED;
+          return LogAggregationStatus.SUCCEEDED;
+        }
+      }
+      return LogAggregationStatus.RUNNING;
+    } finally {
+      this.readLock.unlock();
     }
   }
 }

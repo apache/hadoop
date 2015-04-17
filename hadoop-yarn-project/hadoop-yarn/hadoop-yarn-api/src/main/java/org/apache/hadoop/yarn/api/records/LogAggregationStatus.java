@@ -16,16 +16,40 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.api.records;
+package org.apache.hadoop.yarn.api.records;
+
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * <p>Status of Log aggregation.</p>
  */
 public enum LogAggregationStatus {
+
+  /** Log Aggregation is Disabled. */
   DISABLED,
+
+  /** Log Aggregation does not Start. */
   NOT_START,
+
+  /** Log Aggregation is Running. */
   RUNNING,
-  FINISHED,
+
+  /**
+   * Log Aggregation is Succeeded. All of the logs have been aggregated
+   * successfully.
+   */
+  SUCCEEDED,
+
+  /**
+   * Log Aggregation is completed. But at least one of the logs have not been
+   * aggregated.
+   */
   FAILED,
+
+  /**
+   * The application is finished, but the log aggregation status is not updated
+   * for a long time. 
+   * @see YarnConfiguration#LOG_AGGREGATION_STATUS_TIME_OUT_MS
+   */
   TIME_OUT
 }

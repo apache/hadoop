@@ -21,16 +21,17 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.LogAggregationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.LogAggregationReportProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.LogAggregationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
-import org.apache.hadoop.yarn.server.api.records.LogAggregationStatus;
 
 import com.google.protobuf.TextFormat;
 
@@ -42,8 +43,6 @@ public class LogAggregationReportPBImpl extends LogAggregationReport {
     .getDefaultInstance();
   LogAggregationReportProto.Builder builder = null;
   boolean viaProto = false;
-
-  private static final String LOGAGGREGATION_STATUS_PREFIX = "LOG_";
 
   private ApplicationId applicationId;
   private NodeId nodeId;
@@ -166,14 +165,12 @@ public class LogAggregationReportPBImpl extends LogAggregationReport {
 
   private LogAggregationStatus convertFromProtoFormat(
       LogAggregationStatusProto s) {
-    return LogAggregationStatus.valueOf(s.name().replace(
-      LOGAGGREGATION_STATUS_PREFIX, ""));
+    return ProtoUtils.convertFromProtoFormat(s);
   }
 
   private LogAggregationStatusProto
       convertToProtoFormat(LogAggregationStatus s) {
-    return LogAggregationStatusProto.valueOf(LOGAGGREGATION_STATUS_PREFIX
-        + s.name());
+    return ProtoUtils.convertToProtoFormat(s);
   }
 
   @Override
