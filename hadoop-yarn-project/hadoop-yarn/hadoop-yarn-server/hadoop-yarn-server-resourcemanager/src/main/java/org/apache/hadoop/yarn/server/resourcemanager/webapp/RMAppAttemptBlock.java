@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.webapp.AppAttemptBlock;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
@@ -205,6 +206,10 @@ public class RMAppAttemptBlock extends AppAttemptBlock{
         "Application Attempt State:",
         appAttempt.getAppAttemptState() == null ? UNAVAILABLE : appAttempt
           .getAppAttemptState())
+        ._("Started:", Times.format(appAttempt.getStartedTime()))
+        ._("Elapsed:",
+            org.apache.hadoop.util.StringUtils.formatTime(Times.elapsed(
+                appAttempt.getStartedTime(), appAttempt.getFinishedTime())))
       ._(
         "AM Container:",
         appAttempt.getAmContainerId() == null || containers == null

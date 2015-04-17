@@ -142,6 +142,9 @@ Release 2.8.0 - UNRELEASED
     YARN-2696. Queue sorting in CapacityScheduler should consider node label.
     (Wangda Tan via jianhe)
 
+    YARN-3451. Display attempt start time and elapsed time on the web UI.
+    (Rohith Sharmaks via jianhe)
+
   OPTIMIZATIONS
 
     YARN-3339. TestDockerContainerExecutor should pull a single image and not

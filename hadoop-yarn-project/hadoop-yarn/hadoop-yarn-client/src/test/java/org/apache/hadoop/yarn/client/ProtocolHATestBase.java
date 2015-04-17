@@ -700,7 +700,8 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     public ApplicationAttemptReport createFakeApplicationAttemptReport() {
       return ApplicationAttemptReport.newInstance(
           createFakeApplicationAttemptId(), "localhost", 0, "", "", "",
-          YarnApplicationAttemptState.RUNNING, createFakeContainerId());
+          YarnApplicationAttemptState.RUNNING, createFakeContainerId(), 1000l,
+          1200l);
     }
 
     public List<ApplicationAttemptReport>

@@ -145,10 +145,10 @@ public class TestYarnCLI {
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
         applicationId, 1);
-    ApplicationAttemptReport attemptReport = ApplicationAttemptReport
-        .newInstance(attemptId, "host", 124, "url", "oUrl", "diagnostics",
-            YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
-                attemptId, 1));
+    ApplicationAttemptReport attemptReport =
+        ApplicationAttemptReport.newInstance(attemptId, "host", 124, "url",
+            "oUrl", "diagnostics", YarnApplicationAttemptState.FINISHED,
+            ContainerId.newContainerId(attemptId, 1), 1000l, 2000l);
     when(
         client
             .getApplicationAttemptReport(any(ApplicationAttemptId.class)))
