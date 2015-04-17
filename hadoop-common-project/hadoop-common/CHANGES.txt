@@ -1248,6 +1248,9 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11815. HttpServer2 should destroy SignerSecretProvider when it
     stops. (Rohith via wheat9)
 
+    HADOOP-11837. AuthenticationFilter should destroy SignerSecretProvider in
+    Tomcat deployments. (Bowen Zhang via wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
